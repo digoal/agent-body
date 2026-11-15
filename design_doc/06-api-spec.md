@@ -1,7 +1,7 @@
 # 06 — 接口规范（API Spec）
 
 > Agent Host Steward 产品设计 · 交付件 6/7
-> 版本: v1.0 · 更新: 2026-11-15
+> 版本: v2.0 · 更新: 2026-11-15 (新增端口防撞、混合检索、爆炸半径推演、会话完工结清工具)
 
 ---
 
@@ -670,6 +670,90 @@ steward 对外提供三套等价接口，功能完全一致：
     {"type": "service", "name": "PostgreSQL", "relevance": "version matches query"}
   ],
   "query_time_ms": 120
+}
+```
+
+---
+
+### 2.16 steward_port_check — 端口防撞诊断与可用推荐
+
+在启动任何服务或监听端口前主动校验冲突。
+
+**参数:**
+```json
+{
+  "port": { "type": "integer", "description": "拟占用的网络端口号", "minimum": 1, "maximum": 65535 },
+  "suggest_count": { "type": "integer", "default": 3, "description": "若冲突，返回推荐可用空闲端口个数" }
+}
+```
+
+**返回:**
+```json
+{
+  "port": 8080,
+  "status": "OCCUPIED",
+  "conflict": {
+    "pid": 29841,
+    "name": "python3",
+    "command": "python /root/new/shared_proj/dashboard/app.py",
+    "owner": "user:digoal"
+  },
+  "recommended_free_ports": [8081, 8082, 8083],
+  "advice": "端口已被用户进程占用，建议使用 8081"
+}
+```
+
+---
+
+### 2.17 steward_links_impact — 变更爆炸半径推演
+
+评估重构、改动或删除特定文件/服务对上下游的影响范围。
+
+**参数:**
+```json
+{
+  "target": { "type": "string", "description": "被评估对象的绝对路径或服务名" },
+  "max_depth": { "type": "integer", "default": 3, "description": "依赖传递推演最大跳数" }
+}
+```
+
+**返回:**
+```json
+{
+  "target": "/root/new/shared_proj/sec_fetcher/utils.py",
+  "risk_level": "HIGH",
+  "direct_dependents": [
+    { "type": "asset", "id": "/root/new/work/earnings_cron/run.py", "relation": "references" }
+  ],
+  "indirect_dependents": [
+    { "type": "cron", "id": "sec-daily-scan", "depth": 2 }
+  ],
+  "summary": "发现 1 个直接脚本与 1 个定时任务依赖该资产，改动需确保接口向后兼容。"
+}
+```
+
+---
+
+### 2.18 steward_session_close — 会话完工结算与垃圾回收
+
+在 Agent 任务完成时调用，清理临时资产并归档会话纪要。
+
+**参数:**
+```json
+{
+  "session_id": { "type": "string", "description": "当前会话的唯一标识" },
+  "clean_temp": { "type": "boolean", "default": true, "description": "是否自动回收 /root/new/tmp 下本会话创建的临时文件" }
+}
+```
+
+**返回:**
+```json
+{
+  "session_id": "session-1024",
+  "cleaned_files_count": 3,
+  "freed_bytes": 1048576,
+  "changes_summary": "本会话新增文件 2 个，修改 1 个",
+  "saved_memory_id": "mem-auto-close-883"
 }
 ```
 

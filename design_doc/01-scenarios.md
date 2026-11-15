@@ -1,7 +1,7 @@
 # 01 — 使用场景集（Scenarios）
 
 > Agent Host Steward 产品设计 · 交付件 1/7
-> 版本: v1.0 · 更新: 2026-11-15
+> 版本: v2.0 · 更新: 2026-11-15 (引入混合检索、防撞预警、爆炸半径推演与会话闭环)
 
 ---
 
@@ -815,6 +815,105 @@
 > Agent 准确汇报："发现 3 小时前由 Hermes cron 发起的财报扫描脚本（PID 14208）仍在持续跑且占用 98% CPU，造成了排队阻塞。建议我为您发送 SIGTERM 终止并检查重试日志。"
 
 **价值**: 动态对象不止守护服务，更覆盖 Agent 自发派生的脚本进程、后台 Worker 与端口占用，实现运行时动态无死角。
+
+---
+
+### S-30: 语义与全文混合检索（Hybrid Search: FTS5 + Vector + RRF）
+
+**画像**: A / B / D  
+**触发**: Agent 会话中用口语化或跨表述词汇检索过去的决策、经验或技术资产  
+
+**故事**:
+> 德哥让 Agent 检索：“看看我们以前做过什么数据库防雪崩的策略或者应急预案没有？”
+> 
+> 过去单纯依赖 FTS5 全文搜索，因为历史上记录的词汇是“PostgreSQL 熔断降级与连接池溢出处置”，FTS5 关键词匹配返回了 0 条命中。Agent 误以为“以前从未讨论过”，重新开始造轮子。
+> 
+> 在 v2.0 中，大管家启用了本地 Ollama 向量模型（如 nomic-embed-text）辅助的混合检索：
+> 1. FTS5 进行关键词索引召回；
+> 2. Vector 进行 768 维余弦语义相似度召回；
+> 3. RRF (Reciprocal Rank Fusion) 算法自动融合评分：
+>    $$RRF\_score = \frac{1}{60 + rank_{fts}} + \frac{1}{60 + rank_{vec}}$$
+> 
+> 大管家毫秒级返回 Top 1 记忆：“2026-09-12 记录：PostgreSQL 熔断降级与连接池溢出处置（语义相似度 0.88）”，并关联到了当时的处置脚本 `/root/new/shared_proj/pg_pool_guard/`。
+> Agent 瞬间找回组织记忆，直接在既有成果上扩展。
+
+**价值**: 彻底打破关键词字面必须精确匹配的局限，让 Agent 的记忆检索具备人类般的概念联想与语义泛化能力。
+
+---
+
+### S-31: 端口与资源防撞预警（Port Conflict & Resource Guard）
+
+**画像**: A / B / C  
+**触发**: Agent 即将启动新测试服务、绑定本地端口或发起高并发测试  
+
+**故事**:
+> 某 Agent 编写了一个分析看板，准备在后台启动一个服务并监听 `8080` 端口。
+> 在启动前，Agent 主动调用大管家 MCP 工具 `steward_env_port_check(port=8080)`。
+> 
+> 大管家立即返回冲突阻断信息：
+> ```json
+> {
+>   "port": 8080,
+>   "status": "OCCUPIED",
+>   "conflict": {
+>     "pid": 29841,
+>     "process_name": "python3",
+>     "command": "python /root/new/shared_proj/dashboard/app.py",
+>     "owner": "user:digoal",
+>     "started_at": "2026-11-15T09:00:00+08:00"
+>   },
+>   "recommended_free_ports": [8081, 8082, 8090],
+>   "advice": "端口 8080 已被德哥上午启动的看板进程占用，请勿强杀！建议改用推荐空闲端口 8081 启动新服务。"
+> }
+> ```
+> Agent 听从建议，自动将新脚本监听端口调整为 8081，避免了一次极其严重的线上本地服务踩踏事故。
+
+**价值**: 从“事后排障”转变为“事前防撞”，守护宿主系统环境运行的稳定性与隔离性。
+
+---
+
+### S-32: 资产变更爆炸半径推演（Blast Radius Analysis）
+
+**画像**: A / B  
+**触发**: Agent 计划重构、重命名或删除某个核心模块、共享脚本或通用表结构  
+
+**故事**:
+> Agent 优化代码时，打算将 `/root/new/shared_proj/sec_fetcher/utils.py` 中的一个函数签名进行修改，或者删除该脚本。
+> 
+> 在修改之前，Agent 调用 `steward_links_impact(target="/root/new/shared_proj/sec_fetcher/utils.py")`。
+> 
+> 大管家查询 `links` 依赖图谱并计算传递闭包（Transitive Closure），给出爆炸半径报告：
+> - **直接依赖者 (Direct, 3 个)**:
+>   - 脚本: `/root/new/work/earnings_cron/run.py`
+>   - 定时任务: `crontab: sec-daily-scan` (每天 22:00 运行)
+>   - 技能: `skills/earnings-cron-scan-layer/SKILL.md`
+> - **间接下游 (Indirect, 1 个)**:
+>   - 自动化文章发布流: `marketing-wechat-operator`
+> - **综合风险评级**: `HIGH (P0 核心资产)`
+> 
+> Agent 看到影响面分析后，放弃了粗暴的破坏性重构，而是采取了“保留旧接口向后兼容 + 新增 v2 接口”的稳健迭代策略。
+
+**价值**: 让 Agent 拥有类似资深架构师的全局视角，改动任何代码前心中有数，杜绝暗度陈仓造成的连锁崩溃。
+
+---
+
+### S-33: 会话生命周期闭环与环境垃圾回收（Session Lifecycle & Clean-up）
+
+**画像**: A / B  
+**触发**: Agent 收到任务完成指令，准备退出当前会话或交接  
+
+**故事**:
+> Agent 在本次长任务中，根据放置建议在 `/root/new/tmp/` 创建了 4 个临时测试用例，并在后台跑了一个 `tail -f` 监视日志。
+> 会话结束时，Agent 触发 `steward_session_close(session_id="session-20261115-01")`。
+> 
+> 大管家自动执行会话闭环检查：
+> 1. **临时资产回收**: 探测到属于当前会话的 4 个临时脚本已超过生命周期，提示并一键清理，释放空间；
+> 2. **孤儿进程清理**: 识别到当前会话遗留的无用进程（PID 33102, tail 命令），自动优雅回收；
+> 3. **会话环境总结**: 提取本会话在 `changes` 表中产生的 12 次有效变更，生成标准的《本次会话宿主环境变更清单》，自动存入长期记忆 `memories`。
+> 
+> 下一个 Agent 进场时，宿主机干干净净，没有半点遗留垃圾。
+
+**价值**: 闭环治理 Agent 运行留下的宿主“排泄物”，让开发环境长期保持轻盈与自洁。
 
 ---
 
