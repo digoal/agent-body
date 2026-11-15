@@ -11,5 +11,6 @@ pub mod links;
 pub mod changes;
 pub mod session;
 pub mod tui;
+pub mod fact;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
