@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 360" font-family="system-ui,-apple-system,sans-serif">
+  <defs>
+    <filter id="s3"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.10"/></filter>
+  </defs>
+
+  <text x="360" y="28" text-anchor="middle" fill="#1e293b" font-size="15" font-weight="700">steward brief 工作流程</text>
+
+  <!-- Step 1 -->
+  <rect x="20" y="50" width="150" height="70" rx="10" fill="#eef2ff" stroke="#818cf8" stroke-width="1.5" filter="url(#s3)"/>
+  <text x="95" y="75" text-anchor="middle" fill="#3730a3" font-size="12" font-weight="600">Agent 新会话</text>
+  <text x="95" y="93" text-anchor="middle" fill="#4338ca" font-size="11">调用 steward_brief</text>
+  <line x1="170" y1="85" x2="200" y2="85" stroke="#818cf8" stroke-width="1.5" marker-end="url(#a1)"/>
+  <polygon id="a1" points="198,82 204,85 198,88" fill="#818cf8"/>
+
+  <!-- Step 2 -->
+  <rect x="205" y="50" width="150" height="70" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" filter="url(#s3)"/>
+  <text x="280" y="72" text-anchor="middle" fill="#92400e" font-size="12" font-weight="600">steward daemon</text>
+  <text x="280" y="88" text-anchor="middle" fill="#a16207" font-size="10">并行查询 4 个模块</text>
+  <text x="280" y="102" text-anchor="middle" fill="#a16207" font-size="10">拼装 brief 摘要</text>
+
+  <!-- 四个查询分支 -->
+  <line x1="280" y1="120" x2="280" y2="145" stroke="#d97706" stroke-width="1"/>
+  <line x1="120" y1="145" x2="440" y2="145" stroke="#d97706" stroke-width="1"/>
+
+  <line x1="120" y1="145" x2="120" y2="165" stroke="#d97706" stroke-width="1"/>
+  <line x1="227" y1="145" x2="227" y2="165" stroke="#d97706" stroke-width="1"/>
+  <line x1="333" y1="145" x2="333" y2="165" stroke="#d97706" stroke-width="1"/>
+  <line x1="440" y1="145" x2="440" y2="165" stroke="#d97706" stroke-width="1"/>
+
+  <rect x="55" y="165" width="130" height="50" rx="8" fill="#dbeafe" filter="url(#s3)"/>
+  <text x="120" y="186" text-anchor="middle" fill="#1e40af" font-size="11" font-weight="600">memories</text>
+  <text x="120" y="202" text-anchor="middle" fill="#3b82f6" font-size="10">最近 + 高权重 + pinned</text>
+
+  <rect x="162" y="165" width="130" height="50" rx="8" fill="#d1fae5" filter="url(#s3)"/>
+  <text x="227" y="186" text-anchor="middle" fill="#065f46" font-size="11" font-weight="600">assets</text>
+  <text x="227" y="202" text-anchor="middle" fill="#10b981" font-size="10">活跃项目 + 常用脚本</text>
+
+  <rect x="268" y="165" width="130" height="50" rx="8" fill="#fef9c3" filter="url(#s3)"/>
+  <text x="333" y="186" text-anchor="middle" fill="#713f12" font-size="11" font-weight="600">services</text>
+  <text x="333" y="202" text-anchor="middle" fill="#a16207" font-size="10">运行中服务 + 版本</text>
+
+  <rect x="375" y="165" width="130" height="50" rx="8" fill="#fce7f3" filter="url(#s3)"/>
+  <text x="440" y="186" text-anchor="middle" fill="#9d174d" font-size="11" font-weight="600">changes</text>
+  <text x="440" y="202" text-anchor="middle" fill="#db2777" font-size="10">24h 内重要变更</text>
+
+  <!-- 合并 -->
+  <line x1="120" y1="215" x2="120" y2="240" stroke="#d97706" stroke-width="1"/>
+  <line x1="227" y1="215" x2="227" y2="240" stroke="#d97706" stroke-width="1"/>
+  <line x1="333" y1="215" x2="333" y2="240" stroke="#d97706" stroke-width="1"/>
+  <line x1="440" y1="215" x2="440" y2="240" stroke="#d97706" stroke-width="1"/>
+  <line x1="120" y1="240" x2="440" y2="240" stroke="#d97706" stroke-width="1"/>
+  <line x1="280" y1="240" x2="280" y2="260" stroke="#d97706" stroke-width="1"/>
+
+  <!-- Step 3: brief output -->
+  <rect x="180" y="260" width="360" height="80" rx="10" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5" filter="url(#s3)"/>
+  <text x="360" y="284" text-anchor="middle" fill="#166534" font-size="13" font-weight="700">steward brief 输出</text>
+  <text x="360" y="302" text-anchor="middle" fill="#15803d" font-size="11">结构化摘要 (max_tokens: 2000, 可配)</text>
+  <text x="360" y="318" text-anchor="middle" fill="#15803d" font-size="11">→ 注入 Agent system prompt → Agent 拥有完整上下文</text>
+  <text x="360" y="334" text-anchor="middle" fill="#16a34a" font-size="10" font-weight="600">延迟 &lt; 500ms · 覆盖四维信息 · 自动裁剪不超 token 限</text>
+
+  <!-- 右侧 steward.db -->
+  <rect x="560" y="140" width="140" height="90" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" filter="url(#s3)"/>
+  <text x="630" y="165" text-anchor="middle" fill="#475569" font-size="12" font-weight="600">steward.db</text>
+  <text x="630" y="182" text-anchor="middle" fill="#94a3b8" font-size="10">SQLite + FTS5</text>
+  <text x="630" y="196" text-anchor="middle" fill="#94a3b8" font-size="10">+ sqlite-vec</text>
+  <text x="630" y="214" text-anchor="middle" fill="#94a3b8" font-size="10">单文件 ~130MB/年</text>
+  <line x1="505" y1="190" x2="558" y2="190" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4"/>
+</svg>

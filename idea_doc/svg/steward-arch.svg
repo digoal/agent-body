@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 520" font-family="system-ui,-apple-system,sans-serif">
+  <defs>
+    <linearGradient id="gTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="gMid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="gBot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.12"/></filter>
+  </defs>
+
+  <!-- Agent 层 -->
+  <rect x="40" y="16" width="640" height="56" rx="10" fill="url(#gTop)" filter="url(#shadow)"/>
+  <text x="360" y="38" text-anchor="middle" fill="#fff" font-size="15" font-weight="600">Agent / LLM</text>
+  <text x="360" y="56" text-anchor="middle" fill="#c7d2fe" font-size="11">Antigravity · Cursor · Aider · LangChain · 自定义 Agent</text>
+
+  <!-- 箭头: Agent → API -->
+  <line x1="160" y1="72" x2="160" y2="100" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowG)"/>
+  <text x="160" y="90" text-anchor="middle" fill="#64748b" font-size="10">MCP</text>
+  <line x1="360" y1="72" x2="360" y2="100" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="360" y="90" text-anchor="middle" fill="#64748b" font-size="10">REST</text>
+  <line x1="560" y1="72" x2="560" y2="100" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="560" y="90" text-anchor="middle" fill="#64748b" font-size="10">CLI</text>
+
+  <!-- API Gateway -->
+  <rect x="40" y="100" width="640" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="360" y="125" text-anchor="middle" fill="#334155" font-size="13" font-weight="600">API Gateway — 认证 · 限流 · 路由</text>
+
+  <!-- 五大模块 -->
+  <g transform="translate(0,160)">
+    <rect x="20" y="0" width="126" height="64" rx="8" fill="url(#gMid)" filter="url(#shadow)"/>
+    <text x="83" y="26" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">Memory</text>
+    <text x="83" y="44" text-anchor="middle" fill="#cffafe" font-size="10">记忆管理</text>
+
+    <rect x="160" y="0" width="126" height="64" rx="8" fill="url(#gMid)" filter="url(#shadow)"/>
+    <text x="223" y="26" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">Assets</text>
+    <text x="223" y="44" text-anchor="middle" fill="#cffafe" font-size="10">资产索引</text>
+
+    <rect x="300" y="0" width="126" height="64" rx="8" fill="url(#gMid)" filter="url(#shadow)"/>
+    <text x="363" y="26" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">Env</text>
+    <text x="363" y="44" text-anchor="middle" fill="#cffafe" font-size="10">环境感知</text>
+
+    <rect x="440" y="0" width="126" height="64" rx="8" fill="url(#gMid)" filter="url(#shadow)"/>
+    <text x="503" y="26" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">Changes</text>
+    <text x="503" y="44" text-anchor="middle" fill="#cffafe" font-size="10">变更追踪</text>
+
+    <rect x="580" y="0" width="120" height="64" rx="8" fill="url(#gMid)" filter="url(#shadow)"/>
+    <text x="640" y="26" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">Links</text>
+    <text x="640" y="44" text-anchor="middle" fill="#cffafe" font-size="10">智能关联</text>
+  </g>
+
+  <!-- 箭头 -->
+  <line x1="360" y1="140" x2="360" y2="158" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <!-- Core Engine -->
+  <g transform="translate(0,250)">
+    <rect x="100" y="0" width="520" height="90" rx="10" fill="url(#gBot)" filter="url(#shadow)"/>
+    <text x="360" y="24" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">Core Engine</text>
+    <rect x="120" y="34" width="150" height="42" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="0.5"/>
+    <text x="195" y="52" text-anchor="middle" fill="#92400e" font-size="11" font-weight="600">SQLite + FTS5</text>
+    <text x="195" y="66" text-anchor="middle" fill="#92400e" font-size="10">全文搜索</text>
+
+    <rect x="285" y="34" width="150" height="42" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="0.5"/>
+    <text x="360" y="52" text-anchor="middle" fill="#92400e" font-size="11" font-weight="600">sqlite-vec</text>
+    <text x="360" y="66" text-anchor="middle" fill="#92400e" font-size="10">向量语义搜索</text>
+
+    <rect x="450" y="34" width="150" height="42" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="0.5"/>
+    <text x="525" y="52" text-anchor="middle" fill="#92400e" font-size="11" font-weight="600">Ollama</text>
+    <text x="525" y="66" text-anchor="middle" fill="#92400e" font-size="10">本地 Embedding</text>
+  </g>
+
+  <!-- 连接线 -->
+  <line x1="360" y1="224" x2="360" y2="248" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <!-- 底部: 数据文件 -->
+  <g transform="translate(0,360)">
+    <rect x="140" y="0" width="440" height="46" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+    <text x="360" y="20" text-anchor="middle" fill="#475569" font-size="12" font-weight="600">~/.steward/</text>
+    <text x="360" y="36" text-anchor="middle" fill="#94a3b8" font-size="11">steward.db · config.toml · logs/</text>
+  </g>
+
+  <!-- 右侧标注 -->
+  <g transform="translate(0,430)">
+    <rect x="40" y="0" width="640" height="70" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+    <text x="60" y="22" fill="#166534" font-size="12" font-weight="600">核心 API: steward brief</text>
+    <text x="60" y="40" fill="#166534" font-size="11">一次调用 → 最近记忆 + 活跃项目 + 环境状态 + 待办 → 注入 Agent system prompt</text>
+    <text x="60" y="56" fill="#15803d" font-size="11">Agent 新会话第一秒就拥有完整上下文，不再失忆</text>
+  </g>
+</svg>
