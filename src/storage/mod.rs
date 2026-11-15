@@ -464,6 +464,15 @@ impl Storage {
         Ok(rows)
     }
 
+    pub fn update_memory_status(&self, memory_id: &str, status: &str) -> Result<usize> {
+        let conn = self.conn.lock().unwrap();
+        let count = conn.execute(
+            "UPDATE memories SET status = ?1 WHERE id = ?2",
+            params![status, memory_id],
+        )?;
+        Ok(count)
+    }
+
     // ─── Changes ─────────────────────────────────────────────────────
 
     pub fn record_change(&self, change: &ChangeRecord) -> Result<()> {
@@ -547,6 +556,15 @@ impl Storage {
     pub fn delete_links_for_target(&self, target_id: &str) -> Result<usize> {
         let conn = self.conn.lock().unwrap();
         let count = conn.execute("DELETE FROM links WHERE target_id = ?1", params![target_id])?;
+        Ok(count)
+    }
+
+    pub fn update_link_target(&self, source_id: &str, old_target: &str, new_target: &str) -> Result<usize> {
+        let conn = self.conn.lock().unwrap();
+        let count = conn.execute(
+            "UPDATE links SET target_id = ?1 WHERE source_id = ?2 AND target_id = ?3",
+            params![new_target, source_id, old_target],
+        )?;
         Ok(count)
     }
 

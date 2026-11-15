@@ -258,6 +258,49 @@ impl McpToolRegistry {
                     },
                     "required": ["session_id"]
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_links_repair",
+                "description": "断链智能修复与重定向推演：基于文件名相似度、代码指纹与 Git 历史寻找已迁移/重命名文件，生成 diff 补丁并可自动修正依赖关系。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "apply": { "type": "boolean", "default": false, "description": "是否直接应用修复修改源文件与关联表" }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_placement_learn",
+                "description": "放置规范动态自演化：聚类分析历史资产分布与创建事件，自动推演发现潜在的新放置规则候选，并支持一键采纳持久化。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "min_samples": { "type": "integer", "default": 3, "description": "聚类最小样本数" },
+                        "accept": { "type": "boolean", "default": false, "description": "是否自动采纳并入库所有发现的规则候选" }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_env_gc",
+                "description": "宿主资源垃圾回收与孤儿进程诊断：安全扫描 /root/new/tmp/ 超期孤儿临时文件与后台僵尸测试进程，支持预览与清理。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "tmp_dir": { "type": "string", "default": "/root/new/tmp", "description": "待清理的临时目录路径 (强制安全白名单)" },
+                        "max_age_hours": { "type": "integer", "default": 72, "description": "文件超期阈值 (小时)" },
+                        "apply": { "type": "boolean", "default": false, "description": "是否直接执行清理删除 (默认仅 dry-run 预览)" }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_memory_audit",
+                "description": "长期记忆健康体检与矛盾仲裁：检测对立冲突的认知记忆对，计算温和时间衰减淘汰候选，支持指定归档旧条目。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "archive_id": { "type": "string", "description": "若存在冲突，指定归档淘汰的旧记忆 ID" }
+                    }
+                }
             })
         ]
     }
@@ -533,6 +576,51 @@ impl McpToolRegistry {
                 let clean_temp = args.get("clean_temp").and_then(|v| v.as_bool()).unwrap_or(true);
                 let res = sm.close_session(session_id, clean_temp)?;
                 Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_links_repair" => {
+                let arc_storage = Arc::new(self.storage.clone());
+                let repairer = crate::links::repair::LinkRepairer::new(arc_storage);
+                let apply = args.get("apply").and_then(|v| v.as_bool()).unwrap_or(false);
+                let res = repairer.repair_links(apply)?;
+                Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_placement_learn" => {
+                let learner = crate::placement::learner::PlacementLearner::new(&self.storage);
+                let min_samples = args.get("min_samples").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
+                let accept = args.get("accept").and_then(|v| v.as_bool()).unwrap_or(false);
+                let rep = learner.learn_rules(min_samples)?;
+                let mut accepted_rules = Vec::new();
+                if accept {
+                    for c in &rep.candidates {
+                        let rule = learner.apply_candidate(c)?;
+                        accepted_rules.push(rule);
+                    }
+                }
+                Ok(serde_json::to_string_pretty(&serde_json::json!({
+                    "learn_report": rep,
+                    "accepted_count": accepted_rules.len(),
+                    "accepted_rules": accepted_rules,
+                }))?)
+            }
+
+            "steward_env_gc" => {
+                let tmp_dir_str = args.get("tmp_dir").and_then(|v| v.as_str()).unwrap_or("/root/new/tmp");
+                let max_age_hours = args.get("max_age_hours").and_then(|v| v.as_u64()).unwrap_or(72);
+                let apply = args.get("apply").and_then(|v| v.as_bool()).unwrap_or(false);
+                let p = std::path::Path::new(tmp_dir_str);
+                let res = crate::env::gc::HostGarbageCollector::run_gc(p, max_age_hours, !apply)?;
+                Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_memory_audit" => {
+                let mgr = crate::memory::lifecycle::MemoryLifecycleManager::new(&self.storage);
+                if let Some(aid) = args.get("archive_id").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty()) {
+                    mgr.archive_memory(aid)?;
+                }
+                let rep = mgr.audit_memories()?;
+                Ok(serde_json::to_string_pretty(&rep)?)
             }
 
             _ => bail!("Unknown tool: {}", name),

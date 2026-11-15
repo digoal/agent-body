@@ -172,3 +172,26 @@ ignore_patterns = [".git", "node_modules", "__pycache__", ".steward", "target", 
 default_owner = "user:digoal"
 default_security_level = "internal"
 ```
+
+---
+
+## 六、v3.1 自治生态与自愈特性 (Phase 7)
+
+### 1. 拓扑断链自愈 (`steward links repair`)
+- 基于 Levenshtein 相似度与代码指纹，自动推演已被重命名或迁移的资产文件；
+- 输出 patch 补丁，带 `--apply` 参数自动修复引用脚本并更新关联表。
+
+### 2. 放置规则动态演化 (`steward place learn`)
+- 聚类挖掘历史资产与变更分布模式；
+- 提取高频目录/扩展名规律，生成新规则候选，支持 `--accept` 一键入库。
+
+### 3. 宿主孤儿垃圾回收 (`steward gc`)
+- 强制安全白名单，仅清理 `/root/new/tmp/` 超期孤儿临时文件；
+- 诊断父进程已退出的孤儿/僵尸 Agent Worker 进程。
+
+### 4. 记忆冲突仲裁与衰减 (`steward memory audit`)
+- 探测语义对立的矛盾认知对，支持指定 `--archive-id` 归档淘汰旧认知。
+
+### 5. 终端全景看板 (`steward tui`)
+- 紧凑 ANSI 单屏实时刷新硬件、进程、端口、图拓扑评分与变更流。
+

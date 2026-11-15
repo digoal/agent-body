@@ -5,6 +5,7 @@ use crate::storage::Storage;
 use crate::storage::models::ActiveProcessRecord;
 
 pub mod port;
+pub mod gc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemSummary {

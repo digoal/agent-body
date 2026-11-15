@@ -53,27 +53,31 @@ sequenceDiagram
 
 ---
 
-## 3. 16 个原生 MCP 工具标准字典
+## 3. 22 个原生 MCP 工具标准字典
 
-大管家向 Agent 暴露 16 个原子级认知与管控工具：
+大管家向 Agent 暴露 22 个原子级认知与管控工具：
 
 | MCP 工具名 | 核心功能 | 核心参数说明 |
 |---|---|---|
 | `steward_brief` | 一键获取宿主硬件、活跃任务、资产与记忆简报 | 无必填参数 |
 | `steward_placement_suggest` | 索取新文件/工程的标准存放路径与命名建议 | `type`, `name`, `intent`, `security` |
 | `steward_placement_rules` | 查看生效的 8 大目录放置规范 | 无 |
+| `steward_placement_learn` | 放置规范自演化：聚类挖掘新规则候选与持久化 | `min_samples`, `accept` |
 | `steward_asset_search` | 全文与语义检索已知纳管资产 | `query`, `limit` |
 | `steward_asset_register` | 手动注册一个新资产对象 | `path`, `type`, `owner`, `desc` |
 | `steward_asset_scan` | 触发指定目录白黑名单分级扫描 | `path` |
 | `steward_env_processes` | 检索当前运行的普通任务进程 (过滤底噪) | 无 |
 | `steward_env_show` | 查看系统硬件规格 (CPU/内存/磁盘) | 无 |
+| `steward_env_gc` | 宿主垃圾回收：安全清理超期临时文件与孤儿进程 | `tmp_dir`, `max_age_hours`, `apply` |
 | `steward_port_check` | 端口防撞检测与空闲可用端口推荐 | `port`, `suggest_count` |
 | `steward_memory_add` | 写入一条跨会话长期记忆 | `type`, `content`, `summary` |
 | `steward_memory_search` | 语义+全文混合 RRF 检索记忆 | `query`, `limit`, `hybrid` |
+| `steward_memory_audit` | 长期记忆体检：认知矛盾对与衰减淘汰仲裁 | `archive_id` |
 | `steward_links_query` | 查询指定实体的依赖关联关系 | `type`, `id` |
 | `steward_links_visualize` | 导出当前实体拓扑关系为 Mermaid 架构图 | `limit` |
 | `steward_links_impact` | 变更爆炸半径推演 (BFS 逆向多跳分析) | `target`, `max_depth` |
 | `steward_links_audit` | 全局依赖断链审计 (缺失文件/离线端口) | `fix_dangling` |
+| `steward_links_repair` | 断链智能修复与重定向推演 (生成 patch 或自动应用) | `apply` |
 | `steward_codegraph_bridge` | CodeGraph 宏微联邦联动与符号调用方下钻 | `path`, `symbol` |
 | `steward_changes_since` | 查看自指定时间点以来的宿主环境变更历史 | `since`, `limit` |
 | `steward_session_close` | 会话完工结算与垃圾回收 | `session_id`, `clean_temp` |

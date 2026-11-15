@@ -228,6 +228,16 @@ agent-steward [OPTIONS] <COMMAND>
   agent-steward links codegraph /root/new/src/hk2 interactive
   ```
 
+#### (5) `links repair`（断链智能修复与重定向推演）
+- **说明**: 基于文件名相似度、Git 历史与代码指纹定位已迁移/重命名的断链目标，生成 diff 修复补丁，并支持一键替换修复。
+- **参数**:
+  - `--apply`: 自动修改源文件并更新关联表。
+- **示例**:
+  ```bash
+  agent-steward links repair
+  agent-steward links repair --apply
+  ```
+
 ---
 
 ### 2.7 `changes` — 宿主环境变更回溯
@@ -264,4 +274,54 @@ agent-steward [OPTIONS] <COMMAND>
     "changes_summary": "### 宿主环境变更回溯 (Changes Summary)\n\n> 最近记录数: `0`\n\n*(期间环境平稳，未检测到任何资产或服务变动)*\n",
     "saved_memory_id": "mem-session-e2d36c85-d5e8-4ce1-b3f8-1397e79459ea"
   }
+  ```
+
+---
+
+### 2.9 `place learn` — 放置规范自演化
+- **说明**: 聚类分析历史资产分布与创建事件，自动推演发现潜在的新放置规则候选，并支持一键采纳持久化。
+- **参数**:
+  - `-m, --min-samples <N>`: 聚类最小样本数（默认 3）
+  - `--accept`: 自动采纳并入库所有发现的规则候选
+- **示例**:
+  ```bash
+  agent-steward place learn
+  agent-steward place learn --accept
+  ```
+
+---
+
+### 2.10 `gc` — 宿主垃圾回收与孤儿进程诊断
+- **说明**: 安全扫描 `/root/new/tmp/` 超期孤儿临时文件与后台僵尸测试进程，支持预览与清理。
+- **参数**:
+  - `--tmp-dir <DIR>`: 待清理的临时目录路径 (强制安全白名单，默认 `/root/new/tmp`)
+  - `--max-age-hours <HOURS>`: 文件超期阈值（默认 72）
+  - `--apply`: 直接执行清理删除（默认仅 dry-run 预览）
+- **示例**:
+  ```bash
+  agent-steward gc
+  agent-steward gc --apply
+  ```
+
+---
+
+### 2.11 `memory audit` — 认知记忆冲突体检与仲裁
+- **说明**: 检测对立冲突的认知记忆对，计算温和时间衰减淘汰候选，支持指定归档旧条目。
+- **参数**:
+  - `--archive-id <ID>`: 若存在冲突，指定归档淘汰的旧记忆 ID
+- **示例**:
+  ```bash
+  agent-steward memory audit
+  agent-steward memory audit --archive-id mem-01
+  ```
+
+---
+
+### 2.12 `tui` — 终端实时全景看板
+- **说明**: 启动紧凑 ANSI 交互式终端单屏看板，实时监控硬件指标、过滤后的 Agent 进程树、活动端口拓扑、断链告警与最新审计流。
+- **参数**:
+  - `-i, --interval <SECS>`: 看板刷新间隔秒数（默认 2）
+- **示例**:
+  ```bash
+  agent-steward tui
   ```

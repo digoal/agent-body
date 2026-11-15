@@ -3,6 +3,7 @@ use crate::storage::Storage;
 use crate::storage::models::MemoryRecord;
 
 pub mod hybrid;
+pub mod lifecycle;
 
 pub struct MemoryManager {
     storage: Storage,

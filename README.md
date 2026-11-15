@@ -51,9 +51,9 @@ graph TD
 - 🚀 **[01-getting-started.md](manual/01-getting-started.md)**：快速上手、环境依赖准备与首次编译运行
 - 🧠 **[02-core-concepts.md](manual/02-core-concepts.md)**：核心理念：大管家定位、黑白名单浅层阻断、放置建议哲学
 - 📖 **[03-cli-reference.md](manual/03-cli-reference.md)**：全量 CLI 命令行实操字典（全子命令 + 真实输出）
-- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：16 个原生 MCP 工具与 Claude/Cursor 配置
+- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：22 个原生 MCP 工具与 Claude/Cursor 配置
 - 🔄 **[05-daemon-and-watcher.md](manual/05-daemon-and-watcher.md)**：后台常驻守护服务、inotify 300ms 防抖与 systemd 自启
-- ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：v3.0 进阶特性：端口防撞、爆炸半径推演、混合 RRF 检索、CodeGraph 联邦图
+- ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：v3.1 进阶特性：断链智能修复、放置规则自演化、宿主资源 GC、记忆生命周期与 TUI 看板
 - 🛠️ **[07-troubleshooting.md](manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
 
 ---
@@ -122,7 +122,7 @@ cargo build --release
   - [roadmap-phase4.md](src_doc/roadmap-phase4.md) (图智能与 CodeGraph 宏微联邦已交付)
   - [roadmap-phase5.md](src_doc/roadmap-phase5.md) (系统级实装/Systemd/长文图文已交付)
   - [roadmap-phase6.md](src_doc/roadmap-phase6.md) (目录结构与规范化重构已交付)
-  - [roadmap-phase7.md](src_doc/roadmap-phase7.md) (拓扑自愈/规则进化/宿主GC与自治生态规划)
+  - [roadmap-phase7.md](src_doc/roadmap-phase7.md) (拓扑自愈/规则演化/宿主GC与自治生态已交付)
 - **内置 Agent 技能库**:
   - [`skills/agent-steward-developer/`](skills/agent-steward-developer/SKILL.md)：指导 Agent 持续开发迭代项目的工程技能
   - [`skills/agent-steward-doc-writer/`](skills/agent-steward-doc-writer/SKILL.md)：指导 Agent 编写高质量使用手册与 README 的文档技能

@@ -4,6 +4,8 @@ use anyhow::Result;
 use crate::storage::Storage;
 use crate::storage::models::PlacementRule;
 
+pub mod learner;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlacementRequest {
     pub object_type: String, // project, script, skill, note, tmp, src, other

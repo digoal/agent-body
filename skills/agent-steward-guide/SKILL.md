@@ -1,6 +1,6 @@
 ---
 name: agent-steward-guide
-description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制与 Systemd 常驻服务）、以及熟悉日常使用（CLI 命令行实操、18 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
+description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制与 Systemd 常驻服务）、以及熟悉日常使用（CLI 命令行实操、22 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
 ---
 
 # Agent Host Steward 全景向导与部署使用技能 (agent-steward-guide)
@@ -206,25 +206,29 @@ agent-steward close session-20261115-01 --clean-temp
 }
 ```
 
-#### 步骤 2: 18 个原生 MCP 工具全景矩阵
+#### 步骤 2: 22 个原生 MCP 工具全景矩阵
 
 | 分类 | 工具名称 | 核心功能说明 |
 |---|---|---|
 | **开工与全景** | `steward_brief` | 一键获取宿主机全局上下文与态势简报 |
 | **规范放置** | `steward_placement_suggest` | 咨询新文件/工程的规范存放路径与命名建议 |
 | | `steward_placement_rules` | 查看生效的 8 大目录放置规则清单 |
+| | `steward_placement_learn` | 放置规范自演化：聚类挖掘新规则候选与持久化 |
 | **资产纳管** | `steward_asset_search` | FTS5 全文与前缀模糊混合检索已知资产 |
 | | `steward_asset_register` | 手动纳管或标记特定路径资产 |
 | | `steward_asset_scan` | 触发指定目录白黑名单三级分级扫描 |
 | **环境与防撞** | `steward_env_processes` | 抓取活跃非系统动态任务脚本进程（过滤底噪） |
 | | `steward_env_show` | 查看宿主机 CPU、内存、磁盘与系统规格 |
+| | `steward_env_gc` | 宿主垃圾回收：安全清理超期临时文件与孤儿进程 |
 | | `steward_port_check` | 探测网络端口冲突并推荐连续空闲端口 |
 | **长期记忆** | `steward_memory_add` | 写入架构决策、踩坑教训或项目笔记 |
 | | `steward_memory_search` | BGE-M3 向量 + FTS5 RRF 倒数融合混合检索 |
+| | `steward_memory_audit` | 长期记忆体检：认知矛盾对与衰减淘汰仲裁 |
 | **图智能与联邦**| `steward_links_query` | 查询指定资产的出度/入度依赖拓扑网络 |
 | | `steward_links_visualize` | 将资产依赖关系导出为 Mermaid 图表 |
 | | `steward_links_impact` | 变更事前推演：递归计算多跳依赖爆炸半径 |
 | | `steward_links_audit` | 拓扑健康体检：扫描断链、缺失资产与离线服务 |
+| | `steward_links_repair` | 断链智能修复与重定向推演 (生成 patch 或自动应用) |
 | | `steward_codegraph_bridge`| 宏微双层联邦：穿透调用 CodeGraph 探索微观代码符号 |
 | **会话与审计** | `steward_changes_since` | 回溯指定时间窗口内的资产创建/修改/删除审计流 |
 | | `steward_session_close` | 会话完工结算：归档工单、自洁 `/tmp` 垃圾 |

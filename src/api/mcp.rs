@@ -224,10 +224,14 @@ mod tests {
 
         assert_eq!(v["id"], "req-2");
         let tools = v["result"]["tools"].as_array().expect("tools array");
-        assert!(tools.len() >= 8, "应至少注册 8 个核心工具");
+        assert_eq!(tools.len(), 22, "必须注册全部 22 个原生 MCP 工具");
         assert!(tools.iter().any(|t| t["name"] == "steward_brief"));
         assert!(tools.iter().any(|t| t["name"] == "steward_placement_suggest"));
         assert!(tools.iter().any(|t| t["name"] == "steward_asset_search"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_links_repair"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_placement_learn"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_env_gc"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_memory_audit"));
     }
 
     #[test]
@@ -317,5 +321,44 @@ mod tests {
         let notification = r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#;
         let resp = server.handle_message(notification);
         assert!(resp.is_none(), "Notification 无需返回 response");
+    }
+
+    #[test]
+    fn test_mcp_tools_call_phase7_autonomy() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let server = McpServer::new(storage);
+
+        // 测试调用 steward_memory_audit
+        let req = r#"{
+            "jsonrpc": "2.0",
+            "id": 103,
+            "method": "tools/call",
+            "params": {
+                "name": "steward_memory_audit",
+                "arguments": {}
+            }
+        }"#;
+
+        let resp = server.handle_message(req).expect("handle_message");
+        let v: Value = serde_json::from_str(&resp).expect("parse response");
+        assert_eq!(v["id"], 103);
+        assert_eq!(v["result"]["isError"], false);
+        let text = v["result"]["content"][0]["text"].as_str().expect("content text");
+        assert!(text.contains("conflict_count"));
+
+        // 测试调用 steward_links_repair
+        let req_repair = r#"{
+            "jsonrpc": "2.0",
+            "id": 104,
+            "method": "tools/call",
+            "params": {
+                "name": "steward_links_repair",
+                "arguments": { "apply": false }
+            }
+        }"#;
+        let resp_repair = server.handle_message(req_repair).expect("handle_message");
+        let v_rep: Value = serde_json::from_str(&resp_repair).expect("parse response");
+        assert_eq!(v_rep["id"], 104);
+        assert_eq!(v_rep["result"]["isError"], false);
     }
 }

@@ -48,14 +48,14 @@ flowchart TD
 
 | 任务编号 | 任务模块 | 核心工作内容 | 预期产出与验收门禁 | 状态 | 断点标记 | 完成时间 |
 |---|---|---|---|:---:|:---:|:---:|
-| **P7-1** | 拓扑自愈引擎 | 实现 `src/links/repair.rs`，基于 Levenshtein 相似度、Git 历史与指纹定位失效文件，生成修复 patch 并支持 `--apply` | `cargo test links::repair` 跑通，模拟断链自动修复成功 | ⬜ 待执行 | `CHECKPOINT-P7-1-REPAIR` | - |
-| **P7-2** | 放置自演化引擎 | 实现 `src/placement/learner.rs`，聚类分析 `changes` 路径特征，推断沉淀新规则候选并入库 | `cargo test placement::learner` 跑通，成功从样本提取出规则 | ⬜ 待执行 | `CHECKPOINT-P7-2-LEARN` | - |
-| **P7-3** | 宿主垃圾回收 | 实现 `src/env/gc.rs`，扫描 `/root/new/tmp/` 超期孤儿文件与 `/proc` 孤儿僵尸进程，支持 `--dry-run` | `cargo test env::gc` 跑通，安全隔离非临时目录 | ⬜ 待执行 | `CHECKPOINT-P7-3-GC` | - |
-| **P7-4** | 记忆生命周期与仲裁 | 实现 `src/memory/lifecycle.rs`，引入时间衰减半衰期计算与矛盾候选对探测，生成知识合并建议 | `cargo test memory::lifecycle` 跑通，成功标记对立记忆 | ⬜ 待执行 | `CHECKPOINT-P7-4-MEMORY` | - |
-| **P7-5** | 实时全景 TUI 看板 | 实现 `src/tui/` 交互式终端单屏仪表盘（硬件指标、动态进程树、端口拓扑、断链告警、变更流） | `steward tui` / `steward status --watch` 终端无闪烁正常渲染 | ⬜ 待执行 | `CHECKPOINT-P7-5-TUI` | - |
-| **P7-6** | MCP 矩阵升级 (22工具) | 注册 `steward_links_repair`, `steward_placement_learn`, `steward_env_gc`, `steward_memory_audit` | `cargo test api::mcp::tests` 验证 22 个工具全部就绪 | ⬜ 待执行 | `CHECKPOINT-P7-6-MCP` | - |
-| **P7-7** | 全量回归与生产升级 | 全量运行 `cargo test` (>= 40 tests)，构建 release 并热升级 `/usr/local/bin/agent-steward` 与 systemd 服务 | 全量测试 100% PASS，systemd 守护进程状态为 active | ⬜ 待执行 | `CHECKPOINT-P7-7-RELEASE` | - |
-| **P7-8** | 文档手册与镜像同步 | 同步更新 `manual/01~07`、`src_doc/product-manual.md`、`README.md`，同步镜像至 `/root/new/shared_git/agent-steward` | 全局死链扫描 100% 通过，两处 Git 仓库状态对齐 | ⬜ 待执行 | `CHECKPOINT-P7-8-DELIVERY` | - |
+| **P7-1** | 拓扑自愈引擎 | 实现 `src/links/repair.rs`，基于 Levenshtein 相似度、Git 历史与指纹定位失效文件，生成修复 patch 并支持 `--apply` | `cargo test links::repair` 跑通，模拟断链自动修复成功 | ✅ 已完成 | `CHECKPOINT-P7-1-REPAIR` | 2026-11-15 19:18 |
+| **P7-2** | 放置自演化引擎 | 实现 `src/placement/learner.rs`，聚类分析 `changes` 路径特征，推断沉淀新规则候选并入库 | `cargo test placement::learner` 跑通，成功从样本提取出规则 | ✅ 已完成 | `CHECKPOINT-P7-2-LEARN` | 2026-11-15 19:20 |
+| **P7-3** | 宿主垃圾回收 | 实现 `src/env/gc.rs`，扫描 `/root/new/tmp/` 超期孤儿文件与 `/proc` 孤儿僵尸进程，支持 `--dry-run` | `cargo test env::gc` 跑通，安全隔离非临时目录 | ✅ 已完成 | `CHECKPOINT-P7-3-GC` | 2026-11-15 19:22 |
+| **P7-4** | 记忆生命周期与仲裁 | 实现 `src/memory/lifecycle.rs`，引入时间衰减半衰期计算与矛盾候选对探测，生成知识合并建议 | `cargo test memory::lifecycle` 跑通，成功标记对立记忆 | ✅ 已完成 | `CHECKPOINT-P7-4-MEMORY` | 2026-11-15 19:24 |
+| **P7-5** | 实时全景 TUI 看板 | 实现 `src/tui/` 交互式终端单屏仪表盘（硬件指标、动态进程树、端口拓扑、断链告警、变更流） | `steward tui` / `steward status --watch` 终端无闪烁正常渲染 | ✅ 已完成 | `CHECKPOINT-P7-5-TUI` | 2026-11-15 19:28 |
+| **P7-6** | MCP 矩阵升级 (22工具) | 注册 `steward_links_repair`, `steward_placement_learn`, `steward_env_gc`, `steward_memory_audit` | `cargo test api::mcp::tests` 验证 22 个工具全部就绪 | ✅ 已完成 | `CHECKPOINT-P7-6-MCP` | 2026-11-15 19:30 |
+| **P7-7** | 全量回归与生产升级 | 全量运行 `cargo test` (>= 40 tests)，构建 release 并热升级 `/usr/local/bin/agent-steward` 与 systemd 服务 | 全量测试 100% PASS，systemd 守护进程状态为 active | ✅ 已完成 | `CHECKPOINT-P7-7-RELEASE` | 2026-11-15 19:32 |
+| **P7-8** | 文档手册与镜像同步 | 同步更新 `manual/01~07`、`src_doc/product-manual.md`、`README.md`，同步镜像至 `/root/new/shared_git/agent-steward` | 全局死链扫描 100% 通过，两处 Git 仓库状态对齐 | ✅ 已完成 | `CHECKPOINT-P7-8-DELIVERY` | 2026-11-15 19:39 |
 
 ---
 

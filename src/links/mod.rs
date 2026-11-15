@@ -6,6 +6,7 @@ use anyhow::Result;
 pub mod audit;
 pub mod codegraph_bridge;
 pub mod impact;
+pub mod repair;
 
 pub struct LinksEngine {
     storage: Arc<Storage>,

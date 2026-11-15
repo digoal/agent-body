@@ -23,6 +23,12 @@ enum Commands {
     #[command(about = "查看大管家运行状态与统计")]
     Status,
 
+    #[command(about = "启动交互式终端全景实时看板")]
+    Tui {
+        #[arg(short, long, default_value_t = 2, help = "看板刷新间隔秒数")]
+        interval: u64,
+    },
+
     #[command(about = "一键获取宿主环境与上下文简报")]
     Brief,
 
@@ -79,6 +85,18 @@ enum Commands {
         #[arg(long, default_value_t = true, help = "是否清理 /root/new/tmp/ 下属于本会话的临时文件")]
         clean_temp: bool,
     },
+
+    #[command(about = "宿主机孤儿进程与临时垃圾资源安全扫描与回收")]
+    Gc {
+        #[arg(long, default_value = "/root/new/tmp", help = "待清理的临时目录路径 (强制安全白名单)")]
+        tmp_dir: PathBuf,
+
+        #[arg(long, default_value_t = 72, help = "文件超期阈值 (小时)")]
+        max_age_hours: u64,
+
+        #[arg(long, help = "是否直接执行清理删除 (默认仅 dry-run 预览)")]
+        apply: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -113,6 +131,12 @@ enum LinksCommands {
         fix: bool,
     },
 
+    #[command(about = "智能推演断链修复建议并可一键应用补丁")]
+    Repair {
+        #[arg(long, help = "是否直接应用修复修改源文件与关联表")]
+        apply: bool,
+    },
+
     #[command(about = "跨层联动 CodeGraph 微观代码图")]
     Codegraph {
         #[arg(help = "目标项目工程路径或代码文件")]
@@ -142,6 +166,15 @@ enum PlaceCommands {
 
     #[command(about = "列出当前生效的宿主机目录放置规范")]
     Rules,
+
+    #[command(about = "从历史资产分布中自动挖掘自学习放置规则候选")]
+    Learn {
+        #[arg(short, long, default_value_t = 3, help = "聚类最小样本数")]
+        min_samples: usize,
+
+        #[arg(long, help = "自动采纳并入库所有发现的规则候选")]
+        accept: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -211,6 +244,12 @@ enum MemoryCommands {
         #[arg(long, default_value_t = true, help = "是否启用 Ollama 向量混合 RRF 检索")]
         hybrid: bool,
     },
+
+    #[command(about = "全面体检长期记忆健康度 (检测认知冲突矛盾与衰减淘汰候选)")]
+    Audit {
+        #[arg(long, help = "若存在冲突，指定归档淘汰的旧记忆 ID")]
+        archive_id: Option<String>,
+    },
 }
 
 #[tokio::main]
@@ -235,6 +274,12 @@ async fn main() -> Result<()> {
             println!("放置规范规则:   {} 条", rules.len());
             println!("分级扫描策略:   {} 条", policies.len());
             println!("当前动态进程:   {} 个", procs.len());
+        }
+
+        Commands::Tui { interval } => {
+            let arc_storage = std::sync::Arc::new(storage);
+            let dashboard = agent_steward::tui::TuiDashboard::new(arc_storage);
+            dashboard.run_loop(interval, None).await?;
         }
 
         Commands::Brief => {
@@ -288,6 +333,33 @@ async fn main() -> Result<()> {
                         println!("  - [{}] {} -> {} (优先级 {})", r.rule_name, r.pattern_type, r.target_base_dir, r.priority);
                         if let Some(desc) = r.description {
                             println!("    说明: {}", desc);
+                        }
+                    }
+                }
+                PlaceCommands::Learn { min_samples, accept } => {
+                    let learner = agent_steward::placement::learner::PlacementLearner::new(&storage);
+                    let rep = learner.learn_rules(min_samples)?;
+                    if rep.candidates.is_empty() {
+                        println!("未发现新的聚类放置模式（样本数低于 {} 或已被既有规则完全覆盖）。", min_samples);
+                    } else {
+                        println!("🔍 分析了 {} 个资产，发现 {} 个潜在的放置规则候选:", rep.total_analyzed_assets, rep.candidate_count);
+                        for c in &rep.candidates {
+                            println!("\n候选规则: {} ({})", c.rule_name, c.candidate_id);
+                            println!("建议基准目录: {}", c.target_base_dir);
+                            println!("推荐命名模式: {}", c.naming_pattern);
+                            println!("样本数: {}, 置信度: {:.2}", c.sample_count, c.confidence);
+                            println!("说明: {}", c.description);
+                            println!("样本示例:");
+                            for s in &c.sample_paths {
+                                println!("  - {}", s);
+                            }
+                            if accept {
+                                let rule = learner.apply_candidate(c)?;
+                                println!("  ✅ 已自动采纳并持久化新规则: {}", rule.rule_name);
+                            }
+                        }
+                        if !accept {
+                            println!("\n💡 提示: 添加 --accept 参数可一键将上述候选规则持久化到 placement_rules 表中。");
                         }
                     }
                 }
@@ -385,6 +457,27 @@ async fn main() -> Result<()> {
                         }
                     }
                 }
+                MemoryCommands::Audit { archive_id } => {
+                    let mgr = agent_steward::memory::lifecycle::MemoryLifecycleManager::new(&storage);
+                    if let Some(aid) = archive_id {
+                        mgr.archive_memory(&aid)?;
+                        println!("✅ 已将记忆条目 '{}' 状态归档为 'outdated'。", aid);
+                    }
+                    let rep = mgr.audit_memories()?;
+                    println!("长期记忆体检报告 (总记录: {}, 活跃: {}):", rep.total_memories, rep.active_memories);
+                    println!("  - 发现对立认知矛盾: {} 处", rep.conflict_count);
+                    println!("  - 发现低热度衰减候选: {} 处", rep.decayed_count);
+                    if !rep.conflicts.is_empty() {
+                        println!("\n⚠️ 冲突矛盾对详情:");
+                        for c in &rep.conflicts {
+                            println!("\n  冲突原因: {}", c.conflict_reason);
+                            println!("  [条目 A ({})]: {}", c.memory_id_a, c.content_a);
+                            println!("  [条目 B ({})]: {}", c.memory_id_b, c.content_b);
+                            println!("  仲裁建议: {}", c.suggested_resolution);
+                        }
+                        println!("\n💡 提示: 可通过 'steward memory audit --archive-id <ID>' 归档旧记录。");
+                    }
+                }
             }
         }
 
@@ -435,6 +528,25 @@ async fn main() -> Result<()> {
                         }
                     }
                 }
+                LinksCommands::Repair { apply } => {
+                    let repairer = agent_steward::links::repair::LinkRepairer::new(arc_storage);
+                    let rep = repairer.repair_links(apply)?;
+                    if rep.suggestions.is_empty() {
+                        println!("✅ 未发现可修复的断链或拓扑完全健康。");
+                    } else {
+                        println!("🔍 发现 {} 处缺失目标，找到 {} 处可自动修复候选 (已应用: {}):",
+                            rep.total_missing, rep.reparable_count, rep.applied_count);
+                        for sug in &rep.suggestions {
+                            println!("\n源文件: {} (行号: {:?})", sug.source_file, sug.line_number);
+                            println!("失效目标: {}", sug.missing_target);
+                            println!("推荐重定向: {} (相似度: {:.2}, 置信度: {})", sug.candidate_target, sug.similarity, sug.confidence);
+                            println!("补丁预览:\n{}", sug.patch_diff);
+                        }
+                        if !apply && rep.reparable_count > 0 {
+                            println!("\n💡 提示: 添加 --apply 参数可自动应用补丁并更新关联表。");
+                        }
+                    }
+                }
                 LinksCommands::Codegraph { path, symbol } => {
                     let p = std::path::Path::new(&path);
                     if let Some(sym) = symbol {
@@ -473,6 +585,31 @@ async fn main() -> Result<()> {
             let sm = agent_steward::session::SessionManager::new(arc_storage);
             let res = sm.close_session(&session_id, clean_temp)?;
             println!("{}", serde_json::to_string_pretty(&res)?);
+        }
+
+        Commands::Gc { tmp_dir, max_age_hours, apply } => {
+            let dry_run = !apply;
+            println!("正在扫描宿主垃圾资源 (目录: {:?}, 超期阈值: {} 小时, 模式: {})...",
+                tmp_dir, max_age_hours, if dry_run { "预览模式 (dry-run)" } else { "执行清理 (apply)" });
+            let rep = agent_steward::env::gc::HostGarbageCollector::run_gc(&tmp_dir, max_age_hours, dry_run)?;
+            println!("\n🧹 临时文件清理结果:");
+            println!("  - 扫描临时目录:   {}", rep.tmp_dir_scanned);
+            println!("  - 发现超期候选:   {} 个文件 ({:.2} MB)", rep.candidate_files_count, rep.candidate_bytes_reclaimed as f64 / (1024.0 * 1024.0));
+            println!("  - 实际删除释放:   {} 个文件 ({:.2} MB)", rep.deleted_files_count, rep.deleted_bytes_reclaimed as f64 / (1024.0 * 1024.0));
+            if dry_run && rep.candidate_files_count > 0 {
+                println!("  💡 提示: 添加 --apply 参数可真正物理删除上述超期文件。");
+            }
+
+            println!("\n👻 孤儿/失控 Agent Worker 进程诊断 (共 {} 个):", rep.orphan_processes.len());
+            if rep.orphan_processes.is_empty() {
+                println!("  ✅ 未发现孤儿僵尸进程，系统进程状态健康。");
+            } else {
+                for proc_ in &rep.orphan_processes {
+                    println!("  - [PID {}] {} (内存: {} MB, 运行: {} 秒)", proc_.pid, proc_.name, proc_.memory_mb, proc_.running_secs);
+                    println!("    命令: {}", proc_.command);
+                    println!("    诊断: {}", proc_.reason);
+                }
+            }
         }
     }
 

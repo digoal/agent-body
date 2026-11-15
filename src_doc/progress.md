@@ -28,24 +28,28 @@
 | | 5.2 | 运行全量 `cargo build` 与 `cargo test`，确保 100% 编译与通过测试 | 项目根目录 | ✅ 已完成 | 2026-11-15 12:59 |
 | | 5.3 | 编写使用手册 `src_doc/product-manual.md` 与根目录 README 联动 | `src_doc/product-manual.md`, `README.md` | ✅ 已完成 | 2026-11-15 13:00 |
 | **阶段 6** | 6.1~6.7 | 项目结构与文件规范化重构 (全小写 kebab-case、死链清理、31 单测回归、共享镜像同步) | 详见 [roadmap-phase6.md](roadmap-phase6.md) | ✅ 已完成 | 2026-11-15 18:31 |
-| **阶段 7** | 7.1~7.8 | 拓扑智能自愈、放置规则自进化、宿主资源 GC 与自治生态 (22 原生 MCP、TUI 看板、自愈修复) | 详见 [roadmap-phase7.md](roadmap-phase7.md) | ⬜ 待执行 | 规划完成 |
+| **阶段 7** | 7.1~7.8 | 拓扑智能自愈、放置规则自进化、宿主资源 GC 与自治生态 (22 原生 MCP、TUI 看板、自愈修复) | 详见 [roadmap-phase7.md](roadmap-phase7.md) | ✅ 已完成 | 2026-11-15 19:35 |
 
 ---
 
-## 阶段验收结论 (Phase 1~6)
+## 阶段验收结论 (Phase 1~7)
 
-✅ **阶段 1 至阶段 6 全部任务 100% 串行完成**！
+✅ **阶段 1 至阶段 7 全部 23 个子任务 100% 串行完成**！
 - 搭建了 Rust 1.99 + SQLite 3 (rusqlite bundled with FTS5) 本地编译与单元测试体系；
 - 实现了 `PlacementEngine`（新对象放置建议、冲突检测、安全脱敏规范）；
+- 实现了 `PlacementLearner`（基于历史资产与变更聚类自学习沉淀新规范）；
 - 实现了 `Scanner`（白名单深度遍历、黑名单仅止于当前目录层级绝不下钻）；
 - 实现了 `EnvCollector`（硬件规格采集与 `/proc` 活跃动态任务进程采集）；
+- 实现了 `HostGarbageCollector`（安全白名单清理 `/root/new/tmp/` 超期孤儿文件与僵尸进程诊断）；
 - 实现了 `MemoryManager`（记忆录入与 FTS5+BGE-M3 混合 RRF 搜索）；
+- 实现了 `MemoryLifecycleManager`（时间半衰期衰减与对立语义认知矛盾仲裁）；
 - 实现了 `LinksEngine` 与 `CodeGraphBridge` 宏微双层联邦联动，支持断链审计与爆炸半径推演；
-- 实现了 18 个原生 MCP 工具端点与 CLI 子系统；
-- 全量单元测试 `cargo test` 31 项全部通过，二进制真实运行验证无误；
-- 完成系统级常驻服务部署 (`/usr/local/bin/agent-steward` + systemd) 与开源镜像同步；
-- 彻底完成目录结构与文件命名的规范化（全小写 kebab-case），清理空目录与修复 187 处链接引用；
-- 建立了下一阶段演进路线图：[roadmap-phase7.md](roadmap-phase7.md)。
+- 实现了 `LinkRepairer`（基于 Levenshtein 相似度与代码指纹自动推演断链修复 patch）；
+- 实现了 `TuiDashboard`（交互式终端单屏实时看板与状态刷新）；
+- 实现了 22 个原生 MCP 工具端点与 CLI 子系统；
+- 全量单元测试 `cargo test` **40 项全部通过 (100% PASS)**，release 构建通过并热升级常驻守护服务；
+- 彻底完成目录结构与文件命名的规范化（全小写 kebab-case），清理空目录与修复全局引用；
+- 交付件完整落地于 `manual/`、`src_doc/`、`README.md` 与 `/root/new/shared_git/agent-steward`。
 
 ---
 
