@@ -142,6 +142,15 @@ enum EnvCommands {
 
     #[command(about = "查看活跃动态任务与普通进程 (过滤系统底噪)")]
     Processes,
+
+    #[command(about = "端口防撞预警与空闲端口推荐")]
+    Port {
+        #[arg(help = "拟占用的网络端口号")]
+        port: u16,
+
+        #[arg(short, long, default_value_t = 3, help = "推荐备用空闲端口个数")]
+        suggest_count: usize,
+    },
 }
 
 #[derive(Subcommand)]
@@ -305,6 +314,10 @@ async fn main() -> Result<()> {
                         let cmd_trunc = if p.command.len() > 60 { format!("{}...", &p.command[..60]) } else { p.command };
                         println!("{:<8} {:<10} {:<6.1} {:<10.1} {:<18} {}", p.pid, p.name, p.cpu_pct, mem_mb, p.owner, cmd_trunc);
                     }
+                }
+                EnvCommands::Port { port, suggest_count } => {
+                    let res = agent_steward::env::port::PortChecker::check_port(port, suggest_count)?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
                 }
             }
         }

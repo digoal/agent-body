@@ -10,9 +10,9 @@
 
 | 阶段 | 任务 ID | 任务内容 | 涉及模块与文件 | 预期产出 / 验收标准 | 状态 |
 |---|---|---|---|---|---|
-| **第一阶段: 端口防撞预警与进程健康** | P3-1 | 实现本地端口监听探测与占用进程识别 (`steward_env_port_check`) | `src/env/port.rs`, `src/env/mod.rs` | 毫秒级探测端口占用 PID，并推荐 3 个连续可用空闲端口 | ⬜ 待执行 |
-| | P3-2 | 注册 `steward_port_check` MCP 工具并在 CLI 中暴露 `steward env port` | `src/api/mcp_tools.rs`, `src/main.rs` | 支持 Agent 在起服务前主动防撞 | ⬜ 待执行 |
-| **第二阶段: 关联拓扑逆向爆炸半径** | P3-3 | 基于 `links` 表实现逆向依赖推演与多跳影响面分析 (`steward_links_impact`) | `src/links/impact.rs`, `src/links/mod.rs` | 输入资产路径，递归返回直接依赖与间接下游，标明风险等级 | ⬜ 待执行 |
+| **第一阶段: 端口防撞预警与进程健康** | P3-1 | 实现本地端口监听探测与占用进程识别 (`steward_env_port_check`) | `src/env/port.rs`, `src/env/mod.rs` | 毫秒级探测端口占用 PID，并推荐 3 个连续可用空闲端口 | ✅ 已完成 (2026-11-15 15:06) |
+| | P3-2 | 注册 `steward_port_check` MCP 工具并在 CLI 中暴露 `steward env port` | `src/api/mcp_tools.rs`, `src/main.rs` | 支持 Agent 在起服务前主动防撞 | ✅ 已完成 (2026-11-15 15:07) |
+| **第二阶段: 关联拓扑逆向爆炸半径** | P3-3 | 基于 `links` 表实现逆向依赖推演与多跳影响面分析 (`steward_links_impact`) | `src/links/impact.rs`, `src/links/mod.rs` | 输入资产路径，递归返回直接依赖与间接下游，标明风险等级 | ⏳ 进行中 |
 | | P3-4 | 注册 `steward_links_impact` MCP 工具并在 CLI 中暴露 `steward links impact` | `src/api/mcp_tools.rs`, `src/main.rs` | 支持 Agent 动刀前推演上下游影响 | ⬜ 待执行 |
 | **第三阶段: 语义与全文混合检索** | P3-5 | 设计本地 Ollama Embedding 异步客户端与 RRF 排序融合算法 | `src/memory/hybrid.rs`, `src/memory/mod.rs` | 结合 FTS5 关键词与余弦向量相似度计算 RRF 得分 | ⬜ 待执行 |
 | | P3-6 | 升级 `steward_memory_search` 支持 hybrid 模式 | `src/api/mcp_tools.rs`, `src/main.rs` | 具备近义概念召回能力，优雅降级（无 Ollama 时自动退化为 FTS5） | ⬜ 待执行 |

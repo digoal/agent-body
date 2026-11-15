@@ -199,6 +199,18 @@ impl McpToolRegistry {
                         "limit": { "type": "integer", "default": 20 }
                     }
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_port_check",
+                "description": "端口防撞预警与空闲推荐：启动服务或绑定端口前检测是否冲突，若冲突返回占用进程详情与推荐可用端口。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "port": { "type": "integer", "description": "拟占用的网络端口号 (1-65535)" },
+                        "suggest_count": { "type": "integer", "default": 3, "description": "若冲突返回推荐空闲端口个数" }
+                    },
+                    "required": ["port"]
+                }
             })
         ]
     }
@@ -400,6 +412,13 @@ impl McpToolRegistry {
                 let since = args.get("since").and_then(|v| v.as_str());
                 let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(20) as usize;
                 engine.generate_summary_markdown(since, limit)
+            }
+
+            "steward_port_check" => {
+                let port = args.get("port").and_then(|v| v.as_u64()).unwrap_or(8080) as u16;
+                let suggest_count = args.get("suggest_count").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
+                let res = crate::env::port::PortChecker::check_port(port, suggest_count)?;
+                Ok(serde_json::to_string_pretty(&res)?)
             }
 
             _ => bail!("Unknown tool: {}", name),

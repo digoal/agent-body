@@ -4,6 +4,8 @@ use sysinfo::{CpuRefreshKind, Disks, MemoryRefreshKind, ProcessRefreshKind, Refr
 use crate::storage::Storage;
 use crate::storage::models::ActiveProcessRecord;
 
+pub mod port;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemSummary {
     pub os_name: String,
