@@ -16,8 +16,8 @@
 | | P3-4 | 注册 `steward_links_impact` MCP 工具并在 CLI 中暴露 `steward links impact` | `src/api/mcp_tools.rs`, `src/main.rs` | 支持 Agent 动刀前推演上下游影响 | ✅ 已完成 (2026-11-15 15:11) |
 | **第三阶段: 语义与全文混合检索** | P3-5 | 设计本地 Ollama Embedding 异步客户端与 RRF 排序融合算法 | `src/memory/hybrid.rs`, `src/memory/mod.rs` | 结合 FTS5 关键词与余弦向量相似度计算 RRF 得分 | ✅ 已完成 (2026-11-15 15:18) |
 | | P3-6 | 升级 `steward_memory_search` 支持 hybrid 模式 | `src/api/mcp_tools.rs`, `src/main.rs` | 具备近义概念召回能力，优雅降级（无 Ollama 时自动退化为 FTS5） | ✅ 已完成 (2026-11-15 15:20) |
-| **第四阶段: 会话生命周期与环境治理** | P3-7 | 实现会话完工结算引擎与临时目录 TTL 清理 (`steward_session_close`) | `src/session/mod.rs`, `src/changes/mod.rs` | 自动汇总会话环境变更入库记忆，安全清理临时资产与孤儿进程 | ⏳ 进行中 |
-| | P3-8 | 注册 `steward_session_close` MCP 工具并暴露 CLI | `src/api/mcp_tools.rs`, `src/main.rs` | 实现 Agent 会话闭环与环境自洁 | ⬜ 待执行 |
+| **第四阶段: 会话生命周期与环境治理** | P3-7 | 实现会话完工结算引擎与临时目录 TTL 清理 (`steward_session_close`) | `src/session/mod.rs`, `src/changes/mod.rs` | 自动汇总会话环境变更入库记忆，安全清理临时资产与孤儿进程 | ✅ 已完成 (2026-11-15 15:24) |
+| | P3-8 | 注册 `steward_session_close` MCP 工具并暴露 CLI | `src/api/mcp_tools.rs`, `src/main.rs` | 实现 Agent 会话闭环与环境自洁 | ✅ 已完成 (2026-11-15 15:25) |
 
 ---
 

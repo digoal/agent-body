@@ -224,6 +224,18 @@ impl McpToolRegistry {
                     },
                     "required": ["target"]
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_session_close",
+                "description": "会话完工结算与环境治理：在任务结束时清理临时测试文件、汇总环境变更、并将工单成果归档沉淀到长期记忆。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "session_id": { "type": "string", "description": "当前会话的唯一标识" },
+                        "clean_temp": { "type": "boolean", "default": true, "description": "是否清理 /root/new/tmp/ 下属于本会话的临时文件" }
+                    },
+                    "required": ["session_id"]
+                }
             })
         ]
     }
@@ -458,6 +470,15 @@ impl McpToolRegistry {
                 let target = args.get("target").and_then(|v| v.as_str()).unwrap_or("");
                 let max_depth = args.get("max_depth").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
                 let res = analyzer.analyze_impact(target, max_depth)?;
+                Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_session_close" => {
+                let arc_storage = Arc::new(self.storage.clone());
+                let sm = crate::session::SessionManager::new(arc_storage);
+                let session_id = args.get("session_id").and_then(|v| v.as_str()).unwrap_or("default");
+                let clean_temp = args.get("clean_temp").and_then(|v| v.as_bool()).unwrap_or(true);
+                let res = sm.close_session(session_id, clean_temp)?;
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 

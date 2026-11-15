@@ -70,6 +70,15 @@ enum Commands {
         #[arg(short, long, default_value_t = 20)]
         limit: usize,
     },
+
+    #[command(about = "会话完工结清与环境治理 (清理临时测试资产并归档会话纪要)")]
+    Close {
+        #[arg(help = "当前会话的唯一标识 (Session ID)")]
+        session_id: String,
+
+        #[arg(long, default_value_t = true, help = "是否清理 /root/new/tmp/ 下属于本会话的临时文件")]
+        clean_temp: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -403,6 +412,13 @@ async fn main() -> Result<()> {
             let engine = agent_steward::changes::ChangesEngine::new(arc_storage);
             let summary = engine.generate_summary_markdown(since.as_deref(), limit)?;
             println!("{}", summary);
+        }
+
+        Commands::Close { session_id, clean_temp } => {
+            let arc_storage = std::sync::Arc::new(storage);
+            let sm = agent_steward::session::SessionManager::new(arc_storage);
+            let res = sm.close_session(&session_id, clean_temp)?;
+            println!("{}", serde_json::to_string_pretty(&res)?);
         }
     }
 

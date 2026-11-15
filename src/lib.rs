@@ -9,5 +9,6 @@ pub mod watcher;
 pub mod daemon;
 pub mod links;
 pub mod changes;
+pub mod session;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
