@@ -1,0 +1,121 @@
+---
+name: agent-steward-doc-writer
+description: 专门用于协助 Agent 编写、维护、同步与迭代本项目（Agent Host Steward）使用手册（存放在 manual/ 目录）及根目录 README.md 的专业文档工程师技能。强制执行“代码事实第一”、“命令实跑验证”、“面向小白通俗友好同时兼顾专家深度”、“Mermaid 图表无错渲染”与“断点式分章节渐进编写”规范。适用于：当项目新增特性、API/CLI 调整、架构重构后，系统性更新或新建 manual/ 使用手册及根目录 README.md。
+---
+
+# Agent Host Steward 文档编写与手册迭代技能 (agent-steward-doc-writer)
+
+> **定位**: 本技能驻留在 `agent-steward` 项目内部（`skills/agent-steward-doc-writer/SKILL.md`），是指导任何接手该项目的 AI Agent（无论是主 Agent 还是文档 Subagent）高保真、可复现、接地气地编写与迭代项目根目录 `README.md` 及 `manual/` 用户手册的操作指南。
+
+---
+
+## 一、核心原则与写作戒律（红线）
+
+写技术文档不是堆砌名词，更不是凭空编造。编写本项目的任何文档，必须严格遵守以下 **六大铁律**：
+
+1. **代码真实性第一（Zero Hallucination）**：
+   - 所有的命令参数、子命令名称、配置项键名、MCP 工具名称、JSON 返回结构，必须直接源自 `src/` 源码（如 `src/main.rs`, `src/api/mcp_tools.rs`, `src/config/mod.rs`），绝不允许擅自发明不存在的命令或参数。
+2. **命令必须实跑验证（Execution-Verified）**：
+   - 文档中凡是贴出的 CLI 输出、curl 返回或 JSON 示例，**必须使用编译出来的实际二进制执行一次**（例如 `./target/release/agent-steward env port 22`），捕获真实输出后贴入，严禁“凭印象编造输出”。
+3. **通俗易懂与直击痛点（小白听得懂，架构师有共鸣）**：
+   - 开篇不讲枯燥概念，先讲**场景痛点**（“为什么 Agent 换了个会话就乱放文件？”、“为什么启动测试服务会把宿主机端口打架打崩？”）；
+   - 用大白话类比解释核心机制（例如：黑名单浅层阻断 = “敲门但不进屋”，防止把 node_modules 万级无用碎片扫爆数据库）。
+4. **全套结构化排版与防渲染踩坑**：
+   - 代码块标注具体语言（`bash`, `json`, `toml`, `sql`）；
+   - 所有 Mermaid 图必须使用标准语法（节点文字含特殊符号或括号必须用双引号包裹，如 `node["描述 (详情)"]`），布局美观，避免文字重叠或溢出；
+   - 目录链接必须真实有效。
+5. **双轮驱动同步机制**：
+   - 任何核心特性的发布或调整，必须同步检查：
+     - **根目录 `README.md`**：保持项目门面最新（架构全景、核心定位、快速上手、MCP 配置简明指南）；
+     - **`manual/` 目录**：保持深度手册完备（章节化深度展开、排障常见问题、参数字典）。
+6. **断点式增量推进**：
+   - 当需要重构或批量撰写 `manual/` 多章节长手册时，必须在 `manual/README.md` 中维护章节目录进度清单，按章节串行步进。
+
+---
+
+## 二、文档目标受众与手册目录体系架构
+
+### 2.1 读者画像
+1. **AI Agent 本身**：通过阅读 `README.md` 和 `manual/` 中的快速指南，知道如何通过 stdio MCP 挂载大管家，在开工时主动调用 `steward_brief`。
+2. **普通开发者与个人博主**：希望能一条命令安装并作为后台守护进程跑起来，规范本地文件和记忆。
+3. **架构师与运维 DBA**：关心安全隐私（数据是否全部本地 SQLite）、资源消耗（CPU < 1%）、分级扫描与端口防撞机制。
+
+### 2.2 `manual/` 目录推荐标准体系
+`manual/` 目录下推荐拆分为结构清晰的专题文档：
+
+```
+manual/
+├── README.md                  # 手册导航目录与阅读路线
+├── 01-getting-started.md      # 快速安装、编译、首次启动与配置引导
+├── 02-core-concepts.md        # 核心理念：大管家定位、黑白名单颗粒度、放置建议哲学
+├── 03-cli-reference.md        # 完整 CLI 命令行使用字典（全命令+全参数+实跑示例）
+├── 04-mcp-integration.md      # 接入 Agent：Claude Desktop / Cursor / Antigravity 配置指南
+├── 05-daemon-and-watcher.md   # 后台常驻服务与 Linux inotify 自动审计机制
+├── 06-advanced-features.md    # 进阶特性：混合检索 (RRF)、端口防撞、逆向爆炸半径推演
+└── 07-troubleshooting.md      # 常见问题、数据库维护与排障指南 (FAQ)
+```
+
+---
+
+## 三、文档编写与迭代五步工作流
+
+```mermaid
+flowchart TD
+    A["步骤 1: 提取代码事实<br/>(核对 src/ 源码中的 CLI 与 MCP 规格)"] --> B["步骤 2: 实操命令获取真实输出<br/>(运行 target/release/agent-steward)"]
+    B --> C["步骤 3: 拟定或更新章节草稿<br/>(落盘至 manual/ 或 README.md)"]
+    C --> D["步骤 4: 渲染合规性与链接自检<br/>(检查 Mermaid / Markdown 语法 / 链接有效性)"]
+    D --> E["步骤 5: 提交前三段式小结<br/>(更新完成，提供 Commit 建议)"]
+```
+
+### 步骤 1: 提取代码事实
+在动笔前，Agent 必须快速查阅：
+- `src/main.rs`：当前支持的所有子命令与 flags 参数；
+- `src/api/mcp_tools.rs`：当前注册的所有原生 MCP 工具名与 inputSchema；
+- `src/config/mod.rs`：当前的 `config.toml` 字段；
+- `src/storage/schema.sql`：预置的 8 大放置规则与 10 大扫描策略。
+
+### 步骤 2: 实操命令获取真实输出
+针对文档中需要出现的示例，在终端中以 release 二进制执行：
+```bash
+./target/release/agent-steward place suggest --type script --name demo_tool --intent "数据抓取"
+./target/release/agent-steward env port 22
+./target/release/agent-steward links impact /root/new/shared_proj/test.py
+```
+将真实返回结果原汁原味地嵌入代码块。
+
+### 步骤 3: 结构化撰写规范
+每个命令或工具的介绍必须遵循 **四段式结构**：
+1. **这是什么（一句话大白话）**；
+2. **为什么需要它（解决什么痛点）**；
+3. **真实调用示例与参数说明（含 CLI 与 MCP 对应方法）**；
+4. **实际返回输出与结果解读**。
+
+### 步骤 4: Markdown 与 Mermaid 自检
+- **代码块语法声明**：严格区分 `bash` 与 `json`；
+- **Mermaid 括号转义**：
+  - 错误写法: `A[客户端(Agent)]`
+  - 正确写法: `A["客户端 (Agent)"]`
+- **文件链接规范**：必须使用可点击的相对路径或本地路径。
+
+### 步骤 5: 交付检查与 Commit
+- 检查 `README.md` 与 `manual/` 是否无缝对应；
+- 交付三段式小结给用户，并附上规范的 Git Commit Message。
+
+---
+
+## 四、文档风格与表达指南（"德哥"接地气风范）
+
+- **杜绝官话套话**：不要写“本系统采用了高效的分布式协同机制”，而要写“大管家死守一条原则：白名单深挖到底，黑名单绝不下钻，哪怕你目录里有十万个 node_modules 垃圾碎片，也绝不把 SQLite 扫爆”。
+- **注重实战场景**：多举具体路径（如 `/root/new/shared_proj/`, `/root/new/work/`, `/root/new/tmp/`）。
+- **善用图解**：复杂的数据流动与生命周期，必须用 Mermaid 流程图直观表现。
+
+---
+
+## 五、自检 Checklist（发布文档前必对）
+
+- [ ] 文档中的 CLI 命令是否与 `src/main.rs` 中的定义 100% 吻合？
+- [ ] 文档中的 MCP 工具名是否与 `src/api/mcp_tools.rs` 100% 吻合？
+- [ ] 文档中贴出的 JSON 输出是否经过实际命令运行捕获，而非凭空假想？
+- [ ] Mermaid 节点文字中的括号是否全部加了双引号（防渲染崩溃）？
+- [ ] `README.md` 是否已同步最新架构与功能特性？
+- [ ] `manual/` 目录下的超链接是否全部有效无死链？
