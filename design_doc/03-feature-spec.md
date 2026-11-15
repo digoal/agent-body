@@ -1,83 +1,134 @@
-# 03 — 功能规格（Feature Spec）
+# 03 — 功能规格（Feature Spec）· 三模块解耦版
 
-> Agent Host Steward 产品设计 · 交付件 3/7
-> 版本: v1.0 · 更新: 2026-11-15
+> Agent Host Steward 产品设计 · 交付件 3/7  
+> 版本: v2.0 (模块化体系升级) · 更新: 2026-11-15  
+> 战略原则: **事实图谱为基石护城河 · 偏好规约为协作灵魂 · 记忆模块开放插拔成熟生态**
 
 ---
 
 ## 一、产品名称与定位
 
-**产品名**: `steward` (Agent Host Steward)
+**产品名**: `agent-steward` (Agent Host Steward / 宿主环境大管家)
 
-**一句话定位**: 驻留在 Agent 宿主机上的环境大管家 —— 为 AI Agent 提供记忆、资产、环境、变更的统一持久化与关联检索基础设施。
+**核心使命**: 驻留在 AI Agent 宿主机中的轻量级系统认知底座。它彻底消除了 Agent 对宿主机物理世界的“全盲”状态，建立机器真实世界的客观事实图谱；同时规约用户的代码与文件放置偏好；并通过可插拔标准无缝集成成熟的跨会话记忆生态。
 
-**产品形态**: 本地 daemon 进程 + CLI 工具 + MCP/REST API
+**产品形态**: 单二进制守护进程 (Rust 编写) + CLI 工具 + 标准 MCP stdio/SSE 接口 + Unix Socket
 
 ---
 
-## 二、模块划分
+## 二、三模块核心划分与边界
 
 ```
-steward
-├── core/          # 核心引擎：存储、索引、搜索
-├── memory/        # 记忆管理模块
-├── assets/        # 资产管理模块
-├── env/           # 环境感知模块
-├── changes/       # 变更管理模块
-├── links/         # 智能关联模块
-├── api/           # 对外接口层（MCP + REST + CLI）
-├── scheduler/     # 定时任务调度（巡检、维护、快照）
-└── config/        # 配置管理
+agent-steward
+│
+├── 1. 事实图谱模块 (Host Reality Graph - 核心护城河)
+│   ├── capability/       # 软件与 CLI 工具能力语义注解库 (如 pdftotext, ffmpeg, jq)
+│   ├── process_net/      # /proc 内核级进程与网络端口动态映射 (排障/防撞)
+│   ├── automation/       # systemd 依赖网络 + crontab 定时偷跑感知
+│   ├── assets_code/      # 源码仓库发现 (CodeGraph状态) + 权威资料库编目
+│   └── changes_audit/    # 文件实时 inotify 变更流与逆向爆炸半径推演
+│
+├── 2. 偏好与规约模块 (Preference & Governance - 协作灵魂)
+│   ├── placement/        # 资产放置规则引擎 (路径推荐/命名规范/安全边界)
+│   ├── conventions/      # 用户操作习惯与工程规约 (首选工具/数据真实性/时区)
+│   └── rule_learner/     # 纠偏自演化学习器 (从用户人工纠错中归纳新规则)
+│
+└── 3. 记忆与上下文模块 (Memory & Context - 开放可插拔生态)
+    ├── spi/              # 通用 MemoryProvider 特征抽象 (Search/Store/Context/Evict)
+    ├── builtin/          # 内置开箱即用引擎 (SQLite FTS5 + 本地向量混合检索)
+    └── adapters/         # 成熟开源项目桥接器 (Mem0 / Letta / PowerContext / Zep)
 ```
 
 ---
 
 ## 三、模块功能详述
 
-### 模块 1：Memory（记忆管理）
+### 模块 1：宿主机事实图谱 (Host Reality Graph) —— 【核心护城河】
 
-#### 1.1 数据模型
+#### 1.1 软件与 CLI 工具能力语义注解 (Capability Graph)
+- **业务价值**：当 Agent 面临任务时，无需盲目写脚本或反复 pip 安装失败，直接获知宿主机已就绪的最佳 CLI 工具和参数。
+- **核心功能**：
+  1. 自动化扫描系统 `$PATH` 下的可执行二进制文件；
+  2. 匹配内置的“系统工具能力知识库”，为工具打上功能语义标签（如 `pdf-text-extract`, `image-convert`, `video-transcode`, `json-query`, `fast-search`, `network-sniff`）；
+  3. 提供最佳实践命令行模板与避坑提示（例如 `pdftotext -layout input.pdf output.txt` 保持原样排版）。
+- **查询接口契约**：
+  - `steward_fact_query(type="capability", intent="<自然语言意图>")`
+  - 返回：推荐工具名、二进制物理绝对路径、已安装版本号、推荐调用参数、同类备选工具列表。
 
-每条记忆是一个 `MemoryEntry`：
+#### 1.2 运行时进程与网络拓扑 (Process & Net Graph)
+- **业务价值**：起服务前防撞，端口被占时秒级排障，识别后台孤儿任务。
+- **核心功能**：
+  1. 直接读取 `/proc` 文件系统与内核网络套接字（零子进程 fork 性能损耗）；
+  2. 自动过滤内核底噪（`kworker`, `systemd-journald` 等），专注应用级工作负载；
+  3. 端口全景映射：提供端口占用状态、PID、可执行文件完整命令行、工作目录、运行时间、启动者。
+- **查询接口契约**：
+  - `steward_port_check(port=<int>)`
+  - `steward_env_processes(filter="<keyword>", include_system=false)`
 
-```
-MemoryEntry:
-  id:            UUID
-  type:          enum [decision, task, experience, preference, fact, note]
-  content:       text            # 记忆正文
-  summary:       text            # 一句话摘要（用于列表展示和快速匹配）
-  source:        object          # 来源信息
-    session_id:  string          #   会话 ID
-    agent:       string          #   Agent 名称（Antigravity/Cursor/自定义）
-    timestamp:   datetime        #   产生时间
-  tags:          string[]        # 标签
-  weight:        float [0, 1]    # 权重（影响召回优先级）
-  pinned:        bool            # 是否永不衰减
-  status:        enum [active, archived, outdated]
-  context_id:    string          # 关联上下文 ID（用于跨维度关联）
-  embedding:     vector(768)     # 语义向量
-  created_at:    datetime
-  updated_at:    datetime
-  last_accessed: datetime        # 最后被引用的时间
-  access_count:  int             # 被引用次数
-```
+#### 1.3 系统自动化拓扑 (Systemd & Cron Topology)
+- **业务价值**：消除“后台神秘脚本干扰”，防止改动通用配置导致后台生产服务挂掉。
+- **核心功能**：
+  1. 解析 `/etc/systemd/system/` 单元依赖，识别服务依赖的 `EnvironmentFile`、`ConfigurationFile` 与工作目录；
+  2. 解析全系统及当前用户的 `crontab` 调度，掌握定时任务执行周期、运行脚本与日志输出路径；
+  3. 跨实体关联：输入某配置文件路径，反向推导受其影响的 systemd 服务或 cron 脚本。
 
-#### 1.2 核心操作
+#### 1.4 本地源码库与权威资料编目 (Code & Knowledge Graph)
+- **业务价值**：Agent 开工前了解本地已有哪些宝藏代码与资料，不重复造轮子、不盲目外网乱搜。
+- **核心功能**：
+  1. 源码发现：自动发现宿主机所有 Git 仓库（如 `/root/new/src`、`/root/new/work`），识别分支与最近提交；
+  2. CodeGraph 就绪状态检测：标明仓库根目录是否存在 `.codegraph`，指导 Agent 优先使用 `codegraph mcp` 探索代码；
+  3. 资料库发现：编目本地权威资料（如 `/root/new/note/` 权威网站、离线技术手册、常用脚本库 `/root/new/shared_proj`）。
 
-| 操作 | 说明 | 需求来源 |
-|------|------|----------|
-| `memory.write` | 写入一条记忆 | FM-01 |
-| `memory.search` | 语义搜索 + 关键词搜索 + 过滤 | FM-02, FM-03 |
-| `memory.get` | 按 ID 获取 | FM-01 |
-| `memory.update` | 更新记忆内容/标签/状态 | FM-01 |
-| `memory.delete` | 软删除 | FM-01 |
-| `memory.import` | 从外部会话历史批量导入 | FM-04 |
-| `memory.task.create` | 创建任务记忆 | FM-10 |
-| `memory.task.update` | 更新任务进度 | FM-10 |
-| `memory.task.list` | 列出进行中的任务 | FM-10 |
-| `memory.maintain` | 触发记忆维护（衰减/强化/合并/过时检测） | FM-06~09 |
+#### 1.5 物理文件动态审计与逆向爆炸半径 (Changes & Impact)
+- **核心功能**：
+  1. inotify 监听核心代码与配置目录，带 300ms 智能防抖；
+  2. 审计近期变更：过去 1 小时/24 小时哪些文件被改动；
+  3. 爆炸半径分析（`steward_links_impact`）：输入某公共模块，多跳追溯下游引用依赖链。
 
-#### 1.3 搜索策略
+---
+
+### 模块 2：用户偏好与规约引擎 (Preference & Governance) —— 【协作灵魂】
+
+#### 2.1 资产放置规则引擎 (Placement Engine)
+- **业务价值**：解决“用户偏好把文件放哪”，杜绝 Agent 乱建文件、地皮污染。
+- **核心功能**：
+  1. **意图匹配与推荐**：根据 Agent 提出的资产类型（`script`, `skill`, `project`, `tmp`, `doc`）和自然语言意图，精准推荐基准物理路径；
+  2. **命名范式规约**：强制遵循项目命名规范（蛇形命名、小写下划线、版本号格式等）；
+  3. **安全隔离准则**：临时实验必须放 `/root/new/tmp/` 并具备 TTL 回收机制；敏感凭据严格阻断进入公共资产。
+- **接口契约**：
+  - `steward_placement_suggest(type="<type>", name="<name>", intent="<intent>")`
+
+#### 2.2 用户工程与工作流习惯 (Conventions)
+- **工具链偏好**：例如在已有 `.codegraph` 项目中优先使用 `codegraph` 工具而非 `grep`；
+- **时区与风格**：强制使用北京时间，技术写作严格校验数据真实性；
+- **排版标准**：SVG 必须独立落盘为文件再在 Markdown 中引用。
+
+#### 2.3 纠偏自演化学习机制 (Feedback Learner)
+- **核心机制**：
+  - 当检测到 Agent 产生的文件被人工移动或覆盖时，触发纠偏分析；
+  - 提炼新偏好规则并入库，随着协作越深入，大管家越懂用户的组织习惯。
+
+---
+
+### 模块 3：记忆与上下文适配层 (Memory & Context) —— 【开放可插拔生态】
+
+#### 3.1 战略原则：生态共赢、绝不重复造轮子
+市面上已有成熟的开源记忆项目（Mem0、Letta、Zep、PowerContext 等），大管家不把精力浪费在重新发明认知心理学长程记忆模型上，而是**定义开放的通用接口，做统一的接入中枢**。
+
+#### 3.2 抽象接口 SPI (Service Provider Interface)
+- `search(query, limit, filter)`: 跨会话搜索过往决策、排障经验、用户画像；
+- `store(item)`: 沉淀关键决策、工单总结、任务避坑记录；
+- `get_context(session_id)`: 一键拉取当前 Agent 所需的会话级背景信息；
+- `evict(criteria)`: 根据时间或权重衰减淘汰过期噪音。
+
+#### 3.3 双模支持与生态适配器
+1. **内置轻量 Provider (Built-in Local Provider)**：
+   - 基于 SQLite FTS5 全文检索 + 本地 Embedding（Ollama / 纯文本降级）；
+   - 零网络开销、单机内嵌，开箱即用。
+2. **外部成熟开源适配器 (External Adapters)**：
+   - **Mem0 Adapter**: 桥接 Mem0 REST/SDK，享受工业级事实抽取与用户画像追踪；
+   - **Letta Adapter**: 桥接 Letta 核心记忆系统；
+   - **PowerContext Adapter**: 桥接针对代码库与工程上下文深度优化的 PowerContext 记忆体系。
 
 搜索分三路并行，结果合并排序：
 

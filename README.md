@@ -1,7 +1,7 @@
 # Agent Host Steward (宿主环境大管家)
 
-> **管记忆、管素材、管软件环境、管动态进程、管一切静态与动态对象的位置规范。**  
-> 驻留在 Agent 宿主机中的轻量级系统级认知底座（Rust Edition · 单二进制交付）。
+> **三位一体架构：宿主机事实图谱为核心护城河 · 用户偏好规约为协作准则 · 记忆模块开放插拔成熟生态**  
+> 驻留在 Agent 宿主机中的轻量级系统认知底座（Rust Edition · 单二进制交付）。
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-1.99.0-orange.svg)](https://www.rust-lang.org/)
@@ -12,41 +12,89 @@
 
 ## 什么是 Agent Host Steward？
 
-这不是为了让 Agent 做好某一次任务、一次协作而生的应用框架，而是让 Agent **更清晰地了解自己所处的宿主系统环境**，更好地完成任务和长期协作。
+市面上有大量专注于“跨会话记忆”或“对话摘要”的开源项目，但它们没有解决一个更底层、更致命的痛点：**Agent 在 Linux 宿主机上干活时，对物理世界是完全“两眼一抹黑”的盲人**：
+- 它不知道机器上其实装了 `pdftotext`，却反复折腾 pip 安装第三方库并报错；
+- 它不知道 8080 端口已被生产进程占用，直接 bind 导致崩溃；
+- 它不知道修改一个通用配置文件，会导致后台依赖它的 systemd 服务挂掉；
+- 它不知道哪个 cron 任务在后台定时跑脚本、修改数据库；
+- 它不知道用户偏好把脚本放在哪里，随手乱丢文件污染工作区。
 
-可以把它理解成：**Agent 所处宿主机上的一切动态与静态对象（文件、进程、文件夹、端口、记忆）元数据 + 对象位置的大管家**。
+**Agent Host Steward（大管家）** 将关注点彻底解耦，确立**三位一体架构**：
 
-```mermaid
-graph TD
-    Agent["AI Agent<br/>(Claude / Cursor / Antigravity)"] <-->|MCP stdio / CLI| Steward["Agent Host Steward<br/>(宿主环境大管家)"]
-    
-    subgraph 宿主环境认知矩阵
-        Steward --> P["放置建议 (Placement Advice)<br/>规范基准路径 / 命名模式 / 安全脱敏"]
-        Steward --> S["分级颗粒度扫描 (Granularity Tiering)<br/>白名单递归到底 / 黑名单浅层阻断防扫爆"]
-        Steward --> E["动态任务进程 (Active Processes)<br/>过滤系统底噪 / 端口防撞 / 孤儿诊断"]
-        Steward --> M["跨会话长期记忆 (Hybrid Search)<br/>FTS5 关键词 + Ollama 向量 + RRF 融合"]
-        Steward --> L["关联拓扑与图智能 (Graph & CodeGraph Bridge)<br/>依赖解析 / 语法行号出处 / 断链审计 / CodeGraph 宏微联动 / 逆向爆炸半径"]
-        Steward --> C["会话生命周期自洁 (Session Close)<br/>临时文件 TTL 回收 / 工单纪要沉淀"]
-    end
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                               AI Agents / Clients                                      │
+│             (Antigravity, Cursor, Claude Code, Aider, CLI, Cron Workers)               │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │ MCP (stdio/SSE) / Unix Socket / CLI
+┌───────────────────────────────────────────▼────────────────────────────────────────────┐
+│                    Agent Host Steward (宿主环境大管家)                                  │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│ ┌────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ 模块 1: 宿主机事实图谱 (Host Reality Graph) —— 【核心护城河 · 零幻觉只读体系】       │ │
+│ │                                                                                    │ │
+│ │ • 工具能力语义注解: 识别 $PATH 工具能力(PDF提取/音视频转码/JSON处理)与推荐调用参数 │ │
+│ │ • 运行时进程与端口: 内核 /proc 解析占用(PID/进程名/启动命令/Cwd)，端口防撞预警    │ │
+│ │ • 系统自动化依赖拓扑: systemd 配置文件依赖反查、crontab 后台定时偷跑任务排查      │ │
+│ │ • 源码与资料库编目: 自动发现 Git 仓库(CodeGraph 状态)、本地权威文档与离线知识库   │ │
+│ │ • 变更审计与依赖图: inotify 实时变更流感知、逆向依赖爆炸半径推演                  │ │
+│ │                                                                                    │ │
+│ │ ── 统一只读查询语义接口: steward_fact_query / steward_port_check / links_impact ──│ │
+│ └────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                        │
+│ ┌────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ 模块 2: 用户偏好与规约引擎 (Preference & Governance) —— 【协作灵魂与规约准则】       │ │
+│ │                                                                                    │ │
+│ │ • 资产放置规则 (Placement): 推荐基准物理路径(/root/new/shared_proj等)、强制命名规范│ │
+│ │ • 工程与习惯规约 (Conventions): 优先使用 codegraph 而非 grep、严禁编造数据、北京时区│ │
+│ │ • 纠偏自演化学习 (Rule Learner): 从用户人工纠错行为中自动归纳、沉淀新偏好规则      │ │
+│ └────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                        │
+│ ┌────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ 模块 3: 跨会话记忆与经验 (Memory & Context) —— 【开放生态可插拔 · 拒绝重复造轮子】 │ │
+│ │                                                                                    │ │
+│ │ • 通用 Memory Provider SPI 抽象标准                                                │ │
+│ │ • 内置极简引擎: Local SQLite FTS5 + 本地向量混合检索 (零网络依赖，开箱即用)         │ │
+│ │ • 成熟开源生态桥接器: 一行配置外挂 Mem0 / Letta / PowerContext / Zep 成熟方案       │ │
+│ └────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                        │
+└────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 核心设计信条与红线
+## 典型交互场景 (Zero Hallucination Examples)
 
-1. **放置建议是第一优先级（Placement Advice）**：当 Agent 产生新项目、脚本或临时文件时，大管家主动推荐存放目录与命名规范，杜绝文件散落污染；
-2. **颗粒度分级与白黑名单深度法则（Granularity Tiering）**：
-   - **白名单目录**（如 `/root/new/work/`）：深度递归到底，构建结构化元数据与 FTS5 全文索引；
-   - **黑名单目录**（如 `node_modules/`, `.cache/`, `.git/`）：**严格止于当前目录层级仅记标量，严禁下钻，绝不扫描子文件**，彻底杜绝数据库扫爆与敏感信息泄露；
-3. **动态任务进程过滤底噪**：深度结合 Linux 内核 `/proc` 文件系统，纳管普通 Python 脚本、构建 Worker、端口监听，自动过滤内核系统底噪；
-4. **事前防撞与图智能联邦推演**：起服务前调用 `steward_port_check` 避免端口冲突；改动核心库前调用 `steward_links_impact` 推演多跳下游影响，并可通过 `steward_codegraph_bridge` 穿透代码符号级调用图；
-5. **本地优先、隐私优先、单二进制交付**：全部数据存放在 `~/.steward/steward.db`，内嵌 SQLite FTS5，零重型外部依赖。
+### 场景 1：查询机器上的工具能力（问“有没有能处理 PDF 的东西？”）
+- **Agent 请求**: `steward_fact_query(type="capability", intent="处理 PDF 提取纯文本")`
+- **大管家返回**:
+  > “有 `pdftotext`，版本 24.02，绝对路径 `/usr/bin/pdftotext`。**推荐用法**：`pdftotext -layout input.pdf output.txt`（保持原始排版，性能极快，无需 pip 安装 Python 库）。备选工具：`pdftoppm`（转图片）与 Python `pypdf`。”
+
+### 场景 2：端口排障与防撞（问“8080 端口被谁占了？”）
+- **Agent 请求**: `steward_port_check(port=8080)`
+- **大管家返回**:
+  > “8080 端口已被占用！PID: `18493`，进程名: `python3`，启动命令: `uvicorn main:app --port 8080`，工作目录: `/root/new/work/api-service`，已运行 3 天。**建议**：换用 8081 或 8082 端口。”
+
+### 场景 3：资产放置偏好（问“我要写个抓取脚本，该放哪里？”）
+- **Agent 请求**: `steward_placement_suggest(type="script", name="sec_crawler", intent="美股财报抓取")`
+- **大管家返回**:
+  > “依主人规范，复用脚本应放置在 `/root/new/shared_proj/sec_crawler/`；临时文件请放 `/root/new/tmp/`；严禁散落在当前目录。遵循蛇形命名规范。”
+
+---
+
+## 顶层思想与全新演进路线
+
+- 💡 **[03-modular-steward-architecture.md](idea_doc/03-modular-steward-architecture.md)**：大管家三位一体架构设计深度思考（事实、偏好与记忆的分野与统一）
+- 🗺️ **[09-modular-roadmap.md](design_doc/09-modular-roadmap.md)**：最新模块化演进路线图（Phase 1 事实图谱护城河 → Phase 2 偏好自演化 → Phase 3 记忆生态插拔 → Phase 4 终极智能中枢）
+- 📐 **[05-architecture.md](design_doc/05-architecture.md)**：三模块分层架构与系统规格说明书
+- 📖 **[03-feature-spec.md](design_doc/03-feature-spec.md)**：三模块功能规格详细定义
 
 ---
 
 ## 官方使用手册 (User Manual)
 
-完整的手册已全面发布于 **[`manual/`](manual/)** 目录：
+完整的手册发布于 **[`manual/`](manual/)** 目录：
 
 - 🚀 **[01-getting-started.md](manual/01-getting-started.md)**：快速上手、环境依赖准备与首次编译运行
 - 🧠 **[02-core-concepts.md](manual/02-core-concepts.md)**：核心理念：大管家定位、黑白名单浅层阻断、放置建议哲学
@@ -110,23 +158,9 @@ cargo build --release
 
 ---
 
-## 项目设计与演进文档
+## 开源协议
 
-- **产品设计文档 (v2.0)**:
-  - [01-scenarios.md](design_doc/01-scenarios.md) | [02-requirements.md](design_doc/02-requirements.md) | [03-feature-spec.md](design_doc/03-feature-spec.md) | [04-product-manual.md](design_doc/04-product-manual.md)
-  - [05-architecture.md](design_doc/05-architecture.md) | [06-api-spec.md](design_doc/06-api-spec.md) | [07-data-model.md](design_doc/07-data-model.md)
-  - [review-v2-status-and-evolution.md](design_doc/review-v2-status-and-evolution.md)
-- **研发断点与演进路线**:
-  - [roadmap-phase2.md](src_doc/roadmap-phase2.md) (核心骨架已交付)
-  - [roadmap-phase3.md](src_doc/roadmap-phase3.md) (混合检索/端口防撞/影响面分析已交付)
-  - [roadmap-phase4.md](src_doc/roadmap-phase4.md) (图智能与 CodeGraph 宏微联邦已交付)
-  - [roadmap-phase5.md](src_doc/roadmap-phase5.md) (系统级实装/Systemd/长文图文已交付)
-  - [roadmap-phase6.md](src_doc/roadmap-phase6.md) (目录结构与规范化重构已交付)
-  - [roadmap-phase7.md](src_doc/roadmap-phase7.md) (拓扑自愈/规则演化/宿主GC与自治生态已交付)
-- **内置 Agent 技能库**:
-  - [`skills/agent-steward-developer/`](skills/agent-steward-developer/SKILL.md)：指导 Agent 持续开发迭代项目的工程技能
-  - [`skills/agent-steward-doc-writer/`](skills/agent-steward-doc-writer/SKILL.md)：指导 Agent 编写高质量使用手册与 README 的文档技能
-  - [`skills/agent-steward-guide/`](skills/agent-steward-guide/SKILL.md)：面向初访 Agent 的全景导览与部署使用技能
+本项目采用 [Apache-2.0](LICENSE) 开源许可证。
 
 ---
 
