@@ -161,9 +161,3 @@ cargo build --release
 ## 开源协议
 
 本项目采用 [Apache-2.0](LICENSE) 开源许可证。
-
----
-
-## 开源协议
-
-本项目采用 [Apache-2.0](LICENSE) 开源许可证。
