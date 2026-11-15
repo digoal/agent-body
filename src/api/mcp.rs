@@ -260,6 +260,56 @@ mod tests {
     }
 
     #[test]
+    fn test_mcp_tools_call_links_audit() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let server = McpServer::new(storage);
+
+        let req = r#"{
+            "jsonrpc": "2.0",
+            "id": 101,
+            "method": "tools/call",
+            "params": {
+                "name": "steward_links_audit",
+                "arguments": {
+                    "fix_dangling": false
+                }
+            }
+        }"#;
+
+        let resp = server.handle_message(req).expect("handle_message");
+        let v: Value = serde_json::from_str(&resp).expect("parse response");
+        assert_eq!(v["id"], 101);
+        assert_eq!(v["result"]["isError"], false);
+        let text = v["result"]["content"][0]["text"].as_str().expect("content text");
+        assert!(text.contains("health_score"));
+    }
+
+    #[test]
+    fn test_mcp_tools_call_codegraph_bridge() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let server = McpServer::new(storage);
+
+        let req = r#"{
+            "jsonrpc": "2.0",
+            "id": 102,
+            "method": "tools/call",
+            "params": {
+                "name": "steward_codegraph_bridge",
+                "arguments": {
+                    "path": "/root/new/src/hk2"
+                }
+            }
+        }"#;
+
+        let resp = server.handle_message(req).expect("handle_message");
+        let v: Value = serde_json::from_str(&resp).expect("parse response");
+        assert_eq!(v["id"], 102);
+        assert_eq!(v["result"]["isError"], false);
+        let text = v["result"]["content"][0]["text"].as_str().expect("content text");
+        assert!(text.contains("has_codegraph"));
+    }
+
+    #[test]
     fn test_mcp_notification_no_response() {
         let storage = Storage::open_in_memory().expect("open_in_memory");
         let server = McpServer::new(storage);

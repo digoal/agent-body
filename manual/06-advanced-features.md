@@ -84,3 +84,32 @@ flowchart TD
 ### 4.3 使用方式
 - **CLI**: `agent-steward close <SESSION_ID>`
 - **MCP**: `steward_session_close(session_id, clean_temp=true)`
+
+---
+
+## 5. 宿主图智能与 CodeGraph 宏微联邦联动 (Graph Intelligence & CodeGraph Federation)
+
+### 5.1 痛点与背景
+在过去，实体图关联存在两大痛点：
+1. **只知依赖、不知出处**：系统提示“A 依赖 B”，但不知道在 A 的哪一行、调用了什么代码；
+2. **宏观微观割裂**：宿主大管家停留在“文件与服务”级，而代码仓库内可能已有 `codegraph` 建立的“AST 符号级”代码图，两者无法联动下钻。
+
+### 5.2 原理与机制
+大管家吸收 CodeGraph 的图谱模型设计：
+1. **出处强化（Provenance & Snippet）**:
+   - `links` 表扩展记录行号 `line_number`、截取代码 `snippet` 以及发现来源 `provenance`（`ast_import` / `path_regex` / `port_detect`）。
+2. **断链体检与自愈 (`steward links audit`)**:
+   - 定期或手动扫描全局拓扑，排查“目标文件已被物理删除”或“依赖的端口未监听”等坏死依赖，计算健康分，并支持 `--fix` 自动剔除死链。
+3. **CodeGraph 宏微双层联邦 (`CodeGraphBridge`)**:
+   - 自动向上溯源探测目标路径所在工程是否包含 `.codegraph/codegraph.db`；
+   - 支持跨层下钻：直连代码图 SQLite，毫秒级查询特定函数或类的全部调用方（Callers）与定义位置。
+
+### 5.3 使用方式
+- **CLI**:
+  ```bash
+  agent-steward links audit [--fix]
+  agent-steward links codegraph <PATH> [SYMBOL]
+  ```
+- **MCP**:
+  - `steward_links_audit(fix_dangling=false)`
+  - `steward_codegraph_bridge(path, symbol)`

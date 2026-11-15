@@ -1,8 +1,10 @@
 use std::collections::{HashSet, VecDeque};
+use std::path::Path;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
 use crate::storage::Storage;
+use crate::links::codegraph_bridge::CodeGraphBridge;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DependentNode {
@@ -11,6 +13,9 @@ pub struct DependentNode {
     pub relation: String,
     pub depth: usize,
     pub confidence: f32,
+    pub line_number: Option<i32>,
+    pub snippet: Option<String>,
+    pub provenance: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,6 +25,8 @@ pub struct ImpactAnalysisResult {
     pub direct_dependents: Vec<DependentNode>,
     pub indirect_dependents: Vec<DependentNode>,
     pub total_dependents_count: usize,
+    pub has_codegraph: bool,
+    pub codegraph_db: Option<String>,
     pub summary: String,
 }
 
@@ -32,13 +39,19 @@ impl ImpactAnalyzer {
         Self { storage }
     }
 
-    /// 分析指定目标对象（资产路径、服务或记忆）被谁所依赖（逆向爆炸半径推演）
+    /// 分析指定目标对象（资产路径、服务或记忆）被谁所依赖（逆向爆炸半径推演，含精准出处与 CodeGraph 探测）
     pub fn analyze_impact(&self, target_id: &str, max_depth: usize) -> Result<ImpactAnalysisResult> {
         let all_links = self.storage.list_all_links(1000)?;
 
         let mut direct_dependents = Vec::new();
         let mut indirect_dependents = Vec::new();
         let mut visited = HashSet::new();
+
+        // 探测目标是否处于某个拥有 CodeGraph 代码图的项目中
+        let target_path = Path::new(target_id);
+        let codegraph_db = CodeGraphBridge::find_codegraph_db(target_path)
+            .map(|p| p.to_string_lossy().to_string());
+        let has_codegraph = codegraph_db.is_some();
 
         // BFS 队列: (current_id, current_depth)
         let mut queue = VecDeque::new();
@@ -63,6 +76,9 @@ impl ImpactAnalyzer {
                         relation: link.relation.clone(),
                         depth: next_depth,
                         confidence: link.confidence,
+                        line_number: link.line_number,
+                        snippet: link.snippet.clone(),
+                        provenance: link.provenance.clone(),
                     };
 
                     if next_depth == 1 {
@@ -90,12 +106,18 @@ impl ImpactAnalyzer {
             "LOW"
         };
 
+        let codegraph_tip = if has_codegraph {
+            " [支持 CodeGraph 微观函数级下钻]"
+        } else {
+            ""
+        };
+
         let summary = if total_count == 0 {
-            format!("✅ 未检测到任何上下游资产或服务依赖 '{}'。改动或删除此对象爆炸半径极小 (Risk: LOW)。", target_id)
+            format!("✅ 未检测到任何上下游资产或服务依赖 '{}'。改动或删除此对象爆炸半径极小 (Risk: LOW)。{}", target_id, codegraph_tip)
         } else {
             format!(
-                "⚠️ 发现 {} 个直接依赖与 {} 个多跳间接下游依赖于 '{}'。综合风险评级: {}！改动需确保接口向后兼容或提前迁移调用方。",
-                direct_dependents.len(), indirect_dependents.len(), target_id, risk_level
+                "⚠️ 发现 {} 个直接依赖与 {} 个多跳间接下游依赖于 '{}'。综合风险评级: {}！{}改动需确保接口向后兼容或提前迁移调用方。",
+                direct_dependents.len(), indirect_dependents.len(), target_id, risk_level, codegraph_tip
             )
         };
 
@@ -105,6 +127,8 @@ impl ImpactAnalyzer {
             direct_dependents,
             indirect_dependents,
             total_dependents_count: total_count,
+            has_codegraph,
+            codegraph_db,
             summary,
         })
     }

@@ -95,5 +95,8 @@ pub struct LinkRecord {
     pub relation: String,    // references, depends_on, produced_by, related_to, supersedes, contradicts, confirms
     pub confidence: f32,
     pub auto_discovered: bool,
+    pub line_number: Option<i32>,
+    pub snippet: Option<String>,
+    pub provenance: Option<String>,
     pub created_at: Option<String>,
 }

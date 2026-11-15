@@ -3,6 +3,8 @@ use regex::Regex;
 use crate::storage::{Storage, models::LinkRecord};
 use anyhow::Result;
 
+pub mod audit;
+pub mod codegraph_bridge;
 pub mod impact;
 
 pub struct LinksEngine {
@@ -33,6 +35,9 @@ impl LinksEngine {
             relation: relation.to_string(),
             confidence,
             auto_discovered: false,
+            line_number: None,
+            snippet: None,
+            provenance: Some("manual".to_string()),
             created_at: None,
         };
         self.storage.add_link(&link)
@@ -43,62 +48,185 @@ impl LinksEngine {
         self.storage.query_links_for_node(node_type, node_id)
     }
 
-    /// 自动分析脚本/代码文件内容中的跨资产引用或服务依赖 (例如 import 模块、数据库端口、curl API 等)
+    /// 自动分析脚本/代码文件内容中的跨资产引用或服务依赖 (支持精准行号、切片与多语言语法抽取)
     pub fn discover_links_from_script(&self, asset_path: &str, content: &str) -> Result<usize> {
         let mut count = 0;
 
-        // 1. 匹配 Python/Node/Shell 中的绝对路径引用 (如 /root/new/shared_proj/xxx 或 /root/new/note/xxx)
+        // 编译常用提取正则
         let path_re = Regex::new(r#"(/root/new/[a-zA-Z0-9_\-\./]+)"#).unwrap();
-        for cap in path_re.captures_iter(content) {
-            let matched_path = &cap[1];
-            if matched_path != asset_path {
+        let py_import_re = Regex::new(r#"^(?:from\s+([a-zA-Z0-9_\.]+)\s+import|import\s+([a-zA-Z0-9_\.]+))"#).unwrap();
+        let sh_source_re = Regex::new(r#"^(?:source|\.)\s+["']?([^"'\s]+)"#).unwrap();
+        let sh_exec_re = Regex::new(r#"^(?:bash|sh|python3|python)\s+["']?([^"'\s]+)"#).unwrap();
+        let js_import_re = Regex::new(r#"(?:require\(|from\s+)["']([^"']+)["']"#).unwrap();
+
+        for (line_idx, line) in content.lines().enumerate() {
+            let line_num = (line_idx + 1) as i32;
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            let snippet_str = if trimmed.len() > 140 {
+                format!("{}...", &trimmed[..140])
+            } else {
+                trimmed.to_string()
+            };
+
+            // 1. 语法级 Python 模块导入 (from xxx import ... 或 import xxx)
+            if let Some(cap) = py_import_re.captures(trimmed) {
+                let mod_name = cap.get(1).or_else(|| cap.get(2)).map(|m| m.as_str()).unwrap_or("");
+                if !mod_name.is_empty() && !["os", "sys", "json", "time", "re", "math"].contains(&mod_name) {
+                    let target_candidate = if mod_name.starts_with("shared_proj") {
+                        format!("/root/new/{}", mod_name.replace('.', "/"))
+                    } else {
+                        format!("/root/new/shared_proj/{}", mod_name)
+                    };
+
+                    let link = LinkRecord {
+                        id: None,
+                        source_type: "asset".to_string(),
+                        source_id: asset_path.to_string(),
+                        target_type: "asset".to_string(),
+                        target_id: target_candidate,
+                        relation: "depends_on".to_string(),
+                        confidence: 0.95,
+                        auto_discovered: true,
+                        line_number: Some(line_num),
+                        snippet: Some(snippet_str.clone()),
+                        provenance: Some("ast_import".to_string()),
+                        created_at: None,
+                    };
+                    let _ = self.storage.add_link(&link);
+                    count += 1;
+                }
+            }
+
+            // 2. 语法级 Shell source 或外部脚本调用
+            if let Some(cap) = sh_source_re.captures(trimmed).or_else(|| sh_exec_re.captures(trimmed)) {
+                let script_target = cap[1].to_string();
+                if script_target.starts_with("/root/new/") || script_target.ends_with(".sh") || script_target.ends_with(".py") {
+                    let link = LinkRecord {
+                        id: None,
+                        source_type: "asset".to_string(),
+                        source_id: asset_path.to_string(),
+                        target_type: "asset".to_string(),
+                        target_id: script_target,
+                        relation: "depends_on".to_string(),
+                        confidence: 0.95,
+                        auto_discovered: true,
+                        line_number: Some(line_num),
+                        snippet: Some(snippet_str.clone()),
+                        provenance: Some("ast_import".to_string()),
+                        created_at: None,
+                    };
+                    let _ = self.storage.add_link(&link);
+                    count += 1;
+                }
+            }
+
+            // 3. 语法级 Node.js / JS import & require
+            if let Some(cap) = js_import_re.captures(trimmed) {
+                let js_target = cap[1].to_string();
+                if js_target.starts_with("/root/new/") || js_target.starts_with('.') {
+                    let link = LinkRecord {
+                        id: None,
+                        source_type: "asset".to_string(),
+                        source_id: asset_path.to_string(),
+                        target_type: "asset".to_string(),
+                        target_id: js_target,
+                        relation: "depends_on".to_string(),
+                        confidence: 0.9,
+                        auto_discovered: true,
+                        line_number: Some(line_num),
+                        snippet: Some(snippet_str.clone()),
+                        provenance: Some("ast_import".to_string()),
+                        created_at: None,
+                    };
+                    let _ = self.storage.add_link(&link);
+                    count += 1;
+                }
+            }
+
+            // 4. 绝对路径正则探测 (/root/new/...)
+            for cap in path_re.captures_iter(line) {
+                let matched_path = &cap[1];
+                if matched_path != asset_path {
+                    let link = LinkRecord {
+                        id: None,
+                        source_type: "asset".to_string(),
+                        source_id: asset_path.to_string(),
+                        target_type: "asset".to_string(),
+                        target_id: matched_path.to_string(),
+                        relation: "references".to_string(),
+                        confidence: 0.9,
+                        auto_discovered: true,
+                        line_number: Some(line_num),
+                        snippet: Some(snippet_str.clone()),
+                        provenance: Some("path_regex".to_string()),
+                        created_at: None,
+                    };
+                    let _ = self.storage.add_link(&link);
+                    count += 1;
+                }
+            }
+
+            // 5. 常见数据库与网络服务依赖
+            if line.contains("5432") || line.contains("postgresql://") {
                 let link = LinkRecord {
                     id: None,
                     source_type: "asset".to_string(),
                     source_id: asset_path.to_string(),
-                    target_type: "asset".to_string(),
-                    target_id: matched_path.to_string(),
-                    relation: "references".to_string(),
-                    confidence: 0.9,
+                    target_type: "service".to_string(),
+                    target_id: "postgresql:5432".to_string(),
+                    relation: "depends_on".to_string(),
+                    confidence: 0.88,
                     auto_discovered: true,
+                    line_number: Some(line_num),
+                    snippet: Some(snippet_str.clone()),
+                    provenance: Some("port_detect".to_string()),
                     created_at: None,
                 };
                 let _ = self.storage.add_link(&link);
                 count += 1;
             }
-        }
 
-        // 2. 匹配常见服务端口/连接串 (如 5432: postgresql, 6379: redis, 11434: ollama)
-        if content.contains("5432") || content.contains("postgresql://") {
-            let link = LinkRecord {
-                id: None,
-                source_type: "asset".to_string(),
-                source_id: asset_path.to_string(),
-                target_type: "service".to_string(),
-                target_id: "postgresql:5432".to_string(),
-                relation: "depends_on".to_string(),
-                confidence: 0.85,
-                auto_discovered: true,
-                created_at: None,
-            };
-            let _ = self.storage.add_link(&link);
-            count += 1;
-        }
+            if line.contains("11434") || line.contains("ollama") {
+                let link = LinkRecord {
+                    id: None,
+                    source_type: "asset".to_string(),
+                    source_id: asset_path.to_string(),
+                    target_type: "service".to_string(),
+                    target_id: "ollama:11434".to_string(),
+                    relation: "depends_on".to_string(),
+                    confidence: 0.88,
+                    auto_discovered: true,
+                    line_number: Some(line_num),
+                    snippet: Some(snippet_str.clone()),
+                    provenance: Some("port_detect".to_string()),
+                    created_at: None,
+                };
+                let _ = self.storage.add_link(&link);
+                count += 1;
+            }
 
-        if content.contains("11434") || content.contains("ollama") {
-            let link = LinkRecord {
-                id: None,
-                source_type: "asset".to_string(),
-                source_id: asset_path.to_string(),
-                target_type: "service".to_string(),
-                target_id: "ollama:11434".to_string(),
-                relation: "depends_on".to_string(),
-                confidence: 0.85,
-                auto_discovered: true,
-                created_at: None,
-            };
-            let _ = self.storage.add_link(&link);
-            count += 1;
+            if line.contains("6379") || line.contains("redis://") {
+                let link = LinkRecord {
+                    id: None,
+                    source_type: "asset".to_string(),
+                    source_id: asset_path.to_string(),
+                    target_type: "service".to_string(),
+                    target_id: "redis:6379".to_string(),
+                    relation: "depends_on".to_string(),
+                    confidence: 0.88,
+                    auto_discovered: true,
+                    line_number: Some(line_num),
+                    snippet: Some(snippet_str.clone()),
+                    provenance: Some("port_detect".to_string()),
+                    created_at: None,
+                };
+                let _ = self.storage.add_link(&link);
+                count += 1;
+            }
         }
 
         Ok(count)
@@ -157,23 +285,34 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_links_from_script() {
+    fn test_discover_links_with_line_numbers_and_provenance() {
         let storage = Arc::new(Storage::open_in_memory().expect("open_in_memory"));
         let engine = LinksEngine::new(storage);
 
-        let script_code = r#"
+        let script_code = r#"# Line 1: Comment
 import os
-import psycopg2
-# Read from shared note
+from shared_proj.sec_fetcher import utils
+# Line 4: Note read
 with open("/root/new/note/test.md") as f:
     pass
-conn = psycopg2.connect(host="localhost", port=5432)
+# Line 7: DB Connect
+conn = "postgresql://localhost:5432/mydb"
 "#;
         let count = engine.discover_links_from_script("/root/new/work/demo.py", script_code).unwrap();
-        assert!(count >= 2, "应至少识别到路径引用和 5432 依赖");
+        assert!(count >= 3, "应当识别到 import, 路径引用以及 postgres 依赖");
 
         let links = engine.query_links("asset", "/root/new/work/demo.py").unwrap();
-        assert!(links.iter().any(|l| l.target_id == "/root/new/note/test.md"));
-        assert!(links.iter().any(|l| l.target_id == "postgresql:5432"));
+        let sec_link = links.iter().find(|l| l.target_id.contains("sec_fetcher")).expect("sec_fetcher link");
+        assert_eq!(sec_link.line_number, Some(3));
+        assert_eq!(sec_link.provenance.as_deref(), Some("ast_import"));
+        assert!(sec_link.snippet.as_ref().unwrap().contains("from shared_proj"));
+
+        let note_link = links.iter().find(|l| l.target_id == "/root/new/note/test.md").expect("note link");
+        assert_eq!(note_link.line_number, Some(5));
+        assert_eq!(note_link.provenance.as_deref(), Some("path_regex"));
+
+        let pg_link = links.iter().find(|l| l.target_id == "postgresql:5432").expect("pg link");
+        assert_eq!(pg_link.line_number, Some(8));
+        assert_eq!(pg_link.provenance.as_deref(), Some("port_detect"));
     }
 }

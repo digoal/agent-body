@@ -45,6 +45,11 @@ impl Storage {
         let conn = self.conn.lock().unwrap();
         conn.execute_batch(SCHEMA_SQL)
             .context("执行内置 SQLite Schema 批处理失败")?;
+        // 增量热迁移兼容已存在数据库
+        let _ = conn.execute("ALTER TABLE memories ADD COLUMN embedding TEXT DEFAULT '[]'", []);
+        let _ = conn.execute("ALTER TABLE links ADD COLUMN line_number INTEGER DEFAULT NULL", []);
+        let _ = conn.execute("ALTER TABLE links ADD COLUMN snippet TEXT DEFAULT NULL", []);
+        let _ = conn.execute("ALTER TABLE links ADD COLUMN provenance TEXT DEFAULT 'static_scan'", []);
         Ok(())
     }
 
@@ -470,11 +475,14 @@ impl Storage {
     pub fn add_link(&self, link: &LinkRecord) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO links (source_type, source_id, target_type, target_id, relation, confidence, auto_discovered)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            "INSERT INTO links (source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, line_number, snippet, provenance)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
              ON CONFLICT(source_type, source_id, target_type, target_id, relation) DO UPDATE SET
                 confidence = excluded.confidence,
-                auto_discovered = excluded.auto_discovered",
+                auto_discovered = excluded.auto_discovered,
+                line_number = excluded.line_number,
+                snippet = excluded.snippet,
+                provenance = excluded.provenance",
             params![
                 link.source_type,
                 link.source_id,
@@ -483,15 +491,30 @@ impl Storage {
                 link.relation,
                 link.confidence,
                 if link.auto_discovered { 1 } else { 0 },
+                link.line_number,
+                link.snippet,
+                link.provenance.as_deref().unwrap_or("static_scan"),
             ],
         )?;
         Ok(())
     }
 
+    pub fn delete_link(&self, id: i64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM links WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn delete_links_for_target(&self, target_id: &str) -> Result<usize> {
+        let conn = self.conn.lock().unwrap();
+        let count = conn.execute("DELETE FROM links WHERE target_id = ?1", params![target_id])?;
+        Ok(count)
+    }
+
     pub fn query_links_for_node(&self, node_type: &str, node_id: &str) -> Result<Vec<LinkRecord>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, created_at
+            "SELECT id, source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, line_number, snippet, provenance, created_at
              FROM links
              WHERE (source_type = ?1 AND source_id = ?2) OR (target_type = ?1 AND target_id = ?2)
              ORDER BY confidence DESC, created_at DESC"
@@ -508,7 +531,10 @@ impl Storage {
                 relation: row.get(5)?,
                 confidence: row.get(6)?,
                 auto_discovered: auto_disc != 0,
-                created_at: Some(row.get(8)?),
+                line_number: row.get(8)?,
+                snippet: row.get(9)?,
+                provenance: row.get(10)?,
+                created_at: Some(row.get(11)?),
             })
         })?.collect::<Result<Vec<_>, _>>()?;
 
@@ -518,7 +544,7 @@ impl Storage {
     pub fn list_all_links(&self, limit: usize) -> Result<Vec<LinkRecord>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, created_at
+            "SELECT id, source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, line_number, snippet, provenance, created_at
              FROM links
              ORDER BY created_at DESC
              LIMIT ?1"
@@ -535,7 +561,10 @@ impl Storage {
                 relation: row.get(5)?,
                 confidence: row.get(6)?,
                 auto_discovered: auto_disc != 0,
-                created_at: Some(row.get(8)?),
+                line_number: row.get(8)?,
+                snippet: row.get(9)?,
+                provenance: row.get(10)?,
+                created_at: Some(row.get(11)?),
             })
         })?.collect::<Result<Vec<_>, _>>()?;
 

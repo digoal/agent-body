@@ -921,4 +921,63 @@ url = "http://localhost:8080/notify"
 
 ---
 
+## 7. 图智能与联邦协同工具 (v3.0 扩充)
+
+### 7.1 `steward_links_audit`
+全局依赖断链与幽灵引用审计工具。检测目标文件是否存在、目标服务端口是否在线。
+
+- **输入**:
+  ```json
+  {
+    "fix_dangling": false
+  }
+  ```
+- **输出**:
+  ```json
+  {
+    "health_score": 92,
+    "total_links": 48,
+    "dangling_count": 2,
+    "issues": [
+      {
+        "source": "/root/new/cron/old_backup.sh",
+        "target": "/root/new/shared_proj/obsolete_util.py",
+        "issue_type": "MISSING_FILE",
+        "detail": "目标文件在磁盘上不存在",
+        "line_number": 15
+      }
+    ]
+  }
+  ```
+
+### 7.2 `steward_codegraph_bridge`
+跨层联动 CodeGraph 微观代码图。在目标工程内钻取函数/符号级调用拓扑。
+
+- **输入**:
+  ```json
+  {
+    "path": "/root/new/src/hk2",
+    "symbol": "fetch_data"
+  }
+  ```
+- **输出**:
+  ```json
+  {
+    "has_codegraph": true,
+    "codegraph_db": "/root/new/src/hk2/.codegraph/codegraph.db",
+    "symbol": "fetch_data",
+    "callers": [
+      {
+        "caller_name": "process_pipeline",
+        "qualified_name": "hk2::pipeline::process_pipeline",
+        "file_path": "src/pipeline.rs",
+        "line": 88,
+        "kind": "calls"
+      }
+    ]
+  }
+  ```
+
+---
+
 *下一步: 07-data-model.md — 核心数据模型*

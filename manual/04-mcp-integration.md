@@ -17,7 +17,7 @@ sequenceDiagram
     Agent->>Steward: JSON-RPC "initialize"
     Steward-->>Agent: capabilities (tools: true), serverInfo
     Agent->>Steward: JSON-RPC "tools/list"
-    Steward-->>Agent: 返回 14 个原生工具列表与 JSON Schema
+    Steward-->>Agent: 返回 16 个原生工具列表与 JSON Schema
     Agent->>Steward: JSON-RPC "tools/call" (steward_brief)
     Steward->>SQLite: 聚合查询环境与记忆
     Steward-->>Agent: 返回结果内容文本
@@ -53,9 +53,9 @@ sequenceDiagram
 
 ---
 
-## 3. 14 个原生 MCP 工具标准字典
+## 3. 16 个原生 MCP 工具标准字典
 
-大管家向 Agent 暴露 14 个原子级认知与管控工具：
+大管家向 Agent 暴露 16 个原子级认知与管控工具：
 
 | MCP 工具名 | 核心功能 | 核心参数说明 |
 |---|---|---|
@@ -73,6 +73,8 @@ sequenceDiagram
 | `steward_links_query` | 查询指定实体的依赖关联关系 | `type`, `id` |
 | `steward_links_visualize` | 导出当前实体拓扑关系为 Mermaid 架构图 | `limit` |
 | `steward_links_impact` | 变更爆炸半径推演 (BFS 逆向多跳分析) | `target`, `max_depth` |
+| `steward_links_audit` | 全局依赖断链审计 (缺失文件/离线端口) | `fix_dangling` |
+| `steward_codegraph_bridge` | CodeGraph 宏微联邦联动与符号调用方下钻 | `path`, `symbol` |
 | `steward_changes_since` | 查看自指定时间点以来的宿主环境变更历史 | `since`, `limit` |
 | `steward_session_close` | 会话完工结算与垃圾回收 | `session_id`, `clean_temp` |
 

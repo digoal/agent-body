@@ -194,7 +194,7 @@ agent-steward [OPTIONS] <COMMAND>
 ---
 
 ### 2.6 `links` — 关联依赖与爆炸半径
-提供 `query`, `graph`, `impact` 三大子命令。
+提供 `query`, `graph`, `impact`, `audit`, `codegraph` 五大子命令。
 
 #### (1) `links graph`
 - **说明**: 输出 Mermaid 格式的实体拓扑关系图。
@@ -204,21 +204,28 @@ agent-steward [OPTIONS] <COMMAND>
   ```
 
 #### (2) `links impact <TARGET>`（爆炸半径推演）
-- **说明**: 输入资产路径，BFS 递归计算直接依赖与多跳间接下游。
+- **说明**: 输入资产路径，BFS 递归计算直接依赖与多跳间接下游，并附带代码行号出处与 CodeGraph 微观下钻标记。
 - **示例**:
   ```bash
   agent-steward links impact /root/new/shared_proj/test.py
   ```
-- **真实输出**:
-  ```json
-  {
-    "target": "/root/new/shared_proj/test.py",
-    "risk_level": "LOW",
-    "direct_dependents": [],
-    "indirect_dependents": [],
-    "total_dependents_count": 0,
-    "summary": "✅ 未检测到任何上下游资产或服务依赖 '/root/new/shared_proj/test.py'。改动或删除此对象爆炸半径极小 (Risk: LOW)。"
-  }
+
+#### (3) `links audit`（断链与幽灵依赖体检）
+- **说明**: 主动扫描全局依赖拓扑中的断链与悬空引用（目标文件不存在、依赖服务离线），输出健康评分与修复建议。
+- **参数**:
+  - `--fix`: 自动清理已确认失效的文件依赖死链。
+- **示例**:
+  ```bash
+  agent-steward links audit
+  agent-steward links audit --fix
+  ```
+
+#### (4) `links codegraph <PATH> [SYMBOL]`（CodeGraph 宏微联邦联动）
+- **说明**: 跨层联动局部工程内的 CodeGraph 代码图。在不传递 SYMBOL 时输出项目代码图概览；传递 SYMBOL 时输出函数/符号级代码调用方列表（包含文件路径与行号）。
+- **示例**:
+  ```bash
+  agent-steward links codegraph /root/new/src/hk2
+  agent-steward links codegraph /root/new/src/hk2 interactive
   ```
 
 ---

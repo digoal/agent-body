@@ -25,7 +25,7 @@ graph TD
         Steward --> S["分级颗粒度扫描 (Granularity Tiering)<br/>白名单递归到底 / 黑名单浅层阻断防扫爆"]
         Steward --> E["动态任务进程 (Active Processes)<br/>过滤系统底噪 / 端口防撞 / 孤儿诊断"]
         Steward --> M["跨会话长期记忆 (Hybrid Search)<br/>FTS5 关键词 + Ollama 向量 + RRF 融合"]
-        Steward --> L["关联拓扑与影响推演 (Blast Radius)<br/>依赖解析 / Mermaid 架构图 / 逆向爆炸半径"]
+        Steward --> L["关联拓扑与图智能 (Graph & CodeGraph Bridge)<br/>依赖解析 / 语法行号出处 / 断链审计 / CodeGraph 宏微联动 / 逆向爆炸半径"]
         Steward --> C["会话生命周期自洁 (Session Close)<br/>临时文件 TTL 回收 / 工单纪要沉淀"]
     end
 ```
@@ -39,7 +39,7 @@ graph TD
    - **白名单目录**（如 `/root/new/work/`）：深度递归到底，构建结构化元数据与 FTS5 全文索引；
    - **黑名单目录**（如 `node_modules/`, `.cache/`, `.git/`）：**严格止于当前目录层级仅记标量，严禁下钻，绝不扫描子文件**，彻底杜绝数据库扫爆与敏感信息泄露；
 3. **动态任务进程过滤底噪**：深度结合 Linux 内核 `/proc` 文件系统，纳管普通 Python 脚本、构建 Worker、端口监听，自动过滤内核系统底噪；
-4. **事前防撞与爆炸半径推演**：起服务前调用 `steward_port_check` 避免端口冲突；改动核心库前调用 `steward_links_impact` 推演多跳下游影响；
+4. **事前防撞与图智能联邦推演**：起服务前调用 `steward_port_check` 避免端口冲突；改动核心库前调用 `steward_links_impact` 推演多跳下游影响，并可通过 `steward_codegraph_bridge` 穿透代码符号级调用图；
 5. **本地优先、隐私优先、单二进制交付**：全部数据存放在 `~/.steward/steward.db`，内嵌 SQLite FTS5，零重型外部依赖。
 
 ---
@@ -51,9 +51,9 @@ graph TD
 - 🚀 **[01-getting-started.md](manual/01-getting-started.md)**：快速上手、环境依赖准备与首次编译运行
 - 🧠 **[02-core-concepts.md](manual/02-core-concepts.md)**：核心理念：大管家定位、黑白名单浅层阻断、放置建议哲学
 - 📖 **[03-cli-reference.md](manual/03-cli-reference.md)**：全量 CLI 命令行实操字典（全子命令 + 真实输出）
-- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：14 个原生 MCP 工具与 Claude/Cursor 配置
+- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：16 个原生 MCP 工具与 Claude/Cursor 配置
 - 🔄 **[05-daemon-and-watcher.md](manual/05-daemon-and-watcher.md)**：后台常驻守护服务、inotify 300ms 防抖与 systemd 自启
-- ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：v2.0 进阶特性：端口防撞、爆炸半径推演、混合 RRF 检索、会话自洁
+- ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：v3.0 进阶特性：端口防撞、爆炸半径推演、混合 RRF 检索、CodeGraph 联邦图
 - 🛠️ **[07-troubleshooting.md](manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
 
 ---

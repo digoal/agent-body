@@ -226,6 +226,28 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
+                "name": "steward_links_audit",
+                "description": "全局依赖拓扑审计：主动扫描全局依赖图中的断链与悬空引用（目标文件不存在、依赖服务离线），输出健康评分与修复建议。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "fix_dangling": { "type": "boolean", "default": false, "description": "是否自动清理已确认失效的文件依赖死链" }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_codegraph_bridge",
+                "description": "CodeGraph 宏微联邦桥接：跨层联动局部工程内的 CodeGraph 代码图，查看代码级函数/类调用方或项目代码图统计。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "path": { "type": "string", "description": "项目工程目录或文件路径" },
+                        "symbol": { "type": "string", "description": "待查询的函数、类或符号名称（可选）" }
+                    },
+                    "required": ["path"]
+                }
+            }),
+            serde_json::json!({
                 "name": "steward_session_close",
                 "description": "会话完工结算与环境治理：在任务结束时清理临时测试文件、汇总环境变更、并将工单成果归档沉淀到长期记忆。",
                 "inputSchema": {
@@ -471,6 +493,37 @@ impl McpToolRegistry {
                 let max_depth = args.get("max_depth").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
                 let res = analyzer.analyze_impact(target, max_depth)?;
                 Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_links_audit" => {
+                let arc_storage = Arc::new(self.storage.clone());
+                let auditor = crate::links::audit::LinkAuditor::new(arc_storage);
+                let fix_dangling = args.get("fix_dangling").and_then(|v| v.as_bool()).unwrap_or(false);
+                let res = auditor.audit_links(fix_dangling)?;
+                Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_codegraph_bridge" => {
+                let path_str = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                let symbol_opt = args.get("symbol").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty());
+                let p = std::path::Path::new(path_str);
+
+                if let Some(symbol) = symbol_opt {
+                    let callers = crate::links::codegraph_bridge::CodeGraphBridge::query_symbol_callers(p, symbol)?;
+                    Ok(serde_json::to_string_pretty(&serde_json::json!({
+                        "path": path_str,
+                        "symbol": symbol,
+                        "callers_count": callers.len(),
+                        "callers": callers,
+                    }))?)
+                } else {
+                    let info = crate::links::codegraph_bridge::CodeGraphBridge::inspect_project(p)?;
+                    Ok(serde_json::to_string_pretty(&serde_json::json!({
+                        "path": path_str,
+                        "has_codegraph": info.is_some(),
+                        "project_info": info,
+                    }))?)
+                }
             }
 
             "steward_session_close" => {

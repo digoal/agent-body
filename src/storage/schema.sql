@@ -196,6 +196,9 @@ CREATE TABLE IF NOT EXISTS links (
     )),
     confidence      REAL DEFAULT 1.0 CHECK (confidence >= 0 AND confidence <= 1),
     auto_discovered INTEGER DEFAULT 0,
+    line_number     INTEGER DEFAULT NULL,
+    snippet         TEXT DEFAULT NULL,
+    provenance      TEXT DEFAULT 'static_scan',
     created_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
     UNIQUE(source_type, source_id, target_type, target_id, relation)
 );

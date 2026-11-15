@@ -106,6 +106,21 @@ enum LinksCommands {
         #[arg(short, long, default_value_t = 3, help = "依赖多跳推演最大深度")]
         max_depth: usize,
     },
+
+    #[command(about = "主动审计依赖拓扑中的断链、悬空文件与离线服务")]
+    Audit {
+        #[arg(long, help = "是否自动清理已确认失效的死链")]
+        fix: bool,
+    },
+
+    #[command(about = "跨层联动 CodeGraph 微观代码图")]
+    Codegraph {
+        #[arg(help = "目标项目工程路径或代码文件")]
+        path: String,
+
+        #[arg(help = "待查询的微观符号/函数/类名称 (可选)")]
+        symbol: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -403,6 +418,45 @@ async fn main() -> Result<()> {
                     let analyzer = agent_steward::links::impact::ImpactAnalyzer::new(arc_storage);
                     let res = analyzer.analyze_impact(&target, max_depth)?;
                     println!("{}", serde_json::to_string_pretty(&res)?);
+                }
+                LinksCommands::Audit { fix } => {
+                    let auditor = agent_steward::links::audit::LinkAuditor::new(arc_storage);
+                    let rep = auditor.audit_links(fix)?;
+                    println!("{}", rep.summary);
+                    if !rep.issues.is_empty() {
+                        println!("\n发现以下异常断链 (共 {} 处):", rep.issues.len());
+                        for iss in &rep.issues {
+                            println!("  - [{}] {} -> {} (行号: {:?})", iss.severity, iss.source, iss.target, iss.line_number);
+                            println!("    详情: {}", iss.description);
+                            if let Some(snip) = &iss.snippet {
+                                println!("    代码: {}", snip);
+                            }
+                            println!("    建议: {}", iss.suggested_fix);
+                        }
+                    }
+                }
+                LinksCommands::Codegraph { path, symbol } => {
+                    let p = std::path::Path::new(&path);
+                    if let Some(sym) = symbol {
+                        let callers = agent_steward::links::codegraph_bridge::CodeGraphBridge::query_symbol_callers(p, &sym)?;
+                        println!("CodeGraph 符号调用方分析: '{}' (共 {} 条):", sym, callers.len());
+                        for c in callers {
+                            println!("  - [{}] {} ({}:{:?})", c.kind, c.qualified_name, c.file_path, c.line);
+                        }
+                    } else {
+                        let info = agent_steward::links::codegraph_bridge::CodeGraphBridge::inspect_project(p)?;
+                        match info {
+                            Some(stats) => {
+                                println!("CodeGraph 工程概览:");
+                                println!("  根目录: {}", stats.root_dir);
+                                println!("  数据库: {}", stats.db_path);
+                                println!("  节点数: {} (Nodes)", stats.node_count);
+                                println!("  调用边: {} (Edges)", stats.edge_count);
+                                println!("  文件数: {} (Files)", stats.file_count);
+                            }
+                            None => println!("未在 '{}' 及其父目录中检测到 .codegraph/ 索引。", path),
+                        }
+                    }
                 }
             }
         }
