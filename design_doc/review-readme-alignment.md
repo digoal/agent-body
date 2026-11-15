@@ -1,7 +1,7 @@
 # Agent Host Steward — README 核心设计对齐专项 Review 报告
 
 > 审查基准：README.md 核心设计宗旨与原则  
-> 审查对象：`design_doc/` 全量交付件（01-scenarios ~ 07-data-model、init.sql、REVIEW.md）  
+> 审查对象：`design_doc/` 全量交付件（01-scenarios ~ 07-data-model、init.sql、review.md）  
 > 审查时间：2026-11-15  
 > 审查人：digoal 德哥
 

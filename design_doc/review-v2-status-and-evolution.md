@@ -16,10 +16,10 @@
 | **Scanner 分级扫描域** | `01-scenarios.md` (S-28)<br>`03-feature-spec.md`<br>`07-data-model.md` (`scan_policies`) | `src/scanner/mod.rs`<br>`src/scanner/matcher.rs` | **90%** (高度完备) | 白名单深度到底、黑名单浅层阻断、globset 通配符、批量事务提交已实现。待增强：**Git ignore 级联识别**与 **智能分类启发式（ML/模型辅助）**。 |
 | **Env 宿主环境与动态进程** | `01-scenarios.md` (S-29)<br>`03-feature-spec.md`<br>`07-data-model.md` (`active_processes`) | `src/env/mod.rs`<br>`src/storage/` (`active_processes`) | **85%** (完备可用) | 硬件指标、sysinfo 进程过滤底噪、PID/端口/资源采集入库已实现。待增强：**端口冲突预警（Port Conflict Warning）** 与 **僵尸进程/孤儿进程诊断**。 |
 | **Memory 长期记忆域** | `01-scenarios.md`<br>`07-data-model.md` (`memories`) | `src/memory/mod.rs`<br>`src/storage/` (FTS5) | **80%** (基础完备) | 记忆分类、权重、FTS5 全文搜索、结构化标签已实现。待增强：**本地 Ollama 向量检索（sqlite-vec）** 与 **记忆有效性淘汰/过期衰减机制**。 |
-| **Daemon & Watcher 守护域** | `05-architecture.md`<br>`src_doc/HOOKS_AND_INTEGRATION.md` | `src/daemon/mod.rs`<br>`src/watcher/` | **90%** (完备可用) | inotify 监听、300ms 防抖、changes 审计流、60s `/proc` 轮询巡检、优雅关闭已实现。待增强：**systemd service 单元一键托管生成**。 |
+| **Daemon & Watcher 守护域** | `05-architecture.md`<br>`src_doc/hooks-and-integration.md` | `src/daemon/mod.rs`<br>`src/watcher/` | **90%** (完备可用) | inotify 监听、300ms 防抖、changes 审计流、60s `/proc` 轮询巡检、优雅关闭已实现。待增强：**systemd service 单元一键托管生成**。 |
 | **Links & Graph 关联域** | `07-data-model.md` (`links`) | `src/links/mod.rs` | **85%** (完备可用) | 脚本路径引用与服务端口依赖自动提取、Mermaid 拓扑图导出已实现。待增强：**多跳图查询（Graph Traversal）** 与 **逆向影响分析（Blast Radius）**。 |
 | **Changes & Context 追踪域** | `07-data-model.md` (`changes`) | `src/changes/mod.rs` | **90%** (完备可用) | `changes since` 会话开工简报生成已实现。待增强：**会话隔离标签（Session Tagging）** 与 **重大变更事件主动推送 Webhook**。 |
-| **MCP 原生协议与交互** | `06-api-spec.md`<br>`src_doc/HOOKS_AND_INTEGRATION.md` | `src/api/mcp.rs`<br>`src/api/mcp_tools.rs` | **95%** (高度完备) | 13 个原生 MCP 工具注册，支持 Claude/Cursor/AGY 客户端接入。待增强：**交互式建议确认（Prompt/Approval Hooks）**。 |
+| **MCP 原生协议与交互** | `06-api-spec.md`<br>`src_doc/hooks-and-integration.md` | `src/api/mcp.rs`<br>`src/api/mcp_tools.rs` | **95%** (高度完备) | 13 个原生 MCP 工具注册，支持 Claude/Cursor/AGY 客户端接入。待增强：**交互式建议确认（Prompt/Approval Hooks）**。 |
 
 ---
 
@@ -70,5 +70,5 @@
 
 建议按以下顺序推进：
 1. **第一步（文档迭代先行）**: 串行更新 `design_doc/01-scenarios.md`、`02-requirements.md`、`03-feature-spec.md`、`06-api-spec.md`、`07-data-model.md`，固化 v2.0 规格标准；
-2. **第二步（断点续传排期）**: 在 `src_doc/ROADMAP_PHASE3.md` 中立项第三阶段开发任务（混合检索、端口防撞、影响面推演、会话清理）；
+2. **第二步（断点续传排期）**: 在 `src_doc/roadmap-phase3.md` 中立项第三阶段开发任务（混合检索、端口防撞、影响面推演、会话清理）；
 3. **第三步（串行编码实施）**: 遵循 `skills/agent-steward-developer/SKILL.md` 指引，TDD 推进代码实现。

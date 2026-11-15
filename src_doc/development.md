@@ -32,9 +32,9 @@ agent-steward/
 ├── Cargo.toml               # Rust 项目依赖与元数据配置
 ├── Cargo.lock               # 依赖版本锁定
 ├── src_doc/                 # 开发指南与使用手册目录
-│   ├── PROGRESS.md          # 串行任务断点续传进度表
-│   ├── DEVELOPMENT.md       # 本地开发与编译环境说明
-│   └── PRODUCT_MANUAL.md    # 用户与 Agent 操作使用手册
+│   ├── progress.md          # 串行任务断点续传进度表
+│   ├── development.md       # 本地开发与编译环境说明
+│   └── product-manual.md    # 用户与 Agent 操作使用手册
 ├── design_doc/              # 产品设计工程交付件 (01~07)
 ├── idea_doc/                # 初始思考与设计推导
 └── src/                     # Rust 源码目录

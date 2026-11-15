@@ -1,7 +1,7 @@
 # Agent Host Steward — Agent 接入与 Hook 机制配置指南
 
 > 版本: v0.2.0 · 适用对象: Antigravity, Cursor, Claude Desktop, Aider 等 Agent 框架  
-> 存放路径: `src_doc/HOOKS_AND_INTEGRATION.md`  
+> 存放路径: `src_doc/hooks-and-integration.md`  
 > 更新时间: 2026-11-15
 
 ---

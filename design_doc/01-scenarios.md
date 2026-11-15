@@ -886,7 +886,7 @@
 > - **直接依赖者 (Direct, 3 个)**:
 >   - 脚本: `/root/new/work/earnings_cron/run.py`
 >   - 定时任务: `crontab: sec-daily-scan` (每天 22:00 运行)
->   - 技能: `skills/earnings-cron-scan-layer/SKILL.md`
+>   - 技能: `/root/new/skills/earnings-cron-scan-layer/SKILL.md`
 > - **间接下游 (Indirect, 1 个)**:
 >   - 自动化文章发布流: `marketing-wechat-operator`
 > - **综合风险评级**: `HIGH (P0 核心资产)`

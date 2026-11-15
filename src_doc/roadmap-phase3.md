@@ -22,6 +22,6 @@
 ---
 
 ## 断点恢复机制
-1. 读取本文件 `src_doc/ROADMAP_PHASE3.md`；
+1. 读取本文件 `src_doc/roadmap-phase3.md`；
 2. 找到首个状态为 `⏳ 进行中` 或 `⬜ 待执行` 的任务；
 3. 严格遵守 `skills/agent-steward-developer/SKILL.md` 规则串行步进：**更新状态为进行中 -> 编写代码与单元测试 -> cargo test 验证 -> 更新状态为已完成**。

@@ -1,7 +1,7 @@
 # Agent Host Steward (Rust 版) — 产品使用手册
 
 > 版本: v0.2.0 · 核心实现: Rust 1.99 + SQLite 3 (rusqlite bundled with FTS5)  
-> 存放路径: `src_doc/PRODUCT_MANUAL.md`  
+> 存放路径: `src_doc/product-manual.md`  
 > 更新时间: 2026-11-15
 
 ---

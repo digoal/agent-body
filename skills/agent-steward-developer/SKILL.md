@@ -48,9 +48,9 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/changes/` | 变更历史回溯与 Agent 会话简报 | 生成开工 markdown |
 | └── `src/api/` | MCP (JSON-RPC 2.0 stdio) 协议层与工具注册 | 必须与 CLI 功能一一映射 |
 | `src_doc/` | 开发者手册、产品手册与断点记录 | 随时记录进展 |
-| ├── `ROADMAP_PHASE2.md` | 第二阶段研发断点状态表 | 任务流转枢纽 |
-| ├── `PRODUCT_MANUAL.md` | 用户与 Agent CLI 操作手册 | 更新 CLI 时必须同步更新 |
-| └── `HOOKS_AND_INTEGRATION.md` | Daemon 部署、被动/主动 Hook 规范 | Agent 接入指引 |
+| ├── `roadmap-phase*.md` | 各阶段研发断点状态表 | 任务流转枢纽 |
+| ├── `product-manual.md` | 用户与 Agent CLI 操作手册 | 更新 CLI 时必须同步更新 |
+| └── `hooks-and-integration.md` | Daemon 部署、被动/主动 Hook 规范 | Agent 接入指引 |
 | `design_doc/` | 产品设计文档闭环交付件（01~07） | 顶层架构事实依据 |
 | `skills/` | 本项目内置技能库 | 包含本项目自迭代技能 |
 
@@ -75,7 +75,7 @@ flowchart TD
 
 ### 步骤 2: 任务拆解与断点登记（严禁大步跨越）
 1. 将大任务拆解为粒度在 30 分钟以内的原子任务（如：数据模型扩展 -> 核心算法实现 -> MCP 工具注册 -> CLI 命令暴露 -> 单元测试）。
-2. 在 `src_doc/ROADMAP_PHASE2.md`（或后续创建的 `ROADMAP_PHASE3.md`）中追加或认领任务，标记当前正在进行的任务为 `⏳ 进行中`。
+2. 在 `src_doc/roadmap-phase*.md` 中追加或认领任务，标记当前正在进行的任务为 `⏳ 进行中`。
 3. 确保任何环节遭遇会话重置或中断，后续 Agent 只需读取该状态表即可瞬间无缝续传。
 
 ### 步骤 3: 串行编码与测试驱动
@@ -107,9 +107,9 @@ flowchart TD
 
 ### 步骤 5: 文档同步与交付小结
 1. 若新增或调整了 CLI 子命令，必须同步更新：
-   - `src_doc/PRODUCT_MANUAL.md`
+   - `src_doc/product-manual.md`
 2. 若新增了 MCP 工具，必须同步更新：
-   - `src_doc/HOOKS_AND_INTEGRATION.md`
+   - `src_doc/hooks-and-integration.md`
 3. 更新 Roadmap 中的任务状态为 `✅ 已完成`，并记录完成时间。
 4. 按照“digoal德哥”三段式交付格式向用户汇报：
    - **文件路径**: 改动和新建的文件列表。
@@ -144,5 +144,5 @@ flowchart TD
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
 - [ ] 是否执行了 `cargo test` 且全部通过（目前要求 >= 22 tests 通过）？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？
-- [ ] 相关的文档（`src_doc/PRODUCT_MANUAL.md` / `ROADMAP_PHASE2.md`）是否已同步刷新？
+- [ ] 相关的文档（`src_doc/product-manual.md` / `roadmap-phase*.md`）是否已同步刷新？
 - [ ] 是否给出了清晰规范的 Git Commit 建议？
