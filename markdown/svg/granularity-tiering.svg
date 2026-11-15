@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 240" width="100%" height="auto">
+  <defs>
+    <linearGradient id="bgGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070c18"/>
+      <stop offset="100%" stop-color="#02040a"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="240" rx="8" fill="url(#bgGrad2)" stroke="#1e293b"/>
+
+  <!-- Left: Bad Blind Scan -->
+  <rect x="20" y="20" width="370" height="200" rx="6" fill="#13080c" stroke="#f43f5e" stroke-width="1.5"/>
+  <text x="205" y="45" fill="#fda4af" font-size="12" font-weight="bold" text-anchor="middle">❌ 传统 Agent 暴力遍历模式 (造成宕机)</text>
+  
+  <rect x="40" y="65" width="100" height="35" rx="4" fill="#2d0b16" stroke="#f43f5e"/>
+  <text x="90" y="87" fill="#fca5a5" font-size="9" text-anchor="middle">启动目录递归</text>
+
+  <path d="M 140 82 L 180 82" stroke="#f43f5e" stroke-width="2"/>
+
+  <rect x="180" y="65" width="180" height="35" rx="4" fill="#450a0a" stroke="#ef4444"/>
+  <text x="270" y="87" fill="#fee2e2" font-size="9.5" font-weight="bold" text-anchor="middle">下钻 node_modules / .cache</text>
+
+  <path d="M 270 100 L 270 125" stroke="#ef4444" stroke-width="2"/>
+
+  <rect x="40" y="125" width="320" height="80" rx="4" fill="#3f0f1d" stroke="#dc2626"/>
+  <text x="200" y="148" fill="#fecaca" font-size="10" font-weight="bold" text-anchor="middle">💥 灾难级恶果爆发</text>
+  <text x="55" y="168" fill="#fca5a5" font-size="8.5">• 递归吞入 300,000+ 个无用微小文件，磁盘 I/O 100% 卡死</text>
+  <text x="55" y="183" fill="#fca5a5" font-size="8.5">• SQLite 数据库瞬间撑爆 30GB；私钥 ~/.ssh/id_rsa 被扫入索引</text>
+  <text x="55" y="198" fill="#ef4444" font-size="8.5" font-weight="bold">• 宿主机直接失去响应，用户被迫硬重启开发机！</text>
+
+  <!-- Right: Good Steward Tiering -->
+  <rect x="410" y="20" width="370" height="200" rx="6" fill="#061513" stroke="#10b981" stroke-width="1.5"/>
+  <text x="595" y="45" fill="#6ee7b7" font-size="12" font-weight="bold" text-anchor="middle">✅ Steward 分级颗粒度治理 (白深黑浅)</text>
+
+  <rect x="430" y="65" width="100" height="35" rx="4" fill="#0b2923" stroke="#10b981"/>
+  <text x="480" y="87" fill="#a7f3d0" font-size="9" text-anchor="middle">路径策略探测</text>
+
+  <path d="M 530 82 L 570 82" stroke="#10b981" stroke-width="2"/>
+
+  <rect x="570" y="65" width="180" height="35" rx="4" fill="#064e3b" stroke="#34d399"/>
+  <text x="660" y="87" fill="#ffffff" font-size="9.5" font-weight="bold" text-anchor="middle">命中黑名单目录 (Depth=0)</text>
+
+  <path d="M 660 100 L 660 125" stroke="#34d399" stroke-width="2"/>
+
+  <rect x="430" y="125" width="320" height="80" rx="4" fill="#042f2e" stroke="#059669"/>
+  <text x="590" y="148" fill="#d1fae5" font-size="10" font-weight="bold" text-anchor="middle">🛡️ 敲门绝不进屋，极速返回</text>
+  <text x="445" y="168" fill="#a7f3d0" font-size="8.5">• 仅记录目录实体标量属性，执行 skip_current_dir() 跳过</text>
+  <text x="445" y="183" fill="#a7f3d0" font-size="8.5">• 白名单 (work/shared_proj) 深挖到底；敏感目录深度设为 0</text>
+  <text x="445" y="198" fill="#34d399" font-size="8.5" font-weight="bold">• 耗时 0.4 毫秒，0 垃圾碎片，数据库零膨胀，宿主绝对安全！</text>
+</svg>

@@ -201,6 +201,12 @@ impl Storage {
 
     pub fn search_assets_fts(&self, query: &str, limit: usize) -> Result<Vec<AssetRecord>> {
         let conn = self.conn.lock().unwrap();
+        let fts_query = if query.contains('*') || query.contains('"') {
+            query.to_string()
+        } else {
+            format!("\"{}\"*", query)
+        };
+
         let mut stmt = conn.prepare(
             "SELECT a.id, a.path, a.type, a.owner, a.security_level, a.scan_tier, a.description, a.desc_kv, a.usage, a.size_bytes, a.file_count, a.tags, a.status
              FROM assets_fts f
@@ -209,7 +215,7 @@ impl Storage {
              LIMIT ?2"
         )?;
 
-        let rows = stmt.query_map(params![query, limit as i64], |row| {
+        let mut rows: Vec<AssetRecord> = stmt.query_map(params![fts_query, limit as i64], |row| {
             let desc_kv_str: String = row.get(7)?;
             let desc_kv: serde_json::Value = serde_json::from_str(&desc_kv_str).unwrap_or(serde_json::Value::Object(Default::default()));
             let tags_str: String = row.get(11)?;
@@ -230,7 +236,40 @@ impl Storage {
                 tags,
                 status: row.get(12)?,
             })
-        })?.collect::<Result<Vec<_>, _>>()?;
+        })?.filter_map(|r| r.ok()).collect();
+
+        // 若 FTS5 未直接命中，回退到 LIKE 模糊匹配保障无分词中文子串召回
+        if rows.is_empty() {
+            let like_pattern = format!("%{}%", query);
+            let mut fallback_stmt = conn.prepare(
+                "SELECT id, path, type, owner, security_level, scan_tier, description, desc_kv, usage, size_bytes, file_count, tags, status
+                 FROM assets
+                 WHERE path LIKE ?1 OR description LIKE ?1 OR tags LIKE ?1
+                 LIMIT ?2"
+            )?;
+            rows = fallback_stmt.query_map(params![like_pattern, limit as i64], |row| {
+                let desc_kv_str: String = row.get(7)?;
+                let desc_kv: serde_json::Value = serde_json::from_str(&desc_kv_str).unwrap_or(serde_json::Value::Object(Default::default()));
+                let tags_str: String = row.get(11)?;
+                let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
+
+                Ok(AssetRecord {
+                    id: row.get(0)?,
+                    path: row.get(1)?,
+                    asset_type: row.get(2)?,
+                    owner: row.get(3)?,
+                    security_level: row.get(4)?,
+                    scan_tier: row.get(5)?,
+                    description: row.get(6)?,
+                    desc_kv,
+                    usage: row.get(8)?,
+                    size_bytes: row.get(9)?,
+                    file_count: row.get(10)?,
+                    tags,
+                    status: row.get(12)?,
+                })
+            })?.filter_map(|r| r.ok()).collect();
+        }
 
         Ok(rows)
     }
