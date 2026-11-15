@@ -176,13 +176,16 @@ enum MemoryCommands {
         summary: Option<String>,
     },
 
-    #[command(about = "搜索记忆")]
+    #[command(about = "搜索记忆 (支持 FTS5 与 Ollama 向量混合 RRF 检索)")]
     Search {
-        #[arg(help = "搜索关键词")]
+        #[arg(help = "搜索关键词或语义描述")]
         query: String,
 
         #[arg(short, long, default_value_t = 10)]
         limit: usize,
+
+        #[arg(long, default_value_t = true, help = "是否启用 Ollama 向量混合 RRF 检索")]
+        hybrid: bool,
     },
 }
 
@@ -332,17 +335,30 @@ async fn main() -> Result<()> {
         }
 
         Commands::Memory { action } => {
-            let mm = MemoryManager::new(storage);
             match action {
                 MemoryCommands::Add { r#type, content, summary } => {
+                    let mm = MemoryManager::new(storage);
                     let id = mm.add(&r#type, &content, summary.as_deref(), Some("cli"), vec![])?;
                     println!("✅ 记忆已保存, ID: {}", id);
                 }
-                MemoryCommands::Search { query, limit } => {
-                    let results = mm.search(&query, limit)?;
-                    println!("记忆搜索结果 (共 {} 条):", results.len());
-                    for m in results {
-                        println!("  - [{}] {} (ID: {})", m.memory_type, m.content, m.id);
+                MemoryCommands::Search { query, limit, hybrid } => {
+                    if hybrid {
+                        let arc_storage = std::sync::Arc::new(storage);
+                        let engine = agent_steward::memory::hybrid::HybridSearchEngine::new(arc_storage);
+                        let results = engine.search_hybrid(&query, limit).await?;
+                        println!("记忆搜索结果 (混合模式 RRF, 共 {} 条):", results.len());
+                        for r in results {
+                            let sim_str = r.cosine_similarity.map(|s| format!(" (语义相似度: {:.2})", s)).unwrap_or_default();
+                            println!("  - [{}] {} [RRF: {:.4}]{} (ID: {})",
+                                r.memory.memory_type, r.memory.content, r.rrf_score, sim_str, r.memory.id);
+                        }
+                    } else {
+                        let mm = MemoryManager::new(storage);
+                        let results = mm.search(&query, limit)?;
+                        println!("记忆搜索结果 (FTS 纯文本, 共 {} 条):", results.len());
+                        for m in results {
+                            println!("  - [{}] {} (ID: {})", m.memory_type, m.content, m.id);
+                        }
                     }
                 }
             }

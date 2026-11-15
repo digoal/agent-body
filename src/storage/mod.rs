@@ -330,10 +330,11 @@ impl Storage {
     pub fn insert_memory(&self, mem: &MemoryRecord) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let tags_str = serde_json::to_string(&mem.tags)?;
+        let emb_str = serde_json::to_string(&mem.embedding)?;
 
         conn.execute(
-            "INSERT INTO memories (id, type, content, summary, source_agent, source_session, tags, weight, pinned, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT INTO memories (id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 mem.id,
                 mem.memory_type,
@@ -345,6 +346,7 @@ impl Storage {
                 mem.weight as f64,
                 if mem.pinned { 1 } else { 0 },
                 mem.status,
+                emb_str,
             ],
         )?;
         Ok(())
@@ -353,7 +355,7 @@ impl Storage {
     pub fn search_memories_fts(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT m.id, m.type, m.content, m.summary, m.source_agent, m.source_session, m.tags, m.weight, m.pinned, m.status
+            "SELECT m.id, m.type, m.content, m.summary, m.source_agent, m.source_session, m.tags, m.weight, m.pinned, m.status, m.embedding
              FROM memories_fts f
              JOIN memories m ON m.rowid = f.rowid
              WHERE memories_fts MATCH ?1
@@ -363,6 +365,8 @@ impl Storage {
         let rows = stmt.query_map(params![query, limit as i64], |row| {
             let tags_str: String = row.get(6)?;
             let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
+            let emb_str: String = row.get(10).unwrap_or_else(|_| "[]".to_string());
+            let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
 
             Ok(MemoryRecord {
                 id: row.get(0)?,
@@ -375,6 +379,41 @@ impl Storage {
                 weight: row.get::<_, f64>(7)? as f32,
                 pinned: row.get::<_, i32>(8)? != 0,
                 status: row.get(9)?,
+                embedding,
+            })
+        })?.collect::<Result<Vec<_>, _>>()?;
+
+        Ok(rows)
+    }
+
+    pub fn list_all_active_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding
+             FROM memories
+             WHERE status = 'active'
+             ORDER BY created_at DESC
+             LIMIT ?1"
+        )?;
+
+        let rows = stmt.query_map(params![limit as i64], |row| {
+            let tags_str: String = row.get(6)?;
+            let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
+            let emb_str: String = row.get(10).unwrap_or_else(|_| "[]".to_string());
+            let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+
+            Ok(MemoryRecord {
+                id: row.get(0)?,
+                memory_type: row.get(1)?,
+                content: row.get(2)?,
+                summary: row.get(3)?,
+                source_agent: row.get(4)?,
+                source_session: row.get(5)?,
+                tags,
+                weight: row.get::<_, f64>(7)? as f32,
+                pinned: row.get::<_, i32>(8)? != 0,
+                status: row.get(9)?,
+                embedding,
             })
         })?.collect::<Result<Vec<_>, _>>()?;
 

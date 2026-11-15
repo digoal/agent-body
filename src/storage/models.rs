@@ -69,6 +69,8 @@ pub struct MemoryRecord {
     pub weight: f32,
     pub pinned: bool,
     pub status: String,
+    #[serde(default)]
+    pub embedding: Vec<f32>,
 }
 
 

@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS memories (
     pinned          INTEGER DEFAULT 0,
     sensitive       INTEGER DEFAULT 0,
     status          TEXT DEFAULT 'active' CHECK (status IN ('active','archived','outdated')),
+    embedding       TEXT DEFAULT '[]',
     created_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
     updated_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
     last_accessed_at TEXT,

@@ -2,6 +2,8 @@ use anyhow::Result;
 use crate::storage::Storage;
 use crate::storage::models::MemoryRecord;
 
+pub mod hybrid;
+
 pub struct MemoryManager {
     storage: Storage,
 }
@@ -32,6 +34,7 @@ impl MemoryManager {
             weight: 1.0,
             pinned: false,
             status: "active".to_string(),
+            embedding: vec![],
         };
 
         self.storage.insert_memory(&record)?;

@@ -157,12 +157,13 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_memory_search",
-                "description": "全文检索历史记忆与决策记录。",
+                "description": "语义与全文混合检索历史记忆与决策记录（支持 RRF 混合融合排序与近义词召回）。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "query": { "type": "string", "description": "搜索关键词" },
-                        "limit": { "type": "integer", "default": 10 }
+                        "query": { "type": "string", "description": "搜索关键词或语义描述" },
+                        "limit": { "type": "integer", "default": 10 },
+                        "hybrid": { "type": "boolean", "default": true, "description": "是否启用 Ollama 向量+FTS5 混合重排" }
                     },
                     "required": ["query"]
                 }
@@ -384,16 +385,34 @@ impl McpToolRegistry {
             }
 
             "steward_memory_search" => {
-                let mm = MemoryManager::new(self.storage.clone());
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
                 let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
+                let use_hybrid = args.get("hybrid").and_then(|v| v.as_bool()).unwrap_or(true);
 
-                let results = mm.search(query, limit)?;
-                let mut out = format!("记忆检索结果 (共 {} 条):\n", results.len());
-                for m in results {
-                    out.push_str(&format!("  - [{}] {} (ID: {})\n", m.memory_type, m.content, m.id));
+                if use_hybrid {
+                    let arc_storage = Arc::new(self.storage.clone());
+                    let engine = crate::memory::hybrid::HybridSearchEngine::new(arc_storage);
+                    let rt = tokio::runtime::Handle::current();
+                    let results = tokio::task::block_in_place(|| {
+                        rt.block_on(engine.search_hybrid(query, limit))
+                    })?;
+
+                    let mut out = format!("记忆检索结果 (混合模式 RRF, 共 {} 条):\n", results.len());
+                    for r in results {
+                        let sim_str = r.cosine_similarity.map(|s| format!(" (语义相似度: {:.2})", s)).unwrap_or_default();
+                        out.push_str(&format!("  - [{}] {} [RRF: {:.4}]{} (ID: {})\n",
+                            r.memory.memory_type, r.memory.content, r.rrf_score, sim_str, r.memory.id));
+                    }
+                    Ok(out)
+                } else {
+                    let mm = MemoryManager::new(self.storage.clone());
+                    let results = mm.search(query, limit)?;
+                    let mut out = format!("记忆检索结果 (FTS 纯文本, 共 {} 条):\n", results.len());
+                    for m in results {
+                        out.push_str(&format!("  - [{}] {} (ID: {})\n", m.memory_type, m.content, m.id));
+                    }
+                    Ok(out)
                 }
-                Ok(out)
             }
 
             "steward_links_query" => {
