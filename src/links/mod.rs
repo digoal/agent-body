@@ -3,6 +3,8 @@ use regex::Regex;
 use crate::storage::{Storage, models::LinkRecord};
 use anyhow::Result;
 
+pub mod impact;
+
 pub struct LinksEngine {
     storage: Arc<Storage>,
 }

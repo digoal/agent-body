@@ -211,6 +211,18 @@ impl McpToolRegistry {
                     },
                     "required": ["port"]
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_links_impact",
+                "description": "变更爆炸半径推演：评估重构、改动或删除特定文件/服务对上下游的影响范围，返回直接与多跳间接依赖列表及风险评级。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "target": { "type": "string", "description": "被评估对象的绝对路径或服务标识" },
+                        "max_depth": { "type": "integer", "default": 3, "description": "依赖推演最大跳数" }
+                    },
+                    "required": ["target"]
+                }
             })
         ]
     }
@@ -418,6 +430,15 @@ impl McpToolRegistry {
                 let port = args.get("port").and_then(|v| v.as_u64()).unwrap_or(8080) as u16;
                 let suggest_count = args.get("suggest_count").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
                 let res = crate::env::port::PortChecker::check_port(port, suggest_count)?;
+                Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_links_impact" => {
+                let arc_storage = Arc::new(self.storage.clone());
+                let analyzer = crate::links::impact::ImpactAnalyzer::new(arc_storage);
+                let target = args.get("target").and_then(|v| v.as_str()).unwrap_or("");
+                let max_depth = args.get("max_depth").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
+                let res = analyzer.analyze_impact(target, max_depth)?;
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 

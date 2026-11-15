@@ -88,6 +88,15 @@ enum LinksCommands {
         #[arg(short, long, default_value_t = 20)]
         limit: usize,
     },
+
+    #[command(about = "分析指定资产变更或删除的爆炸半径与上下游依赖")]
+    Impact {
+        #[arg(help = "被评估资产绝对路径或服务标识")]
+        target: String,
+
+        #[arg(short, long, default_value_t = 3, help = "依赖多跳推演最大深度")]
+        max_depth: usize,
+    },
 }
 
 #[derive(Subcommand)]
@@ -351,7 +360,7 @@ async fn main() -> Result<()> {
 
         Commands::Links { action } => {
             let arc_storage = std::sync::Arc::new(storage);
-            let engine = agent_steward::links::LinksEngine::new(arc_storage);
+            let engine = agent_steward::links::LinksEngine::new(arc_storage.clone());
             match action {
                 LinksCommands::Query { r#type, id } => {
                     let links = engine.query_links(&r#type, &id)?;
@@ -364,6 +373,11 @@ async fn main() -> Result<()> {
                 LinksCommands::Graph { limit } => {
                     let mermaid = engine.export_mermaid(limit)?;
                     println!("{}", mermaid);
+                }
+                LinksCommands::Impact { target, max_depth } => {
+                    let analyzer = agent_steward::links::impact::ImpactAnalyzer::new(arc_storage);
+                    let res = analyzer.analyze_impact(&target, max_depth)?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
                 }
             }
         }
