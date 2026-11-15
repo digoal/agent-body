@@ -121,7 +121,8 @@ cargo build --release
   - [roadmap-phase3.md](src_doc/roadmap-phase3.md) (混合检索/端口防撞/影响面分析已交付)
   - [roadmap-phase4.md](src_doc/roadmap-phase4.md) (图智能与 CodeGraph 宏微联邦已交付)
   - [roadmap-phase5.md](src_doc/roadmap-phase5.md) (系统级实装/Systemd/长文图文已交付)
-  - [roadmap-phase6.md](src_doc/roadmap-phase6.md) (目录结构与规范化重构)
+  - [roadmap-phase6.md](src_doc/roadmap-phase6.md) (目录结构与规范化重构已交付)
+  - [roadmap-phase7.md](src_doc/roadmap-phase7.md) (拓扑自愈/规则进化/宿主GC与自治生态规划)
 - **内置 Agent 技能库**:
   - [`skills/agent-steward-developer/`](skills/agent-steward-developer/SKILL.md)：指导 Agent 持续开发迭代项目的工程技能
   - [`skills/agent-steward-doc-writer/`](skills/agent-steward-doc-writer/SKILL.md)：指导 Agent 编写高质量使用手册与 README 的文档技能
