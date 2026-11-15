@@ -1,0 +1,41 @@
+[package]
+name = "agent-steward"
+version = "0.2.0"
+edition = "2021"
+authors = ["digoal 德哥"]
+description = "Agent Host Steward — 驻留在 Agent 宿主机中的环境大管家"
+license = "Apache-2.0"
+
+[dependencies]
+# 异步运行时
+tokio = { version = "1.37", features = ["full"] }
+
+# 命令行解析
+clap = { version = "4.5", features = ["derive", "cargo"] }
+
+# 序列化与配置
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# 错误处理
+anyhow = "1.0"
+thiserror = "1.0"
+
+# 时间与唯一 ID
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.8", features = ["v4", "serde"] }
+
+# SQLite 嵌入式存储 (含 FTS5 全文检索)
+rusqlite = { version = "0.31", features = ["bundled", "chrono"] }
+
+# 系统信息采集与进程监控
+sysinfo = "0.30"
+
+# 文件路径与匹配
+walkdir = "2.5"
+glob = "0.3"
+regex = "1.10"
+
+[dev-dependencies]
+tempfile = "3.10"

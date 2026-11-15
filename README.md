@@ -28,6 +28,15 @@
 | — | 对齐修复进度 (断点续传) | [ALIGNMENT-FIX-PROGRESS.md](design_doc/ALIGNMENT-FIX-PROGRESS.md) | ✅ 全部已完成 | 2026-11-15 |
 | — | 初始化 SQL | [init.sql](design_doc/init.sql) | ✅ 已验证 (v2 DDL 已跑通) | 2026-11-15 |
 
+## 源码实现与工程文档 (Rust Edition)
+
+| 交付模块 | 说明 | 路径 | 状态 |
+|---|---|---|---|
+| **Rust 核心工程** | 基于 Rust 1.99 + SQLite 3 (FTS5) 实现单二进制大管家 | [src/](src/) | ✅ 12 单元测试全部通过 |
+| **研发进度与断点追踪** | 串行研发断点续传总览 | [PROGRESS.md](src_doc/PROGRESS.md) | ✅ 全部完成 |
+| **编译与测试开发指南** | 本地工具链依赖、构建与测试指令 | [DEVELOPMENT.md](src_doc/DEVELOPMENT.md) | ✅ 完成 |
+| **Rust 版产品使用手册** | CLI 命令集、放置建议、分级扫描与环境感知指南 | [PRODUCT_MANUAL.md](src_doc/PRODUCT_MANUAL.md) | ✅ 完成 |
+
 ## 设计原则
 1. **本地优先、隐私优先** — 所有数据存本地，不外传
 2. **位置规范先行** — 智能提供新对象建议（放置路径、命名约定、安全脱敏）
