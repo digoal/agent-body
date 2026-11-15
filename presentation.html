@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Host Steward — 宿主环境大管家路演发布</title>
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --card-bg: rgba(22, 28, 45, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.35);
+      --accent: #10b981;
+      --purple: #8b5cf6;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 16:9 主容器 */
+    #deck-viewport {
+      width: 100vw;
+      height: 56.25vw;
+      max-height: 100vh;
+      max-width: 177.78vh;
+      position: relative;
+      background: radial-gradient(circle at 50% 20%, #151d36 0%, #080b12 80%);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 100px rgba(37, 99, 235, 0.1);
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    /* 幻灯片通用结构 */
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 3.5% 5% 5% 5%;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(40px) scale(0.98);
+      transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0) scale(1);
+    }
+
+    /* 顶部导航与分类 */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2%;
+    }
+
+    .tag-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      font-size: 0.85vw;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .slide-title {
+      font-size: 2.2vw;
+      font-weight: 800;
+      line-height: 1.25;
+      background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .slide-subtitle {
+      font-size: 1.05vw;
+      color: var(--text-muted);
+      margin-top: 0.3vw;
+    }
+
+    /* 内容网格容器 */
+    .content-grid {
+      flex: 1;
+      display: grid;
+      gap: 2vw;
+      align-items: center;
+    }
+
+    .grid-2 {
+      grid-template-columns: 1.05fr 0.95fr;
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    /* 卡片标准 */
+    .glass-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.6vw;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      position: relative;
+    }
+
+    .glass-card:hover {
+      border-color: rgba(96, 165, 250, 0.35);
+    }
+
+    /* 重点卡片高亮 */
+    .card-highlight {
+      border-color: rgba(59, 130, 246, 0.4);
+      background: linear-gradient(145deg, rgba(30, 41, 69, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+    }
+
+    /* 文本要点 */
+    .point-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 1.2vw;
+    }
+
+    .point-icon {
+      width: 1.8vw;
+      height: 1.8vw;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.9vw;
+      flex-shrink: 0;
+    }
+
+    .point-icon.blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .point-icon.green { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .point-icon.amber { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .point-icon.rose { background: rgba(244, 63, 94, 0.2); color: #fb7185; }
+
+    .point-title {
+      font-size: 1.1vw;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 0.2vw;
+    }
+
+    .point-desc {
+      font-size: 0.88vw;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* 封面设计专用 */
+    .cover-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      height: 100%;
+    }
+
+    .hero-badge {
+      padding: 8px 20px;
+      border-radius: 9999px;
+      background: linear-gradient(90deg, rgba(59,130,246,0.2) 0%, rgba(139,92,246,0.2) 100%);
+      border: 1px solid rgba(139,92,246,0.4);
+      color: #c4b5fd;
+      font-size: 1vw;
+      font-weight: 600;
+      margin-bottom: 1.5vw;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-title {
+      font-size: 3.8vw;
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #ffffff 30%, #60a5fa 70%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1vw;
+    }
+
+    .hero-tagline {
+      font-size: 1.5vw;
+      color: #cbd5e1;
+      max-width: 65%;
+      line-height: 1.5;
+      margin-bottom: 2.2vw;
+    }
+
+    .hero-tags-row {
+      display: flex;
+      gap: 1vw;
+    }
+
+    .hero-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 16px;
+      border-radius: 8px;
+      font-size: 0.9vw;
+      color: #94a3b8;
+    }
+
+    /* 控制栏与快捷键提示 */
+    #deck-controls {
+      position: absolute;
+      bottom: 2.5%;
+      left: 5%;
+      right: 5%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      margin: 0 2vw;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #10b981);
+      width: 12.5%;
+      transition: width 0.3s ease;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ctrl-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e2e8f0;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.85vw;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(59, 130, 246, 0.3);
+      border-color: rgba(96, 165, 250, 0.5);
+      color: #ffffff;
+    }
+
+    .page-indicator {
+      font-size: 0.9vw;
+      color: #64748b;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 动态交互仿真器组件 */
+    .sim-panel {
+      background: #080d1a;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 1.2vw;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.82vw;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sim-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+      color: #94a3b8;
+    }
+
+    .sim-screen {
+      flex: 1;
+      background: #040711;
+      border-radius: 6px;
+      padding: 10px;
+      color: #38bdf8;
+      overflow: hidden;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .sim-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .sim-btn {
+      flex: 1;
+      background: #1e293b;
+      color: #f1f5f9;
+      border: 1px solid #334155;
+      padding: 6px 0;
+      border-radius: 4px;
+      font-size: 0.8vw;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .sim-btn:hover {
+      background: #2563eb;
+      border-color: #60a5fa;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="deck-viewport">
+
+    <!-- Slide 1: 封面 -->
+    <section class="slide active" data-index="1">
+      <div class="cover-container">
+        <div class="hero-badge">
+          <span>⚡</span>
+          <span>新一代 Agent 基础设施 · Rust 原生单二进制</span>
+        </div>
+        <h1 class="hero-title">Agent Host Steward</h1>
+        <p class="hero-tagline">
+          宿主环境大管家：驻留在 Agent 宿主机中<br>
+          管记忆 · 管素材 · 管软件环境 · 管动态进程 · 管一切对象位置规范
+        </p>
+        <div class="hero-tags-row">
+          <div class="hero-pill">🚀 终结跨会话失忆</div>
+          <div class="hero-pill">🛡️ 白名单深挖 / 黑名单浅层阻断</div>
+          <div class="hero-pill">🎯 放置建议 (Placement Advice)</div>
+          <div class="hero-pill">⚡ 原生 MCP stdio 挂载</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 2: 行业痛点 -->
+    <section class="slide" data-index="2">
+      <div class="slide-header">
+        <div>
+          <span class="tag-badge">The Problem</span>
+          <h2 class="slide-title">Agent 在宿主机中的四大“结构性失控”</h2>
+          <p class="slide-subtitle">当 Agent 逐渐常驻开发机时，环境正不可逆地走向混乱与崩溃</p>
+        </div>
+      </div>
+      <div class="content-grid grid-2">
+        <div class="glass-card">
+          <div class="point-item">
+            <div class="point-icon rose">1</div>
+            <div>
+              <div class="point-title">跨会话绝对失忆，开工靠人肉喂饭</div>
+              <div class="point-desc">换个对话窗口，Agent 就不知机器上有何数据库、跑了什么脚本，每次排障先花 10 分钟人肉告知环境。</div>
+            </div>
+          </div>
+          <div class="point-item">
+            <div class="point-icon amber">2</div>
+            <div>
+              <div class="point-title">新文件乱放，宿主磁盘严重污染</div>
+              <div class="point-desc">写个爬虫放在根目录，临时测试丢在项目里，没有组织规范，开发机迅速变成垃圾场。</div>
+            </div>
+          </div>
+          <div class="point-item">
+            <div class="point-icon blue">3</div>
+            <div>
+              <div class="point-title">暴力扫描打爆系统，敏感信息泄露</div>
+              <div class="point-desc">传统工具一股脑全盘递归，把 node_modules、.cache 海量碎片扫爆数据库，还把 .ssh 密钥全量读入上下文。</div>
+            </div>
+          </div>
+          <div class="point-item">
+            <div class="point-icon green">4</div>
+            <div>
+              <div class="point-title">缺乏事前防撞，盲目动刀连锁暴雷</div>
+              <div class="point-desc">测试脚本随手占用 8080 端口与用户服务踩踏；改动通用库不知下游定时任务依赖，造成夜间批量 crash。</div>
+            </div>
+          </div>
+        </div>
+        <div class="glass-card" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
+          <!-- SVG 痛点对比图 -->
+          <svg viewBox="0 0 450 300" style="width: 100%; height: auto;">
+            <defs>
+              <linearGradient id="grad-red" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ef4444" stop-opacity="0.2"/>
+                <stop offset="100%" stop-color="#b91c1c" stop-opacity="0.05"/>
+              </linearGradient>
+            </defs>
+            <rect x="20" y="20" width="410" height="260" rx="12" fill="url(#grad-red)" stroke="#ef4444" stroke-dasharray="4 4"/>
+            <text x="225" y="55" fill="#f87171" font-size="16" font-weight="bold" text-anchor="middle">❌ 传统 Agent 宿主机现状：混沌与高危</text>
+            
+            <circle cx="90" cy="130" r="35" fill="#1e293b" stroke="#f87171"/>
+            <text x="90" y="135" fill="#e2e8f0" font-size="12" text-anchor="middle">新开会话</text>
+            <text x="90" y="180" fill="#94a3b8" font-size="11" text-anchor="middle">“我是谁？机器有啥？”</text>
+
+            <path d="M 130 130 L 190 130" stroke="#f87171" stroke-width="2" marker-end="url(#arrow)"/>
+
+            <rect x="200" y="95" width="100" height="70" rx="8" fill="#1e293b" stroke="#ef4444"/>
+            <text x="250" y="125" fill="#fca5a5" font-size="11" text-anchor="middle">乱建测试脚本</text>
+            <text x="250" y="145" fill="#ef4444" font-size="10" text-anchor="middle">端口 8080 冲突!</text>
+
+            <path d="M 305 130 L 340 130" stroke="#f87171" stroke-width="2"/>
+
+            <rect x="345" y="95" width="80" height="70" rx="8" fill="#1e293b" stroke="#ef4444"/>
+            <text x="385" y="125" fill="#f87171" font-size="11" text-anchor="middle">扫爆数据库</text>
+            <text x="385" y="145" fill="#94a3b8" font-size="9" text-anchor="middle">10万 node_modules</text>
+
+            <text x="225" y="240" fill="#fca5a5" font-size="13" text-anchor="middle">结论: Agent 缺乏“环境大管家”，越聪明破坏力越大！</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 3: 架构全景 -->
+    <section class="slide" data-index="3">
+      <div class="slide-header">
+        <div>
+          <span class="tag-badge">Architecture</span>
+          <h2 class="slide-title">系统全景：六维一体的认知底座</h2>
+          <p class="slide-subtitle">管记忆 · 管素材 · 管环境 · 管进程 · 管位置规范 · 单二进制自包含</p>
+        </div>
+      </div>
+      <div class="content-grid grid-2">
+        <div>
+          <!-- 架构 SVG 图解 -->
+          <svg viewBox="0 0 500 320" style="width: 100%; height: auto;">
+            <defs>
+              <linearGradient id="core-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0.1"/>
+              </linearGradient>
+            </defs>
+            <!-- 外部交互层 -->
+            <rect x="10" y="10" width="480" height="45" rx="8" fill="#1e293b" stroke="#38bdf8"/>
+            <text x="250" y="38" fill="#38bdf8" font-size="14" font-weight="bold" text-anchor="middle">Top Layer: Agent 交互通道 (CLI 终端 / MCP stdio / Daemon 守护)</text>
+
+            <!-- 核心治理引擎 -->
+            <rect x="10" y="70" width="480" height="160" rx="10" fill="url(#core-grad)" stroke="#3b82f6"/>
+            
+            <rect x="30" y="90" width="130" height="55" rx="6" fill="#0f172a" stroke="#60a5fa"/>
+            <text x="95" y="115" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">放置建议引擎</text>
+            <text x="95" y="132" fill="#94a3b8" font-size="9" text-anchor="middle">8大目录规范与命名模式</text>
+
+            <rect x="185" y="90" width="130" height="55" rx="6" fill="#0f172a" stroke="#34d399"/>
+            <text x="250" y="115" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">分级扫描器</text>
+            <text x="250" y="132" fill="#94a3b8" font-size="9" text-anchor="middle">白名单深挖 / 黑名单浅层</text>
+
+            <rect x="340" y="90" width="130" height="55" rx="6" fill="#0f172a" stroke="#f59e0b"/>
+            <text x="405" y="115" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">动态进程感知</text>
+            <text x="405" y="132" fill="#94a3b8" font-size="9" text-anchor="middle">/proc 底噪过滤与端口防撞</text>
+
+            <rect x="30" y="160" width="130" height="55" rx="6" fill="#0f172a" stroke="#a78bfa"/>
+            <text x="95" y="185" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">混合记忆检索</text>
+            <text x="95" y="202" fill="#94a3b8" font-size="9" text-anchor="middle">FTS5 + Ollama RRF 重排</text>
+
+            <rect x="185" y="160" width="130" height="55" rx="6" fill="#0f172a" stroke="#38bdf8"/>
+            <text x="250" y="185" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">关联与爆炸半径</text>
+            <text x="250" y="202" fill="#94a3b8" font-size="9" text-anchor="middle">依赖拓扑与改动风险分析</text>
+
+            <rect x="340" y="160" width="130" height="55" rx="6" fill="#0f172a" stroke="#f43f5e"/>
+            <text x="405" y="185" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">会话生命周期</text>
+            <text x="405" y="202" fill="#94a3b8" font-size="9" text-anchor="middle">完工结清 / tmp 垃圾自洁</text>
+
+            <!-- 存储持久层 -->
+            <rect x="10" y="245" width="480" height="60" rx="8" fill="#1e293b" stroke="#10b981"/>
+            <text x="250" y="270" fill="#34d399" font-size="13" font-weight="bold" text-anchor="middle">Storage Layer: ~/.steward/steward.db (SQLite WAL + Bundled FTS5)</text>
+            <text x="250" y="290" fill="#94a3b8" font-size="10" text-anchor="middle">单文件零外部运维依赖 · 纯本地存储保护极致隐私</text>
+          </svg>
+        </div>
+        <div class="glass-card">
+          <h3 style="font-size: 1.3vw; color: #60a5fa; margin-bottom: 1vw;">为什么能胜任大管家？</h3>
+          <p style="font-size: 0.95vw; color: #cbd5e1; line-height: 1.6; margin-bottom: 1.2vw;">
+            大管家采用 <strong>Rust 1.99</strong> 语言编写，从内核级系统调用（<code>inotify</code>、<code>/proc</code>）到底层存储完全自主闭环。
+          </p>
+          <ul style="list-style: none; font-size: 0.9vw; color: #94a3b8; line-height: 1.8;">
+            <li>🔹 <strong>极致轻量</strong>：编译后单二进制仅 8MB，常驻空闲内存 &lt; 20MB，CPU 占用 &lt; 0.1%；</li>
+            <li>🔹 <strong>零动态依赖</strong>：SQLite 静态编译内嵌，无需安装任何 <code>libsqlite3</code> 即可运行；</li>
+            <li>🔹 <strong>开箱即用</strong>：首次运行自动初始化数据库，零配置自愈引导；</li>
+            <li>🔹 <strong>原生标准协议</strong>：原生实现 14 个 MCP 工具，打通 Claude / Cursor 等所有主流 Agent。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 4: 核心黑科技 1 - 放置与分级颗粒度 -->
+    <section class="slide" data-index="4">
+      <div class="slide-header">
+        <div>
+          <span class="tag-badge">Deep Dive</span>
+          <h2 class="slide-title">黑科技 1：放置建议法则 & 分级颗粒度扫描</h2>
+          <p class="slide-subtitle">从根源解决“文件乱放”与“目录扫爆”的两大宿主顽疾</p>
+        </div>
+      </div>
+      <div class="content-grid grid-2">
+        <div class="glass-card">
+          <h3 style="font-size: 1.15vw; color: #34d399; margin-bottom: 0.8vw;">🎯 放置建议 (Placement Engine)</h3>
+          <p style="font-size: 0.9vw; color: var(--text-muted); line-height: 1.5; margin-bottom: 1vw;">
+            Agent 在创建任何新工程、工具或测试文件前，调用大管家获取规范放置建议，彻底告别开发机散落。
+          </p>
+          <div style="background:#040711; padding:0.8vw; border-radius:6px; font-family:monospace; font-size:0.8vw; color:#a78bfa;">
+            $ agent-steward place suggest --type script --name sec_fetcher<br>
+            <span style="color:#34d399;">&gt; 推荐路径: /root/new/shared_proj/sec_fetcher/</span><br>
+            <span style="color:#94a3b8;">&gt; 规则理由: 长期沉淀的可复用脚本与程序库</span><br>
+            <span style="color:#60a5fa;">&gt; 伴随指引: 建议配备 README.md，严禁硬编码敏感信息</span>
+          </div>
+
+          <h3 style="font-size: 1.15vw; color: #60a5fa; margin-top: 1.2vw; margin-bottom: 0.8vw;">🛡️ 白黑名单颗粒度 (Granularity Tiering)</h3>
+          <p style="font-size: 0.9vw; color: var(--text-muted); line-height: 1.5;">
+            <strong>敲门但不进屋！</strong>黑名单目录（<code>node_modules/</code>, <code>.cache/</code>, <code>.git/</code>）仅记录当前目录实体本身标量，遍历器直接调用 <code>skip_current_dir()</code>，下钻深度严格为 0，杜绝扫爆数据库！
+          </p>
+        </div>
+
+        <div class="sim-panel">
+          <div class="sim-header">
+            <span>分级颗粒度扫描逻辑模拟器</span>
+            <span style="color:#10b981;">● Online</span>
+          </div>
+          <div id="sim-scan-screen" class="sim-screen">点击下方按钮，观察大管家如何智能分流扫描...</div>
+          <div class="sim-actions">
+            <button class="sim-btn" onclick="runSimScan('deep')">模拟扫描 /root/new/work/ (白名单)</button>
+            <button class="sim-btn" onclick="runSimScan('shallow')">模拟扫描 node_modules/ (黑名单)</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 5: 核心黑科技 2 - 事前防撞与爆炸半径 -->
+    <section class="slide" data-index="5">
+      <div class="slide-header">
+        <div>
+          <span class="tag-badge">Safety Guard</span>
+          <h2 class="slide-title">黑科技 2：事前端口防撞 & 变更爆炸半径推演</h2>
+          <p class="slide-subtitle">让 Agent 具备资深架构师的全局审慎视角，绝不盲目动刀</p>
+        </div>
+      </div>
+      <div class="content-grid grid-2">
+        <div class="glass-card">
+          <div class="point-item">
+            <div class="point-icon amber">⚡</div>
+            <div>
+              <div class="point-title">端口防撞预警 (Port Conflict Guard)</div>
+              <div class="point-desc">
+                启动服务前校验端口占用，毫秒级追溯持有进程 PID、可执行名、命令行与用户。若冲突，自动推荐连续可用空闲端口（如已占 22 则推荐 23, 24）。
+              </div>
+            </div>
+          </div>
+          <div class="point-item">
+            <div class="point-icon rose">💥</div>
+            <div>
+              <div class="point-title">变更爆炸半径推演 (Blast Radius Analysis)</div>
+              <div class="point-desc">
+                改动核心代码前，BFS 递归计算直接依赖者与多跳下游定时任务，输出风险等级（LOW 到 CRITICAL），杜绝因重构接口造成夜间生产任务集体阵亡。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <div class="sim-header">
+            <span>安全防撞交互控制台</span>
+            <span style="color:#f59e0b;">● Port & Links Guard</span>
+          </div>
+          <div id="sim-port-screen" class="sim-screen">请选择操作体验防撞预警与爆炸半径推演...</div>
+          <div class="sim-actions">
+            <button class="sim-btn" onclick="runSimPort(22)">检测端口 22 (冲突场景)</button>
+            <button class="sim-btn" onclick="runSimPort(8999)">检测端口 8999 (可用场景)</button>
+            <button class="sim-btn" onclick="runSimImpact()">推演 core_utils.py 影响面</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 6: 核心黑科技 3 - 混合检索与会话自洁 -->
+    <section class="slide" data-index="6">
+      <div class="slide-header">
+        <div>
+          <span class="tag-badge">Intelligence</span>
+          <h2 class="slide-title">黑科技 3：混合 RRF 检索 & 会话生命周期自洁</h2>
+          <p class="slide-subtitle">打破字面匹配死角，任务结束干干净净不留碎片</p>
+        </div>
+      </div>
+      <div class="content-grid grid-2">
+        <div class="glass-card">
+          <h3 style="font-size: 1.15vw; color: #a78bfa; margin-bottom: 0.6vw;">🧠 语义 + 全文混合检索 (Hybrid RRF)</h3>
+          <p style="font-size: 0.88vw; color: var(--text-muted); line-height: 1.5; margin-bottom: 0.8vw;">
+            口语化表述（如“查下应急方案”）匹配专业词汇（“PostgreSQL 故障降级处理”）。结合本地 Ollama（bge-m3 1024 维）余弦相似度与 SQLite FTS5，通过 RRF 融合排序，无模型时全自动优雅降级！
+          </p>
+
+          <h3 style="font-size: 1.15vw; color: #f43f5e; margin-top: 1.2vw; margin-bottom: 0.6vw;">🧹 会话完工结算 (Session Close)</h3>
+          <p style="font-size: 0.88vw; color: var(--text-muted); line-height: 1.5;">
+            任务完工触发 <code>steward close</code>，自动回收 <code>/root/new/tmp/</code> 下孤儿临时脚本，汇总环境变更生成工单摘要，沉淀为永久记忆，宿主机长期保持自洁。
+          </p>
+        </div>
+
+        <div class="glass-card card-highlight">
+          <h4 style="font-size: 1vw; color: #38bdf8; margin-bottom: 0.8vw;">实测效果对比（真实执行产出）</h4>
+          <div style="background:#060a17; padding:0.8vw; border-radius:6px; font-family:monospace; font-size:0.78vw; color:#e2e8f0; line-height:1.5;">
+            <span style="color:#64748b;">$ agent-steward close session-20261115-demo</span><br>
+            {<br>
+            &nbsp;&nbsp;"session_id": "session-20261115-demo",<br>
+            &nbsp;&nbsp;<span style="color:#34d399;">"cleaned_files_count": 4</span>,<br>
+            &nbsp;&nbsp;<span style="color:#38bdf8;">"freed_bytes": 9201</span>,<br>
+            &nbsp;&nbsp;"cleaned_paths": [<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;"/root/new/tmp/test_truncation.py",<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;"/root/new/tmp/test_zoom.sh"<br>
+            &nbsp;&nbsp;],<br>
+            &nbsp;&nbsp;<span style="color:#a78bfa;">"saved_memory_id": "mem-session-e2d36c85..."</span><br>
+            }
+          </div>
+          <p style="font-size: 0.82vw; color: #94a3b8; margin-top: 0.8vw;">
+            真实回收 4 个无用测试文件，释放 9.2KB 磁盘，自动归档记忆！
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 7: 商业价值与技术壁垒 -->
+    <section class="slide" data-index="7">
+      <div class="slide-header">
+        <div>
+          <span class="tag-badge">Business & Moat</span>
+          <h2 class="slide-title">商业价值与核心护城河</h2>
+          <p class="slide-subtitle">做 Agent 时代的操作系统认知层，拥有不可替代的底层卡位</p>
+        </div>
+      </div>
+      <div class="content-grid grid-3">
+        <div class="glass-card">
+          <div style="font-size: 2vw; margin-bottom: 0.5vw;">🏰</div>
+          <h3 style="font-size: 1.1vw; color: #f8fafc; margin-bottom: 0.5vw;">关键生态位卡位</h3>
+          <p style="font-size: 0.85vw; color: var(--text-muted); line-height: 1.5;">
+            大模型厂商内卷上下文窗口和推理算力，但<strong>谁来管理开发机上的物理资产和环境？</strong>大管家卡死宿主系统认知底座，成为 Agent 运行不可或缺的基础设施。
+          </p>
+        </div>
+        <div class="glass-card">
+          <div style="font-size: 2vw; margin-bottom: 0.5vw;">⚡</div>
+          <h3 style="font-size: 1.1vw; color: #f8fafc; margin-bottom: 0.5vw;">全自研工程壁垒</h3>
+          <p style="font-size: 0.85vw; color: var(--text-muted); line-height: 1.5;">
+            基于 Rust 编写，彻底摆脱 Python 庞大运行时依赖。独创分级浅层阻断技术与 inotify 300ms 防抖流水线，在万级工程下依然保持极低系统开销。
+          </p>
+        </div>
+        <div class="glass-card">
+          <div style="font-size: 2vw; margin-bottom: 0.5vw;">🔒</div>
+          <h3 style="font-size: 1.1vw; color: #f8fafc; margin-bottom: 0.5vw;">企业级数据安全</h3>
+          <p style="font-size: 0.85vw; color: var(--text-muted); line-height: 1.5;">
+            数据 100% 留存在本地 SQLite，绝不回传云端。天生支持敏感目录阻断与密钥脱敏，满足金融、政企与极客群体的严格隐私合规要求。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 8: 尾页与愿景 -->
+    <section class="slide" data-index="8">
+      <div class="cover-container">
+        <div class="hero-badge">
+          <span>🚀</span>
+          <span>以终为始 · 拥抱常驻 Agent 时代</span>
+        </div>
+        <h2 class="hero-title" style="font-size: 3.2vw;">让每一个 Agent 都有条不紊</h2>
+        <p class="hero-tagline" style="font-size: 1.25vw; max-width: 60%;">
+          我们相信 AI 时代，未来的每一台机器都将运行着数十个自主 Agent。<br>
+          <strong>Agent Host Steward</strong>，就是守护这片数字宿土的坚固基石。
+        </p>
+        <div style="margin-top: 1.5vw; display: flex; gap: 1vw;">
+          <a class="ctrl-btn" style="padding: 10px 24px; font-size: 1vw; text-decoration: none; background: #2563eb;" href="https://github.com/digoal/agent-steward" target="_blank">
+            ⭐ Star on GitHub
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 底部控制栏 -->
+    <div id="deck-controls">
+      <div class="btn-group">
+        <button class="ctrl-btn" onclick="prevSlide()" title="上一页 (←)">上一页</button>
+        <button class="ctrl-btn" onclick="nextSlide()" title="下一页 (→ / 空格)">下一页</button>
+      </div>
+
+      <div class="progress-bar-container">
+        <div id="progress-bar" class="progress-bar-fill"></div>
+      </div>
+
+      <div class="btn-group">
+        <span id="page-num" class="page-indicator">1 / 8</span>
+        <button class="ctrl-btn" onclick="toggleFullScreen()" title="全屏演示 (F)">⛶ 全屏 (F)</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 8;
+
+    function updateSlide() {
+      document.querySelectorAll('.slide').forEach((slide, idx) => {
+        if (idx + 1 === currentSlide) {
+          slide.classList.add('active');
+        } else {
+          slide.classList.remove('active');
+        }
+      });
+
+      document.getElementById('page-num').innerText = `${currentSlide} / ${totalSlides}`;
+      document.getElementById('progress-bar').style.width = `${(currentSlide / totalSlides) * 100}%`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    // 快捷键监听
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        prevSlide();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullScreen();
+      }
+    });
+
+    // 交互模拟器 1: 分级扫描
+    function runSimScan(type) {
+      const screen = document.getElementById('sim-scan-screen');
+      if (type === 'deep') {
+        screen.innerHTML = `[SCANNER] 触发白名单路径: /root/new/work/\n[POLICY] 命中策略: policy-2 (tier=deep, max_depth=-1)\n[ACTION] 递归遍历所有子目录与文件...\n[INDEX]  ✓ 建立代码文件元数据\n[INDEX]  ✓ 同步生成 FTS5 全文索引\n[FINISH] 耗时: 18ms | 纳管资产: +12 个 | 状态: 100% 全量深度沉淀`;
+      } else {
+        screen.innerHTML = `[SCANNER] 触发黑名单路径: **/node_modules/**\n[POLICY] 命中策略: policy-4 (tier=shallow, max_depth=0)\n[ACTION] 🚨 触发浅层阻断机制 (it.skip_current_dir())\n[INDEX]  ✓ 仅记录目录实体本身: node_modules (directory)\n[BLOCK]  ⛔ 跳过 15,820 个无用碎片子文件!\n[FINISH] 耗时: 1ms | 数据库零膨胀 | 杜绝扫爆系统!`;
+      }
+    }
+
+    // 交互模拟器 2: 端口防撞与爆炸半径
+    function runSimPort(port) {
+      const screen = document.getElementById('sim-port-screen');
+      if (port === 22) {
+        screen.innerHTML = `[PORT GUARD] 检测端口 22...\n[KERNEL]   /proc/net/tcp 状态: 0A (TCP_LISTEN)\n[RESOLVE]  定位 PID: 957 | 名称: sshd | 用户: root\n[WARNING]  ⚠️ 端口已被生产进程占用，严禁强杀与重复绑定!\n[ADVICE]   💡 推荐改用连续可用空闲端口: [23, 24, 25]`;
+      } else {
+        screen.innerHTML = `[PORT GUARD] 检测端口 8999...\n[KERNEL]   /proc/net/tcp 未见监听记录\n[BIND]     本地 127.0.0.1:8999 探测绑定成功\n[STATUS]   ✅ 端口 8999 完全空闲，可安全启动测试服务!`;
+      }
+    }
+
+    function runSimImpact() {
+      const screen = document.getElementById('sim-port-screen');
+      screen.innerHTML = `[BLAST RADIUS] 正在分析: /root/new/shared_proj/core_utils.py\n[GRAPH BFS]    解析 links 依赖图谱 (max_depth=3)...\n[DIRECT]       直接依赖: /root/new/work/app_a.py (script)\n[INDIRECT]     间接下游: crontab: daily_sync (22:00 运行)\n[RISK LEVEL]   🔥 CRITICAL (核心公共库，受多业务强依赖!)\n[ADVICE]       改动前必须确保接口向后兼容，切勿直接删除函数!`;
+    }
+  </script>
+</body>
+</html>
