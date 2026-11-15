@@ -97,7 +97,93 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.2 steward_memory_add — 写入记忆
+### 2.2 steward_placement_suggest — 对象放置与路径建议
+
+当 Agent 准备在宿主机新建项目、生成脚本、写入重要笔记或产生临时数据时调用此接口，获取符合宿主机规范的标准落盘路径与命名安全指引。
+
+**参数:**
+
+```json
+{
+  "object_type": {
+    "type": "string",
+    "enum": ["project", "script", "document", "dataset", "note", "tmp", "skill", "other"],
+    "required": true,
+    "description": "准备生成的对象类别"
+  },
+  "name": {
+    "type": "string",
+    "required": true,
+    "description": "对象名称或建议文件名 (例如 'sec_scanner', 'pg_tuning_notes')"
+  },
+  "intent": {
+    "type": "string",
+    "required": true,
+    "description": "对象的用途与生命周期预期 (例如 '长期复用的美股数据抓取工具', '临时调试运行日志')"
+  },
+  "tags": {
+    "type": "array",
+    "items": {"type": "string"},
+    "description": "技术栈或业务标签 (如 ['python', 'sec', 'finance'])"
+  },
+  "security_level": {
+    "type": "string",
+    "enum": ["public", "internal", "confidential", "secret"],
+    "default": "internal",
+    "description": "保密级别"
+  }
+}
+```
+
+**返回:**
+
+```json
+{
+  "suggested_path": "/root/new/shared_proj/sec_scanner/",
+  "rule_matched": "shared_tools",
+  "reason": "长期复用的程序与脚本库统一存放在 /root/new/shared_proj/",
+  "naming_convention": "snake_case 目录命名，子目录下配备入口脚本与 README.md",
+  "recommended_permissions": "0755",
+  "conflict_detected": false,
+  "guidelines": [
+    "需包含使用示例与依赖说明",
+    "严禁将敏感凭据硬编码，应通过环境变量或脱敏配置传入"
+  ]
+}
+```
+
+---
+
+### 2.3 steward_placement_rules — 获取目录规范规则库
+
+**参数:**
+
+```json
+{
+  "pattern_type": {
+    "type": "string",
+    "description": "过滤指定类型的规则 (project/script/tmp/note 等)"
+  }
+}
+```
+
+**返回:**
+
+```json
+{
+  "rules": [
+    {"rule_name": "shared_proj", "type": "script", "target_base_dir": "/root/new/shared_proj/", "desc": "长期沉淀的程序与脚本"},
+    {"rule_name": "work_projects", "type": "project", "target_base_dir": "/root/new/work/", "desc": "常规立项的工作工程目录"},
+    {"rule_name": "tmp_files", "type": "tmp", "target_base_dir": "/root/new/tmp/", "desc": "可随时清理的临时文件与日志"},
+    {"rule_name": "skills", "type": "skill", "target_base_dir": "/root/new/skills/", "desc": "沉淀的 AI 技能目录"},
+    {"rule_name": "notes", "type": "note", "target_base_dir": "/root/new/note/", "desc": "重要笔记与清单"}
+  ]
+}
+```
+
+---
+
+### 2.4 steward_memory_add — 写入记忆
 
 ```json
 {
@@ -294,7 +380,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.7 steward_asset_register — 注册资产
+### 2.9 steward_asset_register — 注册资产
 
 ```json
 {
@@ -305,12 +391,28 @@ steward 对外提供三套等价接口，功能完全一致：
   },
   "type": {
     "type": "string",
-    "enum": ["project", "script", "document", "dataset", "config", "media", "other"],
-    "required": true
+    "enum": ["directory", "project", "script", "document", "dataset", "config", "media", "other"],
+    "required": true,
+    "description": "资产类型，包含 directory 目录一等公民"
+  },
+  "owner": {
+    "type": "string",
+    "default": "user:digoal",
+    "description": "归属主体 (如 'user:digoal', 'agent:session-123', 'system')"
+  },
+  "security_level": {
+    "type": "string",
+    "enum": ["public", "internal", "confidential", "secret"],
+    "default": "internal",
+    "description": "保密级别"
   },
   "description": {
     "type": "string",
-    "description": "资产描述"
+    "description": "资产人类可读描述"
+  },
+  "desc_kv": {
+    "type": "object",
+    "description": "结构化语义元数据 KV (如 {'purpose': '美股抓取', 'ttl': '30d', 'upstream': 'SEC'})"
   },
   "tags": {
     "type": "array",
@@ -335,6 +437,8 @@ steward 对外提供三套等价接口，功能完全一致：
   "id": "uuid",
   "path": "/root/new/work/agent-steward/",
   "type": "project",
+  "owner": "user:digoal",
+  "security_level": "internal",
   "size": "82KB (6 files)",
   "created_at": "2026-11-15T10:30:00+08:00"
 }
@@ -342,12 +446,18 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.8 steward_asset_search — 搜索资产
+### 2.10 steward_asset_search — 搜索资产
 
 ```json
 {
-  "query": {"type": "string", "required": true},
-  "type": {"type": "string"},
+  "query": {"type": "string", "required": true, "description": "自然语言或关键词查询"},
+  "type": {"type": "string", "description": "按资产类型过滤 (如 directory/script/project)"},
+  "owner": {"type": "string", "description": "按归属者过滤"},
+  "max_security_level": {
+    "type": "string",
+    "enum": ["public", "internal", "confidential", "secret"],
+    "description": "最高可见密级过滤（用于安全脱敏检索）"
+  },
   "tags": {"type": "array", "items": {"type": "string"}},
   "limit": {"type": "integer", "default": 20}
 }
@@ -355,7 +465,12 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.9 steward_asset_scan — 扫描目录
+### 2.11 steward_asset_scan — 目录扫描与分级颗粒度建档
+
+依据宿主机 `scan_policies` 策略自动执行分级扫描，**杜绝一股脑全量生成**：
+- 白名单目录：深入递归到最深层，提取完整标量 + 全文 FTS5 + 向量 Embedding + 关联 Links；
+- 黑名单目录：**止于当前目录层级**，仅建档该目录实体本身标量，绝不深入递归子文件，严禁文本切块与向量；
+- 受限目录：仅浅层索引主要入口与 README，跳过大文件向量化。
 
 ```json
 {
@@ -364,15 +479,16 @@ steward 对外提供三套等价接口，功能完全一致：
     "required": true,
     "description": "要扫描的目录路径"
   },
-  "depth": {
-    "type": "integer",
-    "default": 3,
-    "description": "最大扫描深度"
+  "force_tier": {
+    "type": "string",
+    "enum": ["auto", "deep", "shallow", "restricted"],
+    "default": "auto",
+    "description": "强制指定颗粒度层级。默认为 auto，自动匹配预设 scan_policies"
   },
   "auto_register": {
     "type": "boolean",
     "default": false,
-    "description": "自动注册发现的项目目录"
+    "description": "自动注册发现的项目目录与独立脚本"
   }
 }
 ```
@@ -382,12 +498,65 @@ steward 对外提供三套等价接口，功能完全一致：
 ```json
 {
   "scanned_dirs": 156,
-  "discovered": [
-    {"path": "/root/new/work/project-x/", "type": "project", "indicators": [".git", "Cargo.toml"]},
-    {"path": "/root/new/shared_proj/tool.py", "type": "script", "indicators": ["shebang"]}
+  "deep_scanned_files": 342,
+  "shallow_blocked_dirs": [
+    {
+      "path": "/root/new/work/project-x/node_modules",
+      "size": "340MB",
+      "items_count": 14208,
+      "tier": "shallow",
+      "reason": "黑名单策略命中: 止于当前目录层级，未递归下钻，未生成向量与全文"
+    }
   ],
-  "auto_registered": 0,
-  "elapsed_ms": 1230
+  "discovered": [
+    {"path": "/root/new/work/project-x/", "type": "project", "tier": "deep"},
+    {"path": "/root/new/shared_proj/tool.py", "type": "script", "tier": "deep"}
+  ],
+  "embeddings_queued": 48,
+  "elapsed_ms": 860
+}
+```
+
+---
+
+### 2.12 steward_env_processes — 动态任务与进程感知
+
+查询宿主机上除 systemd 守护服务外的活跃动态对象（任务脚本、Worker、临时分析进程、GPU占用与端口）。
+
+**参数:**
+
+```json
+{
+  "owner": {
+    "type": "string",
+    "description": "按发起主体过滤 (如 'agent:hermes_cron')"
+  },
+  "min_cpu_pct": {
+    "type": "number",
+    "default": 1.0,
+    "description": "过滤 CPU 占用底噪 (百分比)"
+  }
+}
+```
+
+**返回:**
+
+```json
+{
+  "processes": [
+    {
+      "pid": 14208,
+      "name": "python3",
+      "command": "python /root/new/shared_proj/earnings_scan/scan_sec.py",
+      "owner": "agent:hermes_cron",
+      "associated_path": "/root/new/shared_proj/earnings_scan/scan_sec.py",
+      "cpu_pct": 98.2,
+      "mem_bytes": 440401920,
+      "gpu_allocated_mb": 0,
+      "started_at": "2026-11-15T08:30:00+08:00",
+      "status": "running"
+    }
+  ]
 }
 ```
 

@@ -158,15 +158,45 @@ steward memory add --type experience \
 
 三种方式不冲突，写入时 steward 自动去重（基于语义相似度 > 0.92 的自动合并建议）。
 
-### 2. 资产（Assets）
+### 2. 放置建议（Placement Advice）— 规范宿主空间
 
-**资产 = 你机器上的一切有价值的东西。** 文件、目录、脚本、项目、数据集——它们不在 Agent 的上下文里，但 Agent 需要知道它们的存在。
+**大管家不仅管理已有资产，更是新对象落盘的规范制定者与位置引导者。**
+当 Agent 准备在宿主机新建项目、写一个独立脚本、沉淀一个 AI 技能或记录重要笔记时，先询问大管家：
 
 ```bash
-# 注册一个项目目录
+# 询问新脚本应该放哪里
+steward place suggest \
+  --type script \
+  --name "sec_scraper" \
+  --intent "美股财报抓取" \
+  --tags "python,sec"
+
+# 输出:
+# 推荐路径:   /root/new/shared_proj/sec_scraper/
+# 命中规范:   长期沉淀的复用程序与脚本统一存放在 shared_proj
+# 命名约定:   snake_case 目录，需包含主脚本与 README.md
+# 冲突检查:   无冲突，目录可用
+# 安全指引:   严禁将敏感 token 硬编码至代码，需外置至环境变量
+
+# 查看系统当前的宿主机目录放置规范
+steward place rules
+```
+
+### 3. 资产（Assets）— 分级颗粒度纳管
+
+**资产 = 你机器上的一切静态对象（文件、目录、脚本、项目、数据集）。**
+大管家拒绝“一股脑全生成对象元数据”，而是采用**严格的颗粒度分级**：
+- **白名单（Deep Tier）**：细到最深层，生成标量、结构化 `desc_kv`、全文 FTS5、BM25 和向量 Embedding；
+- **黑名单（Shallow Tier）**：**止于当前目录层级**（如 `node_modules`、`.cache`、敏感目录），记录该目录实体本身标量（大小、项数、修改时间、所有者、保密级别），**绝不递归下钻、绝不生成全文与向量，杜绝扫爆数据库**。
+
+```bash
+# 注册一个项目目录（支持 owner、密级与结构化 desc_kv）
 steward asset register /root/new/work/agent-steward \
   --type project \
+  --owner "user:digoal" \
+  --security "internal" \
   --desc "Agent Host Steward 产品设计工程" \
+  --desc-kv '{"purpose": "大管家产品设计", "status": "active"}' \
   --tags "product,design,steward"
 
 # 注册一个常用脚本
@@ -175,20 +205,29 @@ steward asset register /root/new/shared_proj/earnings_scan/scan.sh \
   --desc "SEC EDGAR 财报扫描脚本" \
   --tags "finance,sec,scanner"
 
-# 搜索资产
-steward asset search "财报扫描"
+# 搜索资产（支持按密级与 owner 标量过滤）
+steward asset search "财报扫描" --security-level internal
 
-# 扫描目录，自动发现资产
+# 扫描目录（依据 scan_policies 自动执行白黑名单分级纳管）
 steward asset scan /root/new/
 ```
 
-### 3. 环境（Environment）
+### 4. 环境（Environment）— 静态服务 + 动态任务进程
 
-Agent 经常需要知道"这台机器上跑着什么"，但每次都要手动告诉它。steward 自动感知。
+Agent 经常需要知道"这台机器上跑着什么"，但每次都要手动告诉它。steward 自动感知，不仅包括常驻 systemd 服务，更纳管活跃动态任务进程。
 
 ```bash
 # 查看完整环境报告
 steward env show
+
+# 查看除 systemd 外由 Agent 或脚本发起的活跃动态进程（防卡死与资源冲突）
+steward env processes
+
+# 输出类似:
+# PID    Command                                 Owner             CPU%   Mem(MB)  Started
+# 14208  python /root/new/shared_proj/scan.py    agent:hermes      98.2   420.5    08:30 (3h ago)
+# 18932  ollama runner (GPU 14GB)                system            12.0   1420.0   09:10
+```
 
 # 输出类似:
 # ═══ System ═══

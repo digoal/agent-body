@@ -148,15 +148,19 @@ ORDER BY v.distance;
 CREATE TABLE assets (
     id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
     path            TEXT NOT NULL UNIQUE,        -- 绝对路径
-    type            TEXT NOT NULL CHECK (type IN ('project','script','document','dataset','config','media','other')),
+    type            TEXT NOT NULL CHECK (type IN ('directory','project','script','document','dataset','config','media','other')),
+    owner           TEXT DEFAULT 'user:digoal',  -- 归属主体 (Agent 会话或用户)
+    security_level  TEXT DEFAULT 'internal' CHECK (security_level IN ('public','internal','confidential','secret')),
+    scan_tier       TEXT DEFAULT 'deep' CHECK (scan_tier IN ('deep','shallow','restricted')),
     description     TEXT,
+    desc_kv         TEXT DEFAULT '{}',           -- JSON: 结构化语义描述键值 (用途/约束/时效等)
     usage           TEXT,                        -- 使用方法
     size_bytes      INTEGER,                     -- 文件/目录大小
     file_count      INTEGER,                     -- 目录内文件数
     indicators      TEXT DEFAULT '[]',           -- JSON: 识别标记 [".git", "Cargo.toml"]
     tags            TEXT DEFAULT '[]',           -- JSON 数组
     dependencies    TEXT DEFAULT '[]',           -- JSON: 依赖的其他资产 ID
-    sensitive       INTEGER DEFAULT 0,
+    sensitive       INTEGER DEFAULT 0,           -- 快速敏感布尔标记 (向后兼容)
     status          TEXT DEFAULT 'active' CHECK (status IN ('active','archived','missing')),
     embedding_status TEXT DEFAULT 'pending',
     last_scanned_at TEXT,                        -- 上次扫描时间
@@ -173,6 +177,9 @@ BEGIN
 END;
 
 CREATE INDEX idx_assets_type ON assets(type);
+CREATE INDEX idx_assets_owner ON assets(owner);
+CREATE INDEX idx_assets_security_level ON assets(security_level);
+CREATE INDEX idx_assets_scan_tier ON assets(scan_tier);
 CREATE INDEX idx_assets_status ON assets(status);
 CREATE INDEX idx_assets_path ON assets(path);
 CREATE INDEX idx_assets_last_modified ON assets(last_modified_at DESC);
@@ -184,6 +191,7 @@ CREATE INDEX idx_assets_last_modified ON assets(last_modified_at DESC);
 CREATE VIRTUAL TABLE assets_fts USING fts5(
     path,
     description,
+    desc_kv,
     usage,
     tags,
     content=assets,
@@ -193,20 +201,20 @@ CREATE VIRTUAL TABLE assets_fts USING fts5(
 
 -- 同步触发器 (同 memories_fts 模式)
 CREATE TRIGGER assets_fts_insert AFTER INSERT ON assets BEGIN
-    INSERT INTO assets_fts(rowid, path, description, usage, tags)
-    VALUES (NEW.rowid, NEW.path, NEW.description, NEW.usage, NEW.tags);
+    INSERT INTO assets_fts(rowid, path, description, desc_kv, usage, tags)
+    VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.usage, NEW.tags);
 END;
 
 CREATE TRIGGER assets_fts_delete AFTER DELETE ON assets BEGIN
-    INSERT INTO assets_fts(assets_fts, rowid, path, description, usage, tags)
-    VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.usage, OLD.tags);
+    INSERT INTO assets_fts(assets_fts, rowid, path, description, desc_kv, usage, tags)
+    VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.usage, OLD.tags);
 END;
 
 CREATE TRIGGER assets_fts_update AFTER UPDATE ON assets BEGIN
-    INSERT INTO assets_fts(assets_fts, rowid, path, description, usage, tags)
-    VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.usage, OLD.tags);
-    INSERT INTO assets_fts(rowid, path, description, usage, tags)
-    VALUES (NEW.rowid, NEW.path, NEW.description, NEW.usage, NEW.tags);
+    INSERT INTO assets_fts(assets_fts, rowid, path, description, desc_kv, usage, tags)
+    VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.usage, OLD.tags);
+    INSERT INTO assets_fts(rowid, path, description, desc_kv, usage, tags)
+    VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.usage, NEW.tags);
 END;
 ```
 
@@ -329,7 +337,76 @@ WHERE b.snapshot_id = :snapshot_b
 
 ---
 
-### 2.9 changes — 变更表（P1）
+### 2.9 placement_rules — 放置规范规则表
+
+```sql
+CREATE TABLE placement_rules (
+    id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    rule_name       TEXT NOT NULL UNIQUE,        -- 规则标识 (shared_proj, work_projects, tmp_files 等)
+    pattern_type    TEXT NOT NULL,               -- project, script, note, tmp, dataset, src, skill, other
+    target_base_dir TEXT NOT NULL,               -- 推荐基准路径 (/root/new/shared_proj/)
+    naming_pattern  TEXT,                        -- 命名模式建议 ({name}/, YYYYMMDD_{name}.md)
+    description     TEXT,                        -- 规则意图说明
+    guideline       TEXT,                        -- 伴随建议 (如安全、测试、文档要求)
+    priority        INTEGER DEFAULT 100,         -- 匹配优先级，数字越小越先匹配
+    created_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
+    updated_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+);
+
+CREATE INDEX idx_placement_type ON placement_rules(pattern_type);
+CREATE INDEX idx_placement_priority ON placement_rules(priority);
+```
+
+---
+
+### 2.10 scan_policies — 扫描颗粒度与白黑名单策略表
+
+```sql
+CREATE TABLE scan_policies (
+    id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    path_pattern    TEXT NOT NULL UNIQUE,        -- 匹配路径前缀或通配符 (如 **/node_modules/**)
+    tier            TEXT NOT NULL CHECK (tier IN ('deep','shallow','restricted')),
+    max_depth       INTEGER DEFAULT -1,          -- deep=-1 (无限制), shallow=0 (只记录当前目录实体)
+    enable_fts      INTEGER DEFAULT 1,           -- 是否生成 FTS 全文索引 (shallow 为 0)
+    enable_vec      INTEGER DEFAULT 1,           -- 是否调用模型生成向量 (shallow 为 0)
+    enable_graph    INTEGER DEFAULT 1,           -- 是否解析依赖建立关系图 (shallow 为 0)
+    notes           TEXT,                        -- 策略理由 (如 "黑名单阻断区: 防扫爆与敏感泄露")
+    created_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+);
+
+CREATE INDEX idx_scan_policies_tier ON scan_policies(tier);
+```
+
+---
+
+### 2.11 active_processes — 动态任务进程表
+
+纳管除 systemd 外由 Agent 会话或脚本启动的活跃进程，避免后台卡死、资源冲突与重复启动。
+
+```sql
+CREATE TABLE active_processes (
+    id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+    pid             INTEGER NOT NULL UNIQUE,
+    name            TEXT NOT NULL,               -- 进程可执行名 (如 python3, ollama)
+    command         TEXT NOT NULL,               -- 完整启动命令
+    owner           TEXT DEFAULT 'user',         -- 发起者 (如 agent:hermes_cron, user:digoal)
+    associated_path TEXT,                        -- 关联代码/脚本路径 (关联 assets.path)
+    listening_ports TEXT DEFAULT '[]',           -- JSON 监听端口数组
+    status          TEXT DEFAULT 'running',      -- running, sleeping, zombie
+    cpu_pct         REAL DEFAULT 0.0,            -- CPU 使用率
+    mem_bytes       INTEGER DEFAULT 0,           -- 常驻内存字节数
+    gpu_allocated_mb INTEGER DEFAULT 0,          -- 占用 GPU 显存 (MB)
+    started_at      TEXT,                        -- 进程启动时间戳
+    last_seen_at    TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+);
+
+CREATE INDEX idx_active_processes_owner ON active_processes(owner);
+CREATE INDEX idx_active_processes_status ON active_processes(status);
+```
+
+---
+
+### 2.12 changes — 变更表（P1）
 
 ```sql
 CREATE TABLE changes (

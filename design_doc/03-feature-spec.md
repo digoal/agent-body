@@ -130,13 +130,17 @@ for each pair with cosine_similarity > 0.92:
 AssetEntry:
   id:            UUID
   path:          string          # 文件/目录绝对路径
-  type:          enum [project, script, document, dataset, config, media, other]
+  type:          enum [directory, project, script, document, dataset, config, media, other]
   name:          string          # 显示名
   size:          int             # 字节大小
   mime_type:     string          # 文件 MIME 类型
+  owner:         string          # 归属主体 (e.g. "user:digoal", "agent:main", "system")
+  security_level: enum [public, internal, confidential, secret] # 保密级别
+  scan_tier:     enum [deep, shallow, restricted] # 扫描与索引颗粒度层级
   tags:          string[]        # 标签（语言、框架、用途）
   summary:       text            # 一句话摘要
-  description:   text            # 详细描述
+  description:   text            # 详细文本描述
+  desc_kv:       jsonb           # 结构化语义描述键值 (例如: {"purpose": "...", "ttl": "...", "upstream": "..."})
   status:        enum [active, stale, orphan, archived]
   project_id:    UUID?           # 所属项目
   metadata:      jsonb           # 扩展元信息
@@ -145,7 +149,7 @@ AssetEntry:
     git_status:  string?         #   clean / dirty / ahead / behind
     codegraph:   bool            #   是否有 codegraph 索引
     dependencies: string[]       #   依赖列表
-  embedding:     vector(768)     # 语义向量（基于 name + summary + tags）
+  embedding:     vector(768)     # 语义向量（基于 name + summary + tags + desc_kv，仅 deep tier 生成）
   created_at:    datetime        # 文件创建时间
   modified_at:   datetime        # 文件最后修改时间
   indexed_at:    datetime        # 索引时间
@@ -157,11 +161,11 @@ AssetEntry:
 
 | 操作 | 说明 | 需求来源 |
 |------|------|----------|
-| `assets.scan` | 扫描指定目录，索引所有资产 | FA-01 |
-| `assets.register` | 手动注册一个资产 | FA-05 |
-| `assets.search` | 语义/关键词/过滤搜索 | FA-03, FA-04 |
+| `assets.scan` | 依据颗粒度策略扫描指定目录，索引资产 | FA-01, FA-12 |
+| `assets.register` | 手动注册一个资产（含 owner、密级、desc_kv） | FA-05, FA-13 |
+| `assets.search` | 语义/关键词/标量过滤（支持密级与 owner 过滤） | FA-03, FA-04, FA-13 |
 | `assets.get` | 按 ID 或路径获取 | FA-01 |
-| `assets.update` | 更新标签/描述/状态 | FA-02 |
+| `assets.update` | 更新标签/描述/desc_kv/密级/状态 | FA-02, FA-13 |
 | `assets.sync` | 增量同步（检测文件系统变化，更新索引） | FA-07 |
 | `assets.health` | 健康检查（孤儿文件、陈旧项目、Git 状态） | FA-08~10 |
 | `assets.tag` | 批量打标签 | FA-02 |
@@ -187,13 +191,95 @@ rules:
   - content_match: "import duckdb" → tag: duckdb
 ```
 
-更高质量的标签可以调用本地 LLM（通过 Ollama）对文件摘要进行分类。
+#### 2.4 白名单/黑名单与颗粒度分级策略（Granularity Policy）
+
+大管家纳管宿主机一切对象，**坚决杜绝“一股脑全生成对象元数据”**：
+
+```
+                    ┌─────────────────────────┐
+                    │      扫描路径入口       │
+                    └────────────┬────────────┘
+                                 │ 匹配 scan_policies
+          ┌──────────────────────┼──────────────────────┐
+          ▼                      ▼                      ▼
+  【Deep Tier (白名单)】   【Shallow Tier (黑名单)】  【Restricted Tier】
+   (如 shared_proj, work)   (如 node_modules, cache)   (如 src/ 开源克隆)
+          │                      │                      │
+   细到最深层递归遍历      ★ 只到当前目录层级 ★        浅层递归 (max_depth=2)
+   提取叶子文件与目录      记录目录本身作为一个对象      仅索引项目入口与README
+   生成全部元数据:         不深入递归、不下钻解析        生成基础标量与关键词FTS
+   - 基础标量              仅记录目录标量:               大文件跳过向量化
+   - desc_kv 深度解析      - path, size, file_count      - 避免打爆存储
+   - 全文检索 FTS5/BM25    - owner, security_level
+   - 语义向量 Embedding    ★ 严禁全文、向量与图谱 ★
+   - 依赖关系拓扑 (Links)  ★ 绝不扫爆数据库 ★
+```
+
+| 级别 (Tier) | 行为规则 | 深度 (Depth) | 索引生成 | 典型路径示例 |
+|---|---|---|---|---|
+| **Deep Tier (白名单)** | 核心资产库，细到最深层，全面递归 | 无限制 (-1) | 基础标量 + 全文 FTS5 + 向量 Embedding + 拓扑关联 + 深度 desc_kv | `/root/new/shared_proj/`, `/root/new/work/`, `/root/new/skills/` |
+| **Shallow Tier (黑名单)** | 阻断深入递归，**只到当前目录层级**，将该目录实体本身建档 | 0 (仅当前目录) | **仅记录目录标量属性**（大小、项数、修改时间、owner、密级），**严禁全文与向量** | `**/node_modules/**`, `**/.cache/**`, `**/.git/**`, `/root/.ssh/` |
+| **Restricted Tier (受限区)** | 大型外部仓库或只读数据集，浅层纳管 | 限制 2 层 | 仅根目录及 README/配置文件生成关键词索引，不做代码行向量化 | `/root/new/src/**`, `/root/new/tmp/**` |
 
 ---
 
-### 模块 3：Environment（环境感知）
+### 模块 3：Placement（对象放置建议引擎）
 
 #### 3.1 数据模型
+
+```
+PlacementRule:
+  id:              UUID
+  rule_name:       string          # 规则标识 (e.g. "shared_tools", "work_projects")
+  pattern_type:    enum [project, script, note, tmp, dataset, src, skill, other]
+  target_base_dir: string          # 建议目标基准路径 (e.g. "/root/new/shared_proj/")
+  naming_pattern:  string          # 命名约定模式 (e.g. "{name}/", "YYYYMMDD_{name}.md")
+  description:     text            # 规则说明与设计意图
+  guideline:       text            # 附带的开发/安全规范指引
+  priority:        int             # 匹配优先级 (数字越小优先级越高)
+```
+
+#### 3.2 核心操作
+
+| 操作 | 说明 | 需求来源 |
+|------|------|----------|
+| `placement.suggest` | 根据对象类型、名称、意图与密级，推荐最佳落盘路径与命名规范 | FP-01, FP-03 |
+| `placement.list_rules` | 查看当前生效的宿主机目录放置规范规则库 | FP-02 |
+| `placement.check_conflict` | 检查推荐路径是否已有同名资产存在，评估冲突风险 | FP-04 |
+
+#### 3.3 内置规范策略与决策逻辑
+
+大管家为 Agent 提供清晰的宿主机空间拓扑导引：
+
+```
+                           【Agent 产生新对象请求】
+                                      │
+            ┌─────────────────────────┼─────────────────────────┐
+            ▼                         ▼                         ▼
+      [长期复用脚本/程序]         [常规项目/立项工作]           [临时文件/调试日志]
+            │                         │                         │
+     /root/new/shared_proj/    /root/new/work/           /root/new/tmp/
+            │                         │                         │
+            ▼                         ▼                         ▼
+      [克隆开源项目]              [AI 技能 Skill]           [重要笔记/权威列表]
+            │                         │                         │
+     /root/new/src/            /root/new/skills/         /root/new/note/
+```
+
+- **长期程序/工具**: 放置于 `/root/new/shared_proj/{name}/`，要求建立独立子目录，配备 README、使用示例与依赖说明；
+- **常规工作项目**: 放置于 `/root/new/work/{project_name}/`；
+- **临时/中间文件**: 放置于 `/root/new/tmp/`，明确生命周期为可随时清理；
+- **开源克隆代码**: 放置于 `/root/new/src/{repo_name}/`，进入后优先使用 `codegraph init` 建立索引；
+- **AI 技能资产**: 放置于 `/root/new/skills/{skill_name}/`，强制包含 `SKILL.md`；
+- **重要笔记**: 放置于 `/root/new/note/`；
+- **定时任务脚本与输出**: 放置于 `/root/new/cron/{job_name}/`；
+- **对外开源精品**: 放置于 `/root/new/shared_git/{name}/`。
+
+---
+
+### 模块 4：Environment（环境感知）
+
+#### 4.1 数据模型
 
 ```
 EnvSnapshot:
@@ -216,7 +302,21 @@ EnvSnapshot:
   services:      ServiceInfo[]
   packages:      PackageInfo[]
   cron_jobs:     CronJobInfo[]
+  active_processes: ActiveProcessInfo[] # 活跃的动态任务与普通进程
   env_vars:      object          # 脱敏后的环境变量
+
+ActiveProcessInfo:
+  pid:           int             # 进程 PID
+  name:          string          # 进程名 (e.g. "python3", "ollama")
+  command:       string          # 完整启动命令
+  owner:         string          # 发起者 (e.g. "agent:hermes_cron", "user:digoal")
+  associated_path: string?       # 关联代码/脚本资产路径 (如 /root/new/shared_proj/xxx.py)
+  cpu_pct:       float           # CPU 占用百分比
+  mem_bytes:     int             # 内存常驻字节数
+  gpu_allocated: int             # 占用 GPU 显存 (MB)
+  listening_ports: int[]         # 监听端口
+  started_at:    datetime        # 进程启动时间
+  status:        enum [running, sleeping, zombie]
 
 ServiceInfo:
   name:          string          # e.g. "postgresql"
@@ -246,7 +346,7 @@ CronJobInfo:
   next_run:      datetime?
 ```
 
-#### 3.2 核心操作
+#### 4.2 核心操作
 
 | 操作 | 说明 | 需求来源 |
 |------|------|----------|
@@ -254,6 +354,7 @@ CronJobInfo:
 | `env.system` | 获取系统信息（OS/CPU/内存/磁盘） | FE-01 |
 | `env.services` | 列出所有服务及状态 | FE-02 |
 | `env.service(name)` | 获取特定服务详情 | FE-03 |
+| `env.processes` | 列出活跃动态任务与普通进程（CPU/内存/GPU/端口/关联资产） | FE-12 |
 | `env.packages` | 列出已安装包 | FE-02 |
 | `env.network` | 获取网络环境 | FE-04 |
 | `env.vars` | 获取环境变量（脱敏） | FE-05 |
@@ -261,7 +362,7 @@ CronJobInfo:
 | `env.diff(snapshot_a, snapshot_b)` | 两个快照之间的差异 | FE-07 |
 | `env.health` | 健康检查（资源告警、服务存活） | FE-08, FE-09 |
 
-#### 3.3 服务详情采集策略
+#### 4.3 服务详情采集策略
 
 针对常见服务定义专用采集器：
 
@@ -295,9 +396,9 @@ service_collectors:
 
 ---
 
-### 模块 4：Changes（变更管理）
+### 模块 5：Changes（变更管理）
 
-#### 4.1 数据模型
+#### 5.1 数据模型
 
 ```
 ChangeEntry:
@@ -318,7 +419,7 @@ ChangeEntry:
   context_id:    string?         # 关联上下文
 ```
 
-#### 4.2 核心操作
+#### 5.2 核心操作
 
 | 操作 | 说明 | 需求来源 |
 |------|------|----------|
@@ -334,9 +435,9 @@ ChangeEntry:
 
 ---
 
-### 模块 5：Links（智能关联）
+### 模块 6：Links（智能关联）
 
-#### 5.1 数据模型
+#### 6.1 数据模型
 
 ```
 LinkEntry:
@@ -358,7 +459,7 @@ NodeRef:
   label:         string          # 显示标签
 ```
 
-#### 5.2 核心操作
+#### 6.2 核心操作
 
 | 操作 | 说明 | 需求来源 |
 |------|------|----------|
@@ -374,9 +475,9 @@ NodeRef:
 
 ---
 
-### 模块 6：API 层
+### 模块 7：API 层
 
-#### 6.1 三种接口形态
+#### 7.1 三种接口形态
 
 | 接口 | 协议 | 适用场景 |
 |------|------|----------|
@@ -386,30 +487,36 @@ NodeRef:
 
 三种接口是同一套后端逻辑的不同入口，保证行为一致。
 
-#### 6.2 MCP 工具注册
+#### 7.2 MCP 工具注册
 
 ```yaml
 mcp_tools:
+  # Placement (放置建议)
+  - steward_placement_suggest
+  - steward_placement_rules
+
+  # Assets
+  - steward_asset_search
+  - steward_asset_register
+  - steward_asset_get
+  - steward_asset_scan
+
+  # Environment
+  - steward_env_system
+  - steward_env_services
+  - steward_env_service
+  - steward_env_processes
+  - steward_env_packages
+  - steward_env_network
+  - steward_env_crons
+  - steward_env_snapshot
+
   # Memory
   - steward_memory_add
   - steward_memory_search
   - steward_memory_task_create
   - steward_memory_task_update
   - steward_memory_task_list
-
-  # Assets
-  - steward_asset_search
-  - steward_asset_register
-  - steward_asset_get
-
-  # Environment
-  - steward_env_system
-  - steward_env_services
-  - steward_env_service
-  - steward_env_packages
-  - steward_env_network
-  - steward_env_crons
-  - steward_env_snapshot
 
   # Changes
   - steward_changes_since
@@ -422,40 +529,45 @@ mcp_tools:
 
   # Meta
   - steward_status           # 大管家自身状态
-  - steward_brief    # 一键获取当前上下文简报（综合记忆+资产+环境+变更）
+  - steward_brief            # 一键获取当前上下文简报（综合记忆+资产+环境+变更+进程）
 ```
 
-其中 `steward_context_brief` 是最重要的 MCP 工具 —— Agent 新建会话时调用一次，就能拿到完整的上下文简报，包含：最近任务进展、环境状态、上次会话以来的变更、需要注意的事项。
+其中 `steward_brief` 是最重要的 MCP 工具 —— Agent 新建会话时调用一次，就能拿到完整的上下文简报，包含：最近任务进展、环境与进程状态、上次会话以来的变更、需要注意的事项。
 
-#### 6.3 CLI 命令结构
+#### 7.3 CLI 命令结构
 
 ```bash
 steward                          # 启动 daemon
 steward status                   # 查看 daemon 状态
 steward stop                     # 停止 daemon
 
+# Placement
+steward place suggest --type script --name sec_scraper --intent "美股抓取"
+steward place rules              # 查看放置规范
+
+# Assets
+steward assets scan /root/new/   # 扫描目录 (应用白黑名单颗粒度)
+steward assets search "财报扫描脚本"
+steward assets health            # 健康检查
+steward assets register /path --tags "tool,python" --desc "xxx" --owner "user:digoal" --security "internal"
+
+# Environment
+steward env snapshot             # 生成快照
+steward env services             # 列出服务
+steward env processes            # 查看活跃动态进程
+steward env service postgresql   # PG 详情
+steward env diff --last          # 与上次快照对比
+
 # Memory
 steward memory search "DuckDB 文章"
 steward memory write --type decision "选用 FastAPI 做 API 层"
-steward memory tasks              # 列出进行中的任务
-steward memory maintain           # 手动触发记忆维护
-
-# Assets
-steward assets scan /root/new/    # 扫描目录
-steward assets search "财报扫描脚本"
-steward assets health             # 健康检查
-steward assets register /path --tags "tool,python" --desc "xxx"
-
-# Environment
-steward env snapshot              # 生成快照
-steward env services              # 列出服务
-steward env service postgresql    # PG 详情
-steward env diff --last           # 与上次快照对比
+steward memory tasks             # 列出进行中的任务
+steward memory maintain          # 手动触发记忆维护
 
 # Changes
 steward changes since --last-session
 steward changes summary --days 7
-steward changes watch start       # 启动文件监听
+steward changes watch start      # 启动文件监听
 steward changes watch stop
 
 # Links
@@ -463,14 +575,14 @@ steward links query /root/new/shared_proj/earnings_scan/ --depth 2
 steward links visualize /root/new/src/duckdb/ --format mermaid
 
 # Meta
-steward brief                     # 一键上下文简报
-steward config                    # 查看/编辑配置
-steward export                    # 导出所有数据
+steward brief                    # 一键上下文简报
+steward config                   # 查看/编辑配置
+steward export                   # 导出所有数据
 ```
 
 ---
 
-### 模块 7：Scheduler（内部调度器）
+### 模块 8：Scheduler（内部调度器）
 
 大管家自身的定时任务：
 
@@ -481,7 +593,7 @@ steward export                    # 导出所有数据
 | 资产健康检查 | 每周日 04:00 | 孤儿文件、陈旧项目、Git 状态 |
 | 变更日志归档 | 每周日 05:00 | 压缩归档历史变更 |
 | 包变更扫描 | 每 5 分钟 | 检测 pip/apt/npm 变化 |
-| 服务状态检查 | 每 1 分钟 | 检测服务存活 |
+| 服务与动态进程检查 | 每 1 分钟 | 检测服务与高负载任务存活 |
 | 关联图更新 | 每天 04:00 | 自动发现新关联 |
 | 磁盘巡检 | 每天 04:30 | 磁盘使用趋势分析 |
 
@@ -493,15 +605,16 @@ MVP 只做下面这些，保证核心价值可验证：
 
 | 模块 | 包含功能 | 不包含 |
 |------|----------|--------|
+| Placement | 新对象放置建议（匹配内置规范库）、冲突检查 | 用户自定义高级动态规则DSL |
+| Assets | 目录扫描（白黑名单颗粒度分级）、标签、搜索（标量+BM25+向量）、项目与脚本注册、结构化元数据（owner, security_level, desc_kv） | 孤儿检测、Git 状态、并发协调 |
+| Environment | 系统信息、服务清单+详情、动态进程列表、网络、环境变量、cron列表、快照 | 快照对比、健康检查告警 |
 | Memory | 写入、搜索（语义+关键词）、任务记忆 | 导入、衰减强化、合并、过时检测 |
-| Assets | 目录扫描、标签、搜索、项目注册、脚本注册 | 增量同步、孤儿检测、Git 状态、并发协调 |
-| Environment | 系统信息、服务清单+详情、网络、环境变量、cron列表、快照 | 快照对比、健康检查、告警、GPU |
 | Changes | — | 全部推到 P1 |
 | Links | — | 全部推到 P2 |
 | API | MCP + CLI | REST (P1) |
 | Scheduler | 环境快照 (每天) | 其他定时任务 |
 
-**MVP 的核心价值主张**: Agent 终于能在新会话中一次调用 `steward brief`，就知道"我记得什么 + 我有什么 + 环境是什么"。
+**MVP 的核心价值主张**: Agent 终于能在新会话中一次调用 `steward brief`，就知道"我处于什么环境 + 有哪些对象与活跃任务 + 新建资产应该放哪里"。
 
 ---
 
