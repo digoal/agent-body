@@ -1,47 +1,131 @@
-# Agent Host Steward — 产品设计工程
-  
-> 宿主环境大管家：驻留在 Agent 宿主机中，管记忆、管素材、管软件环境、管一切。  
-  
-这不是为让 Agent 做好某一次任务、一次协作而生的产品，而是让 Agent 更清晰的了解自己所处的环境，更好的完成任务和协作。  
-  
-可以把它理解成 Agent 所处的宿主机上的一切动态与静态对象（文件、进程、文件夹等）元数据 + 对象位置的大管家，甚至还应该包括建议（例如，如果会产生一个新的项目、文件，这些对象应该放哪里）。  
-  
-管理对象也应该有颗粒度、有白名单黑名单的设计，不应该一股脑全生成对象元数据（语义(可采用 desc kv/json 存储，至少应该知道它们是干什么的、什么时候创建的、修改的、谁的、保密级别等等)、全文检索、bm25、标量、图），例如白名单包含的文件夹应该细到最深层，黑名单则只到当前目录层级。  
-  
-## idea 
-- [为什么记忆管理没人做对](idea_doc/01-agent-环境大管家-为什么记忆管理没人做对.md)
-- [agent steward 产品设计](idea_doc/02-agent-steward-设计全过程.md)
+# Agent Host Steward (宿主环境大管家)
 
-## 交付件清单与进度
+> **管记忆、管素材、管软件环境、管动态进程、管一切静态与动态对象的位置规范。**  
+> 驻留在 Agent 宿主机中的轻量级系统级认知底座（Rust Edition · 单二进制交付）。
 
-| # | 交付件 | 文件 | 状态 | 更新时间 |
-|---|--------|------|------|----------|
-| 1 | 使用场景集 | [01-scenarios.md](design_doc/01-scenarios.md) | ✅ 完成 (含 S-27~29) | 2026-11-15 |
-| 2 | 需求分析 | [02-requirements.md](design_doc/02-requirements.md) | ✅ 完成 (含 FP 及分级需求) | 2026-11-15 |
-| 3 | 功能清单 | [03-feature-spec.md](design_doc/03-feature-spec.md) | ✅ 完成 (含 Placement/三级颗粒度) | 2026-11-15 |
-| 4 | 产品手册 | [04-product-manual.md](design_doc/04-product-manual.md) | ✅ 完成 (含 CLI/配置) | 2026-11-15 |
-| 5 | 架构设计 | [05-architecture.md](design_doc/05-architecture.md) | ✅ 完成 (含 Placement/颗粒度流水线) | 2026-11-15 |
-| 6 | 接口规范 | [06-api-spec.md](design_doc/06-api-spec.md) | ✅ 完成 (含 placement/scan/process API) | 2026-11-15 |
-| 7 | 数据模型 | [07-data-model.md](design_doc/07-data-model.md) | ✅ 完成 (DDL v2) | 2026-11-15 |
-| — | Review 报告 | [REVIEW.md](design_doc/REVIEW.md) | ✅ 完成 | 2026-11-15 |
-| — | README 核心对齐报告 | [REVIEW-README-ALIGNMENT.md](design_doc/REVIEW-README-ALIGNMENT.md) | ✅ 完成 | 2026-11-15 |
-| — | 对齐修复进度 (断点续传) | [ALIGNMENT-FIX-PROGRESS.md](design_doc/ALIGNMENT-FIX-PROGRESS.md) | ✅ 全部已完成 | 2026-11-15 |
-| — | 初始化 SQL | [init.sql](design_doc/init.sql) | ✅ 已验证 (v2 DDL 已跑通) | 2026-11-15 |
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/Rust-1.99.0-orange.svg)](https://www.rust-lang.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-FTS5_Bundled-green.svg)](https://sqlite.org/)
+[![MCP](https://img.shields.io/badge/Protocol-MCP_stdio-purple.svg)](https://modelcontextprotocol.io/)
 
-## 源码实现与工程文档 (Rust Edition)
+---
 
-| 交付模块 | 说明 | 路径 | 状态 |
-|---|---|---|---|
-| **Rust 核心工程** | 基于 Rust 1.99 + SQLite 3 (FTS5) 实现单二进制大管家 | [src/](src/) | ✅ 12 单元测试全部通过 |
-| **研发进度与断点追踪** | 串行研发断点续传总览 | [PROGRESS.md](src_doc/PROGRESS.md) | ✅ 全部完成 |
-| **编译与测试开发指南** | 本地工具链依赖、构建与测试指令 | [DEVELOPMENT.md](src_doc/DEVELOPMENT.md) | ✅ 完成 |
-| **Rust 版产品使用手册** | CLI 命令集、放置建议、分级扫描与环境感知指南 | [PRODUCT_MANUAL.md](src_doc/PRODUCT_MANUAL.md) | ✅ 完成 |
+## 什么是 Agent Host Steward？
 
-## 设计原则
-1. **本地优先、隐私优先** — 所有数据存本地，不外传
-2. **位置规范先行** — 智能提供新对象建议（放置路径、命名约定、安全脱敏）
-3. **颗粒度分级纳管** — 白名单深到最底层，黑名单止于当前层，拒绝一股脑生成元数据打爆系统
-4. **渐进式接入** — 每层独立可用，组合更强
-5. **动态与静态全景纳管** — 覆盖文件/目录/代码与运行时动态进程/任务
-6. **关联是核心价值** — 记忆×资产×环境×变更 四维关联
-7. **MCP 原生** — 天然对接所有 Agent 框架
+这不是为了让 Agent 做好某一次任务、一次协作而生的应用框架，而是让 Agent **更清晰地了解自己所处的宿主系统环境**，更好地完成任务和长期协作。
+
+可以把它理解成：**Agent 所处宿主机上的一切动态与静态对象（文件、进程、文件夹、端口、记忆）元数据 + 对象位置的大管家**。
+
+```mermaid
+graph TD
+    Agent["AI Agent<br/>(Claude / Cursor / Antigravity)"] <-->|MCP stdio / CLI| Steward["Agent Host Steward<br/>(宿主环境大管家)"]
+    
+    subgraph 宿主环境认知矩阵
+        Steward --> P["放置建议 (Placement Advice)<br/>规范基准路径 / 命名模式 / 安全脱敏"]
+        Steward --> S["分级颗粒度扫描 (Granularity Tiering)<br/>白名单递归到底 / 黑名单浅层阻断防扫爆"]
+        Steward --> E["动态任务进程 (Active Processes)<br/>过滤系统底噪 / 端口防撞 / 孤儿诊断"]
+        Steward --> M["跨会话长期记忆 (Hybrid Search)<br/>FTS5 关键词 + Ollama 向量 + RRF 融合"]
+        Steward --> L["关联拓扑与影响推演 (Blast Radius)<br/>依赖解析 / Mermaid 架构图 / 逆向爆炸半径"]
+        Steward --> C["会话生命周期自洁 (Session Close)<br/>临时文件 TTL 回收 / 工单纪要沉淀"]
+    end
+```
+
+---
+
+## 核心设计信条与红线
+
+1. **放置建议是第一优先级（Placement Advice）**：当 Agent 产生新项目、脚本或临时文件时，大管家主动推荐存放目录与命名规范，杜绝文件散落污染；
+2. **颗粒度分级与白黑名单深度法则（Granularity Tiering）**：
+   - **白名单目录**（如 `/root/new/work/`）：深度递归到底，构建结构化元数据与 FTS5 全文索引；
+   - **黑名单目录**（如 `node_modules/`, `.cache/`, `.git/`）：**严格止于当前目录层级仅记标量，严禁下钻，绝不扫描子文件**，彻底杜绝数据库扫爆与敏感信息泄露；
+3. **动态任务进程过滤底噪**：深度结合 Linux 内核 `/proc` 文件系统，纳管普通 Python 脚本、构建 Worker、端口监听，自动过滤内核系统底噪；
+4. **事前防撞与爆炸半径推演**：起服务前调用 `steward_port_check` 避免端口冲突；改动核心库前调用 `steward_links_impact` 推演多跳下游影响；
+5. **本地优先、隐私优先、单二进制交付**：全部数据存放在 `~/.steward/steward.db`，内嵌 SQLite FTS5，零重型外部依赖。
+
+---
+
+## 官方使用手册 (User Manual)
+
+完整的手册已全面发布于 **[`manual/`](manual/)** 目录：
+
+- 🚀 **[01-getting-started.md](manual/01-getting-started.md)**：快速上手、环境依赖准备与首次编译运行
+- 🧠 **[02-core-concepts.md](manual/02-core-concepts.md)**：核心理念：大管家定位、黑白名单浅层阻断、放置建议哲学
+- 📖 **[03-cli-reference.md](manual/03-cli-reference.md)**：全量 CLI 命令行实操字典（全子命令 + 真实输出）
+- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：14 个原生 MCP 工具与 Claude/Cursor 配置
+- 🔄 **[05-daemon-and-watcher.md](manual/05-daemon-and-watcher.md)**：后台常驻守护服务、inotify 300ms 防抖与 systemd 自启
+- ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：v2.0 进阶特性：端口防撞、爆炸半径推演、混合 RRF 检索、会话自洁
+- 🛠️ **[07-troubleshooting.md](manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
+
+---
+
+## 快速上手 (Quick Start)
+
+### 1. 编译安装
+```bash
+# 确保 Rust 工具链生效
+export PATH="/root/.cargo/bin:$PATH"
+
+# 编译 release 生产二进制
+cargo build --release
+
+# 查看运行状态 (自动完成 ~/.steward 数据初始化)
+./target/release/agent-steward status
+```
+
+### 2. 常用 CLI 命令一览
+
+```bash
+# 1. 开工获取系统硬件、活跃任务、最近资产与长期记忆简报
+./target/release/agent-steward brief
+
+# 2. 准备写一个爬虫脚本？先问大管家放哪里
+./target/release/agent-steward place suggest --type script --name sec_fetcher --intent "抓取美股财报"
+
+# 3. 准备启动一个测试服务？先探测 8080 端口是否已被占用 (防撞预警)
+./target/release/agent-steward env port 8080
+
+# 4. 计划改动公共模块？先推演上下游依赖与多跳爆炸半径
+./target/release/agent-steward links impact /root/new/shared_proj/test.py
+
+# 5. 跨会话搜索过去的决策与排障经验 (FTS5 + Ollama 向量混合 RRF 检索)
+./target/release/agent-steward memory search "数据库连接池故障应急" --hybrid
+
+# 6. 本次会话完成？清理 /root/new/tmp/ 临时测试文件并沉淀工单纪要进长期记忆
+./target/release/agent-steward close session-20261115-01 --clean-temp
+```
+
+### 3. Agent MCP 挂载配置
+
+在 Claude Desktop 或 Antigravity MCP 配置文件中添加：
+```json
+{
+  "mcpServers": {
+    "agent-steward": {
+      "command": "/root/new/work/agent-steward/target/release/agent-steward",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+---
+
+## 项目设计与演进文档
+
+- **产品设计文档 (v2.0)**:
+  - [01-scenarios.md](design_doc/01-scenarios.md) | [02-requirements.md](design_doc/02-requirements.md) | [03-feature-spec.md](design_doc/03-feature-spec.md) | [04-product-manual.md](design_doc/04-product-manual.md)
+  - [05-architecture.md](design_doc/05-architecture.md) | [06-api-spec.md](design_doc/06-api-spec.md) | [07-data-model.md](design_doc/07-data-model.md)
+  - [REVIEW-V2-STATUS-AND-EVOLUTION.md](design_doc/REVIEW-V2-STATUS-AND-EVOLUTION.md)
+- **研发断点与演进路线**:
+  - [ROADMAP_PHASE2.md](src_doc/ROADMAP_PHASE2.md) (已完成)
+  - [ROADMAP_PHASE3.md](src_doc/ROADMAP_PHASE3.md) (全部 8 项已完成)
+- **内置 Agent 技能库**:
+  - [`skills/agent-steward-developer/`](skills/agent-steward-developer/SKILL.md)：指导 Agent 持续开发迭代项目的工程技能
+  - [`skills/agent-steward-doc-writer/`](skills/agent-steward-doc-writer/SKILL.md)：指导 Agent 编写高质量使用手册与 README 的文档技能
+  - [`skills/agent-steward-guide/`](skills/agent-steward-guide/SKILL.md)：面向初访 Agent 的全景导览与部署使用技能
+
+---
+
+## 开源协议
+
+本项目采用 [Apache-2.0](LICENSE) 开源许可证。
