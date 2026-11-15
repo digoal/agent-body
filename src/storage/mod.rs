@@ -380,6 +380,128 @@ impl Storage {
 
         Ok(rows)
     }
+
+    // ─── Changes ─────────────────────────────────────────────────────
+
+    pub fn record_change(&self, change: &ChangeRecord) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let details_str = serde_json::to_string(&change.details)?;
+
+        conn.execute(
+            "INSERT INTO changes (type, target, description, details, source)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                change.change_type,
+                change.target,
+                change.description,
+                details_str,
+                change.source,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_changes(&self, limit: usize) -> Result<Vec<ChangeRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, type, target, description, details, source, created_at
+             FROM changes ORDER BY created_at DESC LIMIT ?1"
+        )?;
+
+        let rows = stmt.query_map(params![limit as i64], |row| {
+            let details_str: String = row.get(4)?;
+            let details: serde_json::Value = serde_json::from_str(&details_str).unwrap_or_default();
+
+            Ok(ChangeRecord {
+                id: Some(row.get(0)?),
+                change_type: row.get(1)?,
+                target: row.get(2)?,
+                description: row.get(3)?,
+                details,
+                source: row.get(5)?,
+                created_at: Some(row.get(6)?),
+            })
+        })?.collect::<Result<Vec<_>, _>>()?;
+
+        Ok(rows)
+    }
+
+    // ─── Links ───────────────────────────────────────────────────────
+
+    pub fn add_link(&self, link: &LinkRecord) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO links (source_type, source_id, target_type, target_id, relation, confidence, auto_discovered)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(source_type, source_id, target_type, target_id, relation) DO UPDATE SET
+                confidence = excluded.confidence,
+                auto_discovered = excluded.auto_discovered",
+            params![
+                link.source_type,
+                link.source_id,
+                link.target_type,
+                link.target_id,
+                link.relation,
+                link.confidence,
+                if link.auto_discovered { 1 } else { 0 },
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn query_links_for_node(&self, node_type: &str, node_id: &str) -> Result<Vec<LinkRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, created_at
+             FROM links
+             WHERE (source_type = ?1 AND source_id = ?2) OR (target_type = ?1 AND target_id = ?2)
+             ORDER BY confidence DESC, created_at DESC"
+        )?;
+
+        let rows = stmt.query_map(params![node_type, node_id], |row| {
+            let auto_disc: i32 = row.get(7)?;
+            Ok(LinkRecord {
+                id: Some(row.get(0)?),
+                source_type: row.get(1)?,
+                source_id: row.get(2)?,
+                target_type: row.get(3)?,
+                target_id: row.get(4)?,
+                relation: row.get(5)?,
+                confidence: row.get(6)?,
+                auto_discovered: auto_disc != 0,
+                created_at: Some(row.get(8)?),
+            })
+        })?.collect::<Result<Vec<_>, _>>()?;
+
+        Ok(rows)
+    }
+
+    pub fn list_all_links(&self, limit: usize) -> Result<Vec<LinkRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, created_at
+             FROM links
+             ORDER BY created_at DESC
+             LIMIT ?1"
+        )?;
+
+        let rows = stmt.query_map(params![limit as i64], |row| {
+            let auto_disc: i32 = row.get(7)?;
+            Ok(LinkRecord {
+                id: Some(row.get(0)?),
+                source_type: row.get(1)?,
+                source_id: row.get(2)?,
+                target_type: row.get(3)?,
+                target_id: row.get(4)?,
+                relation: row.get(5)?,
+                confidence: row.get(6)?,
+                auto_discovered: auto_disc != 0,
+                created_at: Some(row.get(8)?),
+            })
+        })?.collect::<Result<Vec<_>, _>>()?;
+
+        Ok(rows)
+    }
 }
 
 #[cfg(test)]

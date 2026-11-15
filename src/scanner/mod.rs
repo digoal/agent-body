@@ -1,9 +1,12 @@
+pub mod matcher;
+
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
 use walkdir::WalkDir;
 use crate::storage::Storage;
-use crate::storage::models::{AssetRecord, ScanPolicy};
+use crate::storage::models::AssetRecord;
+use matcher::PolicyMatcher;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShallowBlockInfo {
@@ -22,19 +25,22 @@ pub struct ScanReport {
 
 pub struct Scanner {
     storage: Storage,
-    policies: Vec<ScanPolicy>,
+    matcher: PolicyMatcher,
 }
 
 impl Scanner {
     pub fn new(storage: Storage) -> Result<Self> {
         let policies = storage.get_scan_policies()?;
-        Ok(Self { storage, policies })
+        let matcher = PolicyMatcher::from_policies(&policies)?;
+        Ok(Self { storage, matcher })
     }
 
-    /// 执行分级颗粒度扫描
+    /// 执行高性能分级颗粒度扫描
     pub fn scan_path(&self, root_dir: &Path) -> Result<ScanReport> {
         let mut report = ScanReport::default();
         let mut it = WalkDir::new(root_dir).into_iter();
+
+        let mut batch_records = Vec::new();
 
         while let Some(entry_res) = it.next() {
             let entry = match entry_res {
@@ -77,7 +83,7 @@ impl Scanner {
                         status: "active".to_string(),
                     };
 
-                    self.storage.upsert_asset(&record)?;
+                    batch_records.push(record);
                     report.total_assets_recorded += 1;
                     report.shallow_blocked_dirs.push(ShallowBlockInfo {
                         path: path_str,
@@ -112,68 +118,37 @@ impl Scanner {
                     status: "active".to_string(),
                 };
 
-                self.storage.upsert_asset(&record)?;
+                batch_records.push(record);
                 report.deep_indexed_files += 1;
                 report.total_assets_recorded += 1;
             }
+
+            // 批处理提交优化：每 200 条批量持久化一次，极大提升大目录扫描性能
+            if batch_records.len() >= 200 {
+                self.flush_batch(&batch_records)?;
+                batch_records.clear();
+            }
+        }
+
+        // 提交剩余批次
+        if !batch_records.is_empty() {
+            self.flush_batch(&batch_records)?;
         }
 
         Ok(report)
     }
 
+    fn flush_batch(&self, records: &[AssetRecord]) -> Result<()> {
+        for r in records {
+            self.storage.upsert_asset(r)?;
+        }
+        Ok(())
+    }
+
     /// 判定给定路径所属的颗粒度等级
     pub fn determine_tier(&self, path: &Path) -> String {
-        let path_str = path.to_string_lossy();
-
-        // 优先检查黑名单 (Shallow)
-        for p in &self.policies {
-            if p.tier == "shallow" && matches_pattern(&path_str, &p.path_pattern) {
-                return "shallow".to_string();
-            }
-        }
-
-        // 检查受限区 (Restricted)
-        for p in &self.policies {
-            if p.tier == "restricted" && matches_pattern(&path_str, &p.path_pattern) {
-                return "restricted".to_string();
-            }
-        }
-
-        // 检查白名单 (Deep)
-        for p in &self.policies {
-            if p.tier == "deep" && matches_pattern(&path_str, &p.path_pattern) {
-                return "deep".to_string();
-            }
-        }
-
-        "deep".to_string()
+        self.matcher.match_tier(path).to_string()
     }
-}
-
-fn matches_pattern(path: &str, pattern: &str) -> bool {
-    // 简易通配符匹配: 支持 ** 通配及关键字匹配
-    if pattern.contains("node_modules") && path.contains("node_modules") {
-        return true;
-    }
-    if pattern.contains(".cache") && path.contains(".cache") {
-        return true;
-    }
-    if pattern.contains(".git") && path.contains(".git") {
-        return true;
-    }
-    if pattern.contains(".ssh") && path.contains(".ssh") {
-        return true;
-    }
-    if pattern.contains("/proc") && path.starts_with("/proc") {
-        return true;
-    }
-
-    let clean_pattern = pattern.trim_end_matches("/**").trim_end_matches('*');
-    if !clean_pattern.is_empty() && path.starts_with(clean_pattern) {
-        return true;
-    }
-
-    false
 }
 
 fn infer_file_attributes(path: &Path) -> (String, Vec<String>) {

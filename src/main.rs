@@ -49,6 +49,45 @@ enum Commands {
         #[command(subcommand)]
         action: MemoryCommands,
     },
+
+    #[command(about = "启动 MCP (Model Context Protocol) stdio 服务端供 Agent 接入")]
+    Mcp,
+
+    #[command(about = "启动大管家常驻后台守护进程 (含 inotify 监听与定时进程巡检)")]
+    Daemon,
+
+    #[command(about = "实体依赖关联与拓扑图")]
+    Links {
+        #[command(subcommand)]
+        action: LinksCommands,
+    },
+
+    #[command(about = "宿主环境变更历史与开工回溯")]
+    Changes {
+        #[arg(short, long, help = "查询自该时间戳以来的变更 (ISO 8601, 如 2026-11-15T00:00:00)")]
+        since: Option<String>,
+
+        #[arg(short, long, default_value_t = 20)]
+        limit: usize,
+    },
+}
+
+#[derive(Subcommand)]
+enum LinksCommands {
+    #[command(about = "查询指定实体的关联拓扑")]
+    Query {
+        #[arg(short, long, help = "实体类型: asset, service, memory", default_value = "asset")]
+        r#type: String,
+
+        #[arg(help = "实体唯一标识或路径")]
+        id: String,
+    },
+
+    #[command(about = "导出当前关联依赖的 Mermaid 架构图")]
+    Graph {
+        #[arg(short, long, default_value_t = 20)]
+        limit: usize,
+    },
 }
 
 #[derive(Subcommand)]
@@ -129,7 +168,8 @@ enum MemoryCommands {
     },
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let cli = Cli::parse();
     let cfg = Config::load_or_default(cli.config.as_deref())?;
     let storage = Storage::open(&cfg.db_path)?;
@@ -284,6 +324,42 @@ fn main() -> Result<()> {
                     }
                 }
             }
+        }
+
+        Commands::Mcp => {
+            let server = agent_steward::api::mcp::McpServer::new(storage);
+            server.run_stdio().await?;
+        }
+
+        Commands::Daemon => {
+            let daemon = agent_steward::daemon::StewardDaemon::new(cfg, storage);
+            daemon.run().await?;
+        }
+
+        Commands::Links { action } => {
+            let arc_storage = std::sync::Arc::new(storage);
+            let engine = agent_steward::links::LinksEngine::new(arc_storage);
+            match action {
+                LinksCommands::Query { r#type, id } => {
+                    let links = engine.query_links(&r#type, &id)?;
+                    println!("实体关联拓扑 (共 {} 条):", links.len());
+                    for l in links {
+                        println!("  - [{}] {} --({})--> [{}] {} (置信度: {:.2})",
+                            l.source_type, l.source_id, l.relation, l.target_type, l.target_id, l.confidence);
+                    }
+                }
+                LinksCommands::Graph { limit } => {
+                    let mermaid = engine.export_mermaid(limit)?;
+                    println!("{}", mermaid);
+                }
+            }
+        }
+
+        Commands::Changes { since, limit } => {
+            let arc_storage = std::sync::Arc::new(storage);
+            let engine = agent_steward::changes::ChangesEngine::new(arc_storage);
+            let summary = engine.generate_summary_markdown(since.as_deref(), limit)?;
+            println!("{}", summary);
         }
     }
 

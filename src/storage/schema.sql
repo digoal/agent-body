@@ -170,6 +170,39 @@ CREATE TABLE IF NOT EXISTS active_processes (
 CREATE INDEX IF NOT EXISTS idx_active_processes_owner ON active_processes(owner);
 CREATE INDEX IF NOT EXISTS idx_active_processes_status ON active_processes(status);
 
+CREATE TABLE IF NOT EXISTS changes (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    type            TEXT NOT NULL,
+    target          TEXT NOT NULL,
+    description     TEXT,
+    details         TEXT DEFAULT '{}',
+    source          TEXT DEFAULT 'system',
+    created_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_changes_type ON changes(type);
+CREATE INDEX IF NOT EXISTS idx_changes_created_at ON changes(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS links (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_type     TEXT NOT NULL CHECK (source_type IN ('memory','asset','service','change')),
+    source_id       TEXT NOT NULL,
+    target_type     TEXT NOT NULL CHECK (target_type IN ('memory','asset','service','change')),
+    target_id       TEXT NOT NULL,
+    relation        TEXT NOT NULL CHECK (relation IN (
+        'references','depends_on','produced_by','related_to',
+        'supersedes','contradicts','confirms'
+    )),
+    confidence      REAL DEFAULT 1.0 CHECK (confidence >= 0 AND confidence <= 1),
+    auto_discovered INTEGER DEFAULT 0,
+    created_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
+    UNIQUE(source_type, source_id, target_type, target_id, relation)
+);
+
+CREATE INDEX IF NOT EXISTS idx_links_source ON links(source_type, source_id);
+CREATE INDEX IF NOT EXISTS idx_links_target ON links(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_links_relation ON links(relation);
+
 -- 预置数据
 INSERT OR IGNORE INTO config(key, value) VALUES
     ('schema_version', '2'),

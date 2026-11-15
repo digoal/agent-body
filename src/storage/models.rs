@@ -70,3 +70,28 @@ pub struct MemoryRecord {
     pub pinned: bool,
     pub status: String,
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChangeRecord {
+    pub id: Option<i64>,
+    pub change_type: String, // file_created, file_modified, file_deleted, ...
+    pub target: String,
+    pub description: Option<String>,
+    pub details: serde_json::Value,
+    pub source: String,
+    pub created_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LinkRecord {
+    pub id: Option<i64>,
+    pub source_type: String, // memory, asset, service, change
+    pub source_id: String,
+    pub target_type: String, // memory, asset, service, change
+    pub target_id: String,
+    pub relation: String,    // references, depends_on, produced_by, related_to, supersedes, contradicts, confirms
+    pub confidence: f32,
+    pub auto_discovered: bool,
+    pub created_at: Option<String>,
+}
