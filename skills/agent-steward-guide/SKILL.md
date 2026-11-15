@@ -1,6 +1,6 @@
 ---
 name: agent-steward-guide
-description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程、以及熟悉日常使用（CLI 命令实操、原生 MCP 接入、开工协同最佳实践）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”时触发。
+description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制与 Systemd 常驻服务）、以及熟悉日常使用（CLI 命令行实操、18 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
 ---
 
 # Agent Host Steward 全景向导与部署使用技能 (agent-steward-guide)
@@ -12,20 +12,24 @@ description: 专门帮助新接手、外部接入或初次接触本项目的 Age
 ## 一、本项目是什么？（核心作用与定位）
 
 ### 1.1 一句话定义
-**Agent Host Steward（宿主环境大管家）** 是常驻在 AI Agent 宿主机中的轻量级系统级认知底座：**管记忆、管素材、管软件环境、管动态进程、管一切静态与动态对象的位置规范**。
+**Agent Host Steward（宿主环境大管家）** 是常驻在 AI Agent 宿主机中的轻量级系统级认知底座：**管记忆、管素材、管软件环境、管动态进程、管网络端口、管图谱依赖、管一切静态与动态对象的位置规范**。
 
 ### 1.2 它不是什么？
 - ❌ 它**不是**为了让 Agent 完成某一次具体编写代码或对话任务的协作框架（它不抢 LangChain、CrewAI 的活）；
 - ❌ 它**不是**盲目的文件爬虫，绝不一股脑把宿主机扫爆；
-- ❌ 它**不是**单纯的 key-value 缓存。
+- ❌ 它**不是**单纯的 key-value 缓存；
+- ❌ 它**不是**重复造轮子的 AST 解析器（微观代码符号解析直接桥接已有的 CodeGraph）。
 
 ### 1.3 它的核心作用（解决什么核心痛点）
-1. **彻底解决“跨会话失忆”**：Agent 开工第一秒，无需人工反复交代机器上有啥，调用 `steward_brief` 瞬间获取全局上下文（硬件、活跃脚本、最近资产、过往经验）；
-2. **规范文件存放（放置建议 Placement Advice）**：当 Agent 产生新脚本、新工程、临时测试文件或重要笔记时，大管家主动推荐存放目录与命名模式（如工具进 `shared_proj/`、常规进 `work/`、临时进 `tmp/`），终结散落污染；
-3. **分级颗粒度扫描（Granularity Tiering）**：白名单深挖到底建立 FTS5 全文索引，黑名单（`node_modules`, `.cache`, `.git`）**严格止于当前目录层级仅记标量，绝不下钻**，保护数据库不被扫爆；
-4. **动态任务与进程感知**：采集非 systemd 的 Python 脚本、构建 Worker 进程与端口占用，过滤内核系统底噪，排查后台卡死；
-5. **事前防撞与影响面推演**：启动服务前用 `steward_port_check` 防端口踩踏；改动核心代码前用 `steward_links_impact` 推演多跳爆炸半径；
-6. **会话生命周期自洁**：任务完成调用 `steward_session_close`，自动回收 `/root/new/tmp/` 垃圾并沉淀纪要进长期记忆。
+1. **彻底解决“跨会话失忆”**：Agent 开工第一秒，无需人工反复交代机器上有啥，调用 `steward_brief` 瞬间获取全局上下文（硬件规格、活跃进程、最近变动、长期记忆）；
+2. **规范文件存放（放置建议 Placement Advice）**：当 Agent 产生新脚本、新工程、临时测试文件或重要笔记时，大管家主动推荐存放目录与命名模式（工具进 `/root/new/shared_proj/`、项目进 `/root/new/work/`、临时进 `/root/new/tmp/`、技能进 `/root/new/skills/`），终结散落污染；
+3. **分级颗粒度扫描（Granularity Tiering）**：白名单深挖到底建立 FTS5 全文索引，黑名单（`node_modules`, `.cache`, `.git`, `.ssh`）**严格止于当前目录层级仅记标量，绝不下钻**，保护数据库不被垃圾碎片扫爆；
+4. **动态任务与进程感知**：采集非 systemd 的 Python 脚本、构建 Worker 进程与端口占用，过滤内核系统底噪，排查后台死锁与僵尸任务；
+5. **事前防撞与影响面推演**：启动测试服务前用 `steward_port_check` 防端口踩踏；改动核心代码前用 `steward_links_impact` 推演多跳爆炸半径；
+6. **图智能与宏微双层联邦（CodeGraph Bridge）**：
+   - 大管家管理**宏观宿主依赖**（文件、服务、端口、定时任务间的依赖网络），支持 `steward_links_audit` 拓扑断链体检；
+   - 跨层下钻微观代码符号（函数、调用方、定义）时，无缝桥接调用 **CodeGraph**，实现宏观拓扑与微观符号的联邦联动；
+7. **会话生命周期自洁**：任务完成调用 `steward_session_close`，自动回收 `/root/new/tmp/` 临时文件并沉淀会话纪要进长期记忆。
 
 ---
 
@@ -37,12 +41,13 @@ description: 专门帮助新接手、外部接入或初次接触本项目的 Age
 
 | 依赖组件 | 规格要求 | 用途与说明 |
 |---|---|---|
-| **操作系统** | Linux (Ubuntu / Debian / CentOS / 统信 / 麒麟) | 深度利用 Linux `/proc` 文件系统与 `inotify` |
+| **操作系统** | Linux (Ubuntu / Debian / CentOS / 统信 / 麒麟) | 深度利用 Linux `/proc` 文件系统与 `inotify` 机制 |
 | **Rust 工具链** | Rust >= 1.75 (推荐 1.99.0) + Cargo | 源码编译构建工具，安装于 `/root/.cargo/bin` |
 | **SQLite3 运行环境** | 内置 Bundled FTS5 (无需外装系统级动态库) | `rusqlite` 以 bundled 特性编译，单二进制自包含 |
 | **本地 Ollama (可选)** | `http://127.0.0.1:11434` (模型推荐 `bge-m3:latest`) | 提供语义向量混合检索（RRF）。若未安装自动降级为 FTS5 |
+| **CodeGraph (可选)** | 本机安装有 `codegraph` CLI 并在目标项目建立索引 | 提供微观函数与符号级调用链穿透 |
 
-### 2.2 一键编译与本地安装
+### 2.2 一键编译与系统安装
 
 在项目根目录下执行：
 
@@ -53,12 +58,13 @@ export PATH="/root/.cargo/bin:$PATH"
 # 2. 编译生产优化二进制 (单二进制约 8MB)
 cargo build --release
 
-# 3. 验证二进制运行正常
-./target/release/agent-steward --version
-# 输出: agent-steward 0.2.0
+# 3. 运行全量测试验证环境 (目前 31 项测试全部通过)
+cargo test
 
-# 4. (可选) 安装到系统全局 PATH
-cp target/release/agent-steward /usr/local/bin/
+# 4. 安装到系统全局 PATH
+cp target/release/agent-steward /usr/local/bin/agent-steward
+agent-steward --version
+# 输出: steward 0.2.0
 ```
 
 ### 2.3 配置文件与初始化存储
@@ -67,18 +73,48 @@ cp target/release/agent-steward /usr/local/bin/
 - **数据存储**: `~/.steward/steward.db`（SQLite WAL 模式，集成 FTS5 全文虚拟表与触发器）；
 - **主配置文件**: `~/.steward/config.toml`（自动从默认模板引导生成）。
 
-默认配置文件路径与核心参数示例：
+核心配置参数示例：
 ```toml
 [storage]
 database_path = "~/.steward/steward.db"
 
 [daemon]
 poll_interval_secs = 60
-watch_paths = ["/root/new/work", "/root/new/shared_proj", "/root/new/skills"]
+watch_paths = ["/root/new/work", "/root/new/shared_proj", "/root/new/skills", "/root/new/note"]
 
 [memory]
 ollama_endpoint = "http://127.0.0.1:11434"
 default_embedding_model = "bge-m3:latest"
+```
+
+### 2.4 Systemd 后台常驻守护服务（生产托管）
+
+大管家已实装 Systemd 服务单元（内存常驻仅 **2.1MB**，inotify 300ms 防抖监听）：
+
+配置文件路径：`/etc/systemd/system/agent-steward.service`
+```ini
+[Unit]
+Description=Agent Host Steward Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/agent-steward daemon
+Restart=always
+RestartSec=5
+MemoryMax=64M
+CPUQuota=10%
+
+[Install]
+WantedBy=multi-user.target
+```
+
+常用服务管理命令：
+```bash
+systemctl daemon-reload
+systemctl enable --now agent-steward
+systemctl status agent-steward
 ```
 
 ---
@@ -89,52 +125,64 @@ default_embedding_model = "bge-m3:latest"
 
 ### 3.1 命令行通道（CLI 实战手册）
 
-#### 场景 1: 开工获取上下文全局简报
+#### 场景 1: 开工获取全局态势简报
 ```bash
-./target/release/agent-steward brief
+agent-steward brief
 ```
 > 输出系统 CPU/内存/磁盘、活跃动态任务（PID、命令、内存）、最近资产与长期记忆。
 
 #### 场景 2: 新建对象前索取放置建议（Placement Advice）
 ```bash
 # 咨询一个爬虫脚本应该放哪里
-./target/release/agent-steward place suggest \
+agent-steward place suggest \
   --type script \
   --name sec_fetcher \
   --intent "抓取美国 SEC EDGAR 财报"
 
-# 查看内置的 8 大目录规范
-./target/release/agent-steward place rules
+# 查看内置的 8 大目录放置规范
+agent-steward place rules
 ```
 
 #### 场景 3: 启动测试服务前探测端口冲突（防撞预警）
 ```bash
 # 检查 8080 端口是否已被占用
-./target/release/agent-steward env port 8080
+agent-steward env port 8080
 ```
 > 若冲突，自动展示占用该端口的进程 PID、名称、命令行、用户，并推荐连续空闲端口。
 
 #### 场景 4: 修改核心代码前推演变更爆炸半径（Blast Radius）
 ```bash
-./target/release/agent-steward links impact /root/new/shared_proj/sec_fetcher/utils.py
+agent-steward links impact /root/new/shared_proj/sec_fetcher/utils.py
 ```
 > 返回直接依赖该脚本的程序、下游定时任务及风险评级（LOW / HIGH / CRITICAL）。
 
-#### 场景 5: 跨会话长期记忆检索（混合模式）
+#### 场景 5: 图拓扑依赖断链体检（Links Audit）
+```bash
+agent-steward links audit
+```
+> 自动诊断全系统悬空引用、已删除的依赖文件与离线服务端口。
+
+#### 场景 6: CodeGraph 宏微联邦穿透查询微观代码符号
+```bash
+# 在已索引 .codegraph/ 的仓库根目录下或显式指定路径
+agent-steward codegraph bridge --query "explore Storage"
+```
+
+#### 场景 7: 跨会话长期记忆检索（混合模式）
 ```bash
 # 默认启用 FTS5 + Ollama 向量 RRF 混合重排
-./target/release/agent-steward memory search "数据库连接池应急"
+agent-steward memory search "数据库连接池应急"
 
 # 写入一条决策或排障经验
-./target/release/agent-steward memory add \
+agent-steward memory add \
   --type decision \
   --content "PostgreSQL 连接池溢出时，优先调低 max_connections 并开启 pgbouncer 事务池模式" \
   --summary "PG 连接池应急决策"
 ```
 
-#### 场景 6: 会话结束完工结算与垃圾回收
+#### 场景 8: 会话结束完工结算与环境自洁
 ```bash
-./target/release/agent-steward close session-20261115-01 --clean-temp
+agent-steward close session-20261115-01 --clean-temp
 ```
 > 自动清理 `/root/new/tmp/` 下临时残留文件，生成变更摘要并沉淀进长期记忆。
 
@@ -144,102 +192,90 @@ default_embedding_model = "bge-m3:latest"
 
 本项目原生支持 **Model Context Protocol (MCP)**，通过标准 JSON-RPC 2.0 stdio 协议与任何 Agent 宿主环境无缝通信。
 
-#### 步骤 1: 启动 MCP 服务端
-```bash
-agent-steward mcp
-```
-
-#### 步骤 2: Agent 客户端配置挂载
+#### 步骤 1: Agent 客户端配置挂载
 在 Agent 工具配置文件（例如 `claude_desktop_config.json` 或 Antigravity MCP 配置文件）中追加：
 
 ```json
 {
   "mcpServers": {
     "agent-steward": {
-      "command": "/root/new/work/agent-steward/target/release/agent-steward",
+      "command": "/usr/local/bin/agent-steward",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-#### 步骤 3: Agent 可调用的 14 个核心 MCP 原生工具一览
-- `steward_brief`: 一键获取全局上下文简报；
-- `steward_placement_suggest`: 咨询新文件/项目放置路径与命名规范；
-- `steward_placement_rules`: 查看生效的目录放置规则清单；
-- `steward_asset_search`: 全文检索已知资产与文件；
-- `steward_asset_register`: 手动注册新资产；
-- `steward_asset_scan`: 触发指定目录白黑名单分级扫描；
-- `steward_env_processes`: 查询活跃动态任务与后台脚本进程；
-- `steward_env_show`: 查看硬件与操作系统规格；
-- `steward_port_check`: 端口防撞检测与空闲推荐；
-- `steward_memory_add`: 记录长期记忆；
-- `steward_memory_search`: 混合语义与全文搜索长期记忆；
-- `steward_links_query`: 查找实体依赖拓扑；
-- `steward_links_impact`: 推演变更爆炸半径与下游波及；
-- `steward_session_close`: 完工归档结清与环境自洁。
+#### 步骤 2: 18 个原生 MCP 工具全景矩阵
+
+| 分类 | 工具名称 | 核心功能说明 |
+|---|---|---|
+| **开工与全景** | `steward_brief` | 一键获取宿主机全局上下文与态势简报 |
+| **规范放置** | `steward_placement_suggest` | 咨询新文件/工程的规范存放路径与命名建议 |
+| | `steward_placement_rules` | 查看生效的 8 大目录放置规则清单 |
+| **资产纳管** | `steward_asset_search` | FTS5 全文与前缀模糊混合检索已知资产 |
+| | `steward_asset_register` | 手动纳管或标记特定路径资产 |
+| | `steward_asset_scan` | 触发指定目录白黑名单三级分级扫描 |
+| **环境与防撞** | `steward_env_processes` | 抓取活跃非系统动态任务脚本进程（过滤底噪） |
+| | `steward_env_show` | 查看宿主机 CPU、内存、磁盘与系统规格 |
+| | `steward_port_check` | 探测网络端口冲突并推荐连续空闲端口 |
+| **长期记忆** | `steward_memory_add` | 写入架构决策、踩坑教训或项目笔记 |
+| | `steward_memory_search` | BGE-M3 向量 + FTS5 RRF 倒数融合混合检索 |
+| **图智能与联邦**| `steward_links_query` | 查询指定资产的出度/入度依赖拓扑网络 |
+| | `steward_links_visualize` | 将资产依赖关系导出为 Mermaid 图表 |
+| | `steward_links_impact` | 变更事前推演：递归计算多跳依赖爆炸半径 |
+| | `steward_links_audit` | 拓扑健康体检：扫描断链、缺失资产与离线服务 |
+| | `steward_codegraph_bridge`| 宏微双层联邦：穿透调用 CodeGraph 探索微观代码符号 |
+| **会话与审计** | `steward_changes_since` | 回溯指定时间窗口内的资产创建/修改/删除审计流 |
+| | `steward_session_close` | 会话完工结算：归档工单、自洁 `/tmp` 垃圾 |
 
 ---
 
-### 3.3 常驻守护进程模式（Daemon & Watcher）
+## 四、Agent 日常协同推荐心法（六步闭环法）
 
-如果希望宿主系统在无 Agent 交互时也能自动感知文件变更与定时巡检，可作为后台守护进程启动：
-
-```bash
-# 启动后台守护主循环 (包含 300ms inotify 文件监听 + 60s 定时巡检)
-./target/release/agent-steward daemon
-```
-
-也可以通过 `systemd` 配置为开机自启服务：
-```ini
-[Unit]
-Description=Agent Host Steward Daemon
-After=network.target
-
-[Service]
-Type=simple
-User=root
-ExecStart=/root/new/work/agent-steward/target/release/agent-steward daemon
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
----
-
-## 四、Agent 日常协同推荐心法（四步闭环法）
-
-当一个 Agent 在当前机器上工作时，推荐遵循以下四步心法，让大管家发挥最大效能：
+当一个 Agent 在当前机器上工作时，遵循以下六步心法，让大管家发挥最大效能：
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Agent as "AI Agent"
     participant S as "Agent Host Steward"
-    participant Host as "宿主系统 (OS / 磁盘 / 进程)"
+    participant CG as "CodeGraph (微观符号)"
+    participant Host as "宿主系统 (OS / 磁盘 / 端口)"
 
-    Note over Agent, S: 阶段 1: 开工感知
+    Note over Agent, S: 1. 开工感知
     Agent->>S: steward_brief()
-    S-->>Agent: 返回硬件规格、活跃进程、最近变动、长期记忆
+    S-->>Agent: 硬件规格、活跃任务、最近变动、长期记忆
 
-    Note over Agent, S: 阶段 2: 动作规范
+    Note over Agent, S: 2. 规范放置
     Agent->>S: steward_placement_suggest(type="script", name="spider")
-    S-->>Agent: 建议路径: /root/new/shared_proj/spider/
+    S-->>Agent: 建议目录: /root/new/shared_proj/spider/
+
+    Note over Agent, S: 3. 依赖体检与端口防撞
     Agent->>S: steward_port_check(port=8080)
     S-->>Agent: 8080 空闲，安全可用！
+    Agent->>S: steward_links_audit()
+    S-->>Agent: 全系统拓扑健康，无断链
 
-    Note over Agent, Host: 阶段 3: 执行任务
-    Agent->>Host: 编写代码、运行脚本、生成临时测试
+    Note over Agent, CG: 4. 执行任务与宏微联邦
+    Agent->>S: steward_codegraph_bridge(query="explore Storage")
+    S->>CG: 穿透检索底层符号
+    CG-->>S: 返回符号定义与调用树
+    S-->>Agent: 宏微联动结果反馈
 
-    Note over Agent, S: 阶段 4: 完工结清
+    Note over Agent, S: 5. 经验沉淀
+    Agent->>S: steward_memory_add(type="lesson", content="排障经验")
+    S-->>Agent: 记忆已持久化至 SQLite FTS5
+
+    Note over Agent, Host: 6. 完工自洁
     Agent->>S: steward_session_close(session_id="task-01")
-    S->>Host: 自动清理 /root/new/tmp/ 垃圾
-    S-->>Agent: 释放 15KB，已沉淀工单纪要入库长期记忆
+    S->>Host: 自动清除 /root/new/tmp/ 垃圾临时文件
+    S-->>Agent: 释放空间，工单纪要沉淀入库完毕
 ```
 
-1. **进门先问候（steward_brief）**：接手任务第一件事，调用 brief 看一眼宿主机运行状态和记忆；
-2. **动刀先请教（placement & port & impact）**：建新文件先问建议，起服务先查端口，改公共库先推演影响面；
-3. **经验随时存（memory_add）**：攻克了棘手 bug 或做出了技术选型决策，立刻记一条长期记忆；
-4. **出门随手关（session_close）**：任务结束清理垃圾并沉淀总结，保持宿主机自洁。
+1. **进门先问候（steward_brief）**：接手任务第一件事，调用 brief 看一眼宿主机运行状态和历史经验；
+2. **动刀先请教（placement_suggest）**：产生任何新脚本、新工程、新技能先问放置建议，禁止散落；
+3. **起网先防撞（port_check & links_audit）**：启动新测试服务先测端口防冲突，改动前先扫拓扑断链；
+4. **遇码穿宏微（codegraph_bridge）**：宏观文件拓扑看 steward，微观代码符号穿透调用 CodeGraph；
+5. **经验随时存（memory_add）**：攻克了棘手 bug 或做出了重大架构决策，立刻记一条长期记忆；
+6. **出门随手关（session_close）**：任务结束清理垃圾并沉淀工单总结，保持宿主机自洁。
