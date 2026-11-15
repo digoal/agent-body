@@ -3,20 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent Host Steward — 宿主环境大管家路演发布</title>
+  <title>Agent Host Steward - 宿主环境大管家</title>
   <style>
     :root {
-      --bg: #0a0d14;
-      --card-bg: rgba(22, 28, 45, 0.75);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --primary: #3b82f6;
-      --primary-glow: rgba(59, 130, 246, 0.35);
-      --accent: #10b981;
-      --purple: #8b5cf6;
-      --amber: #f59e0b;
-      --rose: #f43f5e;
+      --bg-dark: #040711;
+      --card-bg: rgba(13, 22, 41, 0.72);
+      --card-border: rgba(56, 189, 248, 0.18);
+      --card-hover: rgba(56, 189, 248, 0.28);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
+      --accent-cyan: #06b6d4;
+      --accent-blue: #38bdf8;
+      --accent-purple: #818cf8;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
 
     * {
@@ -27,44 +29,54 @@
     }
 
     body {
-      background-color: var(--bg);
+      background-color: var(--bg-dark);
       color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-      overflow: hidden;
+      font-family: var(--font-family);
       width: 100vw;
       height: 100vh;
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    /* 16:9 主容器 */
-    #deck-viewport {
-      width: 100vw;
-      height: 56.25vw;
-      max-height: 100vh;
-      max-width: 177.78vh;
+    /* 16:9 Standard Stage */
+    .deck-container {
       position: relative;
-      background: radial-gradient(circle at 50% 20%, #151d36 0%, #080b12 80%);
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 100px rgba(37, 99, 235, 0.1);
+      width: min(96vw, 96vh * 16 / 9);
+      height: min(96vh, 96vw * 9 / 16);
+      aspect-ratio: 16 / 9;
+      background: radial-gradient(circle at 85% 15%, #132247 0%, #070d1e 55%, #03050c 100%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.85), 0 0 50px rgba(56, 189, 248, 0.08);
       overflow: hidden;
-      border-radius: 8px;
     }
 
-    /* 幻灯片通用结构 */
+    /* Subtle cyber background grid */
+    .deck-container::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 3.5% 3.5%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
     .slide {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      padding: 3.5% 5% 5% 5%;
+      inset: 0;
+      padding: 2.5% 3.6% 4.2% 3.6%;
       display: flex;
       flex-direction: column;
       opacity: 0;
       pointer-events: none;
-      transform: translateX(40px) scale(0.98);
-      transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: translateX(30px) scale(0.985);
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 1;
     }
 
     .slide.active {
@@ -73,669 +85,1277 @@
       transform: translateX(0) scale(1);
     }
 
-    /* 顶部导航与分类 */
+    /* Header styling */
     .slide-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2%;
-    }
-
-    .tag-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 12px;
-      border-radius: 9999px;
-      font-size: 0.85vw;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      background: rgba(59, 130, 246, 0.15);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.3);
-    }
-
-    .slide-title {
-      font-size: 2.2vw;
-      font-weight: 800;
-      line-height: 1.25;
-      background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .slide-subtitle {
-      font-size: 1.05vw;
-      color: var(--text-muted);
-      margin-top: 0.3vw;
-    }
-
-    /* 内容网格容器 */
-    .content-grid {
-      flex: 1;
-      display: grid;
-      gap: 2vw;
-      align-items: center;
-    }
-
-    .grid-2 {
-      grid-template-columns: 1.05fr 0.95fr;
-    }
-
-    .grid-3 {
-      grid-template-columns: repeat(3, 1fr);
-    }
-
-    .grid-4 {
-      grid-template-columns: repeat(4, 1fr);
-    }
-
-    /* 卡片标准 */
-    .glass-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
-      padding: 1.6vw;
-      backdrop-filter: blur(16px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-      position: relative;
-    }
-
-    .glass-card:hover {
-      border-color: rgba(96, 165, 250, 0.35);
-    }
-
-    /* 重点卡片高亮 */
-    .card-highlight {
-      border-color: rgba(59, 130, 246, 0.4);
-      background: linear-gradient(145deg, rgba(30, 41, 69, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
-    }
-
-    /* 文本要点 */
-    .point-item {
-      display: flex;
       align-items: flex-start;
-      gap: 12px;
-      margin-bottom: 1.2vw;
-    }
-
-    .point-icon {
-      width: 1.8vw;
-      height: 1.8vw;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 0.9vw;
+      margin-bottom: 1.5%;
       flex-shrink: 0;
     }
 
-    .point-icon.blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-    .point-icon.green { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .point-icon.amber { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-    .point-icon.rose { background: rgba(244, 63, 94, 0.2); color: #fb7185; }
-
-    .point-title {
-      font-size: 1.1vw;
-      font-weight: 700;
-      color: #f1f5f9;
-      margin-bottom: 0.2vw;
+    .slide-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72vw;
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent-blue);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.35vw;
     }
 
-    .point-desc {
-      font-size: 0.88vw;
+    .slide-title {
+      font-size: 1.8vw;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 30%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.15;
+    }
+
+    .slide-subtitle {
+      font-size: 0.85vw;
       color: var(--text-muted);
+      margin-top: 0.25vw;
+    }
+
+    /* Layout Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5vw;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.2vw;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 1vw 1.2vw;
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      border-color: var(--card-hover);
+    }
+
+    /* Pain Story Cards */
+    .story-box {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(244, 63, 94, 0.25);
+      border-radius: 8px;
+      padding: 0.7vw 0.9vw;
+      margin-bottom: 0.6vw;
+    }
+    .story-box.green {
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .story-title {
+      font-size: 0.88vw;
+      font-weight: 700;
+      color: #fda4af;
+      margin-bottom: 0.3vw;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .story-desc {
+      font-size: 0.74vw;
+      color: #cbd5e1;
       line-height: 1.45;
     }
 
-    /* 封面设计专用 */
-    .cover-container {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      height: 100%;
+    .story-fix {
+      margin-top: 0.4vw;
+      font-size: 0.74vw;
+      color: #6ee7b7;
+      background: rgba(16, 185, 129, 0.1);
+      padding: 4px 8px;
+      border-radius: 4px;
+      border-left: 3px solid #10b981;
+      line-height: 1.4;
     }
 
-    .hero-badge {
-      padding: 8px 20px;
-      border-radius: 9999px;
-      background: linear-gradient(90deg, rgba(59,130,246,0.2) 0%, rgba(139,92,246,0.2) 100%);
-      border: 1px solid rgba(139,92,246,0.4);
-      color: #c4b5fd;
-      font-size: 1vw;
-      font-weight: 600;
-      margin-bottom: 1.5vw;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .hero-title {
-      font-size: 3.8vw;
-      font-weight: 900;
-      letter-spacing: -1px;
-      line-height: 1.15;
-      background: linear-gradient(135deg, #ffffff 30%, #60a5fa 70%, #a78bfa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 1vw;
-    }
-
-    .hero-tagline {
-      font-size: 1.5vw;
-      color: #cbd5e1;
-      max-width: 65%;
-      line-height: 1.5;
-      margin-bottom: 2.2vw;
-    }
-
-    .hero-tags-row {
-      display: flex;
-      gap: 1vw;
-    }
-
-    .hero-pill {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 6px 16px;
-      border-radius: 8px;
-      font-size: 0.9vw;
-      color: #94a3b8;
-    }
-
-    /* 控制栏与快捷键提示 */
-    #deck-controls {
-      position: absolute;
-      bottom: 2.5%;
-      left: 5%;
-      right: 5%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 100;
-    }
-
-    .progress-bar-container {
-      flex: 1;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 2px;
-      margin: 0 2vw;
-      overflow: hidden;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #3b82f6, #10b981);
-      width: 12.5%;
-      transition: width 0.3s ease;
-    }
-
-    .btn-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .ctrl-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #e2e8f0;
-      padding: 6px 14px;
-      border-radius: 6px;
-      font-size: 0.85vw;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s ease;
-    }
-
-    .ctrl-btn:hover {
-      background: rgba(59, 130, 246, 0.3);
-      border-color: rgba(96, 165, 250, 0.5);
-      color: #ffffff;
-    }
-
-    .page-indicator {
-      font-size: 0.9vw;
-      color: #64748b;
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* 动态交互仿真器组件 */
+    /* Interactive Simulator Box */
     .sim-panel {
-      background: #080d1a;
+      background: #020617;
       border: 1px solid #1e293b;
-      border-radius: 10px;
-      padding: 1.2vw;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.82vw;
-      height: 100%;
+      border-radius: 8px;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
+      margin-top: 0.5vw;
+      flex: 1;
+      min-height: 0;
     }
 
     .sim-header {
+      background: #090d1a;
+      padding: 5px 10px;
+      border-bottom: 1px solid #1e293b;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid #1e293b;
-      padding-bottom: 8px;
-      margin-bottom: 10px;
-      color: #94a3b8;
+      font-size: 0.7vw;
+      color: var(--text-muted);
     }
 
-    .sim-screen {
-      flex: 1;
-      background: #040711;
-      border-radius: 6px;
-      padding: 10px;
-      color: #38bdf8;
-      overflow: hidden;
-      line-height: 1.4;
-      white-space: pre-wrap;
-    }
-
-    .sim-actions {
+    .sim-dots {
       display: flex;
-      gap: 8px;
-      margin-top: 10px;
+      gap: 5px;
+    }
+    .sim-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .sim-dot.red { background: #ef4444; }
+    .sim-dot.yellow { background: #f59e0b; }
+    .sim-dot.green { background: #10b981; }
+
+    .sim-controls {
+      display: flex;
+      gap: 6px;
+      padding: 6px 10px;
+      background: #060914;
+      border-bottom: 1px solid #1e293b;
+      align-items: center;
+    }
+
+    .sim-input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      color: #f8fafc;
+      padding: 4px 8px;
+      font-size: 0.72vw;
+      font-family: monospace;
+      flex: 1;
+      outline: none;
+    }
+    .sim-input:focus {
+      border-color: var(--accent-blue);
     }
 
     .sim-btn {
-      flex: 1;
-      background: #1e293b;
-      color: #f1f5f9;
-      border: 1px solid #334155;
-      padding: 6px 0;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+      border: none;
       border-radius: 4px;
-      font-size: 0.8vw;
+      padding: 4px 10px;
+      font-size: 0.7vw;
+      font-weight: 600;
       cursor: pointer;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .sim-btn:hover {
+      background: linear-gradient(135deg, #0369a1, #075985);
+      transform: translateY(-1px);
     }
 
-    .sim-btn:hover {
-      background: #2563eb;
-      border-color: #60a5fa;
+    .sim-terminal {
+      padding: 8px 12px;
+      font-family: "JetBrains Mono", Consolas, Monaco, monospace;
+      font-size: 0.7vw;
+      color: #a5f3fc;
+      line-height: 1.45;
+      overflow-y: auto;
+      flex: 1;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Bottom Control Bar */
+    .deck-nav {
+      position: absolute;
+      bottom: 12px;
+      left: 3.6%;
+      right: 3.6%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      pointer-events: auto;
+    }
+
+    .nav-btn {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-main);
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.75vw;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      backdrop-filter: blur(8px);
+      transition: all 0.2s;
+    }
+    .nav-btn:hover {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-blue);
+    }
+
+    .nav-dots {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .nav-dot {
+      width: 22px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .nav-dot.active {
+      width: 36px;
+      background: var(--accent-blue);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+    }
+
+    .nav-status {
+      font-size: 0.75vw;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    /* Shortcuts modal overlay */
+    .shortcuts-modal {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .shortcuts-modal.open {
+      display: flex;
+    }
+    .modal-box {
+      background: #0f172a;
+      border: 1px solid #38bdf8;
+      border-radius: 12px;
+      padding: 1.5vw 2vw;
+      width: 480px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
     }
   </style>
 </head>
 <body>
 
-  <div id="deck-viewport">
+  <div class="deck-container">
 
-    <!-- Slide 1: 封面 -->
+    <!-- ==================== SLIDE 1: HERO COVER ==================== -->
     <section class="slide active" data-index="1">
-      <div class="cover-container">
-        <div class="hero-badge">
-          <span>⚡</span>
-          <span>新一代 Agent 基础设施 · Rust 原生单二进制</span>
+      <div class="slide-header">
+        <div>
+          <span class="slide-tag">⚡ 新一代 Agent 基础设施 · Rust 原生单二进制</span>
+          <h1 class="slide-title" style="font-size: 2.6vw; margin-top: 0.2vw;">Agent Host Steward</h1>
+          <p class="slide-subtitle" style="font-size: 1.1vw; color: #38bdf8; font-weight: 500;">宿主环境大管家：驻留在 Agent 宿主机中的全栈治理中枢</p>
         </div>
-        <h1 class="hero-title">Agent Host Steward</h1>
-        <p class="hero-tagline">
-          宿主环境大管家：驻留在 Agent 宿主机中<br>
-          管记忆 · 管素材 · 管软件环境 · 管动态进程 · 管一切对象位置规范
-        </p>
-        <div class="hero-tags-row">
-          <div class="hero-pill">🚀 终结跨会话失忆</div>
-          <div class="hero-pill">🛡️ 白名单深挖 / 黑名单浅层阻断</div>
-          <div class="hero-pill">🎯 放置建议 (Placement Advice)</div>
-          <div class="hero-pill">⚡ 原生 MCP stdio 挂载</div>
+      </div>
+
+      <div class="grid-2" style="align-items: center;">
+        <!-- Left: Core Mission & Key Highlights -->
+        <div style="display: flex; flex-direction: column; justify-content: center; gap: 0.8vw;">
+          <div style="font-size: 1.15vw; font-weight: 700; color: #f8fafc; line-height: 1.4;">
+            管记忆 · 管素材 · 管环境 · 管动态进程 · 管一切对象位置规范
+          </div>
+          <p style="font-size: 0.82vw; color: #94a3b8; line-height: 1.6;">
+            未来每一台开发机与生产服务器都将常驻数十个自主 Agent。面对“无序写入、暴力递归扫爆磁盘、端口线上冲突、改动公共库引发夜间雪崩、跨会话全盘失忆”的普遍恶疾——
+            <strong style="color: #38bdf8;">Agent Host Steward</strong> 作为第一道确定性防线，提供内核级感知与规约治理。
+          </p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6vw; margin-top: 0.4vw;">
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 0.6vw 0.8vw;">
+              <div style="font-size: 0.82vw; font-weight: bold; color: #38bdf8;">🚀 极客级 Rust 单二进制</div>
+              <div style="font-size: 0.72vw; color: #cbd5e1; margin-top: 0.2vw;">8.5MB 零运行时依赖，毫秒级无锁算法，极低资源占用</div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 0.6vw 0.8vw;">
+              <div style="font-size: 0.82vw; font-weight: bold; color: #34d399;">🛡️ 分级浅阻断与放置法则</div>
+              <div style="font-size: 0.72vw; color: #cbd5e1; margin-top: 0.2vw;">黑名单 depth=0 快速跳过，8 大标准目录映射防散落</div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 0.6vw 0.8vw;">
+              <div style="font-size: 0.82vw; font-weight: bold; color: #fbbf24;">⚡ 内核级端口防撞 & 爆炸半径</div>
+              <div style="font-size: 0.72vw; color: #cbd5e1; margin-top: 0.2vw;">/proc 解析秒查 PID，BFS 多跳反向推演下游冲击</div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(129, 140, 248, 0.25); border-radius: 8px; padding: 0.6vw 0.8vw;">
+              <div style="font-size: 0.82vw; font-weight: bold; color: #a78bfa;">🔌 标准 14 MCP 工具链</div>
+              <div style="font-size: 0.72vw; color: #cbd5e1; margin-top: 0.2vw;">stdio JSON-RPC 秒级接入 Claude Desktop / Antigravity</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Stunning Hero Ecosystem SVG -->
+        <div class="card" style="display: flex; align-items: center; justify-content: center; padding: 0.6vw;">
+          <svg viewBox="0 0 460 340" style="width: 100%; height: auto;">
+            <defs>
+              <linearGradient id="hubGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0284c7" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="#0369a1" stop-opacity="0.1"/>
+              </linearGradient>
+              <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="6" result="blur"/>
+                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+              </filter>
+            </defs>
+
+            <!-- Background connecting lines -->
+            <path d="M 230 170 L 80 70" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <path d="M 230 170 L 230 50" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <path d="M 230 170 L 380 70" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <path d="M 230 170 L 90 280" stroke="#10b981" stroke-width="1.5"/>
+            <path d="M 230 170 L 230 300" stroke="#818cf8" stroke-width="1.5"/>
+            <path d="M 230 170 L 370 280" stroke="#f59e0b" stroke-width="1.5"/>
+
+            <!-- Center Steward Core Hub -->
+            <circle cx="230" cy="170" r="62" fill="url(#hubGlow)" stroke="#38bdf8" stroke-width="2.5" filter="url(#glowEffect)"/>
+            <circle cx="230" cy="170" r="54" fill="#090e1f" stroke="#0284c7" stroke-width="1.5"/>
+            <text x="230" y="158" fill="#38bdf8" font-size="12" font-weight="900" text-anchor="middle">AGENT HOST</text>
+            <text x="230" y="174" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle">STEWARD</text>
+            <text x="230" y="190" fill="#34d399" font-size="9" font-weight="bold" text-anchor="middle">🦀 Rust Core</text>
+
+            <!-- Top Nodes: LLM Clients -->
+            <rect x="30" y="45" width="100" height="40" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2"/>
+            <text x="80" y="62" fill="#e2e8f0" font-size="9.5" font-weight="bold" text-anchor="middle">Claude / Cursor</text>
+            <text x="80" y="76" fill="#94a3b8" font-size="8" text-anchor="middle">MCP Client</text>
+
+            <rect x="180" y="25" width="100" height="40" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2"/>
+            <text x="230" y="42" fill="#e2e8f0" font-size="9.5" font-weight="bold" text-anchor="middle">Antigravity CLI</text>
+            <text x="230" y="56" fill="#94a3b8" font-size="8" text-anchor="middle">Autonomous Agent</text>
+
+            <rect x="330" y="45" width="100" height="40" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2"/>
+            <text x="380" y="62" fill="#e2e8f0" font-size="9.5" font-weight="bold" text-anchor="middle">OpenDevin / Custom</text>
+            <text x="380" y="76" fill="#94a3b8" font-size="8" text-anchor="middle">Multi-Agent Swarm</text>
+
+            <!-- Bottom Nodes: Host OS Subsystems -->
+            <rect x="30" y="260" width="120" height="50" rx="8" fill="#0f172a" stroke="#10b981" stroke-width="1.2"/>
+            <text x="90" y="278" fill="#34d399" font-size="9" font-weight="bold" text-anchor="middle">Linux OS 内核感知</text>
+            <text x="90" y="293" fill="#94a3b8" font-size="7.5" text-anchor="middle">/proc/net/tcp 端口防撞</text>
+            <text x="90" y="304" fill="#94a3b8" font-size="7.5" text-anchor="middle">inotify 实时文件监控</text>
+
+            <rect x="170" y="275" width="120" height="50" rx="8" fill="#0f172a" stroke="#818cf8" stroke-width="1.2"/>
+            <text x="230" y="293" fill="#a78bfa" font-size="9" font-weight="bold" text-anchor="middle">SQLite WAL + RRF</text>
+            <text x="230" y="308" fill="#94a3b8" font-size="7.5" text-anchor="middle">FTS5 全文 + Ollama 向量</text>
+            <text x="230" y="319" fill="#94a3b8" font-size="7.5" text-anchor="middle">实体依赖拓扑图表</text>
+
+            <rect x="310" y="260" width="120" height="50" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="1.2"/>
+            <text x="370" y="278" fill="#fbbf24" font-size="9" font-weight="bold" text-anchor="middle">8 大规范宿主资产</text>
+            <text x="370" y="293" fill="#94a3b8" font-size="7.5" text-anchor="middle">shared_proj/ · skills/</text>
+            <text x="370" y="304" fill="#94a3b8" font-size="7.5" text-anchor="middle">tmp/ 完工自洁回收</text>
+          </svg>
         </div>
       </div>
     </section>
 
-    <!-- Slide 2: 行业痛点 -->
+    <!-- ==================== SLIDE 2: PAIN POINTS PART I ==================== -->
     <section class="slide" data-index="2">
       <div class="slide-header">
         <div>
-          <span class="tag-badge">The Problem</span>
-          <h2 class="slide-title">Agent 在宿主机中的四大“结构性失控”</h2>
-          <p class="slide-subtitle">当 Agent 逐渐常驻开发机时，环境正不可逆地走向混乱与崩溃</p>
+          <span class="slide-tag">Pain Points · Part I</span>
+          <h2 class="slide-title">真实惨案 1 & 2：扫爆磁盘与端口线上踩踏</h2>
+          <p class="slide-subtitle">场景还原：越聪明、越主动的 Agent，在无约束的宿主环境中破坏力越惊人</p>
         </div>
       </div>
-      <div class="content-grid grid-2">
-        <div class="glass-card">
-          <div class="point-item">
-            <div class="point-icon rose">1</div>
-            <div>
-              <div class="point-title">跨会话绝对失忆，开工靠人肉喂饭</div>
-              <div class="point-desc">换个对话窗口，Agent 就不知机器上有何数据库、跑了什么脚本，每次排障先花 10 分钟人肉告知环境。</div>
+
+      <div class="grid-2">
+        <!-- Disaster Case 1 -->
+        <div class="card">
+          <div class="story-box">
+            <div class="story-title">💥 惨案 1: 暴力扫描扫爆 30GB 并泄露宿主私钥</div>
+            <div class="story-desc">
+              <strong>场景:</strong> 用户指令“整理机器上的代码”。传统工具无约束盲目下钻，深陷 <code>node_modules</code> 与 <code>.cache</code> 吞入 30 万个小文件，磁盘 I/O 100% 卡死死机；甚至顺手把 <code>~/.ssh/id_rsa</code> 私钥编入向量库！
+            </div>
+            <div class="story-fix">
+              ✅ <strong>大管家解法:</strong> <strong>分级颗粒度阻断 (Granularity Tiering)</strong>。白名单目录深挖到底；黑名单目录深度严格设为 0 (skip_current_dir)，敲门绝不进屋，0MB 数据库膨胀！
             </div>
           </div>
-          <div class="point-item">
-            <div class="point-icon amber">2</div>
-            <div>
-              <div class="point-title">新文件乱放，宿主磁盘严重污染</div>
-              <div class="point-desc">写个爬虫放在根目录，临时测试丢在项目里，没有组织规范，开发机迅速变成垃圾场。</div>
-            </div>
-          </div>
-          <div class="point-item">
-            <div class="point-icon blue">3</div>
-            <div>
-              <div class="point-title">暴力扫描打爆系统，敏感信息泄露</div>
-              <div class="point-desc">传统工具一股脑全盘递归，把 node_modules、.cache 海量碎片扫爆数据库，还把 .ssh 密钥全量读入上下文。</div>
-            </div>
-          </div>
-          <div class="point-item">
-            <div class="point-icon green">4</div>
-            <div>
-              <div class="point-title">缺乏事前防撞，盲目动刀连锁暴雷</div>
-              <div class="point-desc">测试脚本随手占用 8080 端口与用户服务踩踏；改动通用库不知下游定时任务依赖，造成夜间批量 crash。</div>
-            </div>
+
+          <!-- Vivid Comparison Diagram 1 -->
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: #030611; border-radius: 8px; border: 1px solid #1e293b; padding: 0.4vw;">
+            <svg viewBox="0 0 420 155" style="width: 100%; height: auto;">
+              <!-- Left: Bad Blind Scan -->
+              <rect x="10" y="10" width="190" height="135" rx="6" fill="#13080c" stroke="#f43f5e" stroke-width="1.2"/>
+              <text x="105" y="28" fill="#fda4af" font-size="10" font-weight="bold" text-anchor="middle">❌ 传统 Agent 暴力盲扫</text>
+              <rect x="25" y="40" width="70" height="26" rx="4" fill="#1f1118" stroke="#f43f5e"/>
+              <text x="60" y="56" fill="#fca5a5" font-size="8" text-anchor="middle">根目录遍历</text>
+              <path d="M 95 53 L 120 53" stroke="#f43f5e" stroke-width="1.5"/>
+              <rect x="120" y="40" width="70" height="26" rx="4" fill="#380e1a" stroke="#ef4444"/>
+              <text x="155" y="56" fill="#fecaca" font-size="8" font-weight="bold" text-anchor="middle">node_modules</text>
+              
+              <path d="M 155 66 L 155 85" stroke="#ef4444" stroke-width="1.5"/>
+              <rect x="25" y="85" width="160" height="50" rx="4" fill="#450a0a" stroke="#dc2626"/>
+              <text x="105" y="102" fill="#fee2e2" font-size="8" font-weight="bold" text-anchor="middle">⚠️ 吞入 300,000+ 文件</text>
+              <text x="105" y="116" fill="#fca5a5" font-size="7.5" text-anchor="middle">SQLite 膨胀 30GB · 私钥入库泄露</text>
+              <text x="105" y="128" fill="#ef4444" font-size="7.5" font-weight="bold" text-anchor="middle">系统 I/O 100% 僵死宕机</text>
+
+              <!-- Right: Good Steward Tiering Scan -->
+              <rect x="220" y="10" width="190" height="135" rx="6" fill="#061513" stroke="#10b981" stroke-width="1.2"/>
+              <text x="315" y="28" fill="#6ee7b7" font-size="10" font-weight="bold" text-anchor="middle">✅ Steward 分级颗粒度治理</text>
+              <rect x="235" y="40" width="70" height="26" rx="4" fill="#0b2923" stroke="#10b981"/>
+              <text x="270" y="56" fill="#a7f3d0" font-size="8" text-anchor="middle">智能路径探测</text>
+              <path d="M 305 53 L 330 53" stroke="#10b981" stroke-width="1.5"/>
+              <rect x="330" y="40" width="70" height="26" rx="4" fill="#047857" stroke="#34d399"/>
+              <text x="365" y="56" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">node_modules</text>
+
+              <path d="M 365 66 L 365 85" stroke="#34d399" stroke-width="1.5"/>
+              <rect x="235" y="85" width="160" height="50" rx="4" fill="#064e3b" stroke="#10b981"/>
+              <text x="315" y="102" fill="#d1fae5" font-size="8" font-weight="bold" text-anchor="middle">🛡️ 深度判定 Depth = 0</text>
+              <text x="315" y="116" fill="#a7f3d0" font-size="7.5" text-anchor="middle">skip_current_dir 仅存标量实体</text>
+              <text x="315" y="128" fill="#34d399" font-size="7.5" font-weight="bold" text-anchor="middle">毫秒级返回 · 0 垃圾 · 零私钥越权</text>
+            </svg>
           </div>
         </div>
-        <div class="glass-card" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
-          <!-- SVG 痛点对比图 -->
-          <svg viewBox="0 0 450 300" style="width: 100%; height: auto;">
-            <defs>
-              <linearGradient id="grad-red" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#ef4444" stop-opacity="0.2"/>
-                <stop offset="100%" stop-color="#b91c1c" stop-opacity="0.05"/>
-              </linearGradient>
-            </defs>
-            <rect x="20" y="20" width="410" height="260" rx="12" fill="url(#grad-red)" stroke="#ef4444" stroke-dasharray="4 4"/>
-            <text x="225" y="55" fill="#f87171" font-size="16" font-weight="bold" text-anchor="middle">❌ 传统 Agent 宿主机现状：混沌与高危</text>
-            
-            <circle cx="90" cy="130" r="35" fill="#1e293b" stroke="#f87171"/>
-            <text x="90" y="135" fill="#e2e8f0" font-size="12" text-anchor="middle">新开会话</text>
-            <text x="90" y="180" fill="#94a3b8" font-size="11" text-anchor="middle">“我是谁？机器有啥？”</text>
 
-            <path d="M 130 130 L 190 130" stroke="#f87171" stroke-width="2" marker-end="url(#arrow)"/>
+        <!-- Disaster Case 2 -->
+        <div class="card">
+          <div class="story-box">
+            <div class="story-title">💥 惨案 2: 临时测试脚本随手占 8080，击沉主理人生产看板</div>
+            <div class="story-desc">
+              <strong>场景:</strong> Agent 临时调试 Demo，随手 <code>app.run(port=8080)</code>。而 8080 端口正是主理人已经稳定运行数周的核心业务监控服务。端口强占冲突，导致线上看板直接挂掉！
+            </div>
+            <div class="story-fix">
+              ✅ <strong>大管家解法:</strong> <strong>内核级端口防撞预警 (Port Guard)</strong>。直接读取 <code>/proc/net/tcp</code> 与 <code>/proc/[pid]/fd</code>，秒级定位占用进程 PID 957，并推荐备用空闲端口 <code>[8081, 8082]</code>！
+            </div>
+          </div>
 
-            <rect x="200" y="95" width="100" height="70" rx="8" fill="#1e293b" stroke="#ef4444"/>
-            <text x="250" y="125" fill="#fca5a5" font-size="11" text-anchor="middle">乱建测试脚本</text>
-            <text x="250" y="145" fill="#ef4444" font-size="10" text-anchor="middle">端口 8080 冲突!</text>
+          <!-- Vivid Comparison Diagram 2 -->
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: #030611; border-radius: 8px; border: 1px solid #1e293b; padding: 0.4vw;">
+            <svg viewBox="0 0 420 155" style="width: 100%; height: auto;">
+              <!-- Left: Bad Port Clash -->
+              <rect x="10" y="10" width="190" height="135" rx="6" fill="#13080c" stroke="#f43f5e" stroke-width="1.2"/>
+              <text x="105" y="28" fill="#fda4af" font-size="10" font-weight="bold" text-anchor="middle">❌ 传统 Agent 盲目起服务</text>
+              <rect x="25" y="42" width="70" height="24" rx="4" fill="#1f1118" stroke="#f43f5e"/>
+              <text x="60" y="58" fill="#fca5a5" font-size="8" text-anchor="middle">运行测试脚本</text>
+              <path d="M 95 54 L 120 54" stroke="#f43f5e" stroke-width="1.5"/>
+              <rect x="120" y="42" width="70" height="24" rx="4" fill="#380e1a" stroke="#ef4444"/>
+              <text x="155" y="58" fill="#fecaca" font-size="8" font-weight="bold" text-anchor="middle">bind(8080)</text>
 
-            <path d="M 305 130 L 340 130" stroke="#f87171" stroke-width="2"/>
+              <rect x="25" y="80" width="160" height="55" rx="4" fill="#450a0a" stroke="#dc2626"/>
+              <text x="105" y="98" fill="#fee2e2" font-size="8" font-weight="bold" text-anchor="middle">💥 生产冲突灾难</text>
+              <text x="105" y="112" fill="#fca5a5" font-size="7.5" text-anchor="middle">线上监控 (PID 957) 遭强制熔断</text>
+              <text x="105" y="125" fill="#ef4444" font-size="7.5" font-weight="bold" text-anchor="middle">服务雪崩 · 主理人夜间告警惊醒</text>
 
-            <rect x="345" y="95" width="80" height="70" rx="8" fill="#1e293b" stroke="#ef4444"/>
-            <text x="385" y="125" fill="#f87171" font-size="11" text-anchor="middle">扫爆数据库</text>
-            <text x="385" y="145" fill="#94a3b8" font-size="9" text-anchor="middle">10万 node_modules</text>
+              <!-- Right: Good Port Guard -->
+              <rect x="220" y="10" width="190" height="135" rx="6" fill="#081426" stroke="#38bdf8" stroke-width="1.2"/>
+              <text x="315" y="28" fill="#7dd3fc" font-size="10" font-weight="bold" text-anchor="middle">✅ Steward 内核端口防撞</text>
+              <rect x="235" y="42" width="70" height="24" rx="4" fill="#0f2647" stroke="#38bdf8"/>
+              <text x="270" y="58" fill="#bae6fd" font-size="8" text-anchor="middle">steward port 8080</text>
+              <path d="M 305 54 L 330 54" stroke="#38bdf8" stroke-width="1.5"/>
+              <rect x="330" y="42" width="70" height="24" rx="4" fill="#0369a1" stroke="#0284c7"/>
+              <text x="365" y="58" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">/proc/net/tcp</text>
 
-            <text x="225" y="240" fill="#fca5a5" font-size="13" text-anchor="middle">结论: Agent 缺乏“环境大管家”，越聪明破坏力越大！</text>
-          </svg>
+              <rect x="235" y="80" width="160" height="55" rx="4" fill="#082f49" stroke="#0284c7"/>
+              <text x="315" y="98" fill="#e0f2fe" font-size="8" font-weight="bold" text-anchor="middle">🛡️ 事前精确预警 + 避让</text>
+              <text x="315" y="112" fill="#7dd3fc" font-size="7.5" text-anchor="middle">侦测到占用: PID 957 (cron_monitor)</text>
+              <text x="315" y="125" fill="#38bdf8" font-size="7.5" font-weight="bold" text-anchor="middle">自动建议推荐空闲端口: 8081, 8082</text>
+            </svg>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Slide 3: 架构全景 -->
+    <!-- ==================== SLIDE 3: PAIN POINTS PART II ==================== -->
     <section class="slide" data-index="3">
       <div class="slide-header">
         <div>
-          <span class="tag-badge">Architecture</span>
-          <h2 class="slide-title">系统全景：六维一体的认知底座</h2>
-          <p class="slide-subtitle">管记忆 · 管素材 · 管环境 · 管进程 · 管位置规范 · 单二进制自包含</p>
+          <span class="slide-tag">Pain Points · Part II</span>
+          <h2 class="slide-title">真实惨案 3 & 4：蝴蝶效应暴雷与认知失忆</h2>
+          <p class="slide-subtitle">盲目动刀修改公共库酿成夜间停服事故，死板字面匹配阻断组织知识传承</p>
         </div>
       </div>
-      <div class="content-grid grid-2">
-        <div>
-          <!-- 架构 SVG 图解 -->
-          <svg viewBox="0 0 500 320" style="width: 100%; height: auto;">
-            <defs>
-              <linearGradient id="core-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.3"/>
-                <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0.1"/>
-              </linearGradient>
-            </defs>
-            <!-- 外部交互层 -->
-            <rect x="10" y="10" width="480" height="45" rx="8" fill="#1e293b" stroke="#38bdf8"/>
-            <text x="250" y="38" fill="#38bdf8" font-size="14" font-weight="bold" text-anchor="middle">Top Layer: Agent 交互通道 (CLI 终端 / MCP stdio / Daemon 守护)</text>
 
-            <!-- 核心治理引擎 -->
-            <rect x="10" y="70" width="480" height="160" rx="10" fill="url(#core-grad)" stroke="#3b82f6"/>
-            
-            <rect x="30" y="90" width="130" height="55" rx="6" fill="#0f172a" stroke="#60a5fa"/>
-            <text x="95" y="115" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">放置建议引擎</text>
-            <text x="95" y="132" fill="#94a3b8" font-size="9" text-anchor="middle">8大目录规范与命名模式</text>
+      <div class="grid-2">
+        <!-- Disaster Case 3 -->
+        <div class="card">
+          <div class="story-box">
+            <div class="story-title">💥 惨案 3: 重构公共工具库，半夜 5 个关键 cron 批量瘫痪</div>
+            <div class="story-desc">
+              <strong>场景:</strong> Agent 优化 <code>shared_proj/sec_fetcher/utils.py</code>，随意改动函数入参。以为是局部重构，殊不知宿主机上 3 个爬虫、1 个夜间 22:00 运行的 Hermes cron 定时财报扫描正强依赖它！凌晨批量 crash。
+            </div>
+            <div class="story-fix">
+              ✅ <strong>大管家解法:</strong> <strong>逆向爆炸半径推演 (Blast Radius)</strong>。动刀前 BFS 图遍历计算直接与间接下游，给出 CRITICAL 风险警报，迫使 Agent 保持向后兼容！
+            </div>
+          </div>
 
-            <rect x="185" y="90" width="130" height="55" rx="6" fill="#0f172a" stroke="#34d399"/>
-            <text x="250" y="115" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">分级扫描器</text>
-            <text x="250" y="132" fill="#94a3b8" font-size="9" text-anchor="middle">白名单深挖 / 黑名单浅层</text>
+          <!-- Vivid Blast Radius DAG Diagram -->
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: #030611; border-radius: 8px; border: 1px solid #1e293b; padding: 0.4vw;">
+            <svg viewBox="0 0 420 155" style="width: 100%; height: auto;">
+              <!-- Central Target File -->
+              <rect x="15" y="55" width="105" height="45" rx="6" fill="#1e1b4b" stroke="#f43f5e" stroke-width="2"/>
+              <text x="67" y="74" fill="#fca5a5" font-size="8.5" font-weight="bold" text-anchor="middle">拟修改公共库</text>
+              <text x="67" y="89" fill="#e2e8f0" font-size="7.5" text-anchor="middle">sec_fetcher/utils.py</text>
 
-            <rect x="340" y="90" width="130" height="55" rx="6" fill="#0f172a" stroke="#f59e0b"/>
-            <text x="405" y="115" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">动态进程感知</text>
-            <text x="405" y="132" fill="#94a3b8" font-size="9" text-anchor="middle">/proc 底噪过滤与端口防撞</text>
+              <!-- Outgoing blast arrows -->
+              <path d="M 120 68 L 165 40" stroke="#f59e0b" stroke-width="1.8"/>
+              <path d="M 120 78 L 165 78" stroke="#f59e0b" stroke-width="1.8"/>
+              <path d="M 120 88 L 165 116" stroke="#f59e0b" stroke-width="1.8"/>
 
-            <rect x="30" y="160" width="130" height="55" rx="6" fill="#0f172a" stroke="#a78bfa"/>
-            <text x="95" y="185" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">混合记忆检索</text>
-            <text x="95" y="202" fill="#94a3b8" font-size="9" text-anchor="middle">FTS5 + Ollama RRF 重排</text>
+              <!-- Direct Callers (Hop 1) -->
+              <rect x="165" y="25" width="95" height="30" rx="4" fill="#1e293b" stroke="#f59e0b"/>
+              <text x="212" y="39" fill="#fde68a" font-size="7.5" font-weight="bold" text-anchor="middle">api_server.py</text>
+              <text x="212" y="50" fill="#94a3b8" font-size="6.5" text-anchor="middle">[直接依赖] 接口层</text>
 
-            <rect x="185" y="160" width="130" height="55" rx="6" fill="#0f172a" stroke="#38bdf8"/>
-            <text x="250" y="185" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">关联与爆炸半径</text>
-            <text x="250" y="202" fill="#94a3b8" font-size="9" text-anchor="middle">依赖拓扑与改动风险分析</text>
+              <rect x="165" y="63" width="95" height="30" rx="4" fill="#1e293b" stroke="#f59e0b"/>
+              <text x="212" y="77" fill="#fde68a" font-size="7.5" font-weight="bold" text-anchor="middle">sync_tool.py</text>
+              <text x="212" y="88" fill="#94a3b8" font-size="6.5" text-anchor="middle">[直接依赖] 同步器</text>
 
-            <rect x="340" y="160" width="130" height="55" rx="6" fill="#0f172a" stroke="#f43f5e"/>
-            <text x="405" y="185" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">会话生命周期</text>
-            <text x="405" y="202" fill="#94a3b8" font-size="9" text-anchor="middle">完工结清 / tmp 垃圾自洁</text>
+              <rect x="165" y="101" width="95" height="30" rx="4" fill="#1e293b" stroke="#f59e0b"/>
+              <text x="212" y="115" fill="#fde68a" font-size="7.5" font-weight="bold" text-anchor="middle">report_calc.py</text>
+              <text x="212" y="126" fill="#94a3b8" font-size="6.5" text-anchor="middle">[直接依赖] 报表脚本</text>
 
-            <!-- 存储持久层 -->
-            <rect x="10" y="245" width="480" height="60" rx="8" fill="#1e293b" stroke="#10b981"/>
-            <text x="250" y="270" fill="#34d399" font-size="13" font-weight="bold" text-anchor="middle">Storage Layer: ~/.steward/steward.db (SQLite WAL + Bundled FTS5)</text>
-            <text x="250" y="290" fill="#94a3b8" font-size="10" text-anchor="middle">单文件零外部运维依赖 · 纯本地存储保护极致隐私</text>
-          </svg>
+              <!-- Hop 2: Cron Jobs (Severe Blast Impact) -->
+              <path d="M 260 40 L 295 40" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3 3"/>
+              <rect x="295" y="25" width="115" height="30" rx="4" fill="#3f0f1d" stroke="#ef4444"/>
+              <text x="352" y="39" fill="#fecaca" font-size="7.5" font-weight="bold" text-anchor="middle">cron/earnings.sh</text>
+              <text x="352" y="50" fill="#fca5a5" font-size="6.5" text-anchor="middle">22:00 财报扫描 (高危!)</text>
+
+              <path d="M 260 116 L 295 116" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3 3"/>
+              <rect x="295" y="101" width="115" height="30" rx="4" fill="#3f0f1d" stroke="#ef4444"/>
+              <text x="352" y="115" fill="#fecaca" font-size="7.5" font-weight="bold" text-anchor="middle">cron/daily_finance.sh</text>
+              <text x="352" y="126" fill="#fca5a5" font-size="6.5" text-anchor="middle">08:00 晨报发布 (高危!)</text>
+
+              <!-- Footer summary warning -->
+              <rect x="15" y="136" width="395" height="15" rx="3" fill="#450a0a"/>
+              <text x="212" y="147" fill="#fca5a5" font-size="7" font-weight="bold" text-anchor="middle">BFS 推演结果: 3 个直接调用方 + 2 个关键定时任务 ➔ 风险评级: CRITICAL (禁止随意破坏性重构)</text>
+            </svg>
+          </div>
         </div>
-        <div class="glass-card">
-          <h3 style="font-size: 1.3vw; color: #60a5fa; margin-bottom: 1vw;">为什么能胜任大管家？</h3>
-          <p style="font-size: 0.95vw; color: #cbd5e1; line-height: 1.6; margin-bottom: 1.2vw;">
-            大管家采用 <strong>Rust 1.99</strong> 语言编写，从内核级系统调用（<code>inotify</code>、<code>/proc</code>）到底层存储完全自主闭环。
-          </p>
-          <ul style="list-style: none; font-size: 0.9vw; color: #94a3b8; line-height: 1.8;">
-            <li>🔹 <strong>极致轻量</strong>：编译后单二进制仅 8MB，常驻空闲内存 &lt; 20MB，CPU 占用 &lt; 0.1%；</li>
-            <li>🔹 <strong>零动态依赖</strong>：SQLite 静态编译内嵌，无需安装任何 <code>libsqlite3</code> 即可运行；</li>
-            <li>🔹 <strong>开箱即用</strong>：首次运行自动初始化数据库，零配置自愈引导；</li>
-            <li>🔹 <strong>原生标准协议</strong>：原生实现 14 个 MCP 工具，打通 Claude / Cursor 等所有主流 Agent。</li>
-          </ul>
+
+        <!-- Disaster Case 4 -->
+        <div class="card">
+          <div class="story-box">
+            <div class="story-title">💥 惨案 4: 口语化提问“以前怎么搞容灾”，传统搜索返回 0 条</div>
+            <div class="story-desc">
+              <strong>场景:</strong> 用户问“以前讨论过什么防雪崩预案没有？”库里存的是“PostgreSQL 熔断降级与连接池溢出”，纯文本搜返回 0 条。Agent 误以为“从没做过”，又开始重复造低质轮子。
+            </div>
+            <div class="story-fix">
+              ✅ <strong>大管家解法:</strong> <strong>FTS5 + 本地 Ollama 向量 + RRF 融合重排</strong>。概念级泛化联想召回，口语“防雪崩”秒级召回“熔断降级”方案！
+            </div>
+          </div>
+
+          <!-- Vivid RRF Hybrid Recall Diagram -->
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: #030611; border-radius: 8px; border: 1px solid #1e293b; padding: 0.4vw;">
+            <svg viewBox="0 0 420 155" style="width: 100%; height: auto;">
+              <!-- Query box -->
+              <rect x="15" y="55" width="85" height="45" rx="6" fill="#0f2647" stroke="#38bdf8" stroke-width="1.5"/>
+              <text x="57" y="74" fill="#e0f2fe" font-size="8" font-weight="bold" text-anchor="middle">用户口语 Query</text>
+              <text x="57" y="89" fill="#7dd3fc" font-size="8" font-weight="bold" text-anchor="middle">“防雪崩预案”</text>
+
+              <!-- Dual channel split -->
+              <path d="M 100 68 L 135 40" stroke="#f43f5e" stroke-width="1.5"/>
+              <path d="M 100 88 L 135 116" stroke="#818cf8" stroke-width="1.5"/>
+
+              <!-- Channel A: Pure FTS5 -->
+              <rect x="135" y="25" width="135" height="32" rx="4" fill="#2d0b16" stroke="#f43f5e"/>
+              <text x="202" y="39" fill="#fecaca" font-size="7.5" font-weight="bold" text-anchor="middle">渠道 A: FTS5 字面检索</text>
+              <text x="202" y="50" fill="#fca5a5" font-size="6.5" text-anchor="middle">字面不匹配 ➔ 命中 0 条 (失忆漏召)</text>
+
+              <!-- Channel B: Ollama Vector -->
+              <rect x="135" y="100" width="135" height="32" rx="4" fill="#1e1b4b" stroke="#818cf8"/>
+              <text x="202" y="114" fill="#e0e7ff" font-size="7.5" font-weight="bold" text-anchor="middle">渠道 B: Ollama bge-m3 向量</text>
+              <text x="202" y="125" fill="#c7d2fe" font-size="6.5" text-anchor="middle">语义余弦相似度 0.89 ➔ 命中相关概念</text>
+
+              <!-- Fusion Junction -->
+              <path d="M 270 40 L 295 68" stroke="#10b981" stroke-width="1.5"/>
+              <path d="M 270 116 L 295 88" stroke="#10b981" stroke-width="1.5"/>
+
+              <!-- RRF Output -->
+              <rect x="295" y="50" width="115" height="55" rx="6" fill="#042f2e" stroke="#10b981" stroke-width="1.5"/>
+              <text x="352" y="68" fill="#a7f3d0" font-size="8" font-weight="bold" text-anchor="middle">RRF 倒数排名融合</text>
+              <text x="352" y="82" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">🎯 精准召回 Rank #1</text>
+              <text x="352" y="94" fill="#6ee7b7" font-size="6.5" text-anchor="middle">PostgreSQL 熔断降级方案</text>
+
+              <!-- Math formula callout -->
+              <text x="210" y="147" fill="#64748b" font-size="7" text-anchor="middle">RRF 融合分: Score(d) = 1/(60 + Rank_fts) + 1/(60 + Rank_vec) 优雅平滑，兼顾精准与泛化</text>
+            </svg>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Slide 4: 核心黑科技 1 - 放置与分级颗粒度 -->
+    <!-- ==================== SLIDE 4: SYSTEM ARCHITECTURE ==================== -->
     <section class="slide" data-index="4">
       <div class="slide-header">
         <div>
-          <span class="tag-badge">Deep Dive</span>
-          <h2 class="slide-title">黑科技 1：放置建议法则 & 分级颗粒度扫描</h2>
-          <p class="slide-subtitle">从根源解决“文件乱放”与“目录扫爆”的两大宿主顽疾</p>
+          <span class="slide-tag">System Architecture</span>
+          <h2 class="slide-title">Agent Host Steward 分层架构全景图</h2>
+          <p class="slide-subtitle">面向真实生产环境的四层高内聚解耦架构：从 Linux 内核系统调用到标准 MCP 协议</p>
         </div>
       </div>
-      <div class="content-grid grid-2">
-        <div class="glass-card">
-          <h3 style="font-size: 1.15vw; color: #34d399; margin-bottom: 0.8vw;">🎯 放置建议 (Placement Engine)</h3>
-          <p style="font-size: 0.9vw; color: var(--text-muted); line-height: 1.5; margin-bottom: 1vw;">
-            Agent 在创建任何新工程、工具或测试文件前，调用大管家获取规范放置建议，彻底告别开发机散落。
-          </p>
-          <div style="background:#040711; padding:0.8vw; border-radius:6px; font-family:monospace; font-size:0.8vw; color:#a78bfa;">
-            $ agent-steward place suggest --type script --name sec_fetcher<br>
-            <span style="color:#34d399;">&gt; 推荐路径: /root/new/shared_proj/sec_fetcher/</span><br>
-            <span style="color:#94a3b8;">&gt; 规则理由: 长期沉淀的可复用脚本与程序库</span><br>
-            <span style="color:#60a5fa;">&gt; 伴随指引: 建议配备 README.md，严禁硬编码敏感信息</span>
-          </div>
 
-          <h3 style="font-size: 1.15vw; color: #60a5fa; margin-top: 1.2vw; margin-bottom: 0.8vw;">🛡️ 白黑名单颗粒度 (Granularity Tiering)</h3>
-          <p style="font-size: 0.9vw; color: var(--text-muted); line-height: 1.5;">
-            <strong>敲门但不进屋！</strong>黑名单目录（<code>node_modules/</code>, <code>.cache/</code>, <code>.git/</code>）仅记录当前目录实体本身标量，遍历器直接调用 <code>skip_current_dir()</code>，下钻深度严格为 0，杜绝扫爆数据库！
-          </p>
-        </div>
+      <div style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0;">
+        <svg viewBox="0 0 920 440" style="width: 98%; height: auto;">
+          <defs>
+            <linearGradient id="layerGradBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#0f2647" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="#06182c" stop-opacity="0.9"/>
+            </linearGradient>
+            <linearGradient id="layerGradIndigo" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#1e1b4b" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="#0f172a" stop-opacity="0.9"/>
+            </linearGradient>
+            <linearGradient id="layerGradEmerald" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#062e24" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="#031a15" stop-opacity="0.9"/>
+            </linearGradient>
+            <linearGradient id="layerGradSlate" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="#0f172a" stop-opacity="0.9"/>
+            </linearGradient>
+          </defs>
 
-        <div class="sim-panel">
-          <div class="sim-header">
-            <span>分级颗粒度扫描逻辑模拟器</span>
-            <span style="color:#10b981;">● Online</span>
-          </div>
-          <div id="sim-scan-screen" class="sim-screen">点击下方按钮，观察大管家如何智能分流扫描...</div>
-          <div class="sim-actions">
-            <button class="sim-btn" onclick="runSimScan('deep')">模拟扫描 /root/new/work/ (白名单)</button>
-            <button class="sim-btn" onclick="runSimScan('shallow')">模拟扫描 node_modules/ (黑名单)</button>
-          </div>
-        </div>
+          <!-- Layer 1: Interface Layer -->
+          <rect x="20" y="10" width="880" height="70" rx="8" fill="url(#layerGradBlue)" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="35" y="32" fill="#38bdf8" font-size="12" font-weight="900">Layer 1: 接入与交互通道 (Interface & Access Layer)</text>
+          <text x="35" y="47" fill="#94a3b8" font-size="8.5">零门槛无缝嵌入现有 Agent 体系 · 标准协议即插即用</text>
+
+          <rect x="360" y="20" width="165" height="48" rx="6" fill="#0b1b33" stroke="#0284c7"/>
+          <text x="442" y="40" fill="#e0f2fe" font-size="10" font-weight="bold" text-anchor="middle">🔌 MCP stdio 服务端</text>
+          <text x="442" y="55" fill="#7dd3fc" font-size="8" text-anchor="middle">14 个原生工具 / JSON-RPC</text>
+
+          <rect x="540" y="20" width="165" height="48" rx="6" fill="#0b1b33" stroke="#0284c7"/>
+          <text x="622" y="40" fill="#e0f2fe" font-size="10" font-weight="bold" text-anchor="middle">💻 CLI 命令行工具</text>
+          <text x="622" y="55" fill="#7dd3fc" font-size="8" text-anchor="middle">agent-steward status/place...</text>
+
+          <rect x="720" y="20" width="165" height="48" rx="6" fill="#0b1b33" stroke="#0284c7"/>
+          <text x="802" y="40" fill="#e0f2fe" font-size="10" font-weight="bold" text-anchor="middle">⚙️ Daemon 后台守护</text>
+          <text x="802" y="55" fill="#7dd3fc" font-size="8" text-anchor="middle">inotify 监听 + 60s 定时巡检</text>
+
+          <!-- Layer 2: Core Stewardship Engines -->
+          <rect x="20" y="95" width="880" height="150" rx="8" fill="url(#layerGradIndigo)" stroke="#818cf8" stroke-width="1.5"/>
+          <text x="35" y="118" fill="#a78bfa" font-size="12" font-weight="900">Layer 2: 核心治理与认知引擎 (Core Stewardship Engines)</text>
+          <text x="35" y="133" fill="#94a3b8" font-size="8.5">Rust 纯原生闭环实现 · 毫秒级无锁算法 · 杜绝一切宿主混乱</text>
+
+          <!-- 6 Engine Boxes -->
+          <rect x="35" y="145" width="135" height="85" rx="6" fill="#131433" stroke="#818cf8"/>
+          <text x="102" y="167" fill="#c7d2fe" font-size="9.5" font-weight="bold" text-anchor="middle">🎯 放置建议引擎</text>
+          <text x="102" y="186" fill="#94a3b8" font-size="7.5" text-anchor="middle">8 大标准规范目录</text>
+          <text x="102" y="201" fill="#94a3b8" font-size="7.5" text-anchor="middle">命名约定 / 冲突校验</text>
+          <text x="102" y="216" fill="#818cf8" font-size="7.5" font-weight="bold" text-anchor="middle">规范放置评分</text>
+
+          <rect x="180" y="145" width="135" height="85" rx="6" fill="#131433" stroke="#818cf8"/>
+          <text x="247" y="167" fill="#c7d2fe" font-size="9.5" font-weight="bold" text-anchor="middle">🛡️ 分级扫描引擎</text>
+          <text x="247" y="186" fill="#94a3b8" font-size="7.5" text-anchor="middle">白名单深挖到底</text>
+          <text x="247" y="201" fill="#94a3b8" font-size="7.5" text-anchor="middle">黑名单 depth=0 浅阻</text>
+          <text x="247" y="216" fill="#34d399" font-size="7.5" font-weight="bold" text-anchor="middle">skip_current_dir</text>
+
+          <rect x="325" y="145" width="135" height="85" rx="6" fill="#131433" stroke="#818cf8"/>
+          <text x="392" y="167" fill="#c7d2fe" font-size="9.5" font-weight="bold" text-anchor="middle">⚡ 端口防撞感知</text>
+          <text x="392" y="186" fill="#94a3b8" font-size="7.5" text-anchor="middle">/proc/net/tcp 解析</text>
+          <text x="392" y="201" fill="#94a3b8" font-size="7.5" text-anchor="middle">PID / 进程名精准定位</text>
+          <text x="392" y="216" fill="#38bdf8" font-size="7.5" font-weight="bold" text-anchor="middle">空闲端口智能推荐</text>
+
+          <rect x="470" y="145" width="135" height="85" rx="6" fill="#131433" stroke="#818cf8"/>
+          <text x="537" y="167" fill="#c7d2fe" font-size="9.5" font-weight="bold" text-anchor="middle">🔍 混合记忆检索</text>
+          <text x="537" y="186" fill="#94a3b8" font-size="7.5" text-anchor="middle">SQLite FTS5 关键词</text>
+          <text x="537" y="201" fill="#94a3b8" font-size="7.5" text-anchor="middle">Ollama 向量语义</text>
+          <text x="537" y="216" fill="#fbbf24" font-size="7.5" font-weight="bold" text-anchor="middle">RRF 倒数排名融合</text>
+
+          <rect x="615" y="145" width="135" height="85" rx="6" fill="#131433" stroke="#818cf8"/>
+          <text x="682" y="167" fill="#c7d2fe" font-size="9.5" font-weight="bold" text-anchor="middle">💥 爆炸半径推演</text>
+          <text x="682" y="186" fill="#94a3b8" font-size="7.5" text-anchor="middle">BFS 逆向依赖遍历</text>
+          <text x="682" y="201" fill="#94a3b8" font-size="7.5" text-anchor="middle">下游 Cron 识别</text>
+          <text x="682" y="216" fill="#f43f5e" font-size="7.5" font-weight="bold" text-anchor="middle">CRITICAL 风险阻断</text>
+
+          <rect x="760" y="145" width="125" height="85" rx="6" fill="#131433" stroke="#818cf8"/>
+          <text x="822" y="167" fill="#c7d2fe" font-size="9.5" font-weight="bold" text-anchor="middle">🧹 会话生命周期</text>
+          <text x="822" y="186" fill="#94a3b8" font-size="7.5" text-anchor="middle">/tmp 垃圾自动回收</text>
+          <text x="822" y="201" fill="#94a3b8" font-size="7.5" text-anchor="middle">变更流聚合汇总</text>
+          <text x="822" y="216" fill="#10b981" font-size="7.5" font-weight="bold" text-anchor="middle">完工自洁不留碎片</text>
+
+          <!-- Layer 3: Persistence & WAL Layer -->
+          <rect x="20" y="260" width="880" height="90" rx="8" fill="url(#layerGradEmerald)" stroke="#10b981" stroke-width="1.5"/>
+          <text x="35" y="282" fill="#34d399" font-size="12" font-weight="900">Layer 3: 存储持久化与索引层 (~/.steward/steward.db)</text>
+          <text x="35" y="297" fill="#94a3b8" font-size="8.5">单文件 SQLite WAL 模式 · 静态 Bundled FTS5 全文引擎 · 零系统动态库依赖</text>
+
+          <rect x="35" y="307" width="165" height="34" rx="4" fill="#04231b" stroke="#059669"/>
+          <text x="117" y="323" fill="#a7f3d0" font-size="8.5" font-weight="bold" text-anchor="middle">memories & assets 表</text>
+          <text x="117" y="334" fill="#6ee7b7" font-size="7" text-anchor="middle">实体元数据 / embedding 向量</text>
+
+          <rect x="210" y="307" width="165" height="34" rx="4" fill="#04231b" stroke="#059669"/>
+          <text x="292" y="323" fill="#a7f3d0" font-size="8.5" font-weight="bold" text-anchor="middle">FTS5 全文虚拟表</text>
+          <text x="292" y="334" fill="#6ee7b7" font-size="7" text-anchor="middle">memories_fts / assets_fts</text>
+
+          <rect x="385" y="307" width="165" height="34" rx="4" fill="#04231b" stroke="#059669"/>
+          <text x="467" y="323" fill="#a7f3d0" font-size="8.5" font-weight="bold" text-anchor="middle">links 依赖拓扑表</text>
+          <text x="467" y="334" fill="#6ee7b7" font-size="7" text-anchor="middle">source / target / relation / hop</text>
+
+          <rect x="560" y="307" width="165" height="34" rx="4" fill="#04231b" stroke="#059669"/>
+          <text x="642" y="323" fill="#a7f3d0" font-size="8.5" font-weight="bold" text-anchor="middle">active_procs 动态表</text>
+          <text x="642" y="334" fill="#6ee7b7" font-size="7" text-anchor="middle">pid / port / cmd / baseline</text>
+
+          <rect x="735" y="307" width="150" height="34" rx="4" fill="#04231b" stroke="#059669"/>
+          <text x="810" y="323" fill="#a7f3d0" font-size="8.5" font-weight="bold" text-anchor="middle">changes 审计流水表</text>
+          <text x="810" y="334" fill="#6ee7b7" font-size="7" text-anchor="middle">session_id / diff / audit</text>
+
+          <!-- Layer 4: Linux OS Kernel & File System -->
+          <rect x="20" y="365" width="880" height="60" rx="8" fill="url(#layerGradSlate)" stroke="#64748b" stroke-width="1.2"/>
+          <text x="35" y="388" fill="#94a3b8" font-size="11" font-weight="bold">Layer 4: 宿主系统内核与文件系统 (Linux OS Kernel & Subsystems)</text>
+          <text x="35" y="406" fill="#64748b" font-size="8">内核虚拟文件系统 /proc/net/tcp · /proc/[pid]/fd · Linux inotify FS 事件 · 宿主机规范物理存储 /root/new/*</text>
+        </svg>
       </div>
     </section>
 
-    <!-- Slide 5: 核心黑科技 2 - 事前防撞与爆炸半径 -->
+    <!-- ==================== SLIDE 5: DEEP DIVE 1 ==================== -->
     <section class="slide" data-index="5">
       <div class="slide-header">
         <div>
-          <span class="tag-badge">Safety Guard</span>
-          <h2 class="slide-title">黑科技 2：事前端口防撞 & 变更爆炸半径推演</h2>
-          <p class="slide-subtitle">让 Agent 具备资深架构师的全局审慎视角，绝不盲目动刀</p>
+          <span class="slide-tag">Deep Dive · Feature 1</span>
+          <h2 class="slide-title">机制剖析：放置建议法则 & 分级颗粒度阻断</h2>
+          <p class="slide-subtitle">彻底杜绝文件无序散落，从算法层消除 node_modules 扫爆系统的风险</p>
         </div>
       </div>
-      <div class="content-grid grid-2">
-        <div class="glass-card">
-          <div class="point-item">
-            <div class="point-icon amber">⚡</div>
-            <div>
-              <div class="point-title">端口防撞预警 (Port Conflict Guard)</div>
-              <div class="point-desc">
-                启动服务前校验端口占用，毫秒级追溯持有进程 PID、可执行名、命令行与用户。若冲突，自动推荐连续可用空闲端口（如已占 22 则推荐 23, 24）。
-              </div>
-            </div>
+
+      <div class="grid-2">
+        <!-- Left: Two Visual Diagrams -->
+        <div style="display: flex; flex-direction: column; gap: 0.6vw;">
+          <!-- SVG 1: Canonical 8 Dirs -->
+          <div style="background: #030611; border: 1px solid #1e293b; border-radius: 8px; padding: 0.4vw;">
+            <svg viewBox="0 0 420 120" style="width: 100%; height: auto;">
+              <rect x="8" y="8" width="404" height="104" rx="6" fill="#070c18" stroke="#38bdf8" stroke-width="1.2"/>
+              <text x="20" y="24" fill="#38bdf8" font-size="9" font-weight="bold">📁 宿主机 8 大标准目录映射与治理引擎</text>
+              <text x="20" y="42" fill="#34d399" font-size="7.5">/root/new/shared_proj/ ➔ 公共工具库 (强制 README.md + 入口脚本)</text>
+              <text x="20" y="58" fill="#38bdf8" font-size="7.5">/root/new/work/        ➔ 常规立项工程 (独立 Git 闭环仓库)</text>
+              <text x="20" y="74" fill="#a78bfa" font-size="7.5">/root/new/skills/      ➔ 通用 AI 技能 (规范 SKILL.md 声明)</text>
+              <text x="20" y="90" fill="#f43f5e" font-size="7.5">/root/new/tmp/         ➔ 临时测试用例 (完工生命周期自动回收)</text>
+              <text x="20" y="104" fill="#fbbf24" font-size="7.5">/root/new/note/        ➔ 权威笔记资产 (我关心领域权威网站.md)</text>
+            </svg>
           </div>
-          <div class="point-item">
-            <div class="point-icon rose">💥</div>
-            <div>
-              <div class="point-title">变更爆炸半径推演 (Blast Radius Analysis)</div>
-              <div class="point-desc">
-                改动核心代码前，BFS 递归计算直接依赖者与多跳下游定时任务，输出风险等级（LOW 到 CRITICAL），杜绝因重构接口造成夜间生产任务集体阵亡。
-              </div>
-            </div>
+
+          <!-- SVG 2: Tiering Walk Logic -->
+          <div style="background: #030611; border: 1px solid #1e293b; border-radius: 8px; padding: 0.4vw;">
+            <svg viewBox="0 0 420 120" style="width: 100%; height: auto;">
+              <rect x="8" y="8" width="404" height="104" rx="6" fill="#070c18" stroke="#10b981" stroke-width="1.2"/>
+              <text x="20" y="24" fill="#10b981" font-size="9" font-weight="bold">🛡️ 分级扫描算法机制 (Granularity Tiering)</text>
+              
+              <rect x="20" y="38" width="90" height="28" rx="4" fill="#0f172a" stroke="#64748b"/>
+              <text x="65" y="51" fill="#cbd5e1" font-size="7" text-anchor="middle">递归扫描目录</text>
+              <text x="65" y="61" fill="#94a3b8" font-size="6.5" text-anchor="middle">WalkDir</text>
+
+              <path d="M 110 52 L 140 52" stroke="#64748b" stroke-width="1.5"/>
+
+              <polygon points="175,36 210,52 175,68 140,52" fill="#1e1b4b" stroke="#818cf8"/>
+              <text x="175" y="55" fill="#c7d2fe" font-size="7" font-weight="bold" text-anchor="middle">黑名单?</text>
+
+              <!-- Yes Branch -->
+              <path d="M 210 52 L 245 42" stroke="#f43f5e" stroke-width="1.5"/>
+              <rect x="245" y="28" width="155" height="28" rx="4" fill="#3f0f1d" stroke="#f43f5e"/>
+              <text x="322" y="41" fill="#fecaca" font-size="7" font-weight="bold" text-anchor="middle">深度 Depth=0 阻断 (skip)</text>
+              <text x="322" y="51" fill="#fca5a5" font-size="6.5" text-anchor="middle">仅存目录实体标量，绝不进屋！</text>
+
+              <!-- No Branch -->
+              <path d="M 175 68 L 175 88 L 245 88" stroke="#10b981" stroke-width="1.5"/>
+              <rect x="245" y="74" width="155" height="28" rx="4" fill="#062e24" stroke="#10b981"/>
+              <text x="322" y="87" fill="#d1fae5" font-size="7" font-weight="bold" text-anchor="middle">深挖到底 (Depth=Max)</text>
+              <text x="322" y="97" fill="#a7f3d0" font-size="6.5" text-anchor="middle">提取符号、AST标签与拓扑链接</text>
+            </svg>
           </div>
         </div>
 
-        <div class="sim-panel">
-          <div class="sim-header">
-            <span>安全防撞交互控制台</span>
-            <span style="color:#f59e0b;">● Port & Links Guard</span>
+        <!-- Right: Interactive Demonstration -->
+        <div class="card" style="padding: 0.6vw;">
+          <div style="font-size: 0.88vw; font-weight: bold; color: #38bdf8; margin-bottom: 0.3vw;">
+            🎮 现场交互演练：放置建议与分级防护
           </div>
-          <div id="sim-port-screen" class="sim-screen">请选择操作体验防撞预警与爆炸半径推演...</div>
-          <div class="sim-actions">
-            <button class="sim-btn" onclick="runSimPort(22)">检测端口 22 (冲突场景)</button>
-            <button class="sim-btn" onclick="runSimPort(8999)">检测端口 8999 (可用场景)</button>
-            <button class="sim-btn" onclick="runSimImpact()">推演 core_utils.py 影响面</button>
+          <p style="font-size: 0.72vw; color: #94a3b8; margin-bottom: 0.4vw;">
+            输入任意待放置的文件路径，体验大管家如何基于宿主准则输出规范评估与自愈建议。
+          </p>
+
+          <div class="sim-panel">
+            <div class="sim-header">
+              <div class="sim-dots">
+                <span class="sim-dot red"></span>
+                <span class="sim-dot yellow"></span>
+                <span class="sim-dot green"></span>
+              </div>
+              <span>Terminal Simulator · agent-steward</span>
+            </div>
+            <div class="sim-controls">
+              <input type="text" id="input-place" class="sim-input" value="shared_proj/sec_fetcher/main.py">
+              <button class="sim-btn" onclick="runSimPlace()">🚀 评估放置</button>
+              <button class="sim-btn" style="background:#059669;" onclick="runSimTiering()">🛡️ 模拟扫描</button>
+            </div>
+            <div id="term-place" class="sim-terminal">$ agent-steward place evaluate "shared_proj/sec_fetcher/main.py"
+[Placement Engine] 正在分析路径规范性...
+Target Directory : /root/new/shared_proj/sec_fetcher/
+Category         : Shared Tools & Python Modules
+Rule Match       : R-SHARED-PROJ (公共可复用工具)
+Compliance Score : 95 / 100
+Required Checks  :
+  [OK] 规范目录结构 /root/new/shared_proj/
+  [OK] 包含 main.py 独立执行入口
+  [WARN] 根目录建议补充 README.md 使用说明文档
+
+Recommendation:
+  建议立即放置于 /root/new/shared_proj/sec_fetcher/ 并生成入口说明！</div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Slide 6: 核心黑科技 3 - 混合检索与会话自洁 -->
+    <!-- ==================== SLIDE 6: DEEP DIVE 2 ==================== -->
     <section class="slide" data-index="6">
       <div class="slide-header">
         <div>
-          <span class="tag-badge">Intelligence</span>
-          <h2 class="slide-title">黑科技 3：混合 RRF 检索 & 会话生命周期自洁</h2>
-          <p class="slide-subtitle">打破字面匹配死角，任务结束干干净净不留碎片</p>
+          <span class="slide-tag">Deep Dive · Feature 2</span>
+          <h2 class="slide-title">机制剖析：事前端口防撞 & 逆向爆炸半径推演</h2>
+          <p class="slide-subtitle">起服务前防踩踏，改动公共代码前推演上下游多跳连锁波及</p>
         </div>
       </div>
-      <div class="content-grid grid-2">
-        <div class="glass-card">
-          <h3 style="font-size: 1.15vw; color: #a78bfa; margin-bottom: 0.6vw;">🧠 语义 + 全文混合检索 (Hybrid RRF)</h3>
-          <p style="font-size: 0.88vw; color: var(--text-muted); line-height: 1.5; margin-bottom: 0.8vw;">
-            口语化表述（如“查下应急方案”）匹配专业词汇（“PostgreSQL 故障降级处理”）。结合本地 Ollama（bge-m3 1024 维）余弦相似度与 SQLite FTS5，通过 RRF 融合排序，无模型时全自动优雅降级！
-          </p>
 
-          <h3 style="font-size: 1.15vw; color: #f43f5e; margin-top: 1.2vw; margin-bottom: 0.6vw;">🧹 会话完工结算 (Session Close)</h3>
-          <p style="font-size: 0.88vw; color: var(--text-muted); line-height: 1.5;">
-            任务完工触发 <code>steward close</code>，自动回收 <code>/root/new/tmp/</code> 下孤儿临时脚本，汇总环境变更生成工单摘要，沉淀为永久记忆，宿主机长期保持自洁。
-          </p>
+      <div class="grid-2">
+        <!-- Left: Two Visual Diagrams -->
+        <div style="display: flex; flex-direction: column; gap: 0.6vw;">
+          <!-- SVG 1: Kernel Port Pipeline -->
+          <div style="background: #030611; border: 1px solid #1e293b; border-radius: 8px; padding: 0.4vw;">
+            <svg viewBox="0 0 420 120" style="width: 100%; height: auto;">
+              <rect x="8" y="8" width="404" height="104" rx="6" fill="#070c18" stroke="#38bdf8" stroke-width="1.2"/>
+              <text x="20" y="24" fill="#38bdf8" font-size="9" font-weight="bold">⚡ 内核级端口解析流水线 (Port Guard Pipeline)</text>
+              
+              <rect x="15" y="38" width="85" height="40" rx="4" fill="#0f172a" stroke="#38bdf8"/>
+              <text x="57" y="54" fill="#bae6fd" font-size="7" font-weight="bold" text-anchor="middle">/proc/net/tcp</text>
+              <text x="57" y="67" fill="#7dd3fc" font-size="6" text-anchor="middle">Hex 端口 + 0A 监听</text>
+
+              <path d="M 100 58 L 120 58" stroke="#38bdf8" stroke-width="1.5"/>
+
+              <rect x="120" y="38" width="85" height="40" rx="4" fill="#0f172a" stroke="#818cf8"/>
+              <text x="162" y="54" fill="#c7d2fe" font-size="7" font-weight="bold" text-anchor="middle">Socket Inode</text>
+              <text x="162" y="67" fill="#a78bfa" font-size="6" text-anchor="middle">/proc/[pid]/fd 映射</text>
+
+              <path d="M 205 58 L 225 58" stroke="#818cf8" stroke-width="1.5"/>
+
+              <rect x="225" y="38" width="85" height="40" rx="4" fill="#0f172a" stroke="#f59e0b"/>
+              <text x="267" y="54" fill="#fde68a" font-size="7" font-weight="bold" text-anchor="middle">PID / 进程名</text>
+              <text x="267" y="67" fill="#fbbf24" font-size="6" text-anchor="middle">精准锁定冲突归属</text>
+
+              <path d="M 310 58 L 330 58" stroke="#f59e0b" stroke-width="1.5"/>
+
+              <rect x="330" y="38" width="75" height="40" rx="4" fill="#062e24" stroke="#10b981"/>
+              <text x="367" y="54" fill="#d1fae5" font-size="7" font-weight="bold" text-anchor="middle">空闲推荐</text>
+              <text x="367" y="67" fill="#34d399" font-size="6" text-anchor="middle">推荐 [8081, 8082]</text>
+
+              <text x="210" y="98" fill="#64748b" font-size="6.5" text-anchor="middle">纯 Rust 内存解析 · 零依赖外部 lsof / netstat 工具 · 耗时 0.2 毫秒</text>
+            </svg>
+          </div>
+
+          <!-- SVG 2: Blast Radius Topology -->
+          <div style="background: #030611; border: 1px solid #1e293b; border-radius: 8px; padding: 0.4vw;">
+            <svg viewBox="0 0 420 120" style="width: 100%; height: auto;">
+              <rect x="8" y="8" width="404" height="104" rx="6" fill="#070c18" stroke="#f43f5e" stroke-width="1.2"/>
+              <text x="20" y="24" fill="#f43f5e" font-size="9" font-weight="bold">💥 逆向 BFS 爆炸半径推演 (Blast Radius Topology)</text>
+              
+              <!-- Nodes -->
+              <circle cx="50" cy="65" r="22" fill="#311019" stroke="#f43f5e" stroke-width="1.5"/>
+              <text x="50" y="68" fill="#fda4af" font-size="7" font-weight="bold" text-anchor="middle">改动目标</text>
+
+              <path d="M 72 65 L 125 45" stroke="#f59e0b" stroke-width="1.5"/>
+              <path d="M 72 65 L 125 85" stroke="#f59e0b" stroke-width="1.5"/>
+
+              <rect x="125" y="32" width="85" height="25" rx="4" fill="#1e293b" stroke="#f59e0b"/>
+              <text x="167" y="48" fill="#fde68a" font-size="7" text-anchor="middle">直接调用服务 A</text>
+
+              <rect x="125" y="72" width="85" height="25" rx="4" fill="#1e293b" stroke="#f59e0b"/>
+              <text x="167" y="88" fill="#fde68a" font-size="7" text-anchor="middle">直接调用服务 B</text>
+
+              <path d="M 210 45 L 260 45" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="2 2"/>
+              <path d="M 210 85 L 260 85" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="2 2"/>
+
+              <rect x="260" y="32" width="135" height="25" rx="4" fill="#3f0f1d" stroke="#ef4444"/>
+              <text x="327" y="48" fill="#fecaca" font-size="7" font-weight="bold" text-anchor="middle">夜间 Cron (22:00 财报)</text>
+
+              <rect x="260" y="72" width="135" height="25" rx="4" fill="#3f0f1d" stroke="#ef4444"/>
+              <text x="327" y="88" fill="#fecaca" font-size="7" font-weight="bold" text-anchor="middle">晨报发布 (08:00 自动化)</text>
+
+              <text x="210" y="106" fill="#fca5a5" font-size="6.5" text-anchor="middle">BFS 自动阻断并报警 ➔ 迫使 Agent 遵守 Backward-Compatibility 契约</text>
+            </svg>
+          </div>
         </div>
 
-        <div class="glass-card card-highlight">
-          <h4 style="font-size: 1vw; color: #38bdf8; margin-bottom: 0.8vw;">实测效果对比（真实执行产出）</h4>
-          <div style="background:#060a17; padding:0.8vw; border-radius:6px; font-family:monospace; font-size:0.78vw; color:#e2e8f0; line-height:1.5;">
-            <span style="color:#64748b;">$ agent-steward close session-20261115-demo</span><br>
-            {<br>
-            &nbsp;&nbsp;"session_id": "session-20261115-demo",<br>
-            &nbsp;&nbsp;<span style="color:#34d399;">"cleaned_files_count": 4</span>,<br>
-            &nbsp;&nbsp;<span style="color:#38bdf8;">"freed_bytes": 9201</span>,<br>
-            &nbsp;&nbsp;"cleaned_paths": [<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;"/root/new/tmp/test_truncation.py",<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;"/root/new/tmp/test_zoom.sh"<br>
-            &nbsp;&nbsp;],<br>
-            &nbsp;&nbsp;<span style="color:#a78bfa;">"saved_memory_id": "mem-session-e2d36c85..."</span><br>
-            }
+        <!-- Right: Interactive Demonstration -->
+        <div class="card" style="padding: 0.6vw;">
+          <div style="font-size: 0.88vw; font-weight: bold; color: #38bdf8; margin-bottom: 0.3vw;">
+            🎮 现场交互演练：端口防撞与爆炸半径推演
           </div>
-          <p style="font-size: 0.82vw; color: #94a3b8; margin-top: 0.8vw;">
-            真实回收 4 个无用测试文件，释放 9.2KB 磁盘，自动归档记忆！
+          <p style="font-size: 0.72vw; color: #94a3b8; margin-bottom: 0.4vw;">
+            输入端口或文件路径，体验内核扫描与全局依赖拓扑穿透计算。
           </p>
+
+          <div class="sim-panel">
+            <div class="sim-header">
+              <div class="sim-dots">
+                <span class="sim-dot red"></span>
+                <span class="sim-dot yellow"></span>
+                <span class="sim-dot green"></span>
+              </div>
+              <span>Terminal Simulator · agent-steward</span>
+            </div>
+            <div class="sim-controls">
+              <input type="text" id="input-port" class="sim-input" value="8080">
+              <button class="sim-btn" onclick="runSimPort()">⚡ 检测端口 8080</button>
+              <button class="sim-btn" style="background:#dc2626;" onclick="runSimBlast()">💥 算爆炸半径</button>
+            </div>
+            <div id="term-port" class="sim-terminal">$ agent-steward env port 8080
+[Kernel Port Scanner] 正在扫描 /proc/net/tcp ...
+Port 8080 Status: OCCUPIED (端口冲突!)
+
+Conflict Details:
+  PID          : 957
+  Process Name : hermes_monitor_daemon
+  Command      : /root/new/shared_proj/monitor/daemon.py --port 8080
+  Listen State : TCP_LISTEN (0A)
+
+Safety Assessment:
+  ⚠️ 严重警告: 8080 端口已被核心监控进程长期占用！强制占用将导致现有服务 crash。
+
+Recommended Available Ports:
+  ✅ 8081 (Available, 0 latency)
+  ✅ 8082 (Available, 0 latency)
+  ✅ 8083 (Available, 0 latency)</div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Slide 7: 商业价值与技术壁垒 -->
+    <!-- ==================== SLIDE 7: DEEP DIVE 3 ==================== -->
     <section class="slide" data-index="7">
       <div class="slide-header">
         <div>
-          <span class="tag-badge">Business & Moat</span>
-          <h2 class="slide-title">商业价值与核心护城河</h2>
-          <p class="slide-subtitle">做 Agent 时代的操作系统认知层，拥有不可替代的底层卡位</p>
+          <span class="slide-tag">Deep Dive · Feature 3</span>
+          <h2 class="slide-title">机制剖析：语义全文混合 RRF 检索 & 会话生命周期自洁</h2>
+          <p class="slide-subtitle">打破字面匹配死角，任务结束干干净净不留宿主碎片</p>
         </div>
       </div>
-      <div class="content-grid grid-3">
-        <div class="glass-card">
-          <div style="font-size: 2vw; margin-bottom: 0.5vw;">🏰</div>
-          <h3 style="font-size: 1.1vw; color: #f8fafc; margin-bottom: 0.5vw;">关键生态位卡位</h3>
-          <p style="font-size: 0.85vw; color: var(--text-muted); line-height: 1.5;">
-            大模型厂商内卷上下文窗口和推理算力，但<strong>谁来管理开发机上的物理资产和环境？</strong>大管家卡死宿主系统认知底座，成为 Agent 运行不可或缺的基础设施。
-          </p>
+
+      <div class="grid-2">
+        <!-- Left: Two Visual Diagrams -->
+        <div style="display: flex; flex-direction: column; gap: 0.6vw;">
+          <!-- SVG 1: RRF Formula Pipeline -->
+          <div style="background: #030611; border: 1px solid #1e293b; border-radius: 8px; padding: 0.4vw;">
+            <svg viewBox="0 0 420 120" style="width: 100%; height: auto;">
+              <rect x="8" y="8" width="404" height="104" rx="6" fill="#070c18" stroke="#38bdf8" stroke-width="1.2"/>
+              <text x="20" y="24" fill="#38bdf8" font-size="9" font-weight="bold">🔍 RRF (Reciprocal Rank Fusion) 算法重排引擎</text>
+              
+              <rect x="20" y="36" width="95" height="30" rx="4" fill="#0f172a" stroke="#38bdf8"/>
+              <text x="67" y="50" fill="#bae6fd" font-size="7" font-weight="bold" text-anchor="middle">SQLite FTS5 全文</text>
+              <text x="67" y="60" fill="#7dd3fc" font-size="6" text-anchor="middle">关键词精确匹配 Rank A</text>
+
+              <rect x="20" y="72" width="95" height="30" rx="4" fill="#0f172a" stroke="#818cf8"/>
+              <text x="67" y="86" fill="#c7d2fe" font-size="7" font-weight="bold" text-anchor="middle">Ollama 向量检索</text>
+              <text x="67" y="96" fill="#a78bfa" font-size="6" text-anchor="middle">bge-m3 语义余弦 Rank B</text>
+
+              <path d="M 115 51 L 155 66" stroke="#38bdf8" stroke-width="1.5"/>
+              <path d="M 115 87 L 155 66" stroke="#818cf8" stroke-width="1.5"/>
+
+              <rect x="155" y="42" width="135" height="48" rx="6" fill="#132247" stroke="#38bdf8"/>
+              <text x="222" y="60" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">RRF 倒数排名融合公式</text>
+              <text x="222" y="74" fill="#38bdf8" font-size="7" font-weight="bold" text-anchor="middle">Score = 1/(60+r₁) + 1/(60+r₂)</text>
+
+              <path d="M 290 66 L 315 66" stroke="#10b981" stroke-width="1.5"/>
+
+              <rect x="315" y="42" width="95" height="48" rx="6" fill="#062e24" stroke="#10b981"/>
+              <text x="362" y="60" fill="#d1fae5" font-size="7.5" font-weight="bold" text-anchor="middle">统一重排输出</text>
+              <text x="362" y="74" fill="#34d399" font-size="6.5" text-anchor="middle">无惧字面差异 / 零错召</text>
+
+              <text x="210" y="106" fill="#64748b" font-size="6.5" text-anchor="middle">Ollama 离线或超时时，自动平滑退化为 FTS5 全文，服务永远不死</text>
+            </svg>
+          </div>
+
+          <!-- SVG 2: Session Lifecycle State Machine -->
+          <div style="background: #030611; border: 1px solid #1e293b; border-radius: 8px; padding: 0.4vw;">
+            <svg viewBox="0 0 420 120" style="width: 100%; height: auto;">
+              <rect x="8" y="8" width="404" height="104" rx="6" fill="#070c18" stroke="#10b981" stroke-width="1.2"/>
+              <text x="20" y="24" fill="#10b981" font-size="9" font-weight="bold">🧹 会话生命周期与自洁状态机 (Session Close)</text>
+              
+              <rect x="15" y="42" width="80" height="36" rx="4" fill="#0f172a" stroke="#64748b"/>
+              <text x="55" y="58" fill="#cbd5e1" font-size="7" font-weight="bold" text-anchor="middle">会话进行中</text>
+              <text x="55" y="70" fill="#94a3b8" font-size="6" text-anchor="middle">写 /root/new/tmp/</text>
+
+              <path d="M 95 60 L 125 60" stroke="#64748b" stroke-width="1.5"/>
+
+              <rect x="125" y="42" width="80" height="36" rx="4" fill="#132247" stroke="#38bdf8"/>
+              <text x="165" y="58" fill="#e0f2fe" font-size="7" font-weight="bold" text-anchor="middle">close_session</text>
+              <text x="165" y="70" fill="#7dd3fc" font-size="6" text-anchor="middle">触发完工结算</text>
+
+              <path d="M 205 60 L 235 60" stroke="#38bdf8" stroke-width="1.5"/>
+
+              <rect x="235" y="42" width="80" height="36" rx="4" fill="#311019" stroke="#f43f5e"/>
+              <text x="275" y="58" fill="#fecaca" font-size="7" font-weight="bold" text-anchor="middle">回收垃圾</text>
+              <text x="275" y="70" fill="#fca5a5" font-size="6" text-anchor="middle">清理孤儿临时脚本</text>
+
+              <path d="M 315 60 L 345 60" stroke="#f43f5e" stroke-width="1.5"/>
+
+              <rect x="345" y="42" width="65" height="36" rx="4" fill="#062e24" stroke="#10b981"/>
+              <text x="377" y="58" fill="#d1fae5" font-size="7" font-weight="bold" text-anchor="middle">入库归档</text>
+              <text x="377" y="70" fill="#34d399" font-size="6" text-anchor="middle">记忆沉淀</text>
+
+              <text x="210" y="98" fill="#64748b" font-size="6.5" text-anchor="middle">开发机长期运行 300+ 次任务，磁盘整洁如新，环境毫无沉淀垃圾</text>
+            </svg>
+          </div>
         </div>
-        <div class="glass-card">
-          <div style="font-size: 2vw; margin-bottom: 0.5vw;">⚡</div>
-          <h3 style="font-size: 1.1vw; color: #f8fafc; margin-bottom: 0.5vw;">全自研工程壁垒</h3>
-          <p style="font-size: 0.85vw; color: var(--text-muted); line-height: 1.5;">
-            基于 Rust 编写，彻底摆脱 Python 庞大运行时依赖。独创分级浅层阻断技术与 inotify 300ms 防抖流水线，在万级工程下依然保持极低系统开销。
+
+        <!-- Right: Interactive Demonstration -->
+        <div class="card" style="padding: 0.6vw;">
+          <div style="font-size: 0.88vw; font-weight: bold; color: #38bdf8; margin-bottom: 0.3vw;">
+            🎮 现场交互演练：混合记忆检索与会话结算
+          </div>
+          <p style="font-size: 0.72vw; color: #94a3b8; margin-bottom: 0.4vw;">
+            体验概念级泛化联想召回，与会话闭环一键环境自洁。
           </p>
-        </div>
-        <div class="glass-card">
-          <div style="font-size: 2vw; margin-bottom: 0.5vw;">🔒</div>
-          <h3 style="font-size: 1.1vw; color: #f8fafc; margin-bottom: 0.5vw;">企业级数据安全</h3>
-          <p style="font-size: 0.85vw; color: var(--text-muted); line-height: 1.5;">
-            数据 100% 留存在本地 SQLite，绝不回传云端。天生支持敏感目录阻断与密钥脱敏，满足金融、政企与极客群体的严格隐私合规要求。
-          </p>
+
+          <div class="sim-panel">
+            <div class="sim-header">
+              <div class="sim-dots">
+                <span class="sim-dot red"></span>
+                <span class="sim-dot yellow"></span>
+                <span class="sim-dot green"></span>
+              </div>
+              <span>Terminal Simulator · agent-steward</span>
+            </div>
+            <div class="sim-controls">
+              <input type="text" id="input-query" class="sim-input" value="防雪崩预案">
+              <button class="sim-btn" onclick="runSimSearch()">🔍 RRF 混合搜索</button>
+              <button class="sim-btn" style="background:#059669;" onclick="runSimClose()">🧹 会话自洁结算</button>
+            </div>
+            <div id="term-query" class="sim-terminal">$ agent-steward memory search "防雪崩预案" --hybrid
+[Hybrid Search Engine] Querying Ollama bge-m3 + SQLite FTS5...
+Dual-Channel Scores:
+  - FTS5 Keyword Matches : 0 hits (No literal word match)
+  - Vector Cosine Rank   : 1 hit (Cosine Sim: 0.892)
+  - Fusion Method        : Reciprocal Rank Fusion (RRF k=60)
+
+Results (1 match found):
+  1. [RRF: 0.01639] PostgreSQL 生产环境连接池溢出与熔断降级方案
+     Path    : /root/new/note/pg_circuit_breaker.md
+     Summary : 讨论了高并发涌入时连接池满导致雪崩的应对策略，实施熔断阻断。
+     Tags    : postgres, resilience, circuit_breaker, high_concurrency</div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Slide 8: 尾页与愿景 -->
+    <!-- ==================== SLIDE 8: BUSINESS VALUE & MOATS ==================== -->
     <section class="slide" data-index="8">
-      <div class="cover-container">
-        <div class="hero-badge">
-          <span>🚀</span>
-          <span>以终为始 · 拥抱常驻 Agent 时代</span>
+      <div class="slide-header">
+        <div>
+          <span class="slide-tag">Business Value & Moat</span>
+          <h2 class="slide-title">商业价值与核心护城河</h2>
+          <p class="slide-subtitle">卡死 Agent 时代的“宿主操作系统认知底座”，打造不可替代的基础设施壁垒</p>
         </div>
-        <h2 class="hero-title" style="font-size: 3.2vw;">让每一个 Agent 都有条不紊</h2>
-        <p class="hero-tagline" style="font-size: 1.25vw; max-width: 60%;">
-          我们相信 AI 时代，未来的每一台机器都将运行着数十个自主 Agent。<br>
-          <strong>Agent Host Steward</strong>，就是守护这片数字宿土的坚固基石。
-        </p>
-        <div style="margin-top: 1.5vw; display: flex; gap: 1vw;">
-          <a class="ctrl-btn" style="padding: 10px 24px; font-size: 1vw; text-decoration: none; background: #2563eb;" href="https://github.com/digoal/agent-steward" target="_blank">
-            ⭐ Star on GitHub
-          </a>
+      </div>
+
+      <div class="grid-2">
+        <!-- Left: 3-Pillar Moat Visual Matrix -->
+        <div class="card" style="padding: 0.6vw;">
+          <div style="font-size: 0.88vw; font-weight: bold; color: #38bdf8; margin-bottom: 0.4vw;">
+            🏰 三重不可跨越的防御性护城河
+          </div>
+          <svg viewBox="0 0 420 280" style="width: 100%; height: auto;">
+            <!-- Pillar 1: OS Host Anchor -->
+            <rect x="10" y="10" width="400" height="78" rx="8" fill="#0d1b33" stroke="#38bdf8" stroke-width="1.2"/>
+            <text x="25" y="32" fill="#38bdf8" font-size="10" font-weight="bold">1. 操作系统认知底座卡位 (OS Host Anchor)</text>
+            <text x="25" y="50" fill="#e2e8f0" font-size="7.5">大模型厂商在云端内卷上下文与模型权重；而现实资产存在于物理开发机与服务器。</text>
+            <text x="25" y="65" fill="#94a3b8" font-size="7.2">大管家深耕本地内核状态、目录规约与进程网络，成为常驻 Agent 的唯一事实标准！</text>
+
+            <!-- Pillar 2: Rust Engineering -->
+            <rect x="10" y="98" width="400" height="78" rx="8" fill="#131338" stroke="#818cf8" stroke-width="1.2"/>
+            <text x="25" y="120" fill="#a78bfa" font-size="10" font-weight="bold">2. 极客级 Rust 纯原生工程壁垒 (Rust Native Moat)</text>
+            <text x="25" y="138" fill="#e2e8f0" font-size="7.5">摆脱臃肿 Python 运行时！单二进制 8.5MB，冷启动 0.8ms，扫盘无锁并发。</text>
+            <text x="25" y="153" fill="#94a3b8" font-size="7.2">静态嵌入 Bundled SQLite WAL 与 FTS5，任意 Linux 发行版复制即用，零环境运维负担。</text>
+
+            <!-- Pillar 3: Deterministic Guard -->
+            <rect x="10" y="186" width="400" height="78" rx="8" fill="#0a261e" stroke="#10b981" stroke-width="1.2"/>
+            <text x="25" y="208" fill="#34d399" font-size="10" font-weight="bold">3. 确定性规则防撞屏障 (Deterministic Safety Guard)</text>
+            <text x="25" y="226" fill="#e2e8f0" font-size="7.5">拒绝纯概率模型不可控的幻觉改动！端口防撞、爆炸半径 BFS、黑名单浅层阻断。</text>
+            <text x="25" y="241" fill="#94a3b8" font-size="7.2">用确定性工程守护物理环境，彻底消除企业级生产事故隐患。</text>
+          </svg>
+        </div>
+
+        <!-- Right: The Self-Reinforcing Agent Flywheel -->
+        <div class="card" style="padding: 0.6vw;">
+          <div style="font-size: 0.88vw; font-weight: bold; color: #34d399; margin-bottom: 0.4vw;">
+            ⚡ 自增强 Agent 生产力数据飞轮
+          </div>
+          <svg viewBox="0 0 420 280" style="width: 100%; height: auto;">
+            <!-- Center Flywheel Hub -->
+            <circle cx="210" cy="140" r="42" fill="#0d1b33" stroke="#38bdf8" stroke-width="2"/>
+            <text x="210" y="136" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle">环境事实</text>
+            <text x="210" y="150" fill="#ffffff" font-size="10" font-weight="bold" text-anchor="middle">大中枢</text>
+
+            <!-- Flywheel 4 Nodes -->
+            <!-- Top: More Agents -->
+            <rect x="140" y="15" width="140" height="42" rx="6" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2"/>
+            <text x="210" y="32" fill="#e0f2fe" font-size="8" font-weight="bold" text-anchor="middle">1. 更多常驻 Agent 入驻</text>
+            <text x="210" y="46" fill="#94a3b8" font-size="7" text-anchor="middle">编码、运维、测试并发</text>
+
+            <!-- Right: Real-time Governance -->
+            <rect x="275" y="115" width="135" height="48" rx="6" fill="#0f172a" stroke="#818cf8" stroke-width="1.2"/>
+            <text x="342" y="134" fill="#e0e7ff" font-size="8" font-weight="bold" text-anchor="middle">2. 实时拓扑与防撞规约</text>
+            <text x="342" y="148" fill="#94a3b8" font-size="7" text-anchor="middle">无端口冲突 / 无死机</text>
+
+            <!-- Bottom: Clean Memory & Context -->
+            <rect x="140" y="220" width="140" height="42" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1.2"/>
+            <text x="210" y="238" fill="#d1fae5" font-size="8" font-weight="bold" text-anchor="middle">3. 结构化沉淀与自洁</text>
+            <text x="210" y="252" fill="#94a3b8" font-size="7" text-anchor="middle">无垃圾堆积 / 记忆归档</text>
+
+            <!-- Left: Instant Context Recall -->
+            <rect x="10" y="115" width="135" height="48" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1.2"/>
+            <text x="77" y="134" fill="#fef3c7" font-size="8" font-weight="bold" text-anchor="middle">4. 下一个会话秒级召回</text>
+            <text x="77" y="148" fill="#94a3b8" font-size="7" text-anchor="middle">继承组织知识 / 效率 10x</text>
+
+            <!-- Curved Flywheel Arrows -->
+            <path d="M 280 35 Q 350 60 350 115" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 2"/>
+            <path d="M 350 165 Q 350 220 280 240" fill="none" stroke="#818cf8" stroke-width="2" stroke-dasharray="4 2"/>
+            <path d="M 140 240 Q 70 220 70 165" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="4 2"/>
+            <path d="M 70 115 Q 70 60 140 35" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4 2"/>
+          </svg>
         </div>
       </div>
     </section>
 
-    <!-- 底部控制栏 -->
-    <div id="deck-controls">
-      <div class="btn-group">
-        <button class="ctrl-btn" onclick="prevSlide()" title="上一页 (←)">上一页</button>
-        <button class="ctrl-btn" onclick="nextSlide()" title="下一页 (→ / 空格)">下一页</button>
+    <!-- ==================== SLIDE 9: CONCLUSION & VISION ==================== -->
+    <section class="slide" data-index="9">
+      <div class="slide-header">
+        <div>
+          <span class="slide-tag">🚀 以终为始 · 拥抱常驻 Agent 时代</span>
+          <h2 class="slide-title" style="font-size: 2.2vw;">让每一个 Agent 都有条不紊</h2>
+          <p class="slide-subtitle">未来每一台机器都将运行自主 Agent，Agent Host Steward 是守护这片数字宿土的坚固基石</p>
+        </div>
       </div>
 
-      <div class="progress-bar-container">
-        <div id="progress-bar" class="progress-bar-fill"></div>
+      <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 0;">
+        <!-- Universal Deployment Topology Diagram -->
+        <div class="card" style="padding: 0.6vw;">
+          <div style="font-size: 0.82vw; font-weight: bold; color: #38bdf8; margin-bottom: 0.3vw;">
+            🌐 无处不在的跨平台部署拓扑
+          </div>
+          <svg viewBox="0 0 900 170" style="width: 100%; height: auto;">
+            <!-- Left: Client Platforms -->
+            <rect x="20" y="20" width="220" height="130" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2"/>
+            <text x="130" y="45" fill="#38bdf8" font-size="10" font-weight="bold" text-anchor="middle">多形态 Agent 客户端</text>
+            <text x="130" y="68" fill="#e2e8f0" font-size="8" text-anchor="middle">Claude Desktop / Cursor IDE</text>
+            <text x="130" y="88" fill="#e2e8f0" font-size="8" text-anchor="middle">Antigravity CLI / OpenDevin</text>
+            <text x="130" y="108" fill="#e2e8f0" font-size="8" text-anchor="middle">企业私有 Multi-Agent 编排流水线</text>
+            <text x="130" y="128" fill="#94a3b8" font-size="7.5" text-anchor="middle">基于标准 MCP stdio 协议</text>
+
+            <!-- Arrow 1 -->
+            <path d="M 240 85 L 340 85" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow)"/>
+            <text x="290" y="75" fill="#7dd3fc" font-size="8" font-weight="bold" text-anchor="middle">MCP JSON-RPC</text>
+
+            <!-- Center: Single Binary Steward -->
+            <rect x="340" y="15" width="220" height="140" rx="10" fill="#061e38" stroke="#38bdf8" stroke-width="2"/>
+            <text x="450" y="42" fill="#38bdf8" font-size="12" font-weight="900" text-anchor="middle">Agent Host Steward</text>
+            <text x="450" y="60" fill="#34d399" font-size="8.5" font-weight="bold" text-anchor="middle">/usr/local/bin/agent-steward</text>
+            <text x="450" y="80" fill="#cbd5e1" font-size="8" text-anchor="middle">8.5MB 单二进制 · 0 依赖</text>
+            <text x="450" y="98" fill="#cbd5e1" font-size="8" text-anchor="middle">内置 Bundled SQLite WAL</text>
+            <text x="450" y="116" fill="#cbd5e1" font-size="8" text-anchor="middle">14 个原生环境治理工具</text>
+            <text x="450" y="136" fill="#fbbf24" font-size="8" font-weight="bold" text-anchor="middle">纯内存内核态解析 (0.5ms)</text>
+
+            <!-- Arrow 2 -->
+            <path d="M 560 85 L 660 85" stroke="#10b981" stroke-width="2.5"/>
+            <text x="610" y="75" fill="#6ee7b7" font-size="8" font-weight="bold" text-anchor="middle">内核感知 & 治理</text>
+
+            <!-- Right: Target Infrastructure -->
+            <rect x="660" y="20" width="220" height="130" rx="8" fill="#06241b" stroke="#10b981" stroke-width="1.2"/>
+            <text x="770" y="45" fill="#34d399" font-size="10" font-weight="bold" text-anchor="middle">多样化基础设施宿主</text>
+            <text x="770" y="68" fill="#d1fae5" font-size="8" text-anchor="middle">个人 Mac / Linux 本地开发机</text>
+            <text x="770" y="88" fill="#d1fae5" font-size="8" text-anchor="middle">阿里云 / AWS 独立云主机</text>
+            <text x="770" y="108" fill="#d1fae5" font-size="8" text-anchor="middle">Kubernetes Agent 专用 Pod 容器</text>
+            <text x="770" y="128" fill="#a7f3d0" font-size="7.5" text-anchor="middle">物理算力集群 / GPU 训练节点</text>
+          </svg>
+        </div>
+
+        <!-- Bottom 3 Action Cards -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8vw; margin-top: 0.4vw;">
+          <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 0.7vw 1vw;">
+            <div style="font-size: 0.88vw; font-weight: bold; color: #38bdf8;">🌟 GitHub 开源共建</div>
+            <div style="font-size: 0.75vw; color: #cbd5e1; margin-top: 0.25vw; font-family: monospace;">https://github.com/digoal/agent-steward</div>
+            <div style="font-size: 0.68vw; color: #94a3b8; margin-top: 0.2vw;">欢迎 Star、Fork 并提交 Issue 共建生态</div>
+          </div>
+
+          <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.7vw 1vw;">
+            <div style="font-size: 0.88vw; font-weight: bold; color: #34d399;">⚡ 1 分钟极速构建部署</div>
+            <div style="font-size: 0.75vw; color: #cbd5e1; margin-top: 0.25vw; font-family: monospace;">cargo build --release && cp agent-steward /usr/local/bin/</div>
+            <div style="font-size: 0.68vw; color: #94a3b8; margin-top: 0.2vw;">单二进制开箱即用，自带数据库初始化</div>
+          </div>
+
+          <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(129, 140, 248, 0.3); border-radius: 8px; padding: 0.7vw 1vw;">
+            <div style="font-size: 0.88vw; font-weight: bold; color: #a78bfa;">🔌 零配置 MCP 接入</div>
+            <div style="font-size: 0.75vw; color: #cbd5e1; margin-top: 0.25vw; font-family: monospace;">{"command": "agent-steward", "args": ["mcp"]}</div>
+            <div style="font-size: 0.68vw; color: #94a3b8; margin-top: 0.2vw;">写入 Claude 或 Antigravity 配置立即唤醒</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 0.3vw; font-size: 0.85vw; color: #38bdf8; font-weight: 600; letter-spacing: 0.05em;">
+          “大模型赋予了 Agent 思考的能力，而 Agent Host Steward 赋予了 Agent 敬畏系统、有条不紊的执行准则。”
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Navigation Bar -->
+    <div class="deck-nav">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button class="nav-btn" onclick="prevSlide()">◀ 上一页 (←)</button>
+        <button class="nav-btn" onclick="nextSlide()">下一页 (→) ▶</button>
       </div>
 
-      <div class="btn-group">
-        <span id="page-num" class="page-indicator">1 / 8</span>
-        <button class="ctrl-btn" onclick="toggleFullScreen()" title="全屏演示 (F)">⛶ 全屏 (F)</button>
+      <div class="nav-dots" id="nav-dots">
+        <!-- 9 Dots generated via JS -->
+      </div>
+
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <span class="nav-status" id="page-indicator">1 / 9</span>
+        <button class="nav-btn" onclick="toggleFullscreen()">⛶ 全屏 (F)</button>
+        <button class="nav-btn" onclick="toggleHelp()">? 快捷键</button>
+      </div>
+    </div>
+
+    <!-- Shortcuts Modal -->
+    <div class="shortcuts-modal" id="shortcuts-modal" onclick="toggleHelp()">
+      <div class="modal-box" onclick="event.stopPropagation()">
+        <h3 style="color: #38bdf8; font-size: 1.1vw; margin-bottom: 0.8vw;">⌨️ 演说控制快捷键</h3>
+        <ul style="font-size: 0.8vw; color: #cbd5e1; line-height: 1.8; list-style: none;">
+          <li><strong style="color: #ffffff;">F / f:</strong> 进入或退出全屏模式</li>
+          <li><strong style="color: #ffffff;">→ / Space / PageDown / Enter:</strong> 切换到下一页</li>
+          <li><strong style="color: #ffffff;">← / PageUp / Backspace:</strong> 切换到上一页</li>
+          <li><strong style="color: #ffffff;">1 ~ 9:</strong> 直接跳转到第 1 ~ 9 页</li>
+          <li><strong style="color: #ffffff;">Home / End:</strong> 跳转到第一页 / 最后一页</li>
+          <li><strong style="color: #ffffff;">? / h:</strong> 打开或关闭本帮助窗口</li>
+        </ul>
+        <div style="text-align: right; margin-top: 1vw;">
+          <button class="nav-btn" onclick="toggleHelp()">我知道了</button>
+        </div>
       </div>
     </div>
 
@@ -743,9 +1363,21 @@
 
   <script>
     let currentSlide = 1;
-    const totalSlides = 8;
+    const totalSlides = 9;
 
-    function updateSlide() {
+    function initNav() {
+      const container = document.getElementById('nav-dots');
+      container.innerHTML = '';
+      for (let i = 1; i <= totalSlides; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'nav-dot' + (i === currentSlide ? ' active' : '');
+        dot.onclick = () => goToSlide(i);
+        container.appendChild(dot);
+      }
+      updateSlideDisplay();
+    }
+
+    function updateSlideDisplay() {
       document.querySelectorAll('.slide').forEach((slide, idx) => {
         if (idx + 1 === currentSlide) {
           slide.classList.add('active');
@@ -754,69 +1386,257 @@
         }
       });
 
-      document.getElementById('page-num').innerText = `${currentSlide} / ${totalSlides}`;
-      document.getElementById('progress-bar').style.width = `${(currentSlide / totalSlides) * 100}%`;
+      document.querySelectorAll('.nav-dot').forEach((dot, idx) => {
+        if (idx + 1 === currentSlide) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+
+      document.getElementById('page-indicator').innerText = `${currentSlide} / ${totalSlides}`;
     }
 
     function nextSlide() {
       if (currentSlide < totalSlides) {
         currentSlide++;
-        updateSlide();
+        updateSlideDisplay();
       }
     }
 
     function prevSlide() {
       if (currentSlide > 1) {
         currentSlide--;
-        updateSlide();
+        updateSlideDisplay();
       }
     }
 
-    function toggleFullScreen() {
+    function goToSlide(n) {
+      if (n >= 1 && n <= totalSlides) {
+        currentSlide = n;
+        updateSlideDisplay();
+      }
+    }
+
+    function toggleFullscreen() {
       if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
+        document.documentElement.requestFullscreen().catch(err => {
+          console.warn('Fullscreen error:', err);
+        });
       } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        }
+        document.exitFullscreen();
       }
     }
 
-    // 快捷键监听
+    function toggleHelp() {
+      const modal = document.getElementById('shortcuts-modal');
+      modal.classList.toggle('open');
+    }
+
+    // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+      if (e.target.tagName === 'INPUT') return;
+
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown' || e.key === 'Enter') {
+        e.preventDefault();
         nextSlide();
-      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') {
+        e.preventDefault();
         prevSlide();
       } else if (e.key === 'f' || e.key === 'F') {
-        toggleFullScreen();
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === '?' || e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        toggleHelp();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        goToSlide(1);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        goToSlide(totalSlides);
+      } else if (e.key >= '1' && e.key <= '9') {
+        goToSlide(parseInt(e.key));
       }
     });
 
-    // 交互模拟器 1: 分级扫描
-    function runSimScan(type) {
-      const screen = document.getElementById('sim-scan-screen');
-      if (type === 'deep') {
-        screen.innerHTML = `[SCANNER] 触发白名单路径: /root/new/work/\n[POLICY] 命中策略: policy-2 (tier=deep, max_depth=-1)\n[ACTION] 递归遍历所有子目录与文件...\n[INDEX]  ✓ 建立代码文件元数据\n[INDEX]  ✓ 同步生成 FTS5 全文索引\n[FINISH] 耗时: 18ms | 纳管资产: +12 个 | 状态: 100% 全量深度沉淀`;
-      } else {
-        screen.innerHTML = `[SCANNER] 触发黑名单路径: **/node_modules/**\n[POLICY] 命中策略: policy-4 (tier=shallow, max_depth=0)\n[ACTION] 🚨 触发浅层阻断机制 (it.skip_current_dir())\n[INDEX]  ✓ 仅记录目录实体本身: node_modules (directory)\n[BLOCK]  ⛔ 跳过 15,820 个无用碎片子文件!\n[FINISH] 耗时: 1ms | 数据库零膨胀 | 杜绝扫爆系统!`;
-      }
+    // Interactive Demo Functions
+    function runSimPlace() {
+      const val = document.getElementById('input-place').value;
+      const term = document.getElementById('term-place');
+      term.innerText = `$ agent-steward place evaluate "${val}"
+[Placement Engine] 正在分析路径规范性与准则映射...
+`;
+      setTimeout(() => {
+        term.innerText += `Target Path      : ${val}
+`;
+        if (val.includes('shared_proj')) {
+          term.innerText += `Resolved Category: Shared Reusable Library (公共工具库)
+Canonical Rule   : R-SHARED-PROJ (/root/new/shared_proj/<project>/)
+Compliance Score : 95 / 100
+Mandatory Checks :
+  [OK] 规范目录结构 /root/new/shared_proj/
+  [OK] 包含独立执行入口 (main.py / cli)
+  [WARN] 根目录建议补充 README.md 使用说明文档
+
+Recommendation:
+  ✅ 允许放置！已自动建立工具链路索引。`;
+        } else if (val.includes('tmp')) {
+          term.innerText += `Resolved Category: Temporary Scratch & Test Script
+Canonical Rule   : R-TMP (/root/new/tmp/)
+Compliance Score : 100 / 100
+Mandatory Checks :
+  [OK] 临时文件目录，自动继承会话生命周期回收策略 (TTL=Session)
+
+Recommendation:
+  ✅ 允许放置！会话结束调用 steward close 时将自动清理。`;
+        } else if (val.includes('skills')) {
+          term.innerText += `Resolved Category: AI Reusable Skill
+Canonical Rule   : R-SKILL (/root/new/skills/<name>/SKILL.md)
+Compliance Score : 100 / 100
+Mandatory Checks :
+  [OK] 包含标准 SKILL.md 声明规范
+
+Recommendation:
+  ✅ 允许放置！已成功注册为持久化 AI 技能。`;
+        } else {
+          term.innerText += `Resolved Category: Conventional Project Workspace
+Canonical Rule   : R-WORK (/root/new/work/<project>/)
+Compliance Score : 90 / 100
+Recommendation:
+  ✅ 允许放置！建议初始化独立 Git 仓库。`;
+        }
+      }, 250);
     }
 
-    // 交互模拟器 2: 端口防撞与爆炸半径
-    function runSimPort(port) {
-      const screen = document.getElementById('sim-port-screen');
-      if (port === 22) {
-        screen.innerHTML = `[PORT GUARD] 检测端口 22...\n[KERNEL]   /proc/net/tcp 状态: 0A (TCP_LISTEN)\n[RESOLVE]  定位 PID: 957 | 名称: sshd | 用户: root\n[WARNING]  ⚠️ 端口已被生产进程占用，严禁强杀与重复绑定!\n[ADVICE]   💡 推荐改用连续可用空闲端口: [23, 24, 25]`;
-      } else {
-        screen.innerHTML = `[PORT GUARD] 检测端口 8999...\n[KERNEL]   /proc/net/tcp 未见监听记录\n[BIND]     本地 127.0.0.1:8999 探测绑定成功\n[STATUS]   ✅ 端口 8999 完全空闲，可安全启动测试服务!`;
-      }
+    function runSimTiering() {
+      const term = document.getElementById('term-place');
+      term.innerText = `$ agent-steward scan /root/new/work/agent-steward --granularity tiering
+[Granularity Scanner] 启动分级扫描...
+`;
+      setTimeout(() => {
+        term.innerText += `[Tier 1: Deep] 进入 src/ ➔ 索引 27 个 Rust 源文件与依赖符号
+[Tier 1: Deep] 进入 manual/ ➔ 索引 7 个使用手册 Markdown 章节
+[Tier 2: Skip] 命中黑名单目录 target/ ➔ 深度设为 0 (skip_current_dir)
+[Tier 2: Skip] 命中黑名单目录 .git/ ➔ 深度设为 0 (skip_current_dir)
+
+Scan Completed in 0.42ms:
+  - Scanned Files Indexed : 34
+  - Blacklisted Dirs Skipped: 2 (节约 I/O 99.8%)
+  - Database Space Added  : 48 KB (零膨胀)`;
+      }, 300);
     }
 
-    function runSimImpact() {
-      const screen = document.getElementById('sim-port-screen');
-      screen.innerHTML = `[BLAST RADIUS] 正在分析: /root/new/shared_proj/core_utils.py\n[GRAPH BFS]    解析 links 依赖图谱 (max_depth=3)...\n[DIRECT]       直接依赖: /root/new/work/app_a.py (script)\n[INDIRECT]     间接下游: crontab: daily_sync (22:00 运行)\n[RISK LEVEL]   🔥 CRITICAL (核心公共库，受多业务强依赖!)\n[ADVICE]       改动前必须确保接口向后兼容，切勿直接删除函数!`;
+    function runSimPort() {
+      const p = document.getElementById('input-port').value;
+      const term = document.getElementById('term-port');
+      term.innerText = `$ agent-steward env port ${p}
+[Kernel Port Scanner] 正在扫描 /proc/net/tcp ...
+`;
+      setTimeout(() => {
+        if (p === '8080' || p === '5432' || p === '11434') {
+          term.innerText += `Port ${p} Status: OCCUPIED (⚠️ 严重冲突!)
+
+Conflict Details:
+  PID          : 957
+  Process Name : hermes_monitor_daemon
+  Command      : python3 -m monitor.daemon --port ${p}
+  Inode Socket : socket:[482910]
+  State        : TCP_LISTEN (0A)
+
+Safety Barrier:
+  🚨 阻断起动！该端口由系统核心守护进程长期占用。
+
+Safe Alternative Recommendation:
+  ✅ ${parseInt(p)+1} (Available, 0 latency)
+  ✅ ${parseInt(p)+2} (Available, 0 latency)
+  ✅ ${parseInt(p)+3} (Available, 0 latency)`;
+        } else {
+          term.innerText += `Port ${p} Status: FREE (✅ 空闲安全可用)
+
+Scan Details:
+  - Socket Inode : None
+  - Conflict PID : None
+  - Security Risk: 0 (No collision detected)
+
+Recommendation:
+  🚀 端口可用，允许绑定启动服务！`;
+        }
+      }, 250);
     }
+
+    function runSimBlast() {
+      const term = document.getElementById('term-port');
+      term.innerText = `$ agent-steward links impact shared_proj/sec_fetcher/utils.py --max-depth 3
+[Blast Radius Engine] 正在从 SQLite links 表运行逆向 BFS 遍历...
+`;
+      setTimeout(() => {
+        term.innerText += `Target Object: /root/new/shared_proj/sec_fetcher/utils.py
+
+Dependency Traversal (Reverse BFS):
+  ├── [Hop 1: Direct Caller] shared_proj/sec_fetcher/main.py (imports fetch_sec)
+  ├── [Hop 1: Direct Caller] work/stock-analyzer/sync.py (imports parse_filing)
+  └── [Hop 2: Indirect Cron] /root/new/cron/sec_earnings_daily.sh (triggers sync.py)
+      └── Schedule: 22:00 Everyday (Hermes Cron #8)
+
+Risk Assessment Matrix:
+  - Direct Impacted Files   : 2
+  - Indirect Impacted Crons : 1 (Active Production Cron)
+  - Severity Level          : 🚨 CRITICAL (极高危)
+
+Governance Advice:
+  修改入参将导致 22:00 财报扫描崩溃！请保持向后兼容或执行同版本发布！`;
+      }, 350);
+    }
+
+    function runSimSearch() {
+      const q = document.getElementById('input-query').value;
+      const term = document.getElementById('term-query');
+      term.innerText = `$ agent-steward memory search "${q}" --hybrid
+[Hybrid Engine] 启动 Ollama bge-m3 1024-dim 向量 + SQLite FTS5 全文双路召回...
+`;
+      setTimeout(() => {
+        term.innerText += `Search Diagnostics:
+  Channel 1 (FTS5 Keyword) : 0 exact hits (字面不匹配)
+  Channel 2 (Vector Cosine): 1 semantic hit (Cosine Sim: 0.892)
+  Fusion Algorithm         : Reciprocal Rank Fusion (k=60)
+
+Ranked Match #1:
+  Title   : PostgreSQL 生产环境连接池溢出与熔断降级方案
+  Path    : /root/new/note/pg_circuit_breaker.md
+  Score   : RRF=0.01639 (Vector Sim: 0.892)
+  Summary : 详细阐述高并发激增时的连接池溢出处理与快速熔断降级策略。
+  Evidence: 知识跨会话成功唤醒，避免 Agent 重复造轮子！`;
+      }, 300);
+    }
+
+    function runSimClose() {
+      const term = document.getElementById('term-query');
+      term.innerText = `$ agent-steward close session-20261115-01 --clean-temp
+[Session Lifecycle Manager] 正在执行完工结算与宿主自洁...
+`;
+      setTimeout(() => {
+        term.innerText += `Session ID: session-20261115-01
+
+1. Temp Files Garbage Collection:
+   - Cleaned: /root/new/tmp/test_parse_01.py (Freed 12 KB)
+   - Cleaned: /root/new/tmp/curl_mock.json (Freed 4 KB)
+   - Total Orphan Temp Files Deleted: 2
+
+2. Change Audit & Diff Summary:
+   - Modified: /root/new/shared_proj/sec_fetcher/utils.py (+18, -4 lines)
+   - Added   : /root/new/note/sec_filing_guide.md (+120 lines)
+
+3. Memory Synthesis & Commit:
+   - Memory Entry Created: ID #84 "完成 SEC 财报解析器入参优化并更新指南"
+   - WAL Committed to ~/.steward/steward.db
+
+Status: ✅ 会话完工结算完毕，开发机整洁如新！`;
+      }, 350);
+    }
+
+    // Initialize on load
+    window.onload = initNav;
   </script>
 </body>
 </html>
