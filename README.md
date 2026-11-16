@@ -170,6 +170,8 @@ cargo build --release
   
 5、目前在Linux中开发，未来是否支持 MacOS、Windows?  
   
+6、用什么 benchmark 来测试，对标什么产品？
+  
 ---
 
 ## 开源协议
