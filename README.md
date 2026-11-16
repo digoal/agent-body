@@ -11,7 +11,9 @@
 ---
 
 ## 什么是 Agent Host Steward？
-[产品演示 PPT](https://htmlpreview.github.io/?https://github.com/digoal/agent-steward/blob/main/presentation.html)  
+[演讲 PPT](https://htmlpreview.github.io/?https://github.com/digoal/agent-steward/blob/main/steward-deck.html)  
+  
+[路演 PPT](https://htmlpreview.github.io/?https://github.com/digoal/agent-steward/blob/main/presentation.html)  
   
 市面上有大量专注于“跨会话记忆”或“对话摘要”的开源项目，但它们没有解决一个更底层、更致命的痛点：**Agent 在 Linux 宿主机上干活时，对物理世界是完全“两眼一抹黑”的盲人**：
 - 它不知道机器上其实装了 `pdftotext`，却反复折腾 pip 安装第三方库并报错；
