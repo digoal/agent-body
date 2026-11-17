@@ -1,7 +1,149 @@
 pub mod capability;
 pub mod process_net;
 pub mod automation;
+pub mod assets_catalog;
 
 pub use capability::{CapabilityEngine, ToolCapability, CapabilityQueryResult};
 pub use process_net::{ProcessNetTopology, ListeningPortFact, PortQueryFactResult};
 pub use automation::{AutomationTopology, SystemdServiceFact, CronJobFact, FileImpactReport};
+pub use assets_catalog::{AssetsCatalogEngine, RepoFact, DocFact, CatalogOverview};
+
+use anyhow::Result;
+
+/// 宿主机客观事实图谱统一查询门面 (Zero-Hallucination Fact Facade)
+pub struct FactFacade;
+
+impl FactFacade {
+    /// 统一入口：根据类型与自然语言/关键词查询宿主机物理事实
+    pub fn query_facts(fact_type: &str, query: &str) -> Result<String> {
+        let trimmed_query = query.trim();
+        let normalized_type = fact_type.trim().to_lowercase();
+
+        // 智能自动分流 (auto)
+        let resolved_type = if normalized_type.is_empty() || normalized_type == "auto" {
+            Self::infer_fact_type(trimmed_query)
+        } else {
+            normalized_type
+        };
+
+        match resolved_type.as_str() {
+            "capability" | "tool" => {
+                let mut engine = CapabilityEngine::new();
+                engine.scan_host();
+                let res = engine.query(trimmed_query);
+                Ok(engine.format_for_agent(&res))
+            }
+            "port" => {
+                // 如果是纯数字，按端口诊断
+                if let Ok(port) = trimmed_query.parse::<u16>() {
+                    let res = ProcessNetTopology::check_port(port, 3)?;
+                    let mut out = format!("🔌 **端口 `{}` 物理占用事实反查**\n\n", port);
+                    out.push_str(&format!("- **状态**: `{}`\n", res.status));
+                    if let Some(fact) = res.occupied_by {
+                        out.push_str(&format!("- **占用进程**: `{}` (PID: {})\n", fact.process_name.as_deref().unwrap_or("未知"), fact.pid.unwrap_or(0)));
+                        out.push_str(&format!("- **启动命令**: `{}`\n", fact.command.as_deref().unwrap_or("未知")));
+                        out.push_str(&format!("- **工作目录**: `{}`\n", fact.cwd.as_deref().unwrap_or("未知")));
+                        out.push_str(&format!("- **所属用户**: `{}`\n", fact.user.as_deref().unwrap_or("未知")));
+                    }
+                    out.push_str(&format!("- **避坑建议**: {}\n", res.advice));
+                    Ok(out)
+                } else {
+                    // 查询全量监听端口并输出表格
+                    let ports = ProcessNetTopology::scan_listening_ports()?;
+                    Ok(ProcessNetTopology::format_listening_report(&ports, true))
+                }
+            }
+            "automation" => {
+                let services = AutomationTopology::scan_systemd_services()?;
+                let cron_jobs = AutomationTopology::scan_cron_jobs()?;
+                Ok(AutomationTopology::format_automation_overview(&services, &cron_jobs))
+            }
+            "impact" => {
+                let report = AutomationTopology::find_impact_on_file(trimmed_query)?;
+                let mut out = format!("💥 **文件 `{}` 逆向依赖与爆炸半径反查**\n\n", report.target_file);
+                out.push_str(&format!("- **结论**: {}\n\n", report.advice));
+                if !report.impacted_services.is_empty() {
+                    out.push_str("#### 受影响的 Systemd 守护服务:\n");
+                    for s in report.impacted_services {
+                        out.push_str(&format!("* `{}` (启动命令: `{}`)\n", s.service_name, s.exec_start));
+                    }
+                    out.push_str("\n");
+                }
+                if !report.impacted_cron_jobs.is_empty() {
+                    out.push_str("#### 受影响的 Cron 定时调度:\n");
+                    for c in report.impacted_cron_jobs {
+                        out.push_str(&format!("* [{}] 用户: `{}` 命令: `{}`\n", c.schedule, c.user, c.command));
+                    }
+                }
+                Ok(out)
+            }
+            "repo" | "code" => {
+                let repos = if trimmed_query.is_empty() || trimmed_query == "all" {
+                    AssetsCatalogEngine::scan_repos(None)?
+                } else {
+                    AssetsCatalogEngine::query_repos(trimmed_query, None)?
+                };
+                let docs = Vec::new();
+                Ok(AssetsCatalogEngine::format_catalog_overview(&repos, &docs))
+            }
+            "doc" | "document" => {
+                let docs = if trimmed_query.is_empty() || trimmed_query == "all" {
+                    AssetsCatalogEngine::scan_documents(None)?
+                } else {
+                    AssetsCatalogEngine::query_documents(trimmed_query, None)?
+                };
+                let repos = Vec::new();
+                Ok(AssetsCatalogEngine::format_catalog_overview(&repos, &docs))
+            }
+            "all" | "overview" => {
+                let mut out = String::new();
+                out.push_str("# 🌐 宿主机客观事实图谱全景认知 (Host Reality Graph)\n\n");
+                
+                // 1. 端口与进程
+                let ports = ProcessNetTopology::scan_listening_ports()?;
+                out.push_str(&ProcessNetTopology::format_listening_report(&ports, true));
+                out.push_str("\n---\n\n");
+
+                // 2. 自动化拓扑
+                let services = AutomationTopology::scan_systemd_services()?;
+                let cron_jobs = AutomationTopology::scan_cron_jobs()?;
+                out.push_str(&AutomationTopology::format_automation_overview(&services, &cron_jobs));
+                out.push_str("\n---\n\n");
+
+                // 3. 源码与资料
+                let repos = AssetsCatalogEngine::scan_repos(None)?;
+                let docs = AssetsCatalogEngine::scan_documents(None)?;
+                out.push_str(&AssetsCatalogEngine::format_catalog_overview(&repos, &docs));
+
+                Ok(out)
+            }
+            _ => {
+                // 默认兜底尝试能力匹配
+                let mut engine = CapabilityEngine::new();
+                engine.scan_host();
+                let res = engine.query(trimmed_query);
+                Ok(engine.format_for_agent(&res))
+            }
+        }
+    }
+
+    /// 根据用户输入的内容智能推测事实查询类型
+    fn infer_fact_type(query: &str) -> String {
+        let q = query.trim();
+        if q.parse::<u16>().is_ok() || q.contains("端口") || q.contains("port") {
+            "port".to_string()
+        } else if q.contains("systemd") || q.contains("cron") || q.contains("定时任务") || q.contains("服务") {
+            "automation".to_string()
+        } else if q.starts_with('/') && (q.ends_with(".conf") || q.ends_with(".toml") || q.ends_with(".sh") || q.ends_with(".service")) {
+            "impact".to_string()
+        } else if q.contains("源码") || q.contains("仓库") || q.contains("git") || q.contains("repo") {
+            "repo".to_string()
+        } else if q.contains("资料") || q.contains("笔记") || q.contains("权威") || q.contains("文档") {
+            "doc".to_string()
+        } else if q == "all" || q == "overview" || q == "全景" {
+            "all".to_string()
+        } else {
+            "capability".to_string()
+        }
+    }
+}

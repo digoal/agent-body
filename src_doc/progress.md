@@ -32,8 +32,14 @@
 | **三位一体 Phase 1** | 1.1 | 事实图谱核心：工具能力语义注解库与物理扫描器 (Capability Graph & Scanner) | `src/fact/capability.rs` | ✅ **已完成** | 2026-11-15 21:07 |
 | | 1.2 | 事实图谱核心：内核级进程与端口拓扑引擎 (/proc & Socket) | `src/fact/process_net.rs` | ✅ **已完成** | 2026-11-15 21:19 |
 | | 1.3 | 事实图谱核心：系统自动化依赖网络 (Systemd & Cron Topology) | `src/fact/automation.rs` | ✅ **已完成** | 2026-11-15 21:28 |
-| | 1.4 | 事实图谱核心：源码工程与知识资料编目器 (Code & Assets Catalog) | `src/fact/assets_catalog.rs` | ⬜ 待执行 | - |
-| | 1.5 | 事实图谱核心：只读查询语义接口与 MCP/CLI 贯通 (steward_fact_query) | `src/api/` & `src/main.rs` | ⬜ 待执行 | - |
+| | 1.4 | 事实图谱核心：源码工程与知识资料编目器 (Code & Assets Catalog) | `src/fact/assets_catalog.rs` | ✅ **已完成** | 2026-11-17 17:20 |
+| | 1.5 | 事实图谱核心：只读查询语义接口与 MCP/CLI 贯通 (steward_fact_query) | `src/api/` & `src/main.rs` | ✅ **已完成** | 2026-11-17 17:35 |
+| **三位一体 Phase 2** | 2.1 | 偏好规约：资产放置规则引擎 2.0 (项目级配置覆盖与意图推导) | `src/placement/engine_v2.rs` | ✅ **已完成** | 2026-11-17 17:39 |
+| | 2.2 | 偏好规约：工程操作习惯与安全规约 (CodeGraph优先/真实性门禁) | `src/placement/conventions.rs` | ✅ **已完成** | 2026-11-17 17:43 |
+| | 2.3 | 偏好规约：纠偏自演化学习器 2.0 (文件跨目录搬移行为捕获沉淀) | `src/placement/learner.rs` | ✅ **已完成** | 2026-11-17 17:52 |
+| **三位一体 Phase 3** | 3.1 | 可插拔记忆：Memory Provider SPI 抽象设计与通用数据契约 | `src/memory/spi.rs` | ✅ **已完成** | 2026-11-17 18:02 |
+| | 3.2 | 可插拔记忆：内置轻量引擎实现 (Builtin Local Provider) | `src/memory/builtin_provider.rs` | ✅ **已完成** | 2026-11-17 18:07 |
+| | 3.3 | 可插拔记忆：成熟开源生态适配器 (Mem0 / Letta / PowerContext) | `src/memory/adapters/` | ⬜ 待执行 | - |
 
 ---
 
@@ -51,19 +57,22 @@
 - 实现了 `LinksEngine` 与 `CodeGraphBridge` 宏微双层联邦联动，支持断链审计与爆炸半径推演；
 - 实现了 `LinkRepairer`（基于 Levenshtein 相似度与代码指纹自动推演断链修复 patch）；
 - 实现了 `TuiDashboard`（交互式终端单屏实时看板与状态刷新）；
-- 实现了 22 个原生 MCP 工具端点与 CLI 子系统；
-- 全量单元测试 `cargo test` **40 项全部通过 (100% PASS)**，release 构建通过并热升级常驻守护服务；
-- 彻底完成目录结构与文件命名的规范化（全小写 kebab-case），清理空目录与修复全局引用；
+- 实现了 23 个原生 MCP 工具端点与 CLI 子系统；
 - 交付件完整落地于 `manual/`、`src_doc/`、`README.md` 与 `/root/new/shared_git/agent-steward`。
 
-🚀 **三位一体架构 Phase 1（宿主机事实图谱核心）已正式启动**：
-- 详见最新路线图 [roadmap-modular-phase1.md](roadmap-modular-phase1.md)；
-- 正在串行推进 **子任务 1.1：工具能力语义注解库与物理扫描器**。
+🎉 **三位一体架构 Phase 1（宿主机事实图谱核心）已 100% 全量串行交付**：
+- 详见路线图 [roadmap-modular-phase1.md](roadmap-modular-phase1.md)；
+- 宿主机事实图谱已全面纳管工具能力、内核进程端口、Systemd/Cron 自动化拓扑、以及源码与权威清单！
+
+🎉 **三位一体架构 Phase 2（偏好规约与自演化）已 100% 全量串行交付**：
+- 详见路线图 [roadmap-modular-phase2.md](roadmap-modular-phase2.md)；
+- 实现了项目级配置覆盖、意图模糊打分、小写蛇形校验、CodeGraph 与真实性工程纪律、以及跨目录搬移纠偏自演化！
+- 下一阶段为 **三位一体 Phase 3：可插拔记忆与成熟开源适配 (Pluggable Memory & Open Ecosystem)**。
 
 ---
 
 ## 断点恢复指引
 如果任务中断，重新启动时只需：
 1. 读取本文件 `src_doc/progress.md`；
-2. 找到首个状态为 `⏳ 进行中` 或 `⬜ 待执行` 的子任务 ID（当前为三位一体 Phase 1 任务 1.1，详见 [roadmap-modular-phase1.md](roadmap-modular-phase1.md)）；
+2. 找到首个状态为 `⏳ 进行中` 或 `⬜ 待执行` 的子任务 ID（当前为三位一体 Phase 3 任务 3.1，详见 [roadmap-modular-phase3.md](roadmap-modular-phase3.md)）；
 3. 继续按顺序串行执行，每完成一步立即更新对应路线图与本文件的状态与完成时间戳。

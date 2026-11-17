@@ -224,7 +224,7 @@ mod tests {
 
         assert_eq!(v["id"], "req-2");
         let tools = v["result"]["tools"].as_array().expect("tools array");
-        assert_eq!(tools.len(), 22, "必须注册全部 22 个原生 MCP 工具");
+        assert_eq!(tools.len(), 23, "必须注册全部 23 个原生 MCP 工具");
         assert!(tools.iter().any(|t| t["name"] == "steward_brief"));
         assert!(tools.iter().any(|t| t["name"] == "steward_placement_suggest"));
         assert!(tools.iter().any(|t| t["name"] == "steward_asset_search"));
@@ -232,6 +232,31 @@ mod tests {
         assert!(tools.iter().any(|t| t["name"] == "steward_placement_learn"));
         assert!(tools.iter().any(|t| t["name"] == "steward_env_gc"));
         assert!(tools.iter().any(|t| t["name"] == "steward_memory_audit"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_fact_query"));
+    }
+
+    #[test]
+    fn test_mcp_tools_call_fact_query() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let server = McpServer::new(storage);
+
+        let req = r#"{
+            "jsonrpc": "2.0",
+            "id": 105,
+            "method": "tools/call",
+            "params": {
+                "name": "steward_fact_query",
+                "arguments": {
+                    "query": "这台机器上有没有能处理 PDF 的东西？",
+                    "fact_type": "capability"
+                }
+            }
+        }"#;
+        let resp = server.handle_message(req).expect("handle_message");
+        let v: Value = serde_json::from_str(&resp).expect("parse response");
+        assert_eq!(v["id"], 105);
+        let content_text = v["result"]["content"][0]["text"].as_str().expect("text");
+        assert!(content_text.contains("pdftotext"));
     }
 
     #[test]

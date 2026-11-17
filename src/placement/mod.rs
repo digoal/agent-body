@@ -5,6 +5,12 @@ use crate::storage::Storage;
 use crate::storage::models::PlacementRule;
 
 pub mod learner;
+pub mod engine_v2;
+pub mod conventions;
+
+pub use learner::{PlacementLearner, LearnedRuleCandidate, LearnReport, CorrectionFeedback};
+pub use engine_v2::{PlacementEngineV2, PlacementRequestV2, PlacementSuggestionV2, sanitize_name_v2};
+pub use conventions::{ConventionsEngine, EngineeringConvention, ContextualConventionsReport};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlacementRequest {

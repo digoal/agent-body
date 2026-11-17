@@ -301,6 +301,26 @@ impl McpToolRegistry {
                         "archive_id": { "type": "string", "description": "若存在冲突，指定归档淘汰的旧记忆 ID" }
                     }
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_fact_query",
+                "description": "宿主机客观事实图谱只读查询（零幻觉真相底座）。查询：1. 机器已装CLI工具与能力推荐(如'有没有处理PDF的东西'、'如何转视频雪碧图')；2. 端口被谁占用与排障(如'8080')；3. 修改某配置会影响哪些systemd服务或cron调度；4. 本地已克隆哪些开源源码(CodeGraph状态)与权威资料清单等。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "自然语言意图或关键词（例如 '处理 PDF 提取文字', '8080', '/root/.steward/config.toml', '权威网站'）"
+                        },
+                        "fact_type": {
+                            "type": "string",
+                            "enum": ["auto", "capability", "port", "automation", "impact", "repo", "doc", "all"],
+                            "default": "auto",
+                            "description": "事实类别过滤，留空或 auto 为智能识别"
+                        }
+                    },
+                    "required": ["query"]
+                }
             })
         ]
     }
@@ -621,6 +641,12 @@ impl McpToolRegistry {
                 }
                 let rep = mgr.audit_memories()?;
                 Ok(serde_json::to_string_pretty(&rep)?)
+            }
+
+            "steward_fact_query" => {
+                let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("all");
+                let fact_type = args.get("fact_type").and_then(|v| v.as_str()).unwrap_or("auto");
+                crate::fact::FactFacade::query_facts(fact_type, query)
             }
 
             _ => bail!("Unknown tool: {}", name),

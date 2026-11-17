@@ -97,6 +97,15 @@ enum Commands {
         #[arg(long, help = "是否直接执行清理删除 (默认仅 dry-run 预览)")]
         apply: bool,
     },
+
+    #[command(about = "宿主机客观事实图谱查询 (工具能力/端口/Systemd/Cron/源码资料)")]
+    Fact {
+        #[arg(help = "查询意图或关键词 (如 '处理 PDF 提取文字', '8080', 'all')")]
+        query: Option<String>,
+
+        #[arg(short, long, default_value = "auto", help = "事实类型 (capability, port, automation, impact, repo, doc, all, auto)")]
+        fact_type: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -610,6 +619,12 @@ async fn main() -> Result<()> {
                     println!("    诊断: {}", proc_.reason);
                 }
             }
+        }
+
+        Commands::Fact { query, fact_type } => {
+            let q = query.unwrap_or_else(|| "all".to_string());
+            let report = agent_steward::fact::FactFacade::query_facts(&fact_type, &q)?;
+            println!("{}", report);
         }
     }
 

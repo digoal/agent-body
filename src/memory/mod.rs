@@ -4,6 +4,11 @@ use crate::storage::models::MemoryRecord;
 
 pub mod hybrid;
 pub mod lifecycle;
+pub mod spi;
+pub mod builtin_provider;
+
+pub use spi::{MemoryProvider, MemoryItem, MemoryFilter, SessionContext, EvictCriteria};
+pub use builtin_provider::BuiltinMemoryProvider;
 
 pub struct MemoryManager {
     storage: Storage,
