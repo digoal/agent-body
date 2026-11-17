@@ -1,0 +1,21 @@
+{
+  "name": "agent-steward",
+  "version": "1.0.0",
+  "description": "> **三位一体架构：宿主机事实图谱为核心护城河 · 用户偏好规约为协作准则 · 记忆模块开放插拔成熟生态**   > 驻留在 Agent 宿主机中的轻量级系统认知底座（Rust Edition · 单二进制交付）。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/digoal/agent-steward.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/digoal/agent-steward/issues"
+  },
+  "homepage": "https://github.com/digoal/agent-steward#readme"
+}
