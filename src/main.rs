@@ -124,6 +124,18 @@ enum Commands {
         #[arg(short, long, help = "输出原始 JSON 格式以便 CI/CD 或 Agent 机器解析")]
         json: bool,
     },
+
+    #[command(about = "启动基于浏览器的轻量级大管家拓扑图与协作锁监控大屏")]
+    Web {
+        #[arg(long, help = "监听地址 (默认 127.0.0.1)")]
+        host: Option<String>,
+
+        #[arg(short, long, help = "监听端口 (默认 8765)")]
+        port: Option<u16>,
+
+        #[arg(long, help = "管理员操作鉴权 Token")]
+        auth_token: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -896,6 +908,24 @@ fn main() -> Result<()> {
             if !report.passed_required {
                 std::process::exit(1);
             }
+        }
+
+        Commands::Web { host, port, auth_token } => {
+            let web_host = host.unwrap_or_else(|| cfg.web.host.clone());
+            let web_port = port.unwrap_or(cfg.web.port);
+            let token = auth_token.or_else(|| cfg.web.auth_token.clone());
+
+            let web_config = agent_steward::web::WebConfig {
+                host: web_host,
+                port: web_port,
+                auth_token: token,
+            };
+
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(async {
+                let web_server = agent_steward::web::WebServer::new(web_config, storage.provider().clone());
+                web_server.run().await
+            })?;
         }
     }
 

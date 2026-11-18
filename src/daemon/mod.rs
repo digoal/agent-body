@@ -70,7 +70,24 @@ impl StewardDaemon {
         let env_collector = EnvCollector::new(self.storage.clone());
         let bg_scheduler = BackgroundScheduler::new(self.storage.clone());
 
-        // 2. 定时器
+        // 2. 按需拉起后台 Web 监控大屏
+        if self.config.web.enabled {
+            let web_config = crate::web::WebConfig {
+                host: self.config.web.host.clone(),
+                port: self.config.web.port,
+                auth_token: self.config.web.auth_token.clone(),
+            };
+            let storage_provider = self.storage.provider().clone();
+            tokio::spawn(async move {
+                let server = crate::web::WebServer::new(web_config, storage_provider);
+                if let Err(e) = server.run().await {
+                    eprintln!("⚠️ [Daemon] Web 监控服务异常退出: {}", e);
+                }
+            });
+            println!("✅ Web 监控大屏服务已拉起: http://{}:{}", self.config.web.host, self.config.web.port);
+        }
+
+        // 3. 定时器
         let mut process_interval = interval(Duration::from_secs(60));
         let mut watch_poll_interval = interval(Duration::from_millis(500));
         let mut inspection_interval = interval(Duration::from_secs(1800)); // 每 30 分钟一次深度全量巡检

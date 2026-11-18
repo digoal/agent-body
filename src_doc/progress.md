@@ -93,8 +93,36 @@
 | **Phase 10** | DuckDB 分析后端（DuckDB Provider + 分析查询扩展 + 增量同步管道 + 集成测试） | #4 | ✅ **已完成** | 2026-11-18 14:05 |
 | **Phase 11** | 多 Agent 协作锁（CoordinationEngine + PG Advisory Lock + MCP 工具 + Pre-Hook 集成） | 新增 #10 | ✅ **已完成** | 2026-11-18 15:20 |
 | **Phase 12** | 运行依赖显式化与可移植部署（preflight 预检 + config 模板 + INSTALL.md + Dockerfile + SKILL 同步） | #10(ISSUE) | ✅ **已完成** | 2026-11-18 17:15 |
+| **Phase 13** | Web UI / 可视化监控大屏（内嵌 HTTP 引擎 + 宿主拓扑图谱 + 协作锁实时大屏 + 自包含单二进制） | #13 | ✅ **已完成** | 2026-11-18 18:15 |
 
-> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md) 与 [roadmap-phase12.md](roadmap-phase12.md)
+> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md) 与 [roadmap-phase13.md](roadmap-phase13.md)
+
+---
+
+## 阶段 13 子任务追踪清单 (Phase 13 Breakdown)
+
+| 阶段 | 子任务 ID | 任务内容 | 涉及路径 | 状态 | 检查点 |
+|------|-----------|----------|----------|:---:|:------|
+| **Phase 13** | 13.1 | 轻量异步 HTTP 引擎与 REST API 核心框架 | `src/web/`, `Cargo.toml` | ✅ 已完成 | `[x]` 路由与探活接口 |
+| | 13.2 | 宿主机事实拓扑与依赖爆炸半径图谱 API | `src/web/topology.rs` | ✅ 已完成 | `[x]` 图数据模型与聚合 |
+| | 13.3 | 协作锁实时监控看板与事件流 API | `src/web/locks_api.rs`, `src/web/sse.rs` | ✅ 已完成 | `[x]` 活跃锁与 SSE 推流 |
+| | 13.4 | 自包含单页面大屏与前端交互引擎 | `src/web/assets/` | ✅ 已完成 | `[x]` 深色大屏与无外部CDN |
+| | 13.5 | CLI 命令、Daemon 常驻集成与配置联动 | `src/main.rs`, `src/config/` | ✅ 已完成 | `[x]` web 子命令与防撞 |
+| | 13.6 | 工业级测试验证、官方手册与全量文档同步 | `tests/`, `manual/08-web-dashboard.md` | ✅ 已完成 | `[x]` 端到端单测与手册 |
+
+---
+
+## 阶段验收结论 (Phase 13: Web UI 与可视化监控大屏)
+
+🎉 **Phase 13（Web UI 与可视化监控大屏）已 100% 全量串行交付**：
+- 严格对齐 README.md ISSUE #13（Web UI / 可视化监控大屏：提供基于浏览器的轻量级大管家拓扑图与协作锁监控看板）；
+- **核心架构**: 基于 Tokio 原生异步 TCP 构建轻量高性能 HTTP/1.1 与 SSE 引擎，保持单二进制自包含交付，零外部 Node.js/Nginx/CDN 依赖；
+- **事实拓扑图谱**: 聚合 `/proc` 进程、监听端口、Systemd 守护服务、Crontab 定时任务与核心资产，输出符合标准图协议的 Nodes & Edges，支持定向查询爆炸半径多跳子图；
+- **协作锁监控看板**: 实时暴露 Phase 11 `CoordinationEngine` 活跃锁矩阵、租期 TTL 动态倒计时与排队态势，支持受控管理员强制解除超时孤儿锁；
+- **全链路推流**: 实现 `/api/v1/stream` (Server-Sent Events) 长连接推流，实现感知事件秒级推屏；
+- **CLI 与守护集成**: 新增 `agent-steward web [--host] [--port] [--auth-token]` 命令，并在 `steward daemon` 常驻后台中按需托管拉起；
+- **工业级全量测试**: 新增 4 项 Web 模块单元测试与 1 项端到端全生命周期集成测试（`tests/test_web_dashboard.rs`），全系统 145 项测试 **100% 全部通过**；
+- **官方使用手册**: 发布 `manual/08-web-dashboard.md` 并同步更新 `manual/03-cli-reference.md` 与根目录 `README.md`。
 
 ---
 

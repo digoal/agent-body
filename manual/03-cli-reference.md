@@ -325,3 +325,44 @@ agent-steward [OPTIONS] <COMMAND>
   ```bash
   agent-steward tui
   ```
+
+---
+
+### 2.13 `coordination` — 多 Agent 协作互斥锁管理
+- **说明**: 管理与查看跨 Agent 资源互斥锁，支持排他/共享模式、目录递归互斥与超时死锁强制解除。
+- **子命令**:
+  - `list`: 列出当前生效中的活跃协作锁 (`--resource-type <TYPE>`)
+  - `release --lock-id <ID>`: 手动释放指定资源锁
+  - `gc`: 回收所有已超期的过期死锁
+- **示例**:
+  ```bash
+  agent-steward coordination list
+  agent-steward coordination release --lock-id "lock-port-8080"
+  agent-steward coordination gc
+  ```
+
+---
+
+### 2.14 `preflight` — 运行环境与依赖完整性预检
+- **说明**: 逐项验证 procfs、inotify、data_dir、SQLite、DuckDB、Systemd、CodeGraph、Ollama 等运行环境与依赖完整性。
+- **参数**:
+  - `-j, --json`: 输出原始 JSON 格式以便 CI/CD 或 Agent 机器解析
+- **示例**:
+  ```bash
+  agent-steward preflight
+  ```
+
+---
+
+### 2.15 `web` — Web UI 与可视化监控大屏
+- **说明**: 启动基于浏览器的轻量级大管家拓扑图与协作锁监控看板。单二进制 100% 自包含交付，零外部 CDN 网络依赖。
+- **参数**:
+  - `--host <IP>`: 监听地址（默认 `127.0.0.1`，可设为 `0.0.0.0` 允许局域网访问）
+  - `-p, --port <PORT>`: 监听端口（默认 `8765`）
+  - `--auth-token <TOKEN>`: 管理员受控运维操作（如释放锁）鉴权 Token
+- **示例**:
+  ```bash
+  agent-steward web
+  agent-steward web --host 0.0.0.0 --port 9000
+  ```
+

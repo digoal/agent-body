@@ -27,6 +27,47 @@ pub struct Config {
 
     #[serde(default)]
     pub storage: StorageConfig,
+
+    #[serde(default)]
+    pub web: WebConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebConfig {
+    #[serde(default = "default_web_enabled")]
+    pub enabled: bool,
+
+    #[serde(default = "default_web_host")]
+    pub host: String,
+
+    #[serde(default = "default_web_port")]
+    pub port: u16,
+
+    #[serde(default)]
+    pub auth_token: Option<String>,
+}
+
+fn default_web_enabled() -> bool {
+    true
+}
+
+fn default_web_host() -> String {
+    "127.0.0.1".to_string()
+}
+
+fn default_web_port() -> u16 {
+    8765
+}
+
+impl Default for WebConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_web_enabled(),
+            host: default_web_host(),
+            port: default_web_port(),
+            auth_token: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -188,6 +229,7 @@ impl Default for Config {
             assets: AssetsConfig::default(),
             placement: PlacementConfig::default(),
             storage: StorageConfig::default(),
+            web: WebConfig::default(),
         }
     }
 }
@@ -233,6 +275,9 @@ impl Config {
     pub fn validate(&self) -> Result<()> {
         if self.api_port < 1024 {
             anyhow::bail!("api_port ({}) 不能小于 1024 (特权端口限制)", self.api_port);
+        }
+        if self.web.enabled && self.web.port < 1024 {
+            anyhow::bail!("web.port ({}) 不能小于 1024 (特权端口限制)", self.web.port);
         }
         if self.embedding.dimensions == 0 {
             anyhow::bail!("embedding.dimensions 不能为 0");

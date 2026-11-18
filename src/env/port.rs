@@ -214,8 +214,9 @@ mod tests {
         assert_eq!(res.status, "OCCUPIED");
         assert!(!res.recommended_free_ports.is_empty());
 
-        // 释放该端口
+        // 释放该端口并稍候给内核释放 socket 时间
         drop(listener);
+        std::thread::sleep(std::time::Duration::from_millis(20));
 
         // 再次探测，应该为 FREE
         let res_free = PortChecker::check_port(local_port, 3).expect("check_port free");

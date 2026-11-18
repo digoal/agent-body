@@ -119,3 +119,27 @@ default_owner = "user:digoal"
 # 可选值: "public" | "internal" | "confidential" | "secret"
 # 默认: "internal"
 default_security_level = "internal"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. Web UI 与可视化监控大屏配置 (Web Dashboard)
+# ─────────────────────────────────────────────────────────────────────────────
+[web]
+# 是否随 daemon 守护进程自动拉起 Web 监控大屏
+# 取值: true / false
+# 默认: true
+enabled = true
+
+# HTTP 服务监听地址
+# 取值: "127.0.0.1" (仅限本机，推荐安全默认值) 或 "0.0.0.0" (允许局域网/跨主机访问看板)
+# 默认: "127.0.0.1"
+host = "127.0.0.1"
+
+# HTTP 服务监听端口
+# 取值: 1024 ~ 65535
+# 默认: 8765
+port = 8765
+
+# 管理员受控运维操作鉴权 Token (可选)
+# 若留空，则 Web 看板为只读监控模式；配置后，POST /api/v1/locks/release 需携带该 Bearer Token
+# auth_token = "steward-admin-secret"
+
