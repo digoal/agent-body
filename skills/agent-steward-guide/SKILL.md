@@ -1,6 +1,6 @@
 ---
 name: agent-steward-guide
-description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制、Systemd 常驻服务、Docker 编排与 preflight 依赖预检）、以及熟悉日常使用（CLI 命令行实操、31 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、多 Agent 协作锁、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
+description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制、Systemd 常驻服务、Docker 编排与 preflight 依赖预检）、以及熟悉日常使用（CLI 命令行实操、35 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、多 Agent 协作锁、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
 ---
 
 # Agent Host Steward 全景向导与部署使用技能 (agent-steward-guide)
@@ -218,7 +218,7 @@ agent-steward close session-20261115-01 --clean-temp
 }
 ```
 
-#### 步骤 2: 31 个原生 MCP 工具全景矩阵
+#### 步骤 2: 35 个原生 MCP 工具全景矩阵
 
 | 分类 | 工具名称 | 核心功能说明 |
 |---|---|---|
@@ -232,6 +232,7 @@ agent-steward close session-20261115-01 --clean-temp
 | **客观事实图谱**| `steward_fact_query` | 宿主机事实图谱语义只读查询 (工具能力/端口/Systemd/Cron/资料) |
 | **生命周期门禁**| `steward_hook_pre` | Agent 操作前防撞门禁 (端口占用/文件覆盖/协作锁冲突校验) |
 | | `steward_hook_post` | Agent 操作后状态记录与变更同步 |
+| | `steward_hook_generate` | 自动生成 Antigravity / Cursor / Claude / Git 的 Hook 配置 |
 | **环境与防撞** | `steward_env_processes` | 抓取活跃非系统动态任务脚本进程（过滤底噪） |
 | | `steward_env_show` | 查看宿主机 CPU、内存、磁盘与系统规格 |
 | | `steward_env_gc` | 宿主垃圾回收：安全清理超期临时文件与孤儿进程 |
@@ -253,6 +254,9 @@ agent-steward close session-20261115-01 --clean-temp
 | | `steward_lock_list` | 查看当前全系统活跃协作锁看板 |
 | **会话与审计** | `steward_changes_since` | 回溯指定时间窗口内的资产创建/修改/删除审计流 |
 | | `steward_session_close` | 会话完工结算：归档工单、自洁 `/tmp` 垃圾 |
+| **生态防爆路由** | `steward_mcp_catalog` | 扫描与路由宿主机客户端已配置的 MCP Server 目录（脱敏） |
+| | `steward_skill_route` | 按任务意图与 Token 预算路由 Top-K SKILL（防止 Context 被打爆） |
+| | `steward_service_contact` | 管理外部可用服务通讯录与轻量健康探活（严禁存明文密钥） |
 
 ---
 

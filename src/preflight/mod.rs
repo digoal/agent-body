@@ -133,6 +133,7 @@ impl PreflightChecker {
         Self::check_duckdb(&mut report);
         Self::check_systemd(&mut report);
         Self::check_codegraph(&mut report);
+        Self::check_ecosystem_skills(&mut report);
 
         if let Some(cfg) = config {
             Self::check_ollama(&mut report, &cfg.embedding.ollama_url, &cfg.embedding.model, cfg.embedding.fallback_fts_only);
@@ -400,6 +401,38 @@ impl PreflightChecker {
                     remedy: Some("如需函数级代码联邦调用分析，请安装 codegraph (https://github.com/digoal)".to_string()),
                 });
             }
+        }
+    }
+
+    /// 检查宿主机 SKILL 目录可用性 (Phase 16 生态目录)
+    pub fn check_ecosystem_skills(report: &mut PreflightReport) {
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
+        let candidates = [
+            std::path::PathBuf::from("/root/new/skills"),
+            std::path::PathBuf::from(&home).join(".gemini/antigravity-cli/skills"),
+        ];
+        let existing: Vec<String> = candidates
+            .iter()
+            .filter(|p| p.is_dir())
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
+
+        if existing.is_empty() {
+            report.add(CheckItem {
+                name: "宿主机 SKILL 生态目录".to_string(),
+                category: CheckCategory::Optional,
+                status: CheckStatus::Warn,
+                message: "未发现默认 SKILL 目录，Context 按需路由器将保持空闲".to_string(),
+                remedy: Some("可将常用技能放入 /root/new/skills/ 并执行 agent-steward skill scan".to_string()),
+            });
+        } else {
+            report.add(CheckItem {
+                name: "宿主机 SKILL 生态目录".to_string(),
+                category: CheckCategory::Optional,
+                status: CheckStatus::Pass,
+                message: format!("已发现 {} 个 SKILL 根目录: {}", existing.len(), existing.join(", ")),
+                remedy: None,
+            });
         }
     }
 

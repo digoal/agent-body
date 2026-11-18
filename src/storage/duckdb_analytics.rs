@@ -78,11 +78,25 @@ impl DuckDbAnalyticsEngine {
     pub fn new(conn: Arc<Mutex<Connection>>) -> Self {
         Self { conn }
     }
+
+    /// 创建内存 DuckDB 实例并从主存储同步最新数据后返回分析引擎
+    pub fn from_synced_storage(source: Arc<dyn crate::storage::StorageProvider>) -> Result<Self> {
+        let duckdb_prov = crate::storage::DuckDbStorageProvider::open_in_memory()?;
+        let pipeline = crate::storage::SyncPipeline::new(source, Arc::new(duckdb_prov.clone()));
+        let _ = pipeline.sync_all()?;
+        Ok(Self::new(duckdb_prov.conn()))
+    }
+
+    fn lock_conn(&self) -> Result<std::sync::MutexGuard<'_, Connection>> {
+        self.conn
+            .lock()
+            .map_err(|e| anyhow::anyhow!("DuckDB 分析连接锁异常 (mutex poisoned): {}", e))
+    }
 }
 
 impl AnalyticsProvider for DuckDbAnalyticsEngine {
     fn changes_heatmap(&self, _days: usize) -> Result<Vec<HeatmapCell>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT 
                 CASE 
@@ -109,7 +123,7 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
     }
 
     fn asset_growth_trend(&self, _days: usize) -> Result<Vec<TrendPoint>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT 
                 coalesce(substr(created_at, 1, 10), 'unknown') as day,
@@ -136,7 +150,7 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
     }
 
     fn most_changed_assets(&self, _days: usize, limit: usize) -> Result<Vec<ChangeFrequency>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT target, count(*) as cnt, max(created_at) as last_changed
              FROM changes
@@ -159,7 +173,7 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
     }
 
     fn memory_decay_curve(&self) -> Result<Vec<DecayPoint>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT 
                 0 as age_days,
@@ -183,7 +197,7 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
     }
 
     fn fact_graph_stats(&self) -> Result<GraphStats> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut node_counts_by_type = HashMap::new();
         let mut edge_counts_by_relation = HashMap::new();
         let mut total_nodes = 0;
@@ -222,7 +236,7 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
     }
 
     fn export_to_parquet(&self, table: &str, output_path: &str) -> Result<ExportSummary> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let valid_tables = ["assets", "changes", "memories", "fact_nodes", "fact_edges", "links", "active_processes"];
         if !valid_tables.contains(&table) {
             anyhow::bail!("不支持导出表: {}, 仅允许: {:?}", table, valid_tables);

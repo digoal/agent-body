@@ -17,6 +17,7 @@ pub mod coordination;
 pub mod preflight;
 pub mod web;
 pub mod hooks;
+pub mod ecosystem;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const BUILD_TIMESTAMP: &str = env!("BUILD_TIMESTAMP");

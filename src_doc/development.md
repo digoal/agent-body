@@ -65,7 +65,7 @@ agent-steward/
     ├── lib.rs               # 核心库导出与版本元信息
     ├── config/              # 配置文件与环境变量管理、参数校验
     ├── preflight/           # 运行时环境与依赖完整性预检引擎
-    ├── storage/             # 存储层 SPI (35 方法) + SQLite/PG/DuckDB 三引擎 + 热迁移与增量同步
+    ├── storage/             # 存储层 SPI (49 方法) + SQLite/PG/DuckDB 三引擎 + 热迁移与增量同步
     ├── coordination/        # 多 Agent 协作锁中枢 (Port/Dir/File 互斥、TTL、Advisory Lock)
     ├── fact/                # 宿主机客观事实图谱 (工具能力/端口/Systemd/Cron/资料编目)
     ├── brief/               # 自适应情境组装引擎 (Dynamic Brief Assembler)
@@ -76,8 +76,12 @@ agent-steward/
     ├── links/               # 宏微双层依赖拓扑与 CodeGraph 联邦桥接
     ├── watcher/             # inotify 实时监听与防抖 ChangeHandler
     ├── daemon/              # 后台常驻守护进程与自主巡查调度器
+    ├── session/             # 会话生命周期自动绑定与安全归档
+    ├── hooks/               # HOOK 事件总线、自动同步、客户端生成与 Pipeline 编排
+    ├── web/                 # 内嵌 HTTP/SSE 监控大屏服务
     ├── tui/                 # 终端全景实时交互看板
-    └── api/                 # 31 个原生 MCP 工具端点与 Hook 门禁
+    ├── ecosystem/           # MCP/SKILL 生态目录、外部服务通讯录与 Context 防爆路由
+    └── api/                 # 35 个原生 MCP 工具端点与 Hook 门禁
 ```
 
 ---

@@ -17,7 +17,7 @@ sequenceDiagram
     Agent->>Steward: JSON-RPC "initialize"
     Steward-->>Agent: capabilities (tools: true), serverInfo
     Agent->>Steward: JSON-RPC "tools/list"
-    Steward-->>Agent: 返回 16 个原生工具列表与 JSON Schema
+    Steward-->>Agent: 返回 35 个原生工具列表与 JSON Schema
     Agent->>Steward: JSON-RPC "tools/call" (steward_brief)
     Steward->>SQLite: 聚合查询环境与记忆
     Steward-->>Agent: 返回结果内容文本

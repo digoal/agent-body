@@ -40,11 +40,17 @@ impl DuckDbStorageProvider {
     pub fn conn(&self) -> Arc<Mutex<Connection>> {
         self.conn.clone()
     }
+
+    fn lock_conn(&self) -> Result<std::sync::MutexGuard<'_, Connection>> {
+        self.conn
+            .lock()
+            .map_err(|e| anyhow::anyhow!("DuckDB 连接锁异常 (mutex poisoned): {}", e))
+    }
 }
 
 impl StorageProvider for DuckDbStorageProvider {
     fn init(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         conn.execute_batch(DUCKDB_SCHEMA_SQL)
             .context("执行 DuckDB Schema 批处理失败")?;
 
@@ -113,7 +119,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn get_placement_rules(&self) -> Result<Vec<PlacementRule>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, rule_name, pattern_type, target_base_dir, naming_pattern, description, guideline, priority 
              FROM placement_rules ORDER BY priority ASC"
@@ -136,7 +142,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn insert_placement_rule(&self, rule: &PlacementRule) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         conn.execute(
             "INSERT INTO placement_rules (id, rule_name, pattern_type, target_base_dir, naming_pattern, description, guideline, priority, created_at, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'), strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))
@@ -163,7 +169,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn get_scan_policies(&self) -> Result<Vec<ScanPolicy>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, path_pattern, tier, max_depth, enable_fts, enable_vec, enable_graph, notes 
              FROM scan_policies"
@@ -186,7 +192,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn upsert_asset(&self, asset: &AssetRecord) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let desc_kv_str = serde_json::to_string(&asset.desc_kv)?;
         let tags_str = serde_json::to_string(&asset.tags)?;
 
@@ -226,7 +232,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn get_asset_by_path(&self, path: &str) -> Result<Option<AssetRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, path, type, owner, security_level, scan_tier, description, desc_kv, usage, size_bytes, file_count, tags, status
              FROM assets WHERE path = ?1"
@@ -260,7 +266,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn search_assets_fts(&self, query: &str, limit: usize) -> Result<Vec<AssetRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let query_pattern = format!("%{}%", query);
         let mut stmt = conn.prepare(
             "SELECT id, path, type, owner, security_level, scan_tier, description, desc_kv, usage, size_bytes, file_count, tags, status
@@ -297,7 +303,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn list_assets(&self, limit: usize) -> Result<Vec<AssetRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, path, type, owner, security_level, scan_tier, description, desc_kv, usage, size_bytes, file_count, tags, status
              FROM assets
@@ -332,7 +338,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn replace_active_processes(&self, procs: &[ActiveProcessRecord]) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         conn.execute("DELETE FROM active_processes", [])?;
         for p in procs {
             let ports_str = serde_json::to_string(&p.listening_ports)?;
@@ -359,7 +365,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn list_active_processes(&self) -> Result<Vec<ActiveProcessRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, pid, name, command, owner, associated_path, listening_ports, status, cpu_pct, mem_bytes, gpu_allocated_mb, started_at, last_seen_at
              FROM active_processes ORDER BY pid ASC"
@@ -393,7 +399,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn insert_memory(&self, mem: &MemoryRecord) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let tags_str = serde_json::to_string(&mem.tags)?;
         let embedding_str = serde_json::to_string(&mem.embedding)?;
 
@@ -428,7 +434,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn search_memories_fts(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let query_pattern = format!("%{}%", query);
         let mut stmt = conn.prepare(
             "SELECT id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding
@@ -464,7 +470,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn list_all_active_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding
              FROM memories
@@ -499,7 +505,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn update_memory_status(&self, memory_id: &str, status: &str) -> Result<usize> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let rows = conn.execute(
             "UPDATE memories SET status = ?1, updated_at = strftime(now(), '%Y-%m-%dT%H:%M:%SZ') WHERE id = ?2",
             params![status, memory_id],
@@ -508,7 +514,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn record_change(&self, change: &ChangeRecord) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let details_str = serde_json::to_string(&change.details)?;
         conn.execute(
             "INSERT INTO changes (type, target, description, details, source, created_at)
@@ -525,7 +531,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn list_changes(&self, limit: usize) -> Result<Vec<ChangeRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, type, target, description, details, source, created_at
              FROM changes
@@ -552,7 +558,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn add_link(&self, link: &LinkRecord) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         conn.execute(
             "INSERT INTO links (source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, line_number, snippet, provenance, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))",
@@ -573,19 +579,19 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn delete_link(&self, id: i64) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         conn.execute("DELETE FROM links WHERE id = ?1", params![id])?;
         Ok(())
     }
 
     fn delete_links_for_target(&self, target_id: &str) -> Result<usize> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let count = conn.execute("DELETE FROM links WHERE target_id = ?1", params![target_id])?;
         Ok(count)
     }
 
     fn update_link_target(&self, source_id: &str, old_target: &str, new_target: &str) -> Result<usize> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let count = conn.execute(
             "UPDATE links SET target_id = ?1 WHERE source_id = ?2 AND target_id = ?3",
             params![new_target, source_id, old_target],
@@ -594,7 +600,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn query_links_for_node(&self, node_type: &str, node_id: &str) -> Result<Vec<LinkRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, line_number, snippet, provenance, created_at
              FROM links
@@ -623,7 +629,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn list_all_links(&self, limit: usize) -> Result<Vec<LinkRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, line_number, snippet, provenance, created_at
              FROM links
@@ -653,7 +659,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn create_scan_job(&self, job: &ScanJobRecord) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         conn.execute(
             "INSERT INTO scan_jobs (id, root_path, status, last_path, scanned_dirs, scanned_files, total_assets, shallow_blocked, error_message, started_at, paused_at, completed_at, created_at, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
@@ -678,7 +684,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn update_scan_job(&self, job: &ScanJobRecord) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         conn.execute(
             "UPDATE scan_jobs SET
                 status = ?1,
@@ -711,7 +717,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn get_scan_job(&self, id: &str) -> Result<Option<ScanJobRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, root_path, status, last_path, scanned_dirs, scanned_files, total_assets, shallow_blocked, error_message, started_at, paused_at, completed_at, created_at, updated_at
              FROM scan_jobs WHERE id = ?1"
@@ -741,7 +747,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn list_scan_jobs(&self, limit: usize) -> Result<Vec<ScanJobRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, root_path, status, last_path, scanned_dirs, scanned_files, total_assets, shallow_blocked, error_message, started_at, paused_at, completed_at, created_at, updated_at
              FROM scan_jobs ORDER BY created_at DESC LIMIT ?1"
@@ -770,7 +776,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn get_active_scan_job(&self) -> Result<Option<ScanJobRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, root_path, status, last_path, scanned_dirs, scanned_files, total_assets, shallow_blocked, error_message, started_at, paused_at, completed_at, created_at, updated_at
              FROM scan_jobs WHERE status IN ('running', 'paused') ORDER BY created_at DESC LIMIT 1"
@@ -800,7 +806,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn upsert_fact_node(&self, node: &FactNodeRecord) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let props_str = serde_json::to_string(&node.properties)?;
 
         conn.execute(
@@ -824,7 +830,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn upsert_fact_edge(&self, edge: &FactEdgeRecord) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let props_str = serde_json::to_string(&edge.properties)?;
 
         conn.execute(
@@ -842,7 +848,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn get_fact_node(&self, id: &str) -> Result<Option<FactNodeRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, node_type, name, label, properties, updated_at
              FROM fact_nodes WHERE id = ?1"
@@ -867,7 +873,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn find_fact_nodes_by_name(&self, name: &str) -> Result<Vec<FactNodeRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let name_pattern = format!("%{}%", name);
         let mut stmt = conn.prepare(
             "SELECT id, node_type, name, label, properties, updated_at
@@ -897,7 +903,7 @@ impl StorageProvider for DuckDbStorageProvider {
             None => return Ok(SubGraph::default()),
         };
 
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut visited_node_ids = std::collections::HashSet::new();
         visited_node_ids.insert(root_id.to_string());
 
@@ -981,7 +987,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn list_all_fact_nodes(&self, limit: usize) -> Result<Vec<FactNodeRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, node_type, name, label, properties, updated_at
              FROM fact_nodes
@@ -1007,7 +1013,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn list_all_fact_edges(&self, limit: usize) -> Result<Vec<FactEdgeRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT id, source_id, target_id, relation, properties, confidence, updated_at
              FROM fact_edges
@@ -1036,7 +1042,7 @@ impl StorageProvider for DuckDbStorageProvider {
 
     // ─── Multi-Agent Coordination Locks (多 Agent 协作锁) ────────────
     fn insert_coordination_lock(&self, lock: &CoordinationLock) -> Result<bool> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
 
         // 1. 清理该资源已过期的锁
         conn.execute(
@@ -1095,13 +1101,13 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn delete_coordination_lock(&self, lock_id: &str) -> Result<bool> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let affected = conn.execute("DELETE FROM coordination_locks WHERE lock_id = ?1", params![lock_id])?;
         Ok(affected > 0)
     }
 
     fn get_coordination_lock(&self, resource_type: &str, resource_id: &str) -> Result<Option<CoordinationLock>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
              FROM coordination_locks
@@ -1130,7 +1136,7 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn list_coordination_locks(&self, resource_type: Option<&str>) -> Result<Vec<CoordinationLock>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let sql = match resource_type {
             Some(_) => "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
                         FROM coordination_locks
@@ -1168,12 +1174,203 @@ impl StorageProvider for DuckDbStorageProvider {
     }
 
     fn gc_expired_coordination_locks(&self) -> Result<usize> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock_conn()?;
         let count = conn.execute(
             "DELETE FROM coordination_locks WHERE expires_at <= strftime(now(), '%Y-%m-%dT%H:%M:%SZ')",
             [],
         )?;
         Ok(count)
+    }
+
+    fn upsert_mcp_catalog(&self, rec: &McpCatalogRecord) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let tools_str = serde_json::to_string(&rec.tools_json)?;
+        conn.execute(
+            "INSERT OR REPLACE INTO mcp_catalog (id, server_name, client_source, transport, command_or_url, tools_json, tool_count, est_total_tokens, status, last_scanned_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))",
+            params![
+                rec.id, rec.server_name, rec.client_source, rec.transport,
+                rec.command_or_url, tools_str, rec.tool_count as i32,
+                rec.est_total_tokens as i32, rec.status
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_mcp_catalog(&self) -> Result<Vec<McpCatalogRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, server_name, client_source, transport, command_or_url, tools_json, tool_count, est_total_tokens, status, last_scanned_at
+             FROM mcp_catalog ORDER BY server_name ASC"
+        )?;
+        let rows = stmt.query_map([], Self::map_mcp_row)?;
+        let mut res = Vec::new();
+        for r in rows { res.push(r?); }
+        Ok(res)
+    }
+
+    fn search_mcp_catalog(&self, query: &str, limit: usize) -> Result<Vec<McpCatalogRecord>> {
+        let conn = self.lock_conn()?;
+        let kw = format!("%{}%", query.to_lowercase());
+        let mut stmt = conn.prepare(
+            "SELECT id, server_name, client_source, transport, command_or_url, tools_json, tool_count, est_total_tokens, status, last_scanned_at
+             FROM mcp_catalog
+             WHERE lower(server_name) LIKE ?1 OR lower(tools_json) LIKE ?1
+             ORDER BY tool_count DESC LIMIT ?2"
+        )?;
+        let rows = stmt.query_map(params![kw, limit as i64], Self::map_mcp_row)?;
+        let mut res = Vec::new();
+        for r in rows { res.push(r?); }
+        Ok(res)
+    }
+
+    fn upsert_skill_catalog(&self, rec: &SkillCatalogRecord) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let triggers_str = serde_json::to_string(&rec.triggers)?;
+        conn.execute(
+            "INSERT OR REPLACE INTO skills_catalog (id, skill_name, root_source, skill_path, description, triggers_json, est_tokens, has_scripts, has_references, status, last_scanned_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))",
+            params![
+                rec.id, rec.skill_name, rec.root_source, rec.skill_path,
+                rec.description, triggers_str, rec.est_tokens as i32,
+                rec.has_scripts, rec.has_references, rec.status
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_skills_catalog(&self) -> Result<Vec<SkillCatalogRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, skill_name, root_source, skill_path, description, triggers_json, est_tokens, has_scripts, has_references, status, last_scanned_at
+             FROM skills_catalog ORDER BY skill_name ASC"
+        )?;
+        let rows = stmt.query_map([], Self::map_skill_row)?;
+        let mut res = Vec::new();
+        for r in rows { res.push(r?); }
+        Ok(res)
+    }
+
+    fn search_skills_catalog(&self, query: &str, limit: usize) -> Result<Vec<SkillCatalogRecord>> {
+        let conn = self.lock_conn()?;
+        let kw = format!("%{}%", query.to_lowercase());
+        let mut stmt = conn.prepare(
+            "SELECT id, skill_name, root_source, skill_path, description, triggers_json, est_tokens, has_scripts, has_references, status, last_scanned_at
+             FROM skills_catalog
+             WHERE lower(skill_name) LIKE ?1 OR lower(description) LIKE ?1 OR lower(triggers_json) LIKE ?1
+             ORDER BY skill_name ASC LIMIT ?2"
+        )?;
+        let rows = stmt.query_map(params![kw, limit as i64], Self::map_skill_row)?;
+        let mut res = Vec::new();
+        for r in rows { res.push(r?); }
+        Ok(res)
+    }
+
+    fn upsert_external_service(&self, rec: &ExternalServiceRecord) -> Result<()> {
+        let conn = self.lock_conn()?;
+        conn.execute(
+            "INSERT OR REPLACE INTO external_services (id, service_name, category, endpoint, protocol, capabilities, auth_type, auth_env_var, health_endpoint, usage_example, status, last_checked_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, COALESCE(?12, strftime(now(), '%Y-%m-%dT%H:%M:%SZ')))",
+            params![
+                rec.id, rec.service_name, rec.category, rec.endpoint, rec.protocol,
+                rec.capabilities, rec.auth_type, rec.auth_env_var, rec.health_endpoint,
+                rec.usage_example, rec.status, rec.last_checked_at
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_external_services(&self, category: Option<&str>) -> Result<Vec<ExternalServiceRecord>> {
+        let conn = self.lock_conn()?;
+        let mut res = Vec::new();
+        match category {
+            Some(cat) => {
+                let mut stmt = conn.prepare(
+                    "SELECT id, service_name, category, endpoint, protocol, capabilities, auth_type, auth_env_var, health_endpoint, usage_example, status, last_checked_at
+                     FROM external_services WHERE category = ?1 ORDER BY service_name ASC"
+                )?;
+                let rows = stmt.query_map(params![cat], Self::map_ext_svc_row)?;
+                for r in rows { res.push(r?); }
+            }
+            None => {
+                let mut stmt = conn.prepare(
+                    "SELECT id, service_name, category, endpoint, protocol, capabilities, auth_type, auth_env_var, health_endpoint, usage_example, status, last_checked_at
+                     FROM external_services ORDER BY service_name ASC"
+                )?;
+                let rows = stmt.query_map([], Self::map_ext_svc_row)?;
+                for r in rows { res.push(r?); }
+            }
+        }
+        Ok(res)
+    }
+
+    fn search_external_services(&self, query: &str, limit: usize) -> Result<Vec<ExternalServiceRecord>> {
+        let conn = self.lock_conn()?;
+        let kw = format!("%{}%", query.to_lowercase());
+        let mut stmt = conn.prepare(
+            "SELECT id, service_name, category, endpoint, protocol, capabilities, auth_type, auth_env_var, health_endpoint, usage_example, status, last_checked_at
+             FROM external_services
+             WHERE lower(service_name) LIKE ?1 OR lower(category) LIKE ?1 OR lower(capabilities) LIKE ?1
+             ORDER BY service_name ASC LIMIT ?2"
+        )?;
+        let rows = stmt.query_map(params![kw, limit as i64], Self::map_ext_svc_row)?;
+        let mut res = Vec::new();
+        for r in rows { res.push(r?); }
+        Ok(res)
+    }
+}
+
+impl DuckDbStorageProvider {
+    fn map_mcp_row(row: &duckdb::Row) -> duckdb::Result<McpCatalogRecord> {
+        let tools_str: String = row.get(5)?;
+        let tools_json = serde_json::from_str(&tools_str).unwrap_or_else(|_| serde_json::json!([]));
+        Ok(McpCatalogRecord {
+            id: row.get(0)?,
+            server_name: row.get(1)?,
+            client_source: row.get(2)?,
+            transport: row.get(3)?,
+            command_or_url: row.get(4)?,
+            tools_json,
+            tool_count: row.get::<_, i32>(6)? as usize,
+            est_total_tokens: row.get::<_, i32>(7)? as usize,
+            status: row.get(8)?,
+            last_scanned_at: row.get(9)?,
+        })
+    }
+
+    fn map_skill_row(row: &duckdb::Row) -> duckdb::Result<SkillCatalogRecord> {
+        let triggers_str: String = row.get(5)?;
+        let triggers: Vec<String> = serde_json::from_str(&triggers_str).unwrap_or_default();
+        Ok(SkillCatalogRecord {
+            id: row.get(0)?,
+            skill_name: row.get(1)?,
+            root_source: row.get(2)?,
+            skill_path: row.get(3)?,
+            description: row.get(4)?,
+            triggers,
+            est_tokens: row.get::<_, i32>(6)? as usize,
+            has_scripts: row.get(7)?,
+            has_references: row.get(8)?,
+            status: row.get(9)?,
+            last_scanned_at: row.get(10)?,
+        })
+    }
+
+    fn map_ext_svc_row(row: &duckdb::Row) -> duckdb::Result<ExternalServiceRecord> {
+        Ok(ExternalServiceRecord {
+            id: row.get(0)?,
+            service_name: row.get(1)?,
+            category: row.get(2)?,
+            endpoint: row.get(3)?,
+            protocol: row.get(4)?,
+            capabilities: row.get(5)?,
+            auth_type: row.get(6)?,
+            auth_env_var: row.get(7)?,
+            health_endpoint: row.get(8)?,
+            usage_example: row.get(9)?,
+            status: row.get(10)?,
+            last_checked_at: row.get(11)?,
+        })
     }
 }
 

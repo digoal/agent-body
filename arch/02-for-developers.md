@@ -52,9 +52,19 @@ graph TD
 | `src/memory/` | 跨会话长期记忆与三方适配 | `MemoryManager`, `BuiltinLocalProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
 | `src/links/` | 依赖关系网与爆炸半径推演 | `LinksEngine`, `CodeGraphBridge`, `LinkRepairer` |
 | `src/scanner/` | 资产扫描与断点续扫状态机 | `Scanner`, `ScanStateMachine`, `ImportanceScorer` |
-| `src/api/` | 31 个原生 MCP 工具服务端 | `McpServer`, `AgentHookEngine`, `StewardResponse` |
+| `src/api/` | 35 个原生 MCP 工具服务端 | `McpServer`, `AgentHookEngine`, `StewardResponse` |
+| `src/ecosystem/` | MCP/SKILL 目录、外部服务通讯录与 Context 防爆路由 | `McpConfigScanner`, `SkillCatalogScanner`, `ExternalContactsManager`, `ContextBudgetRouter` |
+| `src/hooks/` | HOOK 事件总线与自动同步/生成/Pipeline | `EventBus`, `HookDispatcher`, `AutoSyncEngine`, `ClientHookGenerator`, `HookPipelineEngine` |
+| `src/session/` | 会话生命周期自动绑定与安全归档 | `SessionManager`, `SessionLifecycleManager` |
 | `src/web/` | 内嵌轻量 HTTP 引擎与大屏 | `WebServer`, `HttpRequest`, `TopologyGraph`, `LockViewItem` |
 | `src/preflight/` | 运行时依赖预检与降级保护 | `PreflightChecker`, `PreflightReport`, `CheckItem` |
+| `src/brief/` | 自适应情境上下文组装器 | `BriefAssembler`, `BriefQuality` |
+| `src/changes/` | 宿主变更历史与开工回溯摘要 | `ChangesEngine` |
+| `src/daemon/` | 常驻守护进程与后台巡检调度 | `StewardDaemon`, `BackgroundScheduler` |
+| `src/env/` | 内核 `/proc` 进程采集、端口防撞与安全 GC | `EnvCollector`, `PortChecker`, `HostGarbageCollector` |
+| `src/tui/` | 交互式终端全景实时看板 | `TuiDashboard` |
+| `src/watcher/` | `inotify` 文件监听与 300ms 防抖流水线 | `FileWatcher`, `ChangeHandler` |
+| `src/config/` | TOML 配置文件引导与参数校验 | `Config`, `WebConfig`, `StorageConfig` |
 
 ---
 
@@ -77,7 +87,7 @@ export PATH="/root/.cargo/bin:$PATH"
 # 1. 快速语法与类型检查 (耗时约 2~4 秒)
 cargo check
 
-# 2. 运行全量 145 项自动化测试套件
+# 2. 运行全量 161 项自动化测试套件
 cargo test
 
 # 3. 运行特定模块的单元测试 (如测试 web 模块)
@@ -100,7 +110,7 @@ cargo build --release
 
 ### How-To 1: 如何添加一个新的原生 MCP 工具？
 
-系统原生注册了 31 个 MCP 工具。若需新增一个例如 `steward_system_clean` 工具：
+系统原生注册了 35 个 MCP 工具。若需新增一个例如 `steward_system_clean` 工具：
 
 1. **在 `src/api/mcp_tools.rs` 中声明工具元数据**：
    ```rust
@@ -147,7 +157,7 @@ sequenceDiagram
 
     Dev->>Impl: 创建 MyStorageProvider 结构体
     Dev->>Impl: 实现 impl StorageProvider for MyStorageProvider
-    Note over Impl: 实现 35 个接口方法 (init, upsert_asset, locks...)
+    Note over Impl: 实现 49 个接口方法 (init, upsert_asset, locks, ecosystem...)
     Dev->>Facade: 在 Storage::from_config 中注册分支匹配
     Dev->>Dev: 编写单元测试验证 CRUD 与 FTS 行为
 ```
@@ -162,7 +172,7 @@ pub struct MyCustomProvider { /* 连接句柄 */ }
 impl StorageProvider for MyCustomProvider {
     fn init(&self) -> Result<()> { /* 创建 schema */ Ok(()) }
     fn provider_name(&self) -> &'static str { "custom" }
-    // 实现其余 33+ 个接口...
+    // 实现其余 38+ 个接口...
 }
 ```
 

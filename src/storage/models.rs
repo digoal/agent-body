@@ -159,3 +159,50 @@ pub struct CoordinationLock {
     pub expires_at: String,    // ISO8601
     pub metadata: Option<serde_json::Value>,
 }
+
+// ─── Phase 16: 生态认知目录与外部服务通讯录 ──────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct McpCatalogRecord {
+    pub id: String,
+    pub server_name: String,
+    pub client_source: String,
+    pub transport: String,
+    pub command_or_url: String,
+    pub tools_json: serde_json::Value,
+    pub tool_count: usize,
+    pub est_total_tokens: usize,
+    pub status: String,
+    pub last_scanned_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillCatalogRecord {
+    pub id: String,
+    pub skill_name: String,
+    pub root_source: String,
+    pub skill_path: String,
+    pub description: String,
+    pub triggers: Vec<String>,
+    pub est_tokens: usize,
+    pub has_scripts: bool,
+    pub has_references: bool,
+    pub status: String,
+    pub last_scanned_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExternalServiceRecord {
+    pub id: String,
+    pub service_name: String,
+    pub category: String,
+    pub endpoint: String,
+    pub protocol: String,
+    pub capabilities: String,
+    pub auth_type: String,
+    pub auth_env_var: Option<String>,
+    pub health_endpoint: Option<String>,
+    pub usage_example: Option<String>,
+    pub status: String,
+    pub last_checked_at: Option<String>,
+}

@@ -6,13 +6,17 @@ SHELL := /bin/bash
 TARGET := target/release/agent-steward
 INSTALL_PATH ?= /usr/local/bin/agent-steward
 
-.PHONY: all build check test preflight install restart clean docker-build
+.PHONY: all build check test preflight install restart clean docker-build lint-panic
 
 all: build
 
 # 语法与警告零容忍检查
 check:
 	export PATH="$$HOME/.cargo/bin:$$PATH" && cargo check --tests
+
+# 生产代码零 Panic 门禁检查（禁止在 #[cfg(test)] 前出现 .unwrap( / .expect(）
+lint-panic:
+	@python3 -c 'import glob, re, sys; hits=[(p,i,l.strip()) for p in sorted(glob.glob("src/**/*.rs", recursive=True)) for i,l in enumerate(open(p).read().split("#[cfg(test)]")[0].splitlines(),1) if re.search(r"\.(unwrap|expect)\(", l)]; print("\n".join(f"{p}:{i}: {l}" for p,i,l in hits) if hits else "✅ 生产代码零 unwrap/expect 检查通过"); sys.exit(1 if hits else 0)'
 
 # 编译优化发布版二进制
 build:

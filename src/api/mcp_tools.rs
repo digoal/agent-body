@@ -527,6 +527,51 @@ impl McpToolRegistry {
                         }
                     }
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_mcp_catalog",
+                "description": "管理与路由宿主机客户端（Hermes/AGY/Claude/Cursor）已配置的 MCP Server 目录，支持扫描脱敏入库、列清单与按意图检索，防止上下文膨胀。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["scan", "list", "route"], "default": "route" },
+                        "query": { "type": "string", "description": "意图或关键词" },
+                        "limit": { "type": "integer", "default": 5 }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_skill_route",
+                "description": "按任务意图与 Token 预算对宿主机百级 SKILL 目录进行渐进式按需路由，只返回最匹配的 Top-K SKILL 路径与摘要，避免全量注入打爆 Context。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["scan", "list", "route"], "default": "route" },
+                        "intent": { "type": "string", "description": "任务意图或关键词" },
+                        "budget_tokens": { "type": "integer", "default": 600 },
+                        "max_skills": { "type": "integer", "default": 3 }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_service_contact",
+                "description": "管理宿主机外部可用服务通讯录（Endpoint、能力标签、鉴权环境变量名引用、调用示例与轻量探活），绝不存储明文密钥。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["register", "list", "query", "check", "bootstrap"], "default": "list" },
+                        "service_name": { "type": "string" },
+                        "category": { "type": "string" },
+                        "endpoint": { "type": "string" },
+                        "protocol": { "type": "string", "default": "https" },
+                        "capabilities": { "type": "string" },
+                        "auth_type": { "type": "string", "default": "none" },
+                        "auth_env_var": { "type": "string" },
+                        "health_endpoint": { "type": "string" },
+                        "usage_example": { "type": "string" },
+                        "query": { "type": "string" }
+                    }
+                }
             })
         ]
     }
@@ -795,7 +840,8 @@ impl McpToolRegistry {
                 let sm = crate::session::SessionManager::new(arc_storage);
                 let session_id = args.get("session_id").and_then(|v| v.as_str()).unwrap_or("default");
                 let clean_temp = args.get("clean_temp").and_then(|v| v.as_bool()).unwrap_or(true);
-                let res = sm.close_session(session_id, clean_temp)?;
+                let dry_run = args.get("dry_run").and_then(|v| v.as_bool()).unwrap_or(false);
+                let res = sm.close_session_with_dry_run(session_id, clean_temp, dry_run)?;
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
@@ -880,10 +926,7 @@ impl McpToolRegistry {
             "steward_analytics_heatmap" => {
                 use crate::storage::AnalyticsProvider;
                 let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(30) as usize;
-                let duckdb_prov = crate::storage::DuckDbStorageProvider::open_in_memory()?;
-                let pipeline = crate::storage::SyncPipeline::new(self.storage.provider().clone(), Arc::new(duckdb_prov.clone()));
-                let _ = pipeline.sync_all();
-                let engine = crate::storage::DuckDbAnalyticsEngine::new(duckdb_prov.conn());
+                let engine = crate::storage::DuckDbAnalyticsEngine::from_synced_storage(self.storage.provider().clone())?;
                 let heatmap = engine.changes_heatmap(days)?;
                 Ok(serde_json::to_string_pretty(&serde_json::json!({
                     "time_span_days": days,
@@ -894,10 +937,7 @@ impl McpToolRegistry {
             "steward_analytics_trend" => {
                 use crate::storage::AnalyticsProvider;
                 let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(30) as usize;
-                let duckdb_prov = crate::storage::DuckDbStorageProvider::open_in_memory()?;
-                let pipeline = crate::storage::SyncPipeline::new(self.storage.provider().clone(), Arc::new(duckdb_prov.clone()));
-                let _ = pipeline.sync_all();
-                let engine = crate::storage::DuckDbAnalyticsEngine::new(duckdb_prov.conn());
+                let engine = crate::storage::DuckDbAnalyticsEngine::from_synced_storage(self.storage.provider().clone())?;
                 let trend = engine.asset_growth_trend(days)?;
                 let decay = engine.memory_decay_curve()?;
                 let stats = engine.fact_graph_stats()?;
@@ -913,10 +953,7 @@ impl McpToolRegistry {
                 use crate::storage::AnalyticsProvider;
                 let table = args.get("table").and_then(|v| v.as_str()).unwrap_or("assets");
                 let output_path = args.get("output_path").and_then(|v| v.as_str()).unwrap_or("/root/new/tmp/export.parquet");
-                let duckdb_prov = crate::storage::DuckDbStorageProvider::open_in_memory()?;
-                let pipeline = crate::storage::SyncPipeline::new(self.storage.provider().clone(), Arc::new(duckdb_prov.clone()));
-                let _ = pipeline.sync_all();
-                let engine = crate::storage::DuckDbAnalyticsEngine::new(duckdb_prov.conn());
+                let engine = crate::storage::DuckDbAnalyticsEngine::from_synced_storage(self.storage.provider().clone())?;
                 let summary = engine.export_to_parquet(table, output_path)?;
                 Ok(serde_json::to_string_pretty(&summary)?)
             }
@@ -963,6 +1000,120 @@ impl McpToolRegistry {
                 let engine = CoordinationEngine::new(self.storage.provider().clone());
                 let list = engine.list_active_locks(rt_opt.as_ref())?;
                 Ok(serde_json::to_string_pretty(&list)?)
+            }
+
+            "steward_mcp_catalog" => {
+                use crate::ecosystem::McpConfigScanner;
+                let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("route");
+                let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
+                let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(5) as usize;
+                let scanner = McpConfigScanner::new(self.storage.clone());
+                match action {
+                    "scan" => {
+                        let (cnt, sanitized) = scanner.scan_default_clients()?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "mcp_servers_discovered": cnt,
+                            "sanitized_env_keys_count": sanitized
+                        }))?)
+                    }
+                    "list" => {
+                        let list = self.storage.list_mcp_catalog()?;
+                        Ok(serde_json::to_string_pretty(&list)?)
+                    }
+                    _ => {
+                        let list = if query.trim().is_empty() {
+                            self.storage.list_mcp_catalog()?.into_iter().take(limit).collect()
+                        } else {
+                            self.storage.search_mcp_catalog(query, limit)?
+                        };
+                        Ok(serde_json::to_string_pretty(&list)?)
+                    }
+                }
+            }
+
+            "steward_skill_route" => {
+                use crate::ecosystem::{ContextBudgetRouter, ContextRouteRequest, SkillCatalogScanner};
+                let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("route");
+                let intent = args.get("intent").and_then(|v| v.as_str()).unwrap_or("");
+                let budget_tokens = args.get("budget_tokens").and_then(|v| v.as_u64()).unwrap_or(600) as usize;
+                let max_skills = args.get("max_skills").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
+                match action {
+                    "scan" => {
+                        let scanner = SkillCatalogScanner::new(self.storage.clone());
+                        let (cnt, tokens) = scanner.scan_default_roots()?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "skills_discovered": cnt,
+                            "total_full_tokens_estimated": tokens
+                        }))?)
+                    }
+                    "list" => {
+                        let list = self.storage.list_skills_catalog()?;
+                        Ok(serde_json::to_string_pretty(&list)?)
+                    }
+                    _ => {
+                        let router = ContextBudgetRouter::new(self.storage.clone());
+                        let plan = router.route(&ContextRouteRequest {
+                            intent: intent.to_string(),
+                            budget_tokens,
+                            max_skills,
+                            max_mcps: 4,
+                            max_services: 3,
+                        })?;
+                        Ok(serde_json::to_string_pretty(&plan)?)
+                    }
+                }
+            }
+
+            "steward_service_contact" => {
+                use crate::ecosystem::ExternalContactsManager;
+                use crate::storage::models::ExternalServiceRecord;
+                let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("list");
+                let mgr = ExternalContactsManager::new(self.storage.clone());
+                match action {
+                    "register" => {
+                        let service_name = args.get("service_name").and_then(|v| v.as_str()).unwrap_or("unnamed-service");
+                        let rec = ExternalServiceRecord {
+                            id: format!("svc:{}", service_name),
+                            service_name: service_name.to_string(),
+                            category: args.get("category").and_then(|v| v.as_str()).unwrap_or("api").to_string(),
+                            endpoint: args.get("endpoint").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                            protocol: args.get("protocol").and_then(|v| v.as_str()).unwrap_or("https").to_string(),
+                            capabilities: args.get("capabilities").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                            auth_type: args.get("auth_type").and_then(|v| v.as_str()).unwrap_or("none").to_string(),
+                            auth_env_var: args.get("auth_env_var").and_then(|v| v.as_str()).map(String::from),
+                            health_endpoint: args.get("health_endpoint").and_then(|v| v.as_str()).map(String::from),
+                            usage_example: args.get("usage_example").and_then(|v| v.as_str()).map(String::from),
+                            status: "unknown".to_string(),
+                            last_checked_at: None,
+                        };
+                        mgr.register_service(&rec)?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "registered": true,
+                            "service_name": rec.service_name,
+                            "auth_env_ready": ExternalContactsManager::is_auth_env_ready(rec.auth_env_var.as_deref())
+                        }))?)
+                    }
+                    "check" => {
+                        let name_arg = args.get("service_name").and_then(|v| v.as_str()).unwrap_or("");
+                        let rep = mgr.check_health(name_arg)?;
+                        Ok(serde_json::to_string_pretty(&rep)?)
+                    }
+                    "query" => {
+                        let q = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
+                        let list = self.storage.search_external_services(q, 10)?;
+                        Ok(serde_json::to_string_pretty(&list)?)
+                    }
+                    "bootstrap" => {
+                        let cfg = crate::config::Config::load_or_default(None).unwrap_or_default();
+                        let count = mgr.bootstrap_from_config(&cfg)?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({ "bootstrapped": count }))?)
+                    }
+                    _ => {
+                        let cat = args.get("category").and_then(|v| v.as_str());
+                        let list = self.storage.list_external_services(cat)?;
+                        Ok(serde_json::to_string_pretty(&list)?)
+                    }
+                }
             }
 
             _ => bail!("Unknown tool: {}", name),

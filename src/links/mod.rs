@@ -54,11 +54,12 @@ impl LinksEngine {
         let mut count = 0;
 
         // 编译常用提取正则
-        let path_re = Regex::new(r#"(/root/new/[a-zA-Z0-9_\-\./]+)"#).unwrap();
-        let py_import_re = Regex::new(r#"^(?:from\s+([a-zA-Z0-9_\.]+)\s+import|import\s+([a-zA-Z0-9_\.]+))"#).unwrap();
-        let sh_source_re = Regex::new(r#"^(?:source|\.)\s+["']?([^"'\s]+)"#).unwrap();
-        let sh_exec_re = Regex::new(r#"^(?:bash|sh|python3|python)\s+["']?([^"'\s]+)"#).unwrap();
-        let js_import_re = Regex::new(r#"(?:require\(|from\s+)["']([^"']+)["']"#).unwrap();
+        use anyhow::Context;
+        let path_re = Regex::new(r#"(/root/new/[a-zA-Z0-9_\-\./]+)"#).context("编译 path_re 失败")?;
+        let py_import_re = Regex::new(r#"^(?:from\s+([a-zA-Z0-9_\.]+)\s+import|import\s+([a-zA-Z0-9_\.]+))"#).context("编译 py_import_re 失败")?;
+        let sh_source_re = Regex::new(r#"^(?:source|\.)\s+["']?([^"'\s]+)"#).context("编译 sh_source_re 失败")?;
+        let sh_exec_re = Regex::new(r#"^(?:bash|sh|python3|python)\s+["']?([^"'\s]+)"#).context("编译 sh_exec_re 失败")?;
+        let js_import_re = Regex::new(r#"(?:require\(|from\s+)["']([^"']+)["']"#).context("编译 js_import_re 失败")?;
 
         for (line_idx, line) in content.lines().enumerate() {
             let line_num = (line_idx + 1) as i32;

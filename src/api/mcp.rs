@@ -224,7 +224,10 @@ mod tests {
 
         assert_eq!(v["id"], "req-2");
         let tools = v["result"]["tools"].as_array().expect("tools array");
-        assert_eq!(tools.len(), 32, "必须注册全部 32 个原生 MCP 工具");
+        assert_eq!(tools.len(), 35, "必须注册全部 35 个原生 MCP 工具");
+        assert!(tools.iter().any(|t| t["name"] == "steward_mcp_catalog"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_skill_route"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_service_contact"));
         assert!(tools.iter().any(|t| t["name"] == "steward_brief"));
         assert!(tools.iter().any(|t| t["name"] == "steward_placement_suggest"));
         assert!(tools.iter().any(|t| t["name"] == "steward_asset_search"));

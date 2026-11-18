@@ -65,4 +65,15 @@ pub trait StorageProvider: Send + Sync {
     fn get_coordination_lock(&self, resource_type: &str, resource_id: &str) -> Result<Option<CoordinationLock>>;
     fn list_coordination_locks(&self, resource_type: Option<&str>) -> Result<Vec<CoordinationLock>>;
     fn gc_expired_coordination_locks(&self) -> Result<usize>;
+
+    // ─── Ecosystem Catalogs & External Service Contacts (Phase 16) ────
+    fn upsert_mcp_catalog(&self, rec: &McpCatalogRecord) -> Result<()>;
+    fn list_mcp_catalog(&self) -> Result<Vec<McpCatalogRecord>>;
+    fn search_mcp_catalog(&self, query: &str, limit: usize) -> Result<Vec<McpCatalogRecord>>;
+    fn upsert_skill_catalog(&self, rec: &SkillCatalogRecord) -> Result<()>;
+    fn list_skills_catalog(&self) -> Result<Vec<SkillCatalogRecord>>;
+    fn search_skills_catalog(&self, query: &str, limit: usize) -> Result<Vec<SkillCatalogRecord>>;
+    fn upsert_external_service(&self, rec: &ExternalServiceRecord) -> Result<()>;
+    fn list_external_services(&self, category: Option<&str>) -> Result<Vec<ExternalServiceRecord>>;
+    fn search_external_services(&self, query: &str, limit: usize) -> Result<Vec<ExternalServiceRecord>>;
 }

@@ -368,18 +368,54 @@ agent-steward [OPTIONS] <COMMAND>
 
 ---
 
-### 2.16 `hooks` — HOOK 驱动集成与客户端自动化钩子生成
-- **说明**: 自动生成各 Agent 客户端（Antigravity、Cursor、Claude Code、Git）的 Pre/Post Hook 集成配置与自动脚本（规约 #13 MCP 与 CLI 1:1 映射）。
+### 2.16 `hooks` — HOOK 驱动集成、门禁校验与客户端自动化钩子生成
+- **说明**: 自动生成各 Agent 客户端（Antigravity、Cursor、Claude Code、Git）的 Pre/Post Hook 集成配置，或直接从 CLI 触发前置/后置门禁（规约 #13 MCP 与 CLI 1:1 映射）。
 - **子命令**:
   - `generate`:
     - `-c, --client <CLIENT>`: 目标客户端类型 (`agy`, `cursor`, `claude`, `git`)
     - `-o, --out-dir <DIR>`: 写入目标根目录（若未指定则输出到标准输出预览）
     - `--dry-run`: 仅预览生成内容，不实际写盘
+  - `pre`:
+    - `-t, --tool-name <NAME>`: 即将调用的工具名（如 `bind_port`、`write_file`）
+    - `-a, --args <JSON>`: 工具入参 JSON 字符串
+  - `post`:
+    - `-t, --tool-name <NAME>`: 刚执行完成的工具名
+    - `-a, --args <JSON>`: 工具入参 JSON 字符串
+    - `--success`: 调用是否成功（默认 `true`）
 - **示例**:
   ```bash
   agent-steward hooks generate --client agy --dry-run
-  agent-steward hooks generate --client agy --out-dir .
-  agent-steward hooks generate --client git --out-dir .
+  agent-steward hooks pre --tool-name bind_port --args '{"port":8080}'
+  agent-steward hooks post --tool-name write_file --args '{"path":"/root/new/work/demo.rs"}'
   ```
+
+---
+
+### 2.17 `analytics` — DuckDB 列存分析与 Parquet/CSV 导出
+- **说明**: 基于内嵌 DuckDB 引擎统计文件变更热力图、资产/记忆趋势及导出 Parquet/CSV 数据集（与 `steward_analytics_*` 1:1 映射）。
+- **子命令**:
+  - `heatmap [--days 30]`: 按目录与小时分桶统计变更热力图
+  - `trend [--metric assets] [--days 30]`: 统计资产增长、记忆衰减与图谱统计
+  - `export --table <TABLE> --output-path <PATH>`: 将指定表导出为 Parquet/CSV
+- **示例**:
+  ```bash
+  agent-steward analytics heatmap --days 7
+  agent-steward analytics trend --metric assets --days 30
+  agent-steward analytics export --table assets --output-path /root/new/tmp/assets.parquet
+  ```
+
+---
+
+### 2.18 补充子命令速查（1:1 映射补齐）
+- `agent-steward asset register --path <PATH> --type <TYPE> [--description <DESC>]`：手动向大管家登记单个文件或目录资产（对应 `steward_asset_register`）。
+- `agent-steward coordination acquire -t <TYPE> -i <ID> [-s exclusive|shared] [-a <AGENT>] [--ttl-seconds 300]`：申请资源协作锁（对应 `steward_lock_acquire`）。
+- `agent-steward close <SESSION_ID> [--dry-run]`：会话结算，增加 `--dry-run` 预览开关（对应 `steward_session_close`）。
+
+---
+
+### 2.19 `mcp-catalog` / `skill` / `service` — 生态认知与 Context 防爆路由器 (Phase 16)
+- `agent-steward mcp-catalog <scan|list|route>`: 扫描宿主机客户端 MCP 配置（强制脱敏密钥）、列清单与按意图检索（对应 `steward_mcp_catalog`）。
+- `agent-steward skill <scan|list|route>`: 扫描宿主机 130+ SKILL 目录，按 `--budget-tokens` 渐进式路由 Top-K SKILL 路径，防止 Context 膨胀（对应 `steward_skill_route`）。
+- `agent-steward service <register|list|query|check|bootstrap>`: 管理外部可用服务通讯录与轻量健康探活（对应 `steward_service_contact`）。
 
 

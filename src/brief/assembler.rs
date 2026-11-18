@@ -129,7 +129,10 @@ impl BriefAssembler {
             mem_budget,
         );
 
-        // ── 4. 拼装最终 Markdown ─────────────────────────────────────────
+        // ── 4. 按需生态路由 (Phase 16 Context 防爆按需披露) ─────────────
+        let eco_section = self.build_ecosystem_section(&req.query, (budget * 20 / 100).min(350));
+
+        // ── 5. 拼装最终 Markdown ─────────────────────────────────────────
         let quality = BriefQuality::compute(fact_score, mem_score, pref_score);
         let session_disp = if req.session_id.is_empty() {
             "未指定".to_string()
@@ -142,13 +145,15 @@ impl BriefAssembler {
              **时间**: {now} | **会话**: {session_disp} | **质量分**: {overall}/100\n\n\
              {fact_section}\n\
              {pref_section}\n\
-             {mem_section}",
+             {mem_section}\
+             {eco_section}",
             now = now,
             session_disp = session_disp,
             overall = quality.overall,
             fact_section = fact_section,
             pref_section = pref_section,
             mem_section = mem_section,
+            eco_section = eco_section,
         );
 
         let tokens_used = estimate_tokens(&markdown);
@@ -307,6 +312,28 @@ impl BriefAssembler {
 
         let section = truncate_to_budget(lines.join(""), budget_tokens);
         (section, score.min(100))
+    }
+
+    // ── 生态按需路由模块 (Phase 16) ─────────────────────────────────────────
+
+    fn build_ecosystem_section(&self, query: &str, budget_tokens: usize) -> String {
+        if query.trim().is_empty() || budget_tokens < 100 {
+            return String::new();
+        }
+        let router = crate::ecosystem::ContextBudgetRouter::new(self.storage.clone());
+        let req = crate::ecosystem::ContextRouteRequest {
+            intent: query.to_string(),
+            budget_tokens,
+            max_skills: 2,
+            max_mcps: 2,
+            max_services: 2,
+        };
+        match router.route(&req) {
+            Ok(plan) if !plan.skills.is_empty() || !plan.mcps.is_empty() || !plan.services.is_empty() => {
+                format!("\n{}", plan.markdown)
+            }
+            _ => String::new(),
+        }
     }
 }
 

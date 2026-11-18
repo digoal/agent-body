@@ -49,7 +49,7 @@ graph TD
         direction TB
         
         subgraph Protocols["统一接口与网关层 (Protocol Layer)"]
-            P1["MCP stdio 服务端 (31 Tools)"]
+            P1["MCP stdio 服务端 (35 Tools)"]
             P2["CLI 命令解析器 (Clap)"]
             P3["Tokio 内嵌 HTTP / SSE 服务"]
         end

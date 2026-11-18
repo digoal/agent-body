@@ -193,5 +193,17 @@ port = 8765
 # action = { action = "webhook", url = "http://127.0.0.1:8765/api/v1/notify", timeout_ms = 3000 }
 # on_failure = "continue"
 
+# ==============================================================================
+# 9. 生态目录 (MCP / SKILL / 外部服务通讯录) 与 Context 防爆路由 (Phase 16)
+# ==============================================================================
+# 默认扫描路径:
+#   - MCP 配置: ~/.hermes/config.yaml, ~/.gemini/antigravity-cli/mcp_config.json,
+#               ~/.config/claude/claude_desktop_config.json, ~/.cursor/mcp.json
+#   - SKILL 目录: /root/new/skills, ~/.gemini/antigravity-cli/skills,
+#                 ~/.gemini/antigravity-cli/builtin/skills
+# 安全约束:
+#   - 扫描 MCP 配置时强制剥离 env 明文密钥，仅保留变量名；
+#   - external_services 严禁存储任何明文 API Key/Token/Password。
+
 
 

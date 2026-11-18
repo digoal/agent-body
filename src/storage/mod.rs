@@ -299,11 +299,104 @@ impl Storage {
     pub fn gc_expired_coordination_locks(&self) -> Result<usize> {
         self.provider.gc_expired_coordination_locks()
     }
+
+    // ─── Phase 16: Ecosystem Catalogs & External Service Contacts ────
+    pub fn upsert_mcp_catalog(&self, rec: &McpCatalogRecord) -> Result<()> {
+        self.provider.upsert_mcp_catalog(rec)
+    }
+
+    pub fn list_mcp_catalog(&self) -> Result<Vec<McpCatalogRecord>> {
+        self.provider.list_mcp_catalog()
+    }
+
+    pub fn search_mcp_catalog(&self, query: &str, limit: usize) -> Result<Vec<McpCatalogRecord>> {
+        self.provider.search_mcp_catalog(query, limit)
+    }
+
+    pub fn upsert_skill_catalog(&self, rec: &SkillCatalogRecord) -> Result<()> {
+        self.provider.upsert_skill_catalog(rec)
+    }
+
+    pub fn list_skills_catalog(&self) -> Result<Vec<SkillCatalogRecord>> {
+        self.provider.list_skills_catalog()
+    }
+
+    pub fn search_skills_catalog(&self, query: &str, limit: usize) -> Result<Vec<SkillCatalogRecord>> {
+        self.provider.search_skills_catalog(query, limit)
+    }
+
+    pub fn upsert_external_service(&self, rec: &ExternalServiceRecord) -> Result<()> {
+        self.provider.upsert_external_service(rec)
+    }
+
+    pub fn list_external_services(&self, category: Option<&str>) -> Result<Vec<ExternalServiceRecord>> {
+        self.provider.list_external_services(category)
+    }
+
+    pub fn search_external_services(&self, query: &str, limit: usize) -> Result<Vec<ExternalServiceRecord>> {
+        self.provider.search_external_services(query, limit)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_ecosystem_catalogs_and_fts() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+
+        let mcp = McpCatalogRecord {
+            id: "mcp-1".to_string(),
+            server_name: "agent-steward".to_string(),
+            client_source: "hermes".to_string(),
+            transport: "stdio".to_string(),
+            command_or_url: "/usr/local/bin/agent-steward mcp".to_string(),
+            tools_json: serde_json::json!(["steward_brief", "steward_port_check"]),
+            tool_count: 2,
+            est_total_tokens: 450,
+            status: "active".to_string(),
+            last_scanned_at: None,
+        };
+        storage.upsert_mcp_catalog(&mcp).expect("upsert mcp");
+        assert_eq!(storage.list_mcp_catalog().expect("list mcp").len(), 1);
+        assert_eq!(storage.search_mcp_catalog("port_check", 5).expect("search mcp").len(), 1);
+
+        let skill = SkillCatalogRecord {
+            id: "skill-1".to_string(),
+            skill_name: "pgfaq".to_string(),
+            root_source: "/root/.gemini/antigravity-cli/skills".to_string(),
+            skill_path: "/root/.gemini/antigravity-cli/skills/pgfaq/SKILL.md".to_string(),
+            description: "Answer PostgreSQL core database internals and SQL questions".to_string(),
+            triggers: vec!["postgresql".to_string(), "pg".to_string(), "internals".to_string()],
+            est_tokens: 900,
+            has_scripts: false,
+            has_references: true,
+            status: "active".to_string(),
+            last_scanned_at: None,
+        };
+        storage.upsert_skill_catalog(&skill).expect("upsert skill");
+        assert_eq!(storage.list_skills_catalog().expect("list skills").len(), 1);
+        assert_eq!(storage.search_skills_catalog("PostgreSQL", 5).expect("search skills").len(), 1);
+
+        let svc = ExternalServiceRecord {
+            id: "svc-1".to_string(),
+            service_name: "local-ollama".to_string(),
+            category: "embedding".to_string(),
+            endpoint: "http://127.0.0.1:11434".to_string(),
+            protocol: "http".to_string(),
+            capabilities: "text embedding nomic-embed-text bge-m3".to_string(),
+            auth_type: "none".to_string(),
+            auth_env_var: None,
+            health_endpoint: Some("http://127.0.0.1:11434/api/tags".to_string()),
+            usage_example: Some("curl http://127.0.0.1:11434/api/tags".to_string()),
+            status: "healthy".to_string(),
+            last_checked_at: None,
+        };
+        storage.upsert_external_service(&svc).expect("upsert svc");
+        assert_eq!(storage.list_external_services(Some("embedding")).expect("list svc").len(), 1);
+        assert_eq!(storage.search_external_services("bge-m3", 5).expect("search svc").len(), 1);
+    }
 
     #[test]
     fn test_storage_init_and_defaults() {

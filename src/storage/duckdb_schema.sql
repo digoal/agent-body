@@ -166,3 +166,46 @@ CREATE TABLE IF NOT EXISTS coordination_locks (
     expires_at    VARCHAR NOT NULL,
     metadata      VARCHAR DEFAULT '{}'
 );
+
+-- ─── Phase 16: 生态认知目录与外部服务通讯录 ──────────────────────────
+CREATE TABLE IF NOT EXISTS mcp_catalog (
+    id               VARCHAR PRIMARY KEY,
+    server_name      VARCHAR NOT NULL UNIQUE,
+    client_source    VARCHAR NOT NULL,
+    transport        VARCHAR DEFAULT 'stdio',
+    command_or_url   VARCHAR NOT NULL,
+    tools_json       VARCHAR DEFAULT '[]',
+    tool_count       INTEGER DEFAULT 0,
+    est_total_tokens INTEGER DEFAULT 0,
+    status           VARCHAR DEFAULT 'active',
+    last_scanned_at  VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS skills_catalog (
+    id              VARCHAR PRIMARY KEY,
+    skill_name      VARCHAR NOT NULL UNIQUE,
+    root_source     VARCHAR NOT NULL,
+    skill_path      VARCHAR NOT NULL,
+    description     VARCHAR NOT NULL,
+    triggers_json   VARCHAR DEFAULT '[]',
+    est_tokens      INTEGER DEFAULT 0,
+    has_scripts     BOOLEAN DEFAULT FALSE,
+    has_references  BOOLEAN DEFAULT FALSE,
+    status          VARCHAR DEFAULT 'active',
+    last_scanned_at VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS external_services (
+    id              VARCHAR PRIMARY KEY,
+    service_name    VARCHAR NOT NULL UNIQUE,
+    category        VARCHAR NOT NULL,
+    endpoint        VARCHAR NOT NULL,
+    protocol        VARCHAR DEFAULT 'https',
+    capabilities    VARCHAR NOT NULL,
+    auth_type       VARCHAR DEFAULT 'none',
+    auth_env_var    VARCHAR,
+    health_endpoint VARCHAR,
+    usage_example   VARCHAR,
+    status          VARCHAR DEFAULT 'unknown',
+    last_checked_at VARCHAR
+);

@@ -60,6 +60,12 @@ impl BackgroundScheduler {
         let coord = crate::coordination::CoordinationEngine::new(self.storage.provider().clone());
         let expired_locks_cleaned = coord.gc_expired_locks().unwrap_or(0);
 
+        // 6. 自动刷新宿主机 MCP 与 SKILL 生态目录 (Phase 16)
+        let mcp_scanner = crate::ecosystem::McpConfigScanner::new(self.storage.clone());
+        let _ = mcp_scanner.scan_default_clients();
+        let skill_scanner = crate::ecosystem::SkillCatalogScanner::new(self.storage.clone());
+        let _ = skill_scanner.scan_default_roots();
+
         Ok(SchedulerCycleReport {
             synced_processes,
             graph_nodes_updated: graph_nodes,

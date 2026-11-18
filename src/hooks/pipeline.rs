@@ -105,7 +105,7 @@ impl HookPipelineEngine {
 
     /// 评估是否命中防抖去重窗口
     fn is_debounced(&self, hash: u64, debounce_ms: u64) -> bool {
-        let mut map = self.recent_hashes.write().unwrap();
+        let mut map = self.recent_hashes.write().unwrap_or_else(|e| e.into_inner());
         let now = Instant::now();
         if let Some(last_time) = map.get(&hash) {
             if now.duration_since(*last_time) < Duration::from_millis(debounce_ms) {
@@ -224,7 +224,7 @@ impl HookPipelineEngine {
     /// 记录审计流水到内存与 Storage 持久化
     fn record_audit(&self, record: HookAuditRecord) {
         {
-            let mut hist = self.audit_history.write().unwrap();
+            let mut hist = self.audit_history.write().unwrap_or_else(|e| e.into_inner());
             hist.push(record.clone());
             if hist.len() > 100 {
                 hist.remove(0);
@@ -250,7 +250,7 @@ impl HookPipelineEngine {
 
     /// 查询最近的审计日志
     pub fn list_recent_audits(&self, limit: usize) -> Vec<HookAuditRecord> {
-        let hist = self.audit_history.read().unwrap();
+        let hist = self.audit_history.read().unwrap_or_else(|e| e.into_inner());
         hist.iter().rev().take(limit).cloned().collect()
     }
 }

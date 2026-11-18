@@ -193,3 +193,50 @@ CREATE TABLE IF NOT EXISTS coordination_locks (
 
 CREATE INDEX IF NOT EXISTS idx_pg_locks_resource ON coordination_locks(resource_type, resource_id);
 CREATE INDEX IF NOT EXISTS idx_pg_locks_expires ON coordination_locks(expires_at);
+
+-- ─── Phase 16: 生态认知目录与外部服务通讯录 ──────────────────────────
+CREATE TABLE IF NOT EXISTS mcp_catalog (
+    id               TEXT PRIMARY KEY,
+    server_name      TEXT NOT NULL UNIQUE,
+    client_source    TEXT NOT NULL,
+    transport        TEXT NOT NULL DEFAULT 'stdio',
+    command_or_url   TEXT NOT NULL,
+    tools_json       JSONB DEFAULT '[]'::jsonb,
+    tool_count       INTEGER DEFAULT 0,
+    est_total_tokens INTEGER DEFAULT 0,
+    status           TEXT DEFAULT 'active',
+    last_scanned_at  TEXT
+);
+
+CREATE TABLE IF NOT EXISTS skills_catalog (
+    id              TEXT PRIMARY KEY,
+    skill_name      TEXT NOT NULL UNIQUE,
+    root_source     TEXT NOT NULL,
+    skill_path      TEXT NOT NULL,
+    description     TEXT NOT NULL,
+    triggers_json   JSONB DEFAULT '[]'::jsonb,
+    est_tokens      INTEGER DEFAULT 0,
+    has_scripts     BOOLEAN DEFAULT FALSE,
+    has_references  BOOLEAN DEFAULT FALSE,
+    status          TEXT DEFAULT 'active',
+    last_scanned_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_skills_fts ON skills_catalog USING GIN(to_tsvector('simple', skill_name || ' ' || description));
+
+CREATE TABLE IF NOT EXISTS external_services (
+    id              TEXT PRIMARY KEY,
+    service_name    TEXT NOT NULL UNIQUE,
+    category        TEXT NOT NULL,
+    endpoint        TEXT NOT NULL,
+    protocol        TEXT NOT NULL DEFAULT 'https',
+    capabilities    TEXT NOT NULL,
+    auth_type       TEXT DEFAULT 'none',
+    auth_env_var    TEXT,
+    health_endpoint TEXT,
+    usage_example   TEXT,
+    status          TEXT DEFAULT 'unknown',
+    last_checked_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_ext_svc_fts ON external_services USING GIN(to_tsvector('simple', service_name || ' ' || category || ' ' || capabilities));

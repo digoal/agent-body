@@ -84,6 +84,9 @@ enum Commands {
 
         #[arg(long, default_value_t = true, help = "是否清理 /root/new/tmp/ 下属于本会话的临时文件")]
         clean_temp: bool,
+
+        #[arg(long, default_value_t = false, help = "仅预览待清理临时文件与归档摘要，不物理删除")]
+        dry_run: bool,
     },
 
     #[command(about = "宿主机孤儿进程与临时垃圾资源安全扫描与回收")]
@@ -142,6 +145,129 @@ enum Commands {
         #[command(subcommand)]
         action: HooksCommands,
     },
+
+    #[command(about = "基于 DuckDB 列存分析引擎的宿主机时序统计与数据导出")]
+    Analytics {
+        #[command(subcommand)]
+        action: AnalyticsCommands,
+    },
+
+    #[command(about = "宿主机已配置 MCP Server 目录扫描、列表与路由")]
+    McpCatalog {
+        #[command(subcommand)]
+        action: McpCatalogCommands,
+    },
+
+    #[command(about = "百级 SKILL 目录扫描与 Context 防爆按需路由")]
+    Skill {
+        #[command(subcommand)]
+        action: SkillCommands,
+    },
+
+    #[command(about = "宿主机外部可用服务通讯录与轻量健康探活")]
+    Service {
+        #[command(subcommand)]
+        action: ServiceCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum McpCatalogCommands {
+    #[command(about = "扫描宿主机客户端 (Hermes/AGY/Claude/Cursor) MCP 配置并脱敏入库")]
+    Scan,
+    #[command(about = "列出已入库的 MCP Server 目录")]
+    List,
+    #[command(about = "按任务意图检索匹配 MCP")]
+    Route {
+        #[arg(help = "查询关键词或意图")]
+        query: String,
+        #[arg(short, long, default_value_t = 5)]
+        limit: usize,
+    },
+}
+
+#[derive(Subcommand)]
+enum SkillCommands {
+    #[command(about = "扫描宿主机全局与本地 SKILL.md 摘要目录")]
+    Scan,
+    #[command(about = "列出已索引的 SKILL 清单")]
+    List,
+    #[command(about = "按 Token 预算按需路由推荐 Top-K SKILL（防止 Context 被打爆）")]
+    Route {
+        #[arg(help = "任务意图")]
+        intent: String,
+        #[arg(short, long, default_value_t = 600)]
+        budget_tokens: usize,
+        #[arg(short, long, default_value_t = 3)]
+        max_skills: usize,
+    },
+}
+
+#[derive(Subcommand)]
+enum ServiceCommands {
+    #[command(about = "登记外部服务联系人（仅存环境变量名，严禁明文密钥）")]
+    Register {
+        #[arg(long)]
+        name: String,
+        #[arg(long, default_value = "api")]
+        category: String,
+        #[arg(long)]
+        endpoint: String,
+        #[arg(long, default_value = "https")]
+        protocol: String,
+        #[arg(long, default_value = "")]
+        capabilities: String,
+        #[arg(long, default_value = "none")]
+        auth_type: String,
+        #[arg(long)]
+        auth_env_var: Option<String>,
+        #[arg(long)]
+        health_endpoint: Option<String>,
+        #[arg(long)]
+        usage_example: Option<String>,
+    },
+    #[command(about = "列出外部服务通讯录")]
+    List {
+        #[arg(short, long)]
+        category: Option<String>,
+    },
+    #[command(about = "按能力关键词检索外部服务")]
+    Query {
+        #[arg(help = "关键词")]
+        query: String,
+    },
+    #[command(about = "对指定外部服务执行轻量实时探活")]
+    Check {
+        #[arg(help = "服务名称")]
+        name: String,
+    },
+    #[command(about = "从 config.toml 自动推导并初始化外部服务名片")]
+    Bootstrap,
+}
+
+#[derive(Subcommand)]
+enum AnalyticsCommands {
+    #[command(about = "统计近期各目录文件变更热力图")]
+    Heatmap {
+        #[arg(short, long, default_value_t = 30, help = "回溯天数")]
+        days: usize,
+    },
+    #[command(about = "统计资产增长、记忆衰减与事实图谱趋势")]
+    Trend {
+        #[arg(short, long, default_value = "assets", help = "指标类型 (assets / memories / changes)")]
+        metric: String,
+
+        #[arg(short, long, default_value_t = 30, help = "回溯天数")]
+        days: usize,
+    },
+    #[command(about = "将指定数据表导出为 Parquet/CSV 文件")]
+    Export {
+        #[arg(short, long, help = "数据表名 (assets / changes / memories / fact_nodes / fact_edges / links / active_processes)")]
+        table: String,
+
+        #[arg(short, long, help = "目标输出文件绝对路径")]
+        output_path: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -157,10 +283,49 @@ enum HooksCommands {
         #[arg(long, help = "仅预览生成内容，不实际写入磁盘", default_value_t = false)]
         dry_run: bool,
     },
+    #[command(about = "执行前置防撞检查门禁 (端口/文件/协作锁冲突)")]
+    Pre {
+        #[arg(short, long, help = "即将调用的工具名 (如 write_file, bind_port)")]
+        tool_name: String,
+
+        #[arg(short, long, default_value = "{}", help = "工具入参 JSON 字符串")]
+        args: String,
+    },
+    #[command(about = "执行后置变更通知与自动事实同步")]
+    Post {
+        #[arg(short, long, help = "刚执行完成的工具名")]
+        tool_name: String,
+
+        #[arg(short, long, default_value = "{}", help = "工具入参 JSON 字符串")]
+        args: String,
+
+        #[arg(long, default_value_t = true, help = "该工具调用是否成功")]
+        success: bool,
+    },
 }
 
 #[derive(Subcommand)]
 enum CoordinationCommands {
+    #[command(about = "原子申请资源协作互斥/共享锁 (端口/目录/服务/文件/自定义)")]
+    Acquire {
+        #[arg(short = 't', long, help = "资源类型: port, directory, service, file, custom")]
+        resource_type: String,
+
+        #[arg(short = 'i', long, help = "资源标识 (例如 8080, /root/new/work)")]
+        resource_id: String,
+
+        #[arg(short, long, default_value = "exclusive", help = "锁模式: exclusive 或 shared")]
+        scope: String,
+
+        #[arg(short = 'a', long, default_value = "cli-agent", help = "持有者 Agent 标识")]
+        holder_agent: String,
+
+        #[arg(long, help = "持有者进程 PID (可选)")]
+        holder_pid: Option<u32>,
+
+        #[arg(long, default_value_t = 300, help = "锁有效期秒数 (5~3600)")]
+        ttl_seconds: u64,
+    },
     #[command(about = "列出当前所有生效中的活跃资源协作锁")]
     List {
         #[arg(short, long, help = "按资源类别过滤: port, directory, service, file, custom")]
@@ -299,6 +464,27 @@ enum AssetCommands {
 
         #[arg(short, long, default_value_t = 10)]
         limit: usize,
+    },
+
+    #[command(about = "手动向大管家登记一个文件或目录资产")]
+    Register {
+        #[arg(short, long, help = "文件或目录绝对路径")]
+        path: String,
+
+        #[arg(short = 't', long, default_value = "other", help = "资产类型 (directory/project/script/document/dataset/config/media/other)")]
+        r#type: String,
+
+        #[arg(short, long, default_value = "user:digoal", help = "归属主体")]
+        owner: String,
+
+        #[arg(short, long, default_value = "internal", help = "安全分级 (public/internal/confidential/secret)")]
+        security_level: String,
+
+        #[arg(short, long, help = "文字描述")]
+        description: Option<String>,
+
+        #[arg(long, default_value = "{}", help = "结构化键值 JSON 字符串")]
+        desc_kv: String,
     },
 
     #[command(about = "列出最近索引的资产")]
@@ -507,6 +693,27 @@ fn main() -> Result<()> {
                     for a in results {
                         println!("  - [{}] {} ({:?})", a.asset_type, a.path, a.description);
                     }
+                }
+                AssetCommands::Register { path, r#type, owner, security_level, description, desc_kv } => {
+                    let parsed_kv: serde_json::Value = serde_json::from_str(&desc_kv)
+                        .unwrap_or_else(|_| serde_json::json!({}));
+                    let record = agent_steward::storage::models::AssetRecord {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        path: path.clone(),
+                        asset_type: r#type.clone(),
+                        owner,
+                        security_level,
+                        scan_tier: "deep".to_string(),
+                        description,
+                        desc_kv: parsed_kv,
+                        usage: None,
+                        size_bytes: None,
+                        file_count: None,
+                        tags: vec![],
+                        status: "active".to_string(),
+                    };
+                    storage.upsert_asset(&record)?;
+                    println!("✅ 资产登记成功: {} [{}]", path, r#type);
                 }
                 AssetCommands::List { limit } => {
                     let results = storage.list_assets(limit)?;
@@ -764,10 +971,10 @@ fn main() -> Result<()> {
             println!("{}", summary);
         }
 
-        Commands::Close { session_id, clean_temp } => {
+        Commands::Close { session_id, clean_temp, dry_run } => {
             let arc_storage = std::sync::Arc::new(storage);
             let sm = agent_steward::session::SessionManager::new(arc_storage);
-            let res = sm.close_session(&session_id, clean_temp)?;
+            let res = sm.close_session_with_dry_run(&session_id, clean_temp, dry_run)?;
             println!("{}", serde_json::to_string_pretty(&res)?);
         }
 
@@ -879,6 +1086,19 @@ fn main() -> Result<()> {
         Commands::Coordination { action } => {
             let engine = agent_steward::coordination::CoordinationEngine::new(storage.provider().clone());
             match action {
+                CoordinationCommands::Acquire { resource_type, resource_id, scope, holder_agent, holder_pid, ttl_seconds } => {
+                    let req = agent_steward::coordination::LockRequest {
+                        resource_type: agent_steward::coordination::ResourceType::from_str_loose(&resource_type),
+                        resource_id,
+                        scope: agent_steward::coordination::LockScope::from_str_loose(&scope),
+                        holder_agent,
+                        holder_pid,
+                        ttl_seconds,
+                        metadata: None,
+                    };
+                    let res = engine.try_acquire(&req)?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                }
                 CoordinationCommands::List { resource_type } => {
                     let rt_opt = resource_type.as_deref().map(agent_steward::coordination::ResourceType::from_str_loose);
                     let locks = engine.list_active_locks(rt_opt.as_ref())?;
@@ -969,9 +1189,166 @@ fn main() -> Result<()> {
                     println!("╚══════════════════════════════════════════════════════════════════════════════════════════╝");
                     println!("\n--- 生成内容预览 ---\n{}", res.content);
                 }
+                HooksCommands::Pre { tool_name, args } => {
+                    let parsed_args: serde_json::Value = serde_json::from_str(&args)
+                        .unwrap_or_else(|_| serde_json::json!({}));
+                    let engine = agent_steward::api::hooks::AgentHookEngine::new(storage);
+                    let res = engine.pre_tool_call(&tool_name, &parsed_args);
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                }
+                HooksCommands::Post { tool_name, args, success } => {
+                    let parsed_args: serde_json::Value = serde_json::from_str(&args)
+                        .unwrap_or_else(|_| serde_json::json!({}));
+                    let engine = agent_steward::api::hooks::AgentHookEngine::new(storage);
+                    let res = engine.post_tool_call(&tool_name, &parsed_args, success);
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                }
+            }
+        }
+
+        Commands::Analytics { action } => {
+            use agent_steward::storage::{AnalyticsProvider, DuckDbAnalyticsEngine};
+            let engine = DuckDbAnalyticsEngine::from_synced_storage(storage.provider().clone())?;
+            match action {
+                AnalyticsCommands::Heatmap { days } => {
+                    let heatmap = engine.changes_heatmap(days)?;
+                    println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                        "time_span_days": days,
+                        "heatmap": heatmap,
+                    }))?);
+                }
+                AnalyticsCommands::Trend { metric, days } => {
+                    let trend = engine.asset_growth_trend(days)?;
+                    let decay = engine.memory_decay_curve()?;
+                    let stats = engine.fact_graph_stats()?;
+                    println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                        "metric": metric,
+                        "time_span_days": days,
+                        "asset_growth_trend": trend,
+                        "memory_decay": decay,
+                        "graph_stats": stats,
+                    }))?);
+                }
+                AnalyticsCommands::Export { table, output_path } => {
+                    let summary = engine.export_to_parquet(&table, &output_path)?;
+                    println!("{}", serde_json::to_string_pretty(&summary)?);
+                }
+            }
+        }
+
+        Commands::McpCatalog { action } => {
+            let scanner = agent_steward::ecosystem::McpConfigScanner::new(storage.clone());
+            match action {
+                McpCatalogCommands::Scan => {
+                    let (cnt, sanitized) = scanner.scan_default_clients()?;
+                    println!("✅ MCP 目录扫描完成：发现 {} 个 Server（已脱敏 {} 个环境变量密钥）", cnt, sanitized);
+                }
+                McpCatalogCommands::List => {
+                    let list = storage.list_mcp_catalog()?;
+                    println!("{}", serde_json::to_string_pretty(&list)?);
+                }
+                McpCatalogCommands::Route { query, limit } => {
+                    let list = storage.search_mcp_catalog(&query, limit)?;
+                    println!("{}", serde_json::to_string_pretty(&list)?);
+                }
+            }
+        }
+
+        Commands::Skill { action } => {
+            match action {
+                SkillCommands::Scan => {
+                    let scanner = agent_steward::ecosystem::SkillCatalogScanner::new(storage.clone());
+                    let (cnt, tokens) = scanner.scan_default_roots()?;
+                    println!("✅ SKILL 目录扫描完成：已编目 {} 个 SKILL（若全量注入约消耗 {} tokens）", cnt, tokens);
+                }
+                SkillCommands::List => {
+                    let list = storage.list_skills_catalog()?;
+                    println!("已编目 SKILL 共 {} 个：", list.len());
+                    for s in list {
+                        println!("  - {} (~{} tok) -> {}", s.skill_name, s.est_tokens, s.skill_path);
+                    }
+                }
+                SkillCommands::Route { intent, budget_tokens, max_skills } => {
+                    let router = agent_steward::ecosystem::ContextBudgetRouter::new(storage.clone());
+                    let plan = router.route(&agent_steward::ecosystem::ContextRouteRequest {
+                        intent,
+                        budget_tokens,
+                        max_skills,
+                        max_mcps: 4,
+                        max_services: 3,
+                    })?;
+                    println!("{}", plan.markdown);
+                    println!(
+                        "📊 Context 防爆统计：全量 {} 个 SKILL (~{} tok) -> 本次按需路由 {} tok（节省 {:.1}%）",
+                        plan.total_skills_catalog_count, plan.total_skills_full_tokens, plan.route_tokens_used, plan.saved_pct
+                    );
+                }
+            }
+        }
+
+        Commands::Service { action } => {
+            let mgr = agent_steward::ecosystem::ExternalContactsManager::new(storage.clone());
+            match action {
+                ServiceCommands::Register {
+                    name, category, endpoint, protocol, capabilities,
+                    auth_type, auth_env_var, health_endpoint, usage_example
+                } => {
+                    let rec = agent_steward::storage::models::ExternalServiceRecord {
+                        id: format!("svc:{}", name),
+                        service_name: name.clone(),
+                        category,
+                        endpoint,
+                        protocol,
+                        capabilities,
+                        auth_type,
+                        auth_env_var,
+                        health_endpoint,
+                        usage_example,
+                        status: "unknown".to_string(),
+                        last_checked_at: None,
+                    };
+                    mgr.register_service(&rec)?;
+                    println!("✅ 外部服务联系人 '{}' 已安全登记", name);
+                }
+                ServiceCommands::List { category } => {
+                    let list = storage.list_external_services(category.as_deref())?;
+                    println!("{}", serde_json::to_string_pretty(&list)?);
+                }
+                ServiceCommands::Query { query } => {
+                    let list = storage.search_external_services(&query, 10)?;
+                    println!("{}", serde_json::to_string_pretty(&list)?);
+                }
+                ServiceCommands::Check { name } => {
+                    let rep = mgr.check_health(&name)?;
+                    println!("{}", serde_json::to_string_pretty(&rep)?);
+                }
+                ServiceCommands::Bootstrap => {
+                    let cnt = mgr.bootstrap_from_config(&cfg)?;
+                    println!("✅ 已从配置自动推导 {} 条外部服务联系人", cnt);
+                }
             }
         }
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cli_1to1_mcp_subcommands_parse() {
+        assert!(Cli::try_parse_from(["steward", "asset", "register", "--path", "/root/new/tmp/a.py", "--type", "script"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "hooks", "pre", "--tool-name", "bind_port", "--args", "{\"port\":8080}"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "hooks", "post", "--tool-name", "write_file", "--args", "{\"path\":\"/tmp/a\"}"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "coordination", "acquire", "-t", "port", "-i", "9090"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "analytics", "heatmap", "--days", "7"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "analytics", "trend", "--metric", "assets", "--days", "14"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "analytics", "export", "--table", "assets", "--output-path", "/root/new/tmp/a.parquet"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "close", "sess-1", "--dry-run"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "mcp-catalog", "scan"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "skill", "route", "PostgreSQL调优", "--budget-tokens", "500"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "service", "bootstrap"]).is_ok());
+    }
 }

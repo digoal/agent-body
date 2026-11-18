@@ -101,7 +101,8 @@ impl AutomationTopology {
         let mut referenced_files = Vec::new();
 
         // 提取绝对路径正则（例如 /root/... 或 /etc/...）
-        let abs_path_re = Regex::new(r"(/[a-zA-Z0-9_\.\-]+(/[a-zA-Z0-9_\.\-]+)+)").unwrap();
+        let abs_path_re = Regex::new(r"(/[a-zA-Z0-9_\.\-]+(/[a-zA-Z0-9_\.\-]+)+)")
+            .map_err(|e| anyhow::anyhow!("编译 abs_path_re 失败: {}", e))?;
 
         for line in content.lines() {
             let trimmed = line.trim();
@@ -158,7 +159,8 @@ impl AutomationTopology {
     /// 扫描全系统与当前用户定时任务 (Cron Jobs)
     pub fn scan_cron_jobs() -> Result<Vec<CronJobFact>> {
         let mut cron_jobs = Vec::new();
-        let abs_path_re = Regex::new(r"(/[a-zA-Z0-9_\.\-]+(/[a-zA-Z0-9_\.\-]+)+)").unwrap();
+        let abs_path_re = Regex::new(r"(/[a-zA-Z0-9_\.\-]+(/[a-zA-Z0-9_\.\-]+)+)")
+            .map_err(|e| anyhow::anyhow!("编译 abs_path_re 失败: {}", e))?;
 
         // 1. /etc/crontab
         let etc_crontab = Path::new("/etc/crontab");

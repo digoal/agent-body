@@ -92,7 +92,7 @@ agent-steward memory search "数据库连接池排障" --hybrid # 混合检索�
 ```
 
 ### 方式 2：AI Agent MCP 原生挂载（智能体首选）
-在 Claude Desktop、Cursor 或 Antigravity 的配置文件中添加（即插即用 31 个原生工具）：
+在 Claude Desktop、Cursor 或 Antigravity 的配置文件中添加（即插即用 35 个原生工具）：
 ```json
 {
   "mcpServers": {

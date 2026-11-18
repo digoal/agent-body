@@ -271,6 +271,108 @@ CREATE TABLE IF NOT EXISTS coordination_locks (
 CREATE INDEX IF NOT EXISTS idx_locks_resource ON coordination_locks(resource_type, resource_id);
 CREATE INDEX IF NOT EXISTS idx_locks_expires ON coordination_locks(expires_at);
 
+-- ─── Phase 16: 生态认知目录与外部服务通讯录 ──────────────────────────
+CREATE TABLE IF NOT EXISTS mcp_catalog (
+    id              TEXT PRIMARY KEY,
+    server_name     TEXT NOT NULL UNIQUE,
+    client_source   TEXT NOT NULL,
+    transport       TEXT NOT NULL DEFAULT 'stdio',
+    command_or_url  TEXT NOT NULL,
+    tools_json      TEXT DEFAULT '[]',
+    tool_count      INTEGER DEFAULT 0,
+    est_total_tokens INTEGER DEFAULT 0,
+    status          TEXT DEFAULT 'active',
+    last_scanned_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_mcp_catalog_source ON mcp_catalog(client_source);
+
+CREATE TABLE IF NOT EXISTS skills_catalog (
+    id              TEXT PRIMARY KEY,
+    skill_name      TEXT NOT NULL UNIQUE,
+    root_source     TEXT NOT NULL,
+    skill_path      TEXT NOT NULL,
+    description     TEXT NOT NULL,
+    triggers_json   TEXT DEFAULT '[]',
+    est_tokens      INTEGER DEFAULT 0,
+    has_scripts     INTEGER DEFAULT 0,
+    has_references  INTEGER DEFAULT 0,
+    status          TEXT DEFAULT 'active',
+    last_scanned_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_skills_catalog_source ON skills_catalog(root_source);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS skills_catalog_fts USING fts5(
+    skill_name,
+    description,
+    triggers_json,
+    content=skills_catalog,
+    content_rowid=rowid,
+    tokenize='unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS skills_fts_insert AFTER INSERT ON skills_catalog BEGIN
+    INSERT INTO skills_catalog_fts(rowid, skill_name, description, triggers_json)
+    VALUES (NEW.rowid, NEW.skill_name, NEW.description, NEW.triggers_json);
+END;
+
+CREATE TRIGGER IF NOT EXISTS skills_fts_delete AFTER DELETE ON skills_catalog BEGIN
+    INSERT INTO skills_catalog_fts(skills_catalog_fts, rowid, skill_name, description, triggers_json)
+    VALUES ('delete', OLD.rowid, OLD.skill_name, OLD.description, OLD.triggers_json);
+END;
+
+CREATE TRIGGER IF NOT EXISTS skills_fts_update AFTER UPDATE ON skills_catalog BEGIN
+    INSERT INTO skills_catalog_fts(skills_catalog_fts, rowid, skill_name, description, triggers_json)
+    VALUES ('delete', OLD.rowid, OLD.skill_name, OLD.description, OLD.triggers_json);
+    INSERT INTO skills_catalog_fts(rowid, skill_name, description, triggers_json)
+    VALUES (NEW.rowid, NEW.skill_name, NEW.description, NEW.triggers_json);
+END;
+
+CREATE TABLE IF NOT EXISTS external_services (
+    id              TEXT PRIMARY KEY,
+    service_name    TEXT NOT NULL UNIQUE,
+    category        TEXT NOT NULL,
+    endpoint        TEXT NOT NULL,
+    protocol        TEXT NOT NULL DEFAULT 'https',
+    capabilities    TEXT NOT NULL,
+    auth_type       TEXT DEFAULT 'none',
+    auth_env_var    TEXT,
+    health_endpoint TEXT,
+    usage_example   TEXT,
+    status          TEXT DEFAULT 'unknown',
+    last_checked_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_external_services_cat ON external_services(category);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS external_services_fts USING fts5(
+    service_name,
+    category,
+    capabilities,
+    usage_example,
+    content=external_services,
+    content_rowid=rowid,
+    tokenize='unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS ext_svc_fts_insert AFTER INSERT ON external_services BEGIN
+    INSERT INTO external_services_fts(rowid, service_name, category, capabilities, usage_example)
+    VALUES (NEW.rowid, NEW.service_name, NEW.category, NEW.capabilities, NEW.usage_example);
+END;
+
+CREATE TRIGGER IF NOT EXISTS ext_svc_fts_delete AFTER DELETE ON external_services BEGIN
+    INSERT INTO external_services_fts(external_services_fts, rowid, service_name, category, capabilities, usage_example)
+    VALUES ('delete', OLD.rowid, OLD.service_name, OLD.category, OLD.capabilities, OLD.usage_example);
+END;
+
+CREATE TRIGGER IF NOT EXISTS ext_svc_fts_update AFTER UPDATE ON external_services BEGIN
+    INSERT INTO external_services_fts(external_services_fts, rowid, service_name, category, capabilities, usage_example)
+    VALUES ('delete', OLD.rowid, OLD.service_name, OLD.category, OLD.capabilities, OLD.usage_example);
+    INSERT INTO external_services_fts(rowid, service_name, category, capabilities, usage_example)
+    VALUES (NEW.rowid, NEW.service_name, NEW.category, NEW.capabilities, NEW.usage_example);
+END;
+
 -- 预置数据
 INSERT OR IGNORE INTO config(key, value) VALUES
     ('schema_version', '2'),

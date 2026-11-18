@@ -43,7 +43,7 @@ impl SessionLifecycleManager {
         artifact_path: Option<&str>,
     ) -> SessionState {
         let now = Local::now().to_rfc3339();
-        let mut map = self.sessions.write().unwrap();
+        let mut map = self.sessions.write().unwrap_or_else(|e| e.into_inner());
 
         if let Some(state) = map.get_mut(session_id) {
             state.last_active_at = now;
@@ -75,13 +75,13 @@ impl SessionLifecycleManager {
 
     /// 查询指定 Session 状态
     pub fn get_session(&self, session_id: &str) -> Option<SessionState> {
-        let map = self.sessions.read().unwrap();
+        let map = self.sessions.read().unwrap_or_else(|e| e.into_inner());
         map.get(session_id).cloned()
     }
 
     /// 获取所有活跃中的 Session
     pub fn list_active_sessions(&self) -> Vec<SessionState> {
-        let map = self.sessions.read().unwrap();
+        let map = self.sessions.read().unwrap_or_else(|e| e.into_inner());
         map.values()
             .filter(|s| s.status == "active")
             .cloned()
@@ -96,7 +96,7 @@ impl SessionLifecycleManager {
         dry_run: bool,
     ) -> Result<SessionCloseResult> {
         {
-            let mut map = self.sessions.write().unwrap();
+            let mut map = self.sessions.write().unwrap_or_else(|e| e.into_inner());
             if let Some(state) = map.get_mut(session_id) {
                 state.status = "closed".to_string();
                 state.last_active_at = Local::now().to_rfc3339();
@@ -114,7 +114,7 @@ impl SessionLifecycleManager {
     ) -> Vec<SessionCloseResult> {
         let now = Local::now();
         let timeout_candidates: Vec<String> = {
-            let map = self.sessions.read().unwrap();
+            let map = self.sessions.read().unwrap_or_else(|e| e.into_inner());
             map.values()
                 .filter(|s| s.status == "active")
                 .filter_map(|s| {
