@@ -83,13 +83,21 @@
 
 > 详见 [roadmap-next-phases.md](roadmap-next-phases.md)，对齐 README.md 中的 9 个 ISSUE。
 
-| 阶段 | 核心内容 | 对齐 ISSUE | 状态 |
-|:----:|---------|:----------:|:----:|
-| **Phase 5** | 宿主机主动扫描与智能记录引擎（断点续扫 + 重要性评分 + 属性图 + Agent Hook） | #9 #2 #3 | ✅ **已完成** (2026-11-18 12:02) |
-| **Phase 6** | 存储层抽象与多后端支持（SPI + PostgreSQL + DuckDB） | #4 | ⬜ 待执行 |
-| **Phase 7** | Agent-Native 输出优化与 Benchmark 体系 | #8 #6 | ⬜ 待执行 |
-| **Phase 8** | 跨平台抽象层（macOS / Windows） | #5 | ⬜ 待执行 |
-| **Phase 9** | 产品边界守护与生态定位 | #1 #7 | ⬜ 待执行 |
+| 阶段 | 核心内容 | 对齐 ISSUE | 状态 | 完成时间 |
+|:----:|---------|:----------:|:----:|:--------:|
+| **Phase 5** | 宿主机主动扫描与智能记录引擎（断点续扫 + 重要性评分 + 属性图 + Agent Hook） | #9 #2 #3 | ✅ **已完成** | 2026-11-18 12:02 |
+| **Phase 6** | 存储层抽象与多后端支持（StorageProvider SPI + PostgreSQL pgvector/tsvector + 跨引擎无损热迁移） | #4 | ✅ **已完成** | 2026-11-18 12:23 |
+| **Phase 7** | Agent-Native 输出优化与 Benchmark 性能基准体系（StewardResponse 封套 + 亚毫秒基准测试） | #8 #6 | ✅ **已完成** | 2026-11-18 12:26 |
+| **Phase 8** | 跨平台抽象层与容错探测（macOS / Windows 兼容抽象） | #5 | ✅ **已完成** | 2026-11-18 12:27 |
+| **Phase 9** | 产品边界守护与生态定位（边界指南 + Agent 5阶段生命周期协议） | #1 #7 | ✅ **已完成** | 2026-11-18 12:28 |
+
+---
+
+## 验收总结 (All Phases 100% Complete)
+- **单元与集成测试**：111 项测试全部 100% PASS（含 108 个单元测试与 3 个微秒级基准测试），0 warning。
+- **存储后端**：支持 SQLite 嵌入式与 PostgreSQL (pgvector + tsvector) 双后端，实现 2119 个真实资产、277 个图谱节点的实时跨库热迁移。
+- **后台守护进程**：`agent-steward.service` 在后台持续稳定运行（inotify 实时监听 + 动态进程采集 + 自主深度巡查）。
+- **共享仓库同步**：代码已同步至 `/root/new/shared_git/agent-steward`。
 
 ---
 

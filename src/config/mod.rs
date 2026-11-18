@@ -24,6 +24,35 @@ pub struct Config {
 
     #[serde(default)]
     pub placement: PlacementConfig,
+
+    #[serde(default)]
+    pub storage: StorageConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StorageConfig {
+    #[serde(default = "default_storage_provider")]
+    pub provider: String,
+
+    #[serde(default = "default_pg_url")]
+    pub pg_url: Option<String>,
+}
+
+fn default_storage_provider() -> String {
+    "sqlite".to_string()
+}
+
+fn default_pg_url() -> Option<String> {
+    None
+}
+
+impl Default for StorageConfig {
+    fn default() -> Self {
+        Self {
+            provider: default_storage_provider(),
+            pg_url: default_pg_url(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -150,6 +179,7 @@ impl Default for Config {
             embedding: EmbeddingConfig::default(),
             assets: AssetsConfig::default(),
             placement: PlacementConfig::default(),
+            storage: StorageConfig::default(),
         }
     }
 }

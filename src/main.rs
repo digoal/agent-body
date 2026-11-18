@@ -106,6 +106,32 @@ enum Commands {
         #[arg(short, long, default_value = "auto", help = "事实类型 (capability, port, automation, impact, repo, doc, all, auto)")]
         fact_type: String,
     },
+
+    #[command(about = "跨存储后端管理与热迁移 (SQLite / PostgreSQL)")]
+    Storage {
+        #[command(subcommand)]
+        action: StorageCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum StorageCommands {
+    #[command(about = "在不同的存储后端之间执行全量数据热迁移")]
+    Migrate {
+        #[arg(long, help = "源存储类型 (sqlite / postgres)", default_value = "sqlite")]
+        from: String,
+
+        #[arg(long, help = "源端连接串或文件路径 (默认使用当前配置)")]
+        from_url: Option<String>,
+
+        #[arg(long, help = "目标存储类型 (sqlite / postgres)", default_value = "postgres")]
+        to: String,
+
+        #[arg(long, help = "目标端连接串或文件路径 (默认 postgresql://postgres@127.0.0.1:5432/agent_steward)")]
+        to_url: Option<String>,
+    },
+    #[command(about = "查看当前生效的存储后端技术栈与配置")]
+    Info,
 }
 
 #[derive(Subcommand)]
@@ -273,11 +299,10 @@ enum MemoryCommands {
     },
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let cli = Cli::parse();
     let cfg = Config::load_or_default(cli.config.as_deref())?;
-    let storage = Storage::open(&cfg.db_path)?;
+    let storage = Storage::from_config(&cfg)?;
 
     match cli.command {
         Commands::Status => {
@@ -298,9 +323,12 @@ async fn main() -> Result<()> {
         }
 
         Commands::Tui { interval } => {
-            let arc_storage = std::sync::Arc::new(storage);
-            let dashboard = agent_steward::tui::TuiDashboard::new(arc_storage);
-            dashboard.run_loop(interval, None).await?;
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(async {
+                let arc_storage = std::sync::Arc::new(storage);
+                let dashboard = agent_steward::tui::TuiDashboard::new(arc_storage);
+                dashboard.run_loop(interval, None).await
+            })?;
         }
 
         Commands::Brief => {
@@ -516,8 +544,10 @@ async fn main() -> Result<()> {
                 MemoryCommands::Search { query, limit, hybrid } => {
                     if hybrid {
                         let arc_storage = std::sync::Arc::new(storage);
-                        let engine = agent_steward::memory::hybrid::HybridSearchEngine::new(arc_storage);
-                        let results = engine.search_hybrid(&query, limit).await?;
+                        let results = tokio::runtime::Runtime::new()?.block_on(async {
+                            let engine = agent_steward::memory::hybrid::HybridSearchEngine::new(arc_storage);
+                            engine.search_hybrid(&query, limit).await
+                        })?;
                         println!("记忆搜索结果 (混合模式 RRF, 共 {} 条):", results.len());
                         for r in results {
                             let sim_str = r.cosine_similarity.map(|s| format!(" (语义相似度: {:.2})", s)).unwrap_or_default();
@@ -558,13 +588,19 @@ async fn main() -> Result<()> {
         }
 
         Commands::Mcp => {
-            let server = agent_steward::api::mcp::McpServer::new(storage);
-            server.run_stdio().await?;
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(async {
+                let server = agent_steward::api::mcp::McpServer::new(storage);
+                server.run_stdio().await
+            })?;
         }
 
         Commands::Daemon => {
-            let daemon = agent_steward::daemon::StewardDaemon::new(cfg, storage);
-            daemon.run().await?;
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(async {
+                let daemon = agent_steward::daemon::StewardDaemon::new(cfg, storage);
+                daemon.run().await
+            })?;
         }
 
         Commands::Links { action } => {
@@ -692,6 +728,57 @@ async fn main() -> Result<()> {
             let q = query.unwrap_or_else(|| "all".to_string());
             let report = agent_steward::fact::FactFacade::query_facts(&fact_type, &q)?;
             println!("{}", report);
+        }
+
+        Commands::Storage { action } => {
+            match action {
+                StorageCommands::Info => {
+                    println!("当前活跃存储提供者: {}", storage.provider_name());
+                    println!("配置数据库文件路径: {:?}", cfg.db_path);
+                    if let Some(ref pg) = cfg.storage.pg_url {
+                        println!("配置 PostgreSQL URL: {}", pg);
+                    }
+                }
+                StorageCommands::Migrate { from, from_url, to, to_url } => {
+                    println!("🚀 正在准备执行跨引擎数据迁移: {} -> {} ...", from, to);
+                    let src_storage = match from.to_lowercase().as_str() {
+                        "postgres" | "pg" => {
+                            let url = from_url.unwrap_or_else(|| "postgresql://postgres@127.0.0.1:5432/agent_steward".to_string());
+                            let p = agent_steward::storage::PgStorageProvider::connect(&url)?;
+                            Storage::new(std::sync::Arc::new(p))
+                        }
+                        _ => {
+                            let path = from_url.map(PathBuf::from).unwrap_or_else(|| cfg.db_path.clone());
+                            Storage::open(&path)?
+                        }
+                    };
+
+                    let dst_storage = match to.to_lowercase().as_str() {
+                        "postgres" | "pg" => {
+                            let url = to_url.unwrap_or_else(|| "postgresql://postgres@127.0.0.1:5432/agent_steward".to_string());
+                            let p = agent_steward::storage::PgStorageProvider::connect(&url)?;
+                            Storage::new(std::sync::Arc::new(p))
+                        }
+                        _ => {
+                            let path = to_url.map(PathBuf::from).unwrap_or_else(|| cfg.db_path.clone());
+                            Storage::open(&path)?
+                        }
+                    };
+
+                    let report = agent_steward::storage::StorageMigrator::migrate(&src_storage, &dst_storage)?;
+                    println!("✅ 数据热迁移完成！耗时: {} ms", report.duration_ms);
+                    println!("  - 放置规则迁移: {} 条", report.placement_rules_migrated);
+                    println!("  - 扫描策略迁移: {} 条", report.scan_policies_migrated);
+                    println!("  - 纳管资产迁移: {} 个", report.assets_migrated);
+                    println!("  - 活跃进程迁移: {} 个", report.active_processes_migrated);
+                    println!("  - 记忆条目迁移: {} 条", report.memories_migrated);
+                    println!("  - 变更记录迁移: {} 条", report.changes_migrated);
+                    println!("  - 依赖关系迁移: {} 条", report.links_migrated);
+                    println!("  - 扫描作业迁移: {} 个", report.scan_jobs_migrated);
+                    println!("  - 属性图节点迁移: {} 个", report.fact_nodes_migrated);
+                    println!("  - 属性图边迁移:   {} 条", report.fact_edges_migrated);
+                }
+            }
         }
     }
 

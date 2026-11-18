@@ -347,6 +347,14 @@ Phase 5 (主动扫描)  ──→  Phase 6 (存储抽象)  ──→  Phase 7 (A
 | 5.3 | 属性图组织器：`fact_nodes/fact_edges` 表 + `PropertyGraphOrganizer` + `steward_fact_query` 图遍历扩展 | `src/fact/property_graph.rs`, `src/storage/schema.sql` | ✅ 已完成 | 2026-11-18 10:11 |
 | 5.4 | 定时扫描 + Agent Hook：daemon cron 调度 + `steward_hook_pre/post` MCP 工具 | `src/daemon/scheduler.rs`, `src/api/hooks.rs` | ✅ 已完成 | 2026-11-18 10:17 |
 | 5.5 | 端到端集成验收：全量测试 + 断点续扫实测 + 属性图查询实测 + 生产部署 | 全系统 | ✅ 已完成 | 2026-11-18 12:02 |
+| 6.1 | 存储层 SPI 抽象：定义 `StorageProvider` trait (33个方法) 并解耦门面 | `src/storage/spi.rs`, `src/storage/mod.rs` | ✅ 已完成 | 2026-11-18 12:12 |
+| 6.2 | PostgreSQL 适配器：实现 `PgStorageProvider` (pgvector + tsvector) | `src/storage/pg_provider.rs`, `src/storage/pg_schema.sql` | ✅ 已完成 | 2026-11-18 12:14 |
+| 6.3 | 存储路由配置：`Config::storage` 与 `Storage::from_config` | `src/config/mod.rs`, `src/storage/mod.rs` | ✅ 已完成 | 2026-11-18 12:17 |
+| 6.4 | 跨后端热迁移工具：`StorageMigrator` + CLI `storage migrate` 真实无损迁移 | `src/storage/migration.rs`, `src/main.rs` | ✅ 已完成 | 2026-11-18 12:23 |
+| 7.1 | Agent-Native 强类型响应封套：`StewardResponse<T>` + 溯源信息 | `src/api/response.rs`, `src/api/mod.rs` | ✅ 已完成 | 2026-11-18 12:25 |
+| 7.2 | 亚毫秒基准测试套件：图遍历、全文检索、放置决策性能压测验证 | `tests/benchmarks.rs` | ✅ 已完成 | 2026-11-18 12:26 |
+| 8.1 | 跨平台抽象与容错：macOS / Windows 路径与服务安全降级保障 | `src/fact/automation.rs`, `src/env/mod.rs` | ✅ 已完成 | 2026-11-18 12:27 |
+| 9.1 | 产品边界指南与生态治理协议规范 | `src_doc/product-boundaries-and-governance.md`, `src_doc/agent-ecosystem-integration-protocol.md` | ✅ 已完成 | 2026-11-18 12:28 |
 
 ---
 
