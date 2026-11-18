@@ -44,6 +44,7 @@ notify = "6.1"
 rayon = "1.10"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "blocking"] }
 urlencoding = "2.1"
+duckdb = { version = "1.20000.2", features = ["bundled", "chrono"] }
 
 [dev-dependencies]
 tempfile = "3.10"

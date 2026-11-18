@@ -2,15 +2,21 @@ pub mod models;
 pub mod spi;
 pub mod sqlite_provider;
 pub mod pg_provider;
+pub mod duckdb_provider;
+pub mod duckdb_analytics;
+pub mod sync_pipeline;
 pub mod migration;
 
 use std::path::Path;
 use std::sync::Arc;
 use anyhow::Result;
-use models::*;
+pub use models::*;
 pub use spi::StorageProvider;
 pub use sqlite_provider::{SqliteStorageProvider, SCHEMA_SQL};
 pub use pg_provider::{PgStorageProvider, PG_SCHEMA_SQL};
+pub use duckdb_provider::{DuckDbStorageProvider, DUCKDB_SCHEMA_SQL};
+pub use duckdb_analytics::{AnalyticsProvider, DuckDbAnalyticsEngine, HeatmapCell, TrendPoint, ChangeFrequency, DecayPoint, GraphStats, ExportSummary};
+pub use sync_pipeline::{SyncPipeline, SyncReport};
 pub use migration::{StorageMigrator, MigrationReport};
 
 /// 统一存储中枢门面 (Storage Facade)
@@ -52,7 +58,7 @@ impl Storage {
         })
     }
 
-    /// 根据系统统一配置动态构建存储实例（支持 SQLite / PostgreSQL）
+    /// 根据系统统一配置动态构建存储实例（支持 SQLite / PostgreSQL / DuckDB）
     pub fn from_config(config: &crate::config::Config) -> Result<Self> {
         match config.storage.provider.to_lowercase().as_str() {
             "postgres" | "pg" | "postgresql" => {
@@ -60,6 +66,15 @@ impl Storage {
                     "postgresql://postgres@127.0.0.1:5432/agent_steward"
                 );
                 let provider = PgStorageProvider::connect(url)?;
+                Ok(Self {
+                    provider: Arc::new(provider),
+                })
+            }
+            "duckdb" => {
+                let path = config.storage.duckdb_path.clone().unwrap_or_else(|| {
+                    config.data_dir.join("steward.duckdb")
+                });
+                let provider = DuckDbStorageProvider::open(&path)?;
                 Ok(Self {
                     provider: Arc::new(provider),
                 })

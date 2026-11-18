@@ -90,16 +90,17 @@
 | **Phase 7** | Agent-Native 输出优化与 Benchmark 性能基准体系（StewardResponse 封套 + 亚毫秒基准测试） | #8 #6 | ✅ **已完成** | 2026-11-18 12:26 |
 | **Phase 8** | 跨平台抽象层与容错探测（macOS / Windows 兼容抽象） | #5 | ✅ **已完成** | 2026-11-18 12:27 |
 | **Phase 9** | 产品边界守护与生态定位（边界指南 + Agent 5阶段生命周期协议） | #1 #7 | ✅ **已完成** | 2026-11-18 12:28 |
-| **Phase 10** | DuckDB 分析后端（DuckDB Provider + 分析查询扩展 + 增量同步管道 + 集成测试） | #4 | ⬜ 待执行 | — |
+| **Phase 10** | DuckDB 分析后端（DuckDB Provider + 分析查询扩展 + 增量同步管道 + 集成测试） | #4 | ✅ **已完成** | 2026-11-18 14:05 |
 | **Phase 11** | 多 Agent 协作锁（CoordinationEngine + PG Advisory Lock + MCP 工具 + Pre-Hook 集成） | 新增 #10 | ⬜ 待执行 | — |
 
 > 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)
 
 ---
 
-## 验收总结 (Phase 1~9 Complete, Phase 10~11 待执行)
-- **单元与集成测试**：111 项测试全部 100% PASS（含 108 个单元测试与 3 个微秒级基准测试），0 warning。
-- **存储后端**：支持 SQLite 嵌入式与 PostgreSQL (pgvector + tsvector) 双后端，实现 2119 个真实资产、277 个图谱节点的实时跨库热迁移。
+## 验收总结 (Phase 1~10 Complete, Phase 11 待执行)
+- **单元与集成测试**：111 项单元测试 + 5 项 DuckDB 集成测试 + 5 项高性能基准测试全部 100% PASS，0 warning。
+- **存储后端**：支持 SQLite 嵌入式、PostgreSQL (pgvector + tsvector) 和 DuckDB (OLAP 列存分析与 Parquet/CSV 导出) 三后端；实现跨库双向热迁移与毫秒级增量同步管道。
+- **分析工具**：新增 `steward_analytics_heatmap`、`steward_analytics_trend`、`steward_analytics_export` 3 个原生 MCP 工具，系统原生 MCP 工具总数扩充至 28 个。
 - **后台守护进程**：`agent-steward.service` 在后台持续稳定运行（inotify 实时监听 + 动态进程采集 + 自主深度巡查）。
 - **共享仓库同步**：代码已同步至 `/root/new/shared_git/agent-steward`。
 
@@ -108,8 +109,17 @@
 ## 断点恢复指引
 如果任务中断，重新启动时只需：
 1. 读取本文件 `src_doc/progress.md`；
-2. 找到首个状态为 `⏳ 进行中` 或 `⬜ 待执行` 的子任务 ID（当前为 Phase 10 任务 10.1 或 Phase 11 任务 11.1，详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)）；
+2. 找到首个状态为 `⏳ 进行中` 或 `⬜ 待执行` 的子任务 ID（当前为 Phase 11 任务 11.1，详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)）；
 3. 继续按顺序串行执行，每完成一步立即更新对应路线图与本文件的状态与完成时间戳。
+
+🎉 **Phase 10（DuckDB 分析后端与增量同步管道）已 100% 全量串行交付**：
+- 对齐 README.md ISSUE #4；
+- 实现了 `DuckDbStorageProvider` 存储层 SPI 全部 35 个方法，内置 FTS 与 3-hop 递归图遍历；
+- 实现了 `DuckDbAnalyticsEngine` 与 `AnalyticsProvider` 扩展：变更热力图、变更走势、高频变更 Top-N、事实图谱全景统计、Parquet/CSV 原生导出；
+- 实现了 `SyncPipeline` 增量同步管道，基于 `sync_watermark` 高水位实现秒级增量同步与全量迁移；
+- 扩展了 CLI `storage sync` 子命令与 `storage migrate --to duckdb`；
+- 注册了 3 个分析 MCP 端点，工具总数升至 28 个；
+- 5 项 DuckDB 集成测试与 2 项 OLAP 基准测试 100% PASS，导出 1000 条资产耗时仅 ~50ms！
 
 🎉 **Phase 5（宿主机主动扫描与智能记录引擎）已 100% 全量串行交付**：
 - 对齐 README.md ISSUE #9、#2、#3；

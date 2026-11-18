@@ -36,6 +36,9 @@ pub struct StorageConfig {
 
     #[serde(default = "default_pg_url")]
     pub pg_url: Option<String>,
+
+    #[serde(default = "default_duckdb_path")]
+    pub duckdb_path: Option<PathBuf>,
 }
 
 fn default_storage_provider() -> String {
@@ -46,11 +49,16 @@ fn default_pg_url() -> Option<String> {
     None
 }
 
+fn default_duckdb_path() -> Option<PathBuf> {
+    None
+}
+
 impl Default for StorageConfig {
     fn default() -> Self {
         Self {
             provider: default_storage_provider(),
             pg_url: default_pg_url(),
+            duckdb_path: default_duckdb_path(),
         }
     }
 }

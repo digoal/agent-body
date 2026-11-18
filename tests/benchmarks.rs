@@ -107,3 +107,83 @@ fn bench_placement_engine_decision() {
     println!("⚡ [BENCH] 放置决策引擎平均延迟: {} μs ({} iters)", avg_us, iters);
     assert!(avg_us < 1000, "放置决策单次应在 1ms 以内，实际: {} μs", avg_us);
 }
+
+#[test]
+fn bench_duckdb_aggregate_changes() {
+    use agent_steward::storage::{DuckDbStorageProvider, DuckDbAnalyticsEngine, AnalyticsProvider};
+    let provider = DuckDbStorageProvider::open_in_memory().expect("duckdb");
+
+    // 向量化批量生成 1000 条变更记录（模拟真实批量同步吞吐）
+    {
+        let conn = provider.conn();
+        let conn = conn.lock().unwrap();
+        conn.execute_batch(
+            "INSERT INTO changes (type, target, description, details, source, created_at)
+             SELECT 
+                 CASE WHEN i % 2 = 0 THEN 'file_modified' ELSE 'file_created' END,
+                 '/root/new/work/proj_' || (i % 20) || '/src/file_' || (i % 50) || '.rs',
+                 'change ' || i,
+                 '{\"iter\": ' || i || '}',
+                 'agent',
+                 strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+             FROM generate_series(1, 1000) t(i);"
+        ).expect("bulk insert changes");
+    }
+
+    let engine = DuckDbAnalyticsEngine::new(provider.conn());
+
+    let start = Instant::now();
+    let iters = 20;
+    for _ in 0..iters {
+        let heatmap = engine.changes_heatmap(30).expect("heatmap");
+        assert!(!heatmap.is_empty());
+        let top = engine.most_changed_assets(30, 10).expect("top");
+        assert_eq!(top.len(), 10);
+    }
+    let avg_us = start.elapsed().as_micros() / iters as u128;
+    println!("⚡ [BENCH] DuckDB 1000条变更热力图与Top-N聚合延迟: {} μs ({} iters)", avg_us, iters);
+    assert!(avg_us < 150_000, "聚合分析延迟在 debug 模式下应在 150ms 以内，实际: {} μs", avg_us);
+}
+
+#[test]
+fn bench_duckdb_parquet_export() {
+    use agent_steward::storage::{DuckDbStorageProvider, DuckDbAnalyticsEngine, AnalyticsProvider};
+    let provider = DuckDbStorageProvider::open_in_memory().expect("duckdb");
+
+    // 向量化批量生成 1000 条资产记录
+    {
+        let conn = provider.conn();
+        let conn = conn.lock().unwrap();
+        conn.execute_batch(
+            "INSERT INTO assets (id, path, type, owner, security_level, scan_tier, description, desc_kv, usage, size_bytes, file_count, tags, status, updated_at)
+             SELECT 
+                 'asset-bench-' || i,
+                 '/root/new/work/repo_' || (i % 10) || '/item_' || i || '.rs',
+                 'project',
+                 'user:digoal',
+                 'internal',
+                 'deep',
+                 'DuckDB 性能基准测试资产条目 ' || i,
+                 '{\"index\": ' || i || '}',
+                 NULL,
+                 1024,
+                 5,
+                 '[\"benchmark\"]',
+                 'active',
+                 strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+             FROM generate_series(1, 1000) t(i);"
+        ).expect("bulk insert assets");
+    }
+
+    let engine = DuckDbAnalyticsEngine::new(provider.conn());
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let export_path = tmp.path().join("bench_export.parquet");
+
+    let start = Instant::now();
+    let summary = engine.export_to_parquet("assets", export_path.to_str().unwrap()).expect("export");
+    let elapsed_ms = start.elapsed().as_millis();
+
+    println!("⚡ [BENCH] DuckDB 1000条资产全量导出耗时: {} ms (文件大小: {} bytes)", elapsed_ms, summary.file_size_bytes);
+    assert_eq!(summary.row_count, 1000);
+    assert!(elapsed_ms < 500, "1000条资产导出应在 500ms 内，实际: {} ms", elapsed_ms);
+}

@@ -118,17 +118,25 @@ enum Commands {
 enum StorageCommands {
     #[command(about = "在不同的存储后端之间执行全量数据热迁移")]
     Migrate {
-        #[arg(long, help = "源存储类型 (sqlite / postgres)", default_value = "sqlite")]
+        #[arg(long, help = "源存储类型 (sqlite / postgres / duckdb)", default_value = "sqlite")]
         from: String,
 
         #[arg(long, help = "源端连接串或文件路径 (默认使用当前配置)")]
         from_url: Option<String>,
 
-        #[arg(long, help = "目标存储类型 (sqlite / postgres)", default_value = "postgres")]
+        #[arg(long, help = "目标存储类型 (sqlite / postgres / duckdb)", default_value = "postgres")]
         to: String,
 
         #[arg(long, help = "目标端连接串或文件路径 (默认 postgresql://postgres@127.0.0.1:5432/agent_steward)")]
         to_url: Option<String>,
+    },
+    #[command(about = "执行主存储到分析副本 (DuckDB) 的增量或全量数据同步")]
+    Sync {
+        #[arg(long, help = "目标分析引擎类型 (duckdb)", default_value = "duckdb")]
+        to: String,
+
+        #[arg(long, help = "目标端数据库文件路径 (默认 ~/.steward/steward.duckdb)")]
+        to_path: Option<String>,
     },
     #[command(about = "查看当前生效的存储后端技术栈与配置")]
     Info,
@@ -747,6 +755,11 @@ fn main() -> Result<()> {
                             let p = agent_steward::storage::PgStorageProvider::connect(&url)?;
                             Storage::new(std::sync::Arc::new(p))
                         }
+                        "duckdb" => {
+                            let path = from_url.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("steward.duckdb"));
+                            let p = agent_steward::storage::DuckDbStorageProvider::open(&path)?;
+                            Storage::new(std::sync::Arc::new(p))
+                        }
                         _ => {
                             let path = from_url.map(PathBuf::from).unwrap_or_else(|| cfg.db_path.clone());
                             Storage::open(&path)?
@@ -757,6 +770,11 @@ fn main() -> Result<()> {
                         "postgres" | "pg" => {
                             let url = to_url.unwrap_or_else(|| "postgresql://postgres@127.0.0.1:5432/agent_steward".to_string());
                             let p = agent_steward::storage::PgStorageProvider::connect(&url)?;
+                            Storage::new(std::sync::Arc::new(p))
+                        }
+                        "duckdb" => {
+                            let path = to_url.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("steward.duckdb"));
+                            let p = agent_steward::storage::DuckDbStorageProvider::open(&path)?;
                             Storage::new(std::sync::Arc::new(p))
                         }
                         _ => {
@@ -777,6 +795,19 @@ fn main() -> Result<()> {
                     println!("  - 扫描作业迁移: {} 个", report.scan_jobs_migrated);
                     println!("  - 属性图节点迁移: {} 个", report.fact_nodes_migrated);
                     println!("  - 属性图边迁移:   {} 条", report.fact_edges_migrated);
+                }
+                StorageCommands::Sync { to, to_path } => {
+                    println!("🔄 正在执行主存储 -> 分析副本 ({}) 同步 ...", to);
+                    let target_path = to_path.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("steward.duckdb"));
+                    let duckdb_prov = agent_steward::storage::DuckDbStorageProvider::open(&target_path)?;
+                    let pipeline = agent_steward::storage::SyncPipeline::new(storage.provider().clone(), std::sync::Arc::new(duckdb_prov));
+                    let rep = pipeline.sync_all()?;
+                    println!("✅ 分析副本同步完成！耗时: {} ms", rep.duration_ms);
+                    println!("  - 纳管资产同步:   {} 个", rep.assets_synced);
+                    println!("  - 变更记录同步:   {} 条", rep.changes_synced);
+                    println!("  - 长期记忆同步:   {} 条", rep.memories_synced);
+                    println!("  - 属性图节点同步: {} 个", rep.fact_nodes_synced);
+                    println!("  - 属性图边同步:   {} 条", rep.fact_edges_synced);
                 }
             }
         }

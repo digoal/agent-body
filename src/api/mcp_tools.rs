@@ -377,6 +377,59 @@ impl McpToolRegistry {
                     },
                     "required": ["tool_name", "args"]
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_analytics_heatmap",
+                "description": "基于 DuckDB 高性能列存分析引擎，按目录与时间分桶统计近期的变更热力图分布。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "days": {
+                            "type": "integer",
+                            "default": 30,
+                            "description": "回溯天数"
+                        }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_analytics_trend",
+                "description": "基于 DuckDB 分析引擎的资产增长与记忆演变趋势统计。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "metric": {
+                            "type": "string",
+                            "enum": ["assets", "memories", "changes"],
+                            "default": "assets",
+                            "description": "分析指标类型"
+                        },
+                        "days": {
+                            "type": "integer",
+                            "default": 30,
+                            "description": "分析时间跨度（天数）"
+                        }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_analytics_export",
+                "description": "基于 DuckDB 原生列式引擎将指定的管家数据表秒级导出为 Parquet 格式，供离线深度分析或数据科学工具消费。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "table": {
+                            "type": "string",
+                            "enum": ["assets", "changes", "memories", "fact_nodes", "fact_edges", "links", "active_processes"],
+                            "description": "待导出的数据表名称"
+                        },
+                        "output_path": {
+                            "type": "string",
+                            "description": "输出的目标 Parquet 文件绝对路径（例如 '/root/new/tmp/assets.parquet'）"
+                        }
+                    },
+                    "required": ["table", "output_path"]
+                }
             })
         ]
     }
@@ -715,6 +768,50 @@ impl McpToolRegistry {
                 let engine = crate::api::hooks::AgentHookEngine::new(self.storage.clone());
                 let res = engine.post_tool_call(tool_name, &tool_args, success);
                 Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_analytics_heatmap" => {
+                use crate::storage::AnalyticsProvider;
+                let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(30) as usize;
+                let duckdb_prov = crate::storage::DuckDbStorageProvider::open_in_memory()?;
+                let pipeline = crate::storage::SyncPipeline::new(self.storage.provider().clone(), Arc::new(duckdb_prov.clone()));
+                let _ = pipeline.sync_all();
+                let engine = crate::storage::DuckDbAnalyticsEngine::new(duckdb_prov.conn());
+                let heatmap = engine.changes_heatmap(days)?;
+                Ok(serde_json::to_string_pretty(&serde_json::json!({
+                    "time_span_days": days,
+                    "heatmap": heatmap,
+                }))?)
+            }
+
+            "steward_analytics_trend" => {
+                use crate::storage::AnalyticsProvider;
+                let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(30) as usize;
+                let duckdb_prov = crate::storage::DuckDbStorageProvider::open_in_memory()?;
+                let pipeline = crate::storage::SyncPipeline::new(self.storage.provider().clone(), Arc::new(duckdb_prov.clone()));
+                let _ = pipeline.sync_all();
+                let engine = crate::storage::DuckDbAnalyticsEngine::new(duckdb_prov.conn());
+                let trend = engine.asset_growth_trend(days)?;
+                let decay = engine.memory_decay_curve()?;
+                let stats = engine.fact_graph_stats()?;
+                Ok(serde_json::to_string_pretty(&serde_json::json!({
+                    "time_span_days": days,
+                    "asset_growth_trend": trend,
+                    "memory_decay": decay,
+                    "graph_stats": stats,
+                }))?)
+            }
+
+            "steward_analytics_export" => {
+                use crate::storage::AnalyticsProvider;
+                let table = args.get("table").and_then(|v| v.as_str()).unwrap_or("assets");
+                let output_path = args.get("output_path").and_then(|v| v.as_str()).unwrap_or("/root/new/tmp/export.parquet");
+                let duckdb_prov = crate::storage::DuckDbStorageProvider::open_in_memory()?;
+                let pipeline = crate::storage::SyncPipeline::new(self.storage.provider().clone(), Arc::new(duckdb_prov.clone()));
+                let _ = pipeline.sync_all();
+                let engine = crate::storage::DuckDbAnalyticsEngine::new(duckdb_prov.conn());
+                let summary = engine.export_to_parquet(table, output_path)?;
+                Ok(serde_json::to_string_pretty(&summary)?)
             }
 
             _ => bail!("Unknown tool: {}", name),
