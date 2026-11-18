@@ -8,6 +8,9 @@ use crate::env::EnvCollector;
 use crate::watcher::FileWatcher;
 use crate::watcher::handler::ChangeHandler;
 
+pub mod scheduler;
+pub use scheduler::{BackgroundScheduler, SchedulerCycleReport};
+
 pub struct StewardDaemon {
     config: Config,
     storage: Storage,
@@ -52,12 +55,15 @@ impl StewardDaemon {
 
         let handler = ChangeHandler::new(self.storage.clone())?;
         let env_collector = EnvCollector::new(self.storage.clone());
+        let bg_scheduler = BackgroundScheduler::new(self.storage.clone());
 
         // 2. 定时器
         let mut process_interval = interval(Duration::from_secs(60));
         let mut watch_poll_interval = interval(Duration::from_millis(500));
+        let mut inspection_interval = interval(Duration::from_secs(1800)); // 每 30 分钟一次深度全量巡检
 
         println!("✅ 动态任务进程定时采集就绪 (每 60 秒轮询 /proc)");
+        println!("✅ 后台自主深度巡查与属性图增量同步就绪 (每 1800 秒自动巡查)");
         println!("按 Ctrl+C 优雅退出...\n");
 
         loop {
@@ -81,6 +87,14 @@ impl StewardDaemon {
                     if let Ok(procs) = env_collector.collect_and_sync_processes() {
                         // 仅静默同步，若有高负载任务或异常可在此告警
                         let _ = procs;
+                    }
+                }
+
+                // 定时自主深度巡查与属性图同步
+                _ = inspection_interval.tick() => {
+                    if let Ok(report) = bg_scheduler.run_inspection_cycle() {
+                        println!("[Scheduler] 深度巡检完成: 同步进程 {}, 属性图节点更新 {}, 边更新 {}",
+                            report.synced_processes, report.graph_nodes_updated, report.graph_edges_updated);
                     }
                 }
 

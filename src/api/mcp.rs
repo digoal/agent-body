@@ -224,7 +224,7 @@ mod tests {
 
         assert_eq!(v["id"], "req-2");
         let tools = v["result"]["tools"].as_array().expect("tools array");
-        assert_eq!(tools.len(), 23, "必须注册全部 23 个原生 MCP 工具");
+        assert_eq!(tools.len(), 25, "必须注册全部 25 个原生 MCP 工具");
         assert!(tools.iter().any(|t| t["name"] == "steward_brief"));
         assert!(tools.iter().any(|t| t["name"] == "steward_placement_suggest"));
         assert!(tools.iter().any(|t| t["name"] == "steward_asset_search"));
@@ -233,6 +233,8 @@ mod tests {
         assert!(tools.iter().any(|t| t["name"] == "steward_env_gc"));
         assert!(tools.iter().any(|t| t["name"] == "steward_memory_audit"));
         assert!(tools.iter().any(|t| t["name"] == "steward_fact_query"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_hook_pre"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_hook_post"));
     }
 
     #[test]
@@ -385,5 +387,86 @@ mod tests {
         let v_rep: Value = serde_json::from_str(&resp_repair).expect("parse response");
         assert_eq!(v_rep["id"], 104);
         assert_eq!(v_rep["result"]["isError"], false);
+    }
+
+    #[test]
+    fn test_mcp_tools_call_brief_dynamic() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let server = McpServer::new(storage);
+
+        let req = r#"{
+            "jsonrpc": "2.0",
+            "id": 105,
+            "method": "tools/call",
+            "params": {
+                "name": "steward_brief",
+                "arguments": {
+                    "query": "rust 守护进程",
+                    "session_id": "sess-mcp-test",
+                    "budget_tokens": 1200
+                }
+            }
+        }"#;
+
+        let resp = server.handle_message(req).expect("handle_message");
+        let v: Value = serde_json::from_str(&resp).expect("parse response");
+        assert_eq!(v["id"], 105);
+        assert_eq!(v["result"]["isError"], false);
+        let text = v["result"]["content"][0]["text"].as_str().expect("content text");
+        assert!(text.contains("大管家开工简报"), "输出应含简报标题");
+        assert!(text.contains("宿主机事实"), "输出应含事实模块");
+        assert!(text.contains("工程偏好"), "输出应含偏好模块");
+        assert!(text.contains("质量分"), "输出应含质量评分");
+    }
+
+    #[test]
+    fn test_mcp_tools_call_agent_hooks() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let server = McpServer::new(storage);
+
+        // 1. 调用 steward_hook_pre
+        let req_pre = r#"{
+            "jsonrpc": "2.0",
+            "id": 106,
+            "method": "tools/call",
+            "params": {
+                "name": "steward_hook_pre",
+                "arguments": {
+                    "tool_name": "write_file",
+                    "args": {
+                        "path": "/root/new/work/test_agent.rs"
+                    }
+                }
+            }
+        }"#;
+
+        let resp_pre = server.handle_message(req_pre).expect("handle_message");
+        let v_pre: Value = serde_json::from_str(&resp_pre).expect("parse response");
+        assert_eq!(v_pre["id"], 106);
+        assert_eq!(v_pre["result"]["isError"], false);
+        let text_pre = v_pre["result"]["content"][0]["text"].as_str().expect("text");
+        assert!(text_pre.contains("allowed"));
+
+        // 2. 调用 steward_hook_post
+        let req_post = r#"{
+            "jsonrpc": "2.0",
+            "id": 107,
+            "method": "tools/call",
+            "params": {
+                "name": "steward_hook_post",
+                "arguments": {
+                    "tool_name": "write_file",
+                    "args": {
+                        "path": "/root/new/work/test_agent.rs"
+                    },
+                    "success": true
+                }
+            }
+        }"#;
+
+        let resp_post = server.handle_message(req_post).expect("handle_message");
+        let v_post: Value = serde_json::from_str(&resp_post).expect("parse response");
+        assert_eq!(v_post["id"], 107);
+        assert_eq!(v_post["result"]["isError"], false);
     }
 }

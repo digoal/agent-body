@@ -136,7 +136,28 @@ impl ConventionsEngine {
             brief_prompt_injection: injection,
         }
     }
+
+    /// 综合 query 内容匹配适合的工程规约（供情境组装器使用）
+    pub fn get_filtered_conventions(query: &str) -> Vec<EngineeringConvention> {
+        let q = query.to_lowercase();
+        let ctx = if q.contains("article") || q.contains("文章") || q.contains("写作") {
+            "article"
+        } else if q.contains("code") || q.contains("开发") || q.contains("rust") || q.contains("git") {
+            "code"
+        } else if q.contains("script") || q.contains("脚本") {
+            "script"
+        } else if q.contains("ops") || q.contains("运维") || q.contains("部署") {
+            "ops"
+        } else {
+            "all"
+        };
+        let rep = Self::get_conventions_for_context(ctx, true);
+        rep.active_conventions
+    }
 }
+
+/// 类型别名兼容
+pub type ConventionEngine = ConventionsEngine;
 
 #[cfg(test)]
 mod tests {

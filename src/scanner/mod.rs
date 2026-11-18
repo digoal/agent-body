@@ -1,4 +1,9 @@
 pub mod matcher;
+pub mod state_machine;
+pub mod importance;
+
+pub use state_machine::ScanStateMachine;
+pub use importance::{ImportanceScorer, NoiseFilter, ImportanceScore};
 
 use std::path::Path;
 use serde::{Deserialize, Serialize};
@@ -20,19 +25,28 @@ pub struct ScanReport {
     pub scanned_dirs: usize,
     pub deep_indexed_files: usize,
     pub shallow_blocked_dirs: Vec<ShallowBlockInfo>,
+    pub noise_skipped_files: usize,
     pub total_assets_recorded: usize,
 }
 
 pub struct Scanner {
     storage: Storage,
     matcher: PolicyMatcher,
+    noise_filter: NoiseFilter,
 }
 
 impl Scanner {
     pub fn new(storage: Storage) -> Result<Self> {
         let policies = storage.get_scan_policies()?;
         let matcher = PolicyMatcher::from_policies(&policies)?;
-        Ok(Self { storage, matcher })
+        let noise_filter = NoiseFilter::default();
+        Ok(Self { storage, matcher, noise_filter })
+    }
+
+    pub fn with_noise_filter(storage: Storage, noise_filter: NoiseFilter) -> Result<Self> {
+        let policies = storage.get_scan_policies()?;
+        let matcher = PolicyMatcher::from_policies(&policies)?;
+        Ok(Self { storage, matcher, noise_filter })
     }
 
     /// 执行高性能分级颗粒度扫描
@@ -98,6 +112,17 @@ impl Scanner {
                 let (asset_type, tags) = infer_file_attributes(path);
                 let metadata = entry.metadata().ok();
                 let size_bytes = metadata.as_ref().map(|m| m.len() as i64);
+                let mtime_secs = metadata.as_ref()
+                    .and_then(|m| m.modified().ok())
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_secs());
+
+                // 智能重要性评分与噪声过滤
+                let (should_record, imp_score) = self.noise_filter.should_record(path, &asset_type, size_bytes, mtime_secs);
+                if !should_record {
+                    report.noise_skipped_files += 1;
+                    continue;
+                }
 
                 let record = AssetRecord {
                     id: uuid::Uuid::new_v4().to_string(),
@@ -109,7 +134,9 @@ impl Scanner {
                     description: Some(format!("资产文件 ({})", entry.file_name().to_string_lossy())),
                     desc_kv: serde_json::json!({
                         "filename": entry.file_name().to_string_lossy(),
-                        "tier": tier
+                        "tier": tier,
+                        "importance_score": imp_score.score,
+                        "importance_reason": imp_score.reason
                     }),
                     usage: None,
                     size_bytes,
@@ -151,7 +178,7 @@ impl Scanner {
     }
 }
 
-fn infer_file_attributes(path: &Path) -> (String, Vec<String>) {
+pub(crate) fn infer_file_attributes(path: &Path) -> (String, Vec<String>) {
     let mut tags = Vec::new();
     let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
 
@@ -230,5 +257,34 @@ mod tests {
         let js_asset = storage.get_asset_by_path(&nested_js_path)
             .expect("query nested js");
         assert!(js_asset.is_none(), "★ 黑名单目录下的子文件绝对不能被索引入库！");
+    }
+
+    #[test]
+    fn test_scanner_noise_filtering_behavior() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let scanner = Scanner::new(storage.clone()).expect("new scanner");
+
+        let tmp = tempdir().expect("tempdir");
+        let root = tmp.path();
+
+        // 1. 创建用户工作目录下的有效代码
+        let work_dir = root.join("work").join("my_app");
+        create_dir_all(&work_dir).unwrap();
+        File::create(work_dir.join("app.rs")).unwrap().write_all(b"fn run() {}").unwrap();
+
+        // 2. 创建临时垃圾日志文件
+        let tmp_dir = root.join("tmp");
+        create_dir_all(&tmp_dir).unwrap();
+        File::create(tmp_dir.join("debug.log")).unwrap().write_all(b"debug info").unwrap();
+
+        let report = scanner.scan_path(root).expect("scan_path");
+        assert!(report.deep_indexed_files >= 1);
+        assert!(report.noise_skipped_files >= 1, "临时 log 文件应当被统计为跳过噪声");
+
+        let app_asset = storage.get_asset_by_path(&work_dir.join("app.rs").to_string_lossy().to_string()).unwrap();
+        let log_asset = storage.get_asset_by_path(&tmp_dir.join("debug.log").to_string_lossy().to_string()).unwrap();
+
+        assert!(app_asset.is_some(), "有效代码资产必须已入库");
+        assert!(log_asset.is_none(), "垃圾日志文件绝不应该被入库");
     }
 }

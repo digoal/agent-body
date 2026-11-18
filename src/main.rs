@@ -208,6 +208,18 @@ enum AssetCommands {
         #[arg(short, long, default_value_t = 10)]
         limit: usize,
     },
+
+    #[command(about = "断点续扫状态机任务管控 (create, run, pause, list, status)")]
+    Job {
+        #[arg(short, long, default_value = "list", help = "操作动作: create, run, pause, list, status")]
+        action: String,
+
+        #[arg(help = "目标目录路径或 Job ID")]
+        target: Option<String>,
+
+        #[arg(long, help = "单次推进步数限制 (用于调试)")]
+        limit: Option<usize>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -401,6 +413,61 @@ async fn main() -> Result<()> {
                     println!("最近资产清单 (前 {} 条):", results.len());
                     for a in results {
                         println!("  - [{:8}] {:6} | {}", a.asset_type, a.scan_tier, a.path);
+                    }
+                }
+                AssetCommands::Job { action, target, limit } => {
+                    let sm = agent_steward::scanner::ScanStateMachine::new(storage.clone())?;
+                    match action.as_str() {
+                        "create" => {
+                            let p = target.ok_or_else(|| anyhow::anyhow!("缺少目标扫描路径"))?;
+                            let job = sm.create_job(std::path::Path::new(&p))?;
+                            println!("✅ 成功创建断点续扫任务:");
+                            println!("  - Job ID:    {}", job.id);
+                            println!("  - 根路径:    {}", job.root_path);
+                            println!("  - 当前状态:  {}", job.status);
+                        }
+                        "run" | "resume" => {
+                            let jid = target.ok_or_else(|| anyhow::anyhow!("缺少 Job ID"))?;
+                            println!("正在启动或恢复断点续扫任务: {}", jid);
+                            let job = sm.run_or_resume(&jid, limit)?;
+                            println!("任务执行阶段完成:");
+                            println!("  - 状态:       {}", job.status);
+                            println!("  - 最新断点:   {:?}", job.last_path);
+                            println!("  - 扫描目录数: {}", job.scanned_dirs);
+                            println!("  - 扫描文件数: {}", job.scanned_files);
+                            println!("  - 录入资产数: {}", job.total_assets);
+                        }
+                        "pause" => {
+                            let jid = target.ok_or_else(|| anyhow::anyhow!("缺少 Job ID"))?;
+                            let job = sm.pause_job(&jid)?;
+                            println!("任务已暂停: {} (状态: {})", job.id, job.status);
+                        }
+                        "list" => {
+                            let jobs = sm.list_jobs(20)?;
+                            println!("最近断点续扫任务记录 (共 {} 条):", jobs.len());
+                            for j in jobs {
+                                println!("  - [{:9}] {} | 根路径: {} | 资产数: {}", j.status, j.id, j.root_path, j.total_assets);
+                            }
+                        }
+                        "status" => {
+                            let jid = target.ok_or_else(|| anyhow::anyhow!("缺少 Job ID"))?;
+                            if let Some(j) = sm.get_job(&jid)? {
+                                println!("断点任务状态详情:");
+                                println!("  - Job ID:      {}", j.id);
+                                println!("  - 状态:        {}", j.status);
+                                println!("  - 根路径:      {}", j.root_path);
+                                println!("  - 最新断点:    {:?}", j.last_path);
+                                println!("  - 扫描文件数:  {}", j.scanned_files);
+                                println!("  - 总资产数:    {}", j.total_assets);
+                                println!("  - 创建时间:    {:?}", j.created_at);
+                                println!("  - 完成时间:    {:?}", j.completed_at);
+                            } else {
+                                println!("未找到 Job ID: {}", jid);
+                            }
+                        }
+                        _ => {
+                            println!("未知动作: {} (支持: create, run, pause, list, status)", action);
+                        }
                     }
                 }
             }

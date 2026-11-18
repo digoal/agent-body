@@ -10,7 +10,7 @@ pub mod conventions;
 
 pub use learner::{PlacementLearner, LearnedRuleCandidate, LearnReport, CorrectionFeedback};
 pub use engine_v2::{PlacementEngineV2, PlacementRequestV2, PlacementSuggestionV2, sanitize_name_v2};
-pub use conventions::{ConventionsEngine, EngineeringConvention, ContextualConventionsReport};
+pub use conventions::{ConventionsEngine, ConventionEngine, EngineeringConvention, ContextualConventionsReport};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlacementRequest {
@@ -82,6 +82,25 @@ impl PlacementEngine {
             conflict_detected,
             guidelines,
         })
+    }
+
+    /// 获取当前放置规则摘要（供情境组装器使用）
+    pub fn get_rules_summary(&self) -> String {
+        match self.storage.get_placement_rules() {
+            Ok(rules) => {
+                let parts: Vec<String> = rules
+                    .iter()
+                    .take(6)
+                    .map(|r| format!("{}: {}", r.pattern_type, r.target_base_dir))
+                    .collect();
+                if parts.is_empty() {
+                    "工程目录规范: /root/new/{work,shared_proj,skills,note,src,tmp}".to_string()
+                } else {
+                    parts.join(" | ")
+                }
+            }
+            Err(_) => "工程目录规范: /root/new/{work,shared_proj,skills,note,src,tmp}".to_string(),
+        }
     }
 
     fn match_rule<'a>(&self, rules: &'a [PlacementRule], req: &PlacementRequest) -> &'a PlacementRule {

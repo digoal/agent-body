@@ -50,6 +50,50 @@ impl Storage {
         let _ = conn.execute("ALTER TABLE links ADD COLUMN line_number INTEGER DEFAULT NULL", []);
         let _ = conn.execute("ALTER TABLE links ADD COLUMN snippet TEXT DEFAULT NULL", []);
         let _ = conn.execute("ALTER TABLE links ADD COLUMN provenance TEXT DEFAULT 'static_scan'", []);
+        let _ = conn.execute("CREATE TABLE IF NOT EXISTS scan_jobs (
+            id              TEXT PRIMARY KEY,
+            root_path       TEXT NOT NULL,
+            status          TEXT NOT NULL CHECK (status IN ('pending','running','paused','completed','failed')),
+            last_path       TEXT,
+            scanned_dirs    INTEGER DEFAULT 0,
+            scanned_files   INTEGER DEFAULT 0,
+            total_assets    INTEGER DEFAULT 0,
+            shallow_blocked INTEGER DEFAULT 0,
+            error_message   TEXT,
+            started_at      TEXT,
+            paused_at       TEXT,
+            completed_at    TEXT,
+            created_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
+            updated_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+        )", []);
+        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_jobs_status ON scan_jobs(status)", []);
+
+        let _ = conn.execute("CREATE TABLE IF NOT EXISTS fact_nodes (
+            id          TEXT PRIMARY KEY,
+            node_type   TEXT NOT NULL CHECK (node_type IN ('project','tool','port','service','cron','file','authoritative_site')),
+            name        TEXT NOT NULL,
+            label       TEXT NOT NULL,
+            properties  TEXT DEFAULT '{}',
+            updated_at  TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+        )", []);
+        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_nodes_type ON fact_nodes(node_type)", []);
+        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_nodes_name ON fact_nodes(name)", []);
+
+        let _ = conn.execute("CREATE TABLE IF NOT EXISTS fact_edges (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id   TEXT NOT NULL,
+            target_id   TEXT NOT NULL,
+            relation    TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains')),
+            properties  TEXT DEFAULT '{}',
+            confidence  REAL DEFAULT 1.0,
+            updated_at  TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
+            UNIQUE(source_id, target_id, relation),
+            FOREIGN KEY(source_id) REFERENCES fact_nodes(id) ON DELETE CASCADE,
+            FOREIGN KEY(target_id) REFERENCES fact_nodes(id) ON DELETE CASCADE
+        )", []);
+        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_edges_source ON fact_edges(source_id)", []);
+        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_edges_target ON fact_edges(target_id)", []);
+        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_edges_relation ON fact_edges(relation)", []);
         Ok(())
     }
 
@@ -627,6 +671,324 @@ impl Storage {
 
         Ok(rows)
     }
+
+    // ─── Scan Jobs ───────────────────────────────────────────────────
+
+    pub fn create_scan_job(&self, job: &ScanJobRecord) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO scan_jobs (id, root_path, status, last_path, scanned_dirs, scanned_files, total_assets, shallow_blocked, error_message, started_at, paused_at, completed_at, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, strftime('%Y-%m-%dT%H:%M:%f+00:00','now'), strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))",
+            params![
+                job.id,
+                job.root_path,
+                job.status,
+                job.last_path,
+                job.scanned_dirs,
+                job.scanned_files,
+                job.total_assets,
+                job.shallow_blocked,
+                job.error_message,
+                job.started_at,
+                job.paused_at,
+                job.completed_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_scan_job(&self, job: &ScanJobRecord) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE scan_jobs SET
+                status = ?2,
+                last_path = ?3,
+                scanned_dirs = ?4,
+                scanned_files = ?5,
+                total_assets = ?6,
+                shallow_blocked = ?7,
+                error_message = ?8,
+                started_at = ?9,
+                paused_at = ?10,
+                completed_at = ?11,
+                updated_at = strftime('%Y-%m-%dT%H:%M:%f+00:00','now')
+             WHERE id = ?1",
+            params![
+                job.id,
+                job.status,
+                job.last_path,
+                job.scanned_dirs,
+                job.scanned_files,
+                job.total_assets,
+                job.shallow_blocked,
+                job.error_message,
+                job.started_at,
+                job.paused_at,
+                job.completed_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_scan_job(&self, id: &str) -> Result<Option<ScanJobRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, root_path, status, last_path, scanned_dirs, scanned_files, total_assets, shallow_blocked, error_message, started_at, paused_at, completed_at, created_at, updated_at
+             FROM scan_jobs WHERE id = ?1"
+        )?;
+
+        let mut rows = stmt.query(params![id])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(ScanJobRecord {
+                id: row.get(0)?,
+                root_path: row.get(1)?,
+                status: row.get(2)?,
+                last_path: row.get(3)?,
+                scanned_dirs: row.get(4)?,
+                scanned_files: row.get(5)?,
+                total_assets: row.get(6)?,
+                shallow_blocked: row.get(7)?,
+                error_message: row.get(8)?,
+                started_at: row.get(9)?,
+                paused_at: row.get(10)?,
+                completed_at: row.get(11)?,
+                created_at: row.get(12)?,
+                updated_at: row.get(13)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn list_scan_jobs(&self, limit: usize) -> Result<Vec<ScanJobRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, root_path, status, last_path, scanned_dirs, scanned_files, total_assets, shallow_blocked, error_message, started_at, paused_at, completed_at, created_at, updated_at
+             FROM scan_jobs ORDER BY created_at DESC LIMIT ?1"
+        )?;
+
+        let jobs = stmt.query_map(params![limit as i64], |row| {
+            Ok(ScanJobRecord {
+                id: row.get(0)?,
+                root_path: row.get(1)?,
+                status: row.get(2)?,
+                last_path: row.get(3)?,
+                scanned_dirs: row.get(4)?,
+                scanned_files: row.get(5)?,
+                total_assets: row.get(6)?,
+                shallow_blocked: row.get(7)?,
+                error_message: row.get(8)?,
+                started_at: row.get(9)?,
+                paused_at: row.get(10)?,
+                completed_at: row.get(11)?,
+                created_at: row.get(12)?,
+                updated_at: row.get(13)?,
+            })
+        })?.collect::<Result<Vec<_>, _>>()?;
+
+        Ok(jobs)
+    }
+
+    pub fn get_active_scan_job(&self) -> Result<Option<ScanJobRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, root_path, status, last_path, scanned_dirs, scanned_files, total_assets, shallow_blocked, error_message, started_at, paused_at, completed_at, created_at, updated_at
+             FROM scan_jobs WHERE status IN ('pending', 'running', 'paused') ORDER BY updated_at DESC LIMIT 1"
+        )?;
+
+        let mut rows = stmt.query([])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(ScanJobRecord {
+                id: row.get(0)?,
+                root_path: row.get(1)?,
+                status: row.get(2)?,
+                last_path: row.get(3)?,
+                scanned_dirs: row.get(4)?,
+                scanned_files: row.get(5)?,
+                total_assets: row.get(6)?,
+                shallow_blocked: row.get(7)?,
+                error_message: row.get(8)?,
+                started_at: row.get(9)?,
+                paused_at: row.get(10)?,
+                completed_at: row.get(11)?,
+                created_at: row.get(12)?,
+                updated_at: row.get(13)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    // ─── Fact Property Graph ──────────────────────────────────────────
+
+    pub fn upsert_fact_node(&self, node: &FactNodeRecord) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let props_str = serde_json::to_string(&node.properties)?;
+        conn.execute(
+            "INSERT INTO fact_nodes (id, node_type, name, label, properties, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+             ON CONFLICT(id) DO UPDATE SET
+                node_type = excluded.node_type,
+                name = excluded.name,
+                label = excluded.label,
+                properties = excluded.properties,
+                updated_at = strftime('%Y-%m-%dT%H:%M:%f+00:00','now')",
+            params![node.id, node.node_type, node.name, node.label, props_str],
+        )?;
+        Ok(())
+    }
+
+    pub fn upsert_fact_edge(&self, edge: &FactEdgeRecord) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let props_str = serde_json::to_string(&edge.properties)?;
+        conn.execute(
+            "INSERT INTO fact_edges (source_id, target_id, relation, properties, confidence, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+             ON CONFLICT(source_id, target_id, relation) DO UPDATE SET
+                properties = excluded.properties,
+                confidence = excluded.confidence,
+                updated_at = strftime('%Y-%m-%dT%H:%M:%f+00:00','now')",
+            params![edge.source_id, edge.target_id, edge.relation, props_str, edge.confidence],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_fact_node(&self, id: &str) -> Result<Option<FactNodeRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, node_type, name, label, properties, updated_at FROM fact_nodes WHERE id = ?1"
+        )?;
+
+        let mut rows = stmt.query(params![id])?;
+        if let Some(row) = rows.next()? {
+            let props_str: String = row.get(4)?;
+            let properties: serde_json::Value = serde_json::from_str(&props_str).unwrap_or(serde_json::json!({}));
+            Ok(Some(FactNodeRecord {
+                id: row.get(0)?,
+                node_type: row.get(1)?,
+                name: row.get(2)?,
+                label: row.get(3)?,
+                properties,
+                updated_at: row.get(5)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn find_fact_nodes_by_name(&self, name: &str) -> Result<Vec<FactNodeRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, node_type, name, label, properties, updated_at FROM fact_nodes 
+             WHERE name LIKE ?1 OR label LIKE ?1 LIMIT 50"
+        )?;
+
+        let pattern = format!("%{}%", name);
+        let nodes = stmt.query_map(params![pattern], |row| {
+            let props_str: String = row.get(4)?;
+            let properties: serde_json::Value = serde_json::from_str(&props_str).unwrap_or(serde_json::json!({}));
+            Ok(FactNodeRecord {
+                id: row.get(0)?,
+                node_type: row.get(1)?,
+                name: row.get(2)?,
+                label: row.get(3)?,
+                properties,
+                updated_at: row.get(5)?,
+            })
+        })?.collect::<Result<Vec<_>, _>>()?;
+
+        Ok(nodes)
+    }
+
+    /// 基于广度优先遍历从指定 root_id 提取 N 跳子图
+    pub fn traverse_fact_graph(&self, root_id: &str, max_hops: usize) -> Result<SubGraph> {
+        let root = match self.get_fact_node(root_id)? {
+            Some(r) => r,
+            None => return Ok(SubGraph::default()),
+        };
+
+        let conn = self.conn.lock().unwrap();
+        let mut visited_node_ids = std::collections::HashSet::new();
+        visited_node_ids.insert(root_id.to_string());
+
+        let mut current_frontier = vec![root_id.to_string()];
+        let mut collected_edges = Vec::new();
+
+        for _ in 0..max_hops {
+            if current_frontier.is_empty() {
+                break;
+            }
+            let mut next_frontier = Vec::new();
+
+            for node_id in &current_frontier {
+                let mut stmt = conn.prepare(
+                    "SELECT id, source_id, target_id, relation, properties, confidence, updated_at
+                     FROM fact_edges
+                     WHERE source_id = ?1 OR target_id = ?1"
+                )?;
+
+                let edges = stmt.query_map(params![node_id], |row| {
+                    let props_str: String = row.get(4)?;
+                    let props = serde_json::from_str(&props_str).unwrap_or(serde_json::json!({}));
+                    Ok(FactEdgeRecord {
+                        id: Some(row.get(0)?),
+                        source_id: row.get(1)?,
+                        target_id: row.get(2)?,
+                        relation: row.get(3)?,
+                        properties: props,
+                        confidence: row.get(5)?,
+                        updated_at: row.get(6)?,
+                    })
+                })?.collect::<Result<Vec<_>, _>>()?;
+
+                for e in edges {
+                    let other_id = if &e.source_id == node_id {
+                        &e.target_id
+                    } else {
+                        &e.source_id
+                    };
+
+                    if !visited_node_ids.contains(other_id) {
+                        visited_node_ids.insert(other_id.clone());
+                        next_frontier.push(other_id.clone());
+                    }
+                    if !collected_edges.iter().any(|existing: &FactEdgeRecord| {
+                        existing.source_id == e.source_id && existing.target_id == e.target_id && existing.relation == e.relation
+                    }) {
+                        collected_edges.push(e);
+                    }
+                }
+            }
+            current_frontier = next_frontier;
+        }
+
+        // 收集所有已访问节点的详细信息
+        let mut collected_nodes = Vec::new();
+        for nid in &visited_node_ids {
+            let mut stmt = conn.prepare(
+                "SELECT id, node_type, name, label, properties, updated_at FROM fact_nodes WHERE id = ?1"
+            )?;
+            let mut rows = stmt.query(params![nid])?;
+            if let Some(row) = rows.next()? {
+                let props_str: String = row.get(4)?;
+                let properties: serde_json::Value = serde_json::from_str(&props_str).unwrap_or(serde_json::json!({}));
+                collected_nodes.push(FactNodeRecord {
+                    id: row.get(0)?,
+                    node_type: row.get(1)?,
+                    name: row.get(2)?,
+                    label: row.get(3)?,
+                    properties,
+                    updated_at: row.get(5)?,
+                });
+            }
+        }
+
+        Ok(SubGraph {
+            root_node: Some(root),
+            nodes: collected_nodes,
+            edges: collected_edges,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -698,5 +1060,116 @@ mod tests {
         assert_eq!(list.len(), 1);
         assert_eq!(list[0].pid, 14208);
         assert_eq!(list[0].owner, "agent:hermes_cron");
+    }
+
+    #[test]
+    fn test_scan_jobs_crud() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let job = ScanJobRecord {
+            id: "job-test-1".to_string(),
+            root_path: "/root/new/work".to_string(),
+            status: "pending".to_string(),
+            last_path: None,
+            scanned_dirs: 0,
+            scanned_files: 0,
+            total_assets: 0,
+            shallow_blocked: 0,
+            error_message: None,
+            started_at: None,
+            paused_at: None,
+            completed_at: None,
+            created_at: None,
+            updated_at: None,
+        };
+
+        storage.create_scan_job(&job).expect("create_scan_job");
+
+        let fetched = storage.get_scan_job("job-test-1").expect("get_scan_job").expect("must exist");
+        assert_eq!(fetched.status, "pending");
+        assert_eq!(fetched.root_path, "/root/new/work");
+
+        let mut updated = fetched;
+        updated.status = "running".to_string();
+        updated.last_path = Some("/root/new/work/proj1".to_string());
+        updated.scanned_dirs = 5;
+        updated.scanned_files = 20;
+        updated.total_assets = 25;
+        storage.update_scan_job(&updated).expect("update_scan_job");
+
+        let active = storage.get_active_scan_job().expect("get_active").expect("should have active");
+        assert_eq!(active.id, "job-test-1");
+        assert_eq!(active.status, "running");
+        assert_eq!(active.scanned_dirs, 5);
+        assert_eq!(active.last_path.as_deref(), Some("/root/new/work/proj1"));
+
+        let list = storage.list_scan_jobs(10).expect("list_scan_jobs");
+        assert_eq!(list.len(), 1);
+    }
+
+    #[test]
+    fn test_property_graph_crud_and_traversal() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+
+        // 1. 创建节点: 项目 -> 服务 -> 端口
+        let p_node = FactNodeRecord {
+            id: "proj:agent-steward".to_string(),
+            node_type: "project".to_string(),
+            name: "agent-steward".to_string(),
+            label: "宿主环境大管家工程".to_string(),
+            properties: serde_json::json!({"path": "/root/new/work/agent-steward"}),
+            updated_at: None,
+        };
+        let s_node = FactNodeRecord {
+            id: "service:agent-steward.service".to_string(),
+            node_type: "service".to_string(),
+            name: "agent-steward.service".to_string(),
+            label: "大管家守护服务".to_string(),
+            properties: serde_json::json!({"unit": "/etc/systemd/system/agent-steward.service"}),
+            updated_at: None,
+        };
+        let port_node = FactNodeRecord {
+            id: "port:8080".to_string(),
+            node_type: "port".to_string(),
+            name: "8080".to_string(),
+            label: "TCP 8080端口".to_string(),
+            properties: serde_json::json!({"proto": "tcp"}),
+            updated_at: None,
+        };
+
+        storage.upsert_fact_node(&p_node).expect("upsert proj");
+        storage.upsert_fact_node(&s_node).expect("upsert service");
+        storage.upsert_fact_node(&port_node).expect("upsert port");
+
+        // 2. 创建边
+        let edge1 = FactEdgeRecord {
+            id: None,
+            source_id: "service:agent-steward.service".to_string(),
+            target_id: "proj:agent-steward".to_string(),
+            relation: "depends_on".to_string(),
+            properties: serde_json::json!({}),
+            confidence: 1.0,
+            updated_at: None,
+        };
+        let edge2 = FactEdgeRecord {
+            id: None,
+            source_id: "service:agent-steward.service".to_string(),
+            target_id: "port:8080".to_string(),
+            relation: "listens_on".to_string(),
+            properties: serde_json::json!({}),
+            confidence: 1.0,
+            updated_at: None,
+        };
+
+        storage.upsert_fact_edge(&edge1).expect("edge 1");
+        storage.upsert_fact_edge(&edge2).expect("edge 2");
+
+        // 3. 验证从服务节点出发的 1 跳子图
+        let sub1 = storage.traverse_fact_graph("service:agent-steward.service", 1).expect("subgraph 1 hop");
+        assert_eq!(sub1.nodes.len(), 3, "1跳应该连同项目和端口全部捕获");
+        assert_eq!(sub1.edges.len(), 2, "应包含2条边");
+
+        // 4. 验证根据名字模糊查找节点
+        let found = storage.find_fact_nodes_by_name("steward").expect("find nodes");
+        assert_eq!(found.len(), 2);
     }
 }

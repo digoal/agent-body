@@ -44,7 +44,7 @@
 |:---:|---|---|:---:|:---:|:---:|
 | **3.1** | **Memory Provider SPI 抽象** | 构建 `src/memory/spi.rs`：定义标准 SPI Trait 与跨生态通用数据模型；覆盖单元测试 | ✅ **已完成** | 2026-11-17 18:00 | 2026-11-17 18:02 |
 | **3.2** | **内置轻量引擎 SPI 封装** | 构建 `src/memory/builtin_provider.rs`：将已有 SQLite FTS5 记忆层封装接入标准 SPI；覆盖单元测试 | ✅ **已完成** | 2026-11-17 18:04 | 2026-11-17 18:07 |
-| **3.3** | **成熟开源生态适配器套件** | 构建 `src/memory/adapters/` (Mem0, PowerContext, Letta)，支持配置化透明切换；覆盖单元测试 | ⬜ 待执行 | - | - |
+| **3.3** | **成熟开源生态适配器套件** | 构建 `src/memory/adapters/` (Mem0, PowerContext, Letta)，支持配置化透明切换；覆盖单元测试 | ✅ **已完成** | 2026-11-17 18:46 | 2026-11-17 18:54 |
 
 ---
 
@@ -55,3 +55,30 @@
 2. 找到首个状态为 `⏳ 进行中` 或 `⬜ 待执行` 的任务；
 3. 读取对应模块的代码与测试，恢复上下文并继续串行执行；
 4. 完成后立即更新任务状态为 `✅ 已完成` 并打上精确时间戳。
+
+---
+
+## 四、Phase 3 验收结论（2026-11-17 18:54）
+
+### ✅ 完成标准全部达成
+
+| 验收项 | 状态 |
+|---|:---:|
+| `src/memory/adapters/powercontext.rs`：PowerContext REST 适配器，自动解析 default scope，优雅降级 | ✅ |
+| `src/memory/adapters/mem0.rs`：Mem0 REST 适配器，支持云端与私有化部署，含 auth_header 管理 | ✅ |
+| `src/memory/adapters/letta.rs`：Letta/MemGPT 适配器，支持 Archival Memory 检索与核心记忆块读取 | ✅ |
+| `src/memory/adapters/mod.rs`：`MemoryFactory` 工厂，`builtin|powercontext|mem0|letta` 一行切换 + 优雅降级 | ✅ |
+| `AdapterConfig` 应用默认值，`steward.toml` 配置部分省略安全兼容 | ✅ |
+| 单元测试 82 项 100% PASS，零 warning | ✅ |
+| Release 二进制构建并热部署至 `/usr/local/bin/agent-steward` | ✅ |
+| `systemctl status agent-steward` = `active (running)` | ✅ |
+
+### 关键实现决策
+
+1. **PowerContext 适配器**：通过 `/v1/scopes/default` 自动解析 scope_id，`scope_id` 配置为空时自动发现；不可达时 `MemoryFactory` 自动降级为内置 SQLite 引擎，确保大管家在无外部依赖时仍可正常运转。
+
+2. **Mem0 适配器**：采用标准 REST `POST /v1/memories/search/` 与 `POST /v1/memories/`，支持空 `api_key`（私有化部署场景）；从 `categories` 字段推断 `memory_type`，扩展 `metadata` 携带 `source_agent`、`memory_type` 等语义元数据。
+
+3. **Letta 适配器**：`get_context` 双维度召回——核心记忆块（`/v1/agents/{id}/memory`）作为高权重决策项，Archival Memory（`/v1/agents/{id}/archival?query=…`）作为经验项；`agent_id` 为空时报错降级，URL encode 由 `urlencoding` crate 处理。
+
+4. **统一降级策略**：`PowerContext` 与 `Letta` 的初始化错误被工厂捕获并降级为内置引擎；`Mem0` 配置错误向上传播（属于明确的配置问题，不静默降级）。

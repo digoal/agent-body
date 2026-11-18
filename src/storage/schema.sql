@@ -207,6 +207,54 @@ CREATE INDEX IF NOT EXISTS idx_links_source ON links(source_type, source_id);
 CREATE INDEX IF NOT EXISTS idx_links_target ON links(target_type, target_id);
 CREATE INDEX IF NOT EXISTS idx_links_relation ON links(relation);
 
+CREATE TABLE IF NOT EXISTS scan_jobs (
+    id              TEXT PRIMARY KEY,
+    root_path       TEXT NOT NULL,
+    status          TEXT NOT NULL CHECK (status IN ('pending','running','paused','completed','failed')),
+    last_path       TEXT,
+    scanned_dirs    INTEGER DEFAULT 0,
+    scanned_files   INTEGER DEFAULT 0,
+    total_assets    INTEGER DEFAULT 0,
+    shallow_blocked INTEGER DEFAULT 0,
+    error_message   TEXT,
+    started_at      TEXT,
+    paused_at       TEXT,
+    completed_at    TEXT,
+    created_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
+    updated_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_scan_jobs_status ON scan_jobs(status);
+
+CREATE TABLE IF NOT EXISTS fact_nodes (
+    id          TEXT PRIMARY KEY,
+    node_type   TEXT NOT NULL CHECK (node_type IN ('project','tool','port','service','cron','file','authoritative_site')),
+    name        TEXT NOT NULL,
+    label       TEXT NOT NULL,
+    properties  TEXT DEFAULT '{}',
+    updated_at  TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_fact_nodes_type ON fact_nodes(node_type);
+CREATE INDEX IF NOT EXISTS idx_fact_nodes_name ON fact_nodes(name);
+
+CREATE TABLE IF NOT EXISTS fact_edges (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id   TEXT NOT NULL,
+    target_id   TEXT NOT NULL,
+    relation    TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains')),
+    properties  TEXT DEFAULT '{}',
+    confidence  REAL DEFAULT 1.0,
+    updated_at  TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
+    UNIQUE(source_id, target_id, relation),
+    FOREIGN KEY(source_id) REFERENCES fact_nodes(id) ON DELETE CASCADE,
+    FOREIGN KEY(target_id) REFERENCES fact_nodes(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_fact_edges_source ON fact_edges(source_id);
+CREATE INDEX IF NOT EXISTS idx_fact_edges_target ON fact_edges(target_id);
+CREATE INDEX IF NOT EXISTS idx_fact_edges_relation ON fact_edges(relation);
+
 -- 预置数据
 INSERT OR IGNORE INTO config(key, value) VALUES
     ('schema_version', '2'),

@@ -2,11 +2,13 @@ pub mod capability;
 pub mod process_net;
 pub mod automation;
 pub mod assets_catalog;
+pub mod property_graph;
 
 pub use capability::{CapabilityEngine, ToolCapability, CapabilityQueryResult};
 pub use process_net::{ProcessNetTopology, ListeningPortFact, PortQueryFactResult};
 pub use automation::{AutomationTopology, SystemdServiceFact, CronJobFact, FileImpactReport};
 pub use assets_catalog::{AssetsCatalogEngine, RepoFact, DocFact, CatalogOverview};
+pub use property_graph::PropertyGraphOrganizer;
 
 use anyhow::Result;
 
@@ -95,6 +97,17 @@ impl FactFacade {
                 let repos = Vec::new();
                 Ok(AssetsCatalogEngine::format_catalog_overview(&repos, &docs))
             }
+            "graph" | "topology" | "property_graph" => {
+                let cfg = crate::config::Config::load_or_default(None).unwrap_or_else(|_| crate::config::Config::default());
+                let storage = crate::storage::Storage::open(&cfg.db_path)?;
+                let organizer = PropertyGraphOrganizer::new(storage.clone());
+                
+                // 自动增量感知并刷新当前宿主机实体图
+                let _ = organizer.build_host_graph();
+
+                let sub = organizer.query_subgraph(trimmed_query, 2)?;
+                Ok(organizer.format_graph_report(&sub))
+            }
             "all" | "overview" => {
                 let mut out = String::new();
                 out.push_str("# 🌐 宿主机客观事实图谱全景认知 (Host Reality Graph)\n\n");
@@ -130,7 +143,9 @@ impl FactFacade {
     /// 根据用户输入的内容智能推测事实查询类型
     fn infer_fact_type(query: &str) -> String {
         let q = query.trim();
-        if q.parse::<u16>().is_ok() || q.contains("端口") || q.contains("port") {
+        if q.contains("依赖图") || q.contains("关系图") || q.contains("拓扑图") || q.contains("架构图") || q.contains("拓扑") || q.contains("图谱") || q.contains("graph") || q.contains("topology") {
+            "graph".to_string()
+        } else if q.parse::<u16>().is_ok() || q.contains("端口") || q.contains("port") {
             "port".to_string()
         } else if q.contains("systemd") || q.contains("cron") || q.contains("定时任务") || q.contains("服务") {
             "automation".to_string()
@@ -144,6 +159,29 @@ impl FactFacade {
             "all".to_string()
         } else {
             "capability".to_string()
+        }
+    }
+
+    /// 查询工具能力列表（供情境组装器使用）
+    pub fn query_tools(query: &str) -> Result<Vec<ToolCapability>> {
+        let mut engine = CapabilityEngine::new();
+        engine.scan_host();
+        let res = engine.query(query);
+        Ok(res.all_matching_tools)
+    }
+
+    /// 查询活跃监听端口列表（供情境组装器使用）
+    pub fn query_ports() -> Result<Vec<ListeningPortFact>> {
+        ProcessNetTopology::scan_listening_ports()
+    }
+
+    /// 查询相关仓库列表（供情境组装器使用）
+    pub fn query_repos(query: &str) -> Result<Vec<RepoFact>> {
+        if query.trim().is_empty() {
+            let all_repos = AssetsCatalogEngine::scan_repos(None)?;
+            Ok(all_repos.into_iter().take(5).collect())
+        } else {
+            AssetsCatalogEngine::query_repos(query, None)
         }
     }
 }

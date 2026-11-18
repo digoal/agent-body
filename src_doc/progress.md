@@ -39,7 +39,11 @@
 | | 2.3 | 偏好规约：纠偏自演化学习器 2.0 (文件跨目录搬移行为捕获沉淀) | `src/placement/learner.rs` | ✅ **已完成** | 2026-11-17 17:52 |
 | **三位一体 Phase 3** | 3.1 | 可插拔记忆：Memory Provider SPI 抽象设计与通用数据契约 | `src/memory/spi.rs` | ✅ **已完成** | 2026-11-17 18:02 |
 | | 3.2 | 可插拔记忆：内置轻量引擎实现 (Builtin Local Provider) | `src/memory/builtin_provider.rs` | ✅ **已完成** | 2026-11-17 18:07 |
-| | 3.3 | 可插拔记忆：成熟开源生态适配器 (Mem0 / Letta / PowerContext) | `src/memory/adapters/` | ⬜ 待执行 | - |
+| | 3.3 | 可插拔记忆：成熟开源生态适配器 (Mem0 / Letta / PowerContext) | `src/memory/adapters/` | ✅ **已完成** | 2026-11-17 18:54 |
+| **三位一体 Phase 4** | 4.1 | 自适应情境组装：BriefAssembler 核心组装器 | `src/brief/assembler.rs` | ✅ **已完成** | 2026-11-18 09:45 |
+| | 4.2 | 自适应情境组装：steward_brief MCP 动态化升级 | `src/api/mcp_tools.rs` | ✅ **已完成** | 2026-11-18 09:47 |
+| | 4.3 | 自适应情境组装：情境质量评分器与 TUI 看板升级 | `src/tui/mod.rs` | ✅ **已完成** | 2026-11-18 09:47 |
+| | 4.4 | 自适应情境组装：端到端集成验收实测与生产部署 | 全系统 | ✅ **已完成** | 2026-11-18 09:48 |
 
 ---
 
@@ -67,12 +71,46 @@
 🎉 **三位一体架构 Phase 2（偏好规约与自演化）已 100% 全量串行交付**：
 - 详见路线图 [roadmap-modular-phase2.md](roadmap-modular-phase2.md)；
 - 实现了项目级配置覆盖、意图模糊打分、小写蛇形校验、CodeGraph 与真实性工程纪律、以及跨目录搬移纠偏自演化！
-- 下一阶段为 **三位一体 Phase 3：可插拔记忆与成熟开源适配 (Pluggable Memory & Open Ecosystem)**。
+🎉 **三位一体架构 Phase 3（可插拔记忆与成熟开源适配）已 100% 全量串行交付**：
+- 详见路线图 [roadmap-modular-phase3.md](roadmap-modular-phase3.md)；
+- 实现了 SPI 抽象、内置 SQLite 引擎、以及 PowerContext / Mem0 / Letta 三大适配器，支持 `steward.toml` 一行切换 + 优雅降级；
+- 单元测试 82 项 100% PASS，零 warning；服务 `active (running)`。
+- 下一阶段为 **三位一体 Phase 4：自适应情境组装与全景中枢 (Adaptive Context Assembly)**。
+
+---
+
+## 下一阶段路线图 (Phase 5~9)
+
+> 详见 [roadmap-next-phases.md](roadmap-next-phases.md)，对齐 README.md 中的 9 个 ISSUE。
+
+| 阶段 | 核心内容 | 对齐 ISSUE | 状态 |
+|:----:|---------|:----------:|:----:|
+| **Phase 5** | 宿主机主动扫描与智能记录引擎（断点续扫 + 重要性评分 + 属性图 + Agent Hook） | #9 #2 #3 | ✅ **已完成** (2026-11-18 12:02) |
+| **Phase 6** | 存储层抽象与多后端支持（SPI + PostgreSQL + DuckDB） | #4 | ⬜ 待执行 |
+| **Phase 7** | Agent-Native 输出优化与 Benchmark 体系 | #8 #6 | ⬜ 待执行 |
+| **Phase 8** | 跨平台抽象层（macOS / Windows） | #5 | ⬜ 待执行 |
+| **Phase 9** | 产品边界守护与生态定位 | #1 #7 | ⬜ 待执行 |
 
 ---
 
 ## 断点恢复指引
 如果任务中断，重新启动时只需：
 1. 读取本文件 `src_doc/progress.md`；
-2. 找到首个状态为 `⏳ 进行中` 或 `⬜ 待执行` 的子任务 ID（当前为三位一体 Phase 3 任务 3.1，详见 [roadmap-modular-phase3.md](roadmap-modular-phase3.md)）；
+2. 找到首个状态为 `⏳ 进行中` 或 `⬜ 待执行` 的子任务 ID（当前为 Phase 6 任务 6.1，详见 [roadmap-next-phases.md](roadmap-next-phases.md)）；
 3. 继续按顺序串行执行，每完成一步立即更新对应路线图与本文件的状态与完成时间戳。
+
+🎉 **Phase 5（宿主机主动扫描与智能记录引擎）已 100% 全量串行交付**：
+- 对齐 README.md ISSUE #9、#2、#3；
+- 实现了 `ScanStateMachine` 断点续扫状态机，基于确定性文件排序与持久化检查点，实测支持单步挂起与无损续扫；
+- 实现了 `ImportanceScorer` 与 `NoiseFilter` 智能质量门禁，阻断临时缓存与依赖垃圾入库，并在记忆入库端实现 `MemoryIntakeFilter`；
+- 实现了 `fact_nodes` / `fact_edges` 宿主机属性图，`PropertyGraphOrganizer` 全景关联工程、守护服务、端口与 Cron，自动生成规整 Mermaid 依赖图；
+- 实现了 `AgentHookEngine` 与 `steward_hook_pre` / `steward_hook_post` 原生 MCP 工具（工具总数升至 25 个）；
+- 后台守护集成 `BackgroundScheduler` 30 分钟自巡检；
+- 全系统单元测试 **101 项 100% 全部通过**；Release 二进制已更新部署，`agent-steward.service` 稳定在线！
+
+🎉 **三位一体架构 Phase 4（自适应情境组装与全景中枢）已 100% 全量串行交付**：
+- 详见路线图 [roadmap-modular-phase4.md](roadmap-modular-phase4.md)；
+- 实现了 `BriefAssembler` 自适应组装器，在 `≤ budget_tokens` 内根据任务意图动态从事实、偏好、记忆三模块融合采样；
+- 升级了原生 MCP 工具 `steward_brief`，支持 `query`、`session_id`、`budget_tokens` 动态调控；
+- 升级了 TUI 实时终端看板；
+- 全系统单元测试 **89 项 100% 全部通过**；Release 二进制已热部署，`agent-steward.service` 生产守护稳定运行！

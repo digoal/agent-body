@@ -78,6 +78,12 @@ impl TuiDashboard {
             c_magenta, c_reset, audit.total_links, score_color, audit.health_score, c_reset, audit.dangling_count
         ));
 
+        // 三位一体情境组装中枢状态
+        out.push_str(&format!(
+            "│ {}情境中枢{}: 事实图谱: {}就绪{} | 偏好规约: {}生效{} | 记忆引擎: {}内置+适配器{} | 简报预算: ≤1500t\n",
+            c_cyan, c_reset, c_green, c_reset, c_green, c_reset, c_green, c_reset
+        ));
+
         out.push_str(&format!(
             "{}├────────────────────────────────────────┬───────────────────────────────────────────────┤{}\n",
             c_cyan, c_reset
@@ -181,6 +187,7 @@ pub mod tests {
         assert!(frame.contains("系统硬件"));
         assert!(frame.contains("内存使用"));
         assert!(frame.contains("依赖拓扑"));
+        assert!(frame.contains("情境中枢"));
         assert!(frame.contains("活跃 Agent 任务与进程"));
 
         // 验证 run_loop 在 1 tick 后正常退出

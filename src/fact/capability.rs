@@ -362,6 +362,11 @@ impl CapabilityEngine {
         }
     }
 
+    /// 获取注册表中的所有工具能力列表
+    pub fn all_capabilities(&self) -> Vec<ToolCapability> {
+        self.registry.values().cloned().collect()
+    }
+
     /// 在指定 PATH 列表中查找是否存在可执行文件
     fn find_binary_in_paths(tool_name: &str, dirs: &[PathBuf]) -> Option<PathBuf> {
         for dir in dirs {

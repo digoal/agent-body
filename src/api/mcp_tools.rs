@@ -9,6 +9,7 @@ use crate::env::EnvCollector;
 use crate::memory::MemoryManager;
 use crate::links::LinksEngine;
 use crate::changes::ChangesEngine;
+use crate::brief::{BriefAssembler, BriefRequest};
 use std::sync::Arc;
 
 pub struct McpToolRegistry {
@@ -25,10 +26,24 @@ impl McpToolRegistry {
         vec![
             serde_json::json!({
                 "name": "steward_brief",
-                "description": "一键获取宿主机全局上下文简报（系统硬件规格、活跃动态进程、最近资产与关键记忆）。Agent 在新会话开始时必调。",
+                "description": "一键获取宿主机自适应情境简报（事实图谱、工程偏好规约与历史决策经验三位一体组装）。Agent 在新会话开始或切换任务时必调。",
                 "inputSchema": {
                     "type": "object",
-                    "properties": {}
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "本次任务意图或关键词（用于语义召回匹配的宿主机工具能力、相关仓库与历史决策经验，留空则返回全局概览）"
+                        },
+                        "session_id": {
+                            "type": "string",
+                            "description": "当前 Agent 会话 ID（用于拉取该会话的关键决策与任务上下文）"
+                        },
+                        "budget_tokens": {
+                            "type": "integer",
+                            "description": "情境预算上限 tokens（默认 1500，严格防爆上下文）",
+                            "default": 1500
+                        }
+                    }
                 }
             }),
             serde_json::json!({
@@ -314,12 +329,53 @@ impl McpToolRegistry {
                         },
                         "fact_type": {
                             "type": "string",
-                            "enum": ["auto", "capability", "port", "automation", "impact", "repo", "doc", "all"],
+                            "enum": ["auto", "capability", "port", "automation", "impact", "repo", "doc", "graph", "all"],
                             "default": "auto",
                             "description": "事实类别过滤，留空或 auto 为智能识别"
                         }
                     },
                     "required": ["query"]
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_hook_pre",
+                "description": "Agent 工作流前置检查钩子。在 Agent 执行工具调用前调用，排查即将执行的动作是否存在端口冲突、对核心系统服务的破坏性依赖变更、或文件乱放违规等风险，提供避坑指引。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "tool_name": {
+                            "type": "string",
+                            "description": "即将调用的工具名称（如 run_command, write_file, bind_port, edit_file 等）"
+                        },
+                        "args": {
+                            "type": "object",
+                            "description": "工具入参对象（如包含 port, path, command 等参数键值）"
+                        }
+                    },
+                    "required": ["tool_name", "args"]
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_hook_post",
+                "description": "Agent 工作流后置通知钩子。在 Agent 完成工具执行后调用，通知大管家记录事实变更并触发事实属性图与依赖链增量刷新。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "tool_name": {
+                            "type": "string",
+                            "description": "刚刚执行完成的工具名称（如 write_file, run_command 等）"
+                        },
+                        "args": {
+                            "type": "object",
+                            "description": "工具入参对象"
+                        },
+                        "success": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "该工具执行是否成功"
+                        }
+                    },
+                    "required": ["tool_name", "args"]
                 }
             })
         ]
@@ -329,24 +385,19 @@ impl McpToolRegistry {
     pub fn call_tool(&self, name: &str, args: Value) -> Result<String> {
         match name {
             "steward_brief" => {
-                let env_collector = EnvCollector::new(self.storage.clone());
-                let summary = env_collector.collect_system_summary();
-                let procs = env_collector.collect_and_sync_processes()?;
-                let assets = self.storage.list_assets(5)?;
+                let provider = Arc::new(crate::memory::builtin_provider::BuiltinMemoryProvider::new(self.storage.clone()));
+                let assembler = BriefAssembler::new(self.storage.clone(), Some(provider));
+                let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let session_id = args.get("session_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let budget_tokens = args.get("budget_tokens").and_then(|v| v.as_u64()).unwrap_or(1500) as usize;
 
-                let mut out = String::new();
-                out.push_str("=== Steward Brief 宿主上下文简报 ===\n");
-                out.push_str(&format!("系统: {} | 内核: {} | 内存使用率: {:.1}%\n\n", summary.os_name, summary.kernel_version, summary.memory_used_pct));
-                out.push_str("【活跃动态任务进程】(前 5):\n");
-                for p in procs.iter().take(5) {
-                    let mem_mb = p.mem_bytes as f64 / (1024.0 * 1024.0);
-                    out.push_str(&format!("  - [PID {}] {} (CPU {:.1}%, 内存 {:.1}MB) -> {}\n", p.pid, p.name, p.cpu_pct, mem_mb, p.command));
-                }
-                out.push_str("\n【最近活跃资产】:\n");
-                for a in assets {
-                    out.push_str(&format!("  - [{:8}] {} (层级: {})\n", a.asset_type, a.path, a.scan_tier));
-                }
-                Ok(out)
+                let req = BriefRequest {
+                    query,
+                    session_id,
+                    budget_tokens,
+                };
+                let output = assembler.assemble(&req)?;
+                Ok(output.markdown)
             }
 
             "steward_placement_suggest" => {
@@ -647,6 +698,23 @@ impl McpToolRegistry {
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("all");
                 let fact_type = args.get("fact_type").and_then(|v| v.as_str()).unwrap_or("auto");
                 crate::fact::FactFacade::query_facts(fact_type, query)
+            }
+
+            "steward_hook_pre" => {
+                let tool_name = args.get("tool_name").and_then(|v| v.as_str()).unwrap_or("");
+                let tool_args = args.get("args").cloned().unwrap_or(serde_json::json!({}));
+                let engine = crate::api::hooks::AgentHookEngine::new(self.storage.clone());
+                let res = engine.pre_tool_call(tool_name, &tool_args);
+                Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_hook_post" => {
+                let tool_name = args.get("tool_name").and_then(|v| v.as_str()).unwrap_or("");
+                let tool_args = args.get("args").cloned().unwrap_or(serde_json::json!({}));
+                let success = args.get("success").and_then(|v| v.as_bool()).unwrap_or(true);
+                let engine = crate::api::hooks::AgentHookEngine::new(self.storage.clone());
+                let res = engine.post_tool_call(tool_name, &tool_args, success);
+                Ok(serde_json::to_string_pretty(&res)?)
             }
 
             _ => bail!("Unknown tool: {}", name),

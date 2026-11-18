@@ -100,3 +100,49 @@ pub struct LinkRecord {
     pub provenance: Option<String>,
     pub created_at: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScanJobRecord {
+    pub id: String,
+    pub root_path: String,
+    pub status: String, // pending, running, paused, completed, failed
+    pub last_path: Option<String>,
+    pub scanned_dirs: i64,
+    pub scanned_files: i64,
+    pub total_assets: i64,
+    pub shallow_blocked: i64,
+    pub error_message: Option<String>,
+    pub started_at: Option<String>,
+    pub paused_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FactNodeRecord {
+    pub id: String,
+    pub node_type: String, // project, tool, port, service, cron, file, authoritative_site
+    pub name: String,
+    pub label: String,
+    pub properties: serde_json::Value,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FactEdgeRecord {
+    pub id: Option<i64>,
+    pub source_id: String,
+    pub target_id: String,
+    pub relation: String, // depends_on, listens_on, scheduled_by, reads, writes, part_of, calls, contains
+    pub properties: serde_json::Value,
+    pub confidence: f32,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SubGraph {
+    pub root_node: Option<FactNodeRecord>,
+    pub nodes: Vec<FactNodeRecord>,
+    pub edges: Vec<FactEdgeRecord>,
+}
