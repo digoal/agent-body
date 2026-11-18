@@ -30,6 +30,9 @@ pub struct Config {
 
     #[serde(default)]
     pub web: WebConfig,
+
+    #[serde(default)]
+    pub hooks: Vec<crate::hooks::HookRule>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -230,6 +233,7 @@ impl Default for Config {
             placement: PlacementConfig::default(),
             storage: StorageConfig::default(),
             web: WebConfig::default(),
+            hooks: vec![],
         }
     }
 }

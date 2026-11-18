@@ -81,11 +81,16 @@ impl From<CoordinationLock> for LockInfo {
 
 pub struct CoordinationEngine {
     storage: Arc<dyn StorageProvider>,
+    event_bus: Option<crate::hooks::EventBusHandle>,
 }
 
 impl CoordinationEngine {
     pub fn new(storage: Arc<dyn StorageProvider>) -> Self {
-        Self { storage }
+        Self { storage, event_bus: None }
+    }
+
+    pub fn with_event_bus(storage: Arc<dyn StorageProvider>, event_bus: crate::hooks::EventBusHandle) -> Self {
+        Self { storage, event_bus: Some(event_bus) }
     }
 
     /// 尝试获取资源协作互斥/共享锁（非阻塞）
@@ -152,6 +157,15 @@ impl CoordinationEngine {
 
         let granted = self.storage.insert_coordination_lock(&lock)?;
         if granted {
+            if let Some(ref bus) = self.event_bus {
+                let _ = bus.emit(crate::hooks::StewardEvent::LockAcquired {
+                    resource_type: rt_str.to_string(),
+                    resource_id: norm_id.clone(),
+                    holder_agent: req.holder_agent.clone(),
+                    ttl_seconds: ttl,
+                    timestamp: now.to_rfc3339(),
+                });
+            }
             Ok(LockResult::Granted {
                 lock_id,
                 resource_type: rt_str.to_string(),
@@ -178,17 +192,43 @@ impl CoordinationEngine {
     /// 释放锁（校验持有者身份）
     pub fn release(&self, lock_id: &str, holder_agent: &str) -> Result<bool> {
         let locks = self.storage.list_coordination_locks(None)?;
+        let mut target_lock = None;
         if let Some(l) = locks.iter().find(|x| x.lock_id == lock_id) {
             if l.holder_agent != holder_agent {
                 return Ok(false); // 拒绝非持有者越权释放
             }
+            target_lock = Some(l.clone());
         }
-        self.storage.delete_coordination_lock(lock_id)
+        let res = self.storage.delete_coordination_lock(lock_id)?;
+        if res {
+            if let (Some(l), Some(ref bus)) = (target_lock, &self.event_bus) {
+                let _ = bus.emit(crate::hooks::StewardEvent::LockReleased {
+                    resource_type: l.resource_type,
+                    resource_id: l.resource_id,
+                    holder_agent: l.holder_agent,
+                    timestamp: Utc::now().to_rfc3339(),
+                });
+            }
+        }
+        Ok(res)
     }
 
     /// 强制释放锁（管理员/运维 CLI 操作）
     pub fn force_release(&self, lock_id: &str) -> Result<bool> {
-        self.storage.delete_coordination_lock(lock_id)
+        let locks = self.storage.list_coordination_locks(None)?;
+        let target_lock = locks.into_iter().find(|x| x.lock_id == lock_id);
+        let res = self.storage.delete_coordination_lock(lock_id)?;
+        if res {
+            if let (Some(l), Some(ref bus)) = (target_lock, &self.event_bus) {
+                let _ = bus.emit(crate::hooks::StewardEvent::LockReleased {
+                    resource_type: l.resource_type,
+                    resource_id: l.resource_id,
+                    holder_agent: l.holder_agent,
+                    timestamp: Utc::now().to_rfc3339(),
+                });
+            }
+        }
+        Ok(res)
     }
 
     /// 续期

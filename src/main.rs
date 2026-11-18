@@ -136,6 +136,27 @@ enum Commands {
         #[arg(long, help = "管理员操作鉴权 Token")]
         auth_token: Option<String>,
     },
+
+    #[command(about = "HOOK 驱动集成与各 Agent 客户端自动化钩子生成")]
+    Hooks {
+        #[command(subcommand)]
+        action: HooksCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum HooksCommands {
+    #[command(about = "自动生成指定 Agent 客户端的 Pre/Post Hook 集成配置")]
+    Generate {
+        #[arg(short, long, help = "目标客户端类型 (agy, cursor, claude, git)")]
+        client: String,
+
+        #[arg(short, long, help = "写入目标根目录 (若未指定则输出到标准输出)")]
+        out_dir: Option<PathBuf>,
+
+        #[arg(long, help = "仅预览生成内容，不实际写入磁盘", default_value_t = false)]
+        dry_run: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -926,6 +947,29 @@ fn main() -> Result<()> {
                 let web_server = agent_steward::web::WebServer::new(web_config, storage.provider().clone());
                 web_server.run().await
             })?;
+        }
+
+        Commands::Hooks { action } => {
+            match action {
+                HooksCommands::Generate { client, out_dir, dry_run } => {
+                    use agent_steward::hooks::{ClientHookGenerator, ClientType};
+                    let client_type = client.parse::<ClientType>()?;
+                    let res = ClientHookGenerator::generate(client_type, out_dir.as_deref(), dry_run)?;
+
+                    println!("╔══════════════════════════════════════════════════════════════════════════════════════════╗");
+                    println!("║                   Agent 客户端 Hook 自动化生成成功                                         ║");
+                    println!("╠══════════════════════════════════════════════════════════════════════════════════════════╣");
+                    println!("║ 客户端类型:   {:<75} ║", res.client);
+                    println!("║ 推荐相对路径: {:<75} ║", res.relative_path);
+                    println!("║ 是否可执行:   {:<75} ║", if res.executable { "是 (0o755)" } else { "否 (普通文本规则)" });
+                    println!("║ 执行模式:     {:<75} ║", if res.is_dry_run { "Dry-Run 预览 (未写盘)" } else { "写入已生效" });
+                    if let Some(ref path) = res.written_path {
+                        println!("║ 落地物理路径: {:<75} ║", path);
+                    }
+                    println!("╚══════════════════════════════════════════════════════════════════════════════════════════╝");
+                    println!("\n--- 生成内容预览 ---\n{}", res.content);
+                }
+            }
         }
     }
 

@@ -24,12 +24,22 @@ pub use migration::{StorageMigrator, MigrationReport};
 #[derive(Clone)]
 pub struct Storage {
     provider: Arc<dyn StorageProvider>,
+    event_bus: Option<crate::hooks::EventBusHandle>,
 }
 
 impl Storage {
     /// 基于自定义 StorageProvider 构建存储门面
     pub fn new(provider: Arc<dyn StorageProvider>) -> Self {
-        Self { provider }
+        Self { provider, event_bus: None }
+    }
+
+    /// 关联异步事件总线句柄
+    pub fn with_event_bus(provider: Arc<dyn StorageProvider>, event_bus: crate::hooks::EventBusHandle) -> Self {
+        Self { provider, event_bus: Some(event_bus) }
+    }
+
+    pub fn set_event_bus(&mut self, event_bus: crate::hooks::EventBusHandle) {
+        self.event_bus = Some(event_bus);
     }
 
     /// 获取底层存储 Provider 的动态引用
@@ -47,6 +57,7 @@ impl Storage {
         let provider = SqliteStorageProvider::open(path)?;
         Ok(Self {
             provider: Arc::new(provider),
+            event_bus: None,
         })
     }
 
@@ -55,6 +66,7 @@ impl Storage {
         let provider = SqliteStorageProvider::open_in_memory()?;
         Ok(Self {
             provider: Arc::new(provider),
+            event_bus: None,
         })
     }
 
@@ -68,6 +80,7 @@ impl Storage {
                 let provider = PgStorageProvider::connect(url)?;
                 Ok(Self {
                     provider: Arc::new(provider),
+                    event_bus: None,
                 })
             }
             "duckdb" => {
@@ -77,12 +90,14 @@ impl Storage {
                 let provider = DuckDbStorageProvider::open(&path)?;
                 Ok(Self {
                     provider: Arc::new(provider),
+                    event_bus: None,
                 })
             }
             _ => {
                 let provider = SqliteStorageProvider::open(&config.db_path)?;
                 Ok(Self {
                     provider: Arc::new(provider),
+                    event_bus: None,
                 })
             }
         }
@@ -112,7 +127,17 @@ impl Storage {
     // ─── Assets ──────────────────────────────────────────────────────
 
     pub fn upsert_asset(&self, asset: &AssetRecord) -> Result<()> {
-        self.provider.upsert_asset(asset)
+        let res = self.provider.upsert_asset(asset)?;
+        if let Some(ref bus) = self.event_bus {
+            let _ = bus.emit(crate::hooks::StewardEvent::AssetRegistered {
+                path: asset.path.clone(),
+                object_type: asset.asset_type.clone(),
+                owner: asset.owner.clone(),
+                security_level: asset.security_level.clone(),
+                timestamp: chrono::Local::now().to_rfc3339(),
+            });
+        }
+        Ok(res)
     }
 
     pub fn get_asset_by_path(&self, path: &str) -> Result<Option<AssetRecord>> {
@@ -140,7 +165,17 @@ impl Storage {
     // ─── Memories ────────────────────────────────────────────────────
 
     pub fn insert_memory(&self, mem: &MemoryRecord) -> Result<()> {
-        self.provider.insert_memory(mem)
+        let res = self.provider.insert_memory(mem)?;
+        if let Some(ref bus) = self.event_bus {
+            let _ = bus.emit(crate::hooks::StewardEvent::MemoryAdded {
+                memory_id: mem.id.clone(),
+                memory_type: mem.memory_type.clone(),
+                summary: mem.summary.clone(),
+                tags: mem.tags.clone(),
+                timestamp: chrono::Local::now().to_rfc3339(),
+            });
+        }
+        Ok(res)
     }
 
     pub fn search_memories_fts(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {

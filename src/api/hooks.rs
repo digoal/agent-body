@@ -46,7 +46,7 @@ impl AgentHookEngine {
         if let Some(port) = port_opt {
             // 物理端口检查
             if let Ok(res) = ProcessNetTopology::check_port(port, 3) {
-                if res.status == "occupied" {
+                if res.status.eq_ignore_ascii_case("occupied") {
                     let proc_name = res.occupied_by.as_ref()
                         .and_then(|f| f.process_name.clone())
                         .unwrap_or_else(|| "未知进程".to_string());
@@ -177,7 +177,7 @@ impl AgentHookEngine {
         let mut affected = Vec::new();
 
         if let Some(path_str) = path_opt {
-            // 记录变更记录
+            // 1. 记录变更记录
             let change = crate::storage::models::ChangeRecord {
                 id: None,
                 change_type: format!("agent_tool:{}", tool_name),
@@ -189,12 +189,16 @@ impl AgentHookEngine {
             };
             let _ = self.storage.record_change(&change);
 
-            // 检查受影响服务
+            // 2. 检查受影响服务
             if let Ok(report) = AutomationTopology::find_impact_on_file(path_str) {
                 for s in report.impacted_services {
                     affected.push(s.service_name);
                 }
             }
+
+            // 3. Post-Hook 自动资产建档与记忆沉淀 (AutoSyncEngine)
+            let auto_syncer = crate::hooks::AutoSyncEngine::new(self.storage.clone());
+            let _ = auto_syncer.sync_file_output(path_str, tool_name);
         }
 
         PostHookResult {

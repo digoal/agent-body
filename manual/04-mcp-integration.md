@@ -53,9 +53,9 @@ sequenceDiagram
 
 ---
 
-## 3. 22 个原生 MCP 工具标准字典
+## 3. 32 个原生 MCP 工具标准字典
 
-大管家向 Agent 暴露 22 个原子级认知与管控工具：
+大管家向 Agent 暴露 32 个原子级认知与管控工具：
 
 | MCP 工具名 | 核心功能 | 核心参数说明 |
 |---|---|---|
@@ -81,6 +81,16 @@ sequenceDiagram
 | `steward_codegraph_bridge` | CodeGraph 宏微联邦联动与符号调用方下钻 | `path`, `symbol` |
 | `steward_changes_since` | 查看自指定时间点以来的宿主环境变更历史 | `since`, `limit` |
 | `steward_session_close` | 会话完工结算与垃圾回收 | `session_id`, `clean_temp` |
+| `steward_fact_query` | 宿主机客观事实图谱查询 (工具能力/端口/Systemd/Cron/资料) | `query`, `fact_type` |
+| `steward_hook_pre` | Agent 工作流前置检查钩子 (端口防撞、协作锁、爆炸半径) | `tool_name`, `args` |
+| `steward_hook_post` | Agent 工作流后置通知钩子 (自动资产建档、记忆沉淀与属性图更新) | `tool_name`, `args`, `success` |
+| `steward_hook_generate` | Agent 客户端 Hook 自动生成器 (AGY / Cursor / Claude / Git) | `client`, `out_dir`, `dry_run` |
+| `steward_lock_acquire` | 获取多 Agent 资源协作互斥锁 (端口/目录/服务/文件) | `resource_type`, `resource_id`, `scope`, `holder_agent`, `ttl_seconds` |
+| `steward_lock_release` | 释放指定资源协作互斥锁 | `lock_id`, `holder_agent` |
+| `steward_lock_list` | 列出当前所有活跃的协作互斥锁 | `resource_type` |
+| `steward_analytics_heatmap` | 宿主变更活跃度热力图与密度聚合分析 (DuckDB) | `days` |
+| `steward_analytics_trend` | 资产增长趋势与类别分布聚合统计 (DuckDB) | `days` |
+| `steward_analytics_export` | 导出宿主分析数据为 Parquet 列存文件 (DuckDB) | `export_type`, `output_path` |
 
 ---
 

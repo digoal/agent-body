@@ -7,12 +7,18 @@ use crate::watcher::{FileChangeEvent, FileChangeKind};
 pub struct ChangeHandler {
     storage: Storage,
     scanner: Scanner,
+    event_bus: Option<crate::hooks::EventBusHandle>,
 }
 
 impl ChangeHandler {
     pub fn new(storage: Storage) -> Result<Self> {
         let scanner = Scanner::new(storage.clone())?;
-        Ok(Self { storage, scanner })
+        Ok(Self { storage, scanner, event_bus: None })
+    }
+
+    pub fn with_event_bus(storage: Storage, event_bus: crate::hooks::EventBusHandle) -> Result<Self> {
+        let scanner = Scanner::new(storage.clone())?;
+        Ok(Self { storage, scanner, event_bus: Some(event_bus) })
     }
 
     /// 处理一组防抖后的文件变更事件
@@ -88,12 +94,29 @@ impl ChangeHandler {
                     self.storage.record_change(&ChangeRecord {
                         id: None,
                         change_type: change_type.to_string(),
-                        target: path_str,
+                        target: path_str.clone(),
                         description: Some("inotify 实时监听捕获并同步".to_string()),
                         details: serde_json::json!({"tier": tier}),
                         source: "watcher".to_string(),
                         created_at: None,
                     })?;
+
+                    if let Some(ref bus) = self.event_bus {
+                        let now = chrono::Local::now().to_rfc3339();
+                        let steward_ev = match event.kind {
+                            FileChangeKind::Created => crate::hooks::StewardEvent::FileCreated {
+                                path: path_str,
+                                source: "watcher".to_string(),
+                                timestamp: now,
+                            },
+                            _ => crate::hooks::StewardEvent::FileModified {
+                                path: path_str,
+                                source: "watcher".to_string(),
+                                timestamp: now,
+                            },
+                        };
+                        let _ = bus.emit(steward_ev);
+                    }
                     processed += 1;
                 }
 
@@ -106,12 +129,20 @@ impl ChangeHandler {
                     self.storage.record_change(&ChangeRecord {
                         id: None,
                         change_type: "file_deleted".to_string(),
-                        target: path_str,
+                        target: path_str.clone(),
                         description: Some("inotify 实时监听捕获删除".to_string()),
                         details: serde_json::json!({}),
                         source: "watcher".to_string(),
                         created_at: None,
                     })?;
+
+                    if let Some(ref bus) = self.event_bus {
+                        let _ = bus.emit(crate::hooks::StewardEvent::FileDeleted {
+                            path: path_str,
+                            source: "watcher".to_string(),
+                            timestamp: chrono::Local::now().to_rfc3339(),
+                        });
+                    }
                     processed += 1;
                 }
             }

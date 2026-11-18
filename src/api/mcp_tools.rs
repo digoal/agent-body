@@ -379,6 +379,29 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
+                "name": "steward_hook_generate",
+                "description": "Agent 客户端 Hook 自动生成器。为 Antigravity (agy)、Cursor、Claude Code 或 Git 生成自动化 Pre/Post Hook 集成配置与执行规则脚本（规约 #13 MCP 与 CLI 1:1 映射）。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "client": {
+                            "type": "string",
+                            "description": "目标客户端类型 (可选: agy, cursor, claude, git)"
+                        },
+                        "out_dir": {
+                            "type": "string",
+                            "description": "可选写入的目标基准目录。若不填则默认仅返回生成内容"
+                        },
+                        "dry_run": {
+                            "type": "boolean",
+                            "default": false,
+                            "description": "是否仅预览生成内容而不真正写入磁盘"
+                        }
+                    },
+                    "required": ["client"]
+                }
+            }),
+            serde_json::json!({
                 "name": "steward_analytics_heatmap",
                 "description": "基于 DuckDB 高性能列存分析引擎，按目录与时间分桶统计近期的变更热力图分布。",
                 "inputSchema": {
@@ -841,6 +864,16 @@ impl McpToolRegistry {
                 let success = args.get("success").and_then(|v| v.as_bool()).unwrap_or(true);
                 let engine = crate::api::hooks::AgentHookEngine::new(self.storage.clone());
                 let res = engine.post_tool_call(tool_name, &tool_args, success);
+                Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_hook_generate" => {
+                let client_str = args.get("client").and_then(|v| v.as_str()).unwrap_or("agy");
+                let client_type = client_str.parse::<crate::hooks::ClientType>()?;
+                let out_dir = args.get("out_dir").and_then(|v| v.as_str()).map(std::path::Path::new);
+                let dry_run = args.get("dry_run").and_then(|v| v.as_bool()).unwrap_or(false);
+
+                let res = crate::hooks::ClientHookGenerator::generate(client_type, out_dir, dry_run)?;
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 

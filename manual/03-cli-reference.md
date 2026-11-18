@@ -366,3 +366,20 @@ agent-steward [OPTIONS] <COMMAND>
   agent-steward web --host 0.0.0.0 --port 9000
   ```
 
+---
+
+### 2.16 `hooks` — HOOK 驱动集成与客户端自动化钩子生成
+- **说明**: 自动生成各 Agent 客户端（Antigravity、Cursor、Claude Code、Git）的 Pre/Post Hook 集成配置与自动脚本（规约 #13 MCP 与 CLI 1:1 映射）。
+- **子命令**:
+  - `generate`:
+    - `-c, --client <CLIENT>`: 目标客户端类型 (`agy`, `cursor`, `claude`, `git`)
+    - `-o, --out-dir <DIR>`: 写入目标根目录（若未指定则输出到标准输出预览）
+    - `--dry-run`: 仅预览生成内容，不实际写盘
+- **示例**:
+  ```bash
+  agent-steward hooks generate --client agy --dry-run
+  agent-steward hooks generate --client agy --out-dir .
+  agent-steward hooks generate --client git --out-dir .
+  ```
+
+

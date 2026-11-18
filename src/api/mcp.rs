@@ -224,7 +224,7 @@ mod tests {
 
         assert_eq!(v["id"], "req-2");
         let tools = v["result"]["tools"].as_array().expect("tools array");
-        assert_eq!(tools.len(), 31, "必须注册全部 31 个原生 MCP 工具");
+        assert_eq!(tools.len(), 32, "必须注册全部 32 个原生 MCP 工具");
         assert!(tools.iter().any(|t| t["name"] == "steward_brief"));
         assert!(tools.iter().any(|t| t["name"] == "steward_placement_suggest"));
         assert!(tools.iter().any(|t| t["name"] == "steward_asset_search"));
@@ -241,6 +241,7 @@ mod tests {
         assert!(tools.iter().any(|t| t["name"] == "steward_lock_acquire"));
         assert!(tools.iter().any(|t| t["name"] == "steward_lock_release"));
         assert!(tools.iter().any(|t| t["name"] == "steward_lock_list"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_hook_generate"));
     }
 
     #[test]
@@ -474,6 +475,27 @@ mod tests {
         let v_post: Value = serde_json::from_str(&resp_post).expect("parse response");
         assert_eq!(v_post["id"], 107);
         assert_eq!(v_post["result"]["isError"], false);
+
+        // 3. 调用 steward_hook_generate
+        let req_gen = r#"{
+            "jsonrpc": "2.0",
+            "id": 108,
+            "method": "tools/call",
+            "params": {
+                "name": "steward_hook_generate",
+                "arguments": {
+                    "client": "agy",
+                    "dry_run": true
+                }
+            }
+        }"#;
+
+        let resp_gen = server.handle_message(req_gen).expect("handle_message");
+        let v_gen: Value = serde_json::from_str(&resp_gen).expect("parse response");
+        assert_eq!(v_gen["id"], 108);
+        assert_eq!(v_gen["result"]["isError"], false);
+        let text_gen = v_gen["result"]["content"][0]["text"].as_str().expect("text");
+        assert!(text_gen.contains("steward-hooks.md"));
     }
 
     #[test]

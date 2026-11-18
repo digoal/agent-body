@@ -6,6 +6,9 @@ use anyhow::Result;
 use crate::storage::{Storage, models::MemoryRecord};
 use crate::changes::ChangesEngine;
 
+pub mod lifecycle;
+pub use lifecycle::{SessionLifecycleManager, SessionState};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionCloseResult {
     pub session_id: String,
@@ -14,6 +17,8 @@ pub struct SessionCloseResult {
     pub cleaned_paths: Vec<String>,
     pub changes_summary: String,
     pub saved_memory_id: Option<String>,
+    #[serde(default)]
+    pub is_dry_run: bool,
 }
 
 pub struct SessionManager {
@@ -25,11 +30,18 @@ impl SessionManager {
         Self { storage }
     }
 
-    /// 会话完工结算与环境治理：
-    /// 1. 扫描并安全清理 /root/new/tmp/ 下与该会话关联或孤儿遗留的临时测试脚本
-    /// 2. 统计本次会话的 changes 变更摘要
-    /// 3. 将会话成果环境摘要自动持久化沉淀到长期记忆 (memories)
+    /// 会话完工结算与环境治理 (默认直接物理删除临时文件)
     pub fn close_session(&self, session_id: &str, clean_temp: bool) -> Result<SessionCloseResult> {
+        self.close_session_with_dry_run(session_id, clean_temp, false)
+    }
+
+    /// 支持 dry-run 保护的会话结算与治理 (规约 #8)
+    pub fn close_session_with_dry_run(
+        &self,
+        session_id: &str,
+        clean_temp: bool,
+        dry_run: bool,
+    ) -> Result<SessionCloseResult> {
         let mut cleaned_files_count = 0;
         let mut freed_bytes = 0;
         let mut cleaned_paths = Vec::new();
@@ -42,14 +54,15 @@ impl SessionManager {
                         let path = entry.path();
                         if path.is_file() {
                             let file_name = path.file_name().unwrap_or_default().to_string_lossy();
-                            // 匹配属于该 session 或测试遗留的临时文件 (例如含 session_id 或 test/tmp 前缀)
+                            // 匹配属于该 session 或测试遗留的临时文件
                             if file_name.contains(session_id) || file_name.starts_with("test_") || file_name.starts_with("tmp_") {
                                 if let Ok(meta) = entry.metadata() {
                                     freed_bytes += meta.len();
                                 }
-                                if fs::remove_file(&path).is_ok() {
-                                    cleaned_files_count += 1;
-                                    cleaned_paths.push(path.to_string_lossy().to_string());
+                                cleaned_files_count += 1;
+                                cleaned_paths.push(path.to_string_lossy().to_string());
+                                if !dry_run {
+                                    let _ = fs::remove_file(&path);
                                 }
                             }
                         }
@@ -64,8 +77,8 @@ impl SessionManager {
 
         // 沉淀进长期记忆
         let mem_content = format!(
-            "会话 [{}] 完工环境总结:\n- 清理临时文件数: {}\n- 释放空间: {} 字节\n- 环境变更:\n{}",
-            session_id, cleaned_files_count, freed_bytes, changes_summary
+            "会话 [{}] 完工环境总结 (dry_run: {}):\n- 清理/待清理临时文件数: {}\n- 涉及空间: {} 字节\n- 环境变更:\n{}",
+            session_id, dry_run, cleaned_files_count, freed_bytes, changes_summary
         );
 
         let mem_id = format!("mem-session-{}", uuid::Uuid::new_v4());
@@ -92,6 +105,7 @@ impl SessionManager {
             cleaned_paths,
             changes_summary,
             saved_memory_id: Some(mem_id),
+            is_dry_run: dry_run,
         })
     }
 }

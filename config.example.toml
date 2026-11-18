@@ -143,3 +143,55 @@ port = 8765
 # 若留空，则 Web 看板为只读监控模式；配置后，POST /api/v1/locks/release 需携带该 Bearer Token
 # auth_token = "steward-admin-secret"
 
+# ==============================================================================
+# 7. HOOK 事件总线与外部扩展规则 (Hooks Engine - Phase 14)
+# ==============================================================================
+# 支持事件类型:
+#   - on_file_created / on_file_modified / on_file_deleted
+#   - on_asset_registered
+#   - on_memory_added / on_memory_updated
+#   - on_service_status_changed / on_port_changed
+#   - on_lock_acquired / on_lock_released
+#   - on_session_started / on_session_closed
+#
+# 动作 action:
+#   - exec: 执行本地命令或脚本 ({path}, {event} 占位符支持)
+#   - webhook: 向指定 URL 投递 HTTP POST JSON
+#
+# 示例 1: 当在核心工作区创建 Markdown 文件时，自动执行本地扫描
+# [[hooks]]
+# event = "on_file_created"
+# filter = { path_prefix = "/root/new/work", extensions = [".md"] }
+# action = "exec"
+# command = "agent-steward asset scan {path} --depth 1"
+#
+# 示例 2: 长期记忆写入时，向外部通知中枢发送 Webhook (3秒超时)
+# [[hooks]]
+# event = "on_memory_added"
+# filter = { tags_contain = ["decision", "architecture"] }
+# action = "webhook"
+# url = "http://127.0.0.1:8765/api/v1/notify"
+# timeout_ms = 3000
+
+# ==============================================================================
+# 8. HOOK Pipeline 链式编排引擎 (Phase 14.6)
+# ==============================================================================
+# 支持多步骤串联、条件过滤、防抖幂等与失败策略 (abort / continue)
+# [[pipelines]]
+# id = "pipe-docs-sync"
+# name = "文档自动化建链编排"
+# event_pattern = "on_file_created"
+# debounce_ms = 500
+# [[pipelines.steps]]
+# name = "step-scan-asset"
+# action = { action = "exec", command = "agent-steward asset scan {path} --depth 1" }
+# filter = { path_prefix = "/root/new/work", extensions = [".md"] }
+# on_failure = "abort"
+# timeout_ms = 3000
+# [[pipelines.steps]]
+# name = "step-notify-webhook"
+# action = { action = "webhook", url = "http://127.0.0.1:8765/api/v1/notify", timeout_ms = 3000 }
+# on_failure = "continue"
+
+
+
