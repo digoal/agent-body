@@ -383,4 +383,15 @@ Phase 5 (主动扫描)  ──→  Phase 6 (存储抽象)  ──→  Phase 7 (A
 
 ---
 
-> **下一步**: 在 `progress.md` 中追加 Phase 5 条目，然后开始 5.1 的编码实现。
+## 十、Phase 10~11 路线图（已规划）
+
+> Phase 5~9 全部完成后，下一步为两个独立可并行的方向。详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)。
+
+| 阶段 | 核心内容 | 子任务数 | 新增代码预估 | 状态 |
+|:----:|---------|:-------:|:-----------:|:----:|
+| **Phase 10** | DuckDB 分析后端（DuckDB Provider + 分析查询扩展 + 增量同步管道 + 集成测试） | 4 | ~2800 行 | ⬜ 待执行 |
+| **Phase 11** | 多 Agent 协作锁（CoordinationEngine + PG Advisory Lock + MCP 工具 + Pre-Hook 集成 + 并发测试） | 5 | ~2200 行 | ⬜ 待执行 |
+
+---
+
+> **下一步**: 实施 Phase 10.1 DuckDB Provider 核心实现 或 Phase 11.1 协作锁引擎核心实现（两者独立可并行）。
