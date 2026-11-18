@@ -235,6 +235,9 @@ cargo build --release
 3. **跨平台原生适配深化 (macOS / Windows)**：
    - 当前以 Linux（/proc、inotify、Systemd）为首选核心运行环境，未来进一步拓展对非 Linux 平台的底层环境感知。
   
+4. **管理范围的扩大**：
+   - 还得帮 Agent 管 MCP, SKILL, 可以使用的外部服务等。因为 MCP、SKILL 多了之后啊，Context 容易被打爆，导致大模型注意力下降，影响模型生成质量。 管外部服务的目的则是 Agent 宿主机本机环境的延展，就像销售人员有一本外部联系人名单一样，随时可以按需来 call。
+  
 ---
 
 ## 开源协议
