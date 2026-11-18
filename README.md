@@ -160,6 +160,20 @@ cargo build --release
   }
 }
 ```
+
+## 项目结构
+- design_doc : 产品功能设计文档
+- idea_doc : 产品起初的想法
+- manual : 产品手册
+- markdown : 对外发布的文章、博客
+- releases : 发版说明文档
+- skills : 与本产品相关的对接 AI Agent 的 SKILL 包
+- src : 源代码
+- src_doc : 本项目的开发文档
+- tests : 测试代码
+- README.md : 本文件
+- presentation.html : 产品路演 PPT
+- steward-deck.html : 产品交流 PPT
   
 ## ISSUE
 这里放一些零碎的问题或思考。  
@@ -187,6 +201,8 @@ cargo build --release
 11、分布式/多机 Agent Steward 跨主机网状协调 (Gossip / Raft / HTTP Mesh)：当宿主环境扩展为多台机器构成的集群时，将协作锁与事实图谱提升为跨节点分布式网格。
 
 12、智能死锁检测与等待唤醒机制 (Wait-Queue / Push Notification)：为排他锁提供可订阅的等待队列，当持锁 Agent 释放资源时，主动通知排队中的 Agent，避免轮询开销。
+
+13、Web UI / 可视化监控大屏：提供基于浏览器的轻量级大管家拓扑图与协作锁监控看板。
   
 ---
 
