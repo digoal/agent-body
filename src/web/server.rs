@@ -115,11 +115,11 @@ impl WebServer {
                 .min(65536);
             let body_start = header_end + 4;
             while raw.len() < body_start + content_len {
-                let n = stream.read(&mut buffer).await?;
-                if n == 0 {
-                    break;
+                match tokio::time::timeout(std::time::Duration::from_millis(200), stream.read(&mut buffer)).await {
+                    Ok(Ok(0)) | Err(_) => break,
+                    Ok(Ok(n)) => raw.extend_from_slice(&buffer[..n]),
+                    Ok(Err(e)) => return Err(e.into()),
                 }
-                raw.extend_from_slice(&buffer[..n]);
             }
         }
 

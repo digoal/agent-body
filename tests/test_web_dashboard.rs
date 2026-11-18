@@ -105,7 +105,7 @@ async fn test_web_dashboard_e2e_lifecycle() {
     let post_unauth = "POST /api/v1/locks/release HTTP/1.1\r\n\
 Host: 127.0.0.1\r\n\
 Content-Type: application/json\r\n\
-Content-Length: 53\r\n\r\n\
+Content-Length: 45\r\n\r\n\
 {\"resource_type\":\"port\",\"resource_id\":\"8888\"}";
     let resp_unauth = send_http_request("127.0.0.1", bound_port, post_unauth).await;
     assert!(resp_unauth.contains("HTTP/1.1 401 Unauthorized"));
@@ -115,7 +115,7 @@ Content-Length: 53\r\n\r\n\
 Host: 127.0.0.1\r\n\
 Authorization: Bearer secret123\r\n\
 Content-Type: application/json\r\n\
-Content-Length: 79\r\n\r\n\
+Content-Length: 75\r\n\r\n\
 {\"resource_type\":\"port\",\"resource_id\":\"8888\",\"agent_id\":\"agent_web_tester\"}";
     let resp_auth = send_http_request("127.0.0.1", bound_port, post_auth).await;
     assert!(resp_auth.contains("HTTP/1.1 200 OK"));
