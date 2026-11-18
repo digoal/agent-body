@@ -1,0 +1,17 @@
+services:
+  agent-steward:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agent-steward:latest
+    container_name: agent-steward
+    restart: unless-stopped
+    pid: "host"                  # 必须透传宿主 PID 命名空间，以便大管家采集非系统动态进程
+    network_mode: "host"         # 推荐 host 网络模式，以便精准采集网络端口占用
+    volumes:
+      - /proc:/proc:ro           # 透传只读 procfs，保障端口与进程拓扑分析
+      - ~/.steward:/root/.steward # 持久化 SQLite 元数据库与配置文件
+      - ~/new:/root/new          # 挂载待纳管的工作目录
+    environment:
+      - RUST_LOG=info
+    command: ["daemon"]

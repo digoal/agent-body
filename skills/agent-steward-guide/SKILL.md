@@ -1,6 +1,6 @@
 ---
 name: agent-steward-guide
-description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制与 Systemd 常驻服务）、以及熟悉日常使用（CLI 命令行实操、22 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
+description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制、Systemd 常驻服务、Docker 编排与 preflight 依赖预检）、以及熟悉日常使用（CLI 命令行实操、31 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、多 Agent 协作锁、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
 ---
 
 # Agent Host Steward 全景向导与部署使用技能 (agent-steward-guide)
@@ -35,6 +35,8 @@ description: 专门帮助新接手、外部接入或初次接触本项目的 Age
 
 ## 二、运行依赖与一键部署指南
 
+> 💡 **详细依赖全景与跨环境矩阵**: 请优先查阅项目根目录下的 [INSTALL.md](../../INSTALL.md) 与 [config.example.toml](../../config.example.toml)。
+
 大管家采用 **Rust** 编写，原生单二进制交付，依赖极简、轻量可控。
 
 ### 2.1 环境依赖要求
@@ -42,9 +44,12 @@ description: 专门帮助新接手、外部接入或初次接触本项目的 Age
 | 依赖组件 | 规格要求 | 用途与说明 |
 |---|---|---|
 | **操作系统** | Linux (Ubuntu / Debian / CentOS / 统信 / 麒麟) | 深度利用 Linux `/proc` 文件系统与 `inotify` 机制 |
-| **Rust 工具链** | Rust >= 1.75 (推荐 1.99.0) + Cargo | 源码编译构建工具，安装于 `/root/.cargo/bin` |
+| **C/C++ 工具链 (必选)** | GCC/G++ >= 9, CMake >= 3.15, make | SQLite 与 DuckDB bundled C/C++ 静态构建必须 |
+| **C++ 运行时 (必选)** | `libstdc++.so.6` | 极简 Alpine/Busybox 容器若无将报找不到动态库 |
+| **Rust 工具链 (编译期)** | Rust >= 1.75 (推荐 1.82+) + Cargo | 源码编译构建工具，安装于 `/root/.cargo/bin` |
 | **SQLite3 运行环境** | 内置 Bundled FTS5 (无需外装系统级动态库) | `rusqlite` 以 bundled 特性编译，单二进制自包含 |
-| **本地 Ollama (可选)** | `http://127.0.0.1:11434` (模型推荐 `bge-m3:latest`) | 提供语义向量混合检索（RRF）。若未安装自动降级为 FTS5 |
+| **本地 Ollama (可选)** | `http://127.0.0.1:11434` (模型推荐 `nomic-embed-text` 或 `bge-m3`) | 提供语义向量混合检索（RRF）。若未安装自动降级为 FTS5 |
+| **PostgreSQL (可选)** | PostgreSQL >= 14 (需 pgvector 扩展) | 跨机多 Agent 高并发共享存储后端 |
 | **CodeGraph (可选)** | 本机安装有 `codegraph` CLI 并在目标项目建立索引 | 提供微观函数与符号级调用链穿透 |
 
 ### 2.2 一键编译与系统安装
@@ -53,25 +58,32 @@ description: 专门帮助新接手、外部接入或初次接触本项目的 Age
 
 ```bash
 # 1. 确保 Rust 工具链路径生效
-export PATH="/root/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
 
-# 2. 编译生产优化二进制 (单二进制约 8MB)
-cargo build --release
+# 2. 编译生产优化二进制 (单二进制约 70MB，含 DuckDB 与 SQLite 列存/行存引擎)
+make build
+# 或: cargo build --release
 
-# 3. 运行全量测试验证环境 (目前 31 项测试全部通过)
-cargo test
+# 3. 运行全量测试验证环境 (目前 137 项测试全部通过)
+make test
+# 或: cargo test
 
-# 4. 安装到系统全局 PATH
-cp target/release/agent-steward /usr/local/bin/agent-steward
+# 4. 运行环境与依赖完整性预检 (Preflight)
+agent-steward preflight
+
+# 5. 安装到系统全局 PATH
+sudo make install
+# 或: sudo install -m 755 target/release/agent-steward /usr/local/bin/agent-steward
+
 agent-steward --version
-# 输出: steward 0.2.0
+# 输出: steward 0.3.2 (git-hash, linux/x86_64)
 ```
 
 ### 2.3 配置文件与初始化存储
 
 大管家首次启动时会自动在用户家目录创建持久化存储空间：
 - **数据存储**: `~/.steward/steward.db`（SQLite WAL 模式，集成 FTS5 全文虚拟表与触发器）；
-- **主配置文件**: `~/.steward/config.toml`（自动从默认模板引导生成）。
+- **主配置文件**: `~/.steward/config.toml`（自动从默认模板引导生成，参数详解见 `config.example.toml`）。
 
 核心配置参数示例：
 ```toml
@@ -206,23 +218,26 @@ agent-steward close session-20261115-01 --clean-temp
 }
 ```
 
-#### 步骤 2: 22 个原生 MCP 工具全景矩阵
+#### 步骤 2: 31 个原生 MCP 工具全景矩阵
 
 | 分类 | 工具名称 | 核心功能说明 |
 |---|---|---|
-| **开工与全景** | `steward_brief` | 一键获取宿主机全局上下文与态势简报 |
+| **开工与全景** | `steward_brief` | 一键获取宿主机全局上下文与自适应融合态势简报 |
 | **规范放置** | `steward_placement_suggest` | 咨询新文件/工程的规范存放路径与命名建议 |
 | | `steward_placement_rules` | 查看生效的 8 大目录放置规则清单 |
 | | `steward_placement_learn` | 放置规范自演化：聚类挖掘新规则候选与持久化 |
 | **资产纳管** | `steward_asset_search` | FTS5 全文与前缀模糊混合检索已知资产 |
 | | `steward_asset_register` | 手动纳管或标记特定路径资产 |
-| | `steward_asset_scan` | 触发指定目录白黑名单三级分级扫描 |
+| | `steward_asset_scan` | 触发指定目录白黑名单三级分级扫描 (支持断点续扫) |
+| **客观事实图谱**| `steward_fact_query` | 宿主机事实图谱语义只读查询 (工具能力/端口/Systemd/Cron/资料) |
+| **生命周期门禁**| `steward_hook_pre` | Agent 操作前防撞门禁 (端口占用/文件覆盖/协作锁冲突校验) |
+| | `steward_hook_post` | Agent 操作后状态记录与变更同步 |
 | **环境与防撞** | `steward_env_processes` | 抓取活跃非系统动态任务脚本进程（过滤底噪） |
 | | `steward_env_show` | 查看宿主机 CPU、内存、磁盘与系统规格 |
 | | `steward_env_gc` | 宿主垃圾回收：安全清理超期临时文件与孤儿进程 |
 | | `steward_port_check` | 探测网络端口冲突并推荐连续空闲端口 |
-| **长期记忆** | `steward_memory_add` | 写入架构决策、踩坑教训或项目笔记 |
-| | `steward_memory_search` | BGE-M3 向量 + FTS5 RRF 倒数融合混合检索 |
+| **长期记忆** | `steward_memory_add` | 写入架构决策、踩坑教训或项目笔记 (可插拔多后端) |
+| | `steward_memory_search` | BGE-M3/Nomic 向量 + FTS5 RRF 倒数融合混合检索 |
 | | `steward_memory_audit` | 长期记忆体检：认知矛盾对与衰减淘汰仲裁 |
 | **图智能与联邦**| `steward_links_query` | 查询指定资产的出度/入度依赖拓扑网络 |
 | | `steward_links_visualize` | 将资产依赖关系导出为 Mermaid 图表 |
@@ -230,6 +245,12 @@ agent-steward close session-20261115-01 --clean-temp
 | | `steward_links_audit` | 拓扑健康体检：扫描断链、缺失资产与离线服务 |
 | | `steward_links_repair` | 断链智能修复与重定向推演 (生成 patch 或自动应用) |
 | | `steward_codegraph_bridge`| 宏微双层联邦：穿透调用 CodeGraph 探索微观代码符号 |
+| **列存时序分析**| `steward_analytics_heatmap` | 宿主文件变更日历热力图分析 (DuckDB 列存聚合) |
+| | `steward_analytics_trend` | 资产与代码时序演进趋势对比 |
+| | `steward_analytics_export`| 宿主全景数据高性能导出 (Parquet / CSV) |
+| **多Agent协作锁**| `steward_lock_acquire` | 跨 Agent 资源互斥/共享锁申请 (端口/目录/文件/服务，带TTL) |
+| | `steward_lock_release` | 协作锁释放或提前退租 |
+| | `steward_lock_list` | 查看当前全系统活跃协作锁看板 |
 | **会话与审计** | `steward_changes_since` | 回溯指定时间窗口内的资产创建/修改/删除审计流 |
 | | `steward_session_close` | 会话完工结算：归档工单、自洁 `/tmp` 垃圾 |
 

@@ -211,6 +211,8 @@ impl Config {
                 .with_context(|| format!("读取配置文件失败: {:?}", config_path))?;
             let cfg: Config = toml::from_str(&content)
                 .with_context(|| format!("解析配置文件 TOML 失败: {:?}", config_path))?;
+            cfg.validate()
+                .with_context(|| format!("配置文件校验未通过: {:?}", config_path))?;
             Ok(cfg)
         } else {
             let cfg = Config::default();
@@ -222,8 +224,27 @@ impl Config {
                 .context("序列化默认配置失败")?;
             std::fs::write(&config_path, toml_str)
                 .with_context(|| format!("写入默认配置文件失败: {:?}", config_path))?;
+            cfg.validate()?;
             Ok(cfg)
         }
+    }
+
+    /// 校验配置参数合法性与依赖关系
+    pub fn validate(&self) -> Result<()> {
+        if self.api_port < 1024 {
+            anyhow::bail!("api_port ({}) 不能小于 1024 (特权端口限制)", self.api_port);
+        }
+        if self.embedding.dimensions == 0 {
+            anyhow::bail!("embedding.dimensions 不能为 0");
+        }
+        match self.storage.provider.as_str() {
+            "sqlite" | "postgres" | "duckdb" => {}
+            other => anyhow::bail!("未知存储后端: '{}'，仅支持 'sqlite' / 'postgres' / 'duckdb'", other),
+        }
+        if self.storage.provider == "postgres" && self.storage.pg_url.is_none() {
+            anyhow::bail!("当 storage.provider 设置为 'postgres' 时，必须配置 storage.pg_url 连接串");
+        }
+        Ok(())
     }
 }
 
@@ -246,5 +267,29 @@ mod tests {
         let toml_str = toml::to_string(&cfg).expect("to_string");
         let parsed: Config = toml::from_str(&toml_str).expect("from_str");
         assert_eq!(parsed.api_port, cfg.api_port);
+    }
+
+    #[test]
+    fn test_config_validation() {
+        let mut cfg = Config::default();
+        assert!(cfg.validate().is_ok());
+
+        cfg.api_port = 80;
+        assert!(cfg.validate().is_err());
+
+        cfg.api_port = 9527;
+        cfg.embedding.dimensions = 0;
+        assert!(cfg.validate().is_err());
+
+        cfg.embedding.dimensions = 768;
+        cfg.storage.provider = "oracle".to_string();
+        assert!(cfg.validate().is_err());
+
+        cfg.storage.provider = "postgres".to_string();
+        cfg.storage.pg_url = None;
+        assert!(cfg.validate().is_err());
+
+        cfg.storage.pg_url = Some("host=localhost dbname=steward".to_string());
+        assert!(cfg.validate().is_ok());
     }
 }

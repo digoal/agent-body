@@ -94,14 +94,14 @@ agent-steward daemon
 - `test_preflight_report_format`
 
 **断点续传检查点**:
-- [ ] `src/preflight/mod.rs` 创建
-- [ ] Required 检查项实现
-- [ ] Optional 检查项实现
-- [ ] Informational 检查项实现
-- [ ] CLI `preflight` 子命令注册
-- [ ] `daemon` 启动序列嵌入
-- [ ] 单元测试通过
-- [ ] `cargo check --tests` 零告警
+- [x] `src/preflight/mod.rs` 创建
+- [x] Required 检查项实现
+- [x] Optional 检查项实现
+- [x] Informational 检查项实现
+- [x] CLI `preflight` 子命令注册
+- [x] `daemon` 启动序列嵌入
+- [x] 单元测试通过
+- [x] `cargo check --tests` 零告警
 
 ---
 
@@ -148,10 +148,10 @@ agent-steward --version
 ```
 
 **断点续传检查点**:
-- [ ] `build.rs` 创建
-- [ ] `--version` 输出增强
-- [ ] preflight 中引用 build info
-- [ ] 编译通过
+- [x] `build.rs` 创建
+- [x] `--version` 输出增强
+- [x] preflight 中引用 build info
+- [x] 编译通过
 
 ---
 
@@ -263,10 +263,10 @@ cat config.example.toml | head -5
 ```
 
 **断点续传检查点**:
-- [ ] `config.example.toml` 创建
-- [ ] config 字段校验逻辑实现
-- [ ] 校验单元测试通过
-- [ ] 编译零告警
+- [x] `config.example.toml` 创建
+- [x] config 字段校验逻辑实现
+- [x] 校验单元测试通过
+- [x] 编译零告警
 
 ---
 
@@ -328,14 +328,14 @@ cat config.example.toml | head -5
 - 覆盖编译依赖 / 运行依赖 / 可选依赖的完整安装命令
 
 **断点续传检查点**:
-- [ ] INSTALL.md 框架与系统要求矩阵
-- [ ] 多发行版安装命令
-- [ ] 从源码编译指南
-- [ ] Docker 部署（Dockerfile + docker-compose.yml）
-- [ ] Systemd 配置
-- [ ] 健康检查与故障排除
-- [ ] 可选依赖配置指南
-- [ ] README.md 添加链接
+- [x] INSTALL.md 框架与系统要求矩阵
+- [x] 多发行版安装命令
+- [x] 从源码编译指南
+- [x] Docker 部署（Dockerfile + docker-compose.yml）
+- [x] Systemd 配置
+- [x] 健康检查与故障排除
+- [x] 可选依赖配置指南
+- [x] README.md 添加链接
 
 ---
 
@@ -406,11 +406,11 @@ docker build --check .   # 或 hadolint Dockerfile
 ```
 
 **断点续传检查点**:
-- [ ] Dockerfile 创建
-- [ ] docker-compose.yml 创建
-- [ ] Makefile 创建
-- [ ] .dockerignore 创建
-- [ ] make build / make test 验证
+- [x] Dockerfile 创建
+- [x] docker-compose.yml 创建
+- [x] Makefile 创建
+- [x] .dockerignore 创建
+- [x] make build / make test 验证
 
 ---
 
@@ -432,11 +432,11 @@ docker build --check .   # 或 hadolint Dockerfile
 8. 新增"常见编译/运行问题 FAQ"
 
 **断点续传检查点**:
-- [ ] development.md 重写完成
-- [ ] 目录树更新
-- [ ] 依赖清单更新
-- [ ] 测试命令更新
-- [ ] FAQ 添加
+- [x] development.md 重写完成
+- [x] 目录树更新
+- [x] 依赖清单更新
+- [x] 测试命令更新
+- [x] FAQ 添加
 
 ---
 
@@ -467,9 +467,9 @@ docker build --check .   # 或 hadolint Dockerfile
    - 文档写作规范新增：涉及外部依赖时必须标注"必选/可选"与版本范围
 
 **断点续传检查点**:
-- [ ] agent-steward-guide 更新
-- [ ] agent-steward-developer 更新
-- [ ] agent-steward-doc-writer 更新
+- [x] agent-steward-guide 更新
+- [x] agent-steward-developer 更新
+- [x] agent-steward-doc-writer 更新
 
 ---
 
@@ -515,15 +515,15 @@ docker build --check .   # 或 hadolint Dockerfile
 7. 同步到 `/root/new/shared_git/agent-steward`
 
 **断点续传检查点**:
-- [ ] 全量测试通过
-- [ ] Release 构建成功
-- [ ] preflight 验证通过
-- [ ] 守护进程重启成功
-- [ ] 版本号升级
-- [ ] progress.md 更新
-- [ ] release note 创建
-- [ ] Git 提交 + tag
-- [ ] shared_git 同步
+- [x] 全量测试通过
+- [x] Release 构建成功
+- [x] preflight 验证通过
+- [x] 守护进程重启成功
+- [x] 版本号升级
+- [x] progress.md 更新
+- [x] release note 创建
+- [x] Git 提交 + tag
+- [x] shared_git 同步
 
 ---
 

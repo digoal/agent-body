@@ -37,17 +37,21 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 |---|---|---|
 | `Cargo.toml`, `Cargo.lock` | Rust 依赖与工作空间配置 | 引入新 crate 需考虑编译耗时与轻量化 |
 | `src/` | Rust 核心源码目录 | 业务实现与单元测试所在 |
-| ├── `src/config/` | 配置文件结构体与 `~/.steward/config.toml` 引导 | 保持向后兼容 |
-| ├── `src/storage/` | SQLite (bundled FTS5) 存储层、schema.sql 与 CRUD | 任何表变更必须同步 schema.sql |
-| ├── `src/placement/` | 8 大规范放置引擎与建议逻辑 | 严格对齐 README 与放置规则 |
+| ├── `src/config/` | 配置文件结构体与 `~/.steward/config.toml` 引导、参数校验 | 保持向后兼容 |
+| ├── `src/preflight/` | 运行时环境与依赖完整性预检引擎 | 严格保障可移植部署与优雅降级 |
+| ├── `src/storage/` | SQLite/PG/DuckDB 三引擎、SPI 抽象与热迁移 | 任何表变更必须同步 schema |
+| ├── `src/coordination/` | 多 Agent 协作锁中枢 (Port/Dir/File 互斥、TTL、Advisory Lock) | 跨 Agent 资源互斥保证 |
+| ├── `src/fact/` | 宿主机客观事实图谱 (工具能力/端口/Systemd/Cron/资料编目) | 客观图谱抽取与语义查询 |
+| ├── `src/brief/` | 自适应情境组装引擎 (Dynamic Brief Assembler) | 意图驱动自适应情境裁剪 |
+| ├── `src/placement/` | 8 大规范放置引擎与建议逻辑 (自演化学习) | 严格对齐 README 与放置规则 |
 | ├── `src/scanner/` | 分级扫描器与 `matcher.rs` (globset) | 深度递归与阻断的核心 |
 | ├── `src/env/` | 系统硬件规格、端口防撞与 `/proc` 进程采集 | 过滤系统级底噪与端口冲突检测 |
-| ├── `src/memory/` | 跨会话长期记忆与 Ollama BGE-M3 + FTS5 RRF 混合检索 | 降级机制保障 |
+| ├── `src/memory/` | 跨会话长期记忆与多适配器体系 (内置/PowerContext/Mem0/Letta) | 降级机制保障 |
 | ├── `src/watcher/` | inotify 监听器与变更同步流水线 | 300ms 防抖，同步 `changes` 表 |
-| ├── `src/daemon/` | 常驻守护进程主循环与定时轮询 | 优雅信号捕获与 Systemd 托管 |
+| ├── `src/daemon/` | 常驻守护进程主循环与定时轮询、依赖预检 | 优雅信号捕获与 Systemd 托管 |
 | ├── `src/links/` | 关联拓扑图、Mermaid 导出、断链审计与 CodeGraph 桥接 | AST 引用提取与宏微联邦 |
 | ├── `src/changes/` | 变更历史回溯与 Agent 会话简报 | 生成开工 markdown |
-| └── `src/api/` | 22 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册 | 必须与 CLI 功能一一映射 |
+| └── `src/api/` | 31 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI 功能一一映射 |
 | `manual/` | 面向使用者与架构师的分卷深度技术手册 (01~07) | 保持与代码演进实时同步 |
 | `src_doc/` | 开发者手册、产品手册与各阶段研发断点状态表 | 任务流转枢纽，统一 kebab-case |
 | `design_doc/` | 架构设计文档闭环交付件 (01~08, init.sql) | 顶层架构事实依据，统一 kebab-case |
@@ -147,8 +151,10 @@ flowchart TD
 - [ ] 是否在任务开始前已将任务标记为 `⏳ 进行中`？
 - [ ] 代码中是否存在对黑名单目录进行深度递归扫描的风险？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
-- [ ] 是否执行了 `cargo test` 且全部通过（**要求 >= 40 tests 全部通过**）？
+- [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
+- [ ] 是否执行了 `cargo test` 且全部通过（**要求 >= 137 tests 全部通过，零 warning**）？
+- [ ] 是否执行了 `agent-steward preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？
-- [ ] 相关的文档（`product-manual.md` / `manual/` / `roadmap-phase*.md`）是否已同步刷新？
+- [ ] 相关的文档（`product-manual.md` / `INSTALL.md` / `roadmap-phase*.md`）是否已同步刷新？
 - [ ] 工作区改动是否已通过 `rsync` 镜像同步至 `/root/new/shared_git/agent-steward`？
 - [ ] 是否给出了清晰规范的 Git Commit 建议？

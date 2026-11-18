@@ -1,9 +1,9 @@
 # Agent Host Steward (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-18T15:25:00+08:00  
+> 最新更新: 2026-11-18T17:15:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: Phase 1~11 全部完成，31 个原生 MCP 工具，137 项测试 100% PASS
+> 当前状态: Phase 1~12 全部完成，31 个原生 MCP 工具，140 项测试 100% PASS
 
 ---
 
@@ -92,18 +92,21 @@
 | **Phase 9** | 产品边界守护与生态定位（边界指南 + Agent 5阶段生命周期协议） | #1 #7 | ✅ **已完成** | 2026-11-18 12:28 |
 | **Phase 10** | DuckDB 分析后端（DuckDB Provider + 分析查询扩展 + 增量同步管道 + 集成测试） | #4 | ✅ **已完成** | 2026-11-18 14:05 |
 | **Phase 11** | 多 Agent 协作锁（CoordinationEngine + PG Advisory Lock + MCP 工具 + Pre-Hook 集成） | 新增 #10 | ✅ **已完成** | 2026-11-18 15:20 |
-| **Phase 12** | 运行依赖显式化与可移植部署（preflight 预检 + config 模板 + INSTALL.md + Dockerfile + SKILL 同步） | #10(ISSUE) | ⬜ 待执行 | — |
+| **Phase 12** | 运行依赖显式化与可移植部署（preflight 预检 + config 模板 + INSTALL.md + Dockerfile + SKILL 同步） | #10(ISSUE) | ✅ **已完成** | 2026-11-18 17:15 |
 
 > 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md) 与 [roadmap-phase12.md](roadmap-phase12.md)
 
 ---
 
-## 验收总结 (Phase 1~11 全部完成)
-- **单元与集成测试**：119 项单元测试 + 8 项协作锁集成测试 + 5 项 DuckDB 集成测试 + 5 项高性能基准测试全部 100% PASS，0 warning。
+## 验收总结 (Phase 1~12 全部完成)
+- **单元与集成测试**：122 项单元测试 + 8 项协作锁集成测试 + 5 项 DuckDB 集成测试 + 5 项高性能基准测试共 140 项全部 100% PASS，0 warning。
+- **运行依赖与环境诊断**：新增 `src/preflight/` 预检引擎（REQUIRED / OPTIONAL / INFO 三级判断），CLI 提供 `agent-steward preflight`，守护进程启动自动校验；
+- **配置与可移植部署**：提供带详注的 `config.example.toml`，提供生产部署指南 `INSTALL.md`（含多发行版依赖矩阵与排障 FAQ），提供多阶段 `Dockerfile`、`docker-compose.yml` 与 `Makefile`；
 - **存储后端**：支持 SQLite 嵌入式、PostgreSQL (pgvector + tsvector) 和 DuckDB (OLAP 列存分析与 Parquet/CSV 导出) 三后端；实现跨库双向热迁移与毫秒级增量同步管道。
 - **多 Agent 协作**：实现 `CoordinationEngine`、资源正规化、排他/共享锁、TTL 自动失效、续租、父子目录递归互斥、PG Advisory Lock (跨连接会话级事务保证)、以及 Pre-Hook 自动冲突拦截。
-- **分析与协作工具**：新增 3 个分析 MCP 端点与 3 个协作锁 MCP 端点（`steward_lock_acquire`、`steward_lock_release`、`steward_lock_list`），系统原生 MCP 工具总数扩充至 **31 个**。
-- **后台守护进程**：`agent-steward.service` 在后台持续稳定运行（inotify 实时监听 + 动态进程采集 + 自主深度巡查 + 过期锁定时清理）。
+- **分析与协作工具**：系统原生 MCP 工具总数扩充至 **31 个**。
+- **SKILL 体系**：全面刷新项目内置 3 套技能，测试、工具数与代码事实保持 100% 对齐。
+- **后台守护进程**：`agent-steward.service` 在后台持续稳定运行。
 - **共享仓库同步**：代码已同步至 `/root/new/shared_git/agent-steward`。
 
 ---
@@ -113,6 +116,14 @@
 1. 读取本文件 `src_doc/progress.md`；
 2. 查看当前全部完成的里程碑记录；
 3. 后续若有新 Phase 规划，按标准流程追加 Phase 路线图并串行追踪。
+
+🎉 **Phase 12（运行依赖显式化与可移植部署）已 100% 全量串行交付**：
+- 严格对齐 README.md ISSUE #10 四层贯通要求；
+- 代码层：`PreflightChecker` 逐项验证 procfs、inotify、data_dir、SQLite、DuckDB、Systemd、CodeGraph、Ollama，`build.rs` 注入 Git Commit 与平台信息，`Config::validate` 拦截非法配置；
+- 配置层：`config.example.toml` 逐参数注释说明、取值范围与依赖前提；
+- 文档层：`INSTALL.md` 覆盖编译依赖、运行依赖、四大发行版安装、Docker、Systemd 与排障速查表；
+- 技能层：更新 `agent-steward-guide`、`agent-steward-developer`、`agent-steward-doc-writer` 保持 100% 事实一致；
+- 工程化：`Dockerfile`、`docker-compose.yml`、`Makefile` 一应俱全。
 
 🎉 **Phase 11（多 Agent 协作锁与互斥协调中枢）已 100% 全量串行交付**：
 - 对齐新增 ISSUE #10；

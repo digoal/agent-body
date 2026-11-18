@@ -118,6 +118,12 @@ enum Commands {
         #[command(subcommand)]
         action: CoordinationCommands,
     },
+
+    #[command(about = "宿主运行环境与依赖完整性预检 (Preflight Check)")]
+    Preflight {
+        #[arg(short, long, help = "输出原始 JSON 格式以便 CI/CD 或 Agent 机器解析")]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -342,7 +348,7 @@ fn main() -> Result<()> {
             println!("╔═══════════════════════════════════════════════════════╗");
             println!("║      Agent Host Steward (Rust 版) — 系统状态          ║");
             println!("╚═══════════════════════════════════════════════════════╝");
-            println!("版本:           v{}", agent_steward::VERSION);
+            println!("版本:           {}", agent_steward::version_info());
             println!("数据目录:       {:?}", cfg.data_dir);
             println!("数据库文件:     {:?}", cfg.db_path);
             let assets = storage.list_assets(1000)?;
@@ -877,6 +883,18 @@ fn main() -> Result<()> {
                     let count = engine.gc_expired_locks()?;
                     println!("🧹 协作锁 GC 完成！已清理释放 {} 个过期锁。", count);
                 }
+            }
+        }
+
+        Commands::Preflight { json } => {
+            let report = agent_steward::preflight::PreflightChecker::run_all(&cfg.data_dir, Some(&cfg));
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                println!("{}", report.format_table());
+            }
+            if !report.passed_required {
+                std::process::exit(1);
             }
         }
     }

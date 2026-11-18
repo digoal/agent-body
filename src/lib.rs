@@ -14,5 +14,17 @@ pub mod tui;
 pub mod fact;
 pub mod brief;
 pub mod coordination;
+pub mod preflight;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const BUILD_TIMESTAMP: &str = env!("BUILD_TIMESTAMP");
+pub const BUILD_OS: &str = env!("BUILD_OS");
+pub const BUILD_ARCH: &str = env!("BUILD_ARCH");
+pub const BUILD_GIT_HASH: &str = env!("BUILD_GIT_HASH");
+
+pub fn version_info() -> String {
+    format!(
+        "v{} ({}, {}/{}, built at {})",
+        VERSION, BUILD_GIT_HASH, BUILD_OS, BUILD_ARCH, BUILD_TIMESTAMP
+    )
+}

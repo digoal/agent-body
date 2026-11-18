@@ -1,6 +1,6 @@
 [package]
 name = "agent-steward"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 authors = ["digoal 德哥"]
 description = "Agent Host Steward — 驻留在 Agent 宿主机中的环境大管家"

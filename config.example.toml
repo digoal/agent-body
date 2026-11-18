@@ -1,0 +1,121 @@
+# ==============================================================================
+# Agent Host Steward (宿主环境大管家) — 配置文件参考模板
+# ==============================================================================
+#
+# 配置文件默认查找路径:
+#   1. 环境变量: STEWARD_CONFIG (最高优先级)
+#   2. 命令行参数: agent-steward --config <path> ...
+#   3. 用户家目录: ~/.steward/config.toml (默认路径)
+#
+# 首次运行任何 steward 命令时，若上述路径均不存在配置文件，
+# 系统将自动根据本模板创建默认的 ~/.steward/config.toml。
+# ==============================================================================
+
+# 基础数据存储目录 (SQLite 数据库、本地缓存、备份文件均存放于此)
+# 依赖: 该目录必须具备当前运行用户的读写权限，且磁盘剩余空间建议 >= 100MB
+# 默认: "/root/.steward" (或 "$HOME/.steward")
+data_dir = "/root/.steward"
+
+# SQLite 主存储数据库文件绝对路径
+# 默认: "{data_dir}/steward.db"
+db_path = "/root/.steward/steward.db"
+
+# HTTP API 监听端口 (仅当启动独立的 HTTP/Web 服务模式时生效，stdio MCP 模式不占用端口)
+# 取值范围: 1024 ~ 65535 (禁止使用低于 1024 的特权端口)
+# 默认: 9527
+api_port = 9527
+
+# HTTP API 绑定网络地址
+# 安全建议: 生产与单机环境保持 "127.0.0.1"；若多机 Agent 访问请配置内网 IP
+# 默认: "127.0.0.1"
+api_bind = "127.0.0.1"
+
+# ==============================================================================
+# [storage] 多存储引擎与后端配置
+# ==============================================================================
+[storage]
+# 主存储后端选择
+# 可选值:
+#   - "sqlite": 嵌入式单文件数据库 (默认，零外部依赖，内置 FTS5 全文索引，极速单机)
+#   - "postgres": 外部高并发关系数据库 (需安装 PostgreSQL >= 14 并启用 pgvector 扩展)
+#   - "duckdb": 嵌入式列存分析库 (用于大批量日志/变更时序离线分析)
+# 默认: "sqlite"
+provider = "sqlite"
+
+# PostgreSQL 连接串 (仅当 provider = "postgres" 时必须配置)
+# 格式示例: "host=127.0.0.1 port=5432 user=steward password=secret dbname=steward"
+# 依赖要求: 
+#   1. PostgreSQL 服务处于监听状态
+#   2. 数据库已执行 CREATE EXTENSION IF NOT EXISTS vector;
+#   3. DDL 迁移可通过 `agent-steward storage migrate --to postgres` 自动导入
+# pg_url = "host=localhost port=5432 user=steward dbname=steward"
+
+# DuckDB 数据库文件路径 (若不填则默认为 {data_dir}/steward.duckdb)
+# duckdb_path = "/root/.steward/steward.duckdb"
+
+# ==============================================================================
+# [embedding] 长期记忆语义向量嵌入服务配置 (可选)
+# ==============================================================================
+[embedding]
+# 本地或内网 Ollama 嵌入服务地址
+# 依赖要求: 本机或内网需安装 Ollama (https://ollama.com) 并已启动服务
+# 默认: "http://localhost:11434"
+ollama_url = "http://localhost:11434"
+
+# 文本向量化嵌入模型名称
+# 推荐模型:
+#   - "nomic-embed-text": 768 维，极速且显存开销小 (pull: `ollama pull nomic-embed-text`)
+#   - "bge-m3:latest": 1024 维，高质量中文与代码双语混合嵌入 (pull: `ollama pull bge-m3`)
+# 默认: "nomic-embed-text"
+model = "nomic-embed-text"
+
+# 向量维度 (必须与所选模型的实际输出维度完全一致)
+#   - nomic-embed-text 为 768
+#   - bge-m3 为 1024
+# 默认: 768
+dimensions = 768
+
+# 当 Ollama 服务离线或连接失败时，是否自动降级为 SQLite FTS5 纯全文检索
+# 建议: true (确保系统在断网或 Ollama 挂掉时依然能检索记忆，绝不崩溃)
+# 默认: true
+fallback_fts_only = true
+
+# ==============================================================================
+# [assets] 资产分级扫描与监听配置
+# ==============================================================================
+[assets]
+# 后台常驻守护进程 (daemon) 启动时自动递归扫描与监听的核心目录列表
+# 建议: 仅配置日常存放代码、脚本、资料的工作目录；切勿配置根目录 "/" 或超大目录
+# 默认: 空数组 (启动时自动查找并纳管 ~/new/work 与 ~/new/shared_proj)
+auto_scan_dirs = [
+    # "/root/new/work",
+    # "/root/new/shared_proj"
+]
+
+# 扫描与监听时全局忽略的文件与目录模式 (Glob 表达式)
+# 白名单优先深挖到底，命中以下模式的目录将严格止于当前层级，绝不下钻
+ignore_patterns = [
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".steward",
+    "target",
+    ".venv",
+    ".idea",
+    ".vscode",
+    "dist",
+    "build"
+]
+
+# ==============================================================================
+# [placement] 新对象放置建议与命名规范配置
+# ==============================================================================
+[placement]
+# 默认新建资产的属主标识
+# 默认: "user:digoal"
+default_owner = "user:digoal"
+
+# 默认安全分级
+# 可选值: "public" | "internal" | "confidential" | "secret"
+# 默认: "internal"
+default_security_level = "internal"

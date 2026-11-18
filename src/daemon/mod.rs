@@ -29,6 +29,19 @@ impl StewardDaemon {
         println!("数据目录:       {:?}", self.config.data_dir);
         println!("数据库路径:     {:?}", self.config.db_path);
 
+        // 0. 执行运行时环境依赖预检 (Preflight)
+        let preflight = crate::preflight::PreflightChecker::run_all(&self.config.data_dir, Some(&self.config));
+        if !preflight.passed_required {
+            eprintln!("{}", preflight.format_table());
+            anyhow::bail!("Preflight 检查失败：存在 REQUIRED 关键运行依赖未满足，守护进程终止启动。");
+        } else {
+            for item in &preflight.items {
+                if item.status == crate::preflight::CheckStatus::Warn {
+                    println!("⚠️ [Preflight 降级提示] {}: {} (建议: {:?})", item.name, item.message, item.remedy.as_deref().unwrap_or("无"));
+                }
+            }
+        }
+
         // 1. 初始化文件监听目录
         let mut watch_paths = self.config.assets.auto_scan_dirs.clone();
         if watch_paths.is_empty() {
