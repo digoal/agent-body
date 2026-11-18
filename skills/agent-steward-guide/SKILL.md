@@ -1,6 +1,6 @@
 ---
 name: agent-steward-guide
-description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制、Systemd 常驻服务、Docker 编排与 preflight 依赖预检）、以及熟悉日常使用（CLI 命令行实操、37 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、多 Agent 协作锁、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
+description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制、Systemd 常驻服务、Docker 编排与 preflight 依赖预检）、以及熟悉日常使用（CLI 命令行实操、38 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、多 Agent 协作锁、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
 ---
 
 # Agent Host Steward 全景向导与部署使用技能 (agent-steward-guide)
@@ -218,7 +218,7 @@ agent-steward close session-20261115-01 --clean-temp
 }
 ```
 
-#### 步骤 2: 37 个原生 MCP 工具全景矩阵
+#### 步骤 2: 38 个原生 MCP 工具全景矩阵
 
 | 分类 | 工具名称 | 核心功能说明 |
 |---|---|---|
@@ -259,6 +259,7 @@ agent-steward close session-20261115-01 --clean-temp
 | **生态防爆路由** | `steward_mcp_catalog` | 扫描与路由宿主机客户端已配置的 MCP Server 目录（脱敏） |
 | | `steward_skill_route` | 按任务意图与 Token 预算路由 Top-K SKILL（防止 Context 被打爆） |
 | | `steward_service_contact` | 管理外部可用服务通讯录与轻量健康探活（严禁存明文密钥） |
+| **多机联邦 Mesh** | `steward_mesh_query` | 对等节点 ping/facts/locks 联邦查询、跨机端口检测与跨节点租约锁 |
 
 ---
 

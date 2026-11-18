@@ -169,6 +169,61 @@ enum Commands {
         #[command(subcommand)]
         action: ServiceCommands,
     },
+
+    #[command(about = "轻量多机联邦 Peer Mesh：对等节点 ping/facts/locks/联邦端口查询/跨节点锁")]
+    Mesh {
+        #[command(subcommand)]
+        action: MeshCommands,
+    },
+
+    #[command(about = "跨平台原生探针：查看当前平台探针识别的监听端口与自动化服务")]
+    Platform {
+        #[command(subcommand)]
+        action: PlatformCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum MeshCommands {
+    #[command(about = "查看本节点 mesh 配置与对等节点列表")]
+    Peers,
+    #[command(about = "采集并输出本节点事实（对等节点将收到的同款数据）")]
+    Local,
+    #[command(about = "探测所有对等节点连通性与延迟")]
+    Ping,
+    #[command(about = "拉取所有对等节点事实")]
+    Facts,
+    #[command(about = "拉取所有对等节点活跃协作锁")]
+    Locks,
+    #[command(about = "联邦端口查询：集群哪台机器占用了某端口")]
+    Port {
+        port: u16,
+    },
+    #[command(about = "向属主对等节点申请跨节点协作锁 (HTTP 租约)")]
+    Acquire {
+        #[arg(long, help = "目标对等节点基地址，如 http://192.168.31.161:8756")]
+        peer: String,
+        #[arg(short = 't', long)]
+        resource_type: String,
+        #[arg(short = 'i', long)]
+        resource_id: String,
+        #[arg(short, long, default_value = "exclusive")]
+        scope: String,
+        #[arg(short = 'a', long, default_value = "cli-agent")]
+        holder_agent: String,
+        #[arg(long, default_value_t = 300)]
+        ttl_seconds: u64,
+    },
+}
+
+#[derive(Subcommand)]
+enum PlatformCommands {
+    #[command(about = "显示当前平台探针名称与 OS")]
+    Info,
+    #[command(about = "用当前平台探针枚举监听端口")]
+    Ports,
+    #[command(about = "用当前平台探针枚举自动化服务/计划任务")]
+    Services,
 }
 
 #[derive(Subcommand)]
@@ -1369,6 +1424,62 @@ fn main() -> Result<()> {
                 }
             }
         }
+
+        Commands::Mesh { action } => {
+            use agent_steward::mesh::{build_local_facts, MeshClient};
+            let client = MeshClient::new(&cfg.mesh, cfg.web.auth_token.clone());
+            match action {
+                MeshCommands::Peers => {
+                    println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                        "enabled": cfg.mesh.enabled,
+                        "peers": client.peers(),
+                        "timeout_ms": cfg.mesh.timeout_ms,
+                    }))?);
+                }
+                MeshCommands::Local => println!("{}", serde_json::to_string_pretty(&build_local_facts())?),
+                MeshCommands::Ping => println!("{}", serde_json::to_string_pretty(&client.ping_all())?),
+                MeshCommands::Facts => println!("{}", serde_json::to_string_pretty(&client.facts_all())?),
+                MeshCommands::Locks => println!("{}", serde_json::to_string_pretty(&client.locks_all())?),
+                MeshCommands::Port { port } => {
+                    println!("{}", serde_json::to_string_pretty(&client.federated_port_check(port))?);
+                }
+                MeshCommands::Acquire { peer, resource_type, resource_id, scope, holder_agent, ttl_seconds } => {
+                    let req = agent_steward::coordination::LockRequest {
+                        resource_type: agent_steward::coordination::ResourceType::from_str_loose(&resource_type),
+                        resource_id,
+                        scope: agent_steward::coordination::LockScope::from_str_loose(&scope),
+                        holder_agent,
+                        holder_pid: None,
+                        ttl_seconds,
+                        metadata: None,
+                    };
+                    println!("{}", serde_json::to_string_pretty(&client.acquire_on_peer(&peer, &req)?)?);
+                }
+            }
+        }
+
+        Commands::Platform { action } => {
+            let probe = agent_steward::platform::current_probe();
+            match action {
+                PlatformCommands::Info => {
+                    println!("OS: {}  |  平台探针: {}", std::env::consts::OS, probe.name());
+                }
+                PlatformCommands::Ports => {
+                    let ports = probe.listening_ports()?;
+                    println!("平台探针 `{}` 识别监听端口 {} 个：", probe.name(), ports.len());
+                    for p in ports.iter().filter(|p| !p.is_system_daemon) {
+                        println!("  - {}/{} {} pid={:?} {}", p.port, p.protocol, p.bind_ip, p.pid, p.process_name.as_deref().unwrap_or("-"));
+                    }
+                }
+                PlatformCommands::Services => {
+                    let svcs = probe.services()?;
+                    println!("平台探针 `{}` 识别自动化服务/任务 {} 个：", probe.name(), svcs.len());
+                    for s in svcs.iter().take(50) {
+                        println!("  - [{}] {} -> {}", s.kind, s.name, s.command);
+                    }
+                }
+            }
+        }
     }
 
     Ok(())
@@ -1393,5 +1504,8 @@ mod tests {
         assert!(Cli::try_parse_from(["steward", "service", "bootstrap"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "coordination", "wait", "-t", "port", "-i", "8080"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "coordination", "deadlock"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "mesh", "port", "8080"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "mesh", "acquire", "--peer", "http://10.0.0.2:8756", "-t", "port", "-i", "9000"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "platform", "ports"]).is_ok());
     }
 }

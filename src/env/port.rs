@@ -26,6 +26,24 @@ pub struct PortChecker;
 impl PortChecker {
     /// 检查指定端口是否已被占用，并查询占用进程与推荐可用端口
     pub fn check_port(port: u16, suggest_count: usize) -> Result<PortCheckResult> {
+        // Phase 18：非 Linux 平台经 PlatformProbe 通用实现，不依赖 /proc
+        if std::env::consts::OS != "linux" {
+            let r = crate::fact::process_net::ProcessNetTopology::check_port(port, suggest_count)?;
+            let conflict = r.occupied_by.map(|f| ProcessConflict {
+                pid: f.pid.unwrap_or(0),
+                name: f.process_name.unwrap_or_default(),
+                command: f.command.unwrap_or_default(),
+                owner: f.user.unwrap_or_default(),
+            });
+            return Ok(PortCheckResult {
+                port: r.port,
+                status: r.status,
+                conflict,
+                recommended_free_ports: r.recommended_free_ports,
+                advice: r.advice,
+            });
+        }
+
         let occupied_ports = Self::get_listening_ports_map()?;
 
         if let Some((pid, inode)) = occupied_ports.get(&port) {

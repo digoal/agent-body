@@ -420,4 +420,10 @@ agent-steward [OPTIONS] <COMMAND>
 - `agent-steward skill <scan|list|route>`: 扫描宿主机 130+ SKILL 目录，按 `--budget-tokens` 渐进式路由 Top-K SKILL 路径，防止 Context 膨胀（对应 `steward_skill_route`）。
 - `agent-steward service <register|list|query|check|bootstrap>`: 管理外部可用服务通讯录与轻量健康探活（对应 `steward_service_contact`）。
 
+---
+
+### 2.20 `platform` / `mesh` — 跨平台原生探针与轻量多机联邦 (Phase 18)
+- `agent-steward platform <info|ports|services>`: 使用运行时 `PlatformProbe`（Linux `/proc`+systemd、macOS `lsof`+launchd、Windows `netstat`+schtasks）查看本机监听端口与自动化任务。
+- `agent-steward mesh <peers|local|ping|facts|locks|port|acquire>`: 对等节点只读联邦查询、跨机端口占用查询与 HTTP 租约锁申请（对应 `steward_mesh_query`）。
+
 

@@ -51,7 +51,9 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/daemon/` | 常驻守护进程主循环与定时轮询、依赖预检 | 优雅信号捕获与 Systemd 托管 |
 | ├── `src/links/` | 关联拓扑图、Mermaid 导出、断链审计与 CodeGraph 桥接 | AST 引用提取与宏微联邦 |
 | ├── `src/changes/` | 变更历史回溯与 Agent 会话简报 | 生成开工 markdown |
-| └── `src/api/` | 37 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI 功能 1:1 映射 |
+| └── `src/api/` | 38 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI 功能 1:1 映射 |
+| └── `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | 解析函数纯函数跨平台编译 |
+| └── `src/mesh/` | 轻量多机联邦 HTTP Peer Mesh | 写接口强校验 auth_token |
 | └── `src/ecosystem/` | MCP/SKILL 目录、外部服务通讯录与 Context 防爆路由 | 严禁存明文密钥 |
 | `manual/` | 面向使用者与架构师的分卷深度技术手册 (01~07) | 保持与代码演进实时同步 |
 | `src_doc/` | 开发者手册、产品手册与各阶段研发断点状态表 | 任务流转枢纽，统一 kebab-case |

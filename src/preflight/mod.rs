@@ -150,6 +150,19 @@ impl PreflightChecker {
 
     /// 检查 /proc 虚拟文件系统 (Linux 进程与端口拓扑依赖)
     pub fn check_procfs(report: &mut PreflightReport) {
+        // Phase 18：非 Linux 平台使用 PlatformProbe，不要求 /proc
+        if std::env::consts::OS != "linux" {
+            let probe = crate::platform::current_probe();
+            report.add(CheckItem {
+                name: "平台原生探针".to_string(),
+                category: CheckCategory::Informational,
+                status: CheckStatus::Pass,
+                message: format!("当前 OS 为 {}，使用 `{}` 平台探针（lsof / netstat 等系统自带命令）", std::env::consts::OS, probe.name()),
+                remedy: None,
+            });
+            return;
+        }
+
         let proc_tcp = Path::new("/proc/net/tcp");
         let proc_root = Path::new("/proc");
 

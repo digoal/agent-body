@@ -52,7 +52,9 @@ graph TD
 | `src/memory/` | 跨会话长期记忆与三方适配 | `MemoryManager`, `BuiltinLocalProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
 | `src/links/` | 依赖关系网与爆炸半径推演 | `LinksEngine`, `CodeGraphBridge`, `LinkRepairer` |
 | `src/scanner/` | 资产扫描与断点续扫状态机 | `Scanner`, `ScanStateMachine`, `ImportanceScorer` |
-| `src/api/` | 37 个原生 MCP 工具服务端 | `McpServer`, `AgentHookEngine`, `StewardResponse` |
+| `src/api/` | 38 个原生 MCP 工具服务端 | `McpServer`, `AgentHookEngine`, `StewardResponse` |
+| `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` |
+| `src/mesh/` | 轻量多机联邦 HTTP Peer Mesh | `MeshClient`, `MeshNodeFacts`, `handle_mesh_*` |
 | `src/ecosystem/` | MCP/SKILL 目录、外部服务通讯录与 Context 防爆路由 | `McpConfigScanner`, `SkillCatalogScanner`, `ExternalContactsManager`, `ContextBudgetRouter` |
 | `src/hooks/` | HOOK 事件总线与自动同步/生成/Pipeline | `EventBus`, `HookDispatcher`, `AutoSyncEngine`, `ClientHookGenerator`, `HookPipelineEngine` |
 | `src/session/` | 会话生命周期自动绑定与安全归档 | `SessionManager`, `SessionLifecycleManager` |
@@ -110,7 +112,7 @@ cargo build --release
 
 ### How-To 1: 如何添加一个新的原生 MCP 工具？
 
-系统原生注册了 37 个 MCP 工具。若需新增一个例如 `steward_system_clean` 工具：
+系统原生注册了 38 个 MCP 工具。若需新增一个例如 `steward_system_clean` 工具：
 
 1. **在 `src/api/mcp_tools.rs` 中声明工具元数据**：
    ```rust

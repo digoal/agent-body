@@ -79,7 +79,7 @@ fn test_wait_and_acquire_deadlock_interception_and_37_mcp_tools() {
 
     // 验证 37 个 MCP 工具
     let registry = McpToolRegistry::new(storage.clone());
-    assert_eq!(registry.list_tools().len(), 37);
+    assert_eq!(registry.list_tools().len(), 38);
 
     // A 持 9201，B 持 9202
     let _ = engine

@@ -103,8 +103,27 @@ impl WebServer {
         if bytes_read == 0 {
             return Ok(());
         }
+        let mut raw: Vec<u8> = buffer[..bytes_read].to_vec();
 
-        let req = match HttpRequest::parse(&buffer[..bytes_read]) {
+        // 若请求体分包到达 (如 reqwest 先发头后发体)，按 Content-Length 补读剩余请求体 (上限 64KB)
+        if let Some(header_end) = raw.windows(4).position(|w| w == b"\r\n\r\n") {
+            let header_text = String::from_utf8_lossy(&raw[..header_end]).to_lowercase();
+            let content_len = header_text
+                .lines()
+                .find_map(|l| l.strip_prefix("content-length:").and_then(|v| v.trim().parse::<usize>().ok()))
+                .unwrap_or(0)
+                .min(65536);
+            let body_start = header_end + 4;
+            while raw.len() < body_start + content_len {
+                let n = stream.read(&mut buffer).await?;
+                if n == 0 {
+                    break;
+                }
+                raw.extend_from_slice(&buffer[..n]);
+            }
+        }
+
+        let req = match HttpRequest::parse(&raw) {
             Ok(r) => r,
             Err(e) => {
                 let resp = HttpResponse::bad_request(&format!("Invalid HTTP request: {}", e));
@@ -125,6 +144,14 @@ impl WebServer {
         // 处理 SSE 实时流
         if req.method == Method::Get && req.path == "/api/v1/stream" {
             return Self::handle_sse_stream(stream, event_tx).await;
+        }
+
+        // Mesh 跨节点协作锁申请需要持有 Arc 存储句柄以构造 CoordinationEngine
+        if req.method == Method::Post && req.path == "/api/v1/mesh/locks/acquire" {
+            let resp = crate::mesh::handle_mesh_lock_acquire(&req, storage.clone(), &auth_token);
+            stream.write_all(&resp.to_bytes()).await?;
+            stream.flush().await?;
+            return Ok(());
         }
 
         // 统一路由分发
@@ -162,6 +189,9 @@ impl WebServer {
             (Method::Get, "/api/v1/locks/wait-queue") => crate::web::locks_api::handle_locks_wait_queue(storage),
             (Method::Get, "/api/v1/locks/deadlocks") => crate::web::locks_api::handle_locks_deadlocks(storage),
             (Method::Post, "/api/v1/locks/release") => crate::web::locks_api::handle_lock_release(req, storage, auth_token),
+            (Method::Get, "/api/v1/mesh/ping") => crate::mesh::handle_mesh_ping(req, auth_token),
+            (Method::Get, "/api/v1/mesh/facts") => crate::mesh::handle_mesh_facts(req, auth_token),
+            (Method::Get, "/api/v1/mesh/locks") => crate::mesh::handle_mesh_locks(req, storage, auth_token),
             _ => HttpResponse::not_found(&format!("Endpoint not found: {} {}", req.method.as_str(), req.path)),
         }
     }

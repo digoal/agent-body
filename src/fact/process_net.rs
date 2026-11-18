@@ -45,7 +45,13 @@ pub struct ProcessNetTopology;
 
 impl ProcessNetTopology {
     /// 扫描全系统所有处于 LISTEN 状态的网络端口及其物理进程
+    /// (Phase 18：按运行时 OS 经 `PlatformProbe` 分发；Linux 仍走 `/proc` 微秒级实现)
     pub fn scan_listening_ports() -> Result<Vec<ListeningPortFact>> {
+        crate::platform::current_probe().listening_ports()
+    }
+
+    /// Linux `/proc` 原生实现：扫描 TCP LISTEN 端口及进程上下文
+    pub fn scan_listening_ports_procfs() -> Result<Vec<ListeningPortFact>> {
         let mut port_facts = Vec::new();
 
         // 1. 扫描 TCP IPv4
@@ -157,8 +163,8 @@ impl ProcessNetTopology {
                 continue;
             }
 
-            // state "0A" 表示 TCP_LISTEN
-            let state = fields[1];
+            // state "0A" 表示 TCP_LISTEN (sl=0, local_address=1, rem_address=2, st=3)
+            let state = fields[3];
             if state != "0A" {
                 continue;
             }

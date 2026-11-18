@@ -81,7 +81,9 @@ agent-steward/
     ├── web/                 # 内嵌 HTTP/SSE 监控大屏服务
     ├── tui/                 # 终端全景实时交互看板
     ├── ecosystem/           # MCP/SKILL 生态目录、外部服务通讯录与 Context 防爆路由
-    └── api/                 # 35 个原生 MCP 工具端点与 Hook 门禁
+    ├── platform/            # 跨平台原生探针 (Linux/macOS/Windows)
+    ├── mesh/                # 轻量多机联邦 HTTP Peer Mesh
+    └── api/                 # 38 个原生 MCP 工具端点与 Hook 门禁
 ```
 
 ---

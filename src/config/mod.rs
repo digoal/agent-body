@@ -32,7 +32,41 @@ pub struct Config {
     pub web: WebConfig,
 
     #[serde(default)]
+    pub mesh: MeshConfig,
+
+    #[serde(default)]
     pub hooks: Vec<crate::hooks::HookRule>,
+}
+
+/// 轻量多机联邦 (Peer Mesh) 配置 (Phase 18)
+/// 鉴权复用 `[web].auth_token` 作为集群共享密钥 (Bearer)；各节点必须配置相同 Token 才能互通。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeshConfig {
+    /// 是否启用联邦查询客户端能力（服务端 /api/v1/mesh/* 随 Web 服务常驻）
+    #[serde(default)]
+    pub enabled: bool,
+
+    /// 对等节点 Web 基地址列表，如 ["http://192.168.31.161:8756"]
+    #[serde(default)]
+    pub peers: Vec<String>,
+
+    /// 单次对等节点请求超时毫秒
+    #[serde(default = "default_mesh_timeout_ms")]
+    pub timeout_ms: u64,
+}
+
+fn default_mesh_timeout_ms() -> u64 {
+    1500
+}
+
+impl Default for MeshConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            peers: vec![],
+            timeout_ms: default_mesh_timeout_ms(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -233,6 +267,7 @@ impl Default for Config {
             placement: PlacementConfig::default(),
             storage: StorageConfig::default(),
             web: WebConfig::default(),
+            mesh: MeshConfig::default(),
             hooks: vec![],
         }
     }
@@ -292,6 +327,14 @@ impl Config {
         }
         if self.storage.provider == "postgres" && self.storage.pg_url.is_none() {
             anyhow::bail!("当 storage.provider 设置为 'postgres' 时，必须配置 storage.pg_url 连接串");
+        }
+        for peer in &self.mesh.peers {
+            if !(peer.starts_with("http://") || peer.starts_with("https://")) {
+                anyhow::bail!("mesh.peers 中的 '{}' 必须以 http:// 或 https:// 开头", peer);
+            }
+        }
+        if self.mesh.enabled && !self.mesh.peers.is_empty() && self.web.auth_token.is_none() {
+            anyhow::bail!("启用 mesh 联邦且配置了 peers 时，必须设置 [web].auth_token 作为集群共享密钥");
         }
         Ok(())
     }

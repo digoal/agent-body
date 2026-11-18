@@ -597,6 +597,23 @@ impl McpToolRegistry {
                     "type": "object",
                     "properties": {}
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_mesh_query",
+                "description": "轻量多机联邦 Peer Mesh（Phase 18）：对 config.toml [mesh].peers 中的对等节点做 ping/facts/locks 只读联邦查询、联邦端口占用查询（集群哪台机器占用某端口），或向属主节点申请跨节点协作锁（HTTP 租约）。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["peers", "ping", "facts", "locks", "port", "acquire", "local"], "default": "ping" },
+                        "port": { "type": "integer", "description": "action=port 时要查询的端口" },
+                        "peer": { "type": "string", "description": "action=acquire 时的目标对等节点基地址" },
+                        "resource_type": { "type": "string", "enum": ["port", "directory", "service", "file", "custom"] },
+                        "resource_id": { "type": "string" },
+                        "scope": { "type": "string", "enum": ["exclusive", "shared"], "default": "exclusive" },
+                        "holder_agent": { "type": "string", "default": "current-agent" },
+                        "ttl_seconds": { "type": "integer", "default": 300 }
+                    }
+                }
             })
         ]
     }
@@ -1175,6 +1192,45 @@ impl McpToolRegistry {
                     "wait_queue_count": waits.len(),
                     "wait_queue": waits,
                 }))?)
+            }
+
+            "steward_mesh_query" => {
+                use crate::coordination::{LockRequest, LockScope, ResourceType};
+                use crate::mesh::{build_local_facts, MeshClient};
+                let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("ping");
+                let cfg = crate::config::Config::load_or_default(None).unwrap_or_default();
+                let client = MeshClient::new(&cfg.mesh, cfg.web.auth_token.clone());
+                match action {
+                    "local" => Ok(serde_json::to_string_pretty(&build_local_facts())?),
+                    "peers" => Ok(serde_json::to_string_pretty(&serde_json::json!({
+                        "enabled": cfg.mesh.enabled,
+                        "peers": client.peers(),
+                        "timeout_ms": cfg.mesh.timeout_ms,
+                    }))?),
+                    "facts" => Ok(serde_json::to_string_pretty(&client.facts_all())?),
+                    "locks" => Ok(serde_json::to_string_pretty(&client.locks_all())?),
+                    "port" => {
+                        let port = args.get("port").and_then(|v| v.as_u64()).unwrap_or(0) as u16;
+                        Ok(serde_json::to_string_pretty(&client.federated_port_check(port))?)
+                    }
+                    "acquire" => {
+                        let peer = args.get("peer").and_then(|v| v.as_str()).unwrap_or("");
+                        if peer.is_empty() {
+                            bail!("action=acquire 必须提供 peer 参数");
+                        }
+                        let req = LockRequest {
+                            resource_type: ResourceType::from_str_loose(args.get("resource_type").and_then(|v| v.as_str()).unwrap_or("custom")),
+                            resource_id: args.get("resource_id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                            scope: LockScope::from_str_loose(args.get("scope").and_then(|v| v.as_str()).unwrap_or("exclusive")),
+                            holder_agent: args.get("holder_agent").and_then(|v| v.as_str()).unwrap_or("current-agent").to_string(),
+                            holder_pid: None,
+                            ttl_seconds: args.get("ttl_seconds").and_then(|v| v.as_u64()).unwrap_or(300),
+                            metadata: None,
+                        };
+                        Ok(serde_json::to_string_pretty(&client.acquire_on_peer(peer, &req)?)?)
+                    }
+                    _ => Ok(serde_json::to_string_pretty(&client.ping_all())?),
+                }
             }
 
             _ => bail!("Unknown tool: {}", name),

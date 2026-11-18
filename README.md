@@ -105,7 +105,7 @@
   - 多 Agent 协作锁与层级互斥传播算法（Advisory Lock + 祖先后代路径检测）；
   - 工业级 NFR 指标（单二进制交付、冷启动 `<50ms`、空闲内存 `<25MB`）与递弱代偿边界。
 - 🛠️ **[02-for-developers.md](arch/02-for-developers.md)**（面向研发工程师与贡献者）：
-  - 源码 20 大模块全景职责与依赖拓扑速查；
+  - 源码 22 大模块全景职责与依赖拓扑速查；
   - 核心扩展三大 How-To（添加原生 MCP 工具、实现新存储后端 SPI、新增环境预检项）；
   - 161 项自动化测试套件与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
@@ -124,7 +124,7 @@
 - 🚀 **[01-getting-started.md](manual/01-getting-started.md)**：快速上手、环境依赖准备与首次编译运行
 - 🧠 **[02-core-concepts.md](manual/02-core-concepts.md)**：核心理念：大管家定位、黑白名单浅层阻断、放置建议哲学
 - 📖 **[03-cli-reference.md](manual/03-cli-reference.md)**：全量 CLI 命令行实操字典（全子命令 + 真实输出）
-- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：37 个原生 MCP 工具与 Claude/Cursor 配置
+- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：38 个原生 MCP 工具与 Claude/Cursor 配置
 - 🔄 **[05-daemon-and-watcher.md](manual/05-daemon-and-watcher.md)**：后台常驻守护服务、inotify 300ms 防抖与 systemd 自启
 - ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：v3.1 进阶特性：断链智能修复、放置规则自演化、宿主资源 GC、记忆生命周期与 TUI 看板
 - 🛠️ **[07-troubleshooting.md](manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
