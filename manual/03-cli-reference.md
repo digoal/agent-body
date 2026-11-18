@@ -409,6 +409,8 @@ agent-steward [OPTIONS] <COMMAND>
 ### 2.18 补充子命令速查（1:1 映射补齐）
 - `agent-steward asset register --path <PATH> --type <TYPE> [--description <DESC>]`：手动向大管家登记单个文件或目录资产（对应 `steward_asset_register`）。
 - `agent-steward coordination acquire -t <TYPE> -i <ID> [-s exclusive|shared] [-a <AGENT>] [--ttl-seconds 300]`：申请资源协作锁（对应 `steward_lock_acquire`）。
+- `agent-steward coordination wait -t <TYPE> -i <ID> [--wait-timeout-ms 5000]`：排队等待并唤醒获取协作锁，内置 WFG 死锁环路拦截（对应 `steward_lock_wait`）。
+- `agent-steward coordination deadlock`：执行 Wait-For Graph 全局死锁与等待队列检测（对应 `steward_lock_deadlock_check`）。
 - `agent-steward close <SESSION_ID> [--dry-run]`：会话结算，增加 `--dry-run` 预览开关（对应 `steward_session_close`）。
 
 ---

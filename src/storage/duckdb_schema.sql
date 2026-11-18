@@ -209,3 +209,16 @@ CREATE TABLE IF NOT EXISTS external_services (
     status          VARCHAR DEFAULT 'unknown',
     last_checked_at VARCHAR
 );
+
+-- ─── Phase 17: 协作锁等待队列 (Lock Wait Queue) ────────────────────────
+CREATE TABLE IF NOT EXISTS lock_wait_queue (
+    wait_id       VARCHAR PRIMARY KEY,
+    resource_type VARCHAR NOT NULL,
+    resource_id   VARCHAR NOT NULL,
+    scope         VARCHAR DEFAULT 'exclusive',
+    waiting_agent VARCHAR NOT NULL,
+    priority      INTEGER DEFAULT 100,
+    enqueued_at   VARCHAR NOT NULL,
+    timeout_at    VARCHAR NOT NULL,
+    status        VARCHAR DEFAULT 'waiting'
+);

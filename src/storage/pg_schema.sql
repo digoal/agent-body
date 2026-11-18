@@ -240,3 +240,18 @@ CREATE TABLE IF NOT EXISTS external_services (
 );
 
 CREATE INDEX IF NOT EXISTS idx_pg_ext_svc_fts ON external_services USING GIN(to_tsvector('simple', service_name || ' ' || category || ' ' || capabilities));
+
+-- ─── Phase 17: 协作锁等待队列 (Lock Wait Queue) ────────────────────────
+CREATE TABLE IF NOT EXISTS lock_wait_queue (
+    wait_id       TEXT PRIMARY KEY,
+    resource_type TEXT NOT NULL,
+    resource_id   TEXT NOT NULL,
+    scope         TEXT NOT NULL DEFAULT 'exclusive',
+    waiting_agent TEXT NOT NULL,
+    priority      INTEGER DEFAULT 100,
+    enqueued_at   TEXT NOT NULL,
+    timeout_at    TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'waiting'
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_lock_wait_res ON lock_wait_queue(resource_type, resource_id, status);

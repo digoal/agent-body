@@ -14,7 +14,7 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 写技术文档不是堆砌名词，更不是凭空编造。编写本项目的任何文档，必须严格遵守以下 **六大铁律**：
 
 1. **代码真实性第一（Zero Hallucination）**：
-   - 所有的命令参数、子命令名称、配置项键名、MCP 工具名称（共 35 个）、JSON 返回结构，必须直接源自 `src/` 源码（如 `src/main.rs`, `src/api/mcp_tools.rs`, `src/config/mod.rs`, `src/links/`），绝不允许擅自发明不存在的命令或参数。
+   - 所有的命令参数、子命令名称、配置项键名、MCP 工具名称（共 37 个）、JSON 返回结构，必须直接源自 `src/` 源码（如 `src/main.rs`, `src/api/mcp_tools.rs`, `src/config/mod.rs`, `src/links/`），绝不允许擅自发明不存在的命令或参数。
    - 凡涉及运行依赖、环境要求与部署配置，必须严格注明**“必选 (Required)”**与**“可选 (Optional)”**，并在 [INSTALL.md](../../INSTALL.md) 与 [config.example.toml](../../config.example.toml) 中保持事实对齐。
 2. **命令必须实跑验证（Execution-Verified）**：
    - 文档中凡是贴出的 CLI 输出、curl 返回或 JSON 示例，**必须使用编译出来的实际二进制执行一次**（例如 `./target/release/agent-steward env port 22`、`./target/release/agent-steward links audit`），捕获真实输出后贴入，严禁“凭印象编造输出”。

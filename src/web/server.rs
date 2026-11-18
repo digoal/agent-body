@@ -159,6 +159,8 @@ impl WebServer {
             (Method::Get, "/api/v1/topology/impact") => crate::web::topology::handle_topology_impact(req, storage),
             (Method::Get, "/api/v1/locks") => crate::web::locks_api::handle_locks_list(storage),
             (Method::Get, "/api/v1/locks/history") => crate::web::locks_api::handle_locks_history(storage),
+            (Method::Get, "/api/v1/locks/wait-queue") => crate::web::locks_api::handle_locks_wait_queue(storage),
+            (Method::Get, "/api/v1/locks/deadlocks") => crate::web::locks_api::handle_locks_deadlocks(storage),
             (Method::Post, "/api/v1/locks/release") => crate::web::locks_api::handle_lock_release(req, storage, auth_token),
             _ => HttpResponse::not_found(&format!("Endpoint not found: {} {}", req.method.as_str(), req.path)),
         }

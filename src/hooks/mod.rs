@@ -92,6 +92,14 @@ pub enum StewardEvent {
         holder_agent: String,
         timestamp: String,
     },
+    /// 协作锁等待队列中的 Agent 被主动唤醒 (Phase 17)
+    LockWaiterNotified {
+        wait_id: String,
+        resource_type: String,
+        resource_id: String,
+        notified_agent: String,
+        timestamp: String,
+    },
     /// Agent 会话开工
     SessionStarted {
         session_id: String,
@@ -121,6 +129,7 @@ impl StewardEvent {
             Self::PortChanged { .. } => "on_port_changed",
             Self::LockAcquired { .. } => "on_lock_acquired",
             Self::LockReleased { .. } => "on_lock_released",
+            Self::LockWaiterNotified { .. } => "on_lock_waiter_notified",
             Self::SessionStarted { .. } => "on_session_started",
             Self::SessionClosed { .. } => "on_session_closed",
         }

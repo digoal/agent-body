@@ -34,6 +34,8 @@ fn test_concurrent_port_lock_exclusion() {
         match h.join().expect("thread join") {
             LockResult::Granted { .. } => granted_count += 1,
             LockResult::Denied { .. } => denied_count += 1,
+            LockResult::Deadlock { suggestion, .. } => panic!("Unexpected deadlock: {}", suggestion),
+            LockResult::Timeout { suggestion, .. } => panic!("Unexpected timeout: {}", suggestion),
             LockResult::Error { message } => panic!("Unexpected error: {}", message),
         }
     }

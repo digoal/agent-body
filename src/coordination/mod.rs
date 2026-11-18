@@ -1,4 +1,5 @@
 pub mod lock_registry;
+pub mod deadlock;
 
 use std::sync::Arc;
 use anyhow::Result;
@@ -7,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub use lock_registry::{LockRegistry, LockScope, ResourceType};
-use crate::storage::{CoordinationLock, StorageProvider};
+pub use deadlock::{DeadlockCycle, DeadlockDetector, DeadlockReport};
+use crate::storage::{CoordinationLock, LockWaitEntry, StorageProvider};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LockRequest {
@@ -43,6 +45,15 @@ pub enum LockResult {
         holder_agent: String,
         holder_since: String,
         expires_at: String,
+        suggestion: String,
+    },
+    Deadlock {
+        cycle_agents: Vec<String>,
+        cycle_resources: Vec<String>,
+        suggestion: String,
+    },
+    Timeout {
+        wait_id: String,
         suggestion: String,
     },
     Error {
@@ -201,13 +212,16 @@ impl CoordinationEngine {
         }
         let res = self.storage.delete_coordination_lock(lock_id)?;
         if res {
-            if let (Some(l), Some(ref bus)) = (target_lock, &self.event_bus) {
-                let _ = bus.emit(crate::hooks::StewardEvent::LockReleased {
-                    resource_type: l.resource_type,
-                    resource_id: l.resource_id,
-                    holder_agent: l.holder_agent,
-                    timestamp: Utc::now().to_rfc3339(),
-                });
+            if let Some(l) = target_lock {
+                if let Some(ref bus) = self.event_bus {
+                    let _ = bus.emit(crate::hooks::StewardEvent::LockReleased {
+                        resource_type: l.resource_type.clone(),
+                        resource_id: l.resource_id.clone(),
+                        holder_agent: l.holder_agent,
+                        timestamp: Utc::now().to_rfc3339(),
+                    });
+                }
+                self.notify_next_waiter(&l.resource_type, &l.resource_id);
             }
         }
         Ok(res)
@@ -219,13 +233,16 @@ impl CoordinationEngine {
         let target_lock = locks.into_iter().find(|x| x.lock_id == lock_id);
         let res = self.storage.delete_coordination_lock(lock_id)?;
         if res {
-            if let (Some(l), Some(ref bus)) = (target_lock, &self.event_bus) {
-                let _ = bus.emit(crate::hooks::StewardEvent::LockReleased {
-                    resource_type: l.resource_type,
-                    resource_id: l.resource_id,
-                    holder_agent: l.holder_agent,
-                    timestamp: Utc::now().to_rfc3339(),
-                });
+            if let Some(l) = target_lock {
+                if let Some(ref bus) = self.event_bus {
+                    let _ = bus.emit(crate::hooks::StewardEvent::LockReleased {
+                        resource_type: l.resource_type.clone(),
+                        resource_id: l.resource_id.clone(),
+                        holder_agent: l.holder_agent,
+                        timestamp: Utc::now().to_rfc3339(),
+                    });
+                }
+                self.notify_next_waiter(&l.resource_type, &l.resource_id);
             }
         }
         Ok(res)
@@ -265,9 +282,136 @@ impl CoordinationEngine {
         Ok(list.into_iter().map(LockInfo::from).collect())
     }
 
-    /// 清理所有过期锁
+    /// 清理所有过期锁并唤醒排队等待者
     pub fn gc_expired_locks(&self) -> Result<usize> {
-        self.storage.gc_expired_coordination_locks()
+        let _ = self.storage.gc_expired_lock_waits();
+        let cleaned = self.storage.gc_expired_coordination_locks()?;
+        if cleaned > 0 {
+            if let Ok(waits) = self.storage.list_lock_wait_queue(None, None) {
+                for w in waits {
+                    if w.status == "waiting" {
+                        if let Ok(None) = self.storage.get_coordination_lock(&w.resource_type, &w.resource_id) {
+                            self.notify_next_waiter(&w.resource_type, &w.resource_id);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(cleaned)
+    }
+
+    /// 弹出同资源下一个等待者并推送 EventBus 唤醒信号
+    fn notify_next_waiter(&self, resource_type: &str, resource_id: &str) {
+        if let Ok(Some(waiter)) = self.storage.pop_next_lock_waiter(resource_type, resource_id) {
+            if let Some(ref bus) = self.event_bus {
+                let _ = bus.emit(crate::hooks::StewardEvent::LockWaiterNotified {
+                    wait_id: waiter.wait_id,
+                    resource_type: waiter.resource_type,
+                    resource_id: waiter.resource_id,
+                    notified_agent: waiter.waiting_agent,
+                    timestamp: Utc::now().to_rfc3339(),
+                });
+            }
+        }
+    }
+
+    /// 全局死锁环路检测 (Wait-For Graph)
+    pub fn detect_deadlocks(&self) -> Result<DeadlockReport> {
+        let active_locks = self.storage.list_coordination_locks(None)?;
+        let waits = self.storage.list_lock_wait_queue(None, None)?;
+        Ok(DeadlockDetector::detect(&active_locks, &waits, None))
+    }
+
+    /// 列出等待队列
+    pub fn list_wait_queue(&self, resource_type: Option<&ResourceType>) -> Result<Vec<LockWaitEntry>> {
+        self.storage.list_lock_wait_queue(resource_type.map(|r| r.as_str()), None)
+    }
+
+    /// 带死锁拦截与等待队列唤醒的协作锁获取原语
+    pub fn wait_and_acquire(
+        &self,
+        req: &LockRequest,
+        wait_timeout_ms: u64,
+        priority: i32,
+    ) -> Result<LockResult> {
+        // 1. 先尝试直接拿锁
+        match self.try_acquire(req)? {
+            granted @ LockResult::Granted { .. } => return Ok(granted),
+            LockResult::Error { message } => return Ok(LockResult::Error { message }),
+            _ => {}
+        }
+
+        let norm_id = LockRegistry::normalize_resource_id(&req.resource_type, &req.resource_id);
+        let rt_str = req.resource_type.as_str();
+
+        // 2. 死锁环路预检测
+        let active_locks = self.storage.list_coordination_locks(None)?;
+        let waits = self.storage.list_lock_wait_queue(None, None)?;
+        let dl_rep = DeadlockDetector::detect(
+            &active_locks,
+            &waits,
+            Some((&req.holder_agent, rt_str, &norm_id)),
+        );
+        if dl_rep.has_deadlock {
+            if let Some(first) = dl_rep.cycles.into_iter().next() {
+                return Ok(LockResult::Deadlock {
+                    cycle_agents: first.cycle_agents,
+                    cycle_resources: first.cycle_resources,
+                    suggestion: first.suggestion,
+                });
+            }
+        }
+
+        // 3. 入队等待
+        let wait_id = format!("wait-{}", Uuid::new_v4());
+        let now = Utc::now();
+        let timeout_ms = wait_timeout_ms.clamp(50, 60_000);
+        let timeout_at = (now + Duration::milliseconds(timeout_ms as i64)).to_rfc3339();
+        let entry = LockWaitEntry {
+            wait_id: wait_id.clone(),
+            resource_type: rt_str.to_string(),
+            resource_id: norm_id.clone(),
+            scope: req.scope.as_str().to_string(),
+            waiting_agent: req.holder_agent.clone(),
+            priority,
+            enqueued_at: now.to_rfc3339(),
+            timeout_at,
+            status: "waiting".to_string(),
+        };
+        self.storage.enqueue_lock_wait(&entry)?;
+
+        // 4. 订阅 EventBus 或短周期检查，直到成功或超时
+        let mut rx_opt = self.event_bus.as_ref().map(|b| b.subscribe());
+        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(timeout_ms);
+
+        loop {
+            if let LockResult::Granted { lock_id, resource_type, resource_id, expires_at } = self.try_acquire(req)? {
+                let _ = self.storage.update_lock_wait_status(&wait_id, "acquired");
+                return Ok(LockResult::Granted { lock_id, resource_type, resource_id, expires_at });
+            }
+
+            let now_inst = std::time::Instant::now();
+            if now_inst >= deadline {
+                let _ = self.storage.update_lock_wait_status(&wait_id, "expired");
+                return Ok(LockResult::Timeout {
+                    wait_id,
+                    suggestion: format!("等待资源 '{}:{}' 超时 ({}ms)，请稍后重试或协调持锁方。", rt_str, norm_id, timeout_ms),
+                });
+            }
+
+            let sleep_dur = (deadline - now_inst).min(std::time::Duration::from_millis(25));
+            if let (Some(ref mut rx), Ok(handle)) = (&mut rx_opt, tokio::runtime::Handle::try_current()) {
+                let recv_res = tokio::task::block_in_place(|| {
+                    handle.block_on(tokio::time::timeout(sleep_dur, rx.recv()))
+                });
+                if let Ok(Ok(ev)) = recv_res {
+                    if matches!(ev.as_ref(), crate::hooks::StewardEvent::LockWaiterNotified { .. }) {
+                        continue;
+                    }
+                }
+            }
+            std::thread::sleep(sleep_dur);
+        }
     }
 }
 

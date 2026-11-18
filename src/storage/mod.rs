@@ -336,6 +336,27 @@ impl Storage {
     pub fn search_external_services(&self, query: &str, limit: usize) -> Result<Vec<ExternalServiceRecord>> {
         self.provider.search_external_services(query, limit)
     }
+
+    // ─── Phase 17: Lock Wait Queue ─────────────────────────────────────
+    pub fn enqueue_lock_wait(&self, entry: &LockWaitEntry) -> Result<()> {
+        self.provider.enqueue_lock_wait(entry)
+    }
+
+    pub fn list_lock_wait_queue(&self, resource_type: Option<&str>, resource_id: Option<&str>) -> Result<Vec<LockWaitEntry>> {
+        self.provider.list_lock_wait_queue(resource_type, resource_id)
+    }
+
+    pub fn pop_next_lock_waiter(&self, resource_type: &str, resource_id: &str) -> Result<Option<LockWaitEntry>> {
+        self.provider.pop_next_lock_waiter(resource_type, resource_id)
+    }
+
+    pub fn update_lock_wait_status(&self, wait_id: &str, status: &str) -> Result<bool> {
+        self.provider.update_lock_wait_status(wait_id, status)
+    }
+
+    pub fn gc_expired_lock_waits(&self) -> Result<usize> {
+        self.provider.gc_expired_lock_waits()
+    }
 }
 
 #[cfg(test)]

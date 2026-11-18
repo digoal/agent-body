@@ -76,4 +76,11 @@ pub trait StorageProvider: Send + Sync {
     fn upsert_external_service(&self, rec: &ExternalServiceRecord) -> Result<()>;
     fn list_external_services(&self, category: Option<&str>) -> Result<Vec<ExternalServiceRecord>>;
     fn search_external_services(&self, query: &str, limit: usize) -> Result<Vec<ExternalServiceRecord>>;
+
+    // ─── Lock Wait Queue (Phase 17 等待队列) ───────────────────────────
+    fn enqueue_lock_wait(&self, entry: &LockWaitEntry) -> Result<()>;
+    fn list_lock_wait_queue(&self, resource_type: Option<&str>, resource_id: Option<&str>) -> Result<Vec<LockWaitEntry>>;
+    fn pop_next_lock_waiter(&self, resource_type: &str, resource_id: &str) -> Result<Option<LockWaitEntry>>;
+    fn update_lock_wait_status(&self, wait_id: &str, status: &str) -> Result<bool>;
+    fn gc_expired_lock_waits(&self) -> Result<usize>;
 }

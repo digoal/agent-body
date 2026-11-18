@@ -341,6 +341,25 @@ enum CoordinationCommands {
     },
     #[command(about = "手动回收所有已过期的死锁")]
     Gc,
+    #[command(about = "排队等待并获取资源协作锁（含死锁环路预检）")]
+    Wait {
+        #[arg(short = 't', long)]
+        resource_type: String,
+        #[arg(short = 'i', long)]
+        resource_id: String,
+        #[arg(short, long, default_value = "exclusive")]
+        scope: String,
+        #[arg(short = 'a', long, default_value = "cli-agent")]
+        holder_agent: String,
+        #[arg(long, default_value_t = 300)]
+        ttl_seconds: u64,
+        #[arg(long, default_value_t = 5000)]
+        wait_timeout_ms: u64,
+        #[arg(long, default_value_t = 100)]
+        priority: i32,
+    },
+    #[command(about = "执行 Wait-For Graph (WFG) 全局死锁环路与等待队列检测")]
+    Deadlock,
 }
 
 #[derive(Subcommand)]
@@ -1136,6 +1155,28 @@ fn main() -> Result<()> {
                     let count = engine.gc_expired_locks()?;
                     println!("🧹 协作锁 GC 完成！已清理释放 {} 个过期锁。", count);
                 }
+                CoordinationCommands::Wait { resource_type, resource_id, scope, holder_agent, ttl_seconds, wait_timeout_ms, priority } => {
+                    let req = agent_steward::coordination::LockRequest {
+                        resource_type: agent_steward::coordination::ResourceType::from_str_loose(&resource_type),
+                        resource_id,
+                        scope: agent_steward::coordination::LockScope::from_str_loose(&scope),
+                        holder_agent,
+                        holder_pid: None,
+                        ttl_seconds,
+                        metadata: None,
+                    };
+                    let res = engine.wait_and_acquire(&req, wait_timeout_ms, priority)?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                }
+                CoordinationCommands::Deadlock => {
+                    let rep = engine.detect_deadlocks()?;
+                    let waits = engine.list_wait_queue(None)?;
+                    println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                        "deadlock_report": rep,
+                        "wait_queue_count": waits.len(),
+                        "wait_queue": waits,
+                    }))?);
+                }
             }
         }
 
@@ -1350,5 +1391,7 @@ mod tests {
         assert!(Cli::try_parse_from(["steward", "mcp-catalog", "scan"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "skill", "route", "PostgreSQL调优", "--budget-tokens", "500"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "service", "bootstrap"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "coordination", "wait", "-t", "port", "-i", "8080"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "coordination", "deadlock"]).is_ok());
     }
 }

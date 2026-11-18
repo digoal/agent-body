@@ -1284,9 +1284,106 @@ impl StorageProvider for PgStorageProvider {
         )?;
         Ok(rows.into_iter().map(|r| Self::row_to_ext_svc(&r)).collect())
     }
+
+    fn enqueue_lock_wait(&self, entry: &LockWaitEntry) -> Result<()> {
+        let mut client = self.lock_client()?;
+        client.execute(
+            "INSERT INTO lock_wait_queue (wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            &[
+                &entry.wait_id, &entry.resource_type, &entry.resource_id, &entry.scope,
+                &entry.waiting_agent, &entry.priority, &entry.enqueued_at, &entry.timeout_at, &entry.status,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_lock_wait_queue(&self, resource_type: Option<&str>, resource_id: Option<&str>) -> Result<Vec<LockWaitEntry>> {
+        let mut client = self.lock_client()?;
+        let now = chrono::Utc::now().to_rfc3339();
+        let rows = match (resource_type, resource_id) {
+            (Some(rt), Some(rid)) => client.query(
+                "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
+                 FROM lock_wait_queue
+                 WHERE resource_type = $1 AND resource_id = $2 AND status IN ('waiting','notified') AND timeout_at > $3
+                 ORDER BY priority ASC, enqueued_at ASC",
+                &[&rt, &rid, &now],
+            )?,
+            (Some(rt), None) => client.query(
+                "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
+                 FROM lock_wait_queue
+                 WHERE resource_type = $1 AND status IN ('waiting','notified') AND timeout_at > $2
+                 ORDER BY priority ASC, enqueued_at ASC",
+                &[&rt, &now],
+            )?,
+            _ => client.query(
+                "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
+                 FROM lock_wait_queue
+                 WHERE status IN ('waiting','notified') AND timeout_at > $1
+                 ORDER BY priority ASC, enqueued_at ASC",
+                &[&now],
+            )?,
+        };
+        Ok(rows.into_iter().map(|r| Self::row_to_wait(&r)).collect())
+    }
+
+    fn pop_next_lock_waiter(&self, resource_type: &str, resource_id: &str) -> Result<Option<LockWaitEntry>> {
+        let mut client = self.lock_client()?;
+        let now = chrono::Utc::now().to_rfc3339();
+        let rows = client.query(
+            "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
+             FROM lock_wait_queue
+             WHERE resource_type = $1 AND resource_id = $2 AND status = 'waiting' AND timeout_at > $3
+             ORDER BY priority ASC, enqueued_at ASC LIMIT 1",
+            &[&resource_type, &resource_id, &now],
+        )?;
+        if let Some(r) = rows.into_iter().next() {
+            let mut item = Self::row_to_wait(&r);
+            client.execute(
+                "UPDATE lock_wait_queue SET status = 'notified' WHERE wait_id = $1",
+                &[&item.wait_id],
+            )?;
+            item.status = "notified".to_string();
+            Ok(Some(item))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn update_lock_wait_status(&self, wait_id: &str, status: &str) -> Result<bool> {
+        let mut client = self.lock_client()?;
+        let affected = client.execute(
+            "UPDATE lock_wait_queue SET status = $1 WHERE wait_id = $2",
+            &[&status, &wait_id],
+        )?;
+        Ok(affected > 0)
+    }
+
+    fn gc_expired_lock_waits(&self) -> Result<usize> {
+        let mut client = self.lock_client()?;
+        let now = chrono::Utc::now().to_rfc3339();
+        let affected = client.execute(
+            "UPDATE lock_wait_queue SET status = 'expired' WHERE status IN ('waiting','notified') AND timeout_at <= $1",
+            &[&now],
+        )?;
+        Ok(affected as usize)
+    }
 }
 
 impl PgStorageProvider {
+    fn row_to_wait(r: &postgres::Row) -> LockWaitEntry {
+        LockWaitEntry {
+            wait_id: r.get(0),
+            resource_type: r.get(1),
+            resource_id: r.get(2),
+            scope: r.get(3),
+            waiting_agent: r.get(4),
+            priority: r.get(5),
+            enqueued_at: r.get(6),
+            timeout_at: r.get(7),
+            status: r.get(8),
+        }
+    }
     fn row_to_mcp(r: &postgres::Row) -> McpCatalogRecord {
         McpCatalogRecord {
             id: r.get(0),

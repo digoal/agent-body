@@ -1318,9 +1318,120 @@ impl StorageProvider for DuckDbStorageProvider {
         for r in rows { res.push(r?); }
         Ok(res)
     }
+
+    fn enqueue_lock_wait(&self, entry: &LockWaitEntry) -> Result<()> {
+        let conn = self.lock_conn()?;
+        conn.execute(
+            "INSERT INTO lock_wait_queue (wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                entry.wait_id, entry.resource_type, entry.resource_id, entry.scope,
+                entry.waiting_agent, entry.priority, entry.enqueued_at, entry.timeout_at, entry.status
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_lock_wait_queue(&self, resource_type: Option<&str>, resource_id: Option<&str>) -> Result<Vec<LockWaitEntry>> {
+        let conn = self.lock_conn()?;
+        let mut res = Vec::new();
+        match (resource_type, resource_id) {
+            (Some(rt), Some(rid)) => {
+                let mut stmt = conn.prepare(
+                    "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
+                     FROM lock_wait_queue
+                     WHERE resource_type = ?1 AND resource_id = ?2 AND status IN ('waiting','notified')
+                       AND timeout_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+                     ORDER BY priority ASC, enqueued_at ASC"
+                )?;
+                let rows = stmt.query_map(params![rt, rid], Self::map_wait_row)?;
+                for r in rows { res.push(r?); }
+            }
+            (Some(rt), None) => {
+                let mut stmt = conn.prepare(
+                    "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
+                     FROM lock_wait_queue
+                     WHERE resource_type = ?1 AND status IN ('waiting','notified')
+                       AND timeout_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+                     ORDER BY priority ASC, enqueued_at ASC"
+                )?;
+                let rows = stmt.query_map(params![rt], Self::map_wait_row)?;
+                for r in rows { res.push(r?); }
+            }
+            _ => {
+                let mut stmt = conn.prepare(
+                    "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
+                     FROM lock_wait_queue
+                     WHERE status IN ('waiting','notified')
+                       AND timeout_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+                     ORDER BY priority ASC, enqueued_at ASC"
+                )?;
+                let rows = stmt.query_map([], Self::map_wait_row)?;
+                for r in rows { res.push(r?); }
+            }
+        }
+        Ok(res)
+    }
+
+    fn pop_next_lock_waiter(&self, resource_type: &str, resource_id: &str) -> Result<Option<LockWaitEntry>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
+             FROM lock_wait_queue
+             WHERE resource_type = ?1 AND resource_id = ?2 AND status = 'waiting'
+               AND timeout_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+             ORDER BY priority ASC, enqueued_at ASC LIMIT 1"
+        )?;
+        let mut rows = stmt.query_map(params![resource_type, resource_id], Self::map_wait_row)?;
+        if let Some(first) = rows.next() {
+            let mut item = first?;
+            drop(rows);
+            drop(stmt);
+            conn.execute(
+                "UPDATE lock_wait_queue SET status = 'notified' WHERE wait_id = ?1",
+                params![item.wait_id],
+            )?;
+            item.status = "notified".to_string();
+            Ok(Some(item))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn update_lock_wait_status(&self, wait_id: &str, status: &str) -> Result<bool> {
+        let conn = self.lock_conn()?;
+        let affected = conn.execute(
+            "UPDATE lock_wait_queue SET status = ?1 WHERE wait_id = ?2",
+            params![status, wait_id],
+        )?;
+        Ok(affected > 0)
+    }
+
+    fn gc_expired_lock_waits(&self) -> Result<usize> {
+        let conn = self.lock_conn()?;
+        let affected = conn.execute(
+            "UPDATE lock_wait_queue SET status = 'expired'
+             WHERE status IN ('waiting','notified') AND timeout_at <= strftime(now(), '%Y-%m-%dT%H:%M:%SZ')",
+            [],
+        )?;
+        Ok(affected)
+    }
 }
 
 impl DuckDbStorageProvider {
+    fn map_wait_row(row: &duckdb::Row) -> duckdb::Result<LockWaitEntry> {
+        Ok(LockWaitEntry {
+            wait_id: row.get(0)?,
+            resource_type: row.get(1)?,
+            resource_id: row.get(2)?,
+            scope: row.get(3)?,
+            waiting_agent: row.get(4)?,
+            priority: row.get(5)?,
+            enqueued_at: row.get(6)?,
+            timeout_at: row.get(7)?,
+            status: row.get(8)?,
+        })
+    }
     fn map_mcp_row(row: &duckdb::Row) -> duckdb::Result<McpCatalogRecord> {
         let tools_str: String = row.get(5)?;
         let tools_json = serde_json::from_str(&tools_str).unwrap_or_else(|_| serde_json::json!([]));

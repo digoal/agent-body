@@ -346,6 +346,22 @@ CREATE TABLE IF NOT EXISTS external_services (
 
 CREATE INDEX IF NOT EXISTS idx_external_services_cat ON external_services(category);
 
+-- ─── Phase 17: 协作锁等待队列 (Lock Wait Queue) ────────────────────────
+CREATE TABLE IF NOT EXISTS lock_wait_queue (
+    wait_id       TEXT PRIMARY KEY,
+    resource_type TEXT NOT NULL,
+    resource_id   TEXT NOT NULL,
+    scope         TEXT NOT NULL DEFAULT 'exclusive',
+    waiting_agent TEXT NOT NULL,
+    priority      INTEGER DEFAULT 100,
+    enqueued_at   TEXT NOT NULL,
+    timeout_at    TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'waiting'
+);
+
+CREATE INDEX IF NOT EXISTS idx_lock_wait_res ON lock_wait_queue(resource_type, resource_id, status);
+CREATE INDEX IF NOT EXISTS idx_lock_wait_timeout ON lock_wait_queue(timeout_at);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS external_services_fts USING fts5(
     service_name,
     category,

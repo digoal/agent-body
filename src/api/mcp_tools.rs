@@ -572,6 +572,31 @@ impl McpToolRegistry {
                         "query": { "type": "string" }
                     }
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_lock_wait",
+                "description": "多 Agent 协作锁排队等待与唤醒获取（Phase 17）：若资源正被占用则入队等待释放通知，并在入队前自动执行 WFG 死锁环路检测，避免循环死等。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "resource_type": { "type": "string", "enum": ["port", "directory", "service", "file", "custom"] },
+                        "resource_id": { "type": "string" },
+                        "scope": { "type": "string", "enum": ["exclusive", "shared"], "default": "exclusive" },
+                        "holder_agent": { "type": "string", "default": "current-agent" },
+                        "ttl_seconds": { "type": "integer", "default": 300 },
+                        "wait_timeout_ms": { "type": "integer", "default": 5000 },
+                        "priority": { "type": "integer", "default": 100 }
+                    },
+                    "required": ["resource_type", "resource_id"]
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_lock_deadlock_check",
+                "description": "多 Agent 协作锁 Wait-For Graph (WFG) 死锁环路诊断：实时检测活跃锁与等待队列间是否存在循环依赖（含目录祖先后代传递），给出退让建议。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {}
+                }
             })
         ]
     }
@@ -1114,6 +1139,42 @@ impl McpToolRegistry {
                         Ok(serde_json::to_string_pretty(&list)?)
                     }
                 }
+            }
+
+            "steward_lock_wait" => {
+                use crate::coordination::{CoordinationEngine, LockRequest, LockScope, ResourceType};
+                let rt_str = args.get("resource_type").and_then(|v| v.as_str()).unwrap_or("custom");
+                let res_id = args.get("resource_id").and_then(|v| v.as_str()).unwrap_or("");
+                let scope_str = args.get("scope").and_then(|v| v.as_str()).unwrap_or("exclusive");
+                let holder = args.get("holder_agent").and_then(|v| v.as_str()).unwrap_or("current-agent");
+                let ttl = args.get("ttl_seconds").and_then(|v| v.as_u64()).unwrap_or(300);
+                let wait_ms = args.get("wait_timeout_ms").and_then(|v| v.as_u64()).unwrap_or(5000);
+                let priority = args.get("priority").and_then(|v| v.as_i64()).unwrap_or(100) as i32;
+
+                let engine = CoordinationEngine::new(self.storage.provider().clone());
+                let req = LockRequest {
+                    resource_type: ResourceType::from_str_loose(rt_str),
+                    resource_id: res_id.to_string(),
+                    scope: LockScope::from_str_loose(scope_str),
+                    holder_agent: holder.to_string(),
+                    holder_pid: None,
+                    ttl_seconds: ttl,
+                    metadata: None,
+                };
+                let res = engine.wait_and_acquire(&req, wait_ms, priority)?;
+                Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_lock_deadlock_check" => {
+                use crate::coordination::CoordinationEngine;
+                let engine = CoordinationEngine::new(self.storage.provider().clone());
+                let rep = engine.detect_deadlocks()?;
+                let waits = engine.list_wait_queue(None)?;
+                Ok(serde_json::to_string_pretty(&serde_json::json!({
+                    "deadlock_report": rep,
+                    "wait_queue_count": waits.len(),
+                    "wait_queue": waits,
+                }))?)
             }
 
             _ => bail!("Unknown tool: {}", name),

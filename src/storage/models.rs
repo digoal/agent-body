@@ -206,3 +206,18 @@ pub struct ExternalServiceRecord {
     pub status: String,
     pub last_checked_at: Option<String>,
 }
+
+// ─── Phase 17: 协作锁等待队列 ──────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LockWaitEntry {
+    pub wait_id: String,
+    pub resource_type: String,
+    pub resource_id: String,
+    pub scope: String,
+    pub waiting_agent: String,
+    pub priority: i32,
+    pub enqueued_at: String,
+    pub timeout_at: String,
+    pub status: String, // "waiting" | "notified" | "acquired" | "expired" | "cancelled"
+}

@@ -65,6 +65,28 @@ pub fn handle_locks_history(_storage: &dyn StorageProvider) -> HttpResponse {
     WebResponse::success(history)
 }
 
+/// 处理 GET /api/v1/locks/wait-queue (Phase 17)
+pub fn handle_locks_wait_queue(storage: &dyn StorageProvider) -> HttpResponse {
+    match storage.list_lock_wait_queue(None, None) {
+        Ok(items) => WebResponse::success(items),
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &format!("Failed to list wait queue: {}", e)),
+    }
+}
+
+/// 处理 GET /api/v1/locks/deadlocks (Phase 17)
+pub fn handle_locks_deadlocks(storage: &dyn StorageProvider) -> HttpResponse {
+    let locks = match storage.list_coordination_locks(None) {
+        Ok(l) => l,
+        Err(e) => return WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &format!("Failed to list locks: {}", e)),
+    };
+    let waits = match storage.list_lock_wait_queue(None, None) {
+        Ok(w) => w,
+        Err(e) => return WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &format!("Failed to list wait queue: {}", e)),
+    };
+    let report = crate::coordination::DeadlockDetector::detect(&locks, &waits, None);
+    WebResponse::success(report)
+}
+
 /// 处理 POST /api/v1/locks/release
 pub fn handle_lock_release(
     req: &HttpRequest,

@@ -1,6 +1,6 @@
 ---
 name: agent-steward-guide
-description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制、Systemd 常驻服务、Docker 编排与 preflight 依赖预检）、以及熟悉日常使用（CLI 命令行实操、35 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、多 Agent 协作锁、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
+description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制、Systemd 常驻服务、Docker 编排与 preflight 依赖预检）、以及熟悉日常使用（CLI 命令行实操、37 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、多 Agent 协作锁、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
 ---
 
 # Agent Host Steward 全景向导与部署使用技能 (agent-steward-guide)
@@ -218,7 +218,7 @@ agent-steward close session-20261115-01 --clean-temp
 }
 ```
 
-#### 步骤 2: 35 个原生 MCP 工具全景矩阵
+#### 步骤 2: 37 个原生 MCP 工具全景矩阵
 
 | 分类 | 工具名称 | 核心功能说明 |
 |---|---|---|
@@ -252,6 +252,8 @@ agent-steward close session-20261115-01 --clean-temp
 | **多Agent协作锁**| `steward_lock_acquire` | 跨 Agent 资源互斥/共享锁申请 (端口/目录/文件/服务，带TTL) |
 | | `steward_lock_release` | 协作锁释放或提前退租 |
 | | `steward_lock_list` | 查看当前全系统活跃协作锁看板 |
+| | `steward_lock_wait` | 协作锁排队等待与释放唤醒（含 WFG 死锁环路预检） |
+| | `steward_lock_deadlock_check` | 执行 Wait-For Graph 全局死锁环路与等待队列检测 |
 | **会话与审计** | `steward_changes_since` | 回溯指定时间窗口内的资产创建/修改/删除审计流 |
 | | `steward_session_close` | 会话完工结算：归档工单、自洁 `/tmp` 垃圾 |
 | **生态防爆路由** | `steward_mcp_catalog` | 扫描与路由宿主机客户端已配置的 MCP Server 目录（脱敏） |
