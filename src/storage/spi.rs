@@ -58,4 +58,11 @@ pub trait StorageProvider: Send + Sync {
     fn traverse_fact_graph(&self, root_id: &str, max_hops: usize) -> Result<SubGraph>;
     fn list_all_fact_nodes(&self, limit: usize) -> Result<Vec<FactNodeRecord>>;
     fn list_all_fact_edges(&self, limit: usize) -> Result<Vec<FactEdgeRecord>>;
+
+    // ─── Multi-Agent Coordination Locks (多 Agent 协作锁) ────────────
+    fn insert_coordination_lock(&self, lock: &CoordinationLock) -> Result<bool>;
+    fn delete_coordination_lock(&self, lock_id: &str) -> Result<bool>;
+    fn get_coordination_lock(&self, resource_type: &str, resource_id: &str) -> Result<Option<CoordinationLock>>;
+    fn list_coordination_locks(&self, resource_type: Option<&str>) -> Result<Vec<CoordinationLock>>;
+    fn gc_expired_coordination_locks(&self) -> Result<usize>;
 }

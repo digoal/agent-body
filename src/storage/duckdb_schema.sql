@@ -153,3 +153,16 @@ CREATE TABLE IF NOT EXISTS sync_watermarks (
     synced_rows     BIGINT DEFAULT 0,
     updated_at      VARCHAR
 );
+
+-- ─── 多 Agent 协作锁 (Coordination Locks) ───────────────────────────
+CREATE TABLE IF NOT EXISTS coordination_locks (
+    lock_id       VARCHAR PRIMARY KEY,
+    resource_type VARCHAR NOT NULL,
+    resource_id   VARCHAR NOT NULL,
+    scope         VARCHAR DEFAULT 'exclusive',
+    holder_agent  VARCHAR NOT NULL,
+    holder_pid    INTEGER,
+    acquired_at   VARCHAR NOT NULL,
+    expires_at    VARCHAR NOT NULL,
+    metadata      VARCHAR DEFAULT '{}'
+);

@@ -112,6 +112,31 @@ enum Commands {
         #[command(subcommand)]
         action: StorageCommands,
     },
+
+    #[command(about = "多 Agent 协作互斥锁管理与冲突排查")]
+    Coordination {
+        #[command(subcommand)]
+        action: CoordinationCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum CoordinationCommands {
+    #[command(about = "列出当前所有生效中的活跃资源协作锁")]
+    List {
+        #[arg(short, long, help = "按资源类别过滤: port, directory, service, file, custom")]
+        resource_type: Option<String>,
+    },
+    #[command(about = "手动释放指定资源锁 (管理员运维操作)")]
+    Release {
+        #[arg(long, help = "锁的唯一标识 lock_id")]
+        lock_id: String,
+
+        #[arg(long, help = "是否强制释放", default_value_t = true)]
+        force: bool,
+    },
+    #[command(about = "手动回收所有已过期的死锁")]
+    Gc,
 }
 
 #[derive(Subcommand)]
@@ -808,6 +833,49 @@ fn main() -> Result<()> {
                     println!("  - 长期记忆同步:   {} 条", rep.memories_synced);
                     println!("  - 属性图节点同步: {} 个", rep.fact_nodes_synced);
                     println!("  - 属性图边同步:   {} 条", rep.fact_edges_synced);
+                }
+            }
+        }
+
+        Commands::Coordination { action } => {
+            let engine = agent_steward::coordination::CoordinationEngine::new(storage.provider().clone());
+            match action {
+                CoordinationCommands::List { resource_type } => {
+                    let rt_opt = resource_type.as_deref().map(agent_steward::coordination::ResourceType::from_str_loose);
+                    let locks = engine.list_active_locks(rt_opt.as_ref())?;
+                    println!("╔══════════════════════════════════════════════════════════════════════════════════════════╗");
+                    println!("║                        多 Agent 协作锁全景监控看板                                       ║");
+                    println!("╚══════════════════════════════════════════════════════════════════════════════════════════╝");
+                    if locks.is_empty() {
+                        println!("当前没有任何活跃的协作锁，所有受控资源均处于可用/空闲状态。");
+                    } else {
+                        println!("{:<36} {:<10} {:<24} {:<12} {:<10} {:<24}", "LOCK_ID", "TYPE", "RESOURCE_ID", "HOLDER", "SCOPE", "EXPIRES_AT");
+                        println!("{:-<120}", "");
+                        for l in locks {
+                            println!("{:<36} {:<10} {:<24} {:<12} {:<10} {:<24}",
+                                l.lock_id,
+                                l.resource_type,
+                                l.resource_id,
+                                l.holder_agent,
+                                l.scope,
+                                l.expires_at,
+                            );
+                        }
+                    }
+                }
+                CoordinationCommands::Release { lock_id, force } => {
+                    if force {
+                        let ok = engine.force_release(&lock_id)?;
+                        if ok {
+                            println!("✅ 锁 `{}` 已成功强制解除！", lock_id);
+                        } else {
+                            println!("⚠️ 未找到指定锁 ID `{}` 或该锁已被自动释放。", lock_id);
+                        }
+                    }
+                }
+                CoordinationCommands::Gc => {
+                    let count = engine.gc_expired_locks()?;
+                    println!("🧹 协作锁 GC 完成！已清理释放 {} 个过期锁。", count);
                 }
             }
         }

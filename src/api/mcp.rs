@@ -224,7 +224,7 @@ mod tests {
 
         assert_eq!(v["id"], "req-2");
         let tools = v["result"]["tools"].as_array().expect("tools array");
-        assert_eq!(tools.len(), 28, "必须注册全部 28 个原生 MCP 工具");
+        assert_eq!(tools.len(), 31, "必须注册全部 31 个原生 MCP 工具");
         assert!(tools.iter().any(|t| t["name"] == "steward_brief"));
         assert!(tools.iter().any(|t| t["name"] == "steward_placement_suggest"));
         assert!(tools.iter().any(|t| t["name"] == "steward_asset_search"));
@@ -238,6 +238,9 @@ mod tests {
         assert!(tools.iter().any(|t| t["name"] == "steward_analytics_heatmap"));
         assert!(tools.iter().any(|t| t["name"] == "steward_analytics_trend"));
         assert!(tools.iter().any(|t| t["name"] == "steward_analytics_export"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_lock_acquire"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_lock_release"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_lock_list"));
     }
 
     #[test]
@@ -471,5 +474,72 @@ mod tests {
         let v_post: Value = serde_json::from_str(&resp_post).expect("parse response");
         assert_eq!(v_post["id"], 107);
         assert_eq!(v_post["result"]["isError"], false);
+    }
+
+    #[test]
+    fn test_mcp_tools_call_coordination() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let server = McpServer::new(storage);
+
+        // 1. 获取锁
+        let req_acquire = r#"{
+            "jsonrpc": "2.0",
+            "id": 201,
+            "method": "tools/call",
+            "params": {
+                "name": "steward_lock_acquire",
+                "arguments": {
+                    "resource_type": "port",
+                    "resource_id": "8080",
+                    "scope": "exclusive",
+                    "holder_agent": "test-agent-mcp",
+                    "ttl_seconds": 60
+                }
+            }
+        }"#;
+
+        let resp_acquire = server.handle_message(req_acquire).expect("handle_message");
+        let v_acq: Value = serde_json::from_str(&resp_acquire).expect("parse response");
+        assert_eq!(v_acq["id"], 201);
+        let text_content = v_acq["result"]["content"][0]["text"].as_str().expect("text");
+        let acq_res: Value = serde_json::from_str(text_content).expect("parse inner");
+        assert_eq!(acq_res["status"], "granted");
+        let lock_id = acq_res["lock_id"].as_str().expect("lock_id");
+
+        // 2. 列出锁
+        let req_list = r#"{
+            "jsonrpc": "2.0",
+            "id": 202,
+            "method": "tools/call",
+            "params": {
+                "name": "steward_lock_list",
+                "arguments": {
+                    "resource_type": "port"
+                }
+            }
+        }"#;
+        let resp_list = server.handle_message(req_list).expect("handle_message");
+        let v_list: Value = serde_json::from_str(&resp_list).expect("parse response");
+        assert_eq!(v_list["id"], 202);
+        let list_text = v_list["result"]["content"][0]["text"].as_str().expect("text");
+        let list_arr: Value = serde_json::from_str(list_text).expect("parse inner");
+        assert_eq!(list_arr.as_array().unwrap().len(), 1);
+
+        // 3. 释放锁
+        let req_release = format!(r#"{{
+            "jsonrpc": "2.0",
+            "id": 203,
+            "method": "tools/call",
+            "params": {{
+                "name": "steward_lock_release",
+                "arguments": {{
+                    "lock_id": "{}",
+                    "holder_agent": "test-agent-mcp"
+                }}
+            }}
+        }}"#, lock_id);
+        let resp_release = server.handle_message(&req_release).expect("handle_message");
+        let v_rel: Value = serde_json::from_str(&resp_release).expect("parse response");
+        assert_eq!(v_rel["id"], 203);
     }
 }

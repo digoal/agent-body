@@ -430,6 +430,80 @@ impl McpToolRegistry {
                     },
                     "required": ["table", "output_path"]
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_lock_acquire",
+                "description": "多 Agent 协作锁：原子申请资源锁（端口/目录/服务/文件/自定义），彻底杜绝端口冲突与文件覆盖竞态。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "resource_type": {
+                            "type": "string",
+                            "enum": ["port", "directory", "service", "file", "custom"],
+                            "description": "资源类别"
+                        },
+                        "resource_id": {
+                            "type": "string",
+                            "description": "资源标识（例如 '8080'、'/etc/nginx/conf.d/'、'nginx.service'）"
+                        },
+                        "scope": {
+                            "type": "string",
+                            "enum": ["exclusive", "shared"],
+                            "default": "exclusive",
+                            "description": "锁范围：exclusive（排他独占，默认）或 shared（共享只读）"
+                        },
+                        "holder_agent": {
+                            "type": "string",
+                            "description": "持有者 Agent 标识（默认为当前 Agent）"
+                        },
+                        "holder_pid": {
+                            "type": "integer",
+                            "description": "持有者进程 PID（可选）"
+                        },
+                        "ttl_seconds": {
+                            "type": "integer",
+                            "default": 300,
+                            "description": "锁 TTL 有效期（秒，默认 300s，最大 3600s）"
+                        },
+                        "metadata": {
+                            "type": "object",
+                            "description": "锁附加元数据（例如任务目的、关联项目）"
+                        }
+                    },
+                    "required": ["resource_type", "resource_id"]
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_lock_release",
+                "description": "多 Agent 协作锁：主动释放已持有的资源锁。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "lock_id": {
+                            "type": "string",
+                            "description": "申请锁时返回的 lock_id UUID"
+                        },
+                        "holder_agent": {
+                            "type": "string",
+                            "description": "持有者 Agent 标识（用于防越权释放，默认为当前 Agent）"
+                        }
+                    },
+                    "required": ["lock_id"]
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_lock_list",
+                "description": "多 Agent 协作锁：查看宿主机当前所有生效中的活跃资源锁（谁持有、何资源、何时到期）。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "resource_type": {
+                            "type": "string",
+                            "enum": ["port", "directory", "service", "file", "custom"],
+                            "description": "可选按资源类型过滤"
+                        }
+                    }
+                }
             })
         ]
     }
@@ -812,6 +886,50 @@ impl McpToolRegistry {
                 let engine = crate::storage::DuckDbAnalyticsEngine::new(duckdb_prov.conn());
                 let summary = engine.export_to_parquet(table, output_path)?;
                 Ok(serde_json::to_string_pretty(&summary)?)
+            }
+
+            "steward_lock_acquire" => {
+                use crate::coordination::{CoordinationEngine, LockRequest, ResourceType, LockScope};
+                let rt_str = args.get("resource_type").and_then(|v| v.as_str()).unwrap_or("custom");
+                let res_id = args.get("resource_id").and_then(|v| v.as_str()).unwrap_or("");
+                let scope_str = args.get("scope").and_then(|v| v.as_str()).unwrap_or("exclusive");
+                let holder = args.get("holder_agent").and_then(|v| v.as_str()).unwrap_or("current-agent");
+                let pid = args.get("holder_pid").and_then(|v| v.as_u64()).map(|p| p as u32);
+                let ttl = args.get("ttl_seconds").and_then(|v| v.as_u64()).unwrap_or(300);
+                let meta = args.get("metadata").cloned();
+
+                let engine = CoordinationEngine::new(self.storage.provider().clone());
+                let req = LockRequest {
+                    resource_type: ResourceType::from_str_loose(rt_str),
+                    resource_id: res_id.to_string(),
+                    scope: LockScope::from_str_loose(scope_str),
+                    holder_agent: holder.to_string(),
+                    holder_pid: pid,
+                    ttl_seconds: ttl,
+                    metadata: meta,
+                };
+                let res = engine.try_acquire(&req)?;
+                Ok(serde_json::to_string_pretty(&res)?)
+            }
+
+            "steward_lock_release" => {
+                use crate::coordination::CoordinationEngine;
+                let lock_id = args.get("lock_id").and_then(|v| v.as_str()).unwrap_or("");
+                let holder = args.get("holder_agent").and_then(|v| v.as_str()).unwrap_or("current-agent");
+                let engine = CoordinationEngine::new(self.storage.provider().clone());
+                let released = engine.release(lock_id, holder)?;
+                Ok(serde_json::to_string_pretty(&serde_json::json!({
+                    "lock_id": lock_id,
+                    "released": released,
+                }))?)
+            }
+
+            "steward_lock_list" => {
+                use crate::coordination::{CoordinationEngine, ResourceType};
+                let rt_opt = args.get("resource_type").and_then(|v| v.as_str()).map(ResourceType::from_str_loose);
+                let engine = CoordinationEngine::new(self.storage.provider().clone());
+                let list = engine.list_active_locks(rt_opt.as_ref())?;
+                Ok(serde_json::to_string_pretty(&list)?)
             }
 
             _ => bail!("Unknown tool: {}", name),

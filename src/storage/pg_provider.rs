@@ -1005,6 +1005,163 @@ impl StorageProvider for PgStorageProvider {
         }
         Ok(edges)
     }
+
+    // ─── Multi-Agent Coordination Locks (多 Agent 协作锁) ────────────
+    fn insert_coordination_lock(&self, lock: &CoordinationLock) -> Result<bool> {
+        let mut client = self.client.lock().unwrap();
+        let mut tx = client.transaction()?;
+
+        // 1. 先清理该资源上已过期的锁记录
+        tx.execute(
+            "DELETE FROM coordination_locks WHERE resource_type = $1 AND resource_id = $2 AND expires_at <= NOW()::text",
+            &[&lock.resource_type, &lock.resource_id],
+        )?;
+
+        // 2. 检查当前资源是否已被有效锁占用
+        let rows = tx.query(
+            "SELECT lock_id, scope, holder_agent, expires_at FROM coordination_locks 
+             WHERE resource_type = $1 AND resource_id = $2 AND expires_at > NOW()::text",
+            &[&lock.resource_type, &lock.resource_id],
+        )?;
+
+        for row in rows {
+            let existing_scope: String = row.get(1);
+            let existing_holder: String = row.get(2);
+
+            if existing_holder == lock.holder_agent {
+                continue;
+            }
+
+            if lock.scope == "exclusive" || existing_scope == "exclusive" {
+                return Ok(false);
+            }
+        }
+
+        // 3. 无冲突，插入新锁
+        let metadata_val = lock.metadata.clone().unwrap_or(serde_json::json!({}));
+        let pid_i32 = lock.holder_pid.map(|p| p as i32);
+
+        tx.execute(
+            "INSERT INTO coordination_locks (lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             ON CONFLICT(lock_id) DO UPDATE SET
+                expires_at = EXCLUDED.expires_at,
+                metadata = EXCLUDED.metadata,
+                scope = EXCLUDED.scope,
+                holder_pid = EXCLUDED.holder_pid",
+            &[
+                &lock.lock_id,
+                &lock.resource_type,
+                &lock.resource_id,
+                &lock.scope,
+                &lock.holder_agent,
+                &pid_i32,
+                &lock.acquired_at,
+                &lock.expires_at,
+                &metadata_val,
+            ],
+        )?;
+        tx.commit()?;
+        Ok(true)
+    }
+
+    fn delete_coordination_lock(&self, lock_id: &str) -> Result<bool> {
+        let mut client = self.client.lock().unwrap();
+        let affected = client.execute("DELETE FROM coordination_locks WHERE lock_id = $1", &[&lock_id])?;
+        Ok(affected > 0)
+    }
+
+    fn get_coordination_lock(&self, resource_type: &str, resource_id: &str) -> Result<Option<CoordinationLock>> {
+        let mut client = self.client.lock().unwrap();
+        let rows = client.query(
+            "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
+             FROM coordination_locks
+             WHERE resource_type = $1 AND resource_id = $2 AND expires_at > NOW()::text
+             ORDER BY acquired_at DESC LIMIT 1",
+            &[&resource_type, &resource_id],
+        )?;
+
+        if let Some(row) = rows.into_iter().next() {
+            let pid_i32: Option<i32> = row.get(5);
+            Ok(Some(CoordinationLock {
+                lock_id: row.get(0),
+                resource_type: row.get(1),
+                resource_id: row.get(2),
+                scope: row.get(3),
+                holder_agent: row.get(4),
+                holder_pid: pid_i32.map(|p| p as u32),
+                acquired_at: row.get(6),
+                expires_at: row.get(7),
+                metadata: row.get(8),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn list_coordination_locks(&self, resource_type: Option<&str>) -> Result<Vec<CoordinationLock>> {
+        let mut client = self.client.lock().unwrap();
+        let rows = match resource_type {
+            Some(rt) => client.query(
+                "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
+                 FROM coordination_locks
+                 WHERE resource_type = $1 AND expires_at > NOW()::text
+                 ORDER BY acquired_at DESC",
+                &[&rt],
+            )?,
+            None => client.query(
+                "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
+                 FROM coordination_locks
+                 WHERE expires_at > NOW()::text
+                 ORDER BY acquired_at DESC",
+                &[],
+            )?,
+        };
+
+        let mut list = Vec::new();
+        for row in rows {
+            let pid_i32: Option<i32> = row.get(5);
+            list.push(CoordinationLock {
+                lock_id: row.get(0),
+                resource_type: row.get(1),
+                resource_id: row.get(2),
+                scope: row.get(3),
+                holder_agent: row.get(4),
+                holder_pid: pid_i32.map(|p| p as u32),
+                acquired_at: row.get(6),
+                expires_at: row.get(7),
+                metadata: row.get(8),
+            });
+        }
+        Ok(list)
+    }
+
+    fn gc_expired_coordination_locks(&self) -> Result<usize> {
+        let mut client = self.client.lock().unwrap();
+        let affected = client.execute(
+            "DELETE FROM coordination_locks WHERE expires_at <= NOW()::text",
+            &[],
+        )?;
+        Ok(affected as usize)
+    }
+}
+
+impl PgStorageProvider {
+    /// 原生 PostgreSQL Advisory Lock 尝试加锁（会话级锁，基于 64 位整数哈希）
+    pub fn try_advisory_lock(&self, key: i64) -> Result<bool> {
+        let mut client = self.client.lock().unwrap();
+        let row = client.query_one("SELECT pg_try_advisory_lock($1)", &[&key])?;
+        let granted: bool = row.get(0);
+        Ok(granted)
+    }
+
+    /// 原生 PostgreSQL Advisory Lock 解锁
+    pub fn advisory_unlock(&self, key: i64) -> Result<bool> {
+        let mut client = self.client.lock().unwrap();
+        let row = client.query_one("SELECT pg_advisory_unlock($1)", &[&key])?;
+        let unlocked: bool = row.get(0);
+        Ok(unlocked)
+    }
 }
 
 #[cfg(test)]

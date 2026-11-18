@@ -146,3 +146,16 @@ pub struct SubGraph {
     pub nodes: Vec<FactNodeRecord>,
     pub edges: Vec<FactEdgeRecord>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoordinationLock {
+    pub lock_id: String,
+    pub resource_type: String, // "port", "directory", "service", "file", "custom"
+    pub resource_id: String,   // "8080", "/etc/nginx/conf.d/", "nginx.service", etc.
+    pub scope: String,         // "exclusive", "shared"
+    pub holder_agent: String,  // session_id or agent name
+    pub holder_pid: Option<u32>,
+    pub acquired_at: String,   // ISO8601
+    pub expires_at: String,    // ISO8601
+    pub metadata: Option<serde_json::Value>,
+}

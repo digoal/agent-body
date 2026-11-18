@@ -255,6 +255,22 @@ CREATE INDEX IF NOT EXISTS idx_fact_edges_source ON fact_edges(source_id);
 CREATE INDEX IF NOT EXISTS idx_fact_edges_target ON fact_edges(target_id);
 CREATE INDEX IF NOT EXISTS idx_fact_edges_relation ON fact_edges(relation);
 
+-- ─── 多 Agent 协作锁 (Coordination Locks) ───────────────────────────
+CREATE TABLE IF NOT EXISTS coordination_locks (
+    lock_id       TEXT PRIMARY KEY,
+    resource_type TEXT NOT NULL,
+    resource_id   TEXT NOT NULL,
+    scope         TEXT NOT NULL DEFAULT 'exclusive',
+    holder_agent  TEXT NOT NULL,
+    holder_pid    INTEGER,
+    acquired_at   TEXT NOT NULL,
+    expires_at    TEXT NOT NULL,
+    metadata      TEXT DEFAULT '{}'
+);
+
+CREATE INDEX IF NOT EXISTS idx_locks_resource ON coordination_locks(resource_type, resource_id);
+CREATE INDEX IF NOT EXISTS idx_locks_expires ON coordination_locks(expires_at);
+
 -- 预置数据
 INSERT OR IGNORE INTO config(key, value) VALUES
     ('schema_version', '2'),

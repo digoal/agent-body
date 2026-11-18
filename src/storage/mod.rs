@@ -242,6 +242,28 @@ impl Storage {
     pub fn list_all_fact_edges(&self, limit: usize) -> Result<Vec<FactEdgeRecord>> {
         self.provider.list_all_fact_edges(limit)
     }
+
+    // ─── Multi-Agent Coordination Locks ──────────────────────────────
+
+    pub fn insert_coordination_lock(&self, lock: &CoordinationLock) -> Result<bool> {
+        self.provider.insert_coordination_lock(lock)
+    }
+
+    pub fn delete_coordination_lock(&self, lock_id: &str) -> Result<bool> {
+        self.provider.delete_coordination_lock(lock_id)
+    }
+
+    pub fn get_coordination_lock(&self, resource_type: &str, resource_id: &str) -> Result<Option<CoordinationLock>> {
+        self.provider.get_coordination_lock(resource_type, resource_id)
+    }
+
+    pub fn list_coordination_locks(&self, resource_type: Option<&str>) -> Result<Vec<CoordinationLock>> {
+        self.provider.list_coordination_locks(resource_type)
+    }
+
+    pub fn gc_expired_coordination_locks(&self) -> Result<usize> {
+        self.provider.gc_expired_coordination_locks()
+    }
 }
 
 #[cfg(test)]

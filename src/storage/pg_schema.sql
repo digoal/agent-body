@@ -177,3 +177,19 @@ CREATE TABLE IF NOT EXISTS fact_edges (
 
 CREATE INDEX IF NOT EXISTS idx_pg_fact_edges_source ON fact_edges(source_id);
 CREATE INDEX IF NOT EXISTS idx_pg_fact_edges_target ON fact_edges(target_id);
+
+-- ─── 多 Agent 协作锁 (Coordination Locks) ───────────────────────────
+CREATE TABLE IF NOT EXISTS coordination_locks (
+    lock_id       TEXT PRIMARY KEY,
+    resource_type TEXT NOT NULL,
+    resource_id   TEXT NOT NULL,
+    scope         TEXT NOT NULL DEFAULT 'exclusive',
+    holder_agent  TEXT NOT NULL,
+    holder_pid    INTEGER,
+    acquired_at   TEXT NOT NULL,
+    expires_at    TEXT NOT NULL,
+    metadata      JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_locks_resource ON coordination_locks(resource_type, resource_id);
+CREATE INDEX IF NOT EXISTS idx_pg_locks_expires ON coordination_locks(expires_at);

@@ -1,9 +1,9 @@
 # Agent Host Steward (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-15T19:15:00+08:00  
-> 技术栈: Rust 1.99.0 + SQLite 3 (rusqlite bundled with FTS5) + Tokio + Clap  
-> 当前状态: Phase 1~6 全部完成，Phase 7 规划就绪待启动
+> 最新更新: 2026-11-18T15:25:00+08:00  
+> 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
+> 当前状态: Phase 1~11 全部完成，31 个原生 MCP 工具，137 项测试 100% PASS
 
 ---
 
@@ -91,17 +91,18 @@
 | **Phase 8** | 跨平台抽象层与容错探测（macOS / Windows 兼容抽象） | #5 | ✅ **已完成** | 2026-11-18 12:27 |
 | **Phase 9** | 产品边界守护与生态定位（边界指南 + Agent 5阶段生命周期协议） | #1 #7 | ✅ **已完成** | 2026-11-18 12:28 |
 | **Phase 10** | DuckDB 分析后端（DuckDB Provider + 分析查询扩展 + 增量同步管道 + 集成测试） | #4 | ✅ **已完成** | 2026-11-18 14:05 |
-| **Phase 11** | 多 Agent 协作锁（CoordinationEngine + PG Advisory Lock + MCP 工具 + Pre-Hook 集成） | 新增 #10 | ⬜ 待执行 | — |
+| **Phase 11** | 多 Agent 协作锁（CoordinationEngine + PG Advisory Lock + MCP 工具 + Pre-Hook 集成） | 新增 #10 | ✅ **已完成** | 2026-11-18 15:20 |
 
 > 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)
 
 ---
 
-## 验收总结 (Phase 1~10 Complete, Phase 11 待执行)
-- **单元与集成测试**：111 项单元测试 + 5 项 DuckDB 集成测试 + 5 项高性能基准测试全部 100% PASS，0 warning。
+## 验收总结 (Phase 1~11 全部完成)
+- **单元与集成测试**：119 项单元测试 + 8 项协作锁集成测试 + 5 项 DuckDB 集成测试 + 5 项高性能基准测试全部 100% PASS，0 warning。
 - **存储后端**：支持 SQLite 嵌入式、PostgreSQL (pgvector + tsvector) 和 DuckDB (OLAP 列存分析与 Parquet/CSV 导出) 三后端；实现跨库双向热迁移与毫秒级增量同步管道。
-- **分析工具**：新增 `steward_analytics_heatmap`、`steward_analytics_trend`、`steward_analytics_export` 3 个原生 MCP 工具，系统原生 MCP 工具总数扩充至 28 个。
-- **后台守护进程**：`agent-steward.service` 在后台持续稳定运行（inotify 实时监听 + 动态进程采集 + 自主深度巡查）。
+- **多 Agent 协作**：实现 `CoordinationEngine`、资源正规化、排他/共享锁、TTL 自动失效、续租、父子目录递归互斥、PG Advisory Lock (跨连接会话级事务保证)、以及 Pre-Hook 自动冲突拦截。
+- **分析与协作工具**：新增 3 个分析 MCP 端点与 3 个协作锁 MCP 端点（`steward_lock_acquire`、`steward_lock_release`、`steward_lock_list`），系统原生 MCP 工具总数扩充至 **31 个**。
+- **后台守护进程**：`agent-steward.service` 在后台持续稳定运行（inotify 实时监听 + 动态进程采集 + 自主深度巡查 + 过期锁定时清理）。
 - **共享仓库同步**：代码已同步至 `/root/new/shared_git/agent-steward`。
 
 ---
@@ -109,8 +110,19 @@
 ## 断点恢复指引
 如果任务中断，重新启动时只需：
 1. 读取本文件 `src_doc/progress.md`；
-2. 找到首个状态为 `⏳ 进行中` 或 `⬜ 待执行` 的子任务 ID（当前为 Phase 11 任务 11.1，详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)）；
-3. 继续按顺序串行执行，每完成一步立即更新对应路线图与本文件的状态与完成时间戳。
+2. 查看当前全部完成的里程碑记录；
+3. 后续若有新 Phase 规划，按标准流程追加 Phase 路线图并串行追踪。
+
+🎉 **Phase 11（多 Agent 协作锁与互斥协调中枢）已 100% 全量串行交付**：
+- 对齐新增 ISSUE #10；
+- 实现了 `CoordinationEngine` 协作锁引擎：支持 Port、Directory、Service、File、Custom 5 大资源类型，支持 Exclusive 与 Shared 两种锁模式；
+- 存储层 SPI 扩充 5 个锁生命周期方法（`insert_coordination_lock`, `delete_coordination_lock`, `get_coordination_lock`, `list_coordination_locks`, `gc_expired_coordination_locks`），全面覆盖 SQLite、PostgreSQL (集成 Advisory Lock)、DuckDB；
+- 实现了目录层级祖先/后代递归互斥传播（持有父目录排他锁自动阻止子目录操作，持有子目录排他锁自动阻止父目录独占）；
+- 实现了 `steward_lock_acquire`、`steward_lock_release`、`steward_lock_list` 3 个原生 MCP 端点（原生工具数达到 31 个）；
+- 深度集成 `AgentHookEngine` 的 `hook_pre` 门禁，在绑定端口、修改文件时自动检测排他锁冲突；
+- 深度集成守护进程后台调度 `run_inspection_cycle`，定时自动 GC 过期锁；
+- 新增 CLI `agent-steward coordination [list|release|gc]` 命令；
+- 8 项多 Agent 并发与互斥集成测试（`tests/coordination_integration.rs`）100% PASS！
 
 🎉 **Phase 10（DuckDB 分析后端与增量同步管道）已 100% 全量串行交付**：
 - 对齐 README.md ISSUE #4；

@@ -13,6 +13,7 @@ pub struct SchedulerCycleReport {
     pub graph_edges_updated: usize,
     pub memory_conflicts_found: usize,
     pub scan_job_resumed: bool,
+    pub expired_locks_cleaned: usize,
 }
 
 /// 后台巡查与增量调度引擎
@@ -55,12 +56,17 @@ impl BackgroundScheduler {
             }
         }
 
+        // 5. 过期协作锁自动回收 (Coordination GC)
+        let coord = crate::coordination::CoordinationEngine::new(self.storage.provider().clone());
+        let expired_locks_cleaned = coord.gc_expired_locks().unwrap_or(0);
+
         Ok(SchedulerCycleReport {
             synced_processes,
             graph_nodes_updated: graph_nodes,
             graph_edges_updated: graph_edges,
             memory_conflicts_found: memory_conflicts,
             scan_job_resumed,
+            expired_locks_cleaned,
         })
     }
 }

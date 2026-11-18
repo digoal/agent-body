@@ -44,6 +44,7 @@ impl AgentHookEngine {
             .map(|p| p as u16);
 
         if let Some(port) = port_opt {
+            // 物理端口检查
             if let Ok(res) = ProcessNetTopology::check_port(port, 3) {
                 if res.status == "occupied" {
                     let proc_name = res.occupied_by.as_ref()
@@ -54,6 +55,14 @@ impl AgentHookEngine {
                     suggestions.push(res.advice);
                 }
             }
+
+            // 多 Agent 协作锁排斥检查
+            let port_str = port.to_string();
+            let coord = crate::coordination::CoordinationEngine::new(self.storage.provider().clone());
+            if let Ok(Some(lock)) = coord.check_resource(&crate::coordination::ResourceType::Port, &port_str) {
+                warnings.push(format!("🔒 目标端口 `{}` 已被 Agent `{}` 加协作锁（有效期至 {}）！立即绑定将引发冲突！", port, lock.holder_agent, lock.expires_at));
+                suggestions.push(format!("建议先调用 steward_lock_acquire 获取该端口锁，或与 Agent `{}` 协同释放", lock.holder_agent));
+            }
         }
 
         // 2. 关键系统文件修改与爆炸半径排查 (write_file, edit_file 等)
@@ -63,6 +72,26 @@ impl AgentHookEngine {
             .and_then(|v| v.as_str());
 
         if let Some(path_str) = path_opt {
+            // 协作锁排斥检查（文件锁与父目录锁传递）
+            let coord = crate::coordination::CoordinationEngine::new(self.storage.provider().clone());
+            if let Ok(Some(lock)) = coord.check_resource(&crate::coordination::ResourceType::File, path_str) {
+                warnings.push(format!("🔒 目标文件 `{}` 已被 Agent `{}` 加协作锁（有效期至 {}）！", path_str, lock.holder_agent, lock.expires_at));
+                suggestions.push(format!("请等待 Agent `{}` 释放该文件锁，避免覆盖修改", lock.holder_agent));
+            }
+
+            let p = Path::new(path_str);
+            for ancestor in p.ancestors() {
+                let anc_str = ancestor.to_string_lossy();
+                if anc_str == "/" || anc_str.is_empty() {
+                    continue;
+                }
+                if let Ok(Some(lock)) = coord.check_resource(&crate::coordination::ResourceType::Directory, &anc_str) {
+                    warnings.push(format!("🔒 目标所在父目录 `{}` 已被 Agent `{}` 加协作锁（有效期至 {}）！", anc_str, lock.holder_agent, lock.expires_at));
+                    suggestions.push(format!("建议先获取目录锁或与持有 Agent `{}` 协调", lock.holder_agent));
+                    break;
+                }
+            }
+
             // A. 反向依赖影响排查
             if let Ok(report) = AutomationTopology::find_impact_on_file(path_str) {
                 if !report.impacted_services.is_empty() || !report.impacted_cron_jobs.is_empty() {
@@ -104,6 +133,19 @@ impl AgentHookEngine {
                         suggestions.push(format!("💡 规范放置建议: 用户偏好将此类文件存放于 `{}` 目录下（当前为 `{}`）", sug_parent, parent));
                     }
                 }
+            }
+        }
+
+        // 3. 服务协作锁排查 (如 restart_service, stop_service 等工具)
+        let service_opt = args.get("service")
+            .or_else(|| args.get("service_name"))
+            .and_then(|v| v.as_str());
+
+        if let Some(svc) = service_opt {
+            let coord = crate::coordination::CoordinationEngine::new(self.storage.provider().clone());
+            if let Ok(Some(lock)) = coord.check_resource(&crate::coordination::ResourceType::Service, svc) {
+                warnings.push(format!("🔒 目标服务 `{}` 已被 Agent `{}` 加排他锁（有效期至 {}）！", svc, lock.holder_agent, lock.expires_at));
+                suggestions.push(format!("操作服务可能导致竞争冲突，请等待 Agent `{}` 操作完成", lock.holder_agent));
             }
         }
 
@@ -200,5 +242,57 @@ mod tests {
         let changes = storage.list_changes(10).expect("list_changes");
         assert!(!changes.is_empty());
         assert_eq!(changes[0].target, "/root/new/work/demo.rs");
+    }
+
+    #[test]
+    fn test_agent_pre_hook_lock_conflict_warning() {
+        use crate::coordination::{CoordinationEngine, LockRequest, ResourceType, LockScope};
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let coord = CoordinationEngine::new(storage.provider().clone());
+
+        // Agent-1 先给端口 9090 加锁
+        let req = LockRequest {
+            resource_type: ResourceType::Port,
+            resource_id: "9090".to_string(),
+            scope: LockScope::Exclusive,
+            holder_agent: "agent-1".to_string(),
+            holder_pid: None,
+            ttl_seconds: 60,
+            metadata: None,
+        };
+        let _ = coord.try_acquire(&req).expect("acquire");
+
+        let hook_engine = AgentHookEngine::new(storage);
+        let res = hook_engine.pre_tool_call("bind_port", &serde_json::json!({"port": 9090}));
+        assert!(res.has_warnings, "已加锁端口必须产生 warning");
+        assert!(res.warnings.iter().any(|w| w.contains("已被 Agent `agent-1` 加协作锁")));
+    }
+
+    #[test]
+    fn test_agent_pre_hook_directory_lock_propagation() {
+        use crate::coordination::{CoordinationEngine, LockRequest, ResourceType, LockScope};
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let coord = CoordinationEngine::new(storage.provider().clone());
+
+        // Agent-Alpha 给父目录 /etc/nginx/ 加锁
+        let req = LockRequest {
+            resource_type: ResourceType::Directory,
+            resource_id: "/etc/nginx/".to_string(),
+            scope: LockScope::Exclusive,
+            holder_agent: "agent-alpha".to_string(),
+            holder_pid: None,
+            ttl_seconds: 60,
+            metadata: None,
+        };
+        let _ = coord.try_acquire(&req).expect("acquire");
+
+        let hook_engine = AgentHookEngine::new(storage);
+        // 尝试向子路径 /etc/nginx/conf.d/app.conf 写入
+        let res = hook_engine.pre_tool_call("write_file", &serde_json::json!({
+            "path": "/etc/nginx/conf.d/app.conf",
+            "content": "server {}"
+        }));
+        assert!(res.has_warnings, "父目录被锁时写子路径必须告警");
+        assert!(res.warnings.iter().any(|w| w.contains("已被 Agent `agent-alpha` 加协作锁")));
     }
 }
