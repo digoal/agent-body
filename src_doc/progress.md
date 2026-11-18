@@ -92,8 +92,9 @@
 | **Phase 9** | 产品边界守护与生态定位（边界指南 + Agent 5阶段生命周期协议） | #1 #7 | ✅ **已完成** | 2026-11-18 12:28 |
 | **Phase 10** | DuckDB 分析后端（DuckDB Provider + 分析查询扩展 + 增量同步管道 + 集成测试） | #4 | ✅ **已完成** | 2026-11-18 14:05 |
 | **Phase 11** | 多 Agent 协作锁（CoordinationEngine + PG Advisory Lock + MCP 工具 + Pre-Hook 集成） | 新增 #10 | ✅ **已完成** | 2026-11-18 15:20 |
+| **Phase 12** | 运行依赖显式化与可移植部署（preflight 预检 + config 模板 + INSTALL.md + Dockerfile + SKILL 同步） | #10(ISSUE) | ⬜ 待执行 | — |
 
-> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)
+> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md) 与 [roadmap-phase12.md](roadmap-phase12.md)
 
 ---
 
