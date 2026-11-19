@@ -1,9 +1,9 @@
 # Agent Host Steward (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-18T23:12:00+08:00  
+> 最新更新: 2026-11-19T08:23:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: Phase 1~18 全部完成，38 个原生 MCP 工具，全量测试 100% PASS；roadmap-phase15-18 全部收口
+> 当前状态: Phase 1~20 全部完成，38 个原生 MCP 工具，全量测试 186 passed (0 failed, 1 ignored)；Web UI 2.0 现网运行中
 
 ---
 
@@ -99,8 +99,10 @@
 | **Phase 16** | 管理范围扩展与 Context 防爆路由器（MCP 注册表 + 130+ SKILL 目录 + 外部服务通讯录 + Token 预算路由） | 待探讨 ISSUE #4 | ✅ **已完成** | 2026-11-18 23:41 |
 | **Phase 17** | 智能死锁检测与协作锁等待唤醒中枢（lock_wait_queue + Wait-For Graph 环路检测 + UDS/SSE 唤醒推送） | 待探讨 ISSUE #2 | ✅ **已完成** | 2026-11-19 00:00 |
 | **Phase 18** | 跨平台原生探测深化（macOS/Windows）与轻量多机联邦网格（HTTP Peer Mesh + 跨节点锁路由） | 待探讨 ISSUE #3 & #1 | ✅ **已完成** | 2026-11-19 00:19 |
+| **Phase 19** | 真实事实拓扑修正、进程去噪与 Web UI 2.0 全景交互指挥舱（5 大工作台 + Daemon SSE 实时推流） | 待探讨 ISSUE #5 / 规约 #5 #7 | ✅ **已完成** | 2026-11-19 08:21 |
+| **Phase 20** | 四层贯通文档刷新、全局 3 处 SKILL 镜像同步与现网守护热更新交付 | 规约 #10 #11 #13 #14 | ✅ **已完成** | 2026-11-19 08:23 |
 
-> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md) 与 [progress-phase18.md](progress-phase18.md)
+> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md) 与 [progress-phase19.md](progress-phase19.md)
 
 ---
 
@@ -148,7 +150,7 @@
 如果任务中断，重新启动时只需：
 1. 读取本文件 `src_doc/progress.md`；
 2. 查看当前全部完成的里程碑记录与下一阶段规划；
-3. 当前待启动的 Phase 15~16 详细任务与检查点位于 [roadmap-phase15.md](roadmap-phase15.md) 与 [progress-phase15.md](progress-phase15.md)，按标准流程串行推进。
+3. 当前待启动的 Phase 19~20 详细任务与检查点位于 [roadmap-phase19-20.md](roadmap-phase19-20.md) 与 [progress-phase19.md](progress-phase19.md)，按标准流程串行推进。
 
 🎉 **Phase 12（运行依赖显式化与可移植部署）已 100% 全量串行交付**：
 - 严格对齐 README.md ISSUE #10 四层贯通要求；

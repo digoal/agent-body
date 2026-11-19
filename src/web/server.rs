@@ -154,8 +154,11 @@ impl WebServer {
             return Ok(());
         }
 
-        // 统一路由分发
-        let resp = Self::route_request(&req, storage.as_ref(), &start_time, &auth_token);
+        // 统一路由分发 (在 spawn_blocking 中执行，避免阻塞 Tokio worker 并兼容同步预检/DB调用)
+        let resp = tokio::task::spawn_blocking(move || {
+            Self::route_request(&req, storage.as_ref(), &start_time, &auth_token)
+        })
+        .await?;
         stream.write_all(&resp.to_bytes()).await?;
         stream.flush().await?;
         Ok(())
@@ -182,6 +185,11 @@ impl WebServer {
         match (req.method.clone(), req.path.as_str()) {
             (Method::Get, "/api/v1/health") => api::handle_health(storage, start_time),
             (Method::Get, "/api/v1/overview") => api::handle_overview(storage),
+            (Method::Get, "/api/v1/facts") => api::handle_facts(storage),
+            (Method::Get, "/api/v1/ecosystem") => api::handle_ecosystem(req, storage),
+            (Method::Get, "/api/v1/ecosystem/route") => api::handle_ecosystem_route(req, storage),
+            (Method::Get, "/api/v1/governance") => api::handle_governance(req, storage),
+            (Method::Get, "/api/v1/mesh/status") => api::handle_mesh_status(storage),
             (Method::Get, "/api/v1/topology") => crate::web::topology::handle_topology(storage),
             (Method::Get, "/api/v1/topology/impact") => crate::web::topology::handle_topology_impact(req, storage),
             (Method::Get, "/api/v1/locks") => crate::web::locks_api::handle_locks_list(storage),

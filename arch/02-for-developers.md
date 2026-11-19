@@ -89,7 +89,7 @@ export PATH="/root/.cargo/bin:$PATH"
 # 1. 快速语法与类型检查 (耗时约 2~4 秒)
 cargo check
 
-# 2. 运行全量 161 项自动化测试套件
+# 2. 运行全量 185+ 项自动化测试套件
 cargo test
 
 # 3. 运行特定模块的单元测试 (如测试 web 模块)

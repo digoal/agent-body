@@ -107,7 +107,7 @@
 - 🛠️ **[02-for-developers.md](arch/02-for-developers.md)**（面向研发工程师与贡献者）：
   - 源码 22 大模块全景职责与依赖拓扑速查；
   - 核心扩展三大 How-To（添加原生 MCP 工具、实现新存储后端 SPI、新增环境预检项）；
-  - 161 项自动化测试套件与本地开发流；
+  - 185+ 项自动化测试套件与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
 - 🧭 **[03-for-users.md](arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
   - 大管家核心心智模型与物理世界哨兵定位；
@@ -273,19 +273,20 @@ cargo build --release
 
 ## 未来演进与待探讨 ISSUE (Roadmap & Open Issues)
 
-1. **分布式/多机 Agent Steward 跨主机网状协调 (Gossip / Raft / HTTP Mesh)**：
+1. **分布式/多机 Agent Steward 跨主机网状协调 (Gossip / Raft / HTTP Mesh)** `✅ Phase 18 已落地轻量 HTTP Peer Mesh`：
    - 当宿主环境扩展为多台机器构成的集群时，将协作锁与事实图谱提升为跨节点分布式网状协调。
 
-2. **智能死锁检测与等待唤醒机制 (Wait-Queue / Push Notification)**：
+2. **智能死锁检测与等待唤醒机制 (Wait-Queue / Push Notification)** `✅ Phase 17 已落地 WFG + Wait-Queue`：
    - 为排他锁提供可订阅的等待队列，当持锁 Agent 释放资源时，主动通知排队中的 Agent，避免轮询开销。
 
-3. **跨平台原生适配深化 (macOS / Windows)**：
+3. **跨平台原生适配深化 (macOS / Windows)** `✅ Phase 18 已落地 PlatformProbe 抽象`：
    - 当前以 Linux（/proc、inotify、Systemd）为首选核心运行环境，未来进一步拓展对非 Linux 平台的底层环境感知。
   
-4. **管理范围的扩大**：
+4. **管理范围的扩大** `✅ Phase 16 已落地 Ecosystem & Context 防爆路由`：
    - 还得帮 Agent 管 MCP, SKILL, 可以使用的外部服务等。因为 MCP、SKILL 多了之后啊，Context 容易被打爆，导致大模型注意力下降，影响模型生成质量。 管外部服务的目的则是 Agent 宿主机本机环境的延展，就像销售人员有一本外部联系人名单一样，随时可以按需来 call。
   
-5. Web UI 显示的内容有点简陋，也不美观。需要重新设计一下。
+5. **Web UI 显示内容优化与交互重构** `✅ Phase 19 已落地 Web UI 2.0 五大工作台与真实拓扑`：
+   - Web UI 显示的内容有点简陋，也不美观。需要重新设计一下。
   
 ---
 

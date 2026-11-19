@@ -49,33 +49,43 @@ async fn test_web_dashboard_e2e_lifecycle() {
     // 稍微等待服务器监听完成
     tokio::time::sleep(Duration::from_millis(50)).await;
 
-    // 辅助函数: 发送简单 HTTP GET 请求并返回响应字符串
+    // 辅助函数: 发送 HTTP 请求并完整读取响应体
     async fn send_http_request(host: &str, port: u16, raw_req: &str) -> String {
         let mut stream = TcpStream::connect(format!("{}:{}", host, port)).await.expect("connect web server");
         stream.write_all(raw_req.as_bytes()).await.expect("write request");
         stream.flush().await.expect("flush");
 
-        let mut buf = vec![0u8; 8192];
-        let n = stream.read(&mut buf).await.expect("read response");
-        String::from_utf8_lossy(&buf[..n]).to_string()
+        let mut full = Vec::new();
+        let mut buf = [0u8; 8192];
+        loop {
+            match tokio::time::timeout(Duration::from_millis(5000), stream.read(&mut buf)).await {
+                Ok(Ok(0)) | Err(_) => break,
+                Ok(Ok(n)) => full.extend_from_slice(&buf[..n]),
+                Ok(Err(_)) => break,
+            }
+        }
+        String::from_utf8_lossy(&full).to_string()
     }
 
     // 3. 验证静态资源
-    // 3.1 首页 HTML
+    // 3.1 首页 HTML (Web UI 2.0 必须包含五大工作台且无假图 drawMockGraph)
     let resp_index = send_http_request("127.0.0.1", bound_port, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
     assert!(resp_index.contains("HTTP/1.1 200 OK"));
     assert!(resp_index.contains("Content-Type: text/html"));
     assert!(resp_index.contains("Agent Host Steward"));
+    assert!(resp_index.contains("view-ecosystem"));
+    assert!(resp_index.contains("view-governance"));
 
     // 3.2 静态 CSS
     let resp_css = send_http_request("127.0.0.1", bound_port, "GET /app.css HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
     assert!(resp_css.contains("HTTP/1.1 200 OK"));
     assert!(resp_css.contains("Content-Type: text/css"));
 
-    // 3.3 静态 JS
+    // 3.3 静态 JS (确认已彻底移除 drawMockGraph)
     let resp_js = send_http_request("127.0.0.1", bound_port, "GET /app.js HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
     assert!(resp_js.contains("HTTP/1.1 200 OK"));
     assert!(resp_js.contains("Content-Type: application/javascript"));
+    assert!(!resp_js.contains("drawMockGraph"));
 
     // 4. 验证 REST API
     // 4.1 GET /api/v1/health
@@ -124,6 +134,21 @@ Content-Length: 75\r\n\r\n\
     // 4.7 验证释放后再次查询活跃锁已为空
     let resp_locks_empty = send_http_request("127.0.0.1", bound_port, "GET /api/v1/locks HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
     assert!(resp_locks_empty.contains("[]"));
+
+    // 4.8 验证 Web 2.0 新增全景接口 (/facts, /ecosystem, /ecosystem/route, /governance, /mesh/status, /locks/history)
+    for ep in [
+        "/api/v1/facts",
+        "/api/v1/ecosystem",
+        "/api/v1/ecosystem/route?intent=postgres&budget=600",
+        "/api/v1/governance",
+        "/api/v1/mesh/status",
+        "/api/v1/locks/history",
+    ] {
+        let req = format!("GET {} HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n", ep);
+        let resp = send_http_request("127.0.0.1", bound_port, &req).await;
+        assert!(resp.contains("HTTP/1.1 200 OK"), "端点 {} 应返回 200 OK", ep);
+        assert!(resp.contains("\"code\":200"), "端点 {} 响应体应包含 code:200", ep);
+    }
 
     // 5. 验证 SSE (Server-Sent Events) 长连接推流
     let mut sse_stream = TcpStream::connect(format!("127.0.0.1:{}", bound_port)).await.expect("connect sse");

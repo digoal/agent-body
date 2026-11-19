@@ -196,4 +196,168 @@ mod tests {
         let body_after = std::str::from_utf8(&resp_after.body).unwrap();
         assert!(body_after.contains("[]"));
     }
+
+    #[test]
+    fn test_web_topology_connects_fact_edges_and_process_ports() {
+        use crate::storage::models::{ActiveProcessRecord, FactEdgeRecord, FactNodeRecord};
+
+        let storage = SqliteStorageProvider::open_in_memory().expect("sqlite memory init");
+        storage.init().expect("sqlite init");
+
+        // 插入真实事实节点与边
+        storage.upsert_fact_node(&FactNodeRecord {
+            id: "service:agent-steward".to_string(),
+            node_type: "service".to_string(),
+            name: "agent-steward".to_string(),
+            label: "Agent Steward Service".to_string(),
+            properties: serde_json::json!({"unit": "agent-steward.service"}),
+            updated_at: None,
+        }).expect("upsert service");
+
+        storage.upsert_fact_node(&FactNodeRecord {
+            id: "port:8756".to_string(),
+            node_type: "port".to_string(),
+            name: "8756".to_string(),
+            label: "TCP 8756".to_string(),
+            properties: serde_json::json!({"protocol": "tcp"}),
+            updated_at: None,
+        }).expect("upsert port");
+
+        storage.upsert_fact_edge(&FactEdgeRecord {
+            id: None,
+            source_id: "service:agent-steward".to_string(),
+            target_id: "port:8756".to_string(),
+            relation: "listens_on".to_string(),
+            properties: serde_json::json!({}),
+            confidence: 1.0,
+            updated_at: None,
+        }).expect("upsert edge");
+
+        // 插入带端口的活跃进程
+        storage.replace_active_processes(&[ActiveProcessRecord {
+            id: "proc-999".to_string(),
+            pid: 999,
+            name: "agent-steward".to_string(),
+            command: "/usr/local/bin/agent-steward daemon".to_string(),
+            owner: "user:digoal".to_string(),
+            associated_path: Some("/root/new/work/agent-steward/src/main.rs".to_string()),
+            listening_ports: vec![8756],
+            status: "running".to_string(),
+            cpu_pct: 0.5,
+            mem_bytes: 1024,
+            gpu_allocated_mb: 0,
+            started_at: None,
+        }]).expect("replace procs");
+
+        let graph = topology::build_full_topology(&storage);
+        assert!(graph.summary.total_edges >= 3, "应包含 fact_edges + proc->port + proc->script 三条边");
+        assert!(graph.summary.port_count >= 1);
+        assert!(graph.summary.service_count >= 1);
+        assert!(graph.summary.process_count >= 1);
+
+        // 验证多跳爆炸半径子图查询
+        let impact = topology::build_impact_topology("service:agent-steward", &storage);
+        assert!(impact.summary.total_nodes >= 2);
+        assert!(impact.summary.total_edges >= 1);
+    }
+
+    #[test]
+    fn test_web_v2_panorama_endpoints_and_locks_history() {
+        use crate::storage::models::{ChangeRecord, ExternalServiceRecord, SkillCatalogRecord};
+
+        let storage = SqliteStorageProvider::open_in_memory().expect("sqlite memory init");
+        storage.init().expect("sqlite init");
+        let start_time = Instant::now();
+
+        storage.upsert_skill_catalog(&SkillCatalogRecord {
+            id: "skill-1".to_string(),
+            skill_name: "pgfaq".to_string(),
+            root_source: "/root/new/skills".to_string(),
+            skill_path: "/root/new/skills/pgfaq/SKILL.md".to_string(),
+            description: "PostgreSQL core internals research".to_string(),
+            triggers: vec!["postgres".to_string()],
+            est_tokens: 450,
+            has_scripts: false,
+            has_references: false,
+            status: "active".to_string(),
+            last_scanned_at: None,
+        }).expect("upsert skill");
+
+        storage.upsert_external_service(&ExternalServiceRecord {
+            id: "svc-1".to_string(),
+            service_name: "ollama-local".to_string(),
+            category: "embedding".to_string(),
+            endpoint: "http://127.0.0.1:11434".to_string(),
+            protocol: "http".to_string(),
+            capabilities: "local embeddings".to_string(),
+            auth_type: "none".to_string(),
+            auth_env_var: None,
+            health_endpoint: None,
+            usage_example: None,
+            status: "healthy".to_string(),
+            last_checked_at: None,
+        }).expect("upsert svc");
+
+        storage.record_change(&ChangeRecord {
+            id: None,
+            change_type: "lock_acquired".to_string(),
+            target: "port:8080".to_string(),
+            description: Some("agent_alpha acquired port 8080".to_string()),
+            details: serde_json::json!({}),
+            source: "coordination".to_string(),
+            created_at: None,
+        }).expect("record change");
+
+        let make_req = |path: &str| HttpRequest {
+            method: Method::Get,
+            path: path.to_string(),
+            raw_query: "".to_string(),
+            query_params: Default::default(),
+            headers: Default::default(),
+            body: Vec::new(),
+        };
+
+        // 1. /api/v1/facts
+        let r_facts = server::WebServer::route_request(&make_req("/api/v1/facts"), &storage, &start_time, &None);
+        assert_eq!(r_facts.status, StatusCode::OK);
+        let b_facts = std::str::from_utf8(&r_facts.body).unwrap();
+        assert!(b_facts.contains("listening_ports"));
+        assert!(b_facts.contains("capabilities"));
+
+        // 2. /api/v1/ecosystem
+        let r_eco = server::WebServer::route_request(&make_req("/api/v1/ecosystem"), &storage, &start_time, &None);
+        assert_eq!(r_eco.status, StatusCode::OK);
+        let b_eco = std::str::from_utf8(&r_eco.body).unwrap();
+        assert!(b_eco.contains("pgfaq"));
+        assert!(b_eco.contains("ollama-local"));
+
+        // 3. /api/v1/ecosystem/route
+        let mut req_route = make_req("/api/v1/ecosystem/route");
+        req_route.query_params.insert("intent".to_string(), "postgres".to_string());
+        req_route.query_params.insert("budget".to_string(), "600".to_string());
+        let r_route = server::WebServer::route_request(&req_route, &storage, &start_time, &None);
+        assert_eq!(r_route.status, StatusCode::OK);
+        let b_route = std::str::from_utf8(&r_route.body).unwrap();
+        assert!(b_route.contains("pgfaq"));
+        assert!(b_route.contains("route_tokens_used"));
+
+        // 4. /api/v1/governance
+        let r_gov = server::WebServer::route_request(&make_req("/api/v1/governance"), &storage, &start_time, &None);
+        assert_eq!(r_gov.status, StatusCode::OK);
+        let b_gov = std::str::from_utf8(&r_gov.body).unwrap();
+        assert!(b_gov.contains("placement_rules"));
+        assert!(b_gov.contains("preflight"));
+
+        // 5. /api/v1/mesh/status
+        let r_mesh = server::WebServer::route_request(&make_req("/api/v1/mesh/status"), &storage, &start_time, &None);
+        assert_eq!(r_mesh.status, StatusCode::OK);
+        let b_mesh = std::str::from_utf8(&r_mesh.body).unwrap();
+        assert!(b_mesh.contains("local_facts"));
+
+        // 6. /api/v1/locks/history
+        let r_hist = server::WebServer::route_request(&make_req("/api/v1/locks/history"), &storage, &start_time, &None);
+        assert_eq!(r_hist.status, StatusCode::OK);
+        let b_hist = std::str::from_utf8(&r_hist.body).unwrap();
+        assert!(b_hist.contains("lock_acquired"));
+    }
 }

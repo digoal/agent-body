@@ -66,26 +66,34 @@ impl StewardDaemon {
             }
         };
 
-        let handler = ChangeHandler::new(self.storage.clone())?;
+        let event_bus = crate::hooks::EventBus::new();
+        let event_bus_handle = event_bus.handle();
+        let handler = ChangeHandler::with_event_bus(self.storage.clone(), event_bus_handle)?;
         let env_collector = EnvCollector::new(self.storage.clone());
         let bg_scheduler = BackgroundScheduler::new(self.storage.clone());
 
-        // 2. 按需拉起后台 Web 监控大屏
-        if self.config.web.enabled {
+        // 2. 按需拉起后台 Web 监控大屏，并桥接 EventBus -> SSE 实时事件流
+        let sse_broadcaster = if self.config.web.enabled {
             let web_config = crate::web::WebConfig {
                 host: self.config.web.host.clone(),
                 port: self.config.web.port,
                 auth_token: self.config.web.auth_token.clone(),
             };
             let storage_provider = self.storage.provider().clone();
+            let server = crate::web::WebServer::new(web_config, storage_provider);
+            let broadcaster = server.event_broadcaster();
+            crate::hooks::bridge_event_bus_to_sse(event_bus.subscribe(), broadcaster.clone());
+
             tokio::spawn(async move {
-                let server = crate::web::WebServer::new(web_config, storage_provider);
                 if let Err(e) = server.run().await {
                     eprintln!("⚠️ [Daemon] Web 监控服务异常退出: {}", e);
                 }
             });
-            println!("✅ Web 监控大屏服务已拉起: http://{}:{}", self.config.web.host, self.config.web.port);
-        }
+            println!("✅ Web 监控大屏服务已拉起 (SSE 事件流已桥接): http://{}:{}", self.config.web.host, self.config.web.port);
+            Some(broadcaster)
+        } else {
+            None
+        };
 
         // 3. 定时器
         let mut process_interval = interval(Duration::from_secs(60));
@@ -115,8 +123,16 @@ impl StewardDaemon {
                 // 定时动态进程扫描与同步
                 _ = process_interval.tick() => {
                     if let Ok(procs) = env_collector.collect_and_sync_processes() {
-                        // 仅静默同步，若有高负载任务或异常可在此告警
-                        let _ = procs;
+                        if let Some(ref tx) = sse_broadcaster {
+                            let msg = serde_json::json!({
+                                "type": "ProcessSync",
+                                "payload": {
+                                    "active_processes": procs.len(),
+                                    "timestamp": chrono::Local::now().to_rfc3339(),
+                                }
+                            });
+                            let _ = tx.send(msg.to_string());
+                        }
                     }
                 }
 
@@ -125,6 +141,19 @@ impl StewardDaemon {
                     if let Ok(report) = bg_scheduler.run_inspection_cycle() {
                         println!("[Scheduler] 深度巡检完成: 同步进程 {}, 属性图节点更新 {}, 边更新 {}",
                             report.synced_processes, report.graph_nodes_updated, report.graph_edges_updated);
+                        if let Some(ref tx) = sse_broadcaster {
+                            let msg = serde_json::json!({
+                                "type": "SchedulerCycle",
+                                "payload": {
+                                    "synced_processes": report.synced_processes,
+                                    "graph_nodes": report.graph_nodes_updated,
+                                    "graph_edges": report.graph_edges_updated,
+                                    "expired_locks_cleaned": report.expired_locks_cleaned,
+                                    "timestamp": chrono::Local::now().to_rfc3339(),
+                                }
+                            });
+                            let _ = tx.send(msg.to_string());
+                        }
                     }
                 }
 

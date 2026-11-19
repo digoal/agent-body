@@ -78,10 +78,17 @@ impl ContextBudgetRouter {
     }
 
     pub fn route(&self, req: &ContextRouteRequest) -> Result<ContextRoutePlan> {
+        Self::route_with_provider(self.storage.provider().as_ref(), req)
+    }
+
+    pub fn route_with_provider(
+        provider: &dyn crate::storage::StorageProvider,
+        req: &ContextRouteRequest,
+    ) -> Result<ContextRoutePlan> {
         let intent = req.intent.trim();
         let budget = req.budget_tokens.max(150);
 
-        let all_skills = self.storage.list_skills_catalog()?;
+        let all_skills = provider.list_skills_catalog()?;
         let total_skills_catalog_count = all_skills.len();
         let total_skills_full_tokens: usize = all_skills.iter().map(|s| s.est_tokens).sum();
 
@@ -89,7 +96,7 @@ impl ContextBudgetRouter {
         let matched_skills = if intent.is_empty() {
             all_skills.into_iter().take(req.max_skills).collect::<Vec<_>>()
         } else {
-            let mut candidates = self.storage.search_skills_catalog(intent, req.max_skills * 4)?;
+            let mut candidates = provider.search_skills_catalog(intent, req.max_skills * 4)?;
             if candidates.is_empty() {
                 candidates = all_skills;
             }
@@ -101,22 +108,22 @@ impl ContextBudgetRouter {
 
         // 2. 检索 MCP Servers
         let matched_mcps: Vec<McpCatalogRecord> = if intent.is_empty() {
-            self.storage.list_mcp_catalog()?.into_iter().take(req.max_mcps).collect()
+            provider.list_mcp_catalog()?.into_iter().take(req.max_mcps).collect()
         } else {
-            let mut c = self.storage.search_mcp_catalog(intent, req.max_mcps)?;
+            let mut c = provider.search_mcp_catalog(intent, req.max_mcps)?;
             if c.is_empty() {
-                c = self.storage.list_mcp_catalog()?.into_iter().take(req.max_mcps).collect();
+                c = provider.list_mcp_catalog()?.into_iter().take(req.max_mcps).collect();
             }
             c
         };
 
         // 3. 检索外部服务通讯录
         let matched_services: Vec<ExternalServiceRecord> = if intent.is_empty() {
-            self.storage.list_external_services(None)?.into_iter().take(req.max_services).collect()
+            provider.list_external_services(None)?.into_iter().take(req.max_services).collect()
         } else {
-            let mut c = self.storage.search_external_services(intent, req.max_services)?;
+            let mut c = provider.search_external_services(intent, req.max_services)?;
             if c.is_empty() {
-                c = self.storage.list_external_services(None)?.into_iter().take(req.max_services).collect();
+                c = provider.list_external_services(None)?.into_iter().take(req.max_services).collect();
             }
             c
         };

@@ -58,11 +58,29 @@ pub fn handle_locks_list(storage: &dyn StorageProvider) -> HttpResponse {
     }
 }
 
-/// 处理 GET /api/v1/locks/history
-pub fn handle_locks_history(_storage: &dyn StorageProvider) -> HttpResponse {
-    // 预留历史锁变更日志查询
-    let history: Vec<serde_json::Value> = Vec::new();
-    WebResponse::success(history)
+/// 处理 GET /api/v1/locks/history (从 changes 表检索锁相关审计历史)
+pub fn handle_locks_history(storage: &dyn StorageProvider) -> HttpResponse {
+    match storage.list_changes(150) {
+        Ok(changes) => {
+            let lock_changes: Vec<_> = changes
+                .into_iter()
+                .filter(|c| {
+                    let t = c.change_type.to_lowercase();
+                    let target = c.target.to_lowercase();
+                    t.contains("lock")
+                        || t.contains("coordination")
+                        || target.contains("lock:")
+                        || target.contains("coordination")
+                })
+                .take(50)
+                .collect();
+            WebResponse::success(lock_changes)
+        }
+        Err(e) => WebResponse::error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Failed to query locks history: {}", e),
+        ),
+    }
 }
 
 /// 处理 GET /api/v1/locks/wait-queue (Phase 17)

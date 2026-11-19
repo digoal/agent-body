@@ -1,8 +1,10 @@
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
 use sysinfo::{CpuRefreshKind, Disks, MemoryRefreshKind, ProcessRefreshKind, RefreshKind, System};
 use crate::storage::Storage;
 use crate::storage::models::ActiveProcessRecord;
+use crate::fact::process_net::ProcessNetTopology;
 
 pub mod port;
 pub mod gc;
@@ -83,28 +85,50 @@ impl EnvCollector {
         }
     }
 
-    /// 采集并同步动态任务与普通进程 (过滤系统底噪，纳管活跃任务)
+    /// 采集并同步动态任务与普通进程 (过滤线程与系统底噪，关联真实监听端口)
     pub fn collect_and_sync_processes(&self) -> Result<Vec<ActiveProcessRecord>> {
         let mut sys = System::new_with_specifics(
             RefreshKind::new().with_processes(ProcessRefreshKind::everything()),
         );
         sys.refresh_processes();
 
+        // 预先构建 PID -> 真实监听端口集合映射
+        let mut pid_to_ports: HashMap<u32, Vec<u16>> = HashMap::new();
+        if let Ok(port_facts) = ProcessNetTopology::scan_listening_ports() {
+            for pf in port_facts {
+                if let Some(pid) = pf.pid {
+                    let entry = pid_to_ports.entry(pid).or_default();
+                    if !entry.contains(&pf.port) {
+                        entry.push(pf.port);
+                    }
+                }
+            }
+            for ports in pid_to_ports.values_mut() {
+                ports.sort_unstable();
+            }
+        }
+
         let mut active_procs = Vec::new();
 
         for (pid, proc) in sys.processes() {
+            // 过滤 Linux 用户态/内核态子线程（避免 18 线程 daemon 产生 18 条重复记录）
+            if proc.thread_kind().is_some() {
+                continue;
+            }
+
             let name = proc.name().to_string();
             let cmd_parts: Vec<String> = proc.cmd().iter().map(|s| s.to_string()).collect();
             let command = cmd_parts.join(" ");
+            let pid_u32 = pid.as_u32();
+            let listening_ports = pid_to_ports.get(&pid_u32).cloned().unwrap_or_default();
 
-            // 过滤系统底噪：只关注常见解释器、构建工具、服务与任务
-            if is_noise_process(&name, &command) {
+            // 过滤系统底噪：只关注应用进程、脚本、构建任务与监听端口的服务
+            if listening_ports.is_empty() && is_noise_process(&name, &command) {
                 continue;
             }
 
             let cpu_pct = proc.cpu_usage();
             let mem_bytes = proc.memory();
-            let pid_u32 = pid.as_u32();
 
             // 提取命令中关联的文件资产路径
             let associated_path = extract_associated_script_path(&cmd_parts);
@@ -116,7 +140,7 @@ impl EnvCollector {
                 command,
                 owner: infer_process_owner(&name, &cmd_parts),
                 associated_path,
-                listening_ports: vec![],
+                listening_ports,
                 status: "running".to_string(),
                 cpu_pct,
                 mem_bytes,
@@ -135,10 +159,51 @@ impl EnvCollector {
 
 fn is_noise_process(name: &str, command: &str) -> bool {
     let lower = name.to_lowercase();
-    if lower.starts_with("kworker") || lower.starts_with("systemd") || lower == "init" {
+    if command.trim().is_empty() {
         return true;
     }
-    if command.is_empty() {
+    const NOISE_PREFIXES: &[&str] = &[
+        "kworker",
+        "ksoftirqd",
+        "kswapd",
+        "kthreadd",
+        "migration",
+        "rcu_",
+        "systemd",
+        "tokio-rt-worker",
+        "tokio-runtime",
+        "libuv-worker",
+        "v8worker",
+        "asyncio_",
+    ];
+    if NOISE_PREFIXES.iter().any(|p| lower.starts_with(p)) {
+        return true;
+    }
+    const NOISE_EXACT: &[&str] = &[
+        "init",
+        "agetty",
+        "getty",
+        "dbus-daemon",
+        "dbus-broker",
+        "rsyslogd",
+        "irqbalance",
+        "polkitd",
+        "udisksd",
+        "upowerd",
+        "accounts-daemon",
+        "wpa_supplicant",
+        "avahi-daemon",
+        "bluetoothd",
+        "thermald",
+        "acpid",
+        "atd",
+        "cron",
+        "crond",
+        "rpcbind",
+        "rpcd_lsad",
+        "sleep",
+    ];
+    if NOISE_EXACT.iter().any(|&exact| lower == exact) {
         return true;
     }
     false
@@ -187,5 +252,21 @@ mod tests {
         // 验证持久化到了数据库
         let db_procs = storage.list_active_processes().expect("list active procs");
         assert_eq!(procs.len(), db_procs.len());
+        // 不应包含线程名底噪
+        assert!(
+            !procs.iter().any(|p| p.name.starts_with("tokio-rt-worker") || p.name.starts_with("kworker")),
+            "过滤线程与内核底噪后不应出现 worker 线程"
+        );
+    }
+
+    #[test]
+    fn test_is_noise_process_filters_system_daemons() {
+        assert!(is_noise_process("kworker/u16:2", "kworker"));
+        assert!(is_noise_process("systemd-journald", "/lib/systemd/systemd-journald"));
+        assert!(is_noise_process("tokio-rt-worker", "/usr/local/bin/agent-steward daemon"));
+        assert!(is_noise_process("dbus-daemon", "/usr/bin/dbus-daemon --system"));
+        assert!(is_noise_process("python3", ""));
+        assert!(!is_noise_process("agent-steward", "/usr/local/bin/agent-steward daemon"));
+        assert!(!is_noise_process("python3", "python3 /root/new/shared_proj/bot.py"));
     }
 }

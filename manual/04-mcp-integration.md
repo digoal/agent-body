@@ -53,9 +53,9 @@ sequenceDiagram
 
 ---
 
-## 3. 32 个原生 MCP 工具标准字典
+## 3. 38 个原生 MCP 工具标准字典
 
-大管家向 Agent 暴露 32 个原子级认知与管控工具：
+大管家向 Agent 暴露 38 个原子级认知与管控工具：
 
 | MCP 工具名 | 核心功能 | 核心参数说明 |
 |---|---|---|
@@ -91,6 +91,12 @@ sequenceDiagram
 | `steward_analytics_heatmap` | 宿主变更活跃度热力图与密度聚合分析 (DuckDB) | `days` |
 | `steward_analytics_trend` | 资产增长趋势与类别分布聚合统计 (DuckDB) | `days` |
 | `steward_analytics_export` | 导出宿主分析数据为 Parquet 列存文件 (DuckDB) | `export_type`, `output_path` |
+| `steward_mcp_catalog` | 扫描/列出/路由宿主机已纳管的 MCP Server 与工具摘要 | `action`, `intent`, `limit` |
+| `steward_skill_route` | 扫描 120+ SKILL 目录并按 Token 预算防爆路由推荐 Top-K | `action`, `intent`, `budget_tokens` |
+| `steward_service_contact` | 外部可用服务通讯录管理（脱敏登记、查询与健康探活） | `action`, `service_name`, `endpoint`, `auth_env_var` |
+| `steward_lock_wait` | 排队等待获取协作锁，支持超时与主动唤醒（含死锁拦截） | `resource_type`, `resource_id`, `holder_agent`, `timeout_secs` |
+| `steward_lock_deadlock_check` | 运行 Wait-For Graph (WFG) 环路检测，诊断多 Agent 死锁 | `agent` |
+| `steward_mesh_query` | 多机轻量 HTTP Peer Mesh 联邦查询与跨节点端口/锁协同 | `action`, `port`, `peer` |
 
 ---
 
