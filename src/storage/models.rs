@@ -221,3 +221,74 @@ pub struct LockWaitEntry {
     pub timeout_at: String,
     pub status: String, // "waiting" | "notified" | "acquired" | "expired" | "cancelled"
 }
+
+/// Phase 27: 实验室 A/B 基准评测批次记录 (轨道 A)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BenchmarkRunRecord {
+    pub run_id: String,
+    pub suite_name: String,
+    pub git_commit: String,
+    pub app_version: String,
+    pub host_fingerprint: serde_json::Value,
+    pub workload_count: usize,
+    pub total_baseline_tokens: i64,
+    pub total_steward_tokens: i64,
+    pub overall_token_savings_pct: f64,
+    pub overall_speedup_factor: f64,
+    pub total_hazards_intercepted: i64,
+    pub total_noise_blocked: i64,
+    pub sla_passed: bool,
+    pub results_json: serde_json::Value,
+    pub report_sha256: String,
+    pub duration_ms: i64,
+    pub created_at: String,
+}
+
+/// Phase 27: 生产运行态效能存证账本单条事件 (轨道 B)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectivenessLedgerRecord {
+    pub event_id: String,
+    pub session_id: String,
+    pub source_channel: String,
+    pub tool_or_action: String,
+    pub provenance_rule: String,
+    pub baseline_tokens: i64,
+    pub steward_tokens: i64,
+    pub tokens_saved: i64,
+    pub baseline_rounds: i64,
+    pub steward_rounds: i64,
+    pub rounds_saved: i64,
+    pub hazard_intercepted: i64,
+    pub noise_blocked: i64,
+    pub elapsed_us: i64,
+    pub evidence_summary: String,
+    pub created_at: String,
+}
+
+/// 按推导规则聚合统计
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuleAggregate {
+    pub provenance_rule: String,
+    pub event_count: usize,
+    pub tokens_saved: i64,
+    pub rounds_saved: i64,
+    pub hazards_intercepted: i64,
+    pub noise_blocked: i64,
+}
+
+/// 生产运行态效能存证汇总账单
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectivenessSummary {
+    pub window: String,
+    pub total_events: usize,
+    pub total_baseline_tokens: i64,
+    pub total_steward_tokens: i64,
+    pub total_tokens_saved: i64,
+    pub token_savings_pct: f64,
+    pub total_rounds_saved: i64,
+    pub total_hazards_intercepted: i64,
+    pub total_noise_blocked: i64,
+    pub avg_elapsed_us: f64,
+    pub by_rule: Vec<RuleAggregate>,
+    pub recent_events: Vec<EffectivenessLedgerRecord>,
+}

@@ -93,6 +93,7 @@
 - 🗺️ **[09-modular-roadmap.md](design_doc/09-modular-roadmap.md)**：最新模块化演进路线图（Phase 1 事实图谱护城河 → Phase 2 偏好自演化 → Phase 3 记忆生态插拔 → Phase 4 终极智能中枢）
 - 📐 **[05-architecture.md](design_doc/05-architecture.md)**：三模块分层架构与系统规格说明书
 - 📖 **[03-feature-spec.md](design_doc/03-feature-spec.md)**：三模块功能规格详细定义
+- 📊 **[10-benchmark-spec.md](design_doc/10-benchmark-spec.md)**：实证 Benchmark 对照评测与生产效能存证账本设计规格说明书（双轨闭环确保使用效果 100% 有据可查）
 
 ---
 
@@ -125,12 +126,13 @@
 - 🚀 **[01-getting-started.md](manual/01-getting-started.md)**：快速上手、环境依赖准备与首次编译运行
 - 🧠 **[02-core-concepts.md](manual/02-core-concepts.md)**：核心理念：大管家定位、黑白名单浅层阻断、放置建议哲学
 - 📖 **[03-cli-reference.md](manual/03-cli-reference.md)**：全量 CLI 命令行实操字典（全子命令 + 真实输出）
-- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：39 个原生 MCP 工具与 Claude/Cursor 配置
+- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：40 个原生 MCP 工具与 Claude/Cursor 配置
 - 🔄 **[05-daemon-and-watcher.md](manual/05-daemon-and-watcher.md)**：后台常驻守护服务、inotify 300ms 防抖与 systemd 自启
 - ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：v3.1 进阶特性：断链智能修复、放置规则自演化、宿主资源 GC、记忆生命周期与 TUI 看板
 - 🛠️ **[07-troubleshooting.md](manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
 - 🌐 **[08-web-dashboard.md](manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级大管家拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
 - 🪝 **[09-hooks-integration.md](manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
+- 📊 **[10-benchmark-and-roi.md](manual/10-benchmark-and-roi.md)**：实证 Benchmark 对照评测与生产效能存证账本（8 大 A/B 负载 + 5 大微基准 + PR-01~08 溯源流水）
 
 ---
 
@@ -278,6 +280,10 @@ cargo build --release
     - 从产品经理与市场营销推广视角，将高频痛点与核心护城河沉淀为 Web 端可交互的 **路演演示剧场（Roadshow Live Demo）**，与黑屏 `steward_demo_scenario` / `agent-steward demo` 同源演进。
     - 所有路演剧目必须由真实引擎驱动（严禁硬编码假数据），状态写入严格限定在 `demo:*` 隔离沙盒并支持一键无痕复位；同时将离线路演 PPT（`/deck`、`/presentation`）与 ROI 实时账单内建于单二进制 Web 服务中，随版本同步刷新。
 
+18. **实证基准与效能有据可查规约 (Empirical Benchmark & Verifiable ROI Ledger)**：
+    - 任何宣称的效能提升（Token 节省率、探索轮次缩减、微秒级响应延迟、故障/冲突拦截率、垃圾噪音阻断率）必须通过可复现的 **A/B 对照基准套件（Without Steward 裸奔基线 vs With Steward 管家赋能）** 与 **生产运行态效能存证账本（Effectiveness Telemetry Ledger）** 双轨实证，严禁无出处估算或主观拍脑袋指标。
+    - 基准测试必须基于宿主机真实物理探针与 `bench:*` 隔离沙盒实跑（覆盖内核微基准延迟 SLA 与 8 大宏观业务负载）；每次评测与日常工具调用的真实耗时（`elapsed_us`）、Token 缩减量（`tokens_saved`）、探索轮次缩减（`rounds_saved`）及风险拦截事件（`hazard_intercepted`）均须携带确定性推导规则编号（`provenance_rule`）落库留痕，支持通过 CLI（`agent-steward bench`）、MCP（`steward_benchmark`）、Web UI 与 DuckDB 导出报告随时溯源核验与跨版本回归比对，确保大管家使用效果 100% 有据可查。
+
 ---
 
 ## 未来演进与待探讨 ISSUE (Roadmap & Open Issues)
@@ -351,6 +357,10 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 12. **WEB UI「路演演示剧场」三层故事化直观重构** `✅ Phase 25 已落地三层渐进式故事舞台与 6 大专属可视化组件`：
     - 告别主舞台大段裸露 JSON 调试框：顶部增设经济学「比较优势」立意导览与 6 幕场景摘要卡片；
     - 每幕由真引擎返回 **💡 一句话生活比喻 (`analogy`) + 🎯 核心用意 (`intent_summary`) + 3 张高冲击 ROI 指标卡 (`hero_metrics`)**，左屏呈现盲人 Agent 三步翻车故事线，右屏渲染 **6 套专属可视化组件**（黑白名单阻断漏斗+武器库墙、Pre-Hook 1ms 红绿灯、3 跳蝴蝶效应因果链、双 Agent 死锁环路图、Token 99.9% 对比尺、1 秒简报仪表+安全自洁盾），原始 JSON 收纳至底部默认折叠的技术专家核验抽屉。  
+
+13. **实证 Benchmark 对照评测体系与生产效能存证账本（确保使用效果有据可查）** `✅ Phase 27~28 已落地双轨实证引擎、PR-01~08 生产账本与 40/40 黑白屏同步`:
+    - 构建「实验室 A/B 可复现对照基准（8 大标准宿主工作负载：Without Steward 裸奔物理探针基线 vs With Steward 真引擎实测 + 5 大内核微基准 SLA）」与「生产运行态每次调用效能存证账本（Token 节省、轮次缩减、端口/锁/断链/乱放冲突拦截、黑名单噪音阻断实时带出处入账）」双轨闭环；
+    - 通过第 40 个原生 MCP 工具 `steward_benchmark`、CLI `agent-steward bench` 与 Web UI「📊 实证基准与账本」工作台实现 40/40 黑白屏双向同步与 SHA-256 存证签名，让每一项收益均可量化、可复现、可审计（已升格为开发规约 #18）。
   
 ---
 

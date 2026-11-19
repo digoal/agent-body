@@ -1,9 +1,9 @@
 # Agent Host Steward (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-19T14:50:00+08:00  
+> 最新更新: 2026-11-19T15:18:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: Phase 1~26 全部完成（v0.4.0），39 个原生 MCP 工具（黑白屏 100% 同步），Web UI 2.0 昼夜双主题与三层故事化路演剧场已上线，数据治理硬化与真实依赖图谱闭环已落地，全量测试 198 passed (0 failed, 1 ignored)
+> 当前状态: Phase 1~28 全部完成（v0.4.0），40 个原生 MCP 工具（黑白屏 100% 同步），实证 Benchmark 双轨引擎与 PR-01~08 生产存证账本已上线，全量测试 202 passed (0 failed, 1 ignored)
 
 ---
 
@@ -107,8 +107,10 @@
 | **Phase 24** | 「比较优势」思想源起补完与双 HTML 演说「地层剖面 / 工程蓝图」重构 + Playwright 渲染自检 | 待探讨 ISSUE #9 & #10 | ✅ **已完成** | 2026-11-19 13:05 |
 | **Phase 25** | Web UI 美化（白天工程蓝图 / 夜间深空双主题切换 + 面板去裸 JSON）与「路演演示剧场」三层故事化重构 | 待探讨 ISSUE #11 & #12 | ✅ **已完成** | 2026-11-19 13:50 |
 | **Phase 26** | 数据治理硬化（黑名单零逃逸/`restricted` 落地/噪音门禁）+ `LinksEngine` 真实依赖图谱闭环 + v0.4.0 四层全量对齐 | 规约 #2 #4 #5 #6 #10 #11 | ✅ **已完成** | 2026-11-19 14:50 |
+| **Phase 27** | 实证 Benchmark 双轨内核（8 大 A/B 负载 + 5 大微基准 + 生产效能存证账本 `PR-01~08` + 第 40 工具 `steward_benchmark` & CLI `bench`） | 待探讨 ISSUE #13 / 规约 #18 | ✅ **已完成** | 2026-11-19 15:54 |
+| **Phase 28** | Web「实证基准与效能账本」白屏工作台 + 40/40 Parity 矩阵 + 路演/PPT 实证联动 + 四层文档/SKILL 热部署 | 待探讨 ISSUE #13 / 规约 #16 #18 | ✅ **已完成** | 2026-11-19 15:54 |
 
-> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md) 与 [progress-phase21.md](progress-phase21.md)
+> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md) 与 [progress-phase27.md](progress-phase27.md)
 
 ---
 
@@ -156,7 +158,7 @@
 如果任务中断，重新启动时只需：
 1. 读取本文件 `src_doc/progress.md`；
 2. 查看当前全部完成的里程碑记录与下一阶段规划；
-3. 当前待启动的 Phase 19~20 详细任务与检查点位于 [roadmap-phase19-20.md](roadmap-phase19-20.md) 与 [progress-phase19.md](progress-phase19.md)，按标准流程串行推进。
+3. 当前待启动的 Phase 27~28 详细任务与检查点位于 [roadmap-phase27-28.md](roadmap-phase27-28.md) 与 [progress-phase27.md](progress-phase27.md)（架构规格见 [10-benchmark-spec.md](../design_doc/10-benchmark-spec.md)），按标准流程串行推进。
 
 🎉 **Phase 12（运行依赖显式化与可移植部署）已 100% 全量串行交付**：
 - 严格对齐 README.md ISSUE #10 四层贯通要求；

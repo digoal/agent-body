@@ -187,3 +187,41 @@ fn bench_duckdb_parquet_export() {
     assert_eq!(summary.row_count, 1000);
     assert!(elapsed_ms < 500, "1000条资产导出应在 500ms 内，实际: {} ms", elapsed_ms);
 }
+
+#[test]
+fn bench_empirical_mcp_ledger_and_ab_suite() {
+    use std::sync::Arc;
+    use agent_steward::api::mcp_tools::McpToolRegistry;
+    use agent_steward::benchmark::BenchmarkEngine;
+    use agent_steward::storage::{Storage, SqliteStorageProvider};
+
+    let provider = Arc::new(SqliteStorageProvider::open_in_memory().expect("sqlite"));
+    let storage = Storage::new(provider.clone());
+    let registry = McpToolRegistry::new(storage.clone());
+
+    // 1. 验证 MCP 工具已注册至 40 个且包含 steward_benchmark
+    let tools = registry.list_tools();
+    assert_eq!(tools.len(), 40, "原生 MCP 工具数应为 40 个");
+    assert!(tools.iter().any(|t| t.get("name").and_then(|v| v.as_str()) == Some("steward_benchmark")));
+
+    // 2. 调用典型工具并验证生产效能账本真实带出处入账
+    let _ = registry.call_tool("steward_brief", serde_json::json!({"query": "benchmark test", "budget_tokens": 800})).expect("brief");
+    let _ = registry.call_tool("steward_skill_route", serde_json::json!({"intent": "postgres", "budget_tokens": 600})).expect("route");
+
+    let ledger = storage.query_effectiveness_ledger("7d", None, 10).expect("ledger");
+    assert_eq!(ledger.total_events, 2, "两次 MCP 调用应生成 2 条账本记录");
+    assert!(ledger.total_rounds_saved >= 7, "brief(5) + route(2) 至少缩减 7 轮探查");
+    assert!(ledger.by_rule.iter().any(|r| r.provenance_rule == "PR-08"));
+    assert!(ledger.by_rule.iter().any(|r| r.provenance_rule == "PR-01"));
+
+    // 3. 通过第 40 工具运行 macro A/B 套件并验证 SHA-256 存证与清理
+    let run_out = registry.call_tool("steward_benchmark", serde_json::json!({
+        "action": "run",
+        "suite": "macro",
+        "save": true
+    })).expect("steward_benchmark run");
+    assert!(run_out.contains("report_sha256"));
+
+    let cleaned = BenchmarkEngine::reset_sandbox(provider.as_ref()).expect("reset");
+    assert_eq!(cleaned, 0, "未注入 bench:* 沙盒前缀时应 0 残留");
+}

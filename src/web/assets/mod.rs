@@ -36,7 +36,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       </div>
 
       <div class="topbar-actions">
-        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 39/39 能力对齐矩阵">✅ 39/39 对齐</span>
+        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 40/40 能力对齐矩阵">✅ 40/40 对齐</span>
         <span id="sse-badge" class="sse-pill connecting">SSE 连接中</span>
         <button id="btn-theme-toggle" class="btn btn-theme" title="切换白天工程蓝图 / 夜间深空指挥舱 (快捷键 T)">☀️ 白天蓝图</button>
         <button id="btn-toggle-mirror" class="btn btn-ghost" title="展开/收起黑屏命令镜像器">⌨️ 黑屏镜像</button>
@@ -70,6 +70,10 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
         <button class="nav-btn nav-btn-demo" data-view="demo">
           <span class="nav-ico">🎬</span>
           <span>路演演示剧场</span>
+        </button>
+        <button class="nav-btn" data-view="benchmark">
+          <span class="nav-ico">📊</span>
+          <span>实证基准与账本</span>
         </button>
         <div class="sidenav-footer">
           <a href="/deck" target="_blank" class="btn btn-ghost btn-xs sidenav-link">📽️ 路演 PPT (/deck)</a>
@@ -258,7 +262,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
               <button class="subtab" data-sub="memory">🧠 长期记忆与审计</button>
               <button class="subtab" data-sub="analytics">🔥 DuckDB 分析与导出</button>
               <button class="subtab" data-sub="gc">🧹 宿主自洁 &amp; 变更流</button>
-              <button class="subtab" data-sub="mesh">🌐 Mesh · 预检 · 39/39 对齐矩阵</button>
+              <button class="subtab" data-sub="mesh">🌐 Mesh · 预检 · 40/40 对齐矩阵</button>
             </div>
           </div>
           <div id="gov-panel-brief" class="scroll-panel">
@@ -415,7 +419,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
               <div class="roi-card"><span class="k-label">全量 SKILL / MCP / 服务</span><strong id="roi-eco" class="c-cyan">-</strong></div>
               <div class="roi-card"><span class="k-label">宿主机 CLI 工具 / 资产</span><strong id="roi-tools">-</strong></div>
               <div class="roi-card"><span class="k-label">事实图谱 (节点 / 边)</span><strong id="roi-graph" class="c-purple">-</strong></div>
-              <div class="roi-card"><span class="k-label">黑白屏同步认证</span><strong id="roi-parity" class="c-orange">39/39 (100%)</strong></div>
+              <div class="roi-card"><span class="k-label">黑白屏同步认证</span><strong id="roi-parity" class="c-orange">40/40 (100%)</strong></div>
             </div>
 
             <div class="demo-control-bar mt-12">
@@ -429,6 +433,74 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 
             <div id="demo-stage" class="demo-stage mt-12">
               <div class="empty">点击上方任意路演剧目，或点击「▶ 自动巡航路演」实时驱动真实 Rust 引擎对比演示</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 视图 7: 实证 Benchmark 对照评测与生产效能存证账本 (Phase 28) -->
+        <section id="view-benchmark" class="view">
+          <div class="scroll-panel">
+            <div class="demo-roi-strip">
+              <div class="roi-card"><span class="k-label">生产累计节省 Token</span><strong id="bench-kpi-tokens" class="c-green">-</strong></div>
+              <div class="roi-card"><span class="k-label">累计缩减探索轮次</span><strong id="bench-kpi-rounds" class="c-cyan">-</strong></div>
+              <div class="roi-card"><span class="k-label">事前拦截风险/冲突</span><strong id="bench-kpi-hazards" class="c-orange">-</strong></div>
+              <div class="roi-card"><span class="k-label">阻断垃圾噪音文件</span><strong id="bench-kpi-noise" class="c-purple">-</strong></div>
+              <div class="roi-card"><span class="k-label">最新 A/B 综合加速</span><strong id="bench-kpi-speedup" class="c-green">-</strong></div>
+            </div>
+
+            <div class="view-toolbar mt-12" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);">
+              <div class="toolbar-left">
+                <select id="bench-suite-select" class="input" style="width:170px;">
+                  <option value="full">全量套件 (W1~W8 + M1~M5)</option>
+                  <option value="macro">宏观业务 A/B (W1~W8)</option>
+                  <option value="micro">内核微基准 SLA (M1~M5)</option>
+                  <option value="W1">W1 · 宿主工具发现</option>
+                  <option value="W2">W2 · 端口防撞选址</option>
+                  <option value="W3">W3 · 分级扫描阻断</option>
+                  <option value="W4">W4 · 放置合规门禁</option>
+                  <option value="W5">W5 · 爆炸半径与断链</option>
+                  <option value="W6">W6 · 多 Agent 死锁破局</option>
+                  <option value="W7">W7 · 百级 SKILL 路由</option>
+                  <option value="W8">W8 · 冷启动态势简报</option>
+                </select>
+                <button id="btn-bench-run" class="btn btn-primary btn-xs">▶ 真机运行 A/B 基准</button>
+                <select id="bench-window-select" class="input" style="width:120px;">
+                  <option value="24h">近 24 小时</option>
+                  <option value="7d" selected>近 7 天</option>
+                  <option value="30d">近 30 天</option>
+                  <option value="all">全部历史</option>
+                </select>
+                <button id="btn-bench-refresh" class="btn btn-ghost btn-xs">🔄 刷新账本</button>
+              </div>
+              <div class="toolbar-right">
+                <span id="bench-sha-badge" class="badge">SHA-256: 待运行</span>
+              </div>
+            </div>
+
+            <div class="panel-grid-2 mt-12">
+              <div class="card">
+                <div class="item-top"><strong>🧪 实验室 A/B 对照实测 (Without vs With Steward)</strong><span id="bench-sla-badge" class="badge">-</span></div>
+                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 8 大负载对照实测</div></div>
+              </div>
+              <div class="card">
+                <div class="item-top"><strong>⚡ 5 大内核微基准 SLA & 跨版本回归比对</strong></div>
+                <div id="bench-micro-box" class="mt-8"><div class="empty">暂无微基准数据</div></div>
+                <div class="mt-12" style="border-top:1px solid var(--border);padding-top:10px;">
+                  <div class="toolbar-left">
+                    <select id="bench-cmp-a" class="input" style="width:140px;"></select>
+                    <span class="muted-text">vs</span>
+                    <select id="bench-cmp-b" class="input" style="width:140px;"></select>
+                    <button id="btn-bench-compare" class="btn btn-ghost btn-xs">🔁 回归对比</button>
+                  </div>
+                  <div id="bench-compare-box" class="mt-8"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top"><strong>📒 生产运行态效能存证账本（带 PR-01~PR-08 确定性溯源依据）</strong></div>
+              <div id="bench-rules-strip" class="mt-8"></div>
+              <div id="bench-ledger-list" class="mt-8"><div class="empty">暂无生产流水记录</div></div>
             </div>
           </div>
         </section>
@@ -1151,6 +1223,7 @@ function switchView(view) {
   if (view === "ecosystem" && !state.ecoData) loadEcosystem();
   if (view === "governance" && !state.govData) loadGovernance();
   if (view === "demo") loadDemoTheater();
+  if (view === "benchmark") loadBenchmarkWorkbench();
 }
 
 function bindNavigation() {
@@ -2458,6 +2531,16 @@ async function loadDemoTheater() {
     document.getElementById("roi-eco").innerText = `${roi.skills_count} / ${roi.mcp_servers_count} / ${roi.external_services_count}`;
     document.getElementById("roi-tools").innerText = `${roi.capabilities_installed} 工具 / ${roi.managed_assets_count} 资产`;
     document.getElementById("roi-graph").innerText = `${roi.fact_nodes_count} 节点 / ${roi.fact_edges_count} 边`;
+    const parityEl = document.getElementById("roi-parity");
+    if (parityEl) {
+      const ledgerHint = roi.ledger_tokens_saved > 0
+        ? ` · 账本实省 ${Number(roi.ledger_tokens_saved).toLocaleString()} tok`
+        : "";
+      const speedupHint = roi.latest_benchmark_speedup
+        ? ` · 实测 ${Number(roi.latest_benchmark_speedup).toFixed(2)}x`
+        : "";
+      parityEl.innerText = `40/40 (100%)${speedupHint}${ledgerHint}`;
+    }
 
     const btnWrap = document.getElementById("demo-scene-buttons");
     if (btnWrap) {
@@ -2800,6 +2883,166 @@ document.addEventListener("keydown", (e) => {
     toggleDemoCruise();
   }
 });
+
+/* ─── Phase 28: 实证 Benchmark 与效能账本工作台 JS ─── */
+async function loadBenchmarkWorkbench() {
+  mirrorBlackScreen("agent-steward bench ledger --window 7d", "steward_benchmark", { action: "ledger", window: "7d" });
+  await Promise.all([loadBenchmarkReport(), loadBenchmarkLedger()]);
+  const runBtn = document.getElementById("btn-bench-run");
+  if (runBtn && !runBtn.dataset.bound) {
+    runBtn.dataset.bound = "1";
+    runBtn.addEventListener("click", runBenchmarkSuiteFromUi);
+    document.getElementById("btn-bench-refresh")?.addEventListener("click", loadBenchmarkLedger);
+    document.getElementById("bench-window-select")?.addEventListener("change", loadBenchmarkLedger);
+    document.getElementById("btn-bench-compare")?.addEventListener("click", compareBenchmarkRunsFromUi);
+  }
+}
+
+async function runBenchmarkSuiteFromUi() {
+  const suite = document.getElementById("bench-suite-select")?.value || "full";
+  const box = document.getElementById("bench-workloads-box");
+  if (box) box.innerHTML = `<div class="empty">⏳ 正在宿主机真机运行 ${esc(suite)} A/B 对照基准...</div>`;
+  mirrorBlackScreen(`agent-steward bench run --suite ${suite}`, "steward_benchmark", { action: "run", suite, save: true });
+  try {
+    const rep = await apiPost("/api/v1/benchmark/run", { suite, save: true });
+    renderBenchmarkReportPayload(rep);
+    await loadBenchmarkReport();
+  } catch (e) {
+    if (box) box.innerHTML = `<div class="empty">运行失败: ${esc(e.message)}</div>`;
+  }
+}
+
+async function loadBenchmarkReport() {
+  try {
+    const data = await apiGet("/api/v1/benchmark/report");
+    if (data.latest) {
+      renderBenchmarkReportPayload(data.latest);
+    }
+    const hist = data.history || [];
+    const selA = document.getElementById("bench-cmp-a");
+    const selB = document.getElementById("bench-cmp-b");
+    if (selA && selB) {
+      const opts = hist.map((h) => `<option value="${esc(h.run_id)}">${esc(h.run_id.slice(0, 14))} (v${esc(h.app_version)} · ${Number(h.overall_token_savings_pct || 0).toFixed(1)}%)</option>`).join("");
+      selA.innerHTML = opts;
+      selB.innerHTML = opts;
+      if (hist.length >= 2) selB.selectedIndex = 1;
+    }
+  } catch (_) {}
+}
+
+function renderBenchmarkReportPayload(rep) {
+  const sp = document.getElementById("bench-kpi-speedup");
+  const sha = document.getElementById("bench-sha-badge");
+  const sla = document.getElementById("bench-sla-badge");
+  if (sp) sp.innerText = `${Number(rep.overall_speedup_factor || 1).toFixed(2)}x`;
+  if (sha) sha.innerText = `SHA-256: ${String(rep.report_sha256 || "").slice(0, 16)}...`;
+  if (sla) {
+    sla.innerText = rep.sla_passed ? "✅ SLA PASS" : "❌ SLA FAIL";
+    sla.className = rep.sla_passed ? "badge badge-ok" : "badge badge-err";
+  }
+
+  const wbox = document.getElementById("bench-workloads-box");
+  const workloads = rep.workloads || [];
+  if (wbox) {
+    if (workloads.length === 0) {
+      wbox.innerHTML = `<div class="empty">该批次无宏观负载数据</div>`;
+    } else {
+      wbox.innerHTML = workloads.map((w) => {
+        const pct = Math.max(0, Math.min(100, Number(w.token_savings_pct || 0)));
+        return `<div class="card" style="padding:10px;margin-bottom:8px;">
+          <div class="item-top">
+            <strong>${esc(w.id)} · ${esc(w.title)}</strong>
+            <span class="badge ${w.sla_passed ? "badge-ok" : "badge-err"}">${w.sla_passed ? "PASS" : "FAIL"} · 省 ${pct.toFixed(1)}%</span>
+          </div>
+          <div class="muted-text" style="font-size:12px;margin-top:4px;">${esc(w.evidence_detail)}</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:6px;font-size:11px;">
+            <span style="min-width:95px;">基线 ${w.baseline_tokens} tok</span>
+            <div style="flex:1;height:6px;background:var(--border);border-radius:4px;overflow:hidden;">
+              <div style="width:${(100 - pct).toFixed(1)}%;height:100%;background:var(--green);"></div>
+            </div>
+            <span style="min-width:95px;text-align:right;">管家 ${w.steward_tokens} tok</span>
+          </div>
+        </div>`;
+      }).join("");
+    }
+  }
+
+  const mbox = document.getElementById("bench-micro-box");
+  const micros = rep.micro_benchmarks || [];
+  if (mbox) {
+    if (micros.length === 0) {
+      mbox.innerHTML = `<div class="empty">该批次未运行内核微基准</div>`;
+    } else {
+      mbox.innerHTML = micros.map((m) => `
+        <div class="item-top" style="padding:6px 0;border-bottom:1px dashed var(--border);font-size:12px;">
+          <span><strong>${esc(m.id)}</strong> ${esc(m.name)}</span>
+          <span class="mono">${m.avg_us} μs (P95: ${m.p95_us} / SLA &lt; ${m.sla_limit_us}) ${m.passed ? "✅" : "❌"}</span>
+        </div>
+      `).join("");
+    }
+  }
+}
+
+async function loadBenchmarkLedger() {
+  const win = document.getElementById("bench-window-select")?.value || "7d";
+  try {
+    const sum = await apiGet(`/api/v1/benchmark/ledger?window=${encodeURIComponent(win)}&limit=30`);
+    document.getElementById("bench-kpi-tokens").innerText = `${Number(sum.total_tokens_saved || 0).toLocaleString()} tok`;
+    document.getElementById("bench-kpi-rounds").innerText = `${Number(sum.total_rounds_saved || 0)} 轮`;
+    document.getElementById("bench-kpi-hazards").innerText = `${Number(sum.total_hazards_intercepted || 0)} 次`;
+    document.getElementById("bench-kpi-noise").innerText = `${Number(sum.total_noise_blocked || 0)} 个`;
+
+    const rStrip = document.getElementById("bench-rules-strip");
+    if (rStrip) {
+      const rules = sum.by_rule || [];
+      rStrip.innerHTML = rules.map((r) => `<span class="badge" style="margin-right:6px;margin-bottom:4px;">${esc(r.provenance_rule)}: ${r.event_count}次 · 省${r.tokens_saved} tok</span>`).join("");
+    }
+
+    const list = document.getElementById("bench-ledger-list");
+    if (list) {
+      const evs = sum.recent_events || [];
+      if (evs.length === 0) {
+        list.innerHTML = `<div class="empty">该时间窗内尚无生产效能存证流水（调用任意 MCP/扫描后自动入账）</div>`;
+      } else {
+        list.innerHTML = evs.map((e) => `
+          <div class="item-top" style="padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;">
+            <div>
+              <span class="badge badge-ok">${esc(e.provenance_rule)}</span>
+              <strong class="mono">${esc(e.tool_or_action)}</strong>
+              <span class="muted-text">(${esc(e.source_channel)})</span>
+              <div class="muted-text" style="margin-top:2px;">${esc(e.evidence_summary)}</div>
+            </div>
+            <div class="mono" style="text-align:right;white-space:nowrap;">
+              <span style="color:var(--green);">-${e.tokens_saved} tok</span> · ${e.elapsed_us} μs
+            </div>
+          </div>
+        `).join("");
+      }
+    }
+  } catch (e) {
+    const list = document.getElementById("bench-ledger-list");
+    if (list) list.innerHTML = `<div class="empty">账本加载失败: ${esc(e.message)}</div>`;
+  }
+}
+
+async function compareBenchmarkRunsFromUi() {
+  const a = document.getElementById("bench-cmp-a")?.value;
+  const b = document.getElementById("bench-cmp-b")?.value;
+  const box = document.getElementById("bench-compare-box");
+  if (!a || !b) {
+    if (box) box.innerHTML = `<div class="muted-text">需要至少 2 条历史运行记录才能比对</div>`;
+    return;
+  }
+  try {
+    const diff = await apiGet(`/api/v1/benchmark/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`);
+    if (box) {
+      box.innerHTML = `<div class="badge ${diff.has_regression ? "badge-err" : "badge-ok"}">${diff.has_regression ? "⚠️ 检测到性能/压缩率回归" : "✅ 无回归"}</div>
+        <div class="muted-text mt-4" style="font-size:12px;">加速比: ${Number(diff.speedup_a).toFixed(2)}x → ${Number(diff.speedup_b).toFixed(2)}x · Token 节省: ${Number(diff.token_savings_a_pct).toFixed(1)}% → ${Number(diff.token_savings_b_pct).toFixed(1)}%</div>`;
+    }
+  } catch (e) {
+    if (box) box.innerHTML = `<div class="muted-text">对比失败: ${esc(e.message)}</div>`;
+  }
+}
 "##;
 
 pub fn serve_index() -> HttpResponse {

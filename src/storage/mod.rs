@@ -361,6 +361,42 @@ impl Storage {
     pub fn gc_expired_lock_waits(&self) -> Result<usize> {
         self.provider.gc_expired_lock_waits()
     }
+
+    // ─── Phase 27: Empirical Benchmark & Effectiveness Ledger ─────────
+    pub fn insert_benchmark_run(&self, run: &BenchmarkRunRecord) -> Result<()> {
+        self.provider.insert_benchmark_run(run)
+    }
+
+    pub fn get_benchmark_run(&self, run_id: &str) -> Result<Option<BenchmarkRunRecord>> {
+        self.provider.get_benchmark_run(run_id)
+    }
+
+    pub fn list_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>> {
+        self.provider.list_benchmark_runs(limit)
+    }
+
+    pub fn insert_effectiveness_event(&self, event: &EffectivenessLedgerRecord) -> Result<()> {
+        self.provider.insert_effectiveness_event(event)
+    }
+
+    pub fn query_effectiveness_ledger(&self, window: &str, tool_filter: Option<&str>, limit: usize) -> Result<EffectivenessSummary> {
+        self.provider.query_effectiveness_ledger(window, tool_filter, limit)
+    }
+
+    pub fn delete_bench_sandbox_records(&self) -> Result<usize> {
+        self.provider.delete_bench_sandbox_records()
+    }
+}
+
+/// 根据时间窗标识 ("24h" | "7d" | "30d" | "all") 返回统一 RFC3339 截止时间
+pub fn window_to_cutoff_iso(window: &str) -> Option<String> {
+    let now = chrono::Utc::now();
+    match window {
+        "24h" | "1d" => Some((now - chrono::Duration::hours(24)).to_rfc3339()),
+        "7d" => Some((now - chrono::Duration::days(7)).to_rfc3339()),
+        "30d" => Some((now - chrono::Duration::days(30)).to_rfc3339()),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -600,5 +636,87 @@ mod tests {
         // 4. 验证根据名字模糊查找节点
         let found = storage.find_fact_nodes_by_name("steward").expect("find nodes");
         assert_eq!(found.len(), 2);
+    }
+
+    #[test]
+    fn test_benchmark_runs_and_effectiveness_ledger() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let now = chrono::Utc::now().to_rfc3339();
+
+        let run = BenchmarkRunRecord {
+            run_id: "bench:test-run-1".to_string(),
+            suite_name: "bench:full".to_string(),
+            git_commit: "9ba7bca".to_string(),
+            app_version: "0.4.0".to_string(),
+            host_fingerprint: serde_json::json!({"os": "linux", "cpus": 8}),
+            workload_count: 8,
+            total_baseline_tokens: 10000,
+            total_steward_tokens: 500,
+            overall_token_savings_pct: 95.0,
+            overall_speedup_factor: 12.5,
+            total_hazards_intercepted: 4,
+            total_noise_blocked: 240,
+            sla_passed: true,
+            results_json: serde_json::json!([{"id": "W1", "passed": true}]),
+            report_sha256: "abc123".to_string(),
+            duration_ms: 42,
+            created_at: now.clone(),
+        };
+        storage.insert_benchmark_run(&run).expect("insert run");
+
+        let fetched = storage.get_benchmark_run("bench:test-run-1").expect("get run").expect("exists");
+        assert_eq!(fetched.workload_count, 8);
+        assert!(fetched.sla_passed);
+        assert_eq!(storage.list_benchmark_runs(10).expect("list runs").len(), 1);
+
+        let ev1 = EffectivenessLedgerRecord {
+            event_id: "ev-1".to_string(),
+            session_id: "sess-1".to_string(),
+            source_channel: "mcp".to_string(),
+            tool_or_action: "steward_skill_route".to_string(),
+            provenance_rule: "PR-01".to_string(),
+            baseline_tokens: 4000,
+            steward_tokens: 300,
+            tokens_saved: 3700,
+            baseline_rounds: 3,
+            steward_rounds: 1,
+            rounds_saved: 2,
+            hazard_intercepted: 0,
+            noise_blocked: 0,
+            elapsed_us: 450,
+            evidence_summary: "Routed 3/121 skills".to_string(),
+            created_at: now.clone(),
+        };
+        let ev2 = EffectivenessLedgerRecord {
+            event_id: "ev-2".to_string(),
+            session_id: "bench:sess".to_string(),
+            source_channel: "mcp".to_string(),
+            tool_or_action: "steward_hook_pre".to_string(),
+            provenance_rule: "PR-03".to_string(),
+            baseline_tokens: 600,
+            steward_tokens: 120,
+            tokens_saved: 480,
+            baseline_rounds: 3,
+            steward_rounds: 1,
+            rounds_saved: 2,
+            hazard_intercepted: 1,
+            noise_blocked: 0,
+            elapsed_us: 180,
+            evidence_summary: "Blocked port 8756".to_string(),
+            created_at: now,
+        };
+        storage.insert_effectiveness_event(&ev1).expect("insert ev1");
+        storage.insert_effectiveness_event(&ev2).expect("insert ev2");
+
+        let summary = storage.query_effectiveness_ledger("7d", None, 10).expect("query ledger");
+        assert_eq!(summary.total_events, 2);
+        assert_eq!(summary.total_tokens_saved, 4180);
+        assert_eq!(summary.total_hazards_intercepted, 1);
+        assert_eq!(summary.by_rule.len(), 2);
+
+        let removed = storage.delete_bench_sandbox_records().expect("delete sandbox");
+        assert_eq!(removed, 2); // run + ev2
+        let after = storage.query_effectiveness_ledger("7d", None, 10).expect("query after");
+        assert_eq!(after.total_events, 1);
     }
 }

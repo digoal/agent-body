@@ -222,3 +222,43 @@ CREATE TABLE IF NOT EXISTS lock_wait_queue (
     timeout_at    VARCHAR NOT NULL,
     status        VARCHAR DEFAULT 'waiting'
 );
+
+-- ─── Phase 27: 实证 Benchmark 与生产效能存证账本 ───────────────────────
+CREATE TABLE IF NOT EXISTS benchmark_runs (
+    run_id                    VARCHAR PRIMARY KEY,
+    suite_name                VARCHAR NOT NULL,
+    git_commit                VARCHAR NOT NULL,
+    app_version               VARCHAR NOT NULL,
+    host_fingerprint          VARCHAR NOT NULL,
+    workload_count            INTEGER NOT NULL,
+    total_baseline_tokens     BIGINT NOT NULL,
+    total_steward_tokens      BIGINT NOT NULL,
+    overall_token_savings_pct DOUBLE NOT NULL,
+    overall_speedup_factor    DOUBLE NOT NULL,
+    total_hazards_intercepted BIGINT NOT NULL,
+    total_noise_blocked       BIGINT NOT NULL,
+    sla_passed                BOOLEAN NOT NULL,
+    results_json              VARCHAR NOT NULL,
+    report_sha256             VARCHAR NOT NULL,
+    duration_ms               BIGINT NOT NULL,
+    created_at                VARCHAR NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS effectiveness_ledger (
+    event_id           VARCHAR PRIMARY KEY,
+    session_id         VARCHAR DEFAULT 'default',
+    source_channel     VARCHAR NOT NULL,
+    tool_or_action     VARCHAR NOT NULL,
+    provenance_rule    VARCHAR NOT NULL,
+    baseline_tokens    BIGINT DEFAULT 0,
+    steward_tokens     BIGINT DEFAULT 0,
+    tokens_saved       BIGINT DEFAULT 0,
+    baseline_rounds    BIGINT DEFAULT 1,
+    steward_rounds     BIGINT DEFAULT 1,
+    rounds_saved       BIGINT DEFAULT 0,
+    hazard_intercepted BIGINT DEFAULT 0,
+    noise_blocked      BIGINT DEFAULT 0,
+    elapsed_us         BIGINT DEFAULT 0,
+    evidence_summary   VARCHAR NOT NULL,
+    created_at         VARCHAR NOT NULL
+);

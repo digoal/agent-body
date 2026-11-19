@@ -25,6 +25,7 @@ thiserror = "1.0"
 # 时间与唯一 ID
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.8", features = ["v4", "serde"] }
+sha2 = "0.11"
 
 # SQLite 嵌入式存储 (含 FTS5 全文检索)
 rusqlite = { version = "0.31", features = ["bundled", "chrono"] }

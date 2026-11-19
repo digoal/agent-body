@@ -74,6 +74,22 @@ pub struct RoiReport {
     pub placement_rules_count: usize,
     pub capabilities_installed: usize,
     pub probe_elapsed_us: u128,
+    #[serde(default)]
+    pub ledger_total_events: usize,
+    #[serde(default)]
+    pub ledger_tokens_saved: i64,
+    #[serde(default)]
+    pub ledger_rounds_saved: i64,
+    #[serde(default)]
+    pub ledger_hazards_intercepted: i64,
+    #[serde(default)]
+    pub ledger_noise_blocked: i64,
+    #[serde(default)]
+    pub latest_benchmark_run_id: Option<String>,
+    #[serde(default)]
+    pub latest_benchmark_sha256: Option<String>,
+    #[serde(default)]
+    pub latest_benchmark_speedup: Option<f64>,
 }
 
 pub struct DemoEngine;
@@ -189,6 +205,12 @@ impl DemoEngine {
             .filter(|c| c.installed)
             .count();
 
+        let ledger_summary = storage.query_effectiveness_ledger("all", None, 5).ok();
+        let latest_run = storage
+            .list_benchmark_runs(1)
+            .ok()
+            .and_then(|mut v| if v.is_empty() { None } else { Some(v.remove(0)) });
+
         Ok(RoiReport {
             skills_count,
             skills_full_tokens,
@@ -202,6 +224,14 @@ impl DemoEngine {
             placement_rules_count,
             capabilities_installed,
             probe_elapsed_us: t0.elapsed().as_micros(),
+            ledger_total_events: ledger_summary.as_ref().map(|s| s.total_events).unwrap_or(0),
+            ledger_tokens_saved: ledger_summary.as_ref().map(|s| s.total_tokens_saved).unwrap_or(0),
+            ledger_rounds_saved: ledger_summary.as_ref().map(|s| s.total_rounds_saved).unwrap_or(0),
+            ledger_hazards_intercepted: ledger_summary.as_ref().map(|s| s.total_hazards_intercepted).unwrap_or(0),
+            ledger_noise_blocked: ledger_summary.as_ref().map(|s| s.total_noise_blocked).unwrap_or(0),
+            latest_benchmark_run_id: latest_run.as_ref().map(|r| r.run_id.clone()),
+            latest_benchmark_sha256: latest_run.as_ref().map(|r| r.report_sha256.clone()),
+            latest_benchmark_speedup: latest_run.map(|r| r.overall_speedup_factor),
         })
     }
 

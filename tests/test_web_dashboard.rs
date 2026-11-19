@@ -77,8 +77,8 @@ async fn test_web_dashboard_e2e_lifecycle() {
     assert!(resp_index.contains("view-governance"));
     assert!(resp_index.contains("data-theme"));
     assert!(resp_index.contains("btn-theme-toggle"));
-    assert!(resp_index.contains("v0.3.4"));
-    assert!(resp_index.contains("39/39 对齐"));
+    assert!(resp_index.contains("v0.4.0"));
+    assert!(resp_index.contains("40/40 对齐"));
 
     // 3.2 静态 CSS (验证包含白天与夜间双色调语义变量)
     let resp_css = send_http_request("127.0.0.1", bound_port, "GET /app.css HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
@@ -154,6 +154,9 @@ Content-Length: 75\r\n\r\n\
         "/api/v1/parity/matrix",
         "/api/v1/demo/scenarios",
         "/api/v1/demo/roi",
+        "/api/v1/benchmark/workloads",
+        "/api/v1/benchmark/report",
+        "/api/v1/benchmark/ledger?window=7d",
         "/deck",
         "/presentation",
     ] {
@@ -161,6 +164,23 @@ Content-Length: 75\r\n\r\n\
         let resp = send_http_request("127.0.0.1", bound_port, &req).await;
         assert!(resp.contains("HTTP/1.1 200 OK"), "端点 {} 应返回 200 OK", ep);
     }
+
+    // 4.8.1 验证 40/40 黑白屏同步矩阵覆盖率 = 100%
+    let resp_parity = send_http_request("127.0.0.1", bound_port, "GET /api/v1/parity/matrix HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
+    assert!(resp_parity.contains("\"total_mcp_tools\":40"));
+    assert!(resp_parity.contains("\"synced_count\":40"));
+    assert!(resp_parity.contains("\"coverage_pct\":100.0"));
+
+    // 4.8.2 验证 Benchmark 跑批与重置 API
+    let bench_body = "{\"suite\":\"macro\",\"save\":true}";
+    let bench_req = format!(
+        "POST /api/v1/benchmark/run HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+        bench_body.len(),
+        bench_body
+    );
+    let resp_bench = send_http_request("127.0.0.1", bound_port, &bench_req).await;
+    assert!(resp_bench.contains("HTTP/1.1 200 OK"));
+    assert!(resp_bench.contains("\"report_sha256\""));
 
     // 4.9 验证路演剧场执行与沙盒复位 E2E
     let resp_scenarios = send_http_request("127.0.0.1", bound_port, "GET /api/v1/demo/scenarios HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;

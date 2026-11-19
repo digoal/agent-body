@@ -641,12 +641,45 @@ impl McpToolRegistry {
                         "scenario_id": { "type": "string", "description": "剧目 ID (scene-1 ~ scene-6，action=run 时必填)" }
                     }
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_benchmark",
+                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（Phase 27）：运行 8 大 A/B 对照负载与 5 大微基准、查看带 SHA-256 签名的实证报告、审计生产效能账本 (PR-01~PR-08) 或跨版本回归比对。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["workloads", "run", "report", "ledger", "compare", "export", "reset"], "default": "report" },
+                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | W1~W8" },
+                        "save": { "type": "boolean", "default": true },
+                        "run_id": { "type": "string" },
+                        "run_a": { "type": "string" },
+                        "run_b": { "type": "string" },
+                        "window": { "type": "string", "enum": ["24h", "7d", "30d", "all"], "default": "7d" },
+                        "tool_filter": { "type": "string" },
+                        "format": { "type": "string", "enum": ["json", "markdown", "csv"], "default": "json" },
+                        "limit": { "type": "integer", "default": 20 }
+                    }
+                }
             })
         ]
     }
 
-    /// 执行具体工具调用
+    /// 执行具体工具调用（带生产效能存证自动记账）
     pub fn call_tool(&self, name: &str, args: Value) -> Result<String> {
+        let t0 = std::time::Instant::now();
+        let res = self.call_tool_inner(name, args);
+        if let Ok(ref out) = res {
+            crate::benchmark::ledger::EffectivenessLedger::record_mcp_call(
+                self.storage.provider().as_ref(),
+                name,
+                out,
+                t0.elapsed().as_micros() as i64,
+            );
+        }
+        res
+    }
+
+    fn call_tool_inner(&self, name: &str, args: Value) -> Result<String> {
         match name {
             "steward_brief" => {
                 let provider = Arc::new(crate::memory::builtin_provider::BuiltinMemoryProvider::new(self.storage.clone()));
@@ -1303,6 +1336,93 @@ impl McpToolRegistry {
                         }))?)
                     }
                     _ => Ok(serde_json::to_string_pretty(&DemoEngine::list_scenarios())?),
+                }
+            }
+
+            "steward_benchmark" => {
+                use crate::benchmark::ledger::EffectivenessLedger;
+                use crate::benchmark::provenance::ProvenanceRule;
+                use crate::benchmark::report::{
+                    render_csv_report, render_markdown_report, BenchmarkReportPayload,
+                };
+                use crate::benchmark::workloads::list_workload_specs;
+                use crate::benchmark::BenchmarkEngine;
+
+                let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("report");
+                match action {
+                    "workloads" => Ok(serde_json::to_string_pretty(&serde_json::json!({
+                        "workloads": list_workload_specs(),
+                        "provenance_rules": ProvenanceRule::list_all(),
+                    }))?),
+                    "run" => {
+                        let suite = args.get("suite").and_then(|v| v.as_str()).unwrap_or("full");
+                        let save = args.get("save").and_then(|v| v.as_bool()).unwrap_or(true);
+                        let report = BenchmarkEngine::run_suite(
+                            self.storage.provider().clone(),
+                            suite,
+                            save,
+                            None,
+                        )?;
+                        Ok(serde_json::to_string_pretty(&report)?)
+                    }
+                    "report" => {
+                        let run_id = args.get("run_id").and_then(|v| v.as_str());
+                        let format = args.get("format").and_then(|v| v.as_str()).unwrap_or("json");
+                        let rec_opt = if let Some(id) = run_id {
+                            self.storage.get_benchmark_run(id)?
+                        } else {
+                            self.storage.list_benchmark_runs(1)?.into_iter().next()
+                        };
+                        let Some(rec) = rec_opt else {
+                            return Ok(serde_json::to_string_pretty(&serde_json::json!({
+                                "status": "empty",
+                                "message": "尚无基准评测记录，请先执行 steward_benchmark(action='run')"
+                            }))?);
+                        };
+                        let payload = BenchmarkReportPayload::from_record(&rec);
+                        match format {
+                            "markdown" => render_markdown_report(&payload),
+                            "csv" => render_csv_report(&payload),
+                            _ => Ok(serde_json::to_string_pretty(&payload)?),
+                        }
+                    }
+                    "ledger" => {
+                        let window = args.get("window").and_then(|v| v.as_str()).unwrap_or("7d");
+                        let tool_filter = args.get("tool_filter").and_then(|v| v.as_str());
+                        let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(20) as usize;
+                        let summary = self.storage.query_effectiveness_ledger(window, tool_filter, limit)?;
+                        Ok(serde_json::to_string_pretty(&summary)?)
+                    }
+                    "compare" => {
+                        let a_id = args.get("run_a").and_then(|v| v.as_str()).unwrap_or("");
+                        let b_id = args.get("run_b").and_then(|v| v.as_str()).unwrap_or("");
+                        let Some(a) = self.storage.get_benchmark_run(a_id)? else {
+                            bail!("未找到基准批次 run_a: {}", a_id);
+                        };
+                        let Some(b) = self.storage.get_benchmark_run(b_id)? else {
+                            bail!("未找到基准批次 run_b: {}", b_id);
+                        };
+                        let diff = EffectivenessLedger::compare_runs(&a, &b);
+                        Ok(serde_json::to_string_pretty(&diff)?)
+                    }
+                    "export" => {
+                        let format = args.get("format").and_then(|v| v.as_str()).unwrap_or("markdown");
+                        let rec_opt = self.storage.list_benchmark_runs(1)?.into_iter().next();
+                        let Some(rec) = rec_opt else {
+                            bail!("尚无基准评测记录可导出");
+                        };
+                        let payload = BenchmarkReportPayload::from_record(&rec);
+                        match format {
+                            "csv" => render_csv_report(&payload),
+                            "json" => Ok(serde_json::to_string_pretty(&payload)?),
+                            _ => render_markdown_report(&payload),
+                        }
+                    }
+                    "reset" => {
+                        let cleaned = BenchmarkEngine::reset_sandbox(self.storage.provider().as_ref())?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({ "cleaned": cleaned }))?)
+                    }
+                    other => bail!("未知 benchmark action: {}", other),
                 }
             }
 

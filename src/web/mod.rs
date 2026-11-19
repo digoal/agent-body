@@ -380,8 +380,8 @@ mod tests {
         assert_eq!(resp.status, StatusCode::OK);
         let json: serde_json::Value = serde_json::from_slice(&resp.body).unwrap();
         let data = &json["data"];
-        assert_eq!(data["total_mcp_tools"].as_u64(), Some(39));
-        assert_eq!(data["synced_count"].as_u64(), Some(39));
+        assert_eq!(data["total_mcp_tools"].as_u64(), Some(40));
+        assert_eq!(data["synced_count"].as_u64(), Some(40));
         assert_eq!(data["missing_count"].as_u64(), Some(0));
         assert_eq!(data["coverage_pct"].as_f64(), Some(100.0));
     }

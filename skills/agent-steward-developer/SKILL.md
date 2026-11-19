@@ -51,7 +51,8 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/daemon/` | 常驻守护进程主循环与定时轮询、依赖预检 | 优雅信号捕获与 Systemd 托管 |
 | ├── `src/links/` | 关联拓扑图、Mermaid 导出、断链审计与 CodeGraph 桥接 | AST 引用提取与宏微联邦 |
 | ├── `src/changes/` | 变更历史回溯与 Agent 会话简报 | 生成开工 markdown |
-| └── `src/api/` | 39 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI/Web 1:1:1 映射 |
+| └── `src/api/` | 40 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI/Web 1:1:1 映射 |
+| └── `src/benchmark/` | 双轨实证 Benchmark 引擎（W1~W8 + M1~M5 + PR-01~08 账本） | 必须真机实测与 SHA-256 存证 |
 | └── `src/demo/` | 路演沙盒引擎（6 大黄金剧目、ROI 核算、`demo:*` 隔离） | 严禁假数据，必须真引擎实跑 |
 | └── `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | 解析函数纯函数跨平台编译 |
 | └── `src/mesh/` | 轻量多机联邦 HTTP Peer Mesh | 写接口强校验 auth_token |
@@ -102,7 +103,7 @@ flowchart TD
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo test
    ```
-   **门禁要求**: 目前必须达到 **198 个 tests 全部 `ok`**，0 failed，0 ignored。
+   **门禁要求**: 目前必须达到 **202 个 tests 全部 `ok`**，0 failed，0 ignored。
 2. 运行 release 生产构建：
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo build --release
@@ -156,7 +157,7 @@ flowchart TD
 - [ ] 代码中是否存在对黑名单目录进行深度递归扫描的风险？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
-- [ ] 是否执行了 `make lint-panic`（生产代码 0 `unwrap`/`expect`）且 `cargo test` 全部通过（**要求 >= 198 tests 全部通过，零 warning**）？
+- [ ] 是否执行了 `make lint-panic`（生产代码 0 `unwrap`/`expect`）且 `cargo test` 全部通过（**要求 >= 202 tests 全部通过，零 warning**）？
 - [ ] 是否执行了 `agent-steward preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？
 - [ ] 相关的文档（`product-manual.md` / `INSTALL.md` / `roadmap-phase*.md`）是否已同步刷新？

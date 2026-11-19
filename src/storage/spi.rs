@@ -84,4 +84,12 @@ pub trait StorageProvider: Send + Sync {
     fn pop_next_lock_waiter(&self, resource_type: &str, resource_id: &str) -> Result<Option<LockWaitEntry>>;
     fn update_lock_wait_status(&self, wait_id: &str, status: &str) -> Result<bool>;
     fn gc_expired_lock_waits(&self) -> Result<usize>;
+
+    // ─── Empirical Benchmark & Effectiveness Ledger (Phase 27) ─────────
+    fn insert_benchmark_run(&self, run: &BenchmarkRunRecord) -> Result<()>;
+    fn get_benchmark_run(&self, run_id: &str) -> Result<Option<BenchmarkRunRecord>>;
+    fn list_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>>;
+    fn insert_effectiveness_event(&self, event: &EffectivenessLedgerRecord) -> Result<()>;
+    fn query_effectiveness_ledger(&self, window: &str, tool_filter: Option<&str>, limit: usize) -> Result<EffectivenessSummary>;
+    fn delete_bench_sandbox_records(&self) -> Result<usize>;
 }

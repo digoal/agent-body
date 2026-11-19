@@ -255,3 +255,49 @@ CREATE TABLE IF NOT EXISTS lock_wait_queue (
 );
 
 CREATE INDEX IF NOT EXISTS idx_pg_lock_wait_res ON lock_wait_queue(resource_type, resource_id, status);
+
+-- ─── Phase 27: 实证 Benchmark 与生产效能存证账本 ───────────────────────
+CREATE TABLE IF NOT EXISTS benchmark_runs (
+    run_id                    TEXT PRIMARY KEY,
+    suite_name                TEXT NOT NULL,
+    git_commit                TEXT NOT NULL,
+    app_version               TEXT NOT NULL,
+    host_fingerprint          TEXT NOT NULL,
+    workload_count            INTEGER NOT NULL,
+    total_baseline_tokens     BIGINT NOT NULL,
+    total_steward_tokens      BIGINT NOT NULL,
+    overall_token_savings_pct DOUBLE PRECISION NOT NULL,
+    overall_speedup_factor    DOUBLE PRECISION NOT NULL,
+    total_hazards_intercepted BIGINT NOT NULL,
+    total_noise_blocked       BIGINT NOT NULL,
+    sla_passed                BOOLEAN NOT NULL,
+    results_json              TEXT NOT NULL,
+    report_sha256             TEXT NOT NULL,
+    duration_ms               BIGINT NOT NULL,
+    created_at                TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_benchmark_runs_created ON benchmark_runs(created_at);
+
+CREATE TABLE IF NOT EXISTS effectiveness_ledger (
+    event_id           TEXT PRIMARY KEY,
+    session_id         TEXT NOT NULL DEFAULT 'default',
+    source_channel     TEXT NOT NULL,
+    tool_or_action     TEXT NOT NULL,
+    provenance_rule    TEXT NOT NULL,
+    baseline_tokens    BIGINT NOT NULL DEFAULT 0,
+    steward_tokens     BIGINT NOT NULL DEFAULT 0,
+    tokens_saved       BIGINT NOT NULL DEFAULT 0,
+    baseline_rounds    BIGINT NOT NULL DEFAULT 1,
+    steward_rounds     BIGINT NOT NULL DEFAULT 1,
+    rounds_saved       BIGINT NOT NULL DEFAULT 0,
+    hazard_intercepted BIGINT NOT NULL DEFAULT 0,
+    noise_blocked      BIGINT NOT NULL DEFAULT 0,
+    elapsed_us         BIGINT NOT NULL DEFAULT 0,
+    evidence_summary   TEXT NOT NULL,
+    created_at         TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_ledger_created ON effectiveness_ledger(created_at);
+CREATE INDEX IF NOT EXISTS idx_pg_ledger_tool ON effectiveness_ledger(tool_or_action);
+CREATE INDEX IF NOT EXISTS idx_pg_ledger_rule ON effectiveness_ledger(provenance_rule);

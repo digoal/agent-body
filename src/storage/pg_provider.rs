@@ -1377,9 +1377,269 @@ impl StorageProvider for PgStorageProvider {
         )?;
         Ok(affected as usize)
     }
+
+    fn insert_benchmark_run(&self, run: &BenchmarkRunRecord) -> Result<()> {
+        let mut client = self.lock_client()?;
+        let host_fp = serde_json::to_string(&run.host_fingerprint)?;
+        let res_json = serde_json::to_string(&run.results_json)?;
+        let wcount = run.workload_count as i32;
+        client.execute(
+            "INSERT INTO benchmark_runs (
+                run_id, suite_name, git_commit, app_version, host_fingerprint,
+                workload_count, total_baseline_tokens, total_steward_tokens,
+                overall_token_savings_pct, overall_speedup_factor,
+                total_hazards_intercepted, total_noise_blocked, sla_passed,
+                results_json, report_sha256, duration_ms, created_at
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+             ON CONFLICT (run_id) DO UPDATE SET
+                suite_name = EXCLUDED.suite_name,
+                results_json = EXCLUDED.results_json,
+                report_sha256 = EXCLUDED.report_sha256",
+            &[
+                &run.run_id,
+                &run.suite_name,
+                &run.git_commit,
+                &run.app_version,
+                &host_fp,
+                &wcount,
+                &run.total_baseline_tokens,
+                &run.total_steward_tokens,
+                &run.overall_token_savings_pct,
+                &run.overall_speedup_factor,
+                &run.total_hazards_intercepted,
+                &run.total_noise_blocked,
+                &run.sla_passed,
+                &res_json,
+                &run.report_sha256,
+                &run.duration_ms,
+                &run.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn get_benchmark_run(&self, run_id: &str) -> Result<Option<BenchmarkRunRecord>> {
+        let mut client = self.lock_client()?;
+        let rows = client.query(
+            "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
+                    workload_count, total_baseline_tokens, total_steward_tokens,
+                    overall_token_savings_pct, overall_speedup_factor,
+                    total_hazards_intercepted, total_noise_blocked, sla_passed,
+                    results_json, report_sha256, duration_ms, created_at
+             FROM benchmark_runs WHERE run_id = $1",
+            &[&run_id],
+        )?;
+        Ok(rows.first().map(Self::row_to_benchmark_run))
+    }
+
+    fn list_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>> {
+        let mut client = self.lock_client()?;
+        let rows = client.query(
+            "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
+                    workload_count, total_baseline_tokens, total_steward_tokens,
+                    overall_token_savings_pct, overall_speedup_factor,
+                    total_hazards_intercepted, total_noise_blocked, sla_passed,
+                    results_json, report_sha256, duration_ms, created_at
+             FROM benchmark_runs ORDER BY created_at DESC LIMIT $1",
+            &[&(limit as i64)],
+        )?;
+        Ok(rows.iter().map(Self::row_to_benchmark_run).collect())
+    }
+
+    fn insert_effectiveness_event(&self, event: &EffectivenessLedgerRecord) -> Result<()> {
+        let mut client = self.lock_client()?;
+        client.execute(
+            "INSERT INTO effectiveness_ledger (
+                event_id, session_id, source_channel, tool_or_action, provenance_rule,
+                baseline_tokens, steward_tokens, tokens_saved,
+                baseline_rounds, steward_rounds, rounds_saved,
+                hazard_intercepted, noise_blocked, elapsed_us, evidence_summary, created_at
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+             ON CONFLICT (event_id) DO NOTHING",
+            &[
+                &event.event_id,
+                &event.session_id,
+                &event.source_channel,
+                &event.tool_or_action,
+                &event.provenance_rule,
+                &event.baseline_tokens,
+                &event.steward_tokens,
+                &event.tokens_saved,
+                &event.baseline_rounds,
+                &event.steward_rounds,
+                &event.rounds_saved,
+                &event.hazard_intercepted,
+                &event.noise_blocked,
+                &event.elapsed_us,
+                &event.evidence_summary,
+                &event.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn query_effectiveness_ledger(
+        &self,
+        window: &str,
+        tool_filter: Option<&str>,
+        limit: usize,
+    ) -> Result<EffectivenessSummary> {
+        let mut client = self.lock_client()?;
+        let cutoff = crate::storage::window_to_cutoff_iso(window).unwrap_or_default();
+        let tool = tool_filter.unwrap_or("").to_string();
+
+        let agg = client.query_one(
+            "SELECT COUNT(*),
+                    COALESCE(SUM(baseline_tokens), 0)::BIGINT,
+                    COALESCE(SUM(steward_tokens), 0)::BIGINT,
+                    COALESCE(SUM(tokens_saved), 0)::BIGINT,
+                    COALESCE(SUM(rounds_saved), 0)::BIGINT,
+                    COALESCE(SUM(hazard_intercepted), 0)::BIGINT,
+                    COALESCE(SUM(noise_blocked), 0)::BIGINT,
+                    COALESCE(AVG(elapsed_us)::DOUBLE PRECISION, 0.0)
+             FROM effectiveness_ledger
+             WHERE ($1 = '' OR created_at >= $1)
+               AND ($2 = '' OR tool_or_action = $2)",
+            &[&cutoff, &tool],
+        )?;
+
+        let total_events: i64 = agg.get(0);
+        let total_base: i64 = agg.get(1);
+        let total_stew: i64 = agg.get(2);
+        let total_saved: i64 = agg.get(3);
+        let total_rounds: i64 = agg.get(4);
+        let total_haz: i64 = agg.get(5);
+        let total_noise: i64 = agg.get(6);
+        let avg_us: f64 = agg.get(7);
+
+        let rule_rows = client.query(
+            "SELECT provenance_rule,
+                    COUNT(*),
+                    COALESCE(SUM(tokens_saved), 0)::BIGINT,
+                    COALESCE(SUM(rounds_saved), 0)::BIGINT,
+                    COALESCE(SUM(hazard_intercepted), 0)::BIGINT,
+                    COALESCE(SUM(noise_blocked), 0)::BIGINT
+             FROM effectiveness_ledger
+             WHERE ($1 = '' OR created_at >= $1)
+               AND ($2 = '' OR tool_or_action = $2)
+             GROUP BY provenance_rule
+             ORDER BY SUM(tokens_saved) DESC, COUNT(*) DESC",
+            &[&cutoff, &tool],
+        )?;
+        let by_rule = rule_rows
+            .iter()
+            .map(|r| RuleAggregate {
+                provenance_rule: r.get(0),
+                event_count: r.get::<_, i64>(1) as usize,
+                tokens_saved: r.get(2),
+                rounds_saved: r.get(3),
+                hazards_intercepted: r.get(4),
+                noise_blocked: r.get(5),
+            })
+            .collect();
+
+        let ev_rows = client.query(
+            "SELECT event_id, session_id, source_channel, tool_or_action, provenance_rule,
+                    baseline_tokens, steward_tokens, tokens_saved,
+                    baseline_rounds, steward_rounds, rounds_saved,
+                    hazard_intercepted, noise_blocked, elapsed_us, evidence_summary, created_at
+             FROM effectiveness_ledger
+             WHERE ($1 = '' OR created_at >= $1)
+               AND ($2 = '' OR tool_or_action = $2)
+             ORDER BY created_at DESC LIMIT $3",
+            &[&cutoff, &tool, &(limit as i64)],
+        )?;
+        let recent_events = ev_rows
+            .iter()
+            .map(|r| EffectivenessLedgerRecord {
+                event_id: r.get(0),
+                session_id: r.get(1),
+                source_channel: r.get(2),
+                tool_or_action: r.get(3),
+                provenance_rule: r.get(4),
+                baseline_tokens: r.get(5),
+                steward_tokens: r.get(6),
+                tokens_saved: r.get(7),
+                baseline_rounds: r.get(8),
+                steward_rounds: r.get(9),
+                rounds_saved: r.get(10),
+                hazard_intercepted: r.get(11),
+                noise_blocked: r.get(12),
+                elapsed_us: r.get(13),
+                evidence_summary: r.get(14),
+                created_at: r.get(15),
+            })
+            .collect();
+
+        let token_savings_pct = if total_base > 0 {
+            (total_saved as f64 / total_base as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        Ok(EffectivenessSummary {
+            window: window.to_string(),
+            total_events: total_events as usize,
+            total_baseline_tokens: total_base,
+            total_steward_tokens: total_stew,
+            total_tokens_saved: total_saved,
+            token_savings_pct,
+            total_rounds_saved: total_rounds,
+            total_hazards_intercepted: total_haz,
+            total_noise_blocked: total_noise,
+            avg_elapsed_us: avg_us,
+            by_rule,
+            recent_events,
+        })
+    }
+
+    fn delete_bench_sandbox_records(&self) -> Result<usize> {
+        let mut client = self.lock_client()?;
+        let mut removed = 0usize;
+        removed += client.execute(
+            "DELETE FROM coordination_locks WHERE holder_agent LIKE 'bench-%' OR resource_id LIKE '%bench:%'",
+            &[],
+        )? as usize;
+        removed += client.execute(
+            "DELETE FROM lock_wait_queue WHERE waiting_agent LIKE 'bench-%' OR resource_id LIKE '%bench:%'",
+            &[],
+        )? as usize;
+        removed += client.execute(
+            "DELETE FROM effectiveness_ledger WHERE session_id LIKE 'bench:%' OR tool_or_action LIKE 'bench:%'",
+            &[],
+        )? as usize;
+        removed += client.execute(
+            "DELETE FROM benchmark_runs WHERE run_id LIKE 'bench:%' OR suite_name LIKE 'bench:%'",
+            &[],
+        )? as usize;
+        Ok(removed)
+    }
 }
 
 impl PgStorageProvider {
+    fn row_to_benchmark_run(r: &postgres::Row) -> BenchmarkRunRecord {
+        let host_str: String = r.get(4);
+        let res_str: String = r.get(13);
+        BenchmarkRunRecord {
+            run_id: r.get(0),
+            suite_name: r.get(1),
+            git_commit: r.get(2),
+            app_version: r.get(3),
+            host_fingerprint: serde_json::from_str(&host_str).unwrap_or_else(|_| serde_json::json!({})),
+            workload_count: r.get::<_, i32>(5) as usize,
+            total_baseline_tokens: r.get(6),
+            total_steward_tokens: r.get(7),
+            overall_token_savings_pct: r.get(8),
+            overall_speedup_factor: r.get(9),
+            total_hazards_intercepted: r.get(10),
+            total_noise_blocked: r.get(11),
+            sla_passed: r.get(12),
+            results_json: serde_json::from_str(&res_str).unwrap_or_else(|_| serde_json::json!([])),
+            report_sha256: r.get(14),
+            duration_ms: r.get(15),
+            created_at: r.get(16),
+        }
+    }
     fn row_to_wait(r: &postgres::Row) -> LockWaitEntry {
         LockWaitEntry {
             wait_id: r.get(0),

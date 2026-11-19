@@ -1421,9 +1421,281 @@ impl StorageProvider for SqliteStorageProvider {
         )?;
         Ok(affected)
     }
+
+    fn insert_benchmark_run(&self, run: &BenchmarkRunRecord) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let host_fp = serde_json::to_string(&run.host_fingerprint)?;
+        let res_json = serde_json::to_string(&run.results_json)?;
+        conn.execute(
+            "INSERT OR REPLACE INTO benchmark_runs (
+                run_id, suite_name, git_commit, app_version, host_fingerprint,
+                workload_count, total_baseline_tokens, total_steward_tokens,
+                overall_token_savings_pct, overall_speedup_factor,
+                total_hazards_intercepted, total_noise_blocked, sla_passed,
+                results_json, report_sha256, duration_ms, created_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
+            params![
+                run.run_id,
+                run.suite_name,
+                run.git_commit,
+                run.app_version,
+                host_fp,
+                run.workload_count as i64,
+                run.total_baseline_tokens,
+                run.total_steward_tokens,
+                run.overall_token_savings_pct,
+                run.overall_speedup_factor,
+                run.total_hazards_intercepted,
+                run.total_noise_blocked,
+                if run.sla_passed { 1i32 } else { 0i32 },
+                res_json,
+                run.report_sha256,
+                run.duration_ms,
+                run.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn get_benchmark_run(&self, run_id: &str) -> Result<Option<BenchmarkRunRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
+                    workload_count, total_baseline_tokens, total_steward_tokens,
+                    overall_token_savings_pct, overall_speedup_factor,
+                    total_hazards_intercepted, total_noise_blocked, sla_passed,
+                    results_json, report_sha256, duration_ms, created_at
+             FROM benchmark_runs WHERE run_id = ?1",
+        )?;
+        let mut rows = stmt.query(params![run_id])?;
+        if let Some(row) = rows.next()? {
+            Ok(Some(Self::map_benchmark_run_row(row)?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn list_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
+                    workload_count, total_baseline_tokens, total_steward_tokens,
+                    overall_token_savings_pct, overall_speedup_factor,
+                    total_hazards_intercepted, total_noise_blocked, sla_passed,
+                    results_json, report_sha256, duration_ms, created_at
+             FROM benchmark_runs ORDER BY created_at DESC LIMIT ?1",
+        )?;
+        let rows = stmt
+            .query_map(params![limit as i64], Self::map_benchmark_run_row)?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    fn insert_effectiveness_event(&self, event: &EffectivenessLedgerRecord) -> Result<()> {
+        let conn = self.lock_conn()?;
+        conn.execute(
+            "INSERT OR REPLACE INTO effectiveness_ledger (
+                event_id, session_id, source_channel, tool_or_action, provenance_rule,
+                baseline_tokens, steward_tokens, tokens_saved,
+                baseline_rounds, steward_rounds, rounds_saved,
+                hazard_intercepted, noise_blocked, elapsed_us, evidence_summary, created_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
+            params![
+                event.event_id,
+                event.session_id,
+                event.source_channel,
+                event.tool_or_action,
+                event.provenance_rule,
+                event.baseline_tokens,
+                event.steward_tokens,
+                event.tokens_saved,
+                event.baseline_rounds,
+                event.steward_rounds,
+                event.rounds_saved,
+                event.hazard_intercepted,
+                event.noise_blocked,
+                event.elapsed_us,
+                event.evidence_summary,
+                event.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn query_effectiveness_ledger(
+        &self,
+        window: &str,
+        tool_filter: Option<&str>,
+        limit: usize,
+    ) -> Result<EffectivenessSummary> {
+        let conn = self.lock_conn()?;
+        let cutoff = crate::storage::window_to_cutoff_iso(window).unwrap_or_default();
+        let tool = tool_filter.unwrap_or("").to_string();
+
+        let (total_events, total_base, total_stew, total_saved, total_rounds, total_haz, total_noise, avg_us): (
+            i64,
+            i64,
+            i64,
+            i64,
+            i64,
+            i64,
+            i64,
+            f64,
+        ) = conn.query_row(
+            "SELECT COUNT(*),
+                    COALESCE(SUM(baseline_tokens), 0),
+                    COALESCE(SUM(steward_tokens), 0),
+                    COALESCE(SUM(tokens_saved), 0),
+                    COALESCE(SUM(rounds_saved), 0),
+                    COALESCE(SUM(hazard_intercepted), 0),
+                    COALESCE(SUM(noise_blocked), 0),
+                    COALESCE(AVG(elapsed_us), 0.0)
+             FROM effectiveness_ledger
+             WHERE (?1 = '' OR created_at >= ?1)
+               AND (?2 = '' OR tool_or_action = ?2)",
+            params![cutoff, tool],
+            |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                    r.get(6)?,
+                    r.get(7)?,
+                ))
+            },
+        )?;
+
+        let mut rule_stmt = conn.prepare(
+            "SELECT provenance_rule,
+                    COUNT(*),
+                    COALESCE(SUM(tokens_saved), 0),
+                    COALESCE(SUM(rounds_saved), 0),
+                    COALESCE(SUM(hazard_intercepted), 0),
+                    COALESCE(SUM(noise_blocked), 0)
+             FROM effectiveness_ledger
+             WHERE (?1 = '' OR created_at >= ?1)
+               AND (?2 = '' OR tool_or_action = ?2)
+             GROUP BY provenance_rule
+             ORDER BY SUM(tokens_saved) DESC, COUNT(*) DESC",
+        )?;
+        let by_rule = rule_stmt
+            .query_map(params![cutoff, tool], |r| {
+                Ok(RuleAggregate {
+                    provenance_rule: r.get(0)?,
+                    event_count: r.get::<_, i64>(1)? as usize,
+                    tokens_saved: r.get(2)?,
+                    rounds_saved: r.get(3)?,
+                    hazards_intercepted: r.get(4)?,
+                    noise_blocked: r.get(5)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+
+        let mut ev_stmt = conn.prepare(
+            "SELECT event_id, session_id, source_channel, tool_or_action, provenance_rule,
+                    baseline_tokens, steward_tokens, tokens_saved,
+                    baseline_rounds, steward_rounds, rounds_saved,
+                    hazard_intercepted, noise_blocked, elapsed_us, evidence_summary, created_at
+             FROM effectiveness_ledger
+             WHERE (?1 = '' OR created_at >= ?1)
+               AND (?2 = '' OR tool_or_action = ?2)
+             ORDER BY created_at DESC LIMIT ?3",
+        )?;
+        let recent_events = ev_stmt
+            .query_map(params![cutoff, tool, limit as i64], |r| {
+                Ok(EffectivenessLedgerRecord {
+                    event_id: r.get(0)?,
+                    session_id: r.get(1)?,
+                    source_channel: r.get(2)?,
+                    tool_or_action: r.get(3)?,
+                    provenance_rule: r.get(4)?,
+                    baseline_tokens: r.get(5)?,
+                    steward_tokens: r.get(6)?,
+                    tokens_saved: r.get(7)?,
+                    baseline_rounds: r.get(8)?,
+                    steward_rounds: r.get(9)?,
+                    rounds_saved: r.get(10)?,
+                    hazard_intercepted: r.get(11)?,
+                    noise_blocked: r.get(12)?,
+                    elapsed_us: r.get(13)?,
+                    evidence_summary: r.get(14)?,
+                    created_at: r.get(15)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+
+        let token_savings_pct = if total_base > 0 {
+            (total_saved as f64 / total_base as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        Ok(EffectivenessSummary {
+            window: window.to_string(),
+            total_events: total_events as usize,
+            total_baseline_tokens: total_base,
+            total_steward_tokens: total_stew,
+            total_tokens_saved: total_saved,
+            token_savings_pct,
+            total_rounds_saved: total_rounds,
+            total_hazards_intercepted: total_haz,
+            total_noise_blocked: total_noise,
+            avg_elapsed_us: avg_us,
+            by_rule,
+            recent_events,
+        })
+    }
+
+    fn delete_bench_sandbox_records(&self) -> Result<usize> {
+        let conn = self.lock_conn()?;
+        let mut removed = 0usize;
+        removed += conn.execute(
+            "DELETE FROM coordination_locks WHERE holder_agent LIKE 'bench-%' OR resource_id LIKE '%bench:%'",
+            [],
+        )?;
+        removed += conn.execute(
+            "DELETE FROM lock_wait_queue WHERE waiting_agent LIKE 'bench-%' OR resource_id LIKE '%bench:%'",
+            [],
+        )?;
+        removed += conn.execute(
+            "DELETE FROM effectiveness_ledger WHERE session_id LIKE 'bench:%' OR tool_or_action LIKE 'bench:%'",
+            [],
+        )?;
+        removed += conn.execute(
+            "DELETE FROM benchmark_runs WHERE run_id LIKE 'bench:%' OR suite_name LIKE 'bench:%'",
+            [],
+        )?;
+        Ok(removed)
+    }
 }
 
 impl SqliteStorageProvider {
+    fn map_benchmark_run_row(row: &rusqlite::Row) -> rusqlite::Result<BenchmarkRunRecord> {
+        let host_str: String = row.get(4)?;
+        let res_str: String = row.get(13)?;
+        Ok(BenchmarkRunRecord {
+            run_id: row.get(0)?,
+            suite_name: row.get(1)?,
+            git_commit: row.get(2)?,
+            app_version: row.get(3)?,
+            host_fingerprint: serde_json::from_str(&host_str).unwrap_or_else(|_| serde_json::json!({})),
+            workload_count: row.get::<_, i64>(5)? as usize,
+            total_baseline_tokens: row.get(6)?,
+            total_steward_tokens: row.get(7)?,
+            overall_token_savings_pct: row.get(8)?,
+            overall_speedup_factor: row.get(9)?,
+            total_hazards_intercepted: row.get(10)?,
+            total_noise_blocked: row.get(11)?,
+            sla_passed: row.get::<_, i32>(12)? != 0,
+            results_json: serde_json::from_str(&res_str).unwrap_or_else(|_| serde_json::json!([])),
+            report_sha256: row.get(14)?,
+            duration_ms: row.get(15)?,
+            created_at: row.get(16)?,
+        })
+    }
     fn map_wait_row(row: &rusqlite::Row) -> rusqlite::Result<LockWaitEntry> {
         Ok(LockWaitEntry {
             wait_id: row.get(0)?,

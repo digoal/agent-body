@@ -187,6 +187,55 @@ enum Commands {
         #[command(subcommand)]
         action: DemoCommands,
     },
+
+    #[command(about = "实证 Benchmark 对照评测与生产效能存证账本 (workloads/run/report/ledger/compare/export/reset)")]
+    Bench {
+        #[command(subcommand)]
+        action: BenchCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum BenchCommands {
+    #[command(about = "列出 8 大标准 A/B 负载与 PR-01~08 推导规则")]
+    Workloads,
+    #[command(about = "运行宿主机真机 A/B 对照基准 (full/macro/micro/W1~W8)")]
+    Run {
+        #[arg(long, default_value = "full")]
+        suite: String,
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+        save: bool,
+    },
+    #[command(about = "查看实证基准报告与 SHA-256 存证指纹")]
+    Report {
+        #[arg(long)]
+        run_id: Option<String>,
+        #[arg(long, default_value = "table")]
+        format: String,
+    },
+    #[command(about = "审计生产运行态效能存证账本")]
+    Ledger {
+        #[arg(long, default_value = "7d")]
+        window: String,
+        #[arg(long)]
+        tool: Option<String>,
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+    },
+    #[command(about = "对比两次基准评测批次的回归差异")]
+    Compare {
+        run_a: String,
+        run_b: String,
+    },
+    #[command(about = "导出带 SHA-256 签名的评测报告")]
+    Export {
+        #[arg(long, default_value = "markdown")]
+        format: String,
+        #[arg(long)]
+        out: Option<String>,
+    },
+    #[command(about = "清理 bench:* 隔离测试数据")]
+    Reset,
 }
 
 #[derive(Subcommand)]
@@ -1558,6 +1607,93 @@ fn main() -> Result<()> {
                 DemoCommands::Reset => {
                     let cleaned = DemoEngine::reset_sandbox(storage.provider().as_ref())?;
                     println!("✅ 已清理 {} 条 demo:* 沙盒状态", cleaned);
+                }
+            }
+        }
+
+        Commands::Bench { action } => {
+            use agent_steward::benchmark::ledger::EffectivenessLedger;
+            use agent_steward::benchmark::provenance::ProvenanceRule;
+            use agent_steward::benchmark::report::{
+                render_csv_report, render_markdown_report, BenchmarkReportPayload,
+            };
+            use agent_steward::benchmark::workloads::list_workload_specs;
+            use agent_steward::benchmark::BenchmarkEngine;
+
+            match action {
+                BenchCommands::Workloads => {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&serde_json::json!({
+                            "workloads": list_workload_specs(),
+                            "provenance_rules": ProvenanceRule::list_all(),
+                        }))?
+                    );
+                }
+                BenchCommands::Run { suite, save } => {
+                    let report = BenchmarkEngine::run_suite(
+                        storage.provider().clone(),
+                        &suite,
+                        save,
+                        None,
+                    )?;
+                    println!("{}", render_markdown_report(&report)?);
+                }
+                BenchCommands::Report { run_id, format } => {
+                    let rec_opt = if let Some(id) = run_id {
+                        storage.get_benchmark_run(&id)?
+                    } else {
+                        storage.list_benchmark_runs(1)?.into_iter().next()
+                    };
+                    let Some(rec) = rec_opt else {
+                        println!("尚无基准评测记录，请先运行 `agent-steward bench run`");
+                        return Ok(());
+                    };
+                    let payload = BenchmarkReportPayload::from_record(&rec);
+                    match format.as_str() {
+                        "json" => println!("{}", serde_json::to_string_pretty(&payload)?),
+                        "csv" => println!("{}", render_csv_report(&payload)?),
+                        _ => println!("{}", render_markdown_report(&payload)?),
+                    }
+                }
+                BenchCommands::Ledger { window, tool, limit } => {
+                    let summary = storage.query_effectiveness_ledger(&window, tool.as_deref(), limit)?;
+                    println!("{}", serde_json::to_string_pretty(&summary)?);
+                }
+                BenchCommands::Compare { run_a, run_b } => {
+                    let a = storage.get_benchmark_run(&run_a)?
+                        .ok_or_else(|| anyhow::anyhow!("未找到基准批次: {}", run_a))?;
+                    let b = storage.get_benchmark_run(&run_b)?
+                        .ok_or_else(|| anyhow::anyhow!("未找到基准批次: {}", run_b))?;
+                    let diff = EffectivenessLedger::compare_runs(&a, &b);
+                    println!("{}", serde_json::to_string_pretty(&diff)?);
+                }
+                BenchCommands::Export { format, out } => {
+                    let rec = storage.list_benchmark_runs(1)?
+                        .into_iter()
+                        .next()
+                        .ok_or_else(|| anyhow::anyhow!("尚无基准评测记录可导出"))?;
+                    let payload = BenchmarkReportPayload::from_record(&rec);
+                    let content = match format.as_str() {
+                        "json" => serde_json::to_string_pretty(&payload)?,
+                        "csv" => render_csv_report(&payload)?,
+                        _ => render_markdown_report(&payload)?,
+                    };
+                    if let Some(path) = out {
+                        if let Some(parent) = std::path::Path::new(&path).parent() {
+                            if !parent.as_os_str().is_empty() {
+                                std::fs::create_dir_all(parent)?;
+                            }
+                        }
+                        std::fs::write(&path, &content)?;
+                        println!("✅ 已导出实证基准报告至: {} (SHA-256: {})", path, payload.report_sha256);
+                    } else {
+                        println!("{}", content);
+                    }
+                }
+                BenchCommands::Reset => {
+                    let cleaned = BenchmarkEngine::reset_sandbox(storage.provider().as_ref())?;
+                    println!("✅ 已清理 {} 条 bench:* 沙盒状态", cleaned);
                 }
             }
         }

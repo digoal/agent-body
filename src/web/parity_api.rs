@@ -800,6 +800,7 @@ fn map_tool_parity(tool_name: &str) -> (&'static str, &'static str, &'static str
         "steward_service_contact" => ("agent-steward service", "GET /api/v1/ecosystem/service-check", "ecosystem", "synced"),
         "steward_mesh_query" => ("agent-steward mesh", "GET /api/v1/mesh/query", "governance", "synced"),
         "steward_demo_scenario" => ("agent-steward demo", "POST /api/v1/demo/run", "demo", "synced"),
+        "steward_benchmark" => ("agent-steward bench", "POST /api/v1/benchmark/run", "benchmark", "synced"),
         _ => ("", "", "", "missing"),
     }
 }
@@ -889,6 +890,120 @@ pub fn handle_demo_roi(storage: &dyn StorageProvider) -> HttpResponse {
         Err(e) => WebResponse::error(
             StatusCode::INTERNAL_SERVER_ERROR,
             &format!("ROI compute failed: {}", e),
+        ),
+    }
+}
+
+/* ─── Phase 28: 实证 Benchmark 与生产效能存证账本 API ──────────────────── */
+
+pub fn handle_benchmark_workloads() -> HttpResponse {
+    WebResponse::success(serde_json::json!({
+        "workloads": crate::benchmark::workloads::list_workload_specs(),
+        "provenance_rules": crate::benchmark::provenance::ProvenanceRule::list_all(),
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BenchmarkRunBody {
+    pub suite: Option<String>,
+    pub save: Option<bool>,
+}
+
+pub fn handle_benchmark_run(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let body: BenchmarkRunBody = match req.json() {
+        Ok(b) => b,
+        Err(_) => BenchmarkRunBody {
+            suite: None,
+            save: None,
+        },
+    };
+    let suite = body
+        .suite
+        .or_else(|| req.query_params.get("suite").cloned())
+        .unwrap_or_else(|| "full".to_string());
+    let save = body.save.unwrap_or(true);
+    match crate::benchmark::BenchmarkEngine::run_suite(storage, &suite, save, None) {
+        Ok(report) => WebResponse::success(report),
+        Err(e) => WebResponse::error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Benchmark run failed: {}", e),
+        ),
+    }
+}
+
+pub fn handle_benchmark_report(req: &HttpRequest, storage: &dyn StorageProvider) -> HttpResponse {
+    let run_id = req.query_params.get("run_id").map(|s| s.as_str());
+    let history = storage.list_benchmark_runs(20).unwrap_or_default();
+    let rec_opt = if let Some(id) = run_id {
+        storage.get_benchmark_run(id).ok().flatten()
+    } else {
+        history.first().cloned()
+    };
+    let report = rec_opt.map(|r| crate::benchmark::report::BenchmarkReportPayload::from_record(&r));
+    let history_meta: Vec<_> = history
+        .iter()
+        .map(|r| {
+            serde_json::json!({
+                "run_id": r.run_id,
+                "suite_name": r.suite_name,
+                "app_version": r.app_version,
+                "git_commit": r.git_commit,
+                "overall_token_savings_pct": r.overall_token_savings_pct,
+                "overall_speedup_factor": r.overall_speedup_factor,
+                "sla_passed": r.sla_passed,
+                "report_sha256": r.report_sha256,
+                "created_at": r.created_at,
+            })
+        })
+        .collect();
+    WebResponse::success(serde_json::json!({
+        "latest": report,
+        "history": history_meta,
+    }))
+}
+
+pub fn handle_benchmark_ledger(req: &HttpRequest, storage: &dyn StorageProvider) -> HttpResponse {
+    let window = query_str(req, "window", "7d");
+    let tool = req.query_params.get("tool").map(|s| s.as_str()).filter(|s| !s.is_empty());
+    let limit = query_str(req, "limit", "50")
+        .parse::<usize>()
+        .unwrap_or(50)
+        .clamp(1, 200);
+    match storage.query_effectiveness_ledger(&window, tool, limit) {
+        Ok(summary) => WebResponse::success(summary),
+        Err(e) => WebResponse::error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Ledger query failed: {}", e),
+        ),
+    }
+}
+
+pub fn handle_benchmark_compare(req: &HttpRequest, storage: &dyn StorageProvider) -> HttpResponse {
+    let a_id = query_str(req, "a", "");
+    let b_id = query_str(req, "b", "");
+    if a_id.is_empty() || b_id.is_empty() {
+        return WebResponse::error(StatusCode::BAD_REQUEST, "Query parameters 'a' and 'b' are required");
+    }
+    let a = match storage.get_benchmark_run(&a_id) {
+        Ok(Some(r)) => r,
+        Ok(None) => return WebResponse::error(StatusCode::NOT_FOUND, &format!("Run not found: {}", a_id)),
+        Err(e) => return WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    };
+    let b = match storage.get_benchmark_run(&b_id) {
+        Ok(Some(r)) => r,
+        Ok(None) => return WebResponse::error(StatusCode::NOT_FOUND, &format!("Run not found: {}", b_id)),
+        Err(e) => return WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    };
+    let diff = crate::benchmark::ledger::EffectivenessLedger::compare_runs(&a, &b);
+    WebResponse::success(diff)
+}
+
+pub fn handle_benchmark_reset(storage: &dyn StorageProvider) -> HttpResponse {
+    match crate::benchmark::BenchmarkEngine::reset_sandbox(storage) {
+        Ok(cleaned) => WebResponse::success(serde_json::json!({ "cleaned": cleaned })),
+        Err(e) => WebResponse::error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Benchmark sandbox reset failed: {}", e),
         ),
     }
 }

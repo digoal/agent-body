@@ -420,3 +420,49 @@ INSERT OR IGNORE INTO scan_policies (id, path_pattern, tier, max_depth, enable_f
     ('policy-8', '/proc/**', 'shallow', 0, 0, 0, 0, '黑名单: 系统虚拟文件系统，仅记录根目录，严禁递归'),
     ('policy-9', '/root/new/src/**', 'restricted', 2, 1, 0, 0, '受限区: 开源项目库，仅索引项目入口与 README'),
     ('policy-10', '/root/new/tmp/**', 'restricted', 1, 0, 0, 0, '受限区: 临时目录，仅记录浅层文件');
+
+-- ─── Phase 27: 实证 Benchmark 与生产效能存证账本 ───────────────────────
+CREATE TABLE IF NOT EXISTS benchmark_runs (
+    run_id                    TEXT PRIMARY KEY,
+    suite_name                TEXT NOT NULL,
+    git_commit                TEXT NOT NULL,
+    app_version               TEXT NOT NULL,
+    host_fingerprint          TEXT NOT NULL,
+    workload_count            INTEGER NOT NULL,
+    total_baseline_tokens     INTEGER NOT NULL,
+    total_steward_tokens      INTEGER NOT NULL,
+    overall_token_savings_pct REAL NOT NULL,
+    overall_speedup_factor    REAL NOT NULL,
+    total_hazards_intercepted INTEGER NOT NULL,
+    total_noise_blocked       INTEGER NOT NULL,
+    sla_passed                INTEGER NOT NULL,
+    results_json              TEXT NOT NULL,
+    report_sha256             TEXT NOT NULL,
+    duration_ms               INTEGER NOT NULL,
+    created_at                TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_benchmark_runs_created ON benchmark_runs(created_at);
+
+CREATE TABLE IF NOT EXISTS effectiveness_ledger (
+    event_id           TEXT PRIMARY KEY,
+    session_id         TEXT NOT NULL DEFAULT 'default',
+    source_channel     TEXT NOT NULL,
+    tool_or_action     TEXT NOT NULL,
+    provenance_rule    TEXT NOT NULL,
+    baseline_tokens    INTEGER NOT NULL DEFAULT 0,
+    steward_tokens     INTEGER NOT NULL DEFAULT 0,
+    tokens_saved       INTEGER NOT NULL DEFAULT 0,
+    baseline_rounds    INTEGER NOT NULL DEFAULT 1,
+    steward_rounds     INTEGER NOT NULL DEFAULT 1,
+    rounds_saved       INTEGER NOT NULL DEFAULT 0,
+    hazard_intercepted INTEGER NOT NULL DEFAULT 0,
+    noise_blocked      INTEGER NOT NULL DEFAULT 0,
+    elapsed_us         INTEGER NOT NULL DEFAULT 0,
+    evidence_summary   TEXT NOT NULL,
+    created_at         TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ledger_created ON effectiveness_ledger(created_at);
+CREATE INDEX IF NOT EXISTS idx_ledger_tool ON effectiveness_ledger(tool_or_action);
+CREATE INDEX IF NOT EXISTS idx_ledger_rule ON effectiveness_ledger(provenance_rule);

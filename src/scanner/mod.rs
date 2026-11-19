@@ -199,6 +199,31 @@ impl Scanner {
             self.flush_batch(&batch_records)?;
         }
 
+        let blocked_total = report.shallow_blocked_dirs.len() + report.noise_skipped_files;
+        if blocked_total > 0 {
+            crate::benchmark::ledger::EffectivenessLedger::record(
+                self.storage.provider().as_ref(),
+                crate::benchmark::ledger::LedgerEventInput {
+                    session_id: "scanner".into(),
+                    source_channel: "scanner".into(),
+                    tool_or_action: "steward_asset_scan".into(),
+                    rule: crate::benchmark::provenance::ProvenanceRule::Pr06GranularityNoiseGate,
+                    baseline_tokens: (blocked_total as i64) * 25,
+                    steward_tokens: 0,
+                    baseline_rounds: 1,
+                    steward_rounds: 1,
+                    hazard_intercepted: report.shallow_blocked_dirs.len() as i64,
+                    noise_blocked: blocked_total as i64,
+                    elapsed_us: 0,
+                    evidence_summary: format!(
+                        "PR-06: 阻断 {} 个黑名单目录与 {} 个噪音文件入库",
+                        report.shallow_blocked_dirs.len(),
+                        report.noise_skipped_files
+                    ),
+                },
+            );
+        }
+
         Ok(report)
     }
 

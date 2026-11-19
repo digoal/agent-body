@@ -157,15 +157,16 @@ impl WebServer {
 
         // 统一路由分发 (在 spawn_blocking 中执行，避免阻塞 Tokio worker 并兼容同步预检/DB调用)
         let is_demo_run = req.method == Method::Post && req.path == "/api/v1/demo/run";
+        let is_bench_run = req.method == Method::Post && req.path == "/api/v1/benchmark/run";
         let demo_path = req.path.clone();
         let resp = tokio::task::spawn_blocking(move || {
             Self::route_request_arc(&req, storage, &start_time, &auth_token)
         })
         .await?;
-        if is_demo_run && resp.status == StatusCode::OK {
+        if (is_demo_run || is_bench_run) && resp.status == StatusCode::OK {
             let _ = event_tx.send(
                 serde_json::json!({
-                    "type": "demo_run",
+                    "type": if is_bench_run { "benchmark_run" } else { "demo_run" },
                     "path": demo_path,
                     "timestamp": chrono::Utc::now().to_rfc3339(),
                 })
@@ -217,6 +218,12 @@ impl WebServer {
             (Method::Post, "/api/v1/demo/run") => parity_api::handle_demo_run(req, storage),
             (Method::Post, "/api/v1/demo/reset") => parity_api::handle_demo_reset(storage.as_ref()),
             (Method::Get, "/api/v1/demo/roi") => parity_api::handle_demo_roi(storage.as_ref()),
+            (Method::Get, "/api/v1/benchmark/workloads") => parity_api::handle_benchmark_workloads(),
+            (Method::Post, "/api/v1/benchmark/run") => parity_api::handle_benchmark_run(req, storage),
+            (Method::Get, "/api/v1/benchmark/report") => parity_api::handle_benchmark_report(req, storage.as_ref()),
+            (Method::Get, "/api/v1/benchmark/ledger") => parity_api::handle_benchmark_ledger(req, storage.as_ref()),
+            (Method::Get, "/api/v1/benchmark/compare") => parity_api::handle_benchmark_compare(req, storage.as_ref()),
+            (Method::Post, "/api/v1/benchmark/reset") => parity_api::handle_benchmark_reset(storage.as_ref()),
             _ => Self::route_request(req, storage.as_ref(), start_time, auth_token),
         }
     }
