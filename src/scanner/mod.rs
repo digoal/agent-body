@@ -56,10 +56,19 @@ impl Scanner {
         Ok(Self { storage, matcher, noise_filter })
     }
 
+    pub fn with_policies(storage: Storage, extra_policies: &[crate::storage::models::ScanPolicy]) -> Result<Self> {
+        let mut policies = storage.get_scan_policies()?;
+        policies.extend_from_slice(extra_policies);
+        let matcher = PolicyMatcher::from_policies(&policies)?;
+        let noise_filter = NoiseFilter::default();
+        Ok(Self { storage, matcher, noise_filter })
+    }
+
     /// 执行高性能分级颗粒度扫描
     pub fn scan_path(&self, root_dir: &Path) -> Result<ScanReport> {
         let mut report = ScanReport::default();
         let mut it = WalkDir::new(root_dir).into_iter();
+        let links_engine = crate::links::LinksEngine::new(std::sync::Arc::new(self.storage.clone()));
 
         let mut batch_records = Vec::new();
 
@@ -116,6 +125,14 @@ impl Scanner {
             } else if entry.file_type().is_file() {
                 // 文件处理 (处于 deep 或 restricted 模式下)
                 let tier = self.determine_tier(path);
+                if tier == "shallow" {
+                    report.noise_skipped_files += 1;
+                    continue;
+                }
+                if tier == "restricted" && !should_index_in_restricted(root_dir, path) {
+                    report.noise_skipped_files += 1;
+                    continue;
+                }
                 let (asset_type, mut tags) = infer_file_attributes(path);
                 let metadata = entry.metadata().ok();
                 let size_bytes = metadata.as_ref().map(|m| m.len() as i64);
@@ -164,6 +181,10 @@ impl Scanner {
                 batch_records.push(record);
                 report.deep_indexed_files += 1;
                 report.total_assets_recorded += 1;
+
+                if tier == "deep" {
+                    let _ = links_engine.refresh_links_for_asset(path);
+                }
             }
 
             // 批处理提交优化：每 200 条批量持久化一次，极大提升大目录扫描性能
@@ -194,6 +215,45 @@ impl Scanner {
     pub fn determine_tier(&self, path: &Path) -> String {
         self.matcher.match_tier(path).to_string()
     }
+}
+
+/// 受限扫描（restricted）仅允许索引相对深度 <= 2 的入口文档、工程清单与顶层入口脚本，
+/// 防止第三方开源仓库或对比源码树中的成千上万测试/子模块文件打爆资产库。
+pub(crate) fn should_index_in_restricted(root_dir: &Path, path: &Path) -> bool {
+    let rel = path.strip_prefix(root_dir).unwrap_or(path);
+    let depth = rel.components().count();
+    if depth > 3 {
+        return false;
+    }
+
+    let file_name = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    file_name.starts_with("readme")
+        || file_name.starts_with("install")
+        || file_name.starts_with("license")
+        || matches!(
+            file_name.as_str(),
+            "skill.md"
+                | "cargo.toml"
+                | "pyproject.toml"
+                | "package.json"
+                | "go.mod"
+                | "makefile"
+                | "dockerfile"
+                | "docker-compose.yml"
+                | "config.example.toml"
+                | "main.rs"
+                | "lib.rs"
+                | "main.py"
+                | "__init__.py"
+                | "app.py"
+                | "index.js"
+                | "index.ts"
+        )
 }
 
 pub(crate) fn infer_file_attributes(path: &Path) -> (String, Vec<String>) {
@@ -304,5 +364,58 @@ mod tests {
 
         assert!(app_asset.is_some(), "有效代码资产必须已入库");
         assert!(log_asset.is_none(), "垃圾日志文件绝不应该被入库");
+    }
+
+    #[test]
+    fn test_git_and_restricted_tier_filtering() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let tmp = tempdir().expect("tempdir");
+        let root = tmp.path();
+
+        // 显式注册一条针对 tmp/src/** 的 restricted 策略（等价于生产库的 /root/new/src/**）
+        let src_root = root.join("src");
+        let scanner = Scanner::with_policies(
+            storage.clone(),
+            &[crate::storage::models::ScanPolicy {
+                id: "test-restricted-src".to_string(),
+                path_pattern: format!("{}/**", src_root.to_string_lossy()),
+                tier: "restricted".to_string(),
+                max_depth: 2,
+                enable_fts: true,
+                enable_vec: false,
+                enable_graph: false,
+                notes: Some("test restricted".to_string()),
+            }],
+        )
+        .expect("new scanner");
+
+        // 1. .git 目录自身及内部子文件必须零逃逸
+        let git_dir = root.join("work").join("my_repo").join(".git");
+        create_dir_all(git_dir.join("refs")).unwrap();
+        File::create(git_dir.join("config")).unwrap().write_all(b"[core]").unwrap();
+        File::create(git_dir.join("COMMIT_EDITMSG")).unwrap().write_all(b"init").unwrap();
+
+        // 2. restricted 目录 /src/repo/ 仅索引 README.md / Cargo.toml，不索引深层测试文件
+        let src_repo = root.join("src").join("demo_repo");
+        create_dir_all(src_repo.join("tests").join("deep")).unwrap();
+        File::create(src_repo.join("README.md")).unwrap().write_all(b"# Demo Repo").unwrap();
+        File::create(src_repo.join("Cargo.toml")).unwrap().write_all(b"[package]").unwrap();
+        File::create(src_repo.join("tests/deep/heavy_test.rs")).unwrap().write_all(b"fn t() {}").unwrap();
+
+        let report = scanner.scan_path(root).expect("scan_path");
+        assert!(report.shallow_blocked_dirs.iter().any(|d| d.path.ends_with(".git")));
+
+        assert!(
+            storage.get_asset_by_path(&git_dir.join("config").to_string_lossy()).unwrap().is_none(),
+            ".git/config 绝不能逃逸入库"
+        );
+        assert!(
+            storage.get_asset_by_path(&src_repo.join("README.md").to_string_lossy()).unwrap().is_some(),
+            "restricted 目录下的 README.md 必须被索引"
+        );
+        assert!(
+            storage.get_asset_by_path(&src_repo.join("tests/deep/heavy_test.rs").to_string_lossy()).unwrap().is_none(),
+            "restricted 目录下的深层测试文件不得被索引"
+        );
     }
 }

@@ -64,7 +64,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 make build
 # 或: cargo build --release
 
-# 3. 运行全量测试验证环境 (目前 137 项测试全部通过)
+# 3. 运行全量测试验证环境 (目前 198 项测试全部通过)
 make test
 # 或: cargo test
 
@@ -76,7 +76,7 @@ sudo make install
 # 或: sudo install -m 755 target/release/agent-steward /usr/local/bin/agent-steward
 
 agent-steward --version
-# 输出: steward 0.3.2 (git-hash, linux/x86_64)
+# 输出: steward 0.4.0 (git-hash, linux/x86_64)
 ```
 
 ### 2.3 配置文件与初始化存储

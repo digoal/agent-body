@@ -7,18 +7,29 @@ use crate::watcher::{FileChangeEvent, FileChangeKind};
 pub struct ChangeHandler {
     storage: Storage,
     scanner: Scanner,
+    noise_filter: crate::scanner::NoiseFilter,
     event_bus: Option<crate::hooks::EventBusHandle>,
 }
 
 impl ChangeHandler {
     pub fn new(storage: Storage) -> Result<Self> {
         let scanner = Scanner::new(storage.clone())?;
-        Ok(Self { storage, scanner, event_bus: None })
+        Ok(Self {
+            storage,
+            scanner,
+            noise_filter: crate::scanner::NoiseFilter::default(),
+            event_bus: None,
+        })
     }
 
     pub fn with_event_bus(storage: Storage, event_bus: crate::hooks::EventBusHandle) -> Result<Self> {
         let scanner = Scanner::new(storage.clone())?;
-        Ok(Self { storage, scanner, event_bus: Some(event_bus) })
+        Ok(Self {
+            storage,
+            scanner,
+            noise_filter: crate::scanner::NoiseFilter::default(),
+            event_bus: Some(event_bus),
+        })
     }
 
     /// 处理一组防抖后的文件变更事件
@@ -58,8 +69,17 @@ impl ChangeHandler {
                             self.storage.upsert_asset(&record)?;
                         }
                     } else if event.path.is_file() {
+                        if tier == "shallow" {
+                            // 黑名单子文件：直接跳过，既不入资产库也不记变更噪音
+                            continue;
+                        }
                         let metadata = event.path.metadata().ok();
-                        let size_bytes = metadata.map(|m| m.len() as i64);
+                        let size_bytes = metadata.as_ref().map(|m| m.len() as i64);
+                        let mtime_secs = metadata
+                            .as_ref()
+                            .and_then(|m| m.modified().ok())
+                            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                            .map(|d| d.as_secs());
                         let ext = event.path.extension().and_then(|s| s.to_str()).unwrap_or("");
                         let asset_type = match ext {
                             "rs" | "py" | "sh" | "js" | "ts" | "go" => "script",
@@ -68,11 +88,18 @@ impl ChangeHandler {
                             _ => "other",
                         };
 
+                        let (should_record, imp_score) =
+                            self.noise_filter.should_record(&event.path, asset_type, size_bytes, mtime_secs);
+                        if !should_record {
+                            // 噪声文件（.log / .swx / .pyc 等）跳过入库与变更审计
+                            continue;
+                        }
+
                         let extracted = crate::scanner::metadata::HeuristicMetadataExtractor::extract(
                             &event.path,
                             asset_type,
                             &tier,
-                            None,
+                            Some(&imp_score),
                             size_bytes,
                         );
                         let mut tags = if ext.is_empty() { vec![] } else { vec![ext.to_string()] };
@@ -100,6 +127,11 @@ impl ChangeHandler {
                         let existing = self.storage.get_asset_by_path(&path_str).ok().flatten();
                         let merged = crate::scanner::metadata::merge_with_existing_asset(record, existing.as_ref());
                         self.storage.upsert_asset(&merged)?;
+
+                        if tier == "deep" {
+                            let links_engine = crate::links::LinksEngine::new(std::sync::Arc::new(self.storage.clone()));
+                            let _ = links_engine.refresh_links_for_asset(&event.path);
+                        }
                     }
 
                     // 写入变更审计日志
@@ -141,6 +173,7 @@ impl ChangeHandler {
                         asset.status = "missing".to_string();
                         self.storage.upsert_asset(&asset)?;
                     }
+                    let _ = self.storage.delete_auto_links_for_source(&path_str);
 
                     self.storage.record_change(&ChangeRecord {
                         id: None,
@@ -203,5 +236,32 @@ mod tests {
         let changes = storage.list_changes(10).expect("list_changes");
         assert!(!changes.is_empty());
         assert_eq!(changes[0].change_type, "file_created");
+    }
+
+    #[test]
+    fn test_change_handler_blocks_noise_and_shallow_files() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let handler = ChangeHandler::new(storage.clone()).expect("new handler");
+
+        let tmp = tempdir().expect("tempdir");
+        let log_path = tmp.path().join("daemon.log");
+        File::create(&log_path).unwrap().write_all(b"noise log").unwrap();
+
+        let git_dir = tmp.path().join(".git");
+        std::fs::create_dir_all(&git_dir).unwrap();
+        let git_cfg = git_dir.join("config");
+        File::create(&git_cfg).unwrap().write_all(b"[core]").unwrap();
+
+        let processed = handler
+            .process_events(&[
+                FileChangeEvent { path: log_path.clone(), kind: FileChangeKind::Modified },
+                FileChangeEvent { path: git_cfg.clone(), kind: FileChangeKind::Modified },
+            ])
+            .expect("process_events");
+
+        assert_eq!(processed, 0, "噪声日志与 .git 内部文件必须被拦截");
+        assert!(storage.get_asset_by_path(&log_path.to_string_lossy()).unwrap().is_none());
+        assert!(storage.get_asset_by_path(&git_cfg.to_string_lossy()).unwrap().is_none());
+        assert!(storage.list_changes(10).unwrap().is_empty());
     }
 }

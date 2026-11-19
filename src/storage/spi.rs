@@ -39,6 +39,7 @@ pub trait StorageProvider: Send + Sync {
     fn add_link(&self, link: &LinkRecord) -> Result<()>;
     fn delete_link(&self, id: i64) -> Result<()>;
     fn delete_links_for_target(&self, target_id: &str) -> Result<usize>;
+    fn delete_auto_links_for_source(&self, source_id: &str) -> Result<usize>;
     fn update_link_target(&self, source_id: &str, old_target: &str, new_target: &str) -> Result<usize>;
     fn query_links_for_node(&self, node_type: &str, node_id: &str) -> Result<Vec<LinkRecord>>;
     fn list_all_links(&self, limit: usize) -> Result<Vec<LinkRecord>>;

@@ -102,7 +102,7 @@ flowchart TD
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo test
    ```
-   **门禁要求**: 目前必须达到 **40 个 tests 全部 `ok`**，0 failed，0 ignored。
+   **门禁要求**: 目前必须达到 **198 个 tests 全部 `ok`**，0 failed，0 ignored。
 2. 运行 release 生产构建：
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo build --release
@@ -156,7 +156,7 @@ flowchart TD
 - [ ] 代码中是否存在对黑名单目录进行深度递归扫描的风险？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
-- [ ] 是否执行了 `make lint-panic`（生产代码 0 `unwrap`/`expect`）且 `cargo test` 全部通过（**要求 >= 189 tests 全部通过，零 warning**）？
+- [ ] 是否执行了 `make lint-panic`（生产代码 0 `unwrap`/`expect`）且 `cargo test` 全部通过（**要求 >= 198 tests 全部通过，零 warning**）？
 - [ ] 是否执行了 `agent-steward preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？
 - [ ] 相关的文档（`product-manual.md` / `INSTALL.md` / `roadmap-phase*.md`）是否已同步刷新？

@@ -575,6 +575,15 @@ impl StorageProvider for SqliteStorageProvider {
         Ok(count)
     }
 
+    fn delete_auto_links_for_source(&self, source_id: &str) -> Result<usize> {
+        let conn = self.lock_conn()?;
+        let count = conn.execute(
+            "DELETE FROM links WHERE source_id = ?1 AND auto_discovered = 1",
+            params![source_id],
+        )?;
+        Ok(count)
+    }
+
     fn update_link_target(&self, source_id: &str, old_target: &str, new_target: &str) -> Result<usize> {
         let conn = self.lock_conn()?;
         let count = conn.execute(

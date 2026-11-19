@@ -14,7 +14,7 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 写技术文档不是堆砌名词，更不是凭空编造。编写本项目的任何文档，必须严格遵守以下 **六大铁律**：
 
 1. **代码真实性第一（Zero Hallucination）**：
-   - 所有的命令参数、子命令名称、配置项键名、MCP 工具名称（共 38 个）、JSON 返回结构，必须直接源自 `src/` 源码（如 `src/main.rs`, `src/api/mcp_tools.rs`, `src/config/mod.rs`, `src/links/`），绝不允许擅自发明不存在的命令或参数。
+   - 所有的命令参数、子命令名称、配置项键名、MCP 工具名称（共 39 个）、JSON 返回结构，必须直接源自 `src/` 源码（如 `src/main.rs`, `src/api/mcp_tools.rs`, `src/config/mod.rs`, `src/links/`），绝不允许擅自发明不存在的命令或参数。
    - 凡涉及运行依赖、环境要求与部署配置，必须严格注明**“必选 (Required)”**与**“可选 (Optional)”**，并在 [INSTALL.md](../../INSTALL.md) 与 [config.example.toml](../../config.example.toml) 中保持事实对齐。
 2. **命令必须实跑验证（Execution-Verified）**：
    - 文档中凡是贴出的 CLI 输出、curl 返回或 JSON 示例，**必须使用编译出来的实际二进制执行一次**（例如 `./target/release/agent-steward env port 22`、`./target/release/agent-steward links audit`），捕获真实输出后贴入，严禁“凭印象编造输出”。
@@ -44,18 +44,20 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 3. **系统架构师与平台运维**：关心安全隐私（数据是否全部本地 SQLite）、资源消耗（守护进程常驻仅 2.1MB 内存）、分级扫描黑名单阻断、端口防撞以及宏微代码拓扑穿透机制。
 
 ### 2.2 `manual/` 目录落地的标准分卷体系
-`manual/` 目录下已建立规范的 7 卷技术手册体系：
+`manual/` 目录下已建立规范的 9 卷技术手册体系：
 
 ```
 manual/
 ├── README.md                      # 手册全景导航、章节说明与阅读路线
-├── 01-introduction.md             # 核心定位：为什么需要宿主环境大管家、六大能力全景
-├── 02-architecture-and-concepts.md # 核心概念：8大放置规范、分级扫描、混合检索与生命周期
-├── 03-installation-and-configuration.md # 快速安装：编译构建、Systemd开机自启、config.toml配置
-├── 04-cli-reference.md            # 完整 CLI 命令行使用字典（9大子命令、全参数与实跑输出）
-├── 05-mcp-integration.md          # Agent 接入：18个原生 MCP 工具详解、Claude/Cursor/AGY 配置
-├── 06-graph-and-codegraph.md      # 图智能与 CodeGraph 宏微联邦：依赖拓扑、断链体检与影响面分析
-└── 07-daemon-and-production.md    # 生产部署：Systemd 守护服务、inotify 变更流水线与排障运维
+├── 01-getting-started.md          # 快速上手与编译部署
+├── 02-core-concepts.md            # 核心理念与设计哲学（三位一体与分级扫描）
+├── 03-cli-reference.md            # 全量 CLI 命令行实战字典
+├── 04-mcp-integration.md          # Agent 接入与 MCP 协议指南（39 个原生工具）
+├── 05-daemon-and-watcher.md       # 守护进程与 inotify 实时监听
+├── 06-advanced-features.md        # 进阶特性指南（断链修复、GC、记忆生命周期、TUI）
+├── 07-troubleshooting.md          # 故障诊断与常见问题 (FAQ)
+├── 08-web-dashboard.md            # Web UI 2.0 昼夜蓝图、拓扑大屏与路演剧场
+└── 09-hooks-integration.md        # HOOK 驱动集成引擎与 Pipeline 编排
 ```
 
 ---
@@ -73,7 +75,7 @@ flowchart TD
 ### 步骤 1: 提取代码事实
 在动笔前，Agent 必须快速查阅：
 - `src/main.rs`：当前支持的所有子命令与 flags 参数；
-- `src/api/mcp_tools.rs`：当前注册的全部 **18 个原生 MCP 工具** 名与 inputSchema；
+- `src/api/mcp_tools.rs`：当前注册的全部 **39 个原生 MCP 工具** 名与 inputSchema；
 - `src/config/mod.rs`：当前的 `config.toml` 配置项结构体；
 - `src/storage/schema.sql`：预置的 8 大放置规则与 10 大扫描策略；
 - `src/links/`：依赖关系解析引擎、断链体检规则与 CodeGraph 穿透接口。
@@ -122,10 +124,10 @@ flowchart TD
 ## 五、自检 Checklist（发布文档前必对）
 
 - [ ] 文档中的 CLI 命令是否与 `src/main.rs` 中的定义 100% 吻合？
-- [ ] 文档中的 MCP 工具名是否与 `src/api/mcp_tools.rs`（共 18 个）100% 吻合？
+- [ ] 文档中的 MCP 工具名是否与 `src/api/mcp_tools.rs`（共 39 个）100% 吻合？
 - [ ] 文档中贴出的 JSON 输出是否经过实际命令运行捕获，而非凭空假想？
 - [ ] Mermaid 节点文字中的括号是否全部加了双引号（防渲染崩溃）？
 - [ ] 矢量 SVG 资源是否已独立落盘于 `markdown/svg/` 并在 Markdown 中以标准语法正确引用？
-- [ ] `README.md` 是否已同步最新架构、全量 18 个 MCP 工具与 Phase 6 演进路线？
-- [ ] `manual/` 目录下的 7 卷分卷手册超链接是否全部有效无死链？
+- [ ] `README.md` 是否已同步最新架构、全量 39 个 MCP 工具与演进路线？
+- [ ] `manual/` 目录下的 9 卷分卷手册超链接是否全部有效无死链？
 - [ ] 是否通过了全局死链审计脚本（187+ 处链接 100% 通过）？

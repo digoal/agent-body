@@ -75,10 +75,26 @@ impl FileWatcher {
 
 fn should_ignore_path(path: &Path) -> bool {
     let s = path.to_string_lossy();
-    if s.ends_with('~') || s.ends_with(".tmp") || s.ends_with(".swp") {
+    if s.ends_with('~')
+        || s.ends_with(".tmp")
+        || s.ends_with(".swp")
+        || s.ends_with(".swx")
+        || s.ends_with(".swo")
+        || s.ends_with(".log")
+        || s.ends_with(".pyc")
+        || s.ends_with(".pyo")
+    {
         return true;
     }
-    if s.contains("/target/") || s.contains("/.git/") || s.contains("/.steward/") {
+    if s.contains("/target/")
+        || s.contains("/.git/")
+        || s.contains("/.steward/")
+        || s.contains("/.state/")
+        || s.contains("/__pycache__/")
+        || s.contains("/.codegraph/")
+        || s.contains("/.venv/")
+        || s.contains("/node_modules/")
+    {
         return true;
     }
     false

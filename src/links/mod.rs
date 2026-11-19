@@ -49,9 +49,43 @@ impl LinksEngine {
         self.storage.query_links_for_node(node_type, node_id)
     }
 
+    /// 幂等刷新单个物理资产的自动发现依赖边：
+    /// 仅解析文本类脚本/配置/文档（<= 512KB），先清理该 source 的旧 auto_discovered 边再重建。
+    pub fn refresh_links_for_asset(&self, asset_path: &std::path::Path) -> Result<usize> {
+        let ext = asset_path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        let is_supported = matches!(
+            ext.as_str(),
+            "rs" | "py" | "sh" | "bash" | "js" | "ts" | "toml" | "yaml" | "yml" | "json" | "service" | "conf" | "md"
+        );
+        if !is_supported {
+            return Ok(0);
+        }
+        let meta = match std::fs::metadata(asset_path) {
+            Ok(m) => m,
+            Err(_) => return Ok(0),
+        };
+        if !meta.is_file() || meta.len() > 512 * 1024 {
+            return Ok(0);
+        }
+        let content = match std::fs::read_to_string(asset_path) {
+            Ok(c) => c,
+            Err(_) => return Ok(0),
+        };
+        let path_str = asset_path.to_string_lossy().to_string();
+        let _ = self.storage.delete_auto_links_for_source(&path_str);
+        self.discover_links_from_script(&path_str, &content)
+    }
+
     /// 自动分析脚本/代码文件内容中的跨资产引用或服务依赖 (支持精准行号、切片与多语言语法抽取)
     pub fn discover_links_from_script(&self, asset_path: &str, content: &str) -> Result<usize> {
         let mut count = 0;
+        let is_python = asset_path.ends_with(".py");
+        let is_shell = asset_path.ends_with(".sh") || asset_path.ends_with(".bash");
+        let is_js = asset_path.ends_with(".js") || asset_path.ends_with(".ts");
 
         // 编译常用提取正则
         use anyhow::Context;
@@ -68,43 +102,65 @@ impl LinksEngine {
                 continue;
             }
 
-            let snippet_str = if trimmed.len() > 140 {
-                format!("{}...", &trimmed[..140])
+            let snippet_str = if trimmed.chars().count() > 120 {
+                let s: String = trimmed.chars().take(120).collect();
+                format!("{}...", s)
             } else {
                 trimmed.to_string()
             };
 
             // 1. 语法级 Python 模块导入 (from xxx import ... 或 import xxx)
-            if let Some(cap) = py_import_re.captures(trimmed) {
-                let mod_name = cap.get(1).or_else(|| cap.get(2)).map(|m| m.as_str()).unwrap_or("");
-                if !mod_name.is_empty() && !["os", "sys", "json", "time", "re", "math"].contains(&mod_name) {
-                    let target_candidate = if mod_name.starts_with("shared_proj") {
-                        format!("/root/new/{}", mod_name.replace('.', "/"))
-                    } else {
-                        format!("/root/new/shared_proj/{}", mod_name)
-                    };
-
-                    let link = LinkRecord {
-                        id: None,
-                        source_type: "asset".to_string(),
-                        source_id: asset_path.to_string(),
-                        target_type: "asset".to_string(),
-                        target_id: target_candidate,
-                        relation: "depends_on".to_string(),
-                        confidence: 0.95,
-                        auto_discovered: true,
-                        line_number: Some(line_num),
-                        snippet: Some(snippet_str.clone()),
-                        provenance: Some("ast_import".to_string()),
-                        created_at: None,
-                    };
-                    let _ = self.storage.add_link(&link);
-                    count += 1;
+            if is_python {
+                if let Some(cap) = py_import_re.captures(trimmed) {
+                    let mod_name = cap.get(1).or_else(|| cap.get(2)).map(|m| m.as_str()).unwrap_or("");
+                    let top_pkg = mod_name.split('.').next().unwrap_or("");
+                    let is_stdlib_or_3p = matches!(
+                        top_pkg,
+                        "os" | "sys" | "json" | "time" | "re" | "math" | "io" | "argparse"
+                            | "hashlib" | "collections" | "urllib" | "pathlib" | "datetime"
+                            | "subprocess" | "logging" | "sqlite3" | "typing" | "functools"
+                            | "itertools" | "random" | "string" | "shutil" | "tempfile"
+                            | "glob" | "csv" | "traceback" | "threading" | "multiprocessing"
+                            | "asyncio" | "socket" | "http" | "email" | "xml" | "html"
+                            | "unittest" | "dataclasses" | "enum" | "abc" | "copy" | "pprint"
+                            | "textwrap" | "inspect" | "importlib" | "warnings" | "contextlib"
+                            | "concurrent" | "queue" | "heapq" | "bisect" | "struct"
+                            | "codecs" | "base64" | "hmac" | "secrets" | "uuid" | "zlib"
+                            | "gzip" | "tarfile" | "zipfile" | "signal" | "errno" | "stat"
+                            | "fcntl" | "select" | "ssl" | "urllib3" | "requests" | "numpy"
+                            | "pandas" | "scipy" | "torch" | "pydantic" | "fastapi" | "uvicorn"
+                            | "flask" | "pytest" | "yaml" | "toml" | "dotenv" | "rich"
+                            | "click" | "tqdm" | "httpx" | "aiohttp" | "bs4" | "lxml"
+                            | "playwright" | "selenium" | "psycopg2" | "psycopg" | "duckdb"
+                            | "openai" | "anthropic" | "PIL" | "cv2" | "matplotlib" | "__future__"
+                    );
+                    if !mod_name.is_empty() && !is_stdlib_or_3p {
+                        let target_candidate = resolve_python_import_target(asset_path, mod_name);
+                        if let Some(target_id) = target_candidate {
+                            let link = LinkRecord {
+                                id: None,
+                                source_type: "asset".to_string(),
+                                source_id: asset_path.to_string(),
+                                target_type: "asset".to_string(),
+                                target_id,
+                                relation: "depends_on".to_string(),
+                                confidence: 0.95,
+                                auto_discovered: true,
+                                line_number: Some(line_num),
+                                snippet: Some(snippet_str.clone()),
+                                provenance: Some("ast_import".to_string()),
+                                created_at: None,
+                            };
+                            let _ = self.storage.add_link(&link);
+                            count += 1;
+                        }
+                    }
                 }
             }
 
             // 2. 语法级 Shell source 或外部脚本调用
-            if let Some(cap) = sh_source_re.captures(trimmed).or_else(|| sh_exec_re.captures(trimmed)) {
+            if is_shell {
+                if let Some(cap) = sh_source_re.captures(trimmed).or_else(|| sh_exec_re.captures(trimmed)) {
                 let script_target = cap[1].to_string();
                 if script_target.starts_with("/root/new/") || script_target.ends_with(".sh") || script_target.ends_with(".py") {
                     let link = LinkRecord {
@@ -124,10 +180,12 @@ impl LinksEngine {
                     let _ = self.storage.add_link(&link);
                     count += 1;
                 }
+                }
             }
 
             // 3. 语法级 Node.js / JS import & require
-            if let Some(cap) = js_import_re.captures(trimmed) {
+            if is_js {
+                if let Some(cap) = js_import_re.captures(trimmed) {
                 let js_target = cap[1].to_string();
                 if js_target.starts_with("/root/new/") || js_target.starts_with('.') {
                     let link = LinkRecord {
@@ -146,6 +204,7 @@ impl LinksEngine {
                     };
                     let _ = self.storage.add_link(&link);
                     count += 1;
+                }
                 }
             }
 
@@ -262,6 +321,39 @@ impl LinksEngine {
     }
 }
 
+fn resolve_python_import_target(asset_path: &str, mod_name: &str) -> Option<String> {
+    if mod_name.starts_with("shared_proj") {
+        let rel = mod_name.replace('.', "/");
+        let py_file = format!("/root/new/{}.py", rel);
+        if std::path::Path::new(&py_file).exists() {
+            return Some(py_file);
+        }
+        return Some(format!("/root/new/{}", rel));
+    }
+    let mod_rel = mod_name.replace('.', "/");
+    // 1. 优先检查脚本所在同级目录是否存在 <mod>.py 或 <mod>/__init__.py
+    if let Some(parent) = std::path::Path::new(asset_path).parent() {
+        let sibling_py = parent.join(format!("{}.py", mod_rel));
+        if sibling_py.exists() {
+            return Some(sibling_py.to_string_lossy().to_string());
+        }
+        let sibling_pkg = parent.join(&mod_rel).join("__init__.py");
+        if sibling_pkg.exists() {
+            return Some(sibling_pkg.to_string_lossy().to_string());
+        }
+    }
+    // 2. 其次检查 /root/new/shared_proj/ 下是否存在对应模块
+    let shared_py = format!("/root/new/shared_proj/{}.py", mod_rel);
+    if std::path::Path::new(&shared_py).exists() {
+        return Some(shared_py);
+    }
+    let shared_dir = format!("/root/new/shared_proj/{}", mod_rel);
+    if std::path::Path::new(&shared_dir).exists() {
+        return Some(shared_dir);
+    }
+    None
+}
+
 fn sanitize_label(text: &str) -> String {
     text.replace('\"', "'").replace('\n', " ")
 }
@@ -316,5 +408,39 @@ conn = "postgresql://localhost:5432/mydb"
         let pg_link = links.iter().find(|l| l.target_id == "postgresql:5432").expect("pg link");
         assert_eq!(pg_link.line_number, Some(8));
         assert_eq!(pg_link.provenance.as_deref(), Some("port_detect"));
+    }
+
+    #[test]
+    fn test_refresh_links_for_asset_idempotent() {
+        let storage = Arc::new(Storage::open_in_memory().expect("open_in_memory"));
+        let engine = LinksEngine::new(storage.clone());
+
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let script_path = tmp.path().join("job.py");
+        std::fs::write(&script_path, "conn = 'postgresql://127.0.0.1:5432/db'\n").unwrap();
+
+        let n1 = engine.refresh_links_for_asset(&script_path).unwrap();
+        assert_eq!(n1, 1);
+
+        // 修改文件去掉 5432 改为 11434 (ollama)，再次刷新应自动清理旧 auto_discovered 边
+        std::fs::write(&script_path, "url = 'http://127.0.0.1:11434/api/tags'\n").unwrap();
+        let n2 = engine.refresh_links_for_asset(&script_path).unwrap();
+        assert_eq!(n2, 1);
+
+        let links = engine.query_links("asset", &script_path.to_string_lossy()).unwrap();
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].target_id, "ollama:11434");
+    }
+
+    #[test]
+    fn test_discover_links_utf8_long_chinese_line_no_panic() {
+        let storage = Arc::new(Storage::open_in_memory().expect("open_in_memory"));
+        let engine = LinksEngine::new(storage.clone());
+        let long_cn = format!(
+            "# {} 这是一段非常长的中文注释用于测试超过一百四十字节边界时的安全截断 /root/new/shared_proj/a.py",
+            "存储与依赖拓扑".repeat(12)
+        );
+        let cnt = engine.discover_links_from_script("/root/new/work/cn_test.md", &long_cn).unwrap();
+        assert_eq!(cnt, 1);
     }
 }

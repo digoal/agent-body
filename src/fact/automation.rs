@@ -340,8 +340,9 @@ impl AutomationTopology {
             out.push_str("|:---|:---|:---|:---:|\n");
             for s in services {
                 let desc = if s.description.is_empty() { "-" } else { &s.description };
-                let cmd_trunc = if s.exec_start.len() > 50 {
-                    format!("{}...", &s.exec_start[..47])
+                let cmd_trunc = if s.exec_start.chars().count() > 50 {
+                    let t: String = s.exec_start.chars().take(47).collect();
+                    format!("{}...", t)
                 } else {
                     s.exec_start.clone()
                 };
@@ -361,8 +362,9 @@ impl AutomationTopology {
             out.push_str("|:---|:---:|:---|:---|\n");
             for c in cron_jobs {
                 let script_str = c.target_script.as_deref().unwrap_or(&c.command);
-                let script_trunc = if script_str.len() > 40 {
-                    format!("{}...", &script_str[..37])
+                let script_trunc = if script_str.chars().count() > 40 {
+                    let t: String = script_str.chars().take(37).collect();
+                    format!("{}...", t)
                 } else {
                     script_str.to_string()
                 };

@@ -31,7 +31,7 @@ graph TD
         STORAGE["src/storage/ (统一存储门面/SPI/SQLite/PG/DuckDB)"]
         PRE["src/preflight/ (环境依赖三级预检引擎)"]
         WEB["src/web/ (内嵌HTTP/REST API/SSE推流/内嵌大屏)"]
-        MCP["src/api/ (MCP stdio 服务端/Hook门面)"]
+        MCP["src/api/ (MCP stdio 服务端 39 Tools / Hook门面)"]
         DAEMON["src/daemon/ (常驻守护/inotify监听/后台自巡检)"]
         CFG["src/config/ (TOML配置管理与参数校验)"]
     end

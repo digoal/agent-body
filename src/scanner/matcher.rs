@@ -1,6 +1,6 @@
 use std::path::Path;
 use anyhow::Result;
-use globset::{Glob, GlobBuilder, GlobSet, GlobSetBuilder};
+use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 use crate::storage::models::ScanPolicy;
 
 pub struct PolicyMatcher {
@@ -17,23 +17,35 @@ impl PolicyMatcher {
 
         for p in policies {
             let pattern = normalize_pattern(&p.path_pattern);
-            if let Ok(glob) = GlobBuilder::new(&pattern)
+            add_pattern_to_builder(&mut shallow_builder, &mut restricted_builder, &mut deep_builder, &p.tier, &pattern);
+            // 若黑名单规则形如 **/<dir>/**，必须同时把目录本身 **/<dir> 加入 shallow，
+            // 这样 WalkDir 访问到该目录本身时就能立即 skip_current_dir()，防止下钻一层导致子文件逃逸。
+            if p.tier == "shallow" && pattern.ends_with("/**") {
+                let dir_self = pattern.trim_end_matches("/**");
+                if !dir_self.is_empty() {
+                    add_pattern_to_builder(&mut shallow_builder, &mut restricted_builder, &mut deep_builder, "shallow", dir_self);
+                }
+            }
+        }
+
+        // 默认保底的通用黑名单（目录自身 + 其后代全部阻断）
+        for default_shallow in &[
+            "**/node_modules/**", "**/node_modules",
+            "**/.cache/**", "**/.cache",
+            "**/.git/**", "**/.git",
+            "**/target/**", "**/target",
+            "**/__pycache__/**", "**/__pycache__",
+            "**/.codegraph/**", "**/.codegraph",
+            "**/.venv/**", "**/.venv",
+            "**/.steward/**", "**/.steward",
+            "**/.state/**", "**/.state",
+            "/proc/**", "/proc",
+        ] {
+            if let Ok(glob) = GlobBuilder::new(default_shallow)
                 .literal_separator(false)
                 .backslash_escape(true)
                 .build()
             {
-                match p.tier.as_str() {
-                    "shallow" => shallow_builder.add(glob),
-                    "restricted" => restricted_builder.add(glob),
-                    "deep" => deep_builder.add(glob),
-                    _ => &mut deep_builder,
-                };
-            }
-        }
-
-        // 默认保底的通用黑名单
-        for default_shallow in &["**/node_modules/**", "**/node_modules", "**/.cache/**", "**/.git/**", "**/target/**", "/proc/**"] {
-            if let Ok(glob) = Glob::new(default_shallow) {
                 shallow_builder.add(glob);
             }
         }
@@ -57,6 +69,32 @@ impl PolicyMatcher {
             return "deep";
         }
         "deep"
+    }
+}
+
+fn add_pattern_to_builder(
+    shallow_builder: &mut GlobSetBuilder,
+    restricted_builder: &mut GlobSetBuilder,
+    deep_builder: &mut GlobSetBuilder,
+    tier: &str,
+    pattern: &str,
+) {
+    if let Ok(glob) = GlobBuilder::new(pattern)
+        .literal_separator(false)
+        .backslash_escape(true)
+        .build()
+    {
+        match tier {
+            "shallow" => {
+                shallow_builder.add(glob);
+            }
+            "restricted" => {
+                restricted_builder.add(glob);
+            }
+            _ => {
+                deep_builder.add(glob);
+            }
+        }
     }
 }
 
@@ -103,5 +141,9 @@ mod tests {
         assert_eq!(matcher.match_tier(Path::new("/root/new/work/app/node_modules")), "shallow");
         assert_eq!(matcher.match_tier(Path::new("/root/new/work/app/node_modules/lib/index.js")), "shallow");
         assert_eq!(matcher.match_tier(Path::new("/root/new/work/app/target/debug/build")), "shallow");
+        assert_eq!(matcher.match_tier(Path::new("/root/new/work/app/.git")), "shallow");
+        assert_eq!(matcher.match_tier(Path::new("/root/new/work/app/.git/config")), "shallow");
+        assert_eq!(matcher.match_tier(Path::new("/root/new/work/app/__pycache__")), "shallow");
+        assert_eq!(matcher.match_tier(Path::new("/root/new/work/app/__pycache__/a.pyc")), "shallow");
     }
 }

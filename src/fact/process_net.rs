@@ -358,8 +358,9 @@ impl ProcessNetTopology {
             let cwd_str = f.cwd.as_deref().unwrap_or("-");
             let cmd_str = f.command.as_deref().unwrap_or("-");
             // 截断超长命令防撑爆表格
-            let truncated_cmd = if cmd_str.len() > 60 {
-                format!("{}...", &cmd_str[..57])
+            let truncated_cmd = if cmd_str.chars().count() > 60 {
+                let t: String = cmd_str.chars().take(57).collect();
+                format!("{}...", t)
             } else {
                 cmd_str.to_string()
             };

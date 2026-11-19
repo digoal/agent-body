@@ -676,11 +676,13 @@ fn main() -> Result<()> {
             println!("版本:           {}", agent_steward::version_info());
             println!("数据目录:       {:?}", cfg.data_dir);
             println!("数据库文件:     {:?}", cfg.db_path);
-            let assets = storage.list_assets(1000)?;
+            let assets = storage.list_assets(100_000)?;
+            let links = storage.list_all_links(100_000)?;
             let rules = storage.get_placement_rules()?;
             let policies = storage.get_scan_policies()?;
             let procs = storage.list_active_processes()?;
             println!("已纳管资产数:   {}", assets.len());
+            println!("依赖关系边数:   {} 条", links.len());
             println!("放置规范规则:   {} 条", rules.len());
             println!("分级扫描策略:   {} 条", policies.len());
             println!("当前动态进程:   {} 个", procs.len());
@@ -920,7 +922,12 @@ fn main() -> Result<()> {
                     println!("{:<8} {:<10} {:<6} {:<10} {:<18} {}", "PID", "NAME", "CPU%", "MEM(MB)", "OWNER", "COMMAND");
                     for p in procs {
                         let mem_mb = p.mem_bytes as f64 / (1024.0 * 1024.0);
-                        let cmd_trunc = if p.command.len() > 60 { format!("{}...", &p.command[..60]) } else { p.command };
+                        let cmd_trunc = if p.command.chars().count() > 60 {
+                    let t: String = p.command.chars().take(57).collect();
+                    format!("{}...", t)
+                } else {
+                    p.command
+                };
                         println!("{:<8} {:<10} {:<6.1} {:<10.1} {:<18} {}", p.pid, p.name, p.cpu_pct, mem_mb, p.owner, cmd_trunc);
                     }
                 }

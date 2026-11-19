@@ -47,6 +47,41 @@ impl ImportanceScorer for RuleBasedImportanceScorer {
         let mut reasons = Vec::new();
 
         let path_str = path.to_string_lossy().to_lowercase();
+        let file_name = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+
+        // 0. 确定性高噪音/编译产物/编辑器交换文件一票否决（不被工作区加分抵消）
+        let hard_noise_ext = matches!(
+            ext.as_str(),
+            "pyc" | "pyo" | "swp" | "swx" | "swo" | "tmp" | "log" | "pid" | "sock" | "o" | "a" | "so" | "dylib"
+        );
+        let hard_noise_name = matches!(
+            file_name.as_str(),
+            "cachedir.tag" | ".rustc_info.json" | ".ds_store" | "thumbs.db" | "desktop.ini"
+        ) || file_name.ends_with('~');
+        let hard_noise_dir = path_str.contains("/.git/")
+            || path_str.contains("/node_modules/")
+            || path_str.contains("/__pycache__/")
+            || path_str.contains("/.steward/")
+            || path_str.contains("/.state/")
+            || path_str.contains("/target/debug/")
+            || path_str.contains("/target/release/");
+
+        if hard_noise_ext || hard_noise_name || hard_noise_dir {
+            return ImportanceScore {
+                score: 0.05,
+                reason: "确定性阻断: 编译缓存/临时交换/日志/黑名单路径噪声".to_string(),
+                is_noise: true,
+            };
+        }
 
         // 1. 路径核心度评估
         if path_str.contains("/work/") || path_str.contains("/shared_proj/") || path_str.contains("/skills/") || path_str.contains("/note/") {
@@ -57,14 +92,13 @@ impl ImportanceScorer for RuleBasedImportanceScorer {
             reasons.push("位于临时/构建缓存目录 (-0.35)");
         }
 
-        // 2. 噪声路径命中 (node_modules, .git objects, logs)
-        if path_str.contains("node_modules") || path_str.contains(".git/objects") || path_str.contains("/logs/") || path_str.ends_with(".log") {
+        // 2. 噪声路径命中 (logs)
+        if path_str.contains("/logs/") {
             score -= 0.50;
-            reasons.push("命中已知高频垃圾噪声路径 (-0.50)");
+            reasons.push("命中日志目录路径 (-0.50)");
         }
 
         // 3. 文件扩展名价值评估
-        let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
         match ext.as_str() {
             "rs" | "py" | "go" | "cpp" | "c" | "ts" | "sql" | "sh" => {
                 score += 0.20;

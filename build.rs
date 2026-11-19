@@ -1,5 +1,7 @@
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=.git/HEAD");
+    println!("cargo:rerun-if-changed=.git/logs/HEAD");
 
     // 编译时间 (UTC)
     let now = std::process::Command::new("date")

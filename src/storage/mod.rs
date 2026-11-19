@@ -214,6 +214,10 @@ impl Storage {
         self.provider.delete_links_for_target(target_id)
     }
 
+    pub fn delete_auto_links_for_source(&self, source_id: &str) -> Result<usize> {
+        self.provider.delete_auto_links_for_source(source_id)
+    }
+
     pub fn update_link_target(&self, source_id: &str, old_target: &str, new_target: &str) -> Result<usize> {
         self.provider.update_link_target(source_id, old_target, new_target)
     }

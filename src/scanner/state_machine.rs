@@ -84,7 +84,8 @@ impl ScanStateMachine {
         job.paused_at = None;
         self.storage.update_scan_job(&job)?;
 
-        let root_path = Path::new(&job.root_path);
+        let root_path_buf = std::path::PathBuf::from(&job.root_path);
+        let root_path = root_path_buf.as_path();
         if !root_path.exists() {
             job.status = "failed".to_string();
             job.error_message = Some(format!("根路径不存在: {:?}", root_path));
@@ -103,6 +104,7 @@ impl ScanStateMachine {
         let mut batch_records = Vec::new();
         let mut steps_in_this_run = 0usize;
         let mut reached_limit = false;
+        let links_engine = crate::links::LinksEngine::new(std::sync::Arc::new(self.storage.clone()));
 
         while let Some(entry_res) = it.next() {
             let entry = match entry_res {
@@ -176,6 +178,17 @@ impl ScanStateMachine {
                 }
             } else if entry.file_type().is_file() {
                 job.scanned_files += 1;
+                if tier == "shallow" {
+                    // 黑名单目录内文件绝不入库
+                    job.last_path = Some(path_str);
+                    steps_in_this_run += 1;
+                    continue;
+                }
+                if tier == "restricted" && !crate::scanner::should_index_in_restricted(root_path, path) {
+                    job.last_path = Some(path_str);
+                    steps_in_this_run += 1;
+                    continue;
+                }
                 let (asset_type, mut tags) = infer_file_attributes(path);
                 let metadata = entry.metadata().ok();
                 let size_bytes = metadata.as_ref().map(|m| m.len() as i64);
@@ -218,6 +231,10 @@ impl ScanStateMachine {
 
                     batch_records.push(record);
                     job.total_assets += 1;
+
+                    if tier == "deep" {
+                        let _ = links_engine.refresh_links_for_asset(path);
+                    }
                 }
             }
 

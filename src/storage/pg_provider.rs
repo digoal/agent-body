@@ -582,6 +582,15 @@ impl StorageProvider for PgStorageProvider {
         Ok(count as usize)
     }
 
+    fn delete_auto_links_for_source(&self, source_id: &str) -> Result<usize> {
+        let mut client = self.lock_client()?;
+        let count = client.execute(
+            "DELETE FROM links WHERE source_id = $1 AND auto_discovered = TRUE",
+            &[&source_id],
+        )?;
+        Ok(count as usize)
+    }
+
     fn update_link_target(&self, source_id: &str, old_target: &str, new_target: &str) -> Result<usize> {
         let mut client = self.lock_client()?;
         let count = client.execute(

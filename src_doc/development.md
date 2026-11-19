@@ -1,8 +1,8 @@
 # Agent Host Steward (Rust 版) — 本地编译、开发与测试指南
 
-> **版本**: v0.3.2 (Rust Edition)  
-> **更新时间**: 2026-11-18  
-> **架构基线**: 三位一体架构 (事实图谱 + 偏好规约 + 可插拔记忆) + 多存储引擎 + 协作锁引擎 + 依赖预检
+> **版本**: v0.4.0 (Rust Edition)  
+> **更新时间**: 2026-11-19  
+> **架构基线**: 三位一体架构 (事实图谱 + 偏好规约 + 可插拔记忆) + 多存储引擎 + 协作锁引擎 + Web UI 2.0 + 依赖预检
 
 ---
 
@@ -83,7 +83,7 @@ agent-steward/
     ├── ecosystem/           # MCP/SKILL 生态目录、外部服务通讯录与 Context 防爆路由
     ├── platform/            # 跨平台原生探针 (Linux/macOS/Windows)
     ├── mesh/                # 轻量多机联邦 HTTP Peer Mesh
-    └── api/                 # 38 个原生 MCP 工具端点与 Hook 门禁
+    └── api/                 # 39 个原生 MCP 工具端点与 Hook 门禁
 ```
 
 ---
