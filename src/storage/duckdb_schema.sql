@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS assets (
     file_count      BIGINT,
     tags            VARCHAR DEFAULT '[]',
     status          VARCHAR DEFAULT 'active',
+    embedding       VARCHAR DEFAULT '[]',
     last_scanned_at VARCHAR,
     last_modified_at VARCHAR,
     created_at      VARCHAR,
@@ -133,6 +134,7 @@ CREATE TABLE IF NOT EXISTS fact_nodes (
     name        VARCHAR NOT NULL,
     label       VARCHAR NOT NULL,
     properties  VARCHAR DEFAULT '{}',
+    embedding   VARCHAR DEFAULT '[]',
     updated_at  VARCHAR
 );
 

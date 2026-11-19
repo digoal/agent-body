@@ -109,6 +109,7 @@
 | **Phase 26** | 数据治理硬化（黑名单零逃逸/`restricted` 落地/噪音门禁）+ `LinksEngine` 真实依赖图谱闭环 + v0.4.0 四层全量对齐 | 规约 #2 #4 #5 #6 #10 #11 | ✅ **已完成** | 2026-11-19 14:50 |
 | **Phase 27** | 实证 Benchmark 双轨内核（8 大 A/B 负载 + 5 大微基准 + 生产效能存证账本 `PR-01~08` + 第 40 工具 `steward_benchmark` & CLI `bench`） | 待探讨 ISSUE #13 / 规约 #18 | ✅ **已完成** | 2026-11-19 15:54 |
 | **Phase 28** | Web「实证基准与效能账本」白屏工作台 + 40/40 Parity 矩阵 + 路演/PPT 实证联动 + 四层文档/SKILL 热部署 | 待探讨 ISSUE #13 / 规约 #16 #18 | ✅ **已完成** | 2026-11-19 15:54 |
+| **Phase 29** | 事实对象全景属性字典重构、全链路 Ollama Embedding 向量化与 WebUI 元数据深度贯通 | 用户反馈 / ISSUE #8 | ✅ **已完成** | 2026-11-19 20:17 |
 
 > 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md) 与 [progress-phase27.md](progress-phase27.md)
 

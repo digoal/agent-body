@@ -50,6 +50,10 @@ impl StorageProvider for PgStorageProvider {
         let mut client = self.lock_client()?;
         client.batch_execute(PG_SCHEMA_SQL)
             .context("执行内置 PostgreSQL Schema 批处理失败")?;
+        let _ = client.batch_execute(
+            "ALTER TABLE assets ADD COLUMN IF NOT EXISTS embedding TEXT DEFAULT '[]';
+             ALTER TABLE fact_nodes ADD COLUMN IF NOT EXISTS embedding TEXT DEFAULT '[]';"
+        );
 
         // 预置放置规范规则
         let preset_rules = [
@@ -1019,6 +1023,54 @@ impl StorageProvider for PgStorageProvider {
             });
         }
         Ok(edges)
+    }
+
+    fn update_asset_embedding(&self, path: &str, embedding: &[f32]) -> Result<()> {
+        let mut client = self.lock_client()?;
+        let emb_str = serde_json::to_string(embedding)?;
+        client.execute(
+            "UPDATE assets SET embedding = $1, updated_at = NOW() WHERE path = $2",
+            &[&emb_str, &path],
+        )?;
+        Ok(())
+    }
+
+    fn get_asset_embedding(&self, path: &str) -> Result<Vec<f32>> {
+        let mut client = self.lock_client()?;
+        let rows = client.query(
+            "SELECT COALESCE(embedding, '[]') FROM assets WHERE path = $1",
+            &[&path],
+        )?;
+        if let Some(row) = rows.first() {
+            let s: String = row.get(0);
+            Ok(serde_json::from_str(&s).unwrap_or_default())
+        } else {
+            Ok(Vec::new())
+        }
+    }
+
+    fn update_fact_node_embedding(&self, id: &str, embedding: &[f32]) -> Result<()> {
+        let mut client = self.lock_client()?;
+        let emb_str = serde_json::to_string(embedding)?;
+        client.execute(
+            "UPDATE fact_nodes SET embedding = $1, updated_at = NOW() WHERE id = $2",
+            &[&emb_str, &id],
+        )?;
+        Ok(())
+    }
+
+    fn get_fact_node_embedding(&self, id: &str) -> Result<Vec<f32>> {
+        let mut client = self.lock_client()?;
+        let rows = client.query(
+            "SELECT COALESCE(embedding, '[]') FROM fact_nodes WHERE id = $1",
+            &[&id],
+        )?;
+        if let Some(row) = rows.first() {
+            let s: String = row.get(0);
+            Ok(serde_json::from_str(&s).unwrap_or_default())
+        } else {
+            Ok(Vec::new())
+        }
     }
 
     // ─── Multi-Agent Coordination Locks (多 Agent 协作锁) ────────────

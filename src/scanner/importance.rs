@@ -73,12 +73,18 @@ impl ImportanceScorer for RuleBasedImportanceScorer {
             || path_str.contains("/.steward/")
             || path_str.contains("/.state/")
             || path_str.contains("/target/debug/")
-            || path_str.contains("/target/release/");
+            || path_str.contains("/target/release/")
+            || path_str.contains("/pg_wal/")
+            || path_str.contains("/pg_xact/")
+            || path_str.contains("/pg_multixact/")
+            || path_str.contains("/pg_subtrans/")
+            || path_str.contains("/pg_stat/")
+            || is_pgdata_rel_file(&path_str, &file_name, &ext);
 
         if hard_noise_ext || hard_noise_name || hard_noise_dir {
             return ImportanceScore {
                 score: 0.05,
-                reason: "确定性阻断: 编译缓存/临时交换/日志/黑名单路径噪声".to_string(),
+                reason: "确定性阻断: 编译缓存/临时交换/日志/PG数据块/黑名单路径噪声".to_string(),
                 is_noise: true,
             };
         }
@@ -100,17 +106,21 @@ impl ImportanceScorer for RuleBasedImportanceScorer {
 
         // 3. 文件扩展名价值评估
         match ext.as_str() {
-            "rs" | "py" | "go" | "cpp" | "c" | "ts" | "sql" | "sh" => {
+            "rs" | "py" | "go" | "cpp" | "c" | "h" | "hpp" | "ts" | "js" | "sql" | "sh" => {
                 score += 0.20;
                 reasons.push("核心源码工程脚本 (+0.20)");
             }
-            "md" | "org" | "txt" | "pdf" => {
+            "md" | "org" | "txt" | "pdf" | "html" | "rst" => {
                 score += 0.15;
                 reasons.push("知识文档资料 (+0.15)");
             }
-            "toml" | "json" | "yaml" | "yml" | "ini" | "conf" | "service" => {
+            "toml" | "json" | "yaml" | "yml" | "ini" | "conf" | "service" | "xml" => {
                 score += 0.10;
                 reasons.push("关键系统/工程配置 (+0.10)");
+            }
+            "csv" | "jsonl" | "parquet" | "svg" | "png" => {
+                score += 0.08;
+                reasons.push("结构化数据/媒体资产 (+0.08)");
             }
             "tmp" | "bak" | "swp" | "lock" | "pid" | "sock" | "pyc" => {
                 score -= 0.30;
@@ -195,6 +205,19 @@ impl NoiseFilter {
         let score = self.scorer.score_asset(path, asset_type, size_bytes, mtime_secs);
         (!score.is_noise, score)
     }
+}
+
+/// 判定是否为 PostgreSQL PGDATA 底层原始表文件块 (如 .../base/16384/1259 或 .../base/5/2610_fsm)
+fn is_pgdata_rel_file(path_lower: &str, file_name: &str, ext: &str) -> bool {
+    if !ext.is_empty() || !path_lower.contains("/base/") {
+        return false;
+    }
+    let core = file_name
+        .strip_suffix("_fsm")
+        .or_else(|| file_name.strip_suffix("_vm"))
+        .or_else(|| file_name.strip_suffix("_init"))
+        .unwrap_or(file_name);
+    !core.is_empty() && core.chars().all(|c| c.is_ascii_digit())
 }
 
 #[cfg(test)]

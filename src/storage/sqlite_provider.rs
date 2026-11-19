@@ -55,6 +55,8 @@ impl StorageProvider for SqliteStorageProvider {
             .context("执行内置 SQLite Schema 批处理失败")?;
         // 增量热迁移兼容已存在数据库
         let _ = conn.execute("ALTER TABLE memories ADD COLUMN embedding TEXT DEFAULT '[]'", []);
+        let _ = conn.execute("ALTER TABLE assets ADD COLUMN embedding TEXT DEFAULT '[]'", []);
+        let _ = conn.execute("ALTER TABLE fact_nodes ADD COLUMN embedding TEXT DEFAULT '[]'", []);
         let _ = conn.execute("ALTER TABLE links ADD COLUMN line_number INTEGER DEFAULT NULL", []);
         let _ = conn.execute("ALTER TABLE links ADD COLUMN snippet TEXT DEFAULT NULL", []);
         let _ = conn.execute("ALTER TABLE links ADD COLUMN provenance TEXT DEFAULT 'static_scan'", []);
@@ -1004,6 +1006,50 @@ impl StorageProvider for SqliteStorageProvider {
             })
         })?.collect::<Result<Vec<_>, _>>()?;
         Ok(edges)
+    }
+
+    fn update_asset_embedding(&self, path: &str, embedding: &[f32]) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let emb_str = serde_json::to_string(embedding)?;
+        conn.execute(
+            "UPDATE assets SET embedding = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%f+00:00','now') WHERE path = ?2",
+            params![emb_str, path],
+        )?;
+        Ok(())
+    }
+
+    fn get_asset_embedding(&self, path: &str) -> Result<Vec<f32>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare("SELECT COALESCE(embedding, '[]') FROM assets WHERE path = ?1")?;
+        let mut rows = stmt.query(params![path])?;
+        if let Some(row) = rows.next()? {
+            let s: String = row.get(0)?;
+            Ok(serde_json::from_str(&s).unwrap_or_default())
+        } else {
+            Ok(Vec::new())
+        }
+    }
+
+    fn update_fact_node_embedding(&self, id: &str, embedding: &[f32]) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let emb_str = serde_json::to_string(embedding)?;
+        conn.execute(
+            "UPDATE fact_nodes SET embedding = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%f+00:00','now') WHERE id = ?2",
+            params![emb_str, id],
+        )?;
+        Ok(())
+    }
+
+    fn get_fact_node_embedding(&self, id: &str) -> Result<Vec<f32>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare("SELECT COALESCE(embedding, '[]') FROM fact_nodes WHERE id = ?1")?;
+        let mut rows = stmt.query(params![id])?;
+        if let Some(row) = rows.next()? {
+            let s: String = row.get(0)?;
+            Ok(serde_json::from_str(&s).unwrap_or_default())
+        } else {
+            Ok(Vec::new())
+        }
     }
 
     // ─── Multi-Agent Coordination Locks (多 Agent 协作锁) ────────────

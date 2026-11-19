@@ -8,11 +8,13 @@ pub mod spi;
 pub mod builtin_provider;
 pub mod adapters;
 pub mod intake;
+pub mod embedding;
 
 pub use spi::{MemoryProvider, MemoryItem, MemoryFilter, SessionContext, EvictCriteria};
 pub use builtin_provider::BuiltinMemoryProvider;
 pub use adapters::{MemoryFactory, AdapterConfig};
 pub use intake::{MemoryIntakeFilter, MemoryIntakeEvaluation};
+pub use embedding::{EmbeddingClient, inject_embedding_meta, inject_pending_embedding_meta};
 
 pub struct MemoryManager {
     storage: Storage,
@@ -37,6 +39,7 @@ impl MemoryManager {
         let weight = if eval.accepted { eval.calculated_weight } else { 0.5 };
 
         let id = format!("mem-{}", uuid::Uuid::new_v4());
+        let emb = Self::try_embed_memory(content, summary);
         let record = MemoryRecord {
             id: id.clone(),
             memory_type: memory_type.to_string(),
@@ -48,7 +51,7 @@ impl MemoryManager {
             weight,
             pinned: false,
             status: "active".to_string(),
-            embedding: vec![],
+            embedding: emb,
         };
 
         self.storage.insert_memory(&record)?;
@@ -71,6 +74,7 @@ impl MemoryManager {
         }
 
         let id = format!("mem-{}", uuid::Uuid::new_v4());
+        let emb = Self::try_embed_memory(content, summary);
         let record = MemoryRecord {
             id: id.clone(),
             memory_type: memory_type.to_string(),
@@ -82,7 +86,7 @@ impl MemoryManager {
             weight: eval.calculated_weight,
             pinned: false,
             status: "active".to_string(),
-            embedding: vec![],
+            embedding: emb,
         };
 
         self.storage.insert_memory(&record)?;
@@ -92,6 +96,49 @@ impl MemoryManager {
     /// 全文检索记忆
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {
         self.storage.search_memories_fts(query, limit)
+    }
+
+    fn try_embed_memory(content: &str, summary: Option<&str>) -> Vec<f32> {
+        if cfg!(test) {
+            return Vec::new();
+        }
+        let client = EmbeddingClient::default();
+        if !client.is_available() {
+            return Vec::new();
+        }
+        let text = match summary {
+            Some(s) if !s.trim().is_empty() => format!("{} — {}", s.trim(), content.trim()),
+            _ => content.trim().to_string(),
+        };
+        client.embed_text(&text).unwrap_or_default()
+    }
+
+    /// 批量补全历史记忆缺失的 Embedding 向量
+    pub fn backfill_missing_embeddings(&self, limit: usize) -> Result<usize> {
+        let client = EmbeddingClient::default();
+        if !client.is_available() {
+            return Ok(0);
+        }
+        let all = self.storage.list_all_active_memories(limit.max(100))?;
+        let mut updated = 0usize;
+        for mut m in all {
+            if !m.embedding.is_empty() {
+                continue;
+            }
+            let text = match m.summary.as_deref() {
+                Some(s) if !s.trim().is_empty() => format!("{} — {}", s.trim(), m.content.trim()),
+                _ => m.content.trim().to_string(),
+            };
+            if let Some(vec) = client.embed_text(&text) {
+                m.embedding = vec;
+                self.storage.insert_memory(&m)?;
+                updated += 1;
+                if updated >= limit {
+                    break;
+                }
+            }
+        }
+        Ok(updated)
     }
 }
 

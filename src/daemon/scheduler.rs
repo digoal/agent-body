@@ -39,11 +39,15 @@ impl BackgroundScheduler {
         let organizer = PropertyGraphOrganizer::new(self.storage.clone());
         let (graph_nodes, graph_edges) = organizer.build_host_graph()
             .unwrap_or((0, 0));
+        let _fact_embedded = organizer.embed_fact_nodes(40).unwrap_or(0);
 
-        // 3. 记忆生命周期健康度审计
+        // 3. 记忆生命周期健康度审计 & 向量补全
         let lifecycle = MemoryLifecycleManager::new(&self.storage);
         let memory_conflicts = lifecycle.audit_memories()
             .map(|r| r.conflict_count)
+            .unwrap_or(0);
+        let _mem_embedded = crate::memory::MemoryManager::new(self.storage.clone())
+            .backfill_missing_embeddings(20)
             .unwrap_or(0);
 
         // 4. 若有挂起或未完成的断点扫描任务，自动推进恢复执行
@@ -72,10 +76,12 @@ impl BackgroundScheduler {
         let assets_enriched = if cfg.annotation.enabled && cfg.annotation.auto_enrich_batch_size > 0 {
             let batch_size = cfg.annotation.auto_enrich_batch_size;
             let annotator = crate::scanner::OllamaAnnotator::new(self.storage.clone(), cfg.annotation);
-            annotator
+            let enriched = annotator
                 .enrich_pending_assets(batch_size, None)
                 .map(|r| r.enriched_count)
-                .unwrap_or(0)
+                .unwrap_or(0);
+            let _ = annotator.embed_pending_assets(batch_size * 2, None);
+            enriched
         } else {
             0
         };

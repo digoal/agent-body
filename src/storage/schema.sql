@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS assets (
     file_count      INTEGER,
     tags            TEXT DEFAULT '[]',
     status          TEXT DEFAULT 'active' CHECK (status IN ('active','archived','missing')),
+    embedding       TEXT DEFAULT '[]',
     last_scanned_at TEXT,
     last_modified_at TEXT,
     created_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
@@ -232,6 +233,7 @@ CREATE TABLE IF NOT EXISTS fact_nodes (
     name        TEXT NOT NULL,
     label       TEXT NOT NULL,
     properties  TEXT DEFAULT '{}',
+    embedding   TEXT DEFAULT '[]',
     updated_at  TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
 );
 

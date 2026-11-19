@@ -28,20 +28,20 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 
       <div class="kpi-strip">
         <div class="kpi-pill"><span class="k-label">主机</span><strong id="k-host">-</strong></div>
-        <div class="kpi-pill"><span class="k-label">CPU / 内存</span><strong id="k-hw">-</strong></div>
-        <div class="kpi-pill"><span class="k-label">事实节点/边</span><strong id="k-facts" class="c-cyan">-</strong></div>
-        <div class="kpi-pill"><span class="k-label">协作锁/排队</span><strong id="k-locks" class="c-orange">-</strong></div>
-        <div class="kpi-pill"><span class="k-label">SKILL / MCP</span><strong id="k-eco" class="c-green">-</strong></div>
+        <div class="kpi-pill"><span class="k-label">硬件</span><strong id="k-hw">-</strong></div>
+        <div class="kpi-pill"><span class="k-label">图谱</span><strong id="k-facts" class="c-cyan">-</strong></div>
+        <div class="kpi-pill"><span class="k-label">协作锁</span><strong id="k-locks" class="c-orange">-</strong></div>
+        <div class="kpi-pill"><span class="k-label">生态</span><strong id="k-eco" class="c-green">-</strong></div>
         <div class="kpi-pill"><span class="k-label">平台</span><strong id="k-os" class="c-purple">-</strong></div>
       </div>
 
       <div class="topbar-actions">
-        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 40/40 能力对齐矩阵">✅ 40/40 对齐</span>
-        <span id="sse-badge" class="sse-pill connecting">SSE 连接中</span>
-        <button id="btn-theme-toggle" class="btn btn-theme" title="切换白天工程蓝图 / 夜间深空指挥舱 (快捷键 T)">☀️ 白天蓝图</button>
-        <button id="btn-toggle-mirror" class="btn btn-ghost" title="展开/收起黑屏命令镜像器">⌨️ 黑屏镜像</button>
-        <button id="btn-toggle-sse" class="btn btn-ghost" title="展开/收起实时事件流">⚡ 事件流</button>
-        <button id="btn-global-refresh" class="btn btn-primary">↻ 全量刷新</button>
+        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 40/40 能力对齐矩阵">✅ 40/40</span>
+        <span id="sse-badge" class="sse-pill connecting">SSE</span>
+        <button id="btn-theme-toggle" class="btn btn-theme btn-sm" title="切换白天工程蓝图 / 夜间深空指挥舱 (快捷键 T)">☀️ 蓝图</button>
+        <button id="btn-toggle-mirror" class="btn btn-ghost btn-sm" title="展开/收起黑屏命令镜像器">⌨️ 镜像</button>
+        <button id="btn-toggle-sse" class="btn btn-ghost btn-sm" title="展开/收起实时事件流">⚡ 事件 <span id="sse-unread-badge" class="badge hidden">0</span></button>
+        <button id="btn-global-refresh" class="btn btn-primary btn-sm">↻ 刷新</button>
       </div>
     </header>
 
@@ -84,9 +84,32 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       <main class="stage">
         <!-- 视图 1: 宿主机事实拓扑图谱 -->
         <section id="view-topology" class="view active">
-          <div class="view-toolbar">
+          <div class="view-toolbar topo-toolbar">
             <div class="toolbar-left">
-              <input id="topo-search" class="input" type="text" placeholder="搜索节点 (端口/服务/进程/工程)..." />
+              <input id="topo-search" class="input input-search" type="text" placeholder="搜索节点并转至中心 (Enter)..." />
+              <div class="mode-switch" id="topo-mode-switch" title="切换 3D 全息球面 / 2D 平面视图">
+                <button type="button" class="mode-btn active" data-mode="sphere">🌐 3D 球面</button>
+                <button type="button" class="mode-btn" data-mode="flat">🗺️ 2D 平面</button>
+              </div>
+              <label class="depth-ctrl" title="限制文件夹与文件路径展示深度，超出层级的子文件自动聚合到父目录">
+                <span>📂 层级</span>
+                <select id="topo-max-depth" class="input input-xs">
+                  <option value="2">2 层 (极简)</option>
+                  <option value="3" selected>3 层 (默认)</option>
+                  <option value="4">4 层</option>
+                  <option value="5">5 层</option>
+                  <option value="99">全部展开</option>
+                </select>
+              </label>
+              <label class="depth-ctrl" title="选中节点时高亮的关联跳数层级">
+                <span>🎯 跳数</span>
+                <select id="topo-hop-limit" class="input input-xs">
+                  <option value="1">1 跳</option>
+                  <option value="2">2 跳</option>
+                  <option value="3" selected>3 跳</option>
+                  <option value="99">全图</option>
+                </select>
+              </label>
               <div class="filter-chips" id="topo-filters">
                 <label class="chip"><input type="checkbox" value="process" checked><span class="dot d-process"></span>进程</label>
                 <label class="chip"><input type="checkbox" value="port" checked><span class="dot d-port"></span>端口</label>
@@ -97,16 +120,28 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
               </div>
             </div>
             <div class="toolbar-right">
-              <span id="topo-stats" class="muted-text">加载中...</span>
-              <button id="btn-links-audit" class="btn btn-ghost">🩺 断链审计/修复</button>
-              <button id="btn-links-mermaid" class="btn btn-ghost">📐 导出 Mermaid</button>
-              <button id="btn-topo-reset" class="btn btn-ghost">恢复全景</button>
-              <button id="btn-topo-fit" class="btn btn-ghost">自适应居中</button>
+              <span id="topo-stats" class="muted-text mono">加载中...</span>
+              <button id="btn-links-audit" class="btn btn-ghost btn-xs">🩺 断链审计</button>
+              <button id="btn-links-mermaid" class="btn btn-ghost btn-xs">📐 Mermaid</button>
             </div>
           </div>
-          <div class="topology-stage">
+          <div class="topology-stage" id="topology-stage">
             <canvas id="topology-canvas"></canvas>
-            <div class="canvas-hint">滚轮缩放 · 拖拽平移/移点 · 点击节点查看详情、CodeGraph 下钻与爆炸半径 · 按 T 切换昼夜主题</div>
+            <div id="topo-focus-banner" class="topo-focus-banner hidden">
+              <span id="topo-focus-label">🎯 当前中心: -</span>
+              <button id="btn-topo-clear-focus" class="btn btn-ghost btn-xs">✕ 取消聚焦</button>
+            </div>
+            <div class="topo-hud-controls">
+              <button id="btn-zoom-out" class="hud-btn" title="缩小球体">➖</button>
+              <input id="topo-zoom-slider" type="range" min="35" max="350" value="100" class="hud-slider" title="缩放比例" />
+              <button id="btn-zoom-in" class="hud-btn" title="放大球体">➕</button>
+              <span id="topo-zoom-label" class="hud-zoom-val mono">100%</span>
+              <span class="hud-sep">|</span>
+              <button id="btn-topo-orbit" class="hud-btn" title="开启/暂停球体怠速微旋">🔄 微旋</button>
+              <button id="btn-topo-fit" class="hud-btn" title="重置视角与缩放">🎯 归位</button>
+              <button id="btn-topo-reset" class="hud-btn" title="恢复全景图">🌐 全景</button>
+            </div>
+            <div class="canvas-hint">拖拽旋转球体 · 滚轮缩放 · 点击节点自动转至正面中心并下钻 · 按 T 切换主题</div>
             <aside id="node-drawer" class="drawer hidden">
               <div class="drawer-header">
                 <h3 id="drawer-title">节点详情</h3>
@@ -506,14 +541,17 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
         </section>
       </main>
 
-      <!-- 右侧可折叠 SSE 实时事件流 -->
-      <aside id="sse-sidebar" class="sse-sidebar">
+      <!-- 右侧可折叠 SSE 实时事件流 (默认收起为悬浮抽屉) -->
+      <aside id="sse-sidebar" class="sse-sidebar collapsed">
         <div class="drawer-header">
           <h3>⚡ 实时事件流 (SSE)</h3>
-          <button id="btn-clear-sse" class="btn btn-ghost btn-xs">清空</button>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button id="btn-clear-sse" class="btn btn-ghost btn-xs">清空</button>
+            <button id="btn-close-sse" class="btn-icon" title="收起">✕</button>
+          </div>
         </div>
         <div id="event-stream" class="event-stream">
-          <div class="event-item info">[系统] 2.0 驾驶舱已就绪</div>
+          <div class="event-item info"><div class="ev-head"><span class="badge">SYSTEM</span><span class="ev-time">就绪</span></div><div class="ev-body">2.0 驾驶舱已就绪</div></div>
         </div>
       </aside>
     </div>
@@ -665,45 +703,52 @@ body {
 
 /* Topbar */
 .topbar {
-  min-height: 60px;
+  height: 54px;
+  min-height: 54px;
   background: var(--topbar-bg);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 18px;
-  gap: 14px;
-  flex-wrap: wrap;
+  padding: 0 16px;
+  gap: 12px;
+  flex-wrap: nowrap;
 }
-.brand { display: flex; align-items: center; gap: 12px; }
-.brand h1 { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: 0.2px; }
+.brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.brand h1 { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: 0.2px; white-space: nowrap; }
 .ver-badge {
-  font-size: 11px; font-weight: 600; color: var(--blue);
+  font-size: 10px; font-weight: 600; color: var(--blue);
   background: var(--blue-soft); border: 1px solid var(--blue-border);
-  padding: 1px 7px; border-radius: 999px; margin-left: 6px;
+  padding: 1px 7px; border-radius: 999px; margin-left: 5px;
 }
-.subtitle { font-size: 11px; color: var(--muted); }
+.subtitle { font-size: 10px; color: var(--muted); white-space: nowrap; }
 .pulse-dot {
-  width: 10px; height: 10px; border-radius: 50%; background: var(--green);
+  width: 9px; height: 9px; border-radius: 50%; background: var(--green);
   box-shadow: 0 0 8px var(--green); flex-shrink: 0;
 }
 
-.kpi-strip { display: flex; gap: 8px; flex-wrap: wrap; }
+.kpi-strip {
+  display: flex; gap: 6px; flex-wrap: nowrap; align-items: center;
+  overflow-x: auto; scrollbar-width: none;
+}
+.kpi-strip::-webkit-scrollbar { display: none; }
 .kpi-pill {
   background: var(--panel-2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 4px 10px; display: flex; flex-direction: column;
-  box-shadow: var(--shadow-card);
+  border-radius: 999px; padding: 3px 10px;
+  display: flex; flex-direction: row; align-items: center; gap: 6px;
+  box-shadow: var(--shadow-card); white-space: nowrap; flex-shrink: 0;
 }
 .k-label { font-size: 10px; color: var(--muted); }
-.kpi-pill strong { font-size: 12px; color: var(--text); font-family: ui-monospace, SFMono-Regular, monospace; }
+.kpi-pill strong { font-size: 11px; color: var(--text); font-family: ui-monospace, SFMono-Regular, monospace; }
 .c-cyan { color: var(--blue) !important; }
 .c-orange { color: var(--orange) !important; }
 .c-green { color: var(--green) !important; }
 .c-purple { color: var(--purple) !important; }
 
-.topbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.topbar-actions { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; flex-shrink: 0; }
 .sse-pill {
-  font-size: 11px; padding: 3px 9px; border-radius: 999px; font-weight: 600;
+  font-size: 11px; padding: 3px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap;
   background: var(--green-soft); color: var(--green); border: 1px solid var(--green-border);
 }
 .sse-pill.connecting { background: var(--orange-soft); color: var(--orange); border-color: var(--orange-border); }
@@ -712,6 +757,7 @@ body {
 .btn {
   border: 1px solid var(--border-hi); background: var(--panel-2); color: var(--text);
   padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: 0.15s; font-weight: 500;
+  white-space: nowrap;
 }
 .btn:hover { border-color: var(--blue); color: var(--blue); background: var(--hover-bg); }
 .btn-primary { background: var(--accent-btn-bg); border-color: var(--accent-btn-bg); color: var(--accent-btn-fg); }
@@ -721,6 +767,7 @@ body {
 .btn-danger { background: var(--red-soft); border-color: var(--red-border); color: var(--red); }
 .btn-danger:hover { background: var(--red); color: #ffffff; }
 .btn-ghost { background: transparent; }
+.btn-sm { padding: 4px 9px; font-size: 11px; }
 .btn-xs { padding: 3px 8px; font-size: 11px; }
 .btn-icon { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; }
 .btn-icon:hover { color: var(--text); }
@@ -731,6 +778,8 @@ body {
 }
 .input:focus { border-color: var(--blue); }
 .input-sm { padding: 4px 8px; font-size: 11px; width: 160px; }
+.input-xs { padding: 3px 6px; font-size: 11px; }
+.input-search { width: 210px; padding: 5px 10px; font-size: 12px; }
 .flex-1 { flex: 1; min-width: 200px; }
 
 /* Workspace */
@@ -774,14 +823,36 @@ body {
 
 .view-toolbar {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
+  gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
 }
-.toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.topo-toolbar { margin-bottom: 8px; gap: 8px; }
+.toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mode-switch {
+  display: inline-flex; background: var(--panel-2); border: 1px solid var(--border-hi);
+  border-radius: 8px; padding: 2px; gap: 2px;
+}
+.mode-btn {
+  border: none; background: transparent; color: var(--muted); padding: 3px 9px;
+  border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.15s;
+}
+.mode-btn:hover { color: var(--text); }
+.mode-btn.active { background: var(--accent-btn-bg); color: var(--accent-btn-fg); }
+.depth-ctrl {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted);
+  background: var(--panel); border: 1px solid var(--border); padding: 2px 6px; border-radius: 7px;
+}
+.depth-ctrl select { border: none; background: transparent; padding: 2px 4px; font-weight: 600; color: var(--text); }
+.filter-chips { display: flex; gap: 4px; flex-wrap: wrap; }
 .chip {
   display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-2);
   background: var(--panel); border: 1px solid var(--border);
-  padding: 4px 8px; border-radius: 999px; cursor: pointer;
+  padding: 3px 9px; border-radius: 999px; cursor: pointer;
+  opacity: 0.42; transition: 0.16s; user-select: none;
+}
+.chip input[type="checkbox"] { display: none; }
+.chip:has(input:checked) {
+  opacity: 1; background: var(--panel-2); border-color: var(--border-hi);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.16);
 }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .d-process { background: var(--blue); }
@@ -793,22 +864,54 @@ body {
 
 /* Topology */
 .topology-stage {
-  flex: 1; position: relative; border: 1px solid var(--border); border-radius: 10px;
-  background: radial-gradient(var(--canvas-dot) 1px, transparent 1px), var(--canvas-bg);
-  background-size: 22px 22px; overflow: hidden;
+  flex: 1; position: relative; border: 1px solid var(--border); border-radius: 12px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.08) 0%, rgba(167, 139, 250, 0.035) 38%, transparent 72%),
+    radial-gradient(var(--canvas-dot) 1px, transparent 1px),
+    var(--canvas-bg);
+  background-size: 100% 100%, 22px 22px, 100% 100%;
+  overflow: hidden;
 }
 #topology-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
 #topology-canvas:active { cursor: grabbing; }
+.topo-focus-banner {
+  position: absolute; top: 12px; left: 12px; z-index: 8;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--drawer-bg); backdrop-filter: blur(10px);
+  border: 1px solid var(--blue-border); border-radius: 999px;
+  padding: 4px 10px 4px 12px; font-size: 11px; color: var(--text);
+  box-shadow: var(--drawer-shadow);
+}
+.topo-hud-controls {
+  position: absolute; bottom: 12px; left: 12px; z-index: 8;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--drawer-bg); backdrop-filter: blur(10px);
+  border: 1px solid var(--border-hi); border-radius: 10px;
+  padding: 5px 10px; box-shadow: var(--drawer-shadow);
+}
+.hud-btn {
+  background: transparent; border: 1px solid transparent; color: var(--text-2);
+  padding: 3px 7px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;
+  transition: 0.14s; white-space: nowrap;
+}
+.hud-btn:hover { background: var(--hover-bg); border-color: var(--border-hi); color: var(--blue); }
+.hud-btn.active { background: var(--blue-soft); border-color: var(--blue-border); color: var(--blue); }
+.hud-slider { width: 88px; accent-color: var(--blue); cursor: pointer; }
+.hud-zoom-val { min-width: 38px; text-align: right; color: var(--muted); font-size: 11px; }
+.hud-sep { color: var(--border-hi); }
 .canvas-hint {
-  position: absolute; bottom: 10px; left: 12px; font-size: 11px; color: var(--muted);
-  background: var(--topbar-bg); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+  position: absolute; bottom: 14px; right: 14px; font-size: 11px; color: var(--muted);
+  background: var(--topbar-bg); backdrop-filter: blur(8px);
+  padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border);
+  pointer-events: none;
 }
 
 .drawer {
-  position: absolute; top: 10px; right: 10px; bottom: 10px; width: 350px;
-  background: var(--drawer-bg); border: 1px solid var(--border-hi);
-  border-radius: 10px; display: flex; flex-direction: column;
-  box-shadow: var(--drawer-shadow); z-index: 10;
+  position: absolute; top: 12px; right: 12px; bottom: 44px; width: 356px;
+  background: var(--drawer-bg); backdrop-filter: blur(14px);
+  border: 1px solid var(--border-hi);
+  border-radius: 12px; display: flex; flex-direction: column;
+  box-shadow: var(--drawer-shadow); z-index: 12;
 }
 .drawer.hidden { display: none; }
 .drawer-header {
@@ -820,7 +923,7 @@ body {
 
 /* Cards & Grids */
 .scroll-panel { flex: 1; overflow-y: auto; padding-right: 4px; }
-.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.grid-2, .panel-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .mt-8 { margin-top: 8px; }
 .mt-12 { margin-top: 12px; }
@@ -849,14 +952,15 @@ body {
   text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border);
   vertical-align: top; word-break: break-word; color: var(--text-2);
 }
-.data-table th { color: var(--muted); font-weight: 600; background: var(--table-head-bg); position: sticky; top: 0; }
+.data-table th { color: var(--muted); font-weight: 600; background: var(--table-head-bg); position: sticky; top: 0; white-space: nowrap; }
+.data-table td:first-child, .data-table td:nth-child(2) { white-space: nowrap; }
 .data-table tbody tr:hover { background: var(--hover-bg); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
 
 /* Badges & Items */
 .badge {
   display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600;
-  background: var(--blue-soft); color: var(--blue); border: 1px solid transparent;
+  background: var(--blue-soft); color: var(--blue); border: 1px solid transparent; white-space: nowrap;
 }
 .badge-ok { background: var(--green-soft); color: var(--green); border-color: var(--green-border); }
 .badge-warn { background: var(--orange-soft); color: var(--orange); border-color: var(--orange-border); }
@@ -877,19 +981,25 @@ body {
 .budget-label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .route-result { padding: 0 12px 12px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 
-/* SSE Sidebar */
+/* SSE Sidebar (Overlay Drawer) */
 .sse-sidebar {
-  width: 280px; background: var(--sidenav-bg); border-left: 1px solid var(--border);
+  position: fixed; top: 54px; right: 0; bottom: 36px; width: 320px; z-index: 30;
+  background: var(--drawer-bg); backdrop-filter: blur(14px);
+  border-left: 1px solid var(--border-hi);
   display: flex; flex-direction: column; flex-shrink: 0;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.42);
 }
 .sse-sidebar.collapsed { display: none; }
 .event-stream { flex: 1; overflow-y: auto; padding: 10px; font-family: ui-monospace, monospace; font-size: 11px; }
 .event-item {
-  border-left: 2px solid var(--blue); padding: 4px 8px; margin-bottom: 6px;
-  background: var(--item-bg); color: var(--text-2); border-radius: 0 4px 4px 0; word-break: break-all;
+  border-left: 3px solid var(--blue); padding: 6px 8px; margin-bottom: 8px;
+  background: var(--item-bg); color: var(--text-2); border-radius: 0 6px 6px 0; word-break: break-word;
 }
 .event-item.warn { border-left-color: var(--orange); }
 .event-item.ok { border-left-color: var(--green); }
+.ev-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+.ev-time { font-size: 10px; color: var(--muted); }
+.ev-body { font-size: 11px; color: var(--text-2); line-height: 1.4; }
 
 /* Parity Bars & Black-Screen Mirror */
 .hidden { display: none !important; }
@@ -1090,7 +1200,7 @@ body.presenter-mode .sidenav, body.presenter-mode .sse-sidebar, body.presenter-m
   .demo-scene-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 1100px) {
-  .grid-2, .grid-3, .route-result, .demo-roi-strip, .demo-split, .demo-explainer-grid, .demo-hero-metrics, .tool-wall { grid-template-columns: 1fr; }
+  .grid-2, .panel-grid-2, .grid-3, .route-result, .demo-roi-strip, .demo-split, .demo-explainer-grid, .demo-hero-metrics, .tool-wall { grid-template-columns: 1fr; }
   .sse-sidebar { display: none; }
   .sidenav { width: 62px; padding: 8px 6px; }
   .nav-btn span:last-child { display: none; }
@@ -1108,14 +1218,29 @@ const state = {
   govData: null,
   topoRaw: null,
   topoDisplay: null,
+  topoMode: "sphere",
+  maxPathDepth: 3,
+  hopLimit: 3,
+  expandedDirs: new Set(),
   simNodes: [],
   simEdges: [],
   cam: { x: 0, y: 0, zoom: 1 },
+  canvasW: 900,
+  canvasH: 600,
+  dpr: 1,
+  rotMat: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+  rotVel: { vx: 0, vy: 0 },
+  autoOrbit: false,
+  sphereAnimId: null,
+  inertiaAnimId: null,
+  orbitAnimId: null,
   selectedNodeId: null,
   hoverNodeId: null,
   dragNode: null,
+  dragMoved: false,
   panning: false,
   panStart: { x: 0, y: 0 },
+  unreadSse: 0,
 };
 
 const NODE_COLORS_DARK = {
@@ -1169,7 +1294,7 @@ function applyTheme(theme, persist) {
   }
   const btn = document.getElementById("btn-theme-toggle");
   if (btn) {
-    btn.innerText = next === "light" ? "🌙 夜间深空" : "☀️ 白天蓝图";
+    btn.innerText = next === "light" ? "🌙 深空" : "☀️ 蓝图";
   }
   if (state.simNodes.length > 0) {
     drawTopology();
@@ -1208,6 +1333,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindNavigation();
   bindTopologyControls();
   bindOtherControls();
+  resizeCanvas();
   initSSE();
   refreshAll();
   loadParityBadge();
@@ -1256,8 +1382,16 @@ function bindOtherControls() {
   document.getElementById("btn-theme-toggle")?.addEventListener("click", toggleTheme);
   document.getElementById("btn-global-refresh")?.addEventListener("click", refreshAll);
   document.getElementById("btn-toggle-sse")?.addEventListener("click", () => {
-    document.getElementById("sse-sidebar")?.classList.toggle("collapsed");
-    if (state.activeView === "topology") setTimeout(resizeCanvas, 50);
+    const sb = document.getElementById("sse-sidebar");
+    sb?.classList.toggle("collapsed");
+    if (sb && !sb.classList.contains("collapsed")) {
+      state.unreadSse = 0;
+      const ub = document.getElementById("sse-unread-badge");
+      if (ub) { ub.classList.add("hidden"); ub.innerText = "0"; }
+    }
+  });
+  document.getElementById("btn-close-sse")?.addEventListener("click", () => {
+    document.getElementById("sse-sidebar")?.classList.add("collapsed");
   });
   document.getElementById("btn-toggle-mirror")?.addEventListener("click", () => {
     document.getElementById("mirror-bar")?.classList.toggle("collapsed");
@@ -1266,13 +1400,17 @@ function bindOtherControls() {
     switchView("governance");
     document.querySelector('#gov-subtabs .subtab[data-sub="mesh"]')?.click();
   });
-  document.getElementById("btn-copy-cli")?.addEventListener("click", () => {
+  document.getElementById("btn-copy-cli")?.addEventListener("click", (e) => {
     const txt = document.getElementById("mirror-cli")?.innerText || "";
     navigator.clipboard?.writeText(txt);
+    const b = e.currentTarget;
+    if (b) { const old = b.innerText; b.innerText = "✅"; setTimeout(() => { b.innerText = old; }, 1000); }
   });
-  document.getElementById("btn-copy-mcp")?.addEventListener("click", () => {
+  document.getElementById("btn-copy-mcp")?.addEventListener("click", (e) => {
     const txt = document.getElementById("mirror-mcp")?.innerText || "";
     navigator.clipboard?.writeText(txt);
+    const b = e.currentTarget;
+    if (b) { const old = b.innerText; b.innerText = "✅"; setTimeout(() => { b.innerText = old; }, 1000); }
   });
   document.getElementById("btn-clear-sse")?.addEventListener("click", () => {
     const el = document.getElementById("event-stream");
@@ -1343,18 +1481,324 @@ async function loadOverview() {
   }
 }
 
-/* ─── 1. 宿主机事实拓扑交互图谱 ─────────────────────────────────── */
+/* ─── 1. 宿主机事实拓扑交互图谱 (3D 全息球面 + 层级折叠 + 2D 平面) ──── */
+function normalizeNodeType(rawType) {
+  if (typeof rawType === "string") {
+    const t = rawType.toLowerCase();
+    if (t === "asset" || t === "directory" || t === "doc" || t === "script") return "file";
+    if (t === "project" || t === "repo") return "git";
+    return t;
+  }
+  if (rawType && typeof rawType === "object" && rawType.custom) {
+    return normalizeNodeType(rawType.custom);
+  }
+  return "file";
+}
+
+function normalizePathStr(p) {
+  if (!p) return "";
+  const s = String(p).trim();
+  return s.length > 1 && s.endsWith("/") ? s.replace(/\/+$/, "") : s;
+}
+
+function getEffectiveDepthAndAncestor(canonPath, maxDepth) {
+  if (!canonPath || !canonPath.startsWith("/")) return { depth: 1, ancestor: null };
+  const norm = normalizePathStr(canonPath);
+  if (norm.startsWith("/root/new/")) {
+    const rel = norm.slice("/root/new/".length);
+    const segs = rel.split("/").filter(Boolean);
+    const depth = Math.max(1, segs.length);
+    if (depth <= maxDepth) return { depth, ancestor: null };
+    const ancSegs = segs.slice(0, maxDepth);
+    return { depth, ancestor: "/root/new/" + ancSegs.join("/") };
+  }
+  const segs = norm.split("/").filter(Boolean);
+  const depth = Math.max(1, segs.length);
+  if (depth <= maxDepth) return { depth, ancestor: null };
+  return { depth, ancestor: "/" + segs.slice(0, maxDepth).join("/") };
+}
+
+function isDirExplicitlyExpanded(canonPath) {
+  if (!canonPath || state.expandedDirs.size === 0) return false;
+  for (const dir of state.expandedDirs) {
+    if (canonPath.startsWith(dir + "/")) {
+      const rest = canonPath.slice(dir.length + 1).split("/").filter(Boolean);
+      if (rest.length <= 1) return true;
+    }
+  }
+  return false;
+}
+
+function foldTopologyByPathDepth(rawNodes, rawEdges, maxDepth) {
+  if (maxDepth >= 99) {
+    return { nodes: rawNodes, edges: rawEdges, foldedCount: 0 };
+  }
+  const idMap = new Map();
+  const dirGroups = new Map();
+  const keptNodes = [];
+  let foldedCount = 0;
+
+  for (const n of rawNodes) {
+    const nt = normalizeNodeType(n.node_type);
+    const cpath = normalizePathStr(n.canonical_path || n.metadata?.abs_path || n.metadata?.path || n.metadata?.ref || "");
+    if ((nt === "file" || nt === "git") && cpath.startsWith("/") && !isDirExplicitlyExpanded(cpath)) {
+      const { ancestor } = getEffectiveDepthAndAncestor(cpath, maxDepth);
+      if (ancestor) {
+        const dirId = `dir:${ancestor}`;
+        idMap.set(n.id, dirId);
+        foldedCount++;
+        if (!dirGroups.has(dirId)) {
+          const dirName = ancestor.split("/").filter(Boolean).pop() || ancestor;
+          dirGroups.set(dirId, {
+            id: dirId,
+            label: `📁 ${dirName}`,
+            baseLabel: dirName,
+            node_type: "file",
+            status: "folded_dir",
+            canonical_path: ancestor,
+            path_depth: maxDepth,
+            isFoldedDir: true,
+            children: [],
+            childTypes: {},
+            childDomains: {},
+            metadata: {
+              path: ancestor,
+              canonical_path: ancestor,
+              category: "folded_directory",
+              folded: true,
+            },
+          });
+        }
+        const grp = dirGroups.get(dirId);
+        grp.children.push({ id: n.id, label: n.label, path: cpath, desc: n.metadata?.description || n.metadata?.purpose || "" });
+        const ct = n.metadata?.asset_type || nt || "file";
+        grp.childTypes[ct] = (grp.childTypes[ct] || 0) + 1;
+        const dom = n.metadata?.domain;
+        if (dom) grp.childDomains[dom] = (grp.childDomains[dom] || 0) + 1;
+        continue;
+      }
+    }
+    idMap.set(n.id, n.id);
+    keptNodes.push(n);
+  }
+
+  for (const dirNode of dirGroups.values()) {
+    dirNode.label = `📁 ${dirNode.baseLabel} [+${dirNode.children.length}]`;
+    const topDomain = Object.entries(dirNode.childDomains).sort((a, b) => b[1] - a[1])[0]?.[0] || "workspace_dir";
+    dirNode.metadata.children_count = dirNode.children.length;
+    dirNode.metadata.domain = topDomain;
+    dirNode.metadata.child_types = dirNode.childTypes;
+    dirNode.metadata.description = `聚合目录 ${dirNode.metadata.path}，共包含 ${dirNode.children.length} 个子对象 (主域: ${topDomain})`;
+    dirNode.metadata.sample_children = dirNode.children.slice(0, 5).map((c) => c.label);
+    delete dirNode.childTypes;
+    delete dirNode.childDomains;
+    keptNodes.push(dirNode);
+  }
+
+  const edgeSeen = new Set();
+  const rolledEdges = [];
+  for (const e of rawEdges) {
+    const s = idMap.get(e.source) || e.source;
+    const t = idMap.get(e.target) || e.target;
+    if (!s || !t || s === t) continue;
+    const key = `${s}|${t}|${e.relation}`;
+    if (edgeSeen.has(key)) continue;
+    edgeSeen.add(key);
+    rolledEdges.push({ ...e, source: s, target: t });
+  }
+
+  return { nodes: keptNodes, edges: rolledEdges, foldedCount };
+}
+
+function mulMat3(a, b) {
+  return [
+    a[0]*b[0] + a[1]*b[3] + a[2]*b[6], a[0]*b[1] + a[1]*b[4] + a[2]*b[7], a[0]*b[2] + a[1]*b[5] + a[2]*b[8],
+    a[3]*b[0] + a[4]*b[3] + a[5]*b[6], a[3]*b[1] + a[4]*b[4] + a[5]*b[7], a[3]*b[2] + a[4]*b[5] + a[5]*b[8],
+    a[6]*b[0] + a[7]*b[3] + a[8]*b[6], a[6]*b[1] + a[7]*b[4] + a[8]*b[7], a[6]*b[2] + a[7]*b[5] + a[8]*b[8],
+  ];
+}
+
+function rotateVec3(m, x, y, z) {
+  return {
+    x: m[0]*x + m[1]*y + m[2]*z,
+    y: m[3]*x + m[4]*y + m[5]*z,
+    z: m[6]*x + m[7]*y + m[8]*z,
+  };
+}
+
+function axisAngleMat3(ux, uy, uz, angle) {
+  const c = Math.cos(angle), s = Math.sin(angle), t = 1 - c;
+  return [
+    t*ux*ux + c,    t*ux*uy - s*uz, t*ux*uz + s*uy,
+    t*ux*uy + s*uz, t*uy*uy + c,    t*uy*uz - s*ux,
+    t*ux*uz - s*uy, t*uy*uz + s*ux, t*uz*uz + c,
+  ];
+}
+
+function orthonormalizeMat3(m) {
+  let x = [m[0], m[3], m[6]];
+  const xl = Math.hypot(x[0], x[1], x[2]) || 1;
+  x = [x[0]/xl, x[1]/xl, x[2]/xl];
+  let y = [m[1], m[4], m[7]];
+  const dot = x[0]*y[0] + x[1]*y[1] + x[2]*y[2];
+  y = [y[0] - dot*x[0], y[1] - dot*x[1], y[2] - dot*x[2]];
+  const yl = Math.hypot(y[0], y[1], y[2]) || 1;
+  y = [y[0]/yl, y[1]/yl, y[2]/yl];
+  const z = [x[1]*y[2] - x[2]*y[1], x[2]*y[0] - x[0]*y[2], x[0]*y[1] - x[1]*y[0]];
+  return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
+}
+
+function syncZoomHud() {
+  const pct = Math.round(state.cam.zoom * 100);
+  const slider = document.getElementById("topo-zoom-slider");
+  const label = document.getElementById("topo-zoom-label");
+  if (slider) slider.value = String(Math.max(35, Math.min(350, pct)));
+  if (label) label.innerText = `${pct}%`;
+}
+
+function setTopoZoom(nextZoom) {
+  state.cam.zoom = Math.max(0.35, Math.min(3.5, nextZoom));
+  syncZoomHud();
+  drawTopology();
+}
+
+function updateFocusBanner(node) {
+  const banner = document.getElementById("topo-focus-banner");
+  const lbl = document.getElementById("topo-focus-label");
+  if (!banner || !lbl) return;
+  if (!node) {
+    banner.classList.add("hidden");
+    return;
+  }
+  banner.classList.remove("hidden");
+  lbl.innerText = `🎯 中心: ${node.label} (被引用 ${node.inDeg} · 引用 ${node.outDeg})`;
+}
+
+function stopSphereAnimations() {
+  if (state.sphereAnimId) { cancelAnimationFrame(state.sphereAnimId); state.sphereAnimId = null; }
+  if (state.inertiaAnimId) { cancelAnimationFrame(state.inertiaAnimId); state.inertiaAnimId = null; }
+}
+
+function focusNodeToSphereCenter(node) {
+  if (!node || state.topoMode !== "sphere") return;
+  stopSphereAnimations();
+  const startMat = state.rotMat.slice();
+  const p = rotateVec3(startMat, node.sx, node.sy, node.sz);
+  const crossX = p.y;
+  const crossY = -p.x;
+  const crossLen = Math.hypot(crossX, crossY);
+  const totalAngle = Math.acos(Math.max(-1, Math.min(1, p.z)));
+  if (totalAngle < 0.005) {
+    drawTopology();
+    return;
+  }
+  const ax = crossLen > 1e-5 ? crossX / crossLen : 0;
+  const ay = crossLen > 1e-5 ? crossY / crossLen : 1;
+  const startTime = performance.now();
+  const duration = 420;
+
+  function step(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const deltaMat = axisAngleMat3(ax, ay, 0, totalAngle * eased);
+    state.rotMat = orthonormalizeMat3(mulMat3(deltaMat, startMat));
+    drawTopology();
+    if (t < 1) {
+      state.sphereAnimId = requestAnimationFrame(step);
+    } else {
+      state.sphereAnimId = null;
+    }
+  }
+  state.sphereAnimId = requestAnimationFrame(step);
+}
+
+function startInertiaLoop() {
+  if (state.topoMode !== "sphere") return;
+  if (state.inertiaAnimId) cancelAnimationFrame(state.inertiaAnimId);
+  function tick() {
+    if (Math.abs(state.rotVel.vx) < 0.0002 && Math.abs(state.rotVel.vy) < 0.0002) {
+      state.inertiaAnimId = null;
+      return;
+    }
+    const ry = axisAngleMat3(0, 1, 0, state.rotVel.vx);
+    const rx = axisAngleMat3(1, 0, 0, state.rotVel.vy);
+    state.rotMat = orthonormalizeMat3(mulMat3(rx, mulMat3(ry, state.rotMat)));
+    state.rotVel.vx *= 0.90;
+    state.rotVel.vy *= 0.90;
+    drawTopology();
+    state.inertiaAnimId = requestAnimationFrame(tick);
+  }
+  state.inertiaAnimId = requestAnimationFrame(tick);
+}
+
+function toggleAutoOrbit() {
+  state.autoOrbit = !state.autoOrbit;
+  const btn = document.getElementById("btn-topo-orbit");
+  if (btn) btn.classList.toggle("active", state.autoOrbit);
+  if (state.autoOrbit && !state.orbitAnimId) {
+    const loop = () => {
+      if (!state.autoOrbit) { state.orbitAnimId = null; return; }
+      if (state.activeView === "topology" && state.topoMode === "sphere" && !state.panning && !state.sphereAnimId) {
+        const ry = axisAngleMat3(0, 1, 0, 0.0028);
+        state.rotMat = orthonormalizeMat3(mulMat3(ry, state.rotMat));
+        drawTopology();
+      }
+      state.orbitAnimId = requestAnimationFrame(loop);
+    };
+    state.orbitAnimId = requestAnimationFrame(loop);
+  }
+}
+
 function bindTopologyControls() {
   const canvas = document.getElementById("topology-canvas");
   if (!canvas) return;
 
+  if (typeof ResizeObserver !== "undefined" && canvas.parentElement) {
+    const ro = new ResizeObserver(() => {
+      if (state.activeView === "topology") resizeCanvas();
+    });
+    ro.observe(canvas.parentElement);
+  }
   window.addEventListener("resize", () => {
     if (state.activeView === "topology") resizeCanvas();
   });
 
-  document.getElementById("topo-search")?.addEventListener("input", drawTopology);
+  const searchInput = document.getElementById("topo-search");
+  searchInput?.addEventListener("input", drawTopology);
+  searchInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const kw = searchInput.value.trim().toLowerCase();
+      if (!kw) return;
+      const hit = state.simNodes.find((n) => n.label.toLowerCase().includes(kw) || n.id.toLowerCase().includes(kw));
+      if (hit) selectAndCenterNode(hit);
+    }
+  });
+
+  document.querySelectorAll("#topo-mode-switch .mode-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.topoMode = btn.dataset.mode || "sphere";
+      document.querySelectorAll("#topo-mode-switch .mode-btn").forEach((b) => b.classList.toggle("active", b === btn));
+      fitCamera();
+    });
+  });
+
+  document.getElementById("topo-max-depth")?.addEventListener("change", (e) => {
+    state.maxPathDepth = Number(e.target.value || 3);
+    applyTopoFilter();
+  });
+
+  document.getElementById("topo-hop-limit")?.addEventListener("change", (e) => {
+    state.hopLimit = Number(e.target.value || 3);
+    drawTopology();
+  });
+
   document.querySelectorAll("#topo-filters input").forEach((cb) => cb.addEventListener("change", applyTopoFilter));
+
   document.getElementById("btn-topo-reset")?.addEventListener("click", () => {
+    state.expandedDirs.clear();
+    state.selectedNodeId = null;
+    updateFocusBanner(null);
+    document.getElementById("node-drawer")?.classList.add("hidden");
     if (state.topoRaw) {
       state.topoDisplay = state.topoRaw;
       applyTopoFilter();
@@ -1362,62 +1806,142 @@ function bindTopologyControls() {
       loadTopology();
     }
   });
-  document.getElementById("btn-topo-fit")?.addEventListener("click", fitCamera);
+
+  document.getElementById("btn-topo-fit")?.addEventListener("click", () => {
+    state.rotMat = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    fitCamera();
+  });
+
+  document.getElementById("btn-topo-orbit")?.addEventListener("click", toggleAutoOrbit);
+  document.getElementById("btn-topo-clear-focus")?.addEventListener("click", () => {
+    state.selectedNodeId = null;
+    updateFocusBanner(null);
+    document.getElementById("node-drawer")?.classList.add("hidden");
+    drawTopology();
+  });
+
+  document.getElementById("btn-zoom-in")?.addEventListener("click", () => setTopoZoom(state.cam.zoom * 1.18));
+  document.getElementById("btn-zoom-out")?.addEventListener("click", () => setTopoZoom(state.cam.zoom * 0.85));
+  document.getElementById("topo-zoom-slider")?.addEventListener("input", (e) => {
+    setTopoZoom(Number(e.target.value || 100) / 100);
+  });
 
   canvas.addEventListener("wheel", (e) => {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.12 : 0.89;
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const wx = (mx - state.cam.x) / state.cam.zoom;
-    const wy = (my - state.cam.y) / state.cam.zoom;
-    state.cam.zoom = Math.max(0.18, Math.min(3.5, state.cam.zoom * factor));
-    state.cam.x = mx - wx * state.cam.zoom;
-    state.cam.y = my - wy * state.cam.zoom;
-    drawTopology();
+    if (state.topoMode === "sphere") {
+      setTopoZoom(state.cam.zoom * factor);
+    } else {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const wx = (mx - state.cam.x) / state.cam.zoom;
+      const wy = (my - state.cam.y) / state.cam.zoom;
+      state.cam.zoom = Math.max(0.25, Math.min(3.5, state.cam.zoom * factor));
+      state.cam.x = mx - wx * state.cam.zoom;
+      state.cam.y = my - wy * state.cam.zoom;
+      syncZoomHud();
+      drawTopology();
+    }
   }, { passive: false });
 
+  let downX = 0, downY = 0, pendingHit = null;
+
   canvas.addEventListener("mousedown", (e) => {
-    const pos = canvasToWorld(e, canvas);
-    const hit = findNodeAt(pos.x, pos.y);
-    if (hit) {
-      state.dragNode = hit;
-      state.selectedNodeId = hit.id;
-      showNodeDrawer(hit);
-      drawTopology();
-    } else {
+    stopSphereAnimations();
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    downX = e.clientX;
+    downY = e.clientY;
+    state.dragMoved = false;
+
+    const hit = findNodeAtScreen(sx, sy);
+    if (state.topoMode === "sphere") {
+      pendingHit = hit;
       state.panning = true;
-      state.panStart = { x: e.clientX - state.cam.x, y: e.clientY - state.cam.y };
+      state.panStart = { x: e.clientX, y: e.clientY };
+      state.rotVel = { vx: 0, vy: 0 };
+    } else {
+      if (hit) {
+        state.dragNode = hit;
+        pendingHit = hit;
+      } else {
+        state.panning = true;
+        state.panStart = { x: e.clientX - state.cam.x, y: e.clientY - state.cam.y };
+      }
     }
   });
 
   window.addEventListener("mousemove", (e) => {
-    if (state.dragNode) {
-      const pos = canvasToWorld(e, canvas);
-      state.dragNode.x = pos.x;
-      state.dragNode.y = pos.y;
-      drawTopology();
-    } else if (state.panning) {
-      state.cam.x = e.clientX - state.panStart.x;
-      state.cam.y = e.clientY - state.panStart.y;
-      drawTopology();
-    } else if (state.activeView === "topology") {
-      const pos = canvasToWorld(e, canvas);
-      const hit = findNodeAt(pos.x, pos.y);
-      const nextHover = hit ? hit.id : null;
-      if (nextHover !== state.hoverNodeId) {
-        state.hoverNodeId = nextHover;
-        canvas.style.cursor = hit ? "pointer" : "grab";
+    if (state.topoMode === "sphere") {
+      if (state.panning) {
+        const dx = e.clientX - state.panStart.x;
+        const dy = e.clientY - state.panStart.y;
+        if (Math.hypot(e.clientX - downX, e.clientY - downY) > 4) state.dragMoved = true;
+        state.panStart = { x: e.clientX, y: e.clientY };
+        const ay = dx * 0.0055;
+        const ax = -dy * 0.0055;
+        state.rotVel = { vx: ay, vy: ax };
+        const ry = axisAngleMat3(0, 1, 0, ay);
+        const rx = axisAngleMat3(1, 0, 0, ax);
+        state.rotMat = orthonormalizeMat3(mulMat3(rx, mulMat3(ry, state.rotMat)));
         drawTopology();
+      } else if (state.activeView === "topology") {
+        const rect = canvas.getBoundingClientRect();
+        const hit = findNodeAtScreen(e.clientX - rect.left, e.clientY - rect.top);
+        const nextHover = hit ? hit.id : null;
+        if (nextHover !== state.hoverNodeId) {
+          state.hoverNodeId = nextHover;
+          canvas.style.cursor = hit ? "pointer" : "grab";
+          drawTopology();
+        }
+      }
+    } else {
+      if (state.dragNode) {
+        if (Math.hypot(e.clientX - downX, e.clientY - downY) > 4) state.dragMoved = true;
+        const pos = canvasToWorld(e, canvas);
+        state.dragNode.x = pos.x;
+        state.dragNode.y = pos.y;
+        drawTopology();
+      } else if (state.panning) {
+        state.cam.x = e.clientX - state.panStart.x;
+        state.cam.y = e.clientY - state.panStart.y;
+        drawTopology();
+      } else if (state.activeView === "topology") {
+        const rect = canvas.getBoundingClientRect();
+        const hit = findNodeAtScreen(e.clientX - rect.left, e.clientY - rect.top);
+        const nextHover = hit ? hit.id : null;
+        if (nextHover !== state.hoverNodeId) {
+          state.hoverNodeId = nextHover;
+          canvas.style.cursor = hit ? "pointer" : "grab";
+          drawTopology();
+        }
       }
     }
   });
 
   window.addEventListener("mouseup", () => {
+    if (!state.dragMoved && pendingHit) {
+      selectAndCenterNode(pendingHit);
+    } else if (state.topoMode === "sphere" && state.panning && state.dragMoved) {
+      startInertiaLoop();
+    }
     state.dragNode = null;
     state.panning = false;
+    pendingHit = null;
   });
+}
+
+function selectAndCenterNode(node) {
+  state.selectedNodeId = node.id;
+  updateFocusBanner(node);
+  showNodeDrawer(node);
+  if (state.topoMode === "sphere") {
+    focusNodeToSphereCenter(node);
+  } else {
+    drawTopology();
+  }
 }
 
 function canvasToWorld(e, canvas) {
@@ -1428,13 +1952,19 @@ function canvasToWorld(e, canvas) {
   };
 }
 
-function findNodeAt(wx, wy) {
-  for (let i = state.simNodes.length - 1; i >= 0; i--) {
-    const n = state.simNodes[i];
-    const r = n.radius || 12;
-    const dx = wx - n.x;
-    const dy = wy - n.y;
-    if (dx * dx + dy * dy <= (r + 4) * (r + 4)) return n;
+function findNodeAtScreen(sx, sy) {
+  // 按渲染后屏幕坐标反向遍历（画家算法最上层优先命中）
+  const sorted = state.topoMode === "sphere"
+    ? [...state.simNodes].sort((a, b) => (a.pz || 0) - (b.pz || 0))
+    : state.simNodes;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const n = sorted[i];
+    const rx = n.screenX ?? 0;
+    const ry = n.screenY ?? 0;
+    const rr = n.screenR ?? n.radius ?? 10;
+    const dx = sx - rx;
+    const dy = sy - ry;
+    if (dx * dx + dy * dy <= (rr + 5) * (rr + 5)) return n;
   }
   return null;
 }
@@ -1442,12 +1972,18 @@ function findNodeAt(wx, wy) {
 function resizeCanvas() {
   const canvas = document.getElementById("topology-canvas");
   if (!canvas || !canvas.parentElement) return;
-  canvas.width = canvas.parentElement.clientWidth || 800;
-  canvas.height = canvas.parentElement.clientHeight || 500;
+  const cssW = Math.max(320, canvas.parentElement.clientWidth || 800);
+  const cssH = Math.max(260, canvas.parentElement.clientHeight || 500);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  state.canvasW = cssW;
+  state.canvasH = cssH;
+  state.dpr = dpr;
+  canvas.width = Math.floor(cssW * dpr);
+  canvas.height = Math.floor(cssH * dpr);
   if (!state.topoRaw) {
     loadTopology();
   } else {
-    drawTopology();
+    fitCamera();
   }
 }
 
@@ -1467,41 +2003,85 @@ function applyTopoFilter() {
   const enabled = new Set(
     Array.from(document.querySelectorAll("#topo-filters input:checked")).map((c) => c.value)
   );
-  const rawNodes = (state.topoDisplay.nodes || []).filter((n) => {
-    const nt = typeof n.node_type === "string" ? n.node_type : "file";
-    return enabled.has(nt) || (nt !== "process" && nt !== "port" && nt !== "service" && nt !== "cron" && nt !== "git");
+  const filteredNodes = (state.topoDisplay.nodes || []).filter((n) => {
+    const nt = normalizeNodeType(n.node_type);
+    return enabled.has(nt);
   });
-  const idSet = new Set(rawNodes.map((n) => n.id));
-  const rawEdges = (state.topoDisplay.edges || []).filter((e) => idSet.has(e.source) && idSet.has(e.target));
+  const idSet = new Set(filteredNodes.map((n) => n.id));
+  const filteredEdges = (state.topoDisplay.edges || []).filter((e) => idSet.has(e.source) && idSet.has(e.target));
 
+  const folded = foldTopologyByPathDepth(filteredNodes, filteredEdges, state.maxPathDepth);
+
+  const depthDesc = state.maxPathDepth >= 99 ? "全部层级" : `≤${state.maxPathDepth}层`;
+  const foldHint = folded.foldedCount > 0 ? ` · 已折叠 ${folded.foldedCount} 深层文件` : "";
   document.getElementById("topo-stats").innerText =
-    `显示 ${rawNodes.length} 节点 · ${rawEdges.length} 条真实连边 (全图 ${state.topoDisplay.summary?.total_nodes ?? 0} 节点)`;
+    `${depthDesc} · ${folded.nodes.length} 节点 · ${folded.edges.length} 边${foldHint}`;
 
-  layoutGraph(rawNodes, rawEdges);
+  layoutGraph(folded.nodes, folded.edges);
   fitCamera();
-  drawTopology();
 }
 
 function layoutGraph(rawNodes, rawEdges) {
-  const deg = new Map();
+  const inDegMap = new Map();
+  const outDegMap = new Map();
   rawEdges.forEach((e) => {
-    deg.set(e.source, (deg.get(e.source) || 0) + 1);
-    deg.set(e.target, (deg.get(e.target) || 0) + 1);
+    if (e.source === e.target) return;
+    outDegMap.set(e.source, (outDegMap.get(e.source) || 0) + 1);
+    inDegMap.set(e.target, (inDegMap.get(e.target) || 0) + 1);
   });
 
-  const nCount = rawNodes.length || 1;
-  const simNodes = rawNodes.map((n, idx) => {
-    const d = deg.get(n.id) || 0;
-    const angle = (idx / nCount) * Math.PI * 2;
-    const ring = d > 0 ? 180 + (idx % 5) * 45 : 380 + (idx % 4) * 55;
-    const nt = typeof n.node_type === "string" ? n.node_type : "file";
+  let maxWeight = 10;
+  rawNodes.forEach((n) => {
+    const ind = inDegMap.get(n.id) ?? n.in_degree ?? 0;
+    const outd = outDegMap.get(n.id) ?? n.out_degree ?? 0;
+    const w = ind + 0.25 * outd;
+    if (w > maxWeight) maxWeight = w;
+  });
+
+  // 按节点类型 + 重要度排序，使同类型及枢纽节点在斐波那契球面上形成有序星带
+  const typeOrder = { service: 0, port: 1, process: 2, cron: 3, git: 4, file: 5, memory: 6 };
+  const sortedRaw = [...rawNodes].sort((a, b) => {
+    const ta = typeOrder[normalizeNodeType(a.node_type)] ?? 9;
+    const tb = typeOrder[normalizeNodeType(b.node_type)] ?? 9;
+    if (ta !== tb) return ta - tb;
+    const wa = (inDegMap.get(a.id) || 0) - (inDegMap.get(b.id) || 0);
+    return -wa;
+  });
+
+  const nCount = sortedRaw.length || 1;
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  const R_MIN = 5.2;
+  const R_MAX = 16.5; // 严控半径硬上限，被引用再多也不会遮挡其他节点
+
+  const simNodes = sortedRaw.map((n, idx) => {
+    const inDeg = inDegMap.get(n.id) ?? n.in_degree ?? 0;
+    const outDeg = outDegMap.get(n.id) ?? n.out_degree ?? 0;
+    const weight = inDeg + 0.25 * outDeg;
+    const ratio = Math.min(1, Math.log(1 + weight) / Math.log(1 + maxWeight));
+    const radius = R_MIN + (R_MAX - R_MIN) * ratio;
+
+    // 3D 斐波那契球面晶格
+    const sy = nCount === 1 ? 0 : 1 - (2 * (idx + 0.5)) / nCount;
+    const rxy = Math.sqrt(Math.max(0, 1 - sy * sy));
+    const theta = idx * goldenAngle;
+    const sx = Math.cos(theta) * rxy;
+    const sz = Math.sin(theta) * rxy;
+
+    // 2D 平面初始环
+    const angle2d = (idx / nCount) * Math.PI * 2;
+    const ring2d = (inDeg + outDeg) > 0 ? 180 + (idx % 5) * 45 : 360 + (idx % 4) * 52;
+    const nt = normalizeNodeType(n.node_type);
+
     return {
       ...n,
       nt,
-      degree: d,
-      radius: Math.min(20, 9 + Math.sqrt(d) * 2.5),
-      x: Math.cos(angle) * ring,
-      y: Math.sin(angle) * ring,
+      inDeg,
+      outDeg,
+      degree: inDeg + outDeg,
+      radius,
+      sx, sy, sz,
+      x: Math.cos(angle2d) * ring2d,
+      y: Math.sin(angle2d) * ring2d,
       vx: 0,
       vy: 0,
     };
@@ -1510,42 +2090,48 @@ function layoutGraph(rawNodes, rawEdges) {
   const nodeMap = new Map(simNodes.map((n) => [n.id, n]));
   const simEdges = rawEdges
     .map((e) => ({ ...e, sNode: nodeMap.get(e.source), tNode: nodeMap.get(e.target) }))
-    .filter((e) => e.sNode && e.tNode);
+    .filter((e) => e.sNode && e.tNode && e.sNode !== e.tNode);
 
-  const iters = simNodes.length > 160 ? 35 : 65;
-  for (let step = 0; step < iters; step++) {
+  // 3D 球面切向微调 (20 步)：让有连边的节点在球面上适当聚拢同时保持球面均匀
+  for (let step = 0; step < 20; step++) {
+    for (const e of simEdges) {
+      const a = e.sNode, b = e.tNode;
+      const dx = b.sx - a.sx, dy = b.sy - a.sy, dz = b.sz - a.sz;
+      a.sx += dx * 0.035; a.sy += dy * 0.035; a.sz += dz * 0.035;
+      b.sx -= dx * 0.035; b.sy -= dy * 0.035; b.sz -= dz * 0.035;
+    }
+    for (const n of simNodes) {
+      const len = Math.hypot(n.sx, n.sy, n.sz) || 1;
+      n.sx /= len; n.sy /= len; n.sz /= len;
+    }
+  }
+
+  // 2D 平面力导向布局
+  const iters2d = simNodes.length > 160 ? 35 : 65;
+  for (let step = 0; step < iters2d; step++) {
     for (let i = 0; i < simNodes.length; i++) {
       const a = simNodes[i];
-      a.vx *= 0.6;
-      a.vy *= 0.6;
-      a.vx -= a.x * 0.004;
-      a.vy -= a.y * 0.004;
+      a.vx *= 0.6; a.vy *= 0.6;
+      a.vx -= a.x * 0.004; a.vy -= a.y * 0.004;
       const limitJ = Math.min(simNodes.length, i + 45);
       for (let j = i + 1; j < limitJ; j++) {
         const b = simNodes[j];
-        let dx = a.x - b.x;
-        let dy = a.y - b.y;
-        let dist2 = dx * dx + dy * dy + 1;
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const dist2 = dx * dx + dy * dy + 1;
         if (dist2 < 18000) {
           const f = 900 / dist2;
-          a.vx += dx * f;
-          a.vy += dy * f;
-          b.vx -= dx * f;
-          b.vy -= dy * f;
+          a.vx += dx * f; a.vy += dy * f;
+          b.vx -= dx * f; b.vy -= dy * f;
         }
       }
     }
     for (const e of simEdges) {
-      const dx = e.tNode.x - e.sNode.x;
-      const dy = e.tNode.y - e.sNode.y;
+      const dx = e.tNode.x - e.sNode.x, dy = e.tNode.y - e.sNode.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
       const pull = (dist - 110) * 0.04;
-      const fx = (dx / dist) * pull;
-      const fy = (dy / dist) * pull;
-      e.sNode.vx += fx;
-      e.sNode.vy += fy;
-      e.tNode.vx -= fx;
-      e.tNode.vy -= fy;
+      const fx = (dx / dist) * pull, fy = (dy / dist) * pull;
+      e.sNode.vx += fx; e.sNode.vy += fy;
+      e.tNode.vx -= fx; e.tNode.vy -= fy;
     }
     for (const n of simNodes) {
       n.x += Math.max(-25, Math.min(25, n.vx));
@@ -1558,8 +2144,17 @@ function layoutGraph(rawNodes, rawEdges) {
 }
 
 function fitCamera() {
-  const canvas = document.getElementById("topology-canvas");
-  if (!canvas || state.simNodes.length === 0) return;
+  if (state.topoMode === "sphere") {
+    state.cam.zoom = 1.0;
+    state.cam.x = 0;
+    state.cam.y = 0;
+    syncZoomHud();
+    drawTopology();
+    return;
+  }
+  const w = state.canvasW || 800;
+  const h = state.canvasH || 500;
+  if (state.simNodes.length === 0) return;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   state.simNodes.forEach((n) => {
     if (n.x < minX) minX = n.x;
@@ -1569,31 +2164,71 @@ function fitCamera() {
   });
   const spanX = Math.max(200, maxX - minX + 120);
   const spanY = Math.max(200, maxY - minY + 120);
-  const zoom = Math.min(1.2, Math.min(canvas.width / spanX, canvas.height / spanY));
+  const zoom = Math.min(1.2, Math.min(w / spanX, h / spanY));
   state.cam.zoom = zoom;
-  state.cam.x = canvas.width / 2 - ((minX + maxX) / 2) * zoom;
-  state.cam.y = canvas.height / 2 - ((minY + maxY) / 2) * zoom;
+  state.cam.x = w / 2 - ((minX + maxX) / 2) * zoom;
+  state.cam.y = h / 2 - ((minY + maxY) / 2) * zoom;
+  syncZoomHud();
   drawTopology();
+}
+
+function computeFocusHopSet(focusId, hopLimit) {
+  const hopMap = new Map();
+  if (!focusId || hopLimit >= 99) return hopMap;
+  hopMap.set(focusId, 0);
+  const queue = [focusId];
+  let head = 0;
+  while (head < queue.length) {
+    const cur = queue[head++];
+    const d = hopMap.get(cur);
+    if (d >= hopLimit) continue;
+    for (const e of state.simEdges) {
+      const nb = e.source === cur ? e.target : (e.target === cur ? e.source : null);
+      if (nb && !hopMap.has(nb)) {
+        hopMap.set(nb, d + 1);
+        queue.push(nb);
+      }
+    }
+  }
+  return hopMap;
 }
 
 function drawTopology() {
   const canvas = document.getElementById("topology-canvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  const w = canvas.width, h = canvas.height;
+  const w = state.canvasW || canvas.width;
+  const h = state.canvasH || canvas.height;
+  ctx.setTransform(state.dpr || 1, 0, 0, state.dpr || 1, 0, 0);
   ctx.clearRect(0, 0, w, h);
 
   const isLight = state.theme === "light";
   const palette = isLight ? NODE_COLORS_LIGHT : NODE_COLORS_DARK;
-  const edgeNormal = isLight ? "rgba(36, 90, 107, 0.28)" : "rgba(148, 163, 184, 0.28)";
+  const edgeNormal = isLight ? "rgba(36, 90, 107, 0.22)" : "rgba(148, 163, 184, 0.22)";
   const edgeFocus = isLight ? "#245A6B" : "#38bdf8";
-  const edgeLabelNormal = isLight ? "rgba(70, 88, 95, 0.78)" : "rgba(148, 163, 184, 0.65)";
+  const edgeLabelNormal = isLight ? "rgba(70, 88, 95, 0.78)" : "rgba(148, 163, 184, 0.72)";
   const edgeLabelFocus = isLight ? "#1E4B5A" : "#7dd3fc";
   const nodeOutline = isLight ? "#BE653B" : "#ffffff";
   const nodeLabelColor = isLight ? "#1B2B33" : "#e2e8f0";
 
   const kw = (document.getElementById("topo-search")?.value || "").trim().toLowerCase();
   const focusId = state.hoverNodeId || state.selectedNodeId;
+  const hopMap = computeFocusHopSet(state.selectedNodeId, state.hopLimit);
+
+  if (state.topoMode === "sphere") {
+    drawSphereTopology(ctx, w, h, {
+      isLight, palette, edgeNormal, edgeFocus, edgeLabelNormal, edgeLabelFocus,
+      nodeOutline, nodeLabelColor, kw, focusId, hopMap,
+    });
+    return;
+  }
+
+  // 2D 平面视图渲染
+  for (const n of state.simNodes) {
+    n.screenX = state.cam.x + n.x * state.cam.zoom;
+    n.screenY = state.cam.y + n.y * state.cam.zoom;
+    n.screenR = n.radius * state.cam.zoom;
+  }
 
   ctx.save();
   ctx.translate(state.cam.x, state.cam.y);
@@ -1605,10 +2240,10 @@ function drawTopology() {
     ctx.moveTo(e.sNode.x, e.sNode.y);
     ctx.lineTo(e.tNode.x, e.tNode.y);
     ctx.strokeStyle = isFocus ? edgeFocus : edgeNormal;
-    ctx.lineWidth = isFocus ? 2.2 : 1.1;
+    ctx.lineWidth = isFocus ? 2.2 : 1.0;
     ctx.stroke();
 
-    if (isFocus || state.cam.zoom > 0.85) {
+    if (isFocus || state.cam.zoom > 0.9) {
       const mx = (e.sNode.x + e.tNode.x) / 2;
       const my = (e.sNode.y + e.tNode.y) / 2;
       ctx.fillStyle = isFocus ? edgeLabelFocus : edgeLabelNormal;
@@ -1620,10 +2255,11 @@ function drawTopology() {
 
   for (const n of state.simNodes) {
     const matched = !kw || n.label.toLowerCase().includes(kw) || n.id.toLowerCase().includes(kw);
+    const inHop = !state.selectedNodeId || state.hopLimit >= 99 || hopMap.has(n.id);
     const isSelected = n.id === state.selectedNodeId || n.id === state.hoverNodeId;
     const color = palette[n.nt] || palette.memory;
 
-    ctx.globalAlpha = matched ? 1 : 0.22;
+    ctx.globalAlpha = matched && inHop ? 1 : 0.16;
     ctx.beginPath();
     ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
     ctx.fillStyle = color;
@@ -1631,11 +2267,11 @@ function drawTopology() {
 
     if (isSelected || (kw && matched)) {
       ctx.strokeStyle = nodeOutline;
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2.4;
       ctx.stroke();
     }
 
-    if (state.cam.zoom > 0.45 || n.degree > 0 || isSelected || (kw && matched)) {
+    if (state.cam.zoom > 0.45 || n.inDeg > 0 || isSelected || (kw && matched)) {
       ctx.fillStyle = nodeLabelColor;
       ctx.font = isSelected ? "bold 11px sans-serif" : "10px monospace";
       ctx.textAlign = "center";
@@ -1646,6 +2282,183 @@ function drawTopology() {
   ctx.restore();
 }
 
+function drawSphereTopology(ctx, w, h, theme) {
+  const cx = w / 2;
+  const cy = h / 2;
+  const baseR = Math.min(w, h) * 0.36;
+  const R = baseR * state.cam.zoom;
+  const F = Math.max(420, R * 2.6);
+
+  // 1. 绘制全息球体经纬线轮廓底盘 (Subtle Holographic Globe Wireframe)
+  ctx.save();
+  const globeGrad = ctx.createRadialGradient(cx - R * 0.25, cy - R * 0.25, R * 0.08, cx, cy, R);
+  if (theme.isLight) {
+    globeGrad.addColorStop(0, "rgba(36, 90, 107, 0.07)");
+    globeGrad.addColorStop(1, "rgba(36, 90, 107, 0.01)");
+  } else {
+    globeGrad.addColorStop(0, "rgba(56, 189, 248, 0.09)");
+    globeGrad.addColorStop(0.7, "rgba(167, 139, 250, 0.03)");
+    globeGrad.addColorStop(1, "rgba(15, 23, 42, 0.0)");
+  }
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.fillStyle = globeGrad;
+  ctx.fill();
+  ctx.strokeStyle = theme.isLight ? "rgba(36, 90, 107, 0.16)" : "rgba(56, 189, 248, 0.18)";
+  ctx.lineWidth = 1.1;
+  ctx.stroke();
+
+  // 绘制 2 条轻柔经纬辅助环
+  ctx.setLineDash([4, 6]);
+  ctx.strokeStyle = theme.isLight ? "rgba(36, 90, 107, 0.10)" : "rgba(148, 163, 184, 0.10)";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, R, R * 0.32, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, R * 0.32, R, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // 2. 投影所有节点 3D -> 2D
+  for (const n of state.simNodes) {
+    const rot = rotateVec3(state.rotMat, n.sx, n.sy, n.sz);
+    const X = rot.x * R;
+    const Y = rot.y * R;
+    const Z = rot.z * R;
+    const persp = F / Math.max(80, F - Z);
+    n.px = rot.x;
+    n.py = rot.y;
+    n.pz = rot.z;
+    n.screenX = cx + X * persp;
+    n.screenY = cy + Y * persp;
+    n.screenR = n.radius * persp * Math.min(1.25, Math.max(0.75, state.cam.zoom * 0.85));
+    n.depthNorm = (rot.z + 1) * 0.5; // 0 (背面) ~ 1 (正面中心)
+  }
+
+  // 3. 绘制 3D 球内弧线连边 (先画非焦点淡边，再画焦点高亮边)
+  const focusEdges = [];
+  for (const e of state.simEdges) {
+    const isFocus = theme.focusId && (e.source === theme.focusId || e.target === theme.focusId);
+    if (isFocus) {
+      focusEdges.push(e);
+      continue;
+    }
+    const avgZ = ((e.sNode.pz || 0) + (e.tNode.pz || 0)) * 0.5;
+    if (avgZ < -0.25 && state.simNodes.length > 80) continue; // 背面非焦点边剔除防毛线团
+    const alpha = Math.max(0.05, Math.min(0.32, 0.08 + ((avgZ + 1) * 0.5) * 0.24));
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    const mx = (e.sNode.screenX + e.tNode.screenX) * 0.5;
+    const my = (e.sNode.screenY + e.tNode.screenY) * 0.5;
+    const ctrlX = cx + (mx - cx) * 0.82;
+    const ctrlY = cy + (my - cy) * 0.82;
+    ctx.moveTo(e.sNode.screenX, e.sNode.screenY);
+    ctx.quadraticCurveTo(ctrlX, ctrlY, e.tNode.screenX, e.tNode.screenY);
+    ctx.strokeStyle = theme.edgeNormal;
+    ctx.lineWidth = 1.0;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  for (const e of focusEdges) {
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+    ctx.beginPath();
+    const mx = (e.sNode.screenX + e.tNode.screenX) * 0.5;
+    const my = (e.sNode.screenY + e.tNode.screenY) * 0.5;
+    const ctrlX = cx + (mx - cx) * 0.85;
+    const ctrlY = cy + (my - cy) * 0.85;
+    ctx.moveTo(e.sNode.screenX, e.sNode.screenY);
+    ctx.quadraticCurveTo(ctrlX, ctrlY, e.tNode.screenX, e.tNode.screenY);
+    ctx.strokeStyle = theme.edgeFocus;
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+
+    ctx.fillStyle = theme.edgeLabelFocus;
+    ctx.font = "bold 9px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(e.relation, (mx + ctrlX) * 0.5, (my + ctrlY) * 0.5 - 3);
+    ctx.restore();
+  }
+
+  // 4. 画家算法 Z-Sort 从背面到正面绘制节点
+  const sorted = [...state.simNodes].sort((a, b) => a.pz - b.pz);
+  for (const n of sorted) {
+    const matched = !theme.kw || n.label.toLowerCase().includes(theme.kw) || n.id.toLowerCase().includes(theme.kw);
+    const inHop = !state.selectedNodeId || state.hopLimit >= 99 || theme.hopMap.has(n.id);
+    const isSelected = n.id === state.selectedNodeId || n.id === state.hoverNodeId;
+    const color = theme.palette[n.nt] || theme.palette.memory;
+
+    let depthAlpha = n.pz >= 0 ? (0.62 + 0.38 * n.pz) : (0.14 + 0.42 * Math.pow(n.depthNorm, 2));
+    if (theme.kw && !matched) depthAlpha *= 0.2;
+    if (state.selectedNodeId && state.hopLimit < 99 && !inHop) depthAlpha *= 0.18;
+    if (isSelected) depthAlpha = 1.0;
+
+    ctx.save();
+    ctx.globalAlpha = depthAlpha;
+
+    // 高被引用节点外围呼吸环 (代替无限增大半径)
+    if (n.inDeg >= 3 && n.pz > -0.2) {
+      ctx.beginPath();
+      ctx.arc(n.screenX, n.screenY, n.screenR + 3.5, 0, Math.PI * 2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    }
+
+    // 节点球体径向高光
+    const grad = ctx.createRadialGradient(
+      n.screenX - n.screenR * 0.3, n.screenY - n.screenR * 0.3, n.screenR * 0.1,
+      n.screenX, n.screenY, n.screenR
+    );
+    grad.addColorStop(0, theme.isLight ? "#ffffff" : "#f8fafc");
+    grad.addColorStop(0.28, color);
+    grad.addColorStop(1, color);
+
+    ctx.beginPath();
+    ctx.arc(n.screenX, n.screenY, n.screenR, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    if (isSelected || (theme.kw && matched)) {
+      ctx.strokeStyle = theme.nodeOutline;
+      ctx.lineWidth = isSelected ? 2.6 : 1.8;
+      ctx.stroke();
+    }
+
+    // 高引用计数角标 (×N)
+    if (n.inDeg >= 3 && n.pz > 0.1 && state.cam.zoom >= 0.75) {
+      const tag = `×${n.inDeg}`;
+      ctx.font = "bold 9px monospace";
+      const tw = ctx.measureText(tag).width + 6;
+      const bx = n.screenX + n.screenR * 0.7;
+      const by = n.screenY - n.screenR * 0.9;
+      ctx.fillStyle = theme.isLight ? "#1B2B33" : "#0f172a";
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(bx, by - 7, tw, 13, 4) : ctx.rect(bx, by - 7, tw, 13);
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = theme.isLight ? "#ffffff" : "#f8fafc";
+      ctx.textAlign = "left";
+      ctx.fillText(tag, bx + 3, by + 3);
+    }
+
+    // 仅正面、高重要度或选中/搜索节点显示文字标签，防止背面文字穿透叠字
+    const showLabel = isSelected || (theme.kw && matched) || (n.pz > 0.25 && (n.inDeg > 0 || state.cam.zoom > 0.95 || state.simNodes.length < 70));
+    if (showLabel) {
+      ctx.fillStyle = theme.nodeLabelColor;
+      ctx.font = isSelected ? "bold 11px sans-serif" : (n.pz > 0.6 ? "600 10px monospace" : "9px monospace");
+      ctx.textAlign = "center";
+      ctx.fillText(n.label.slice(0, 26), n.screenX, n.screenY + n.screenR + 12);
+    }
+    ctx.restore();
+  }
+}
+
 function showNodeDrawer(node) {
   const drawer = document.getElementById("node-drawer");
   const title = document.getElementById("drawer-title");
@@ -1653,15 +2466,43 @@ function showNodeDrawer(node) {
   if (!drawer || !body) return;
   drawer.classList.remove("hidden");
   title.innerText = `${node.label}`;
-  const cgPath = node.metadata?.abs_path || node.metadata?.path || (node.id.startsWith("/") ? node.id : "/root/new/work/agent-steward");
-  const metaPairs = Object.entries(node.metadata || {}).slice(0, 6);
+  const meta = node.metadata || {};
+  const cgPath = node.canonical_path || meta.abs_path || meta.path || (node.id.startsWith("/") ? node.id : "/root/new/work/agent-steward");
+  const desc = meta.description || meta.purpose || "";
+  const domain = meta.domain || "";
+  const category = meta.category || meta.asset_type || "";
+  const embStatus = meta.embedding_status || "";
+  const embModel = meta.embedding_model || "";
+  const embDim = meta.embedding_dim || "";
+  const embPreview = Array.isArray(meta.embedding_preview) ? meta.embedding_preview.slice(0, 4).join(", ") : "";
+  const embHtml = embStatus === "ready"
+    ? `<div style="margin-top:6px;font-size:12px;"><span class="badge badge-ok">🧬 Embedding: ${esc(embModel)} (${esc(embDim)}d)</span> <span class="mono muted-text">[${esc(embPreview)}...]</span></div>`
+    : (embStatus ? `<div style="margin-top:6px;font-size:12px;"><span class="badge">🧬 Embedding: ${esc(embStatus)}</span></div>` : "");
+  const skipKeys = new Set(["description", "embedding_preview", "embedding_status", "embedding_model", "embedding_dim", "embedding_norm", "embedding_updated_at"]);
+  const metaPairs = Object.entries(meta).filter(([k]) => !skipKeys.has(k)).slice(0, 10);
+  const childrenHtml = node.isFoldedDir && Array.isArray(node.children) ? `
+    <div class="item-box">
+      <div class="item-top">
+        <strong>📂 已折叠子节点 (${node.children.length})</strong>
+        <button id="btn-expand-dir-node" class="btn btn-primary btn-xs">展开下一层</button>
+      </div>
+      <div class="mono muted-text" style="max-height:130px;overflow-y:auto;margin-top:6px;">
+        ${node.children.slice(0, 20).map((c) => `<div>• ${esc(c.label)}</div>`).join("")}
+        ${node.children.length > 20 ? `<div>... 还有 ${node.children.length - 20} 项</div>` : ""}
+      </div>
+    </div>
+  ` : "";
+
   body.innerHTML = `
     <div class="item-box">
       <div><strong>ID:</strong> <span class="mono">${esc(node.id)}</span></div>
-      <div><strong>类型:</strong> <span class="badge">${esc(node.nt)}</span></div>
+      <div><strong>类型:</strong> <span class="badge">${esc(node.nt)}</span> ${domain ? `<span class="badge">${esc(domain)}</span>` : ""} ${category ? `<span class="badge">${esc(category)}</span>` : ""}</div>
       <div><strong>状态:</strong> ${esc(node.status)}</div>
-      <div><strong>关联边数:</strong> ${node.degree}</div>
+      ${desc ? `<div style="margin-top:6px;line-height:1.45;"><strong>语义描述:</strong> ${esc(desc)}</div>` : ""}
+      ${embHtml}
+      <div style="margin-top:6px;"><strong>被引用(入度):</strong> <span class="badge badge-ok">${node.inDeg ?? 0}</span> · <strong>主动引用(出度):</strong> <span class="badge">${node.outDeg ?? 0}</span></div>
     </div>
+    ${childrenHtml}
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <button id="btn-impact-node" class="btn btn-primary" style="flex:1;">💥 爆炸半径</button>
       <button id="btn-cg-node" class="btn btn-ghost" style="flex:1;">🔬 CodeGraph 穿透</button>
@@ -1674,6 +2515,14 @@ function showNodeDrawer(node) {
     </div>
   `;
   mirrorBlackScreen(`agent-steward links query --id "${node.id}"`, "steward_links_query", { id: node.id, type: node.nt });
+
+  document.getElementById("btn-expand-dir-node")?.addEventListener("click", () => {
+    if (node.canonical_path) {
+      state.expandedDirs.add(node.canonical_path);
+      applyTopoFilter();
+    }
+  });
+
   document.getElementById("btn-impact-node")?.addEventListener("click", async () => {
     try {
       const impact = await apiGet(`/api/v1/topology/impact?target=${encodeURIComponent(node.id)}`);
@@ -2497,11 +3346,30 @@ function initSSE() {
       badge.innerText = "SSE 在线";
     };
     es.onmessage = (event) => {
+      let evType = "EVENT";
+      let evBody = event.data;
+      let evTime = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+      try {
+        const parsed = JSON.parse(event.data);
+        evType = String(parsed.type || "event").toUpperCase();
+        evBody = parsed.message || parsed.path || event.data;
+        if (parsed.timestamp) {
+          evTime = new Date(parsed.timestamp).toLocaleTimeString("zh-CN", { hour12: false });
+        }
+      } catch (_) {}
       const div = document.createElement("div");
       div.className = "event-item ok";
-      div.innerText = event.data;
+      div.innerHTML = `<div class="ev-head"><span class="badge">${esc(evType)}</span><span class="ev-time">${esc(evTime)}</span></div><div class="ev-body">${esc(evBody)}</div>`;
       stream.prepend(div);
       while (stream.children.length > 80) stream.removeChild(stream.lastChild);
+
+      const sb = document.getElementById("sse-sidebar");
+      const ub = document.getElementById("sse-unread-badge");
+      if (sb && sb.classList.contains("collapsed") && ub) {
+        state.unreadSse = (state.unreadSse || 0) + 1;
+        ub.innerText = String(state.unreadSse);
+        ub.classList.remove("hidden");
+      }
       loadOverview();
       if (state.activeView === "locks") loadLocks();
     };

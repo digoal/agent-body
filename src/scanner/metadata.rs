@@ -319,12 +319,44 @@ impl HeuristicMetadataExtractor {
         let snippet = read_head_utf8(path, 8192).unwrap_or_default();
         let content_hash = compute_fnv1a_hash(&snippet, size_bytes.unwrap_or(0));
         let loc = snippet.lines().count();
+        let fs_meta = std::fs::metadata(path).ok();
+        let actual_size = size_bytes.or_else(|| fs_meta.as_ref().map(|m| m.len() as i64));
+        let last_modified_at = fs_meta
+            .as_ref()
+            .and_then(|m| m.modified().ok())
+            .map(|t| {
+                let dt: chrono::DateTime<chrono::Local> = t.into();
+                dt.to_rfc3339()
+            });
+        #[cfg(unix)]
+        let file_mode = fs_meta.as_ref().map(|m| {
+            use std::os::unix::fs::PermissionsExt;
+            format!("{:04o}", m.permissions().mode() & 0o7777)
+        });
+        #[cfg(not(unix))]
+        let file_mode: Option<String> = None;
 
         let mut kv = Map::new();
+        kv.insert("canonical_path".to_string(), json!(path.to_string_lossy().to_string()));
+        kv.insert("category".to_string(), json!(asset_type));
+        kv.insert("file_name".to_string(), json!(file_name));
+        if !ext.is_empty() {
+            kv.insert("extension".to_string(), json!(ext));
+        }
+        if let Some(sz) = actual_size {
+            kv.insert("size_bytes".to_string(), json!(sz));
+        }
+        if let Some(ref mode) = file_mode {
+            kv.insert("file_mode".to_string(), json!(mode));
+        }
+        if let Some(ref mtime) = last_modified_at {
+            kv.insert("last_modified_at".to_string(), json!(mtime));
+        }
         kv.insert("domain".to_string(), json!(domain));
         kv.insert("content_hash".to_string(), json!(content_hash));
         kv.insert("annotation_status".to_string(), json!("heuristic_only"));
         kv.insert("annotation_model".to_string(), json!("heuristic-v1"));
+        kv.insert("embedding_status".to_string(), json!("pending"));
         kv.insert("tier".to_string(), json!(tier));
         if let Some(imp) = imp_score {
             kv.insert("importance_score".to_string(), json!(imp.score));
@@ -335,7 +367,9 @@ impl HeuristicMetadataExtractor {
             "script" => Self::extract_script(&snippet, &ext, &file_name, loc, &mut kv, &mut extra_tags),
             "document" => Self::extract_document(path, &snippet, &file_name, &mut kv, &mut extra_tags),
             "config" => Self::extract_config(&snippet, &ext, &file_name, &mut kv, &mut extra_tags),
-            _ => Self::extract_other(&snippet, &ext, &file_name, loc, &mut kv),
+            "dataset" => Self::extract_dataset(&snippet, &ext, &file_name, actual_size, &mut kv, &mut extra_tags),
+            "media" => Self::extract_media(path, &snippet, &ext, &file_name, actual_size, &mut kv, &mut extra_tags),
+            _ => Self::extract_other(&snippet, &ext, &file_name, loc, actual_size, &mut kv),
         };
 
         kv.insert("purpose".to_string(), json!(purpose));
@@ -345,6 +379,7 @@ impl HeuristicMetadataExtractor {
         }
 
         let description = format!("[{}] {}", domain, purpose);
+        kv.insert("description".to_string(), json!(description));
         ExtractedMetadata {
             description,
             usage: usage_hint,
@@ -365,10 +400,14 @@ impl HeuristicMetadataExtractor {
         let lang = match ext {
             "rs" => "rust",
             "py" => "python",
-            "sh" | "bash" => "shell",
-            "js" => "javascript",
-            "ts" => "typescript",
+            "sh" | "bash" | "zsh" => "shell",
+            "js" | "mjs" | "cjs" | "jsx" => "javascript",
+            "ts" | "tsx" => "typescript",
             "go" => "go",
+            "c" | "h" => "c",
+            "cpp" | "cc" | "hpp" => "cpp",
+            "lua" => "lua",
+            "rb" => "ruby",
             _ => ext,
         };
         kv.insert("lang".to_string(), json!(lang));
@@ -607,18 +646,124 @@ impl HeuristicMetadataExtractor {
         (purpose, entry_point, None)
     }
 
+    fn extract_dataset(
+        snippet: &str,
+        ext: &str,
+        file_name: &str,
+        size_bytes: Option<i64>,
+        kv: &mut Map<String, Value>,
+        extra_tags: &mut Vec<String>,
+    ) -> (String, String, Option<String>) {
+        let fmt = if ext.is_empty() { "dataset" } else { ext };
+        let mut columns: Vec<String> = Vec::new();
+        let mut sample_rows = 0usize;
+
+        if matches!(fmt, "csv" | "tsv") {
+            let sep = if fmt == "tsv" { '\t' } else { ',' };
+            let mut lines = snippet.lines().filter(|l| !l.trim().is_empty());
+            if let Some(header) = lines.next() {
+                columns = header
+                    .split(sep)
+                    .map(|c| c.trim().trim_matches('"').to_string())
+                    .filter(|c| !c.is_empty())
+                    .take(12)
+                    .collect();
+            }
+            sample_rows = lines.count();
+        } else if matches!(fmt, "jsonl" | "ndjson") {
+            let mut lines = snippet.lines().filter(|l| !l.trim().is_empty());
+            if let Some(first) = lines.next() {
+                if let Ok(Value::Object(obj)) = serde_json::from_str::<Value>(first) {
+                    columns = obj.keys().take(12).cloned().collect();
+                }
+            }
+            sample_rows = lines.count() + 1;
+        }
+
+        let purpose = if columns.is_empty() {
+            format!("{} 数据集 ({}, {} bytes)", fmt, file_name, size_bytes.unwrap_or(0))
+        } else {
+            format!("{} 数据集，字段 [{}]", fmt, columns.iter().take(4).cloned().collect::<Vec<_>>().join(", "))
+        };
+        kv.insert("dataset_format".to_string(), json!(fmt));
+        kv.insert("columns".to_string(), json!(columns));
+        kv.insert("sample_rows_in_head".to_string(), json!(sample_rows));
+        kv.insert("capabilities".to_string(), json!(vec![format!("{} 结构化数据存取", fmt)]));
+        extra_tags.push(fmt.to_string());
+
+        (purpose, file_name.to_string(), Some(format!("数据检索/DuckDB分析: {}", file_name)))
+    }
+
+    fn extract_media(
+        _path: &Path,
+        snippet: &str,
+        ext: &str,
+        file_name: &str,
+        size_bytes: Option<i64>,
+        kv: &mut Map<String, Value>,
+        extra_tags: &mut Vec<String>,
+    ) -> (String, String, Option<String>) {
+        let fmt = if ext.is_empty() { "media" } else { ext };
+        let mut dimensions: Option<String> = None;
+
+        if fmt == "svg" {
+            if let Some(idx) = snippet.find("viewBox=\"") {
+                let rest = &snippet[idx + 9..];
+                if let Some(end) = rest.find('"') {
+                    dimensions = Some(rest[..end].to_string());
+                }
+            }
+        }
+
+        let purpose = match dimensions {
+            Some(ref d) => format!("{} 矢量图形 ({}, viewBox: {})", fmt.to_uppercase(), file_name, d),
+            None => format!("{} 媒体资源 ({}, {} bytes)", fmt.to_uppercase(), file_name, size_bytes.unwrap_or(0)),
+        };
+
+        kv.insert("media_format".to_string(), json!(fmt));
+        if let Some(ref d) = dimensions {
+            kv.insert("viewbox".to_string(), json!(d));
+        }
+        kv.insert("capabilities".to_string(), json!(vec![format!("{} 媒体资产", fmt)]));
+        extra_tags.push(fmt.to_string());
+
+        (purpose, file_name.to_string(), None)
+    }
+
     fn extract_other(
-        _snippet: &str,
+        snippet: &str,
         ext: &str,
         file_name: &str,
         loc: usize,
+        size_bytes: Option<i64>,
         kv: &mut Map<String, Value>,
     ) -> (String, String, Option<String>) {
-        let fmt = if ext.is_empty() { "binary_or_text" } else { ext };
+        let is_binary = snippet.is_empty() || snippet.contains('\u{FFFD}');
+        let fmt = if !ext.is_empty() {
+            ext
+        } else if is_binary {
+            "binary"
+        } else {
+            "plain_text"
+        };
+        let first_meaningful = if !is_binary {
+            snippet
+                .lines()
+                .map(|l| l.trim())
+                .find(|l| !l.is_empty() && l.chars().count() >= 4)
+                .map(|l| truncate_chars(l, 45))
+        } else {
+            None
+        };
+        let purpose = first_meaningful.unwrap_or_else(|| {
+            format!("{} 资源文件 ({}, {} bytes)", fmt, file_name, size_bytes.unwrap_or(0))
+        });
+
         kv.insert("format".to_string(), json!(fmt));
+        kv.insert("is_binary".to_string(), json!(is_binary));
         kv.insert("loc".to_string(), json!(loc));
         kv.insert("capabilities".to_string(), json!(vec![format!("{} 资源文件", fmt)]));
-        (format!("{} 资源文件 ({})", fmt, file_name), file_name.to_string(), None)
+        (purpose, file_name.to_string(), None)
     }
 }
 

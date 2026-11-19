@@ -282,6 +282,24 @@ impl Storage {
         self.provider.list_all_fact_edges(limit)
     }
 
+    // ─── Embedding Vectors (Phase 29) ────────────────────────────────
+
+    pub fn update_asset_embedding(&self, path: &str, embedding: &[f32]) -> Result<()> {
+        self.provider.update_asset_embedding(path, embedding)
+    }
+
+    pub fn get_asset_embedding(&self, path: &str) -> Result<Vec<f32>> {
+        self.provider.get_asset_embedding(path)
+    }
+
+    pub fn update_fact_node_embedding(&self, id: &str, embedding: &[f32]) -> Result<()> {
+        self.provider.update_fact_node_embedding(id, embedding)
+    }
+
+    pub fn get_fact_node_embedding(&self, id: &str) -> Result<Vec<f32>> {
+        self.provider.get_fact_node_embedding(id)
+    }
+
     // ─── Multi-Agent Coordination Locks ──────────────────────────────
 
     pub fn insert_coordination_lock(&self, lock: &CoordinationLock) -> Result<bool> {

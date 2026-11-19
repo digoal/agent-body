@@ -853,6 +853,8 @@ fn main() -> Result<()> {
                         for s in er.samples {
                             println!("    ✅ [{}] {} -> {} (入口: {})", s.domain, s.path, s.purpose, s.entry_point);
                         }
+                        let emb_cnt = annotator.embed_pending_assets(enrich_limit, Some(&prefix)).unwrap_or(0);
+                        println!("  - Ollama Embedding 向量化完成: {} 个核心资产已生成向量", emb_cnt);
                     }
                 }
                 AssetCommands::Search { query, limit, detail } => {

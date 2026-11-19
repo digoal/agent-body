@@ -283,9 +283,18 @@ pub(crate) fn should_index_in_restricted(root_dir: &Path, path: &Path) -> bool {
 
 pub(crate) fn infer_file_attributes(path: &Path) -> (String, Vec<String>) {
     let mut tags = Vec::new();
-    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
+    let ext = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    let file_name = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_lowercase();
 
-    let asset_type = match ext {
+    let asset_type = match ext.as_str() {
         "rs" => {
             tags.push("rust".to_string());
             "script".to_string()
@@ -294,19 +303,67 @@ pub(crate) fn infer_file_attributes(path: &Path) -> (String, Vec<String>) {
             tags.push("python".to_string());
             "script".to_string()
         }
-        "sh" | "bash" => {
+        "sh" | "bash" | "zsh" => {
             tags.push("shell".to_string());
             "script".to_string()
         }
-        "md" | "txt" => {
+        "js" | "mjs" | "cjs" | "jsx" => {
+            tags.push("javascript".to_string());
+            "script".to_string()
+        }
+        "ts" | "tsx" => {
+            tags.push("typescript".to_string());
+            "script".to_string()
+        }
+        "go" => {
+            tags.push("go".to_string());
+            "script".to_string()
+        }
+        "c" | "cpp" | "cc" | "h" | "hpp" => {
+            tags.push("c_cpp".to_string());
+            "script".to_string()
+        }
+        "lua" | "rb" | "pl" => {
+            tags.push(ext.clone());
+            "script".to_string()
+        }
+        "md" | "markdown" | "txt" | "rst" | "adoc" | "org" | "html" | "htm" | "pdf" => {
             tags.push("document".to_string());
+            if !ext.is_empty() && ext != "md" && ext != "txt" {
+                tags.push(ext.clone());
+            }
             "document".to_string()
         }
-        "toml" | "json" | "yaml" | "yml" | "sql" => {
+        "toml" | "json" | "yaml" | "yml" | "sql" | "ini" | "conf" | "cfg" | "service" | "env"
+        | "xml" | "xsd" => {
             tags.push("config".to_string());
+            if !ext.is_empty() {
+                tags.push(ext.clone());
+            }
             "config".to_string()
         }
-        _ => "other".to_string(),
+        "csv" | "tsv" | "jsonl" | "ndjson" | "parquet" | "db" | "sqlite" | "sqlite3" | "duckdb" => {
+            tags.push("dataset".to_string());
+            tags.push(ext.clone());
+            "dataset".to_string()
+        }
+        "svg" | "png" | "jpg" | "jpeg" | "webp" | "gif" | "ico" | "mp3" | "wav" | "ogg"
+        | "mp4" | "webm" => {
+            tags.push("media".to_string());
+            tags.push(ext.clone());
+            "media".to_string()
+        }
+        _ => {
+            if matches!(
+                file_name.as_str(),
+                "makefile" | "dockerfile" | "cargo.lock" | "cmakelists.txt" | ".gitignore"
+            ) {
+                tags.push("config".to_string());
+                "config".to_string()
+            } else {
+                "other".to_string()
+            }
+        }
     };
 
     (asset_type, tags)

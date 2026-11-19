@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS assets (
     file_count      BIGINT,
     tags            JSONB DEFAULT '[]'::jsonb,
     status          TEXT DEFAULT 'active' CHECK (status IN ('active','archived','missing')),
+    embedding       TEXT DEFAULT '[]',
     last_scanned_at TIMESTAMPTZ,
     last_modified_at TIMESTAMPTZ,
     created_at      TIMESTAMPTZ DEFAULT NOW(),
@@ -158,6 +159,7 @@ CREATE TABLE IF NOT EXISTS fact_nodes (
     name        TEXT NOT NULL,
     label       TEXT NOT NULL,
     properties  JSONB DEFAULT '{}'::jsonb,
+    embedding   TEXT DEFAULT '[]',
     updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -150,6 +150,89 @@ impl OllamaAnnotator {
         Ok(report)
     }
 
+    /// 按重要性优先级批量为 deep 级资产生成本地 Ollama Embedding 并写入摘要 KV
+    pub fn embed_pending_assets(&self, limit: usize, path_prefix: Option<&str>) -> Result<usize> {
+        if limit == 0 {
+            return Ok(0);
+        }
+        let client = crate::memory::embedding::EmbeddingClient::default();
+        if !client.is_available() {
+            return Ok(0);
+        }
+
+        let all_assets = self.storage.list_assets(5000)?;
+        let mut candidates: Vec<AssetRecord> = all_assets
+            .into_iter()
+            .filter(|a| {
+                if a.scan_tier != "deep" || a.status != "active" {
+                    return false;
+                }
+                if let Some(prefix) = path_prefix {
+                    if !a.path.starts_with(prefix) {
+                        return false;
+                    }
+                }
+                if is_sensitive_file(Path::new(&a.path)) || a.security_level == "secret" {
+                    return false;
+                }
+                a.desc_kv
+                    .get("embedding_status")
+                    .and_then(|v| v.as_str())
+                    != Some("ready")
+            })
+            .collect();
+
+        candidates.sort_by(|a, b| {
+            let sa = a.desc_kv.get("importance_score").and_then(|v| v.as_f64()).unwrap_or(0.5);
+            let sb = b.desc_kv.get("importance_score").and_then(|v| v.as_f64()).unwrap_or(0.5);
+            sb.partial_cmp(&sa).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let mut updated = 0usize;
+        for mut asset in candidates.into_iter().take(limit) {
+            let purpose = asset
+                .desc_kv
+                .get("purpose")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| asset.description.clone())
+                .unwrap_or_default();
+            let domain = asset
+                .desc_kv
+                .get("domain")
+                .and_then(|v| v.as_str())
+                .unwrap_or("workspace_general");
+            let caps = asset
+                .desc_kv
+                .get("capabilities")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|x| x.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                })
+                .unwrap_or_default();
+            let text = format!(
+                "[{}|{}] {} | {} | {}",
+                asset.asset_type, domain, asset.path, purpose, caps
+            );
+            if let Some(vec) = client.embed_text(&text) {
+                self.storage.update_asset_embedding(&asset.path, &vec)?;
+                if let Some(obj) = asset.desc_kv.as_object_mut() {
+                    crate::memory::embedding::inject_embedding_meta(
+                        obj,
+                        client.model_name(),
+                        &vec,
+                    );
+                }
+                self.storage.upsert_asset(&asset)?;
+                updated += 1;
+            }
+        }
+        Ok(updated)
+    }
+
     /// 对单个资产调用本地 Ollama 小模型生成结构化语义 KV 并回写
     pub fn enrich_single_asset(&self, asset: &AssetRecord) -> Result<Option<EnrichedSample>> {
         let path = Path::new(&asset.path);

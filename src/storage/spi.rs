@@ -60,6 +60,20 @@ pub trait StorageProvider: Send + Sync {
     fn list_all_fact_nodes(&self, limit: usize) -> Result<Vec<FactNodeRecord>>;
     fn list_all_fact_edges(&self, limit: usize) -> Result<Vec<FactEdgeRecord>>;
 
+    // ─── Embedding Vectors (Phase 29 全链路向量存储) ───────────────────
+    fn update_asset_embedding(&self, _path: &str, _embedding: &[f32]) -> Result<()> {
+        Ok(())
+    }
+    fn get_asset_embedding(&self, _path: &str) -> Result<Vec<f32>> {
+        Ok(Vec::new())
+    }
+    fn update_fact_node_embedding(&self, _id: &str, _embedding: &[f32]) -> Result<()> {
+        Ok(())
+    }
+    fn get_fact_node_embedding(&self, _id: &str) -> Result<Vec<f32>> {
+        Ok(Vec::new())
+    }
+
     // ─── Multi-Agent Coordination Locks (多 Agent 协作锁) ────────────
     fn insert_coordination_lock(&self, lock: &CoordinationLock) -> Result<bool>;
     fn delete_coordination_lock(&self, lock_id: &str) -> Result<bool>;

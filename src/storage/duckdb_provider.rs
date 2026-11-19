@@ -53,6 +53,8 @@ impl StorageProvider for DuckDbStorageProvider {
         let conn = self.lock_conn()?;
         conn.execute_batch(DUCKDB_SCHEMA_SQL)
             .context("执行 DuckDB Schema 批处理失败")?;
+        let _ = conn.execute("ALTER TABLE assets ADD COLUMN embedding VARCHAR DEFAULT '[]'", []);
+        let _ = conn.execute("ALTER TABLE fact_nodes ADD COLUMN embedding VARCHAR DEFAULT '[]'", []);
 
         // 预置放置规则
         let presets = [
@@ -1047,6 +1049,50 @@ impl StorageProvider for DuckDbStorageProvider {
         })?.collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(rows)
+    }
+
+    fn update_asset_embedding(&self, path: &str, embedding: &[f32]) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let emb_str = serde_json::to_string(embedding)?;
+        conn.execute(
+            "UPDATE assets SET embedding = ?1, updated_at = strftime(now(), '%Y-%m-%dT%H:%M:%SZ') WHERE path = ?2",
+            params![emb_str, path],
+        )?;
+        Ok(())
+    }
+
+    fn get_asset_embedding(&self, path: &str) -> Result<Vec<f32>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare("SELECT COALESCE(embedding, '[]') FROM assets WHERE path = ?1")?;
+        let mut rows = stmt.query(params![path])?;
+        if let Some(row) = rows.next()? {
+            let s: String = row.get(0)?;
+            Ok(serde_json::from_str(&s).unwrap_or_default())
+        } else {
+            Ok(Vec::new())
+        }
+    }
+
+    fn update_fact_node_embedding(&self, id: &str, embedding: &[f32]) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let emb_str = serde_json::to_string(embedding)?;
+        conn.execute(
+            "UPDATE fact_nodes SET embedding = ?1, updated_at = strftime(now(), '%Y-%m-%dT%H:%M:%SZ') WHERE id = ?2",
+            params![emb_str, id],
+        )?;
+        Ok(())
+    }
+
+    fn get_fact_node_embedding(&self, id: &str) -> Result<Vec<f32>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare("SELECT COALESCE(embedding, '[]') FROM fact_nodes WHERE id = ?1")?;
+        let mut rows = stmt.query(params![id])?;
+        if let Some(row) = rows.next()? {
+            let s: String = row.get(0)?;
+            Ok(serde_json::from_str(&s).unwrap_or_default())
+        } else {
+            Ok(Vec::new())
+        }
     }
 
     // ─── Multi-Agent Coordination Locks (多 Agent 协作锁) ────────────
