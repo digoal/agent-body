@@ -64,7 +64,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 make build
 # 或: cargo build --release
 
-# 3. 运行全量测试验证环境 (目前 202 项测试全部通过)
+# 3. 运行全量测试验证环境 (目前 202 项测试全部通过，1 项文档示例忽略)
 make test
 # 或: cargo test
 
@@ -87,16 +87,23 @@ agent-steward --version
 
 核心配置参数示例：
 ```toml
+db_path = "~/.steward/steward.db"
+
 [storage]
-database_path = "~/.steward/steward.db"
+provider = "sqlite"
 
-[daemon]
-poll_interval_secs = 60
-watch_paths = ["/root/new/work", "/root/new/shared_proj", "/root/new/skills", "/root/new/note"]
+[assets]
+auto_scan_dirs = ["/root/new/work", "/root/new/shared_proj"]
 
-[memory]
-ollama_endpoint = "http://127.0.0.1:11434"
-default_embedding_model = "bge-m3:latest"
+[embedding]
+ollama_url = "http://localhost:11434"
+model = "nomic-embed-text"
+dimensions = 768
+fallback_fts_only = true
+
+[annotation]
+enabled = true
+model = "qwen3.5:0.8b"
 ```
 
 ### 2.4 Systemd 后台常驻守护服务（生产托管）
@@ -218,7 +225,7 @@ agent-steward close session-20261115-01 --clean-temp
 }
 ```
 
-#### 步骤 2: 39 个原生 MCP 工具全景矩阵
+#### 步骤 2: 40 个原生 MCP 工具全景矩阵
 
 | 分类 | 工具名称 | 核心功能说明 |
 |---|---|---|
@@ -261,6 +268,7 @@ agent-steward close session-20261115-01 --clean-temp
 | | `steward_service_contact` | 管理外部可用服务通讯录与轻量健康探活（严禁存明文密钥） |
 | **多机联邦 Mesh** | `steward_mesh_query` | 对等节点 ping/facts/locks 联邦查询、跨机端口检测与跨节点租约锁 |
 | **路演与对齐** | `steward_demo_scenario` | Web/黑屏同源 6 大路演剧目真引擎实跑、ROI 核算、Parity 对齐与沙盒复位 |
+| **实证基准与账本** | `steward_benchmark` | 运行 8 大 A/B 对照负载与 5 大微基准、审计 PR-01~08 效能存证账本与回归比对 |
 
 ---
 

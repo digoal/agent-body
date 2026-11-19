@@ -10,14 +10,19 @@
 
 ```mermaid
 flowchart LR
-    Daemon["Steward Daemon 主循环"] --> TaskA["任务 A: inotify 实时监听器<br/>(notify crate / 300ms 智能防抖)"]
-    Daemon --> TaskB["任务 B: 60s 定时巡检轮询<br/>(/proc 动态进程 + 硬件资源)"]
+    Daemon["Steward Daemon 主循环"] --> Pre["启动门禁: PreflightChecker 运行预检"]
+    Daemon --> TaskA["任务 A: inotify 实时监听器<br/>(notify crate / 300ms 智能防抖)"]
+    Daemon --> TaskB["任务 B: 60s 定时巡检轮询<br/>(BackgroundScheduler)"]
+    Daemon --> WebSSE["任务 C: 内嵌 Web 大屏 + SSE 事件流<br/>(当 web.enabled = true)"]
 
     TaskA --> Sync["变更同步流水线<br/>(watcher/handler.rs)"]
-    Sync --> DB1["增量更新 assets 表与 FTS5"]
-    Sync --> DB2["记录 changes 变更审计表"]
+    Sync --> DB1["NoiseFilter 去噪 + L1 元数据 + FTS5"]
+    Sync --> DB2["deep 资产自动刷新 links 依赖边"]
+    Sync --> DB3["记录 changes 表并推送 EventBus"]
 
-    TaskB --> DB3["刷新 active_processes 进程表"]
+    TaskB --> Sched1["/proc 动态进程与属性图刷新"]
+    TaskB --> Sched2["过期协作锁 GC + MCP/SKILL 刷新"]
+    TaskB --> Sched3["Ollama 异步批处理精炼 L2 元数据"]
 ```
 
 ---
@@ -32,8 +37,9 @@ flowchart LR
 1. 捕获到文件创建/修改/删除事件后，暂存入内存通道；
 2. 聚合 300ms 窗口内的同路径变动；
 3. 将最终稳定态分发给 `src/watcher/handler.rs`：
-   - **新增/修改文件**：读取元信息，更新 `assets` 记录与 FTS5 虚拟表，并在 `changes` 表中插入一条类型为 `file_created` 或 `file_modified` 的审计日志；
-   - **删除文件**：将 `assets` 对应记录状态置为 `missing` 或清除，并在 `changes` 表中记录 `file_deleted`。
+   - **新增/修改文件**：先经 `PolicyMatcher`（黑名单目录仅记目录本身，子文件直接跳过）与 `NoiseFilter` 去噪；再通过 `HeuristicMetadataExtractor` 生成 L1 语义元数据、更新 `assets` 与 FTS5；若属于 `deep` 白名单目录，同步触发 `LinksEngine::refresh_links_for_asset` 幂等刷新依赖边，并记录 `changes` 与推送 `EventBus`；
+   - **删除文件**：将 `assets` 对应记录置为 `missing`，清理关联自动依赖边（`delete_auto_links_for_source`），记录 `file_deleted` 并推送 `EventBus`。
+4. **后台巡检协同（`src/daemon/scheduler.rs`）**：每 60 秒执行一次 `run_inspection_cycle`，自动刷新 `/proc` 动态进程、构建事实属性图、审计记忆冲突、推进断点扫描任务、回收过期协作锁、刷新 MCP/SKILL 生态目录，并按 `annotation.auto_enrich_batch_size` 调用本地 Ollama（`qwen3.5:0.8b`）异步精炼待标注资产的 L2 语义元数据。
 
 ---
 
@@ -45,12 +51,15 @@ flowchart LR
 agent-steward daemon
 ```
 
-**运行日志输出示例**:
+**启动输出示例（对齐 `src/daemon/mod.rs`）**:
 ```text
-[INFO] 正在启动 Agent Host Steward 常驻守护服务 (v0.2.0)...
-[INFO] inotify 实时监听已就绪，正在监听目录: ["/root/new/work", "/root/new/shared_proj", "/root/new/skills"]
-[INFO] 定时巡检任务已启动，轮询间隔: 60 秒
-[INFO] 正在监控动态任务进程... 当前纳管进程数: 198
+╔═══════════════════════════════════════════════════════╗
+║      Agent Host Steward Daemon 已在后台启动运行       ║
+╚═══════════════════════════════════════════════════════╝
+数据目录:       "/root/.steward"
+数据库路径:     "/root/.steward/steward.db"
+实时监听目录:   ["/root/new/work", "/root/new/shared_proj"]
+✅ inotify 文件系统实时监听就绪 (300ms 防抖)
 ```
 
 ---

@@ -29,7 +29,7 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 5. **双轮驱动同步机制**：
    - 任何核心特性的发布或调整，必须同步检查：
      - **根目录 `README.md`**：保持项目门面最新（架构全景、核心定位、快速上手、MCP 配置简明指南、分阶段路线索引）；
-     - **`manual/` 目录**：保持深度分卷手册完备（01~07 章节化深度展开、排障常见问题、参数字典）；
+     - **`manual/` 目录**：保持深度分卷手册完备（01~10 章节化深度展开、排障常见问题、参数字典与实证 Benchmark）；
      - **`markdown/` 目录**：提炼适合对外技术传播的长文与高保真图解。
 6. **断点式增量推进**：
    - 当需要重构或批量撰写 `manual/` 多章节长手册时，必须在 [manual/README.md](../../manual/README.md) 中维护章节目录进度清单，按章节串行步进。
@@ -44,7 +44,7 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 3. **系统架构师与平台运维**：关心安全隐私（数据是否全部本地 SQLite）、资源消耗（守护进程常驻仅 2.1MB 内存）、分级扫描黑名单阻断、端口防撞以及宏微代码拓扑穿透机制。
 
 ### 2.2 `manual/` 目录落地的标准分卷体系
-`manual/` 目录下已建立规范的 9 卷技术手册体系：
+`manual/` 目录下已建立规范的 10 卷技术手册体系：
 
 ```
 manual/
@@ -52,12 +52,13 @@ manual/
 ├── 01-getting-started.md          # 快速上手与编译部署
 ├── 02-core-concepts.md            # 核心理念与设计哲学（三位一体与分级扫描）
 ├── 03-cli-reference.md            # 全量 CLI 命令行实战字典
-├── 04-mcp-integration.md          # Agent 接入与 MCP 协议指南（39 个原生工具）
+├── 04-mcp-integration.md          # Agent 接入与 MCP 协议指南（40 个原生工具）
 ├── 05-daemon-and-watcher.md       # 守护进程与 inotify 实时监听
 ├── 06-advanced-features.md        # 进阶特性指南（断链修复、GC、记忆生命周期、TUI）
 ├── 07-troubleshooting.md          # 故障诊断与常见问题 (FAQ)
-├── 08-web-dashboard.md            # Web UI 2.0 昼夜蓝图、拓扑大屏与路演剧场
-└── 09-hooks-integration.md        # HOOK 驱动集成引擎与 Pipeline 编排
+├── 08-web-dashboard.md            # Web UI 2.0 昼夜蓝图、拓扑大屏、路演剧场与实证基准
+├── 09-hooks-integration.md        # HOOK 驱动集成引擎与 Pipeline 编排
+└── 10-benchmark-and-roi.md        # 实证 Benchmark 与生产效能存证账本
 ```
 
 ---
@@ -75,7 +76,7 @@ flowchart TD
 ### 步骤 1: 提取代码事实
 在动笔前，Agent 必须快速查阅：
 - `src/main.rs`：当前支持的所有子命令与 flags 参数；
-- `src/api/mcp_tools.rs`：当前注册的全部 **39 个原生 MCP 工具** 名与 inputSchema；
+- `src/api/mcp_tools.rs`：当前注册的全部 **40 个原生 MCP 工具** 名与 inputSchema；
 - `src/config/mod.rs`：当前的 `config.toml` 配置项结构体；
 - `src/storage/schema.sql`：预置的 8 大放置规则与 10 大扫描策略；
 - `src/links/`：依赖关系解析引擎、断链体检规则与 CodeGraph 穿透接口。
@@ -124,10 +125,10 @@ flowchart TD
 ## 五、自检 Checklist（发布文档前必对）
 
 - [ ] 文档中的 CLI 命令是否与 `src/main.rs` 中的定义 100% 吻合？
-- [ ] 文档中的 MCP 工具名是否与 `src/api/mcp_tools.rs`（共 39 个）100% 吻合？
+- [ ] 文档中的 MCP 工具名是否与 `src/api/mcp_tools.rs`（共 40 个）100% 吻合？
 - [ ] 文档中贴出的 JSON 输出是否经过实际命令运行捕获，而非凭空假想？
 - [ ] Mermaid 节点文字中的括号是否全部加了双引号（防渲染崩溃）？
 - [ ] 矢量 SVG 资源是否已独立落盘于 `markdown/svg/` 并在 Markdown 中以标准语法正确引用？
-- [ ] `README.md` 是否已同步最新架构、全量 39 个 MCP 工具与演进路线？
-- [ ] `manual/` 目录下的 9 卷分卷手册超链接是否全部有效无死链？
+- [ ] `README.md` 是否已同步最新架构、全量 40 个 MCP 工具与演进路线？
+- [ ] `manual/` 目录下的 10 卷分卷手册超链接是否全部有效无死链？
 - [ ] 是否通过了全局死链审计脚本（187+ 处链接 100% 通过）？

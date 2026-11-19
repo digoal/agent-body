@@ -107,9 +107,9 @@
   - 多 Agent 协作锁与层级互斥传播算法（Advisory Lock + 祖先后代路径检测）；
   - 工业级 NFR 指标（单二进制交付、冷启动 `<50ms`、空闲内存 `<25MB`）与递弱代偿边界。
 - 🛠️ **[02-for-developers.md](arch/02-for-developers.md)**（面向研发工程师与贡献者）：
-  - 源码 23 大模块全景职责与依赖拓扑速查；
+  - 源码 24 大模块全景职责与依赖拓扑速查；
   - 核心扩展三大 How-To（添加原生 MCP 工具、实现新存储后端 SPI、新增环境预检项）；
-  - 189+ 项自动化测试套件与本地开发流；
+  - 202 项自动化测试套件（179 单元 + 23 集成）与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
 - 🧭 **[03-for-users.md](arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
   - 大管家核心心智模型与物理世界哨兵定位；
@@ -128,7 +128,7 @@
 - 📖 **[03-cli-reference.md](manual/03-cli-reference.md)**：全量 CLI 命令行实操字典（全子命令 + 真实输出）
 - 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：40 个原生 MCP 工具与 Claude/Cursor 配置
 - 🔄 **[05-daemon-and-watcher.md](manual/05-daemon-and-watcher.md)**：后台常驻守护服务、inotify 300ms 防抖与 systemd 自启
-- ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：v3.1 进阶特性：断链智能修复、放置规则自演化、宿主资源 GC、记忆生命周期与 TUI 看板
+- ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：进阶特性：端口防撞、断链智能修复、放置规则自演化、三层元数据、WFG 死锁检测、宿主资源 GC、记忆生命周期与 TUI 看板
 - 🛠️ **[07-troubleshooting.md](manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
 - 🌐 **[08-web-dashboard.md](manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级大管家拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
 - 🪝 **[09-hooks-integration.md](manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
@@ -303,7 +303,7 @@ cargo build --release
 5. **Web UI 显示内容优化与交互重构** `✅ Phase 19 已落地 Web UI 2.0 五大工作台与真实拓扑`：
    - Web UI 显示的内容有点简陋，也不美观。需要重新设计一下。
 
-6. **黑屏功能和白屏功能双向同步** `✅ Phase 21 已落地 39 工具 100% Parity 同步`：
+6. **黑屏功能和白屏功能双向同步** `✅ Phase 21 已落地 39 工具 100% Parity 同步（Phase 28 已扩展至 40/40）`：
    - 黑屏功能和白屏功能要同步，白屏主要体现在WEB端，黑屏体现在 MCP,SKILL,CLI 侧（已升格为开发规约 #16）。
 
 7. **WEB 侧路演与对外分享演示剧场** `✅ Phase 22 已落地「🎬 路演演示剧场」与第 39 工具`：

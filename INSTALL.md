@@ -1,7 +1,7 @@
 # Agent Host Steward — 生产安装与可移植部署指南 (INSTALL.md)
 
-> **适用版本**: v0.3.2+  
-> **更新时间**: 2026-11-18  
+> **适用版本**: v0.4.0+  
+> **更新时间**: 2026-11-19  
 > **文档目标**: 本文档全面说明 Agent Host Steward 在不同操作系统与容器环境下的**编译依赖**、**运行时依赖**、**可选增强服务**与**一键部署流程**，防止因环境差异导致部署或运行失败。
 
 ---
@@ -18,7 +18,8 @@
 | **Rust 工具链** | *编译期* | >= 1.75.0 (推荐 1.82+) | 从源码编译 Rust 二进制 | 若使用预编译发布二进制包，则**无需安装** |
 | **C/C++ 编译器** | *编译期* | gcc / g++ >= 9 或 clang | 编译 `rusqlite` 与 `duckdb` 内置 C/C++ 引擎 | 源码编译失败 |
 | **CMake & Make** | *编译期* | CMake >= 3.15, GNU Make | DuckDB Bundled 静态构建支持 | 源码编译构建阶段报错退出 |
-| **Ollama 服务** | OPTIONAL | >= 0.1.20 | 长期记忆双路向量混合检索 (RRF) | **自动降级**为内置 SQLite FTS5 纯全文检索，绝不崩溃 |
+| **Ollama 向量服务** | OPTIONAL | >= 0.1.20 (`nomic-embed-text` / `bge-m3`) | 长期记忆双路向量混合检索 (RRF) | **自动降级**为内置 SQLite FTS5 纯全文检索，绝不崩溃 |
+| **Ollama 元数据标注模型** | OPTIONAL | >= 0.1.20 (`qwen3.5:0.8b`) | 资产 L2 本地异步脱敏语义标注精炼 | **自动降级**为纯 L1 Rust 确定性语法提取，零云端 Token |
 | **PostgreSQL** | OPTIONAL | >= 14 (需 pgvector) | 跨机多 Agent 高并发共享存储后端 | 默认采用内置嵌入式 SQLite，无需安装外部数据库 |
 | **Systemd** | OPTIONAL | >= 245 | 系统自动化拓扑扫描、常驻后台守护服务托管 | 容器或 OpenRC 环境下跳过拓扑，可使用 Docker/nohup 运行 |
 | **CodeGraph CLI** | OPTIONAL | >= 0.1.0 | 宏微双层联邦微观代码函数符号穿透 | **自动降级**为文件与目录级宏观拓扑分析 |
@@ -117,7 +118,7 @@ agent-steward preflight
 ╔══════════════════════════════════════════════════════════════════════════════════════════╗
 ║                   Agent Host Steward — 运行环境与依赖预检报告 (Preflight)                ║
 ╚══════════════════════════════════════════════════════════════════════════════════════════╝
-系统架构: linux-unix (x86_64)  |  检查时间: 2026-11-18T17:00:00+08:00
+系统架构: linux-unix (x86_64)  |  检查时间: 2026-11-19T16:16:25.242977676+08:00
 --------------------------------------------------------------------------------------------
 状态     类型           检查项                      详情 / 修复指引
 --------------------------------------------------------------------------------------------
@@ -127,10 +128,12 @@ agent-steward preflight
 ✅ PASS   REQUIRED     SQLite3 + FTS5 存储引擎      嵌入式 SQLite 及 FTS5 全文检索模块运行正常
 ✅ PASS   OPTIONAL     DuckDB 列存分析引擎            嵌入式 DuckDB 内存引擎就绪
 ✅ PASS   OPTIONAL     Systemd 守护环境             系统由 Systemd 纳管，支持自动化拓扑采集与 service 后台运行
-✅ PASS   OPTIONAL     CodeGraph 宏微联邦引擎         已安装 codegraph CLI: /usr/local/bin/codegraph
-⚠️ WARN  OPTIONAL     Ollama 向量服务与模型           未连接到 Ollama (已自动降级为 SQLite FTS5 检索)
+✅ PASS   OPTIONAL     CodeGraph 宏微联邦引擎         已安装 codegraph CLI: /root/.nvm/versions/node/v24.20.0/bin/codegraph
+✅ PASS   OPTIONAL     宿主机 SKILL 生态目录           已发现 2 个 SKILL 根目录: /root/new/skills, /root/.gemini/antigravity-cli/skills
+✅ PASS   OPTIONAL     Ollama 向量服务与模型           服务正常且已拉取嵌入模型 `nomic-embed-text`
+✅ PASS   OPTIONAL     Ollama 元数据标注模型           服务正常且已拉取小模型 `qwen3.5:0.8b` (L2 自动语义标注就绪)
 ✅ PASS   INFO         系统内核 inotify watch 限制    max_user_watches = 123055 (建议大项目 >= 65536)
-✅ PASS   INFO         Agent Steward 软件包版本      v0.3.2 (git-hash, linux/x86_64)
+✅ PASS   INFO         Agent Steward 软件包版本      v0.4.0 (9ba7bca, linux/x86_64, built at 2026-11-19T07:53:18Z)
 --------------------------------------------------------------------------------------------
 🚀 结论: 所有 REQUIRED 基础环境依赖全部满足，大管家可稳定上线运行。
 ```
@@ -208,14 +211,15 @@ docker run -d \
 
 ## 七、可选增强依赖配置指南
 
-### 1. 配置 Ollama 向量语义混合检索 (RRF)
+### 1. 配置 Ollama 向量混合检索 (RRF) 与资产 L2 自动标注
 1. 安装 Ollama：
    ```bash
    curl -fsSL https://ollama.com/install.sh | sh
    ```
-2. 拉取嵌入模型：
+2. 拉取嵌入模型与轻量元数据标注模型（`qwen3.5:0.8b` 为可选增强，缺失时自动降级为纯 L1 确定性语法提取）：
    ```bash
    ollama pull nomic-embed-text
+   ollama pull qwen3.5:0.8b
    ```
 3. 在 `~/.steward/config.toml` 中配置：
    ```toml
@@ -224,6 +228,14 @@ docker run -d \
    model = "nomic-embed-text"
    dimensions = 768
    fallback_fts_only = true
+
+   [annotation]
+   enabled = true
+   ollama_url = "http://localhost:11434"
+   model = "qwen3.5:0.8b"
+   timeout_ms = 15000
+   max_snippet_chars = 1200
+   auto_enrich_batch_size = 10
    ```
 
 ### 2. 配置 PostgreSQL + pgvector 高并发后端

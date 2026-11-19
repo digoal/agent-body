@@ -30,7 +30,7 @@
    - 保证 `/proc` 挂载且可读 (`/proc/net/tcp`、`/proc/[pid]/fd`)
 
 ### 2. 可选扩展服务 (按需安装)
-- **Ollama**: 本地运行 `http://127.0.0.1:11434`，模型推荐 `nomic-embed-text` 或 `bge-m3`（语义混合检索用，若无则自动降级为 FTS5）；
+- **Ollama**: 本地运行 `http://127.0.0.1:11434`，嵌入模型推荐 `nomic-embed-text` 或 `bge-m3`（语义混合检索），轻量标注模型推荐 `qwen3.5:0.8b`（L2 资产元数据异步精炼，离线均自动优雅降级）；
 - **PostgreSQL**: 版本 >= 14 并安装 `pgvector` 扩展（多机高并发共享存储用，若无则使用默认 SQLite）；
 - **CodeGraph**: 本地安装 `codegraph` CLI 并在目标仓库建立索引（微观符号级函数调用链穿透用）。
 
@@ -50,40 +50,45 @@ agent-steward/
 ├── INSTALL.md               # 生产部署与依赖全景排障手册
 ├── releases/                # 历史各版本详细 Release Notes
 │   ├── README.md            # 滚动版本索引与打 Tag 规范
-│   ├── v0.1.0.md ~ v0.3.1.md
+│   ├── v0.1.0.md ~ v0.4.0.md
 ├── src_doc/                 # 研发规划与架构文档
 │   ├── progress.md          # 串行任务断点续传总进度表
 │   ├── development.md       # 本开发指南
-│   ├── roadmap-phase10-11.md# Phase 10~11 详细设计文档
-│   └── roadmap-phase12.md   # Phase 12 依赖显式化与可移植路线图
-├── tests/                   # 独立集成与性能基准测试套件
-│   ├── coordination_integration.rs # 多 Agent 协作锁并发集成测试 (8 项)
-│   ├── duckdb_integration.rs       # DuckDB 分析与增量管道测试 (5 项)
-│   └── benchmarks.rs               # 亚毫秒 OLAP 与微观向量基准测试 (5 项)
-└── src/                     # Rust 核心源码目录
-    ├── main.rs              # CLI 入口与子命令解析 (Clap derive)
+│   └── roadmap-phase*.md    # 分阶段详细设计文档
+├── tests/                   # 独立集成与性能基准测试套件 (23 项)
+│   ├── coordination_integration.rs  # 多 Agent 协作锁并发集成测试 (8 项)
+│   ├── deadlock_wait_integration.rs # WFG 死锁与唤醒集成测试 (2 项)
+│   ├── duckdb_integration.rs        # DuckDB 分析与增量管道测试 (5 项)
+│   ├── ecosystem_integration.rs     # 生态目录与防爆路由集成测试 (1 项)
+│   ├── test_web_dashboard.rs        # Web UI 2.0 端到端全生命周期测试 (1 项)
+│   └── benchmarks.rs                # 亚毫秒 OLAP 与实证基准测试 (6 项)
+└── src/                     # Rust 核心源码目录 (24 个顶层模块)
+    ├── main.rs              # CLI 入口与 27 个顶层子命令解析 (Clap derive)
     ├── lib.rs               # 核心库导出与版本元信息
     ├── config/              # 配置文件与环境变量管理、参数校验
     ├── preflight/           # 运行时环境与依赖完整性预检引擎
-    ├── storage/             # 存储层 SPI (49 方法) + SQLite/PG/DuckDB 三引擎 + 热迁移与增量同步
-    ├── coordination/        # 多 Agent 协作锁中枢 (Port/Dir/File 互斥、TTL、Advisory Lock)
+    ├── storage/             # 存储层 SPI (61 方法) + SQLite/PG/DuckDB 三引擎 + 热迁移与增量同步
+    ├── coordination/        # 多 Agent 协作锁中枢 (Port/Dir/File 互斥、TTL、WFG 死锁、Advisory Lock)
     ├── fact/                # 宿主机客观事实图谱 (工具能力/端口/Systemd/Cron/资料编目)
     ├── brief/               # 自适应情境组装引擎 (Dynamic Brief Assembler)
     ├── placement/           # 新对象放置建议引擎 (Rules 2.0 / 意图打分 / 纠偏自学习)
-    ├── scanner/             # 资产分级颗粒度扫描器 (Deep/Shallow/Restricted + 断点续扫)
+    ├── scanner/             # 资产分级颗粒度扫描器 (Deep/Shallow/Restricted + 三层元数据 + Ollama 标注)
     ├── env/                 # 宿主系统感知与 /proc 动态任务采集器
     ├── memory/              # 记忆管理与可插拔适配器 (内置/PowerContext/Mem0/Letta)
     ├── links/               # 宏微双层依赖拓扑与 CodeGraph 联邦桥接
+    ├── changes/             # 宿主变更历史与开工回溯摘要
     ├── watcher/             # inotify 实时监听与防抖 ChangeHandler
     ├── daemon/              # 后台常驻守护进程与自主巡查调度器
     ├── session/             # 会话生命周期自动绑定与安全归档
     ├── hooks/               # HOOK 事件总线、自动同步、客户端生成与 Pipeline 编排
-    ├── web/                 # 内嵌 HTTP/SSE 监控大屏服务
+    ├── web/                 # 内嵌 HTTP/SSE 昼夜蓝图监控大屏服务 (7 大工作台)
     ├── tui/                 # 终端全景实时交互看板
     ├── ecosystem/           # MCP/SKILL 生态目录、外部服务通讯录与 Context 防爆路由
     ├── platform/            # 跨平台原生探针 (Linux/macOS/Windows)
     ├── mesh/                # 轻量多机联邦 HTTP Peer Mesh
-    └── api/                 # 39 个原生 MCP 工具端点与 Hook 门禁
+    ├── demo/                # 路演沙盒引擎（6 大剧目、ROI 核算）
+    ├── benchmark/           # 双轨实证 Benchmark 引擎（W1~W8 + M1~M5 + PR-01~08 账本）
+    └── api/                 # 40 个原生 MCP 工具端点与 Hook 门禁
 ```
 
 ---
@@ -104,7 +109,7 @@ make preflight
 
 ### 3. 运行测试套件
 ```bash
-# 运行全部单元测试 (119+ 项)
+# 运行全部库内单元测试 (178 项；全量 cargo test 共 202 项通过，1 项 doc-test 忽略)
 cargo test --lib
 
 # 运行协作锁并发集成测试 (8 项)
@@ -113,7 +118,7 @@ cargo test --test coordination_integration
 # 运行 DuckDB 列存分析集成测试 (5 项)
 cargo test --test duckdb_integration
 
-# 运行性能基准测试 (5 项)
+# 运行性能与实证基准测试 (6 项)
 cargo test --test benchmarks
 
 # 一键运行 Makefile 全量测试

@@ -12,17 +12,33 @@ agent-steward [OPTIONS] <COMMAND>
 
 | 顶级子命令 | 简要说明 | 适用场景 |
 |---|---|---|
-| `status` | 查看大管家自身版本、数据库位置、纳管资产与进程统计 | 状态巡检与探活 |
+| `status` | 查看大管家自身版本、数据库位置、资产/依赖边/进程统计 | 状态巡检与探活 |
+| `tui` | 启动终端 ANSI 实时全景看板 | 终端实时运维观测 |
 | `brief` | 一键获取宿主系统硬件、活跃任务、最近资产与记忆简报 | Agent 开工首调 |
-| `place` | 咨询对象放置规范建议或列出放置规则表 | 新建文件/工程前防乱放 |
-| `asset` | 资产分级扫描录入、全文检索与列表查看 | 资产盘点与检索 |
+| `place` | 咨询对象放置规范建议、列出规则或纠偏自演化学习 | 新建文件/工程防乱放 |
+| `asset` | 资产分级扫描录入、手动注册与全文/语义检索 | 资产盘点与检索 |
 | `env` | 硬件规格、活跃动态任务进程、网络端口防撞检测 | 运维排障、资源防撞 |
-| `memory` | 跨会话长期记忆写入、全文与向量混合 RRF 检索 | 知识与决策沉淀 |
-| `links` | 查询实体依赖拓扑、导出 Mermaid 架构图、推演爆炸半径 | 改动代码前影响分析 |
-| `changes`| 查看自某个时间点以来的宿主环境变更历史 | 开工前了解环境变动 |
-| `close` | 会话完工结算、清理临时测试资产、归档沉淀长期记忆 | 会话结束自洁 |
-| `mcp` | 启动标准 JSON-RPC 2.0 stdio MCP 服务端 | 供 Agent 客户端挂载 |
+| `memory` | 跨会话长期记忆写入、混合 RRF 检索与矛盾仲裁审计 | 知识与决策沉淀 |
+| `mcp` | 启动标准 JSON-RPC 2.0 stdio MCP 服务端（40 工具） | 供 Agent 客户端挂载 |
 | `daemon` | 启动常驻后台守护主循环 (inotify 监听 + 60s 定时巡检) | 系统服务守护 |
+| `links` | 查询实体依赖拓扑、导出 Mermaid、推演爆炸半径、断链修复与 CodeGraph 联动 | 改动代码前影响分析 |
+| `changes` | 查看自某个时间点以来的宿主环境变更历史 | 开工前了解环境变动 |
+| `close` | 会话完工结算、清理临时测试资产、归档沉淀长期记忆 | 会话结束自洁 |
+| `gc` | 安全清理白名单临时目录过期文件与诊断孤儿进程 | 宿主环境自洁 |
+| `fact` | 只读查询宿主机物理事实图谱（工具能力/进程端口/自动化/资料） | 零幻觉客观事实探查 |
+| `storage` | 查看当前存储后端并执行 SQLite/PG/DuckDB 热迁移或分析副本同步 | 多引擎存储管理与迁移 |
+| `coordination` | 管理跨 Agent 资源协作锁、等待队列唤醒与 WFG 死锁检测 | 多 Agent 防踩踏协同 |
+| `preflight` | 运行时环境与系统依赖完整性预检（支持 `--json`） | 部署前与 CI/CD 校验 |
+| `web` | 启动内嵌 Web UI 2.0 昼夜蓝图可视化大屏与 REST/SSE 服务 | 浏览器监控与路演 |
+| `hooks` | 触发 Pre/Post Hook 门禁与生成客户端自动化钩子 | 客户端工作流集成 |
+| `analytics` | 基于 DuckDB 列存统计变更热力图、趋势与 Parquet/CSV 导出 | 宿主时序聚合分析 |
+| `mcp-catalog` | 扫描与路由宿主机客户端已纳管 MCP Server（密钥脱敏） | 生态目录管理 |
+| `skill` | 扫描 120+ SKILL 目录并按 Token 预算防爆路由 Top-K | 防止大模型上下文爆炸 |
+| `service` | 管理外部可用服务通讯录与轻量健康探活 | 外部服务目录治理 |
+| `mesh` | 轻量多机联邦 HTTP Peer Mesh 跨节点查询与协调 | 多机集群联动 |
+| `platform` | 跨平台原生探针查看本机硬件、端口与自动化任务 | Linux/macOS/Windows 探测 |
+| `demo` | 真引擎路演场景演示、ROI 核算与 40 工具黑白屏对齐自检 | 产品路演与一致性验证 |
+| `bench` | 运行 8 大 A/B 对照负载与 5 大微基准、审计 PR-01~08 存证账本 | 实证效能评测与回归对比 |
 
 ---
 
@@ -39,13 +55,14 @@ agent-steward [OPTIONS] <COMMAND>
   ╔═══════════════════════════════════════════════════════╗
   ║      Agent Host Steward (Rust 版) — 系统状态          ║
   ╚═══════════════════════════════════════════════════════╝
-  版本:           v0.2.0
+  版本:           v0.4.0 (9ba7bca, linux/x86_64, built at 2026-11-19T07:53:18Z)
   数据目录:       "/root/.steward"
   数据库文件:     "/root/.steward/steward.db"
-  已纳管资产数:   0
+  已纳管资产数:   26091
+  依赖关系边数:   6407 条
   放置规范规则:   8 条
-  分级扫描策略:   10 条
-  当前动态进程:   198 个
+  分级扫描策略:   12 条
+  当前动态进程:   96 个
   ```
 
 ---
@@ -429,6 +446,63 @@ agent-steward [OPTIONS] <COMMAND>
 ---
 
 ### 2.21 `demo` — 路演场景演示与黑白屏同步自检引擎 (Phase 22)
-- `agent-steward demo <list|run <scenario_id>|roi|parity|reset>`: 列出或用真实宿主机引擎执行 6 大黄金路演剧目（`scene-1`~`scene-6`）、核算实时商业价值 ROI、检查 39 工具黑白屏同步矩阵，或一键清理 `demo:*` 沙盒锁（对应 `steward_demo_scenario`）。
+- `agent-steward demo <list|run <scenario_id>|roi|parity|reset>`: 列出或用真实宿主机引擎执行 6 大黄金路演剧目（`scene-1`~`scene-6`）、核算实时商业价值 ROI、检查 40 工具黑白屏同步矩阵，或一键清理 `demo:*` 沙盒锁（对应 `steward_demo_scenario`）。
+
+---
+
+### 2.22 `storage` — 多后端存储管理、热迁移与 DuckDB 同步
+- **这是什么**: 在不中断业务的前提下查看当前存储后端，在 SQLite / PostgreSQL / DuckDB 之间执行全量热迁移或增量同步 OLAP 分析副本。
+- **为什么需要**: 单机起步用零依赖 SQLite 最省心，但团队多机协同或海量审计时序分析需要迁移至 PostgreSQL + pgvector 或同步至 DuckDB 列存。
+- **子命令与参数**:
+  - `storage info`: 查看当前生效的存储提供者与数据库路径/连接信息。
+  - `storage migrate [--from sqlite|postgres|duckdb] [--from-url <URL>] [--to sqlite|postgres|duckdb] [--to-url <URL>]`: 在不同存储后端间执行全量数据热迁移。
+  - `storage sync [--to duckdb] [--to-path <PATH>]`: 将主存储的资产与变更审计同步到 DuckDB 列存副本（默认 `~/.steward/steward.duckdb`）。
+- **调用示例**:
+  ```bash
+  agent-steward storage info
+  agent-steward storage sync --to duckdb
+  agent-steward storage migrate --from sqlite --to postgres --to-url "host=127.0.0.1 dbname=steward user=postgres"
+  ```
+- **真实输出解读**:
+  ```text
+  当前活跃存储提供者: sqlite
+  配置数据库文件路径: "/root/.steward/steward.db"
+  ```
+
+---
+
+### 2.23 `bench` — 实证 Benchmark 对照评测与生产效能存证账本 (Phase 27~28)
+- **这是什么**: 在真实宿主机上运行「Without Steward 裸奔基线 vs With Steward 大管家」A/B 对照测试套件，并审计日常每次 MCP 调用自动记录的生产效能存证流水（对应第 40 个 MCP 工具 `steward_benchmark`）。
+- **为什么需要**: 用同机实跑数据与 SHA-256 防篡改指纹证明 Token 节省率、延迟加速比与冲突拦截率，杜绝“拍脑袋宣传数字”（规约 #18）。
+- **子命令与参数**:
+  - `workloads`: 列出 8 大标准 A/B 负载（`W1`~`W8`）与 `PR-01`~`PR-08` 归因推导规则字典。
+  - `run [--suite full|macro|micro|W1~W8] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
+  - `report [--run-id <ID>] [--format table|json|csv]`: 查看指定批次或最近一次跑批报告。
+  - `ledger [--window 24h|7d|30d|all] [--tool <NAME>] [--limit 20]`: 审计生产运行态按 PR 规则聚合的效能存证账本。
+  - `compare <RUN_A> <RUN_B>`: 跨版本或跨批次比对 Token 节省率与耗时回归差异。
+  - `export [--format markdown|json|csv] [--out <PATH>]`: 导出带 SHA-256 签名的可发表评测报告。
+  - `reset`: 清理 `bench:*` 隔离沙盒测试数据。
+- **调用示例**:
+  ```bash
+  agent-steward bench workloads
+  agent-steward bench run --suite full --save false
+  agent-steward bench ledger --window 7d --limit 5
+  ```
+- **真实输出解读（`bench run --suite full --save false` 实机片段）**:
+  ```markdown
+  # Agent Host Steward 实证基准评测报告 (run-ef911f10-cb74-4733-8908-7744f190e75a)
+
+  - **版本 / Commit**: `v0.4.0` (`9ba7bca`)
+  - **评测套件**: `full` · **总耗时**: `1924 ms`
+  - **报告 SHA-256 存证指纹**: `19e4777aefde296b80bb36e2b1099905442c4f7d3bf797dd3630411113b8bbea`
+  - **SLA 总检门禁**: ✅ PASS
+
+  | 指标维度 | 基线 (Without Steward) | 管家赋能 (With Steward) | 净收益 |
+  |---|---:|---:|---:|
+  | **Prompt Token 消耗** | 76690 tok | 1381 tok | **-98.20%** (75309 tok saved) |
+  | **事前拦截风险数** | - | - | **16 次** |
+  | **阻断垃圾噪音文件** | - | - | **379 个** |
+  ```
+  > 💡 **指标解读**: 8 大负载全跑仅需 ~1.9 秒，其中 W1（工具能力发现）加速 `567.44x`（`142.99ms → 252μs`）、W7（百级 SKILL 预算路由）节省 `99.8%` Token，且所有 5 项微基准 P95（`M1=144μs`, `M2=269μs`, `M3=27μs`）均远低于 SLA 红线。
 
 

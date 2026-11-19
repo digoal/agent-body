@@ -92,7 +92,7 @@ agent-steward memory search "数据库连接池排障" --hybrid # 混合检索�
 ```
 
 ### 方式 2：AI Agent MCP 原生挂载（智能体首选）
-在 Claude Desktop、Cursor 或 Antigravity 的配置文件中添加（即插即用 39 个原生工具）：
+在 Claude Desktop、Cursor 或 Antigravity 的配置文件中添加（即插即用 40 个原生工具）：
 ```json
 {
   "mcpServers": {
@@ -109,10 +109,11 @@ agent-steward memory search "数据库连接池排障" --hybrid # 混合检索�
 ```bash
 agent-steward web --port 8765
 ```
-打开浏览器访问 `http://127.0.0.1:8765`，全景观测：
+打开浏览器访问 `http://127.0.0.1:8765`，全景观测（支持 `T` 键实时切换「☀️ 白天工程蓝图 / 🌙 夜间深空」双主题）：
 - 🌐 宿主机物理拓扑（进程、端口、服务连线图）；
-- 🔒 活跃协作锁矩阵与剩余 TTL 倒计时；
-- ⚡ 全链路 SSE 实时事件滚动推流。
+- 🔒 活跃协作锁矩阵、等待队列与 WFG 死锁雷达；
+- 🎬 6 幕真引擎路演演示剧场与 📊 实证基准存证账本（等价黑屏 CLI：`agent-steward bench`）；
+- ⚡ 全链路 SSE 实时事件滚动推流与全局黑屏命令镜像。
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐

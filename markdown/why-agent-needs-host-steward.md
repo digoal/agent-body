@@ -35,7 +35,7 @@
 ![Agent Host Steward 分层架构全景图](svg/architecture.svg)
 
 大管家采用高内聚的四层工业级解耦架构：
-1. **接入与交互通道 (Interface Layer)**：内置免额外端口的标准 MCP Stdio 服务（提供 **39 个原生治理工具**，与 CLI、Web UI 2.0 保持 1:1:1 双向同步）、CLI 终端与内嵌 Tokio Web 监控大屏（支持昼夜双主题蓝图与 6 幕路演剧场）；
+1. **接入与交互通道 (Interface Layer)**：内置免额外端口的标准 MCP Stdio 服务（提供 **40 个原生治理工具**，与 CLI、Web UI 2.0 保持 1:1:1 双向同步）、CLI 终端与内嵌 Tokio Web 监控大屏（支持昼夜双主题蓝图、6 幕路演剧场与实证基准工作台）；
 2. **核心治理与认知引擎 (Core Engines)**：遵循「**宿主机事实图谱 × 用户偏好规约 × 可插拔记忆**」三位一体架构，涵盖放置建议、分级扫描（含黑名单浅层阻断与 `restricted` 入口过滤）、端口防撞、多 Agent 协作锁与 WFG 死锁检测、Ollama 小模型双轨元数据标注、混合检索、爆炸半径推演与会话自洁；
 3. **存储持久化层 (Storage Layer)**：支持 SQLite（WAL + Bundled FTS5）、PostgreSQL（pgvector + Advisory Lock）与 DuckDB（OLAP 列存与增量同步）三后端 SPI 抽象；
 4. **Linux 内核与物理文件系统**：直连 `/proc/net/tcp` 内存虚拟文件系统与 Linux inotify 事件。
@@ -80,7 +80,7 @@ Agent 无论是通过 CLI `agent-steward env port 8080` 还是 MCP `steward_port
 
 在重构公共库时，如何杜绝“蝴蝶效应”导致的夜间生产故障？
 
-大管家在 `links` 表中构建了全局实体依赖图谱，并在 v3.0 中完成了重磅升维：
+大管家在 `links` 表中构建了全局实体依赖图谱，并在底层完成了三维图智能跃迁：
 
 ![逆向 BFS 爆炸半径推演与 CodeGraph 宏微联邦](svg/blast-radius-codegraph.svg)
 
@@ -123,14 +123,18 @@ Agent 每次任务结束后调用 `agent-steward close <SESSION_ID>`：
 
 ---
 
-## 极客级 Rust 工程落地：极小体量与极致资源控制
+## 极客级 Rust 工程落地与双轨实证（有据可查）
 
 为了不给开发机和服务器增加额外负担，大管家坚决摒弃了臃肿的 Python 运行时与重型中间件：
 
-- **单二进制交付**：编译后仅 **8.5MB**（静态剥离符号）；
-- **极致内存开销**：Systemd 常驻后台守护进程（Daemon）内存峰值仅 **2.1MB**，CPU 占用低于 0.1%；
-- **毫秒级性能**：内核端口解析 0.2ms，分级扫描千级资产 0.4ms；
-- **开箱即用**：自带 SQLite 建表与自动增量迁移（v1 -> v2 -> v3 平滑无感）。
+- **单二进制交付**：静态内嵌 SQLite FTS5、DuckDB 列存引擎与 Web UI 2.0 全套前端，零外部运行时依赖（release 单二进制约 79MB，无 Python/Node.js 环境依赖）；
+- **轻量常驻开销**：Systemd 常驻后台守护进程（Daemon）现网匿名内存（RssAnon）实测仅 **~20.8MB**，空闲 CPU 低于 0.1%；
+- **亚毫秒级内核微基准实测**（`agent-steward bench run --suite full` 同机真机跑批，总耗时 1.9 秒）：
+  - 放置推导 `M3` P95 **27 μs**（SLA `< 400 μs`）；
+  - 3 跳依赖图查询 `M1` P95 **144 μs**（SLA `< 1500 μs`）；
+  - FTS5 全文检索 `M2` P95 **269 μs**（SLA `< 1500 μs`）；
+- **8 大标准业务负载 A/B 对照实证**：Without Steward 裸奔基线累计消耗 `76,690 tok`，启用大管家后降至 `1,381 tok`（**Prompt Token 节省 98.20%**），事前拦截 **16 次** 端口/锁/乱放/断链风险，阻断 **379 个** 垃圾噪音文件，评测报告自带 **SHA-256 防篡改存证指纹**；日常每次 MCP 调用自动写入生产效能存证账本（`PR-01`~`PR-08`），收益 100% 可复现、可审计；
+- **开箱即用**：自带 SQLite / PostgreSQL / DuckDB Schema 自动建表与增量迁移。
 
 ---
 
@@ -155,7 +159,7 @@ agent-steward links audit
 agent-steward links codegraph /root/new/src/hk2 interactive
 ```
 
-同时，我们通过标准 Stdio 注册了 **39 个原生 MCP 工具**，无缝兼容 Claude Desktop、Cursor IDE 与 Antigravity CLI。Agent 每次开工前，输入首帧即自动收到宿主全貌简报（`steward_brief`），彻底告别盲人摸象。
+同时，我们通过标准 Stdio 注册了 **40 个原生 MCP 工具**，无缝兼容 Claude Desktop、Cursor IDE 与 Antigravity CLI。Agent 每次开工前，输入首帧即自动收到宿主全貌简报（`steward_brief`），彻底告别盲人摸象。
 
 ---
 

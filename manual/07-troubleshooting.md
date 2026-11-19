@@ -78,3 +78,29 @@
   # 拉取推荐的中文多语言嵌入模型
   ollama pull bge-m3:latest
   ```
+
+---
+
+## 5. 环境预检、Ollama 元数据标注与沙盒清理 (v0.4.0)
+
+### Q8: 部署到新机器或 CI/CD 后如何快速排查缺少哪项系统依赖？
+- **排查与解决**:
+  使用内置的运行环境预检命令（退出码 `0` 表示满足全部 `REQUIRED` 项，非 `0` 表示缺失关键依赖）：
+  ```bash
+  agent-steward preflight
+  agent-steward preflight --json
+  ```
+
+### Q9: 本地未拉取 `qwen3.5:0.8b` 或 Ollama 离线时，扫描资产会报错吗？
+- **说明**: 不会报错！资产扫描默认执行 **Track 1 (L1 Rust 确定性语法提取)**，耗时 `<1ms` 即可完成结构化元数据提取；当本地 Ollama 不可达或超时时，L2 异步标注会自动跳过并优雅降级，待模型就绪后可再运行：
+  ```bash
+  ollama pull qwen3.5:0.8b
+  agent-steward asset scan /root/new/work --enrich-with-ollama
+  ```
+
+### Q10: 跑完路演演示或 Benchmark 测试后，如何安全清理沙盒记录？
+- **说明**: 路演与基准评测默认使用隔离前缀（`demo:*` / `bench:*`），不会污染正式业务资产。如需一键清除测试产生的沙盒锁或基准运行记录，可执行：
+  ```bash
+  agent-steward demo reset
+  agent-steward bench reset
+  ```

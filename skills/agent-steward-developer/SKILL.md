@@ -57,7 +57,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | └── `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | 解析函数纯函数跨平台编译 |
 | └── `src/mesh/` | 轻量多机联邦 HTTP Peer Mesh | 写接口强校验 auth_token |
 | └── `src/ecosystem/` | MCP/SKILL 目录、外部服务通讯录与 Context 防爆路由 | 严禁存明文密钥 |
-| `manual/` | 面向使用者与架构师的分卷深度技术手册 (01~07) | 保持与代码演进实时同步 |
+| `manual/` | 面向使用者与架构师的分卷深度技术手册 (01~10) | 保持与代码演进实时同步 |
 | `src_doc/` | 开发者手册、产品手册与各阶段研发断点状态表 | 任务流转枢纽，统一 kebab-case |
 | `design_doc/` | 架构设计文档闭环交付件 (01~08, init.sql) | 顶层架构事实依据，统一 kebab-case |
 | `idea_doc/` | 初始思考、方案推导与设计全过程长文 | 原始产品哲学思考沉淀 |
@@ -74,7 +74,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 flowchart TD
     A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 src_doc/roadmap-phase*.md)"]
     B --> C["步骤 3: 串行编码与单元测试驱动<br/>(TDD + cargo test 局部验证)"]
-    C --> D["步骤 4: 编译检查与全量回归<br/>(cargo test 31项全绿 + release 构建)"]
+    C --> D["步骤 4: 编译检查与全量回归<br/>(cargo test 202 项全绿 + release 构建)"]
     D --> E["步骤 5: 文档同步与交付三段式小结<br/>(更新手册/README + 状态标记)"]
 ```
 
@@ -103,7 +103,7 @@ flowchart TD
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo test
    ```
-   **门禁要求**: 目前必须达到 **202 个 tests 全部 `ok`**，0 failed，0 ignored。
+   **门禁要求**: 目前必须达到 **202 个 tests 全部 `ok`**，0 failed（另允许 1 项 doc-test ignored）。
 2. 运行 release 生产构建：
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo build --release

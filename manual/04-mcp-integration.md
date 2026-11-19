@@ -17,7 +17,7 @@ sequenceDiagram
     Agent->>Steward: JSON-RPC "initialize"
     Steward-->>Agent: capabilities (tools: true), serverInfo
     Agent->>Steward: JSON-RPC "tools/list"
-    Steward-->>Agent: 返回 39 个原生工具列表与 JSON Schema
+    Steward-->>Agent: 返回 40 个原生工具列表与 JSON Schema
     Agent->>Steward: JSON-RPC "tools/call" (steward_brief)
     Steward->>SQLite: 聚合查询环境与记忆
     Steward-->>Agent: 返回结果内容文本
@@ -53,9 +53,9 @@ sequenceDiagram
 
 ---
 
-## 3. 39 个原生 MCP 工具标准字典
+## 3. 40 个原生 MCP 工具标准字典
 
-大管家向 Agent 暴露 39 个原子级认知与管控工具：
+大管家向 Agent 暴露 40 个原子级认知与管控工具：
 
 | MCP 工具名 | 核心功能 | 核心参数说明 |
 |---|---|---|
@@ -98,6 +98,7 @@ sequenceDiagram
 | `steward_lock_deadlock_check` | 运行 Wait-For Graph (WFG) 环路检测，诊断多 Agent 死锁 | `agent` |
 | `steward_mesh_query` | 多机轻量 HTTP Peer Mesh 联邦查询与跨节点端口/锁协同 | `action`, `port`, `peer` |
 | `steward_demo_scenario` | Web 路演与黑屏同源场景演示引擎（6 大剧目、ROI、Parity、沙盒重置） | `action`, `scenario_id` |
+| `steward_benchmark` | 实证 Benchmark 对照评测（W1~W8 + M1~M5）与生产效能存证账本（PR-01~08） | `action`, `suite`, `save`, `run_id`, `run_a`, `run_b`, `window`, `tool_filter`, `format`, `limit` |
 
 ---
 
@@ -110,7 +111,7 @@ sequenceDiagram
 ```
 **响应**:
 ```json
-{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"agent-steward","version":"0.2.0"}}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"agent-steward","version":"0.4.0"}}}
 ```
 
 ### (2) 工具调用 (`tools/call`) — 放置建议
@@ -142,6 +143,43 @@ sequenceDiagram
         "text": "╔═══════════════════════════════════════════════════════╗\n║             Steward 对象放置与路径建议                ║\n╚═══════════════════════════════════════════════════════╝\n推荐目标路径:   \"/root/new/shared_proj/sec_fetcher/\"\n命中规范规则:   shared_tools\n..."
       }
     ]
+  }
+}
+```
+
+### (3) 工具调用 (`tools/call`) — 运行实证 Benchmark 与审计账本 (`steward_benchmark`)
+支持 `action`: `"workloads" | "run" | "report" | "ledger" | "compare" | "export" | "reset"`（默认为 `"report"`）。
+
+**请求（真机跑批全量套件）**:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "steward_benchmark",
+    "arguments": {
+      "action": "run",
+      "suite": "full",
+      "save": true
+    }
+  }
+}
+```
+
+**请求（审计过去 7 天生产效能存证账本）**:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "tools/call",
+  "params": {
+    "name": "steward_benchmark",
+    "arguments": {
+      "action": "ledger",
+      "window": "7d",
+      "limit": 20
+    }
   }
 }
 ```

@@ -44,7 +44,7 @@ cargo build --release
 ```
 
 编译完成后，产物二进制文件位于：
-`target/release/agent-steward`（大小约为 8MB）。
+`target/release/agent-steward`（静态内嵌 SQLite FTS5、DuckDB 列存引擎与 Web UI 2.0，单二进制约 79MB）。
 
 ### 2.2 (可选) 安装到系统可执行路径
 为了方便在任意目录直接使用 `agent-steward` 命令，可以将其拷贝至系统 PATH：
@@ -72,13 +72,14 @@ chmod +x /usr/local/bin/agent-steward
 ╔═══════════════════════════════════════════════════════╗
 ║      Agent Host Steward (Rust 版) — 系统状态          ║
 ╚═══════════════════════════════════════════════════════╝
-版本:           v0.2.0
+版本:           v0.4.0 (9ba7bca, linux/x86_64, built at 2026-11-19T07:53:18Z)
 数据目录:       "/root/.steward"
 数据库文件:     "/root/.steward/steward.db"
-已纳管资产数:   0
+已纳管资产数:   26091
+依赖关系边数:   6407 条
 放置规范规则:   8 条
-分级扫描策略:   10 条
-当前动态进程:   198 个
+分级扫描策略:   12 条
+当前动态进程:   96 个
 ```
 
 ### 3.2 自动初始化的文件系统结构

@@ -1,11 +1,11 @@
 # Agent Host Steward — 官方使用手册：第 8 章 Web UI 2.0 全景交互指挥舱
 
-> 版本: v0.3.4+ (Web UI 2.0)  
-> 技术架构: Tokio 异步内嵌 HTTP 引擎 · 原生 Canvas 力导向交互拓扑 · 6 大工作台 · 白天工程蓝图 / 夜间深空双主题 · 单二进制 100% 离线自包含 · 零外部 CDN
+> 版本: v0.4.0 (Web UI 2.0)  
+> 技术架构: Tokio 异步内嵌 HTTP 引擎 · 原生 Canvas 力导向交互拓扑 · 7 大工作台 · 白天工程蓝图 / 夜间深空双主题 · 单二进制 100% 离线自包含 · 零外部 CDN
 
 ---
 
-## 1. 概述与五大核心工作台
+## 1. 概述与七大核心工作台
 
 **Web UI 2.0** 是 Agent Host Steward 提供的轻量级浏览器全景指挥舱，所有 HTML/CSS/JS/Canvas 渲染引擎均编译内嵌于单二进制中，零外部 CDN/Node.js 依赖：
 
@@ -20,16 +20,21 @@
    - 浏览已纳管的 MCP Server、120+ SKILL 目录与脱敏后的外部服务通讯录；
    - 内置交互式 **Context Budget Router 演练沙盒**，输入任务意图与 Token 预算即可实时预览 Top-K 召回清单与节省 Token 百分比。
 5. **📐 规约 · 记忆 · 变更审计与 Mesh (Governance & Mesh)**：
-   - 集中展示 `steward_brief` 自适应简报组装、8 大放置规则推导与自演化、跨会话记忆（写入/RRF 混合检索/衰减与矛盾审计）、DuckDB 变更热力图/趋势/导出、宿主 GC/会话结清 `dry-run` 预览、Peer Mesh 联邦探活与 `39/39` 黑白屏同步矩阵。
+   - 集中展示 `steward_brief` 自适应简报组装、8 大放置规则推导与自演化、跨会话记忆（写入/RRF 混合检索/衰减与矛盾审计）、DuckDB 变更热力图/趋势/导出、宿主 GC/会话结清 `dry-run` 预览、Peer Mesh 联邦探活与 `40/40` 黑白屏同步矩阵。
 6. **🎬 路演演示剧场 (Roadshow Live Demo Theater · Phase 22 / Phase 25 故事化升级)**：
-   - 顶部提供经济学「比较优势」总立意导览与宿主机商业价值 ROI 实时账单（Context Token 节省率、工具/资产/图谱规模、39/39 对齐认证）；
+   - 顶部提供经济学「比较优势」总立意导览与宿主机商业价值 ROI 实时账单（Context Token 节省率、工具/资产/图谱规模、40/40 对齐认证）；
    - 采用 **三层渐进式故事舞台**：第 1 层展示每幕「💡 一句话生活比喻 (`analogy`)」「🎯 核心用意 (`intent_summary`)」、3 张核心收益数字卡 (`hero_metrics`) 与演讲者 30 秒提词卡；第 2 层左右分屏对比「盲人 Agent 三步翻车故事线」vs「6 套真引擎驱动的专属可视化组件」（黑白名单过滤漏斗与武器库墙、Pre-Hook 1ms 红绿灯、3 跳蝴蝶效应因果链、双 Agent 死锁环路图、Token 99.9% 比例尺、简报评分与 Dry-Run 安全自洁盾）；第 3 层提供默认收起的 `<details>` 技术专家原始 JSON 核验抽屉；
    - 支持 8 秒/幕自动巡航（`Space` 暂停 / `←→` 切幕）、演讲者大屏模式与一键无痕重置 `demo:*` 沙盒；
    - 左侧内置 `/deck`（[steward-deck.html](../steward-deck.html)）与 `/presentation`（[presentation.html](../presentation.html)）离线 PPT 直达入口，页脚内置全局「⌨️ 黑屏命令镜像器」实时回显等价 CLI 与 MCP JSON-RPC。
-7. **☀️ 白天工程蓝图 / 🌙 夜间深空双色调切换 (Phase 25)**：
-   - 顶栏右侧提供 `#btn-theme-toggle` 一键昼夜主题切换（非输入焦点时可按快捷键 **`T`** 瞬间切换，状态自动持久化至 `localStorage`）；
-   - **白天模式**采用暖纸工程蓝图色系（`#F7F6F2` 暖纸底 + `#245A6B` 深靛青 + `#BE653B` 陶橙 + `#2F7A66` 青绿），**夜间模式**采用深空指挥舱高对比暗色系；切换瞬间 Canvas 拓扑图节点标签、连边与选中外环自动同步重绘；
-   - 端口防撞、Pre-Hook、放置推导、DuckDB 热力图与趋势、宿主 GC 等交互结果默认展示可视化摘要卡片与进度条，原始 JSON 收纳在可折叠 `<details>` 抽屉中。
+7. **📊 实证基准与账本 (Empirical Benchmark & ROI Ledger · Phase 27~28)**：
+   - **轨道 A — A/B 对照基准跑批**：支持一键运行 `full` / `macro` / `micro` / 单项负载（`W1`~`W8`），同机实时比对 Without Steward 裸奔基线 vs With Steward 真引擎的 Token 节省率、延迟加速比、风险拦截率、噪音阻断率与 5 大内核微基准 SLA（`M1`~`M5`），每批生成 **SHA-256 防篡改指纹**；
+   - **轨道 B — 生产效能存证账本**：按 `24h` / `7d` / `30d` / `all` 时间窗展示日常每一次 MCP 调用自动记账的 `PR-01`~`PR-08` 归因收益与溯源流水；
+   - 支持跨批次历史回归对比（`compare`）与清理 `bench:*` 隔离沙盒数据（`reset`），与第 40 个 MCP 工具 `steward_benchmark` 及 `agent-steward bench` 保持 **40/40 (100%)** 双向同步。
+
+### 1.1 ☀️ 白天工程蓝图 / 🌙 夜间深空双色调切换 (Phase 25)
+- 顶栏右侧提供 `#btn-theme-toggle` 一键昼夜主题切换（非输入焦点时可按快捷键 **`T`** 瞬间切换，状态自动持久化至 `localStorage`）；
+- **白天模式**采用暖纸工程蓝图色系（`#F7F6F2` 暖纸底 + `#245A6B` 深靛青 + `#BE653B` 陶橙 + `#2F7A66` 青绿），**夜间模式**采用深空指挥舱高对比暗色系；切换瞬间 Canvas 拓扑图节点标签、连边与选中外环自动同步重绘；
+- 端口防撞、Pre-Hook、放置推导、DuckDB 热力图与趋势、宿主 GC 等交互结果默认展示可视化摘要卡片与进度条，原始 JSON 收纳在可折叠 `<details>` 抽屉中。
 
 ---
 
@@ -73,8 +78,14 @@ port = 8756
 | `GET` | `/api/v1/ecosystem/route?intent=<q>&budget=600` | Context 防爆路由器演练与 Token 节省估算 | 开放 |
 | `GET` | `/api/v1/governance?q=<kw>` | 放置规则、扫描策略、长期记忆、变更审计流与 Preflight 预检 | 开放 |
 | `GET` | `/api/v1/mesh/status` | 本机跨平台探针与 Peer Mesh 节点配置状态 | 开放 |
-| `GET` | `/api/v1/parity/matrix` | 黑白屏 39 工具 100% 映射对齐自检矩阵 | 开放 |
-| `GET` | `/api/v1/demo/scenarios` / `roi` | 6 大路演剧目列表与实时 ROI 商业价值核算 | 开放 |
-| `POST` | `/api/v1/demo/run` / `reset` | 真引擎实跑指定路演剧目与一键重置 `demo:*` 沙盒 | 开放 |
+| `GET` | `/api/v1/parity/matrix` | 黑白屏 40 工具 100% 映射对齐自检矩阵 | 开放 |
+| `GET` | `/api/v1/demo/scenarios` / `/api/v1/demo/roi` | 6 大路演剧目列表与实时 ROI 商业价值核算 | 开放 |
+| `POST` | `/api/v1/demo/run` / `/api/v1/demo/reset` | 真引擎实跑指定路演剧目与一键重置 `demo:*` 沙盒 | 开放 |
+| `GET` | `/api/v1/benchmark/workloads` | 获取 8 大标准 A/B 负载与 PR-01~08 推导规则字典 | 开放 |
+| `POST` | `/api/v1/benchmark/run` | 真机运行 `full` / `macro` / `micro` / `W1~W8` 对照基准并存证 | 开放 |
+| `GET` | `/api/v1/benchmark/report` | 查询指定或最近批次报告及历史列表（含 SHA-256 指纹） | 开放 |
+| `GET` | `/api/v1/benchmark/ledger` | 审计指定时间窗内的生产效能存证账本流水 | 开放 |
+| `GET` | `/api/v1/benchmark/compare` | 对比两个批次（`run_a` vs `run_b`）的回归差异 | 开放 |
+| `POST` | `/api/v1/benchmark/reset` | 清理 `bench:*` 隔离沙盒记录 | 开放 |
 | `GET` | `/deck` / `/presentation` | 内嵌离线版路演与架构演示 PPT | 开放 |
 | `GET` | `/api/v1/stream` | Server-Sent Events (SSE) 实时事件推流 | 开放 |

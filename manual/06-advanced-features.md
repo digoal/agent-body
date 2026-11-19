@@ -1,6 +1,6 @@
-# 06 — v2.0 进阶特性指南（Advanced Features）
+# 06 — 进阶特性指南（Advanced Features）
 
-> **章节目标**: 详细介绍大管家 v2.0 的四大护城河进阶能力：端口防撞预警、变更爆炸半径推演、Ollama+FTS5 混合 RRF 检索、以及会话生命周期环境自洁。
+> **章节目标**: 详细介绍大管家 v0.4.0 的核心进阶能力：端口防撞预警、变更爆炸半径推演、混合 RRF 检索、会话自洁、CodeGraph 联邦、三层语义元数据、WFG 死锁检测与跨机联邦 Mesh。
 
 ---
 
@@ -113,3 +113,24 @@ flowchart TD
 - **MCP**:
   - `steward_links_audit(fix_dangling=false)`
   - `steward_codegraph_bridge(path, symbol)`
+
+---
+
+## 6. 三层正交元数据与 Ollama 异步双轨标注 (Phase 23)
+- **三层正交 Key 体系**：
+  - **L0 管线溯源**：`content_hash`、`annotation_status`、`annotation_model`，保证幂等跳过未变更文件；
+  - **L1 确定性提取**：Rust 毫秒级静态解析 `purpose`、`domain`、`capabilities`、`entry_point`、`usage_hint`，不依赖外部模型；
+  - **L2 本地小模型精炼**：经 `SecretRedactor` 脱敏后送入本地 Ollama `qwen3.5:0.8b` 异步精炼，零云端 Token 消耗；
+- **三级渐进披露**：`steward_asset_search` 支持 `detail_level = "micro" | "standard" | "full"`，按任务需要控制 Token 注入体积。
+
+---
+
+## 7. 多 Agent 协作锁与 WFG 死锁检测 (Phase 17)
+- 支持针对 `port`、`directory`、`service`、`file` 等资源申请排他/共享锁（`steward_lock_acquire`），并具备目录祖先-后代路径递归互斥检测；
+- 提供主动排队唤醒（`steward_lock_wait`）与 **Wait-For Graph (WFG)** 全局环路检测（`steward_lock_deadlock_check`），当双 Agent 交叉等锁时毫秒级识别死锁环并阻断。
+
+---
+
+## 8. 轻量多机联邦 Peer Mesh 与实证 Benchmark (Phase 18 & 27~28)
+- **Peer Mesh (`steward_mesh_query`)**：在 `[mesh]` 中配置同网段对等节点并共享 `[web].auth_token`，即可跨节点只读查询 facts、检测远程端口占用或申请分布式租约锁；
+- **实证 Benchmark 与存证账本**：关于 A/B 对照负载（`W1`~`W8`）、内核微基准 SLA（`M1`~`M5`）及 `PR-01`~`PR-08` 生产效能存证流水，请直接阅读专题章节 [10-benchmark-and-roi.md](10-benchmark-and-roi.md)。

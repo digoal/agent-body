@@ -1,5 +1,8 @@
 # 05 — 架构设计（Architecture）· 三位一体架构体系
 
+> [!NOTE]
+> **历史设计基线说明**：本文档沉淀自项目 v2.0 架构重构期（2026-11-15）。当前 `v0.4.0` 完整 24 模块源码架构、61 方法存储 SPI、双轨实证评测与 Web UI 2.0 权威口径，请以 [arch/01-for-architects.md](../arch/01-for-architects.md) 与 [arch/02-for-developers.md](../arch/02-for-developers.md) 为准。
+
 > Agent Host Steward 产品设计 · 交付件 5/7  
 > 版本: v2.0 (三模块重构版) · 更新: 2026-11-15  
 > 战略定位: **宿主机事实图谱为核心护城河 + 用户偏好规约为协作准则 + 开放插拔记忆拥抱成熟生态**
