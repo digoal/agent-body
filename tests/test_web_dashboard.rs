@@ -68,24 +68,32 @@ async fn test_web_dashboard_e2e_lifecycle() {
     }
 
     // 3. 验证静态资源
-    // 3.1 首页 HTML (Web UI 2.0 必须包含五大工作台且无假图 drawMockGraph)
+    // 3.1 首页 HTML (Web UI 2.0 必须包含五大工作台、双主题切换及路演故事舞台)
     let resp_index = send_http_request("127.0.0.1", bound_port, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
     assert!(resp_index.contains("HTTP/1.1 200 OK"));
     assert!(resp_index.contains("Content-Type: text/html"));
     assert!(resp_index.contains("Agent Host Steward"));
     assert!(resp_index.contains("view-ecosystem"));
     assert!(resp_index.contains("view-governance"));
+    assert!(resp_index.contains("data-theme"));
+    assert!(resp_index.contains("btn-theme-toggle"));
+    assert!(resp_index.contains("v0.3.4"));
+    assert!(resp_index.contains("39/39 对齐"));
 
-    // 3.2 静态 CSS
+    // 3.2 静态 CSS (验证包含白天与夜间双色调语义变量)
     let resp_css = send_http_request("127.0.0.1", bound_port, "GET /app.css HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
     assert!(resp_css.contains("HTTP/1.1 200 OK"));
     assert!(resp_css.contains("Content-Type: text/css"));
+    assert!(resp_css.contains("data-theme=\"light\""));
+    assert!(resp_css.contains("--canvas-bg"));
 
-    // 3.3 静态 JS (确认已彻底移除 drawMockGraph)
+    // 3.3 静态 JS (确认已彻底移除 drawMockGraph 且包含双主题与路演组件)
     let resp_js = send_http_request("127.0.0.1", bound_port, "GET /app.js HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
     assert!(resp_js.contains("HTTP/1.1 200 OK"));
     assert!(resp_js.contains("Content-Type: application/javascript"));
     assert!(!resp_js.contains("drawMockGraph"));
+    assert!(resp_js.contains("toggleTheme"));
+    assert!(resp_js.contains("renderDemoSceneWidget"));
 
     // 4. 验证 REST API
     // 4.1 GET /api/v1/health
@@ -155,6 +163,10 @@ Content-Length: 75\r\n\r\n\
     }
 
     // 4.9 验证路演剧场执行与沙盒复位 E2E
+    let resp_scenarios = send_http_request("127.0.0.1", bound_port, "GET /api/v1/demo/scenarios HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
+    assert!(resp_scenarios.contains("\"analogy\""));
+    assert!(resp_scenarios.contains("\"intent_summary\""));
+
     let demo_body = "{\"scenario_id\":\"scene-4\"}";
     let demo_req = format!(
         "POST /api/v1/demo/run HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
@@ -164,6 +176,9 @@ Content-Length: 75\r\n\r\n\
     let resp_demo = send_http_request("127.0.0.1", bound_port, &demo_req).await;
     assert!(resp_demo.contains("HTTP/1.1 200 OK"));
     assert!(resp_demo.contains("\"has_deadlock\":true"));
+    assert!(resp_demo.contains("\"analogy\""));
+    assert!(resp_demo.contains("\"intent_summary\""));
+    assert!(resp_demo.contains("\"hero_metrics\""));
 
     let reset_req = "POST /api/v1/demo/reset HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 2\r\n\r\n{}";
     let resp_reset = send_http_request("127.0.0.1", bound_port, reset_req).await;

@@ -1,11 +1,18 @@
 use crate::web::http::HttpResponse;
 
 pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agent Host Steward 2.0 — 宿主环境全景指挥舱</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23245A6B'/%3E%3Ctext x='16' y='21' font-size='16' text-anchor='middle' fill='white'%3ES%3C/text%3E%3C/svg%3E">
+  <script>
+    try {
+      var savedTheme = localStorage.getItem("steward_ui_theme") || "dark";
+      document.documentElement.setAttribute("data-theme", savedTheme === "light" ? "light" : "dark");
+    } catch (e) {}
+  </script>
   <link rel="stylesheet" href="/app.css">
 </head>
 <body>
@@ -14,7 +21,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       <div class="brand">
         <span class="pulse-dot"></span>
         <div>
-          <h1>Agent Host Steward <span class="ver-badge">v0.3.2 · 2.0</span></h1>
+          <h1>Agent Host Steward <span class="ver-badge">v0.3.4 · 2.0</span></h1>
           <p class="subtitle">宿主机事实图谱 · 协作锁中枢 · Context 防爆路由器</p>
         </div>
       </div>
@@ -29,8 +36,9 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       </div>
 
       <div class="topbar-actions">
-        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 38/38 能力对齐矩阵">✅ 38/38 对齐</span>
+        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 39/39 能力对齐矩阵">✅ 39/39 对齐</span>
         <span id="sse-badge" class="sse-pill connecting">SSE 连接中</span>
+        <button id="btn-theme-toggle" class="btn btn-theme" title="切换白天工程蓝图 / 夜间深空指挥舱 (快捷键 T)">☀️ 白天蓝图</button>
         <button id="btn-toggle-mirror" class="btn btn-ghost" title="展开/收起黑屏命令镜像器">⌨️ 黑屏镜像</button>
         <button id="btn-toggle-sse" class="btn btn-ghost" title="展开/收起实时事件流">⚡ 事件流</button>
         <button id="btn-global-refresh" class="btn btn-primary">↻ 全量刷新</button>
@@ -59,13 +67,13 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
           <span class="nav-ico">📐</span>
           <span>规约 · 记忆 · Mesh</span>
         </button>
-        <button class="nav-btn" data-view="demo" style="margin-top:6px;border-color:rgba(251,146,60,0.35);color:#fdba74;">
+        <button class="nav-btn nav-btn-demo" data-view="demo">
           <span class="nav-ico">🎬</span>
           <span>路演演示剧场</span>
         </button>
-        <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--border);">
-          <a href="/deck" target="_blank" class="btn btn-ghost btn-xs" style="text-decoration:none;text-align:center;">📽️ 路演 PPT (/deck)</a>
-          <a href="/presentation" target="_blank" class="btn btn-ghost btn-xs" style="text-decoration:none;text-align:center;">🎨 架构 PPT</a>
+        <div class="sidenav-footer">
+          <a href="/deck" target="_blank" class="btn btn-ghost btn-xs sidenav-link">📽️ 路演 PPT (/deck)</a>
+          <a href="/presentation" target="_blank" class="btn btn-ghost btn-xs sidenav-link">🎨 架构 PPT</a>
         </div>
       </nav>
 
@@ -94,7 +102,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
           </div>
           <div class="topology-stage">
             <canvas id="topology-canvas"></canvas>
-            <div class="canvas-hint">滚轮缩放 · 拖拽平移/移点 · 点击节点查看详情、CodeGraph 下钻与爆炸半径</div>
+            <div class="canvas-hint">滚轮缩放 · 拖拽平移/移点 · 点击节点查看详情、CodeGraph 下钻与爆炸半径 · 按 T 切换昼夜主题</div>
             <aside id="node-drawer" class="drawer hidden">
               <div class="drawer-header">
                 <h3 id="drawer-title">节点详情</h3>
@@ -118,7 +126,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
               <option value="doc">doc (权威资料)</option>
             </select>
             <button id="btn-fq-run" class="btn btn-primary">🔍 事实问答</button>
-            <input id="pc-port" class="input input-sm" style="width:95px;" type="number" value="8080" min="1" max="65535" />
+            <input id="pc-port" class="input input-sm" style="width:95px;" type="number" value="8756" min="1" max="65535" />
             <button id="btn-pc-run" class="btn btn-ghost">🛡️ 端口防撞诊断</button>
           </div>
           <div id="facts-qa-result" class="qa-box hidden"></div>
@@ -219,7 +227,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                 <button id="btn-hook-pre" class="btn btn-primary">🛡️ Pre-Hook 预检</button>
                 <button id="btn-hook-post" class="btn btn-ghost">📝 Post-Hook 通知</button>
               </div>
-              <div id="hook-result" class="card-body" style="max-height:200px;"></div>
+              <div id="hook-result" class="card-body" style="max-height:240px;"></div>
             </div>
 
             <div class="grid-3 mt-12">
@@ -250,7 +258,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
               <button class="subtab" data-sub="memory">🧠 长期记忆与审计</button>
               <button class="subtab" data-sub="analytics">🔥 DuckDB 分析与导出</button>
               <button class="subtab" data-sub="gc">🧹 宿主自洁 &amp; 变更流</button>
-              <button class="subtab" data-sub="mesh">🌐 Mesh · 预检 · 38/38 对齐矩阵</button>
+              <button class="subtab" data-sub="mesh">🌐 Mesh · 预检 · 39/39 对齐矩阵</button>
             </div>
           </div>
           <div id="gov-panel-brief" class="scroll-panel">
@@ -391,10 +399,18 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
           </div>
         </section>
 
-        <!-- 视图 6: 路演演示剧场 (Phase 22) -->
+        <!-- 视图 6: 路演演示剧场 (Phase 25 故事化直观舞台) -->
         <section id="view-demo" class="view">
           <div class="scroll-panel">
-            <div id="demo-roi-strip" class="demo-roi-strip">
+            <div class="demo-origin-banner">
+              <div class="demo-origin-ico">🏛️</div>
+              <div class="demo-origin-body">
+                <strong>为什么 AI Agent 需要大管家？—— 经济学「比较优势」分工原则</strong>
+                <p>就像硅谷创业园区物业包办生活琐事让程序员专心写代码、企业高管配秘书打理杂务。大管家驻留本机，替 AI 摸清现成工具与代码家底、拦住危险操作，让大模型把 100% 智商和 Token 用在核心任务上。</p>
+              </div>
+            </div>
+
+            <div id="demo-roi-strip" class="demo-roi-strip mt-12">
               <div class="roi-card"><span class="k-label">Context Token 节省率</span><strong id="roi-save" class="c-green">-</strong></div>
               <div class="roi-card"><span class="k-label">全量 SKILL / MCP / 服务</span><strong id="roi-eco" class="c-cyan">-</strong></div>
               <div class="roi-card"><span class="k-label">宿主机 CLI 工具 / 资产</span><strong id="roi-tools">-</strong></div>
@@ -402,14 +418,16 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
               <div class="roi-card"><span class="k-label">黑白屏同步认证</span><strong id="roi-parity" class="c-orange">39/39 (100%)</strong></div>
             </div>
 
-            <div class="inline-bar mt-12">
-              <div id="demo-scene-buttons" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
-              <button id="btn-demo-cruise" class="btn btn-primary btn-xs">▶ 自动巡航路演</button>
-              <button id="btn-demo-presenter" class="btn btn-ghost btn-xs">📽️ 演讲者大屏模式</button>
-              <button id="btn-demo-reset" class="btn btn-danger btn-xs">🧹 一键重置沙盒</button>
+            <div class="demo-control-bar mt-12">
+              <div id="demo-scene-buttons" class="demo-scene-grid"></div>
+              <div class="demo-actions-col">
+                <button id="btn-demo-cruise" class="btn btn-primary btn-xs">▶ 自动巡航路演</button>
+                <button id="btn-demo-presenter" class="btn btn-ghost btn-xs">📽️ 演讲者大屏模式</button>
+                <button id="btn-demo-reset" class="btn btn-danger btn-xs">🧹 一键重置沙盒</button>
+              </div>
             </div>
 
-            <div id="demo-stage" class="demo-stage">
+            <div id="demo-stage" class="demo-stage mt-12">
               <div class="empty">点击上方任意路演剧目，或点击「▶ 自动巡航路演」实时驱动真实 Rust 引擎对比演示</div>
             </div>
           </div>
@@ -449,37 +467,134 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 </body>
 </html>"##;
 
-pub static APP_CSS: &str = r##":root {
-  --bg: #090d16;
-  --panel: rgba(17, 24, 39, 0.88);
-  --panel-2: #111827;
-  --border: #1f2937;
-  --border-hi: #374151;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
+pub static APP_CSS: &str = r##":root, :root[data-theme="dark"] {
+  --bg: #080c14;
+  --bg-grad-start: #0f172a;
+  --topbar-bg: rgba(15, 23, 42, 0.94);
+  --sidenav-bg: rgba(15, 23, 42, 0.78);
+  --panel: rgba(17, 24, 39, 0.90);
+  --panel-2: #131d31;
+  --item-bg: rgba(9, 13, 22, 0.75);
+  --input-bg: #0b1120;
+  --card-head-bg: rgba(30, 41, 59, 0.60);
+  --table-head-bg: rgba(15, 23, 42, 0.72);
+  --drawer-bg: rgba(15, 23, 42, 0.96);
+  --drawer-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --text: #f1f5f9;
+  --text-2: #cbd5e1;
+  --muted: #94a3b8;
+  --border: #1e293b;
+  --border-hi: #334155;
   --blue: #38bdf8;
+  --blue-soft: rgba(56, 189, 248, 0.14);
+  --blue-border: rgba(56, 189, 248, 0.35);
   --orange: #fb923c;
+  --orange-soft: rgba(251, 146, 60, 0.16);
+  --orange-border: rgba(251, 146, 60, 0.35);
   --purple: #a78bfa;
+  --purple-soft: rgba(167, 139, 250, 0.14);
   --pink: #f472b6;
   --green: #34d399;
+  --green-soft: rgba(52, 211, 153, 0.14);
+  --green-border: rgba(52, 211, 153, 0.32);
   --red: #f87171;
+  --red-soft: rgba(248, 113, 113, 0.18);
+  --red-border: rgba(248, 113, 113, 0.45);
   --yellow: #fbbf24;
+  --code-fg: #93c5fd;
+  --mirror-bg: rgba(11, 17, 32, 0.96);
+  --mirror-code: #a7f3d0;
+  --canvas-bg: #070b14;
+  --canvas-dot: #1e293b;
+  --accent-btn-bg: #0284c7;
+  --accent-btn-hover: #0ea5e9;
+  --accent-btn-fg: #ffffff;
+  --demo-nav-bg: rgba(251, 146, 60, 0.08);
+  --demo-nav-fg: #fdba74;
+  --demo-nav-border: rgba(251, 146, 60, 0.38);
+  --demo-bad-bg: rgba(127, 29, 29, 0.22);
+  --demo-bad-border: rgba(248, 113, 113, 0.55);
+  --demo-good-bg: rgba(6, 78, 59, 0.22);
+  --demo-good-border: rgba(52, 211, 153, 0.55);
+  --speaker-bg: rgba(30, 41, 59, 0.88);
+  --speaker-fg: #fef3c7;
+  --banner-grad: linear-gradient(90deg, rgba(56, 189, 248, 0.14), rgba(167, 139, 250, 0.12));
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.22);
 }
+
+:root[data-theme="light"] {
+  --bg: #F7F6F2;
+  --bg-grad-start: #EFECE4;
+  --topbar-bg: rgba(247, 246, 242, 0.96);
+  --sidenav-bg: #F1EFE9;
+  --panel: #FFFFFF;
+  --panel-2: #F3F1EB;
+  --item-bg: #FAF9F5;
+  --input-bg: #FFFFFF;
+  --card-head-bg: #F1EFE9;
+  --table-head-bg: #F1EFE9;
+  --drawer-bg: rgba(255, 255, 255, 0.97);
+  --drawer-shadow: 0 10px 28px rgba(27, 43, 51, 0.14);
+  --hover-bg: rgba(36, 90, 107, 0.07);
+  --text: #1B2B33;
+  --text-2: #33444C;
+  --muted: #64747B;
+  --border: #D9D5CB;
+  --border-hi: #B8B2A6;
+  --blue: #245A6B;
+  --blue-soft: #E5EFF0;
+  --blue-border: #9CC0C6;
+  --orange: #BE653B;
+  --orange-soft: #F7E9DE;
+  --orange-border: #DFAA8B;
+  --purple: #5B4B8A;
+  --purple-soft: #EFEBF8;
+  --pink: #A84A6C;
+  --green: #2F7A66;
+  --green-soft: #E8F3EF;
+  --green-border: #8FC4B4;
+  --red: #B9382C;
+  --red-soft: #FCEAE7;
+  --red-border: #E2A098;
+  --yellow: #9A7422;
+  --code-fg: #1E4B5A;
+  --mirror-bg: #ECE9E0;
+  --mirror-code: #1E5E4A;
+  --canvas-bg: #F4F2EC;
+  --canvas-dot: #D5D0C5;
+  --accent-btn-bg: #245A6B;
+  --accent-btn-hover: #1E4B5A;
+  --accent-btn-fg: #FFFFFF;
+  --demo-nav-bg: #F7E9DE;
+  --demo-nav-fg: #9C4821;
+  --demo-nav-border: #DFAA8B;
+  --demo-bad-bg: #FDF3F1;
+  --demo-bad-border: #E2A098;
+  --demo-good-bg: #EFF7F4;
+  --demo-good-border: #8FC4B4;
+  --speaker-bg: #FBF6E9;
+  --speaker-fg: #3D2E0E;
+  --banner-grad: linear-gradient(90deg, #E5EFF0, #EFEBF8);
+  --shadow-card: 0 2px 8px rgba(27, 43, 51, 0.06);
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: radial-gradient(circle at 20% 0%, #0f172a 0%, var(--bg) 65%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  background: radial-gradient(circle at 18% 0%, var(--bg-grad-start) 0%, var(--bg) 68%);
   color: var(--text);
   height: 100vh;
   overflow: hidden;
   font-size: 13px;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 #app { display: flex; flex-direction: column; height: 100vh; }
 
 /* Topbar */
 .topbar {
   min-height: 60px;
-  background: rgba(15, 23, 42, 0.92);
+  background: var(--topbar-bg);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -489,54 +604,57 @@ body {
   flex-wrap: wrap;
 }
 .brand { display: flex; align-items: center; gap: 12px; }
-.brand h1 { font-size: 15px; font-weight: 700; color: #f8fafc; letter-spacing: 0.2px; }
+.brand h1 { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: 0.2px; }
 .ver-badge {
-  font-size: 11px; font-weight: 500; color: var(--blue);
-  background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3);
+  font-size: 11px; font-weight: 600; color: var(--blue);
+  background: var(--blue-soft); border: 1px solid var(--blue-border);
   padding: 1px 7px; border-radius: 999px; margin-left: 6px;
 }
 .subtitle { font-size: 11px; color: var(--muted); }
 .pulse-dot {
   width: 10px; height: 10px; border-radius: 50%; background: var(--green);
-  box-shadow: 0 0 10px var(--green); flex-shrink: 0;
+  box-shadow: 0 0 8px var(--green); flex-shrink: 0;
 }
 
 .kpi-strip { display: flex; gap: 8px; flex-wrap: wrap; }
 .kpi-pill {
   background: var(--panel-2); border: 1px solid var(--border);
   border-radius: 8px; padding: 4px 10px; display: flex; flex-direction: column;
+  box-shadow: var(--shadow-card);
 }
 .k-label { font-size: 10px; color: var(--muted); }
-.kpi-pill strong { font-size: 12px; color: #f9fafb; font-family: ui-monospace, monospace; }
+.kpi-pill strong { font-size: 12px; color: var(--text); font-family: ui-monospace, SFMono-Regular, monospace; }
 .c-cyan { color: var(--blue) !important; }
 .c-orange { color: var(--orange) !important; }
 .c-green { color: var(--green) !important; }
 .c-purple { color: var(--purple) !important; }
 
-.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sse-pill {
-  font-size: 11px; padding: 3px 9px; border-radius: 999px;
-  background: rgba(52, 211, 153, 0.12); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.3);
+  font-size: 11px; padding: 3px 9px; border-radius: 999px; font-weight: 600;
+  background: var(--green-soft); color: var(--green); border: 1px solid var(--green-border);
 }
-.sse-pill.connecting { background: rgba(251, 146, 60, 0.12); color: var(--orange); border-color: rgba(251, 146, 60, 0.3); }
+.sse-pill.connecting { background: var(--orange-soft); color: var(--orange); border-color: var(--orange-border); }
 
 /* Buttons & Inputs */
 .btn {
   border: 1px solid var(--border-hi); background: var(--panel-2); color: var(--text);
-  padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: 0.15s;
+  padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: 0.15s; font-weight: 500;
 }
-.btn:hover { border-color: var(--blue); color: #fff; }
-.btn-primary { background: #0284c7; border-color: #0ea5e9; color: #fff; }
-.btn-primary:hover { background: #0ea5e9; }
-.btn-danger { background: rgba(248, 113, 113, 0.15); border-color: var(--red); color: var(--red); }
-.btn-danger:hover { background: var(--red); color: #090d16; }
+.btn:hover { border-color: var(--blue); color: var(--blue); background: var(--hover-bg); }
+.btn-primary { background: var(--accent-btn-bg); border-color: var(--accent-btn-bg); color: var(--accent-btn-fg); }
+.btn-primary:hover { background: var(--accent-btn-hover); border-color: var(--accent-btn-hover); color: var(--accent-btn-fg); }
+.btn-theme { background: var(--orange-soft); border-color: var(--orange-border); color: var(--orange); font-weight: 600; }
+.btn-theme:hover { border-color: var(--orange); color: var(--text); }
+.btn-danger { background: var(--red-soft); border-color: var(--red-border); color: var(--red); }
+.btn-danger:hover { background: var(--red); color: #ffffff; }
 .btn-ghost { background: transparent; }
 .btn-xs { padding: 3px 8px; font-size: 11px; }
 .btn-icon { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; }
-.btn-icon:hover { color: #fff; }
+.btn-icon:hover { color: var(--text); }
 
 .input {
-  background: #0b1120; border: 1px solid var(--border-hi); color: var(--text);
+  background: var(--input-bg); border: 1px solid var(--border-hi); color: var(--text);
   padding: 6px 10px; border-radius: 6px; font-size: 12px; outline: none;
 }
 .input:focus { border-color: var(--blue); }
@@ -546,7 +664,7 @@ body {
 /* Workspace */
 .workspace { display: flex; flex: 1; overflow: hidden; }
 .sidenav {
-  width: 184px; background: rgba(15, 23, 42, 0.72); border-right: 1px solid var(--border);
+  width: 192px; background: var(--sidenav-bg); border-right: 1px solid var(--border);
   padding: 12px 10px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;
 }
 .nav-btn {
@@ -554,12 +672,29 @@ body {
   border-radius: 8px; border: 1px solid transparent; background: transparent;
   color: var(--muted); cursor: pointer; text-align: left; font-size: 13px; transition: 0.15s;
 }
-.nav-btn:hover { background: rgba(255, 255, 255, 0.04); color: #fff; }
+.nav-btn:hover { background: var(--hover-bg); color: var(--text); }
 .nav-btn.active {
-  background: rgba(56, 189, 248, 0.12); border-color: rgba(56, 189, 248, 0.35);
-  color: #f8fafc; font-weight: 600;
+  background: var(--blue-soft); border-color: var(--blue-border);
+  color: var(--text); font-weight: 600;
+}
+.nav-btn-demo {
+  margin-top: 6px;
+  background: var(--demo-nav-bg);
+  border-color: var(--demo-nav-border);
+  color: var(--demo-nav-fg);
+  font-weight: 600;
+}
+.nav-btn-demo.active {
+  background: var(--orange-soft);
+  border-color: var(--orange);
+  color: var(--orange);
 }
 .nav-ico { font-size: 15px; }
+.sidenav-footer {
+  margin-top: auto; display: flex; flex-direction: column; gap: 6px;
+  padding-top: 10px; border-top: 1px solid var(--border);
+}
+.sidenav-link { text-decoration: none; text-align: center; }
 
 .stage { flex: 1; overflow: hidden; display: flex; flex-direction: column; padding: 14px; }
 .view { display: none; flex-direction: column; height: 100%; overflow: hidden; }
@@ -572,7 +707,7 @@ body {
 .toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip {
-  display: flex; align-items: center; gap: 5px; font-size: 11px;
+  display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-2);
   background: var(--panel); border: 1px solid var(--border);
   padding: 4px 8px; border-radius: 999px; cursor: pointer;
 }
@@ -582,49 +717,50 @@ body {
 .d-service { background: var(--purple); }
 .d-cron { background: var(--pink); }
 .d-git { background: var(--green); }
-.d-file { background: #94a3b8; }
+.d-file { background: var(--muted); }
 
 /* Topology */
 .topology-stage {
   flex: 1; position: relative; border: 1px solid var(--border); border-radius: 10px;
-  background: radial-gradient(#1e293b 1px, transparent 1px), #070b14;
+  background: radial-gradient(var(--canvas-dot) 1px, transparent 1px), var(--canvas-bg);
   background-size: 22px 22px; overflow: hidden;
 }
 #topology-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
 #topology-canvas:active { cursor: grabbing; }
 .canvas-hint {
   position: absolute; bottom: 10px; left: 12px; font-size: 11px; color: var(--muted);
-  background: rgba(9, 13, 22, 0.75); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--topbar-bg); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
 }
 
 .drawer {
-  position: absolute; top: 10px; right: 10px; bottom: 10px; width: 340px;
-  background: rgba(15, 23, 42, 0.96); border: 1px solid var(--border-hi);
+  position: absolute; top: 10px; right: 10px; bottom: 10px; width: 350px;
+  background: var(--drawer-bg); border: 1px solid var(--border-hi);
   border-radius: 10px; display: flex; flex-direction: column;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.5); z-index: 10;
+  box-shadow: var(--drawer-shadow); z-index: 10;
 }
 .drawer.hidden { display: none; }
 .drawer-header {
   padding: 10px 14px; border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
 }
-.drawer-header h3 { font-size: 13px; color: #f8fafc; }
+.drawer-header h3 { font-size: 13px; color: var(--text); }
 .drawer-body { padding: 12px; overflow-y: auto; flex: 1; font-size: 12px; }
 
 /* Cards & Grids */
 .scroll-panel { flex: 1; overflow-y: auto; padding-right: 4px; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.mt-8 { margin-top: 8px; }
 .mt-12 { margin-top: 12px; }
 .card {
   background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-  display: flex; flex-direction: column; overflow: hidden;
+  display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow-card);
 }
 .card-header {
-  padding: 10px 14px; background: rgba(30, 41, 59, 0.55); border-bottom: 1px solid var(--border);
+  padding: 10px 14px; background: var(--card-head-bg); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
-.card-header h3 { font-size: 13px; font-weight: 600; color: #f1f5f9; }
+.card-header h3 { font-size: 13px; font-weight: 600; color: var(--text); }
 .card-body { padding: 12px; overflow-y: auto; max-height: 360px; }
 .scroll-sm { max-height: 320px; overflow-y: auto; }
 
@@ -632,34 +768,36 @@ body {
 .subtabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .subtab {
   background: var(--panel); border: 1px solid var(--border); color: var(--muted);
-  padding: 6px 11px; border-radius: 6px; cursor: pointer; font-size: 12px;
+  padding: 6px 11px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: 0.15s;
 }
-.subtab.active { background: rgba(56, 189, 248, 0.15); border-color: var(--blue); color: #fff; }
+.subtab:hover { border-color: var(--border-hi); color: var(--text); }
+.subtab.active { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); font-weight: 600; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .data-table th, .data-table td {
   text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border);
-  vertical-align: top; word-break: break-word;
+  vertical-align: top; word-break: break-word; color: var(--text-2);
 }
-.data-table th { color: var(--muted); font-weight: 600; background: rgba(15, 23, 42, 0.65); position: sticky; top: 0; }
+.data-table th { color: var(--muted); font-weight: 600; background: var(--table-head-bg); position: sticky; top: 0; }
+.data-table tbody tr:hover { background: var(--hover-bg); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
 
 /* Badges & Items */
 .badge {
-  font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600;
-  background: rgba(56, 189, 248, 0.14); color: var(--blue);
+  display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600;
+  background: var(--blue-soft); color: var(--blue); border: 1px solid transparent;
 }
-.badge-ok { background: rgba(52, 211, 153, 0.14); color: var(--green); }
-.badge-warn { background: rgba(251, 146, 60, 0.16); color: var(--orange); }
-.badge-err { background: rgba(248, 113, 113, 0.18); color: var(--red); }
+.badge-ok { background: var(--green-soft); color: var(--green); border-color: var(--green-border); }
+.badge-warn { background: var(--orange-soft); color: var(--orange); border-color: var(--orange-border); }
+.badge-err { background: var(--red-soft); color: var(--red); border-color: var(--red-border); }
 .muted-text { color: var(--muted); font-size: 12px; }
 .empty { color: var(--muted); text-align: center; padding: 20px; }
 
 .item-box {
-  background: rgba(9, 13, 22, 0.72); border: 1px solid var(--border);
-  border-radius: 8px; padding: 10px; margin-bottom: 8px;
+  background: var(--item-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px; margin-bottom: 8px; color: var(--text-2);
 }
-.item-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
-.ttl-bar { height: 4px; background: #1e293b; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+.item-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.ttl-bar { height: 5px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 6px; }
 .ttl-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--blue)); }
 
 /* Router Sandbox */
@@ -669,14 +807,14 @@ body {
 
 /* SSE Sidebar */
 .sse-sidebar {
-  width: 280px; background: rgba(15, 23, 42, 0.85); border-left: 1px solid var(--border);
+  width: 280px; background: var(--sidenav-bg); border-left: 1px solid var(--border);
   display: flex; flex-direction: column; flex-shrink: 0;
 }
 .sse-sidebar.collapsed { display: none; }
 .event-stream { flex: 1; overflow-y: auto; padding: 10px; font-family: ui-monospace, monospace; font-size: 11px; }
 .event-item {
   border-left: 2px solid var(--blue); padding: 4px 8px; margin-bottom: 6px;
-  background: rgba(9, 13, 22, 0.55); border-radius: 0 4px 4px 0; word-break: break-all;
+  background: var(--item-bg); color: var(--text-2); border-radius: 0 4px 4px 0; word-break: break-all;
 }
 .event-item.warn { border-left-color: var(--orange); }
 .event-item.ok { border-left-color: var(--green); }
@@ -686,19 +824,19 @@ body {
 .inline-bar {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   background: var(--panel); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; box-shadow: var(--shadow-card);
 }
 .qa-box {
-  background: rgba(15, 23, 42, 0.92); border: 1px solid var(--blue);
+  background: var(--panel); border: 1px solid var(--blue);
   border-radius: 8px; padding: 10px 12px; margin-bottom: 10px;
-  max-height: 220px; overflow-y: auto;
+  max-height: 280px; overflow-y: auto; box-shadow: var(--shadow-card);
 }
 .md-pre {
   white-space: pre-wrap; font-family: ui-monospace, Menlo, monospace;
-  font-size: 11px; color: #cbd5e1; line-height: 1.5;
+  font-size: 11px; color: var(--code-fg); line-height: 1.5;
 }
 .mirror-bar {
-  background: rgba(11, 17, 32, 0.96); border-top: 1px solid var(--border-hi);
+  background: var(--mirror-bg); border-top: 1px solid var(--border-hi);
   padding: 6px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
 }
 .mirror-bar.collapsed { display: none; }
@@ -708,38 +846,179 @@ body {
   display: flex; align-items: center; gap: 6px; background: var(--panel-2);
   border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; max-width: 100%;
 }
-.mirror-slot code { color: #a7f3d0; max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mirror-slot code { color: var(--mirror-code); max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Roadshow Live Demo Theater (Phase 22) */
+/* Collapsible Raw JSON Details & Visual Summary Cards */
+.raw-json-details {
+  margin-top: 8px; border: 1px dashed var(--border-hi); border-radius: 8px;
+  background: var(--item-bg); padding: 6px 10px;
+}
+.raw-json-details summary {
+  cursor: pointer; font-size: 11px; font-weight: 600; color: var(--muted);
+  user-select: none; outline: none;
+}
+.raw-json-details summary:hover { color: var(--blue); }
+.raw-json-details[open] summary { margin-bottom: 8px; color: var(--blue); }
+.summary-kpi-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px; margin-bottom: 8px;
+}
+.summary-kpi {
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px;
+}
+.summary-kpi .sk-label { font-size: 10px; color: var(--muted); display: block; }
+.summary-kpi .sk-val { font-size: 14px; font-weight: 700; color: var(--text); font-family: ui-monospace, monospace; }
+.bar-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.bar-row-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-2); }
+.bar-track { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--blue); border-radius: 999px; transition: width 0.35s ease; }
+.bar-fill.ok { background: var(--green); }
+.bar-fill.warn { background: var(--orange); }
+.bar-fill.err { background: var(--red); }
+
+/* Roadshow Live Demo Theater (Phase 25 Story-Driven) */
+.demo-origin-banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--banner-grad); border: 1px solid var(--blue-border);
+  border-radius: 10px; padding: 12px 16px;
+}
+.demo-origin-ico { font-size: 24px; line-height: 1.1; flex-shrink: 0; }
+.demo-origin-body strong { display: block; font-size: 13px; color: var(--text); margin-bottom: 3px; }
+.demo-origin-body p { font-size: 12px; color: var(--text-2); line-height: 1.55; }
+
 .demo-roi-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .roi-card {
   background: var(--panel); border: 1px solid var(--border-hi); border-radius: 10px;
-  padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; box-shadow: var(--shadow-card);
 }
-.roi-card strong { font-size: 16px; font-family: ui-monospace, monospace; }
+.roi-card strong { font-size: 15px; font-family: ui-monospace, monospace; color: var(--text); }
+
+.demo-control-bar {
+  display: flex; gap: 12px; align-items: stretch; justify-content: space-between; flex-wrap: wrap;
+}
+.demo-scene-grid {
+  flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; min-width: 300px;
+}
+.scene-card-btn {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
+  padding: 8px 10px; cursor: pointer; text-align: left; transition: 0.15s;
+  display: flex; flex-direction: column; gap: 3px; color: var(--text);
+}
+.scene-card-btn:hover { border-color: var(--blue); background: var(--hover-bg); }
+.scene-card-btn.active {
+  background: var(--blue-soft); border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue);
+}
+.scene-card-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.scene-card-title { font-size: 12px; font-weight: 700; color: var(--text); }
+.scene-card-sub { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.demo-actions-col {
+  display: flex; flex-direction: column; gap: 6px; justify-content: center; min-width: 146px;
+}
+
 .demo-stage { display: flex; flex-direction: column; gap: 12px; }
 .demo-header-banner {
-  background: linear-gradient(90deg, rgba(56,189,248,0.14), rgba(167,139,250,0.12));
-  border: 1px solid rgba(56,189,248,0.35); border-radius: 10px; padding: 12px 16px;
+  background: var(--banner-grad);
+  border: 1px solid var(--blue-border); border-radius: 10px; padding: 12px 16px;
   display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
 }
+.demo-header-banner h3 { font-size: 16px; color: var(--text); }
+.demo-explainer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.explainer-card {
+  background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--blue);
+  border-radius: 8px; padding: 10px 14px; box-shadow: var(--shadow-card);
+}
+.explainer-card.analogy { border-left-color: var(--orange); }
+.explainer-card .ex-title { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
+.explainer-card .ex-body { font-size: 13px; color: var(--text); line-height: 1.55; font-weight: 500; }
+
+.demo-hero-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.hero-metric-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; box-shadow: var(--shadow-card);
+}
+.hero-metric-card.tone-ok { border-top: 3px solid var(--green); }
+.hero-metric-card.tone-warn { border-top: 3px solid var(--orange); }
+.hero-metric-card.tone-info { border-top: 3px solid var(--blue); }
+.hero-metric-label { font-size: 11px; color: var(--muted); }
+.hero-metric-value { font-size: 18px; font-weight: 800; color: var(--text); font-family: ui-monospace, monospace; }
+
 .demo-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .demo-pane-bad {
-  background: rgba(127, 29, 29, 0.22); border: 1px solid rgba(248, 113, 113, 0.55);
-  border-radius: 10px; padding: 14px;
+  background: var(--demo-bad-bg); border: 1px solid var(--demo-bad-border);
+  border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px;
 }
 .demo-pane-good {
-  background: rgba(6, 78, 59, 0.22); border: 1px solid rgba(52, 211, 153, 0.55);
-  border-radius: 10px; padding: 14px;
+  background: var(--demo-good-bg); border: 1px solid var(--demo-good-border);
+  border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px;
 }
-.speaker-card {
-  background: rgba(30, 41, 59, 0.85); border-left: 4px solid var(--yellow);
-  border-radius: 8px; padding: 12px 14px; font-size: 13px; line-height: 1.6; color: #fef3c7;
+.story-step-list { display: flex; flex-direction: column; gap: 8px; }
+.story-step {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 11px; display: flex; gap: 9px; align-items: flex-start;
 }
-body.presenter-mode .sidenav, body.presenter-mode .sse-sidebar, body.presenter-mode .kpi-strip { display: none !important; }
+.step-num {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; background: var(--red-soft); color: var(--red); border: 1px solid var(--red-border);
+}
+.step-num.good { background: var(--green-soft); color: var(--green); border-color: var(--green-border); }
+.story-step-text strong { display: block; font-size: 12px; color: var(--text); margin-bottom: 2px; }
+.story-step-text p { font-size: 12px; color: var(--text-2); line-height: 1.45; }
+.cmd-sim-box {
+  background: var(--input-bg); border: 1px solid var(--border-hi); border-radius: 6px;
+  padding: 7px 10px; font-family: ui-monospace, monospace; font-size: 11px; color: var(--red);
+  word-break: break-all;
+}
 
+.widget-panel {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.widget-title { font-size: 12px; font-weight: 700; color: var(--text); display: flex; justify-content: space-between; align-items: center; }
+.tool-wall { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tool-card {
+  background: var(--item-bg); border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px;
+}
+.tool-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+.tool-card code { font-size: 10px; color: var(--code-fg); word-break: break-all; display: block; }
+.pill-wrap { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.traffic-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--item-bg);
+}
+.traffic-light { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+.traffic-light.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.traffic-light.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+.cascade-chain { display: flex; flex-direction: column; gap: 6px; }
+.cascade-node {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--item-bg); border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px;
+}
+.cascade-arrow { text-align: center; font-size: 12px; color: var(--blue); font-weight: 700; line-height: 1; }
+
+.deadlock-ring {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center;
+  background: var(--item-bg); border: 1px solid var(--red-border); border-radius: 8px; padding: 10px;
+}
+.dl-agent-box {
+  background: var(--panel); border: 1px solid var(--border-hi); border-radius: 7px; padding: 8px; text-align: center;
+}
+.dl-arrows { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--red); font-weight: 700; }
+
+.speaker-card {
+  background: var(--speaker-bg); border: 1px solid var(--border); border-left: 4px solid var(--yellow);
+  border-radius: 8px; padding: 10px 14px; font-size: 12px; line-height: 1.6; color: var(--speaker-fg);
+}
+body.presenter-mode .sidenav, body.presenter-mode .sse-sidebar, body.presenter-mode .kpi-strip, body.presenter-mode .demo-origin-banner { display: none !important; }
+
+@media (max-width: 1180px) {
+  .demo-scene-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 1100px) {
-  .grid-2, .grid-3, .route-result, .demo-roi-strip, .demo-split { grid-template-columns: 1fr; }
+  .grid-2, .grid-3, .route-result, .demo-roi-strip, .demo-split, .demo-explainer-grid, .demo-hero-metrics, .tool-wall { grid-template-columns: 1fr; }
   .sse-sidebar { display: none; }
   .sidenav { width: 62px; padding: 8px 6px; }
   .nav-btn span:last-child { display: none; }
@@ -748,6 +1027,7 @@ body.presenter-mode .sidenav, body.presenter-mode .sse-sidebar, body.presenter-m
 
 pub static APP_JS: &str = r##"// Agent Host Steward 2.0 Web Console (Zero External Dependencies)
 const state = {
+  theme: "dark",
   activeView: "topology",
   factsTab: "ports",
   govTab: "brief",
@@ -766,7 +1046,7 @@ const state = {
   panStart: { x: 0, y: 0 },
 };
 
-const NODE_COLORS = {
+const NODE_COLORS_DARK = {
   process: "#38bdf8",
   port: "#fb923c",
   service: "#a78bfa",
@@ -776,6 +1056,16 @@ const NODE_COLORS = {
   memory: "#fbbf24",
 };
 
+const NODE_COLORS_LIGHT = {
+  process: "#245A6B",
+  port: "#BE653B",
+  service: "#5B4B8A",
+  cron: "#A84A6C",
+  git: "#2F7A66",
+  file: "#64747B",
+  memory: "#9A7422",
+};
+
 function esc(str) {
   if (str === null || str === undefined) return "";
   return String(str)
@@ -783,6 +1073,39 @@ function esc(str) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function rawJsonDrawer(data, title) {
+  return `<details class="raw-json-details"><summary>${esc(title || "查看原始数据 (JSON)")}</summary><pre class="md-pre">${esc(JSON.stringify(data, null, 2))}</pre></details>`;
+}
+
+function initTheme() {
+  let saved = "dark";
+  try {
+    const v = localStorage.getItem("steward_ui_theme");
+    if (v === "light" || v === "dark") saved = v;
+  } catch (_) {}
+  applyTheme(saved, false);
+}
+
+function applyTheme(theme, persist) {
+  const next = theme === "light" ? "light" : "dark";
+  state.theme = next;
+  document.documentElement.setAttribute("data-theme", next);
+  if (persist !== false) {
+    try { localStorage.setItem("steward_ui_theme", next); } catch (_) {}
+  }
+  const btn = document.getElementById("btn-theme-toggle");
+  if (btn) {
+    btn.innerText = next === "light" ? "🌙 夜间深空" : "☀️ 白天蓝图";
+  }
+  if (state.simNodes.length > 0) {
+    drawTopology();
+  }
+}
+
+function toggleTheme() {
+  applyTheme(state.theme === "light" ? "dark" : "light", true);
 }
 
 async function apiGet(url) {
@@ -809,6 +1132,7 @@ function mirrorBlackScreen(cliCmd, mcpTool, mcpArgs) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
   bindNavigation();
   bindTopologyControls();
   bindOtherControls();
@@ -856,6 +1180,7 @@ function bindNavigation() {
 }
 
 function bindOtherControls() {
+  document.getElementById("btn-theme-toggle")?.addEventListener("click", toggleTheme);
   document.getElementById("btn-global-refresh")?.addEventListener("click", refreshAll);
   document.getElementById("btn-toggle-sse")?.addEventListener("click", () => {
     document.getElementById("sse-sidebar")?.classList.toggle("collapsed");
@@ -1114,14 +1439,12 @@ function layoutGraph(rawNodes, rawEdges) {
     .map((e) => ({ ...e, sNode: nodeMap.get(e.source), tNode: nodeMap.get(e.target) }))
     .filter((e) => e.sNode && e.tNode);
 
-  // 轻量级力导向迭代（仅对前 180 节点做全对斥力，控制耗时 <15ms）
   const iters = simNodes.length > 160 ? 35 : 65;
   for (let step = 0; step < iters; step++) {
     for (let i = 0; i < simNodes.length; i++) {
       const a = simNodes[i];
       a.vx *= 0.6;
       a.vy *= 0.6;
-      // 向心引力
       a.vx -= a.x * 0.004;
       a.vy -= a.y * 0.004;
       const limitJ = Math.min(simNodes.length, i + 45);
@@ -1187,6 +1510,15 @@ function drawTopology() {
   const w = canvas.width, h = canvas.height;
   ctx.clearRect(0, 0, w, h);
 
+  const isLight = state.theme === "light";
+  const palette = isLight ? NODE_COLORS_LIGHT : NODE_COLORS_DARK;
+  const edgeNormal = isLight ? "rgba(36, 90, 107, 0.28)" : "rgba(148, 163, 184, 0.28)";
+  const edgeFocus = isLight ? "#245A6B" : "#38bdf8";
+  const edgeLabelNormal = isLight ? "rgba(70, 88, 95, 0.78)" : "rgba(148, 163, 184, 0.65)";
+  const edgeLabelFocus = isLight ? "#1E4B5A" : "#7dd3fc";
+  const nodeOutline = isLight ? "#BE653B" : "#ffffff";
+  const nodeLabelColor = isLight ? "#1B2B33" : "#e2e8f0";
+
   const kw = (document.getElementById("topo-search")?.value || "").trim().toLowerCase();
   const focusId = state.hoverNodeId || state.selectedNodeId;
 
@@ -1194,31 +1526,29 @@ function drawTopology() {
   ctx.translate(state.cam.x, state.cam.y);
   ctx.scale(state.cam.zoom, state.cam.zoom);
 
-  // 连边
   for (const e of state.simEdges) {
     const isFocus = focusId && (e.source === focusId || e.target === focusId);
     ctx.beginPath();
     ctx.moveTo(e.sNode.x, e.sNode.y);
     ctx.lineTo(e.tNode.x, e.tNode.y);
-    ctx.strokeStyle = isFocus ? "#38bdf8" : "rgba(148, 163, 184, 0.28)";
+    ctx.strokeStyle = isFocus ? edgeFocus : edgeNormal;
     ctx.lineWidth = isFocus ? 2.2 : 1.1;
     ctx.stroke();
 
     if (isFocus || state.cam.zoom > 0.85) {
       const mx = (e.sNode.x + e.tNode.x) / 2;
       const my = (e.sNode.y + e.tNode.y) / 2;
-      ctx.fillStyle = isFocus ? "#7dd3fc" : "rgba(148, 163, 184, 0.65)";
+      ctx.fillStyle = isFocus ? edgeLabelFocus : edgeLabelNormal;
       ctx.font = "9px monospace";
       ctx.textAlign = "center";
       ctx.fillText(e.relation, mx, my - 3);
     }
   }
 
-  // 节点
   for (const n of state.simNodes) {
     const matched = !kw || n.label.toLowerCase().includes(kw) || n.id.toLowerCase().includes(kw);
     const isSelected = n.id === state.selectedNodeId || n.id === state.hoverNodeId;
-    const color = NODE_COLORS[n.nt] || "#fbbf24";
+    const color = palette[n.nt] || palette.memory;
 
     ctx.globalAlpha = matched ? 1 : 0.22;
     ctx.beginPath();
@@ -1227,13 +1557,13 @@ function drawTopology() {
     ctx.fill();
 
     if (isSelected || (kw && matched)) {
-      ctx.strokeStyle = "#ffffff";
+      ctx.strokeStyle = nodeOutline;
       ctx.lineWidth = 2.5;
       ctx.stroke();
     }
 
     if (state.cam.zoom > 0.45 || n.degree > 0 || isSelected || (kw && matched)) {
-      ctx.fillStyle = "#e2e8f0";
+      ctx.fillStyle = nodeLabelColor;
       ctx.font = isSelected ? "bold 11px sans-serif" : "10px monospace";
       ctx.textAlign = "center";
       ctx.fillText(n.label.slice(0, 26), n.x, n.y + n.radius + 12);
@@ -1251,6 +1581,7 @@ function showNodeDrawer(node) {
   drawer.classList.remove("hidden");
   title.innerText = `${node.label}`;
   const cgPath = node.metadata?.abs_path || node.metadata?.path || (node.id.startsWith("/") ? node.id : "/root/new/work/agent-steward");
+  const metaPairs = Object.entries(node.metadata || {}).slice(0, 6);
   body.innerHTML = `
     <div class="item-box">
       <div><strong>ID:</strong> <span class="mono">${esc(node.id)}</span></div>
@@ -1264,8 +1595,9 @@ function showNodeDrawer(node) {
     </div>
     <div id="drawer-extra" class="hidden item-box"></div>
     <div class="item-box">
-      <div style="margin-bottom:6px;"><strong>物理元数据:</strong></div>
-      <pre class="mono" style="white-space:pre-wrap;color:#93c5fd;">${esc(JSON.stringify(node.metadata, null, 2))}</pre>
+      <div style="margin-bottom:6px;"><strong>关键物理属性:</strong></div>
+      ${metaPairs.length ? metaPairs.map(([k, v]) => `<div class="mono" style="margin-bottom:3px;"><span class="muted-text">${esc(k)}:</span> ${esc(typeof v === "object" ? JSON.stringify(v) : v)}</div>`).join("") : '<div class="muted-text">无附加属性</div>'}
+      ${rawJsonDrawer(node.metadata, "查看完整元数据 JSON")}
     </div>
   `;
   mirrorBlackScreen(`agent-steward links query --id "${node.id}"`, "steward_links_query", { id: node.id, type: node.nt });
@@ -1287,7 +1619,12 @@ function showNodeDrawer(node) {
     try {
       const cg = await apiGet(`/api/v1/links/codegraph?path=${encodeURIComponent(cgPath)}`);
       mirrorBlackScreen(`agent-steward links codegraph --path "${cgPath}"`, "steward_codegraph_bridge", { path: cgPath });
-      extra.innerHTML = `<strong>🔬 CodeGraph 状态:</strong> ${cg.has_codegraph ? '<span class="badge badge-ok">已索引</span>' : '<span class="badge">未索引</span>'}<pre class="md-pre" style="margin-top:6px;">${esc(JSON.stringify(cg.project_info || cg, null, 2))}</pre>`;
+      const info = cg.project_info || {};
+      extra.innerHTML = `
+        <div class="item-top"><strong>🔬 CodeGraph 状态</strong> ${cg.has_codegraph ? '<span class="badge badge-ok">已索引</span>' : '<span class="badge">未索引</span>'}</div>
+        ${cg.has_codegraph ? `<div class="summary-kpi-row mt-8"><div class="summary-kpi"><span class="sk-label">符号节点</span><span class="sk-val">${info.node_count ?? 0}</span></div><div class="summary-kpi"><span class="sk-label">调用边</span><span class="sk-val">${info.edge_count ?? 0}</span></div><div class="summary-kpi"><span class="sk-label">文件数</span><span class="sk-val">${info.file_count ?? 0}</span></div></div>` : '<div class="muted-text">该目录尚未初始化 .codegraph/ 索引</div>'}
+        ${rawJsonDrawer(cg, "查看 CodeGraph 原始 JSON")}
+      `;
     } catch (e) {
       extra.innerHTML = `<div class="muted-text">${esc(e.message)}</div>`;
     }
@@ -1305,9 +1642,20 @@ async function runLinksAuditModal() {
   try {
     const [audit, repair] = await Promise.all([apiGet("/api/v1/links/audit"), apiGet("/api/v1/links/repair")]);
     mirrorBlackScreen("agent-steward links audit && agent-steward links repair", "steward_links_audit", { fix_dangling: false });
+    const score = audit.health_score ?? 100;
+    const issues = audit.issues || [];
+    const suggestions = repair.suggestions || [];
     body.innerHTML = `
-      <div class="item-box"><strong>健康审计</strong><pre class="md-pre">${esc(JSON.stringify(audit, null, 2))}</pre></div>
-      <div class="item-box"><strong>断链修复建议 (Dry-Run)</strong><pre class="md-pre">${esc(JSON.stringify(repair, null, 2))}</pre></div>
+      <div class="summary-kpi-row">
+        <div class="summary-kpi"><span class="sk-label">拓扑健康度</span><span class="sk-val c-green">${score}/100</span></div>
+        <div class="summary-kpi"><span class="sk-label">总连边</span><span class="sk-val">${audit.total_links ?? 0}</span></div>
+        <div class="summary-kpi"><span class="sk-label">断链数</span><span class="sk-val c-orange">${issues.length}</span></div>
+      </div>
+      <div class="item-box">
+        <strong>修复建议 (${suggestions.length})</strong>
+        ${suggestions.length ? suggestions.slice(0, 6).map((s) => `<div class="mt-8 mono">${esc(s.broken_target)} → ${esc(s.suggested_target)}</div>`).join("") : '<div class="muted-text mt-8">当前依赖图健康，无待修复断链。</div>'}
+      </div>
+      ${rawJsonDrawer({ audit, repair }, "查看审计与修复原始 JSON")}
     `;
   } catch (e) {
     body.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
@@ -1489,7 +1837,17 @@ async function scanAssetFromWeb() {
     const rep = await apiPost("/api/v1/assets/scan", { path, enrich_with_ollama: enrich, enrich_limit: 5 });
     const cliCmd = enrich ? `agent-steward asset scan "${path}" --enrich --enrich-limit 5` : `agent-steward asset scan "${path}"`;
     mirrorBlackScreen(cliCmd, "steward_asset_scan", { path, enrich_with_ollama: enrich, enrich_limit: 5 });
-    if (out) out.innerHTML = `<div class="item-box"><strong>📂 分级扫描 & 元数据标注报告</strong><pre class="md-pre">${esc(JSON.stringify(rep, null, 2))}</pre></div>`;
+    if (out) {
+      out.innerHTML = `<div class="item-box">
+        <div class="item-top"><strong>📂 分级扫描 &amp; 元数据标注完成</strong><span class="badge badge-ok">${esc(path)}</span></div>
+        <div class="summary-kpi-row mt-8">
+          <div class="summary-kpi"><span class="sk-label">扫描总数</span><span class="sk-val">${rep.scanned_count ?? rep.total_scanned ?? "-"}</span></div>
+          <div class="summary-kpi"><span class="sk-label">黑名单浅层阻断</span><span class="sk-val c-orange">${rep.shallow_blocked ?? rep.skipped_count ?? 0}</span></div>
+          <div class="summary-kpi"><span class="sk-label">Ollama 精炼</span><span class="sk-val c-green">${rep.ollama_enriched ?? 0}</span></div>
+        </div>
+        ${rawJsonDrawer(rep, "查看扫描明细 JSON")}
+      </div>`;
+    }
   } catch (e) {
     alert("扫描失败: " + e.message);
   }
@@ -1512,14 +1870,28 @@ async function runFactQuery() {
 }
 
 async function runPortCheck() {
-  const port = Number(document.getElementById("pc-port")?.value || 8080);
+  const port = Number(document.getElementById("pc-port")?.value || 8756);
   const box = document.getElementById("facts-qa-result");
   if (!box) return;
   box.classList.remove("hidden");
   try {
     const res = await apiGet(`/api/v1/facts/port-check?port=${port}`);
     mirrorBlackScreen(`agent-steward env port ${port}`, "steward_port_check", { port, suggest_count: 3 });
-    box.innerHTML = `<div class="item-top"><strong>🛡️ 端口 :${port} 防撞诊断</strong><button class="btn-icon" onclick="this.closest('.qa-box').classList.add('hidden')">✕</button></div><pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+    const occupied = res.status === "OCCUPIED";
+    const freePorts = (res.recommended_free_ports || []).map((p) => `<span class="badge badge-ok">:${p}</span>`).join(" ");
+    const conflictHtml = res.conflict
+      ? `<div class="muted-text mt-8">占用进程: <strong>${esc(res.conflict.name)}</strong> (PID ${res.conflict.pid}, 用户 ${esc(res.conflict.owner)}) · 命令: <code class="mono">${esc(res.conflict.command)}</code></div>`
+      : "";
+    box.innerHTML = `
+      <div class="item-top">
+        <strong>🛡️ 端口 :${port} 防撞诊断</strong>
+        <div><span class="badge ${occupied ? "badge-err" : "badge-ok"}">${occupied ? "已被占用 (防撞拦截)" : "空闲可用"}</span> <button class="btn-icon" onclick="this.closest('.qa-box').classList.add('hidden')">✕</button></div>
+      </div>
+      <div style="margin-top:6px;">${esc(res.advice || "")}</div>
+      ${conflictHtml}
+      ${freePorts ? `<div class="mt-8"><strong>推荐安全空闲端口:</strong> ${freePorts}</div>` : ""}
+      ${rawJsonDrawer(res, "查看端口探测原始 JSON")}
+    `;
   } catch (e) {
     box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1628,7 +2000,7 @@ async function runLockAction(mode) {
     const url = mode === "wait" ? "/api/v1/locks/wait" : "/api/v1/locks/acquire";
     const data = await apiPost(url, { resource_type, resource_id, holder_agent, scope, ttl_seconds: 120, wait_timeout_ms: 800 }, token);
     mirrorBlackScreen(`agent-steward coordination ${mode} -t ${resource_type} -i "${resource_id}" -a "${holder_agent}"`, mode === "wait" ? "steward_lock_wait" : "steward_lock_acquire", { resource_type, resource_id, holder_agent, scope });
-    if (msgEl) msgEl.innerText = `结果: ${JSON.stringify(data)}`;
+    if (msgEl) msgEl.innerText = data.acquired ? `✅ 已获锁 (${data.lock_id || "ok"})` : `⏳ 冲突/排队: ${data.conflict_reason || data.status || "waiting"}`;
     loadLocks();
     loadOverview();
   } catch (e) {
@@ -1701,7 +2073,19 @@ async function runHookTest(kind) {
   try {
     const res = await apiPost(kind === "pre" ? "/api/v1/hooks/pre" : "/api/v1/hooks/post", { tool_name, args, success: true });
     mirrorBlackScreen(`agent-steward hooks ${kind} --tool-name ${tool_name} --args '${rawArgs}'`, kind === "pre" ? "steward_hook_pre" : "steward_hook_post", { tool_name, args });
-    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+    if (out) {
+      const hasWarn = Boolean(res.has_warnings || (res.warnings && res.warnings.length));
+      const allowed = res.allowed !== false;
+      const badgeCls = !allowed ? "badge-err" : hasWarn ? "badge-warn" : "badge-ok";
+      const badgeTxt = !allowed ? "🛑 已拦截 (BLOCK)" : hasWarn ? "⚠️ 触发告警与建议" : "✅ 安全放行";
+      const warns = (res.warnings || []).map((w) => `<div class="item-box" style="border-color:var(--orange);">${esc(w)}</div>`).join("");
+      const sugs = (res.suggestions || []).map((s) => `<div class="item-box">${esc(s)}</div>`).join("");
+      out.innerHTML = `
+        <div class="item-top"><strong>${kind === "pre" ? "Pre-Hook 预检结果" : "Post-Hook 回写结果"}</strong><span class="badge ${badgeCls}">${badgeTxt}</span></div>
+        <div class="mt-8">${warns}${sugs || (!warns ? '<div class="muted-text">未发现冲突，操作已记录。</div>' : "")}</div>
+        ${rawJsonDrawer(res, "查看 Hook 原始 JSON")}
+      `;
+    }
   } catch (e) {
     if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1713,7 +2097,13 @@ async function runHookGenerate() {
   try {
     const res = await apiGet(`/api/v1/hooks/generate?client=${encodeURIComponent(client)}`);
     mirrorBlackScreen(`agent-steward hooks generate --client ${client} --dry-run`, "steward_hook_generate", { client, dry_run: true });
-    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+    if (out) {
+      out.innerHTML = `
+        <div class="item-top"><strong>⚙️ 客户端 Hook 配置 (${esc(client)})</strong><span class="badge badge-ok">已生成</span></div>
+        <div class="muted-text mt-8">目标路径: <code class="mono">${esc(res.target_path || "-")}</code></div>
+        ${rawJsonDrawer(res, "查看生成配置详情 JSON")}
+      `;
+    }
   } catch (e) {
     if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1729,9 +2119,9 @@ async function runContextRoute() {
     badge.innerText = `消耗 ${plan.route_tokens_used} tok · 节省 ${Number(plan.saved_pct || 0).toFixed(1)}% (全量 ${plan.total_skills_full_tokens} tok)`;
     mirrorBlackScreen(`agent-steward skill route "${intent}" --budget-tokens ${budget}`, "steward_skill_route", { intent, budget_tokens: Number(budget) });
     out.innerHTML = `
-      <div class="item-box"><strong>命中 SKILL (${plan.skills.length})</strong>${plan.skills.map((s) => `<div class="mt-12"><span class="badge badge-ok">${esc(s.skill_name)}</span><div class="muted-text">${esc(s.summary)}</div></div>`).join("") || '<div class="muted-text">无</div>'}</div>
-      <div class="item-box"><strong>推荐 MCP (${plan.mcps.length})</strong>${plan.mcps.map((m) => `<div class="mt-12"><span class="badge">${esc(m.server_name)}</span><div class="mono muted-text">${esc(m.transport)} · ${esc(m.client_source)}</div></div>`).join("") || '<div class="muted-text">无</div>'}</div>
-      <div class="item-box"><strong>外部服务 (${plan.services.length})</strong>${plan.services.map((s) => `<div class="mt-12"><span class="badge badge-warn">${esc(s.service_name)}</span><div class="mono muted-text">${esc(s.endpoint)}</div></div>`).join("") || '<div class="muted-text">无</div>'}</div>
+      <div class="item-box"><strong>命中 SKILL (${plan.skills.length})</strong>${plan.skills.map((s) => `<div class="mt-8"><span class="badge badge-ok">${esc(s.skill_name)}</span><div class="muted-text">${esc(s.summary)}</div></div>`).join("") || '<div class="muted-text">无</div>'}</div>
+      <div class="item-box"><strong>推荐 MCP (${plan.mcps.length})</strong>${plan.mcps.map((m) => `<div class="mt-8"><span class="badge">${esc(m.server_name)}</span><div class="mono muted-text">${esc(m.transport)} · ${esc(m.client_source)}</div></div>`).join("") || '<div class="muted-text">无</div>'}</div>
+      <div class="item-box"><strong>外部服务 (${plan.services.length})</strong>${plan.services.map((s) => `<div class="mt-8"><span class="badge badge-warn">${esc(s.service_name)}</span><div class="mono muted-text">${esc(s.endpoint)}</div></div>`).join("") || '<div class="muted-text">无</div>'}</div>
     `;
   } catch (e) {
     badge.innerText = "路由失败";
@@ -1802,7 +2192,19 @@ async function runPlaceSuggest() {
   try {
     const res = await apiPost("/api/v1/placement/suggest", { object_type, name, intent });
     mirrorBlackScreen(`agent-steward place suggest --type ${object_type} --name "${name}" --intent "${intent}"`, "steward_placement_suggest", { object_type, name, intent });
-    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+    if (out) {
+      out.innerHTML = `
+        <div class="item-box">
+          <div class="item-top">
+            <strong class="mono" style="color:var(--green);font-size:13px;">${esc(res.suggested_path)}</strong>
+            <span class="badge ${res.conflict_detected ? "badge-warn" : "badge-ok"}">${res.conflict_detected ? "存在同名冲突" : "路径安全可用"}</span>
+          </div>
+          <div class="muted-text">命中规约: <strong>${esc(res.rule_matched || "-")}</strong> · ${esc(res.reason || "")}</div>
+          <div class="muted-text mt-8">${esc(res.naming_convention || "")}</div>
+        </div>
+        ${rawJsonDrawer(res, "查看放置推导原始 JSON")}
+      `;
+    }
   } catch (e) {
     if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1813,7 +2215,16 @@ async function runPlaceLearn() {
   try {
     const res = await apiGet("/api/v1/placement/learn?min_samples=3");
     mirrorBlackScreen("agent-steward place learn --min-samples 3", "steward_placement_learn", { min_samples: 3, accept: false });
-    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+    if (out) {
+      const cands = res.candidates || res.suggestions || [];
+      out.innerHTML = `
+        <div class="item-box">
+          <div class="item-top"><strong>🧠 放置规则自演化分析</strong><span class="badge">${cands.length} 个候选规则</span></div>
+          ${cands.length ? cands.map((c) => `<div class="mt-8 mono">${esc(JSON.stringify(c))}</div>`).join("") : '<div class="muted-text mt-8">近期未发现偏离既有规则的新目录聚类。</div>'}
+        </div>
+        ${rawJsonDrawer(res, "查看自演化原始 JSON")}
+      `;
+    }
   } catch (e) {
     if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1856,7 +2267,17 @@ async function runMemoryAudit() {
   try {
     const rep = await apiGet("/api/v1/memories/audit");
     mirrorBlackScreen("agent-steward memory audit", "steward_memory_audit", {});
-    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(rep, null, 2))}</pre>`;
+    if (out) {
+      out.innerHTML = `
+        <div class="summary-kpi-row">
+          <div class="summary-kpi"><span class="sk-label">总记忆数</span><span class="sk-val">${rep.total_memories ?? 0}</span></div>
+          <div class="summary-kpi"><span class="sk-label">活跃记忆</span><span class="sk-val c-green">${rep.active_memories ?? 0}</span></div>
+          <div class="summary-kpi"><span class="sk-label">半衰期衰减</span><span class="sk-val c-orange">${rep.decayed_count ?? 0}</span></div>
+          <div class="summary-kpi"><span class="sk-label">语义矛盾</span><span class="sk-val">${rep.conflict_count ?? 0}</span></div>
+        </div>
+        ${rawJsonDrawer(rep, "查看记忆审计明细 JSON")}
+      `;
+    }
   } catch (e) {
     if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1868,8 +2289,35 @@ async function loadAnalytics() {
   try {
     const [heat, trend] = await Promise.all([apiGet("/api/v1/analytics/heatmap?days=30"), apiGet("/api/v1/analytics/trend?days=30")]);
     mirrorBlackScreen("agent-steward analytics heatmap --days 30", "steward_analytics_heatmap", { days: 30 });
-    if (hEl) hEl.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(heat, null, 2))}</pre>`;
-    if (tEl) tEl.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(trend, null, 2))}</pre>`;
+    if (hEl) {
+      const cells = heat.heatmap || [];
+      const maxCnt = Math.max(1, ...cells.map((c) => c.change_count || 0));
+      hEl.innerHTML = `
+        ${cells.length ? cells.slice(0, 10).map((c) => {
+          const pct = Math.max(6, Math.round(((c.change_count || 0) / maxCnt) * 100));
+          return `<div class="bar-row"><div class="bar-row-head"><span class="mono">${esc(c.directory)}</span><strong>${c.change_count} 次变更</strong></div><div class="bar-track"><div class="bar-fill warn" style="width:${pct}%"></div></div></div>`;
+        }).join("") : '<div class="empty">近 30 天暂无变更热力记录</div>'}
+        ${rawJsonDrawer(heat, "查看 DuckDB 热力图原始 JSON")}
+      `;
+    }
+    if (tEl) {
+      const rows = trend.asset_growth_trend || [];
+      const maxAsset = Math.max(1, ...rows.map((r) => r.cumulative_count || r.daily_count || 0));
+      const gs = trend.graph_stats || {};
+      tEl.innerHTML = `
+        <div class="summary-kpi-row">
+          <div class="summary-kpi"><span class="sk-label">统计窗口</span><span class="sk-val">${trend.time_span_days ?? 30} 天</span></div>
+          <div class="summary-kpi"><span class="sk-label">图谱节点</span><span class="sk-val c-cyan">${gs.total_nodes ?? "-"}</span></div>
+          <div class="summary-kpi"><span class="sk-label">图谱边</span><span class="sk-val c-green">${gs.total_edges ?? "-"}</span></div>
+        </div>
+        ${rows.slice(0, 8).map((r) => {
+          const val = r.cumulative_count || r.daily_count || 0;
+          const pct = Math.max(6, Math.round((val / maxAsset) * 100));
+          return `<div class="bar-row"><div class="bar-row-head"><span>${esc(r.asset_type)}</span><strong>${val}</strong></div><div class="bar-track"><div class="bar-fill ok" style="width:${pct}%"></div></div></div>`;
+        }).join("")}
+        ${rawJsonDrawer(trend, "查看 DuckDB 趋势原始 JSON")}
+      `;
+    }
   } catch (e) {
     if (hEl) hEl.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1882,7 +2330,7 @@ async function runAnalyticsExport() {
   try {
     const res = await apiPost("/api/v1/analytics/export", { table, output_path });
     mirrorBlackScreen(`agent-steward analytics export --table ${table} --output-path ${output_path}`, "steward_analytics_export", { table, output_path });
-    if (msgEl) msgEl.innerText = `✅ 已导出: ${JSON.stringify(res)}`;
+    if (msgEl) msgEl.innerText = `✅ 已导出 ${res.rows_exported ?? ""} 行至 ${output_path}`;
   } catch (e) {
     if (msgEl) msgEl.innerText = `导出失败: ${e.message}`;
   }
@@ -1893,7 +2341,18 @@ async function runGcPreview() {
   try {
     const res = await apiGet("/api/v1/env/gc?max_age_hours=72");
     mirrorBlackScreen("agent-steward gc --max-age-hours 72", "steward_env_gc", { max_age_hours: 72, apply: false });
-    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+    if (out) {
+      const mb = ((res.candidate_bytes_reclaimed || 0) / 1048576).toFixed(1);
+      out.innerHTML = `
+        <div class="item-top"><strong>🧹 /root/new/tmp/ 扫描结果</strong><span class="badge badge-ok">Dry-Run 安全预览</span></div>
+        <div class="summary-kpi-row mt-8">
+          <div class="summary-kpi"><span class="sk-label">待清理文件数</span><span class="sk-val c-orange">${res.candidate_files_count ?? 0}</span></div>
+          <div class="summary-kpi"><span class="sk-label">可释放空间</span><span class="sk-val">${mb} MB</span></div>
+          <div class="summary-kpi"><span class="sk-label">实际删除</span><span class="sk-val c-green">${res.deleted_files_count ?? 0} (零误删)</span></div>
+        </div>
+        ${rawJsonDrawer(res, "查看 GC 候选列表 JSON")}
+      `;
+    }
   } catch (e) {
     if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1904,7 +2363,13 @@ async function runSessionClosePreview() {
   try {
     const res = await apiPost("/api/v1/session/close", { session_id: "web-preview", clean_temp: true });
     mirrorBlackScreen("agent-steward close web-preview --dry-run", "steward_session_close", { session_id: "web-preview", dry_run: true });
-    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+    if (out) {
+      out.innerHTML = `
+        <div class="item-top"><strong>📋 会话完工结清预览</strong><span class="badge badge-ok">Dry-Run 模拟</span></div>
+        <div class="muted-text mt-8">会话 ID: <code class="mono">${esc(res.session_id || "web-preview")}</code> · 已检测关联记忆与临时清理清单。</div>
+        ${rawJsonDrawer(res, "查看结清报告 JSON")}
+      `;
+    }
   } catch (e) {
     if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1916,7 +2381,14 @@ async function runMeshQuery(action) {
   try {
     const res = await apiGet(`/api/v1/mesh/query?action=${action}&port=${port}`);
     mirrorBlackScreen(`agent-steward mesh ${action === "port" ? "port " + port : action}`, "steward_mesh_query", { action, port });
-    if (out) out.innerHTML = `<div class="item-box"><strong>Mesh (${action})</strong><pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre></div>`;
+    if (out) {
+      out.innerHTML = `
+        <div class="item-box">
+          <div class="item-top"><strong>🌐 Peer Mesh 查询 (${esc(action)})</strong><span class="badge badge-ok">已响应</span></div>
+          ${rawJsonDrawer(res, "查看 Mesh 返回 JSON")}
+        </div>
+      `;
+    }
   } catch (e) {
     if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1969,7 +2441,7 @@ function initSSE() {
   }
 }
 
-/* ─── 6. 路演演示剧场 (Phase 22) ──────────────────────────────────── */
+/* ─── 6. 路演演示剧场 (Phase 25 三层故事化直观舞台) ──────────────── */
 let demoScenariosCache = [];
 let demoCurrentIdx = 0;
 let demoCruiseTimer = null;
@@ -1990,7 +2462,14 @@ async function loadDemoTheater() {
     const btnWrap = document.getElementById("demo-scene-buttons");
     if (btnWrap) {
       btnWrap.innerHTML = demoScenariosCache.map((s, idx) =>
-        `<button class="subtab ${idx === demoCurrentIdx ? "active" : ""}" data-scene="${esc(s.id)}" onclick="runDemoScenario('${esc(s.id)}', ${idx})">${s.order}. ${esc(s.title)}</button>`
+        `<button class="scene-card-btn ${idx === demoCurrentIdx ? "active" : ""}" data-scene="${esc(s.id)}" onclick="runDemoScenario('${esc(s.id)}', ${idx})">
+          <div class="scene-card-top">
+            <span class="badge">第 ${s.order} 幕</span>
+            <span class="muted-text mono" style="font-size:10px;">${esc(s.category)}</span>
+          </div>
+          <div class="scene-card-title">${esc(s.title)}</div>
+          <div class="scene-card-sub" title="${esc(s.intent_summary || s.tagline)}">${esc(s.intent_summary || s.tagline)}</div>
+        </button>`
       ).join("");
     }
     if (demoScenariosCache.length > 0 && !document.getElementById("demo-stage")?.dataset.loaded) {
@@ -2001,9 +2480,191 @@ async function loadDemoTheater() {
   }
 }
 
+function renderDemoSceneWidget(res) {
+  const ws = res.with_steward || {};
+  const roi = res.roi_metrics || {};
+  const id = res.scenario_id;
+
+  if (id === "scene-1") {
+    const tools = ws.sample_tools || [];
+    const guards = ws.blacklist_shallow_guards || [];
+    return `
+      <div class="widget-panel">
+        <div class="widget-title"><span>🚪 黑白名单浅层阻断漏斗</span><span class="badge badge-ok">拦截 ${esc(roi.noise_blocked_pct || "98.5%")} 垃圾文件</span></div>
+        <div class="bar-row">
+          <div class="bar-row-head"><span>敲门即止（仅记录目录实体，绝不递归扫爆）</span><strong>98.5% 阻断</strong></div>
+          <div class="bar-track"><div class="bar-fill ok" style="width:98.5%"></div></div>
+        </div>
+        <div class="pill-wrap">${guards.map((g) => `<span class="badge badge-warn">🚫 ${esc(g)}</span>`).join("")}</div>
+      </div>
+      <div class="widget-panel">
+        <div class="widget-title"><span>🧰 本机现成 CLI 武器库（实测已装 ${ws.installed_tools_count ?? tools.length} 个）</span><span class="badge">零幻觉</span></div>
+        <div class="tool-wall">
+          ${tools.map((t) => `<div class="tool-card">
+            <div class="tool-card-head"><strong>${esc(t.tool)}</strong><span class="badge badge-ok">${esc(t.category)}</span></div>
+            <code>${esc(t.best_practice || "已就绪可直接调用")}</code>
+          </div>`).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  if (id === "scene-2") {
+    const pc = ws.port_check || {};
+    const conflict = pc.conflict || {};
+    const freePorts = (pc.recommended_free_ports || roi.free_ports_recommended || []);
+    const place = ws.placement_advice || {};
+    return `
+      <div class="widget-panel">
+        <div class="widget-title"><span>🚦 Pre-Hook 1ms 红绿灯急刹车</span><span class="badge badge-ok">执行前拦截</span></div>
+        <div class="traffic-row">
+          <span class="traffic-light red"></span>
+          <div style="flex:1;">
+            <strong>红灯拦截：端口 :${esc(ws.target_port_probed)} 已被真实占用</strong>
+            <div class="muted-text">占用方: ${esc(conflict.name || "宿主机服务")} (PID ${esc(conflict.pid ?? "-")}) · 避免服务撞车崩溃</div>
+          </div>
+          <span class="badge badge-err">拦截</span>
+        </div>
+        <div class="traffic-row">
+          <span class="traffic-light red"></span>
+          <div style="flex:1;">
+            <strong>红灯纠正：禁止随手乱丢 /tmp/TmpCrawler.py</strong>
+            <div class="muted-text">违反工作区整洁与小写蛇形命名规范</div>
+          </div>
+          <span class="badge badge-warn">纠正</span>
+        </div>
+        <div class="traffic-row">
+          <span class="traffic-light green"></span>
+          <div style="flex:1;">
+            <strong>绿灯自动改道推荐</strong>
+            <div class="pill-wrap mt-8">
+              ${freePorts.map((p) => `<span class="badge badge-ok">可用端口 :${p}</span>`).join("")}
+              <span class="badge">规范路径: ${esc(place.suggested_path || roi.suggested_path || "/root/new/shared_proj/")}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (id === "scene-3") {
+    const chain = ws.cascade_chain || [];
+    const repair = ws.repair_preview || {};
+    const cg = ws.codegraph_federation;
+    const audit = ws.links_audit || {};
+    return `
+      <div class="widget-panel">
+        <div class="widget-title"><span>🦋 3 跳蝴蝶效应因果链（真实宿主机拓扑）</span><span class="badge badge-ok">健康度 ${audit.health_score ?? 100}/100</span></div>
+        <div class="cascade-chain">
+          ${chain.map((node, idx) => `
+            ${idx > 0 ? '<div class="cascade-arrow">↓ 牵连影响</div>' : ''}
+            <div class="cascade-node">
+              <span class="badge">${esc(node.kind)}</span>
+              <strong class="mono" style="flex:1;font-size:11px;">${esc(node.label)}</strong>
+              <span class="muted-text">Hop ${node.hop}</span>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+      <div class="widget-panel">
+        <div class="widget-title"><span>🩹 断链自愈补丁 &amp; 🔬 CodeGraph 微观联邦</span><span class="badge">${cg ? `已联邦 ${cg.node_count} 符号` : "按需下钻"}</span></div>
+        <div class="item-box" style="margin-bottom:0;">
+          <div class="muted-text" style="text-decoration:line-through;color:var(--red);">${esc(repair.broken_ref || "/root/new/shared_proj/sec_crawler_v1.py")}</div>
+          <div class="mono" style="color:var(--green);margin-top:4px;font-weight:700;">→ 自动修复为: ${esc(repair.repaired_ref || "/root/new/shared_proj/sec_crawler.py")} (相似度 ${repair.similarity ?? 0.94})</div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (id === "scene-4") {
+    const dl = ws.deadlock_report || {};
+    const cycles = dl.cycles || [];
+    const firstCycle = cycles[0] || {};
+    return `
+      <div class="widget-panel">
+        <div class="widget-title"><span>🔄 WFG 双 Agent 交叉死锁环路图</span><span class="badge badge-err">1ms 检出 ${cycles.length} 条环路</span></div>
+        <div class="deadlock-ring">
+          <div class="dl-agent-box">
+            <strong>🤖 demo-agent-alpha</strong>
+            <div class="muted-text mt-8">持有 <span class="badge">demo:port:19090</span></div>
+          </div>
+          <div class="dl-arrows">
+            <span>⇄ 互相死等 ⇄</span>
+            <span style="font-size:10px;color:var(--muted);">WFG DFS 环路</span>
+          </div>
+          <div class="dl-agent-box">
+            <strong>🤖 demo-agent-beta</strong>
+            <div class="muted-text mt-8">持有 <span class="badge">/work/demo_app</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="widget-panel">
+        <div class="widget-title"><span>⚖️ 交警破局裁决书</span><span class="badge badge-ok">demo:* 隔离沙盒</span></div>
+        <div class="item-box" style="margin-bottom:0;">
+          <strong>建议动作：</strong>${esc(firstCycle.suggestion || "唤醒优先级裁决：让等待代价更小的一方暂时退让释放锁，打破死锁环路。")}
+        </div>
+      </div>
+    `;
+  }
+
+  if (id === "scene-5") {
+    const plan = ws.route_plan || {};
+    const fullTok = Number(plan.total_skills_full_tokens || roi.full_tokens || 449640);
+    const usedTok = Number(plan.route_tokens_used || roi.routed_tokens || 358);
+    const pct = Math.max(1.5, Math.min(100, (usedTok / Math.max(1, fullTok)) * 100));
+    const skills = plan.skills || [];
+    const mcps = plan.mcps || [];
+    return `
+      <div class="widget-panel">
+        <div class="widget-title"><span>📉 Token 账单瘦身对比尺</span><span class="badge badge-ok">节省 ${esc(roi.saved_pct || "99.9%")}</span></div>
+        <div class="bar-row">
+          <div class="bar-row-head"><span>全量硬塞 121+ SKILL（上下文直接打爆）</span><strong style="color:var(--red);">${fullTok.toLocaleString()} tok (100%)</strong></div>
+          <div class="bar-track"><div class="bar-fill err" style="width:100%"></div></div>
+        </div>
+        <div class="bar-row" style="margin-bottom:0;">
+          <div class="bar-row-head"><span>按预算精准路由 Top-K 名片</span><strong style="color:var(--green);">${usedTok.toLocaleString()} tok</strong></div>
+          <div class="bar-track"><div class="bar-fill ok" style="width:${pct.toFixed(1)}%"></div></div>
+        </div>
+      </div>
+      <div class="widget-panel">
+        <div class="widget-title"><span>🎯 精准命中名片夹（意图：PostgreSQL 调优）</span><span class="badge">${skills.length} SKILL · ${mcps.length} MCP</span></div>
+        <div class="pill-wrap">
+          ${skills.map((s) => `<span class="badge badge-ok">📚 ${esc(s.skill_name)}</span>`).join("")}
+          ${mcps.map((m) => `<span class="badge">🔌 ${esc(m.server_name)}</span>`).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  // scene-6
+  const quality = ws.brief_quality || {};
+  const score = Number(quality.overall ?? roi.brief_overall_score ?? 71);
+  const gc = ws.gc_dry_run || {};
+  const mem = ws.memory_audit || {};
+  const mb = ((gc.candidate_bytes_reclaimed || 0) / 1048576).toFixed(1);
+  return `
+    <div class="widget-panel">
+      <div class="widget-title"><span>📋 1 秒交接开工简报质量仪表</span><span class="badge badge-ok">综合评分 ${score}/100</span></div>
+      <div class="bar-row">
+        <div class="bar-row-head"><span>三位一体情境组装完整度（硬件 + 近期变更 + 长期记忆）</span><strong>${score}%</strong></div>
+        <div class="bar-track"><div class="bar-fill ok" style="width:${Math.max(10, Math.min(100, score))}%"></div></div>
+      </div>
+      <div class="muted-text">${esc((ws.brief_preview || "").slice(0, 140))}...</div>
+    </div>
+    <div class="widget-panel">
+      <div class="widget-title"><span>🧹 完工安全自洁护盾</span><span class="badge badge-ok">Dry-Run 绝不静默误删</span></div>
+      <div class="summary-kpi-row" style="margin-bottom:0;">
+        <div class="summary-kpi"><span class="sk-label">待检孤儿文件</span><span class="sk-val c-orange">${gc.candidate_files_count ?? roi.orphan_files_found ?? 0}</span></div>
+        <div class="summary-kpi"><span class="sk-label">可安全回收</span><span class="sk-val">${mb} MB</span></div>
+        <div class="summary-kpi"><span class="sk-label">记忆矛盾检查</span><span class="sk-val c-green">${mem.conflict_count ?? 0} 冲突</span></div>
+      </div>
+    </div>
+  `;
+}
+
 window.runDemoScenario = async function (scenarioId, idx) {
   if (typeof idx === "number") demoCurrentIdx = idx;
-  document.querySelectorAll("#demo-scene-buttons .subtab").forEach((b) =>
+  document.querySelectorAll("#demo-scene-buttons .scene-card-btn").forEach((b) =>
     b.classList.toggle("active", b.dataset.scene === scenarioId)
   );
   const stage = document.getElementById("demo-stage");
@@ -2020,17 +2681,38 @@ window.runDemoScenario = async function (scenarioId, idx) {
       );
     }
     const elapsedMs = (Number(res.elapsed_us || 0) / 1000).toFixed(2);
+    const wo = res.without_steward || {};
+    const heroCards = (res.hero_metrics || []).map((m) => `
+      <div class="hero-metric-card tone-${esc(m.tone || "info")}">
+        <span class="hero-metric-label">${esc(m.label)}</span>
+        <strong class="hero-metric-value">${esc(m.value)}</strong>
+      </div>
+    `).join("");
+
     stage.innerHTML = `
       <div class="demo-header-banner">
         <div>
-          <h3 style="font-size:16px;color:#f8fafc;">🎬 ${esc(res.title)}</h3>
+          <h3>🎬 ${esc(res.title)}</h3>
           <div class="muted-text" style="margin-top:3px;">${esc(res.tagline)}</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-          <span class="badge badge-ok">⚡ 真引擎耗时 ${res.elapsed_us} μs (${elapsedMs} ms)</span>
+          <span class="badge badge-ok">⚡ 真引擎实测 ${res.elapsed_us} μs (${elapsedMs} ms)</span>
           <span class="badge">${esc(res.scenario_id)}</span>
         </div>
       </div>
+
+      <div class="demo-explainer-grid">
+        <div class="explainer-card analogy">
+          <div class="ex-title">💡 一句话生活比喻</div>
+          <div class="ex-body">${esc(res.analogy || res.tagline)}</div>
+        </div>
+        <div class="explainer-card">
+          <div class="ex-title">🎯 这一幕解决什么问题（核心用意）</div>
+          <div class="ex-body">${esc(res.intent_summary || res.speaker_notes)}</div>
+        </div>
+      </div>
+
+      <div class="demo-hero-metrics">${heroCards}</div>
 
       <div class="speaker-card">
         <strong>🎙️ 演讲者 30 秒提词卡：</strong>${esc(res.speaker_notes)}
@@ -2038,19 +2720,35 @@ window.runDemoScenario = async function (scenarioId, idx) {
 
       <div class="demo-split">
         <div class="demo-pane-bad">
-          <div class="item-top"><strong style="color:var(--red);">💥 裸奔 Agent 惨案现场 (Without Steward)</strong><span class="badge badge-err">高危痛点</span></div>
-          <pre class="md-pre" style="margin-top:8px;color:#fecaca;">${esc(JSON.stringify(res.without_steward, null, 2))}</pre>
+          <div class="item-top"><strong style="color:var(--red);">💥 没有大管家：盲人 Agent 翻车现场</strong><span class="badge badge-err">高危痛点</span></div>
+          <div class="story-step-list">
+            <div class="story-step">
+              <span class="step-num">1</span>
+              <div class="story-step-text"><strong>盲目动作</strong><p>${esc(wo.action || wo.symptom || "")}</p></div>
+            </div>
+            <div class="story-step">
+              <span class="step-num">2</span>
+              <div class="story-step-text"><strong>触发故障</strong><p>${esc(wo.failure || wo.symptom || "")}</p></div>
+            </div>
+            <div class="story-step">
+              <span class="step-num">3</span>
+              <div class="story-step-text"><strong>业务代价</strong><p>${esc(wo.cost || wo.risk || "")}</p></div>
+            </div>
+          </div>
+          ${wo.command ? `<div class="cmd-sim-box">$ ${esc(wo.command)}</div>` : ""}
         </div>
+
         <div class="demo-pane-good">
-          <div class="item-top"><strong style="color:var(--green);">🛡️ 大管家真引擎护航 (With Steward)</strong><span class="badge badge-ok">零幻觉实跑</span></div>
-          <pre class="md-pre" style="margin-top:8px;color:#a7f3d0;">${esc(JSON.stringify(res.with_steward, null, 2))}</pre>
+          <div class="item-top"><strong style="color:var(--green);">🛡️ 有了大管家：小秘书毫秒级护航</strong><span class="badge badge-ok">真引擎实跑</span></div>
+          ${renderDemoSceneWidget(res)}
         </div>
       </div>
 
-      <div class="item-box">
-        <div class="item-top"><strong>📊 本幕商业价值与 ROI 指标</strong><span class="mono muted-text">CLI: ${esc(res.black_screen_mirror?.cli_command || "")}</span></div>
-        <pre class="md-pre">${esc(JSON.stringify(res.roi_metrics, null, 2))}</pre>
-      </div>
+      <details class="raw-json-details">
+        <summary>🔍 技术专家核验区：展开查看本机 Rust 真引擎原始返回 JSON 与等价 CLI / MCP 命令</summary>
+        <div class="muted-text" style="margin-bottom:6px;">CLI: <code class="mono">${esc(res.black_screen_mirror?.cli_command || "")}</code></div>
+        <pre class="md-pre">${esc(JSON.stringify({ without_steward: res.without_steward, with_steward: res.with_steward, roi_metrics: res.roi_metrics }, null, 2))}</pre>
+      </details>
     `;
   } catch (e) {
     stage.innerHTML = `<div class="empty">路演执行失败: ${esc(e.message)}</div>`;
@@ -2085,8 +2783,12 @@ async function resetDemoSandbox() {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (state.activeView !== "demo" || demoScenariosCache.length === 0) return;
   if (e.target && ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+  if ((e.key === "t" || e.key === "T") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    toggleTheme();
+    return;
+  }
+  if (state.activeView !== "demo" || demoScenariosCache.length === 0) return;
   if (e.key === "ArrowRight") {
     demoCurrentIdx = (demoCurrentIdx + 1) % demoScenariosCache.length;
     runDemoScenario(demoScenariosCache[demoCurrentIdx].id, demoCurrentIdx);

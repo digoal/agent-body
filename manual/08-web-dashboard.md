@@ -1,7 +1,7 @@
 # Agent Host Steward — 官方使用手册：第 8 章 Web UI 2.0 全景交互指挥舱
 
-> 版本: v0.3.2+ (Web UI 2.0)  
-> 技术架构: Tokio 异步内嵌 HTTP 引擎 · 原生 Canvas 力导向交互拓扑 · 5 大工作台 · 单二进制 100% 离线自包含 · 零外部 CDN
+> 版本: v0.3.4+ (Web UI 2.0)  
+> 技术架构: Tokio 异步内嵌 HTTP 引擎 · 原生 Canvas 力导向交互拓扑 · 6 大工作台 · 白天工程蓝图 / 夜间深空双主题 · 单二进制 100% 离线自包含 · 零外部 CDN
 
 ---
 
@@ -21,10 +21,15 @@
    - 内置交互式 **Context Budget Router 演练沙盒**，输入任务意图与 Token 预算即可实时预览 Top-K 召回清单与节省 Token 百分比。
 5. **📐 规约 · 记忆 · 变更审计与 Mesh (Governance & Mesh)**：
    - 集中展示 `steward_brief` 自适应简报组装、8 大放置规则推导与自演化、跨会话记忆（写入/RRF 混合检索/衰减与矛盾审计）、DuckDB 变更热力图/趋势/导出、宿主 GC/会话结清 `dry-run` 预览、Peer Mesh 联邦探活与 `39/39` 黑白屏同步矩阵。
-6. **🎬 路演演示剧场 (Roadshow Live Demo Theater · Phase 22)**：
-   - 顶部实时展示宿主机商业价值 ROI 账单（Context Token 节省率、工具/资产/图谱规模、39/39 对齐认证）；
-   - 支持 6 大黄金路演剧目（防扫爆、Pre-Hook 防撞、宏微爆炸半径、WFG 死锁、Context 防爆、完工自洁与简报）真实引擎对比实跑（Without Steward vs With Steward）、8 秒/幕自动巡航（`Space` 暂停 / `←→` 切幕）、演讲者大屏模式与一键无痕重置 `demo:*` 沙盒；
+6. **🎬 路演演示剧场 (Roadshow Live Demo Theater · Phase 22 / Phase 25 故事化升级)**：
+   - 顶部提供经济学「比较优势」总立意导览与宿主机商业价值 ROI 实时账单（Context Token 节省率、工具/资产/图谱规模、39/39 对齐认证）；
+   - 采用 **三层渐进式故事舞台**：第 1 层展示每幕「💡 一句话生活比喻 (`analogy`)」「🎯 核心用意 (`intent_summary`)」、3 张核心收益数字卡 (`hero_metrics`) 与演讲者 30 秒提词卡；第 2 层左右分屏对比「盲人 Agent 三步翻车故事线」vs「6 套真引擎驱动的专属可视化组件」（黑白名单过滤漏斗与武器库墙、Pre-Hook 1ms 红绿灯、3 跳蝴蝶效应因果链、双 Agent 死锁环路图、Token 99.9% 比例尺、简报评分与 Dry-Run 安全自洁盾）；第 3 层提供默认收起的 `<details>` 技术专家原始 JSON 核验抽屉；
+   - 支持 8 秒/幕自动巡航（`Space` 暂停 / `←→` 切幕）、演讲者大屏模式与一键无痕重置 `demo:*` 沙盒；
    - 左侧内置 `/deck`（[steward-deck.html](../steward-deck.html)）与 `/presentation`（[presentation.html](../presentation.html)）离线 PPT 直达入口，页脚内置全局「⌨️ 黑屏命令镜像器」实时回显等价 CLI 与 MCP JSON-RPC。
+7. **☀️ 白天工程蓝图 / 🌙 夜间深空双色调切换 (Phase 25)**：
+   - 顶栏右侧提供 `#btn-theme-toggle` 一键昼夜主题切换（非输入焦点时可按快捷键 **`T`** 瞬间切换，状态自动持久化至 `localStorage`）；
+   - **白天模式**采用暖纸工程蓝图色系（`#F7F6F2` 暖纸底 + `#245A6B` 深靛青 + `#BE653B` 陶橙 + `#2F7A66` 青绿），**夜间模式**采用深空指挥舱高对比暗色系；切换瞬间 Canvas 拓扑图节点标签、连边与选中外环自动同步重绘；
+   - 端口防撞、Pre-Hook、放置推导、DuckDB 热力图与趋势、宿主 GC 等交互结果默认展示可视化摘要卡片与进度条，原始 JSON 收纳在可折叠 `<details>` 抽屉中。
 
 ---
 

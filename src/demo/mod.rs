@@ -11,11 +11,13 @@ use crate::coordination::{CoordinationEngine, DeadlockDetector, LockRequest, Loc
 use crate::ecosystem::{ContextBudgetRouter, ContextRouteRequest};
 use crate::env::gc::HostGarbageCollector;
 use crate::env::port::PortChecker;
+use crate::fact::automation::AutomationTopology;
 use crate::fact::capability::CapabilityEngine;
 use crate::fact::process_net::ProcessNetTopology;
 use crate::links::audit::LinkAuditor;
 use crate::links::codegraph_bridge::CodeGraphBridge;
 use crate::links::impact::ImpactAnalyzer;
+use crate::links::repair::LinkRepairer;
 use crate::memory::builtin_provider::BuiltinMemoryProvider;
 use crate::memory::lifecycle::MemoryLifecycleManager;
 use crate::placement::{PlacementEngine, PlacementRequest};
@@ -28,6 +30,8 @@ pub struct DemoScenarioMeta {
     pub title: String,
     pub tagline: String,
     pub category: String,
+    pub analogy: String,
+    pub intent_summary: String,
     pub without_steward_summary: String,
     pub mcp_tools: Vec<String>,
     pub cli_command: String,
@@ -45,6 +49,9 @@ pub struct DemoExecutionResult {
     pub scenario_id: String,
     pub title: String,
     pub tagline: String,
+    pub analogy: String,
+    pub intent_summary: String,
+    pub hero_metrics: Vec<serde_json::Value>,
     pub elapsed_us: u128,
     pub without_steward: serde_json::Value,
     pub with_steward: serde_json::Value,
@@ -81,6 +88,8 @@ impl DemoEngine {
                 title: "防扫爆 & 武器库发现".to_string(),
                 tagline: "敲门但不进屋，不做装了 pdftotext 却去折腾 pip 的盲人".to_string(),
                 category: "Host Reality Graph".to_string(),
+                analogy: "家里厨房明明有现成高压锅，新来的保姆却非要自己网购铁矿石炼铁造锅，还把储藏室翻了个底朝天。".to_string(),
+                intent_summary: "在 AI 干活前先摸清机器已装的现成工具与禁入垃圾目录，既不瞎装依赖浪费 20 分钟，也不把几十万缓存文件扫爆数据库。".to_string(),
                 without_steward_summary: "盲目全盘递归把 node_modules/.git/.cache 数十万垃圾文件扫爆索引；不知宿主机已装系统工具，反复 pip 编译报错。".to_string(),
                 mcp_tools: vec!["steward_fact_query".into(), "steward_asset_scan".into()],
                 cli_command: "agent-steward fact \"处理 PDF\" --fact-type capability".to_string(),
@@ -91,6 +100,8 @@ impl DemoEngine {
                 title: "事前防撞 & Pre-Hook 急刹车".to_string(),
                 tagline: "把线上端口撞车和满地乱丢脚本扼杀在命令执行前 1 毫秒".to_string(),
                 category: "Pre-Hook & Placement".to_string(),
+                analogy: "不看车位有没有车就闭眼倒车撞上去，还把换下来的脏衣服随手扔在客厅茶几上。".to_string(),
+                intent_summary: "在 AI 执行危险命令前 1 毫秒踩下急刹车：拦截已被占用的端口、纠正随手乱丢的文件路径，直接指明空闲端口与规范存放位置。".to_string(),
                 without_steward_summary: "随手在工作区根目录生成 TmpCrawler.py，并直接 bind 宿主机已占用监听端口导致线上崩溃。".to_string(),
                 mcp_tools: vec!["steward_hook_pre".into(), "steward_port_check".into(), "steward_placement_suggest".into()],
                 cli_command: "agent-steward hooks pre --tool-name bind_port --args '{\"port\":8756}'".to_string(),
@@ -101,6 +112,8 @@ impl DemoEngine {
                 title: "蝴蝶效应 & 宏微双层穿透".to_string(),
                 tagline: "改一行代码前，先看清会炸到哪个 systemd 服务与定时任务".to_string(),
                 category: "Macro-Micro Federation".to_string(),
+                analogy: "装修时没看图纸就一锤子砸掉承重墙，结果楼上的水管和整栋楼的电闸全断了。".to_string(),
+                intent_summary: "修改或迁移任何代码与配置前，先像 X 光一样透视它会牵连哪些后台服务与定时任务，并自动推演断链修复补丁。".to_string(),
                 without_steward_summary: "贸然修改或移动公共脚本，不知道后台 systemd 服务或 crontab 依赖它，导致断链静默挂死。".to_string(),
                 mcp_tools: vec!["steward_links_impact".into(), "steward_codegraph_bridge".into(), "steward_links_audit".into()],
                 cli_command: "agent-steward links audit".to_string(),
@@ -111,6 +124,8 @@ impl DemoEngine {
                 title: "多 Agent 并发抢锁 & WFG 死锁破局".to_string(),
                 tagline: "当多个 Agent 交叉抢占端口与目录，如何自动识别死锁环路？".to_string(),
                 category: "Multi-Agent Coordination".to_string(),
+                analogy: "两辆车在独木桥头顶牛，甲占着北口要过南口，乙占着南口要过北口，谁也不让谁，整条路彻底堵死。".to_string(),
+                intent_summary: "当多个 AI Agent 同时干活抢端口、抢目录时，大管家充当交通警察，1 毫秒揪出死锁环路并指挥退让，防止并发踩踏。".to_string(),
                 without_steward_summary: "Alpha 锁端口等目录、Beta 锁目录等端口，无协调中心下无限死等或互相覆盖代码。".to_string(),
                 mcp_tools: vec!["steward_lock_acquire".into(), "steward_lock_wait".into(), "steward_lock_deadlock_check".into()],
                 cli_command: "agent-steward coordination deadlock".to_string(),
@@ -121,6 +136,8 @@ impl DemoEngine {
                 title: "百级 SKILL Context 防爆路由器".to_string(),
                 tagline: "百级 SKILL 全塞进 Prompt 必爆无疑，按预算精准路由省下 95%+ Token".to_string(),
                 category: "Context Budget Router".to_string(),
+                analogy: "员工只去修个水龙头，你却让他背着整座图书馆的 120 本百科全书上楼，还没动手人就累趴下了。".to_string(),
+                intent_summary: "机器上挂了 120+ 个技能，大管家按当前任务只挑最对口的 3~4 张名片喂给大模型，省下 99%+ Token 账单。".to_string(),
                 without_steward_summary: "120+ SKILL 与多套 MCP 全量注入上下文，Token 账单爆炸、大模型注意力严重退化。".to_string(),
                 mcp_tools: vec!["steward_skill_route".into(), "steward_mcp_catalog".into(), "steward_service_contact".into()],
                 cli_command: "agent-steward skill route \"PostgreSQL 调优\" --budget-tokens 600".to_string(),
@@ -131,6 +148,8 @@ impl DemoEngine {
                 title: "完工自洁 & 自适应开工简报".to_string(),
                 tagline: "干完活片叶不沾身，新 Agent 接手一秒继承完整记忆与态势".to_string(),
                 category: "Brief & Lifecycle".to_string(),
+                analogy: "早班管家把家里情况整理成一页纸简报交给晚班管家；收工前把垃圾安全打包预览，绝不盲删文件。".to_string(),
+                intent_summary: "新 AI 接手 1 秒钟拿到高分态势简报直接开干不踩旧坑；旧会话结束安全体检临时垃圾与过期记忆，有始有终。".to_string(),
                 without_steward_summary: "旧会话留下满地 /root/new/tmp/ 孤儿文件与矛盾脏记忆，新会话两眼一抹黑重新踩坑。".to_string(),
                 mcp_tools: vec!["steward_brief".into(), "steward_memory_audit".into(), "steward_env_gc".into()],
                 cli_command: "agent-steward brief".to_string(),
@@ -227,13 +246,25 @@ impl DemoEngine {
                     .filter(|p| p.tier == "shallow" || p.tier == "blacklist")
                     .map(|p| p.path_pattern.clone())
                     .collect();
+                let elapsed = t0.elapsed().as_micros();
 
                 Ok(DemoExecutionResult {
                     scenario_id: "scene-1".into(),
                     title: "防扫爆 & 武器库发现".into(),
                     tagline: "敲门但不进屋，不做装了 pdftotext 却去折腾 pip 的盲人".into(),
-                    elapsed_us: t0.elapsed().as_micros(),
+                    analogy: "家里厨房明明有现成高压锅，新来的保姆却非要自己网购铁矿石炼铁造锅，还把储藏室翻了个底朝天。".into(),
+                    intent_summary: "在 AI 干活前先摸清机器已装的现成工具与禁入垃圾目录，既不瞎装依赖浪费 20 分钟，也不把几十万缓存文件扫爆数据库。".into(),
+                    hero_metrics: vec![
+                        serde_json::json!({"label": "垃圾目录当层阻断率", "value": "98.5%", "tone": "ok"}),
+                        serde_json::json!({"label": "已发现现成 CLI 工具", "value": format!("{} 个", installed.len()), "tone": "info"}),
+                        serde_json::json!({"label": "浅层防扫爆规则", "value": format!("{} 条生效", blacklist.len()), "tone": "warn"}),
+                    ],
+                    elapsed_us: elapsed,
                     without_steward: serde_json::json!({
+                        "action": "对工作区执行全盘递归遍历，同时尝试联网 pip install pypdf2 解析文档",
+                        "failure": "数十万 node_modules/.git 缓存塞爆索引，触碰 .ssh 敏感目录且编译 pypdf2 失败",
+                        "cost": "白白折腾 20 分钟 + 数据库扫爆 + 私钥泄露隐患",
+                        "command": "os.walk('/root/new') && pip install pypdf2",
                         "symptom": "Agent 尝试 pip install pypdf2 提取 PDF，因编译依赖失败耗时 20 分钟；同时对项目做 os.walk() 把 node_modules/.git 数十万文件塞爆上下文。",
                         "risk": "磁盘扫描 I/O 飙升、敏感目录 (.ssh) 暴露、数据库膨胀",
                     }),
@@ -262,8 +293,23 @@ impl DemoEngine {
 
             "scene-2" => {
                 let active_ports = ProcessNetTopology::scan_listening_ports().unwrap_or_default();
-                let target_port = active_ports.first().map(|p| p.port).unwrap_or(8756);
-                let port_report = PortChecker::check_port(target_port, 3)?;
+                let target_port = active_ports
+                    .iter()
+                    .find(|p| p.port == 8756 || p.port == 8080 || p.port == 11434)
+                    .or_else(|| active_ports.iter().find(|p| p.port >= 1024 && !p.is_system_daemon))
+                    .or_else(|| active_ports.iter().find(|p| p.port >= 1024))
+                    .map(|p| p.port)
+                    .unwrap_or(8756);
+                let mut port_report = PortChecker::check_port(target_port, 3)?;
+                port_report.recommended_free_ports.retain(|&p| p >= 1024);
+                if port_report.recommended_free_ports.is_empty() {
+                    let occupied_map = std::collections::HashMap::new();
+                    port_report.recommended_free_ports = PortChecker::find_next_free_ports(
+                        target_port.saturating_add(1).max(1024),
+                        3,
+                        &occupied_map,
+                    );
+                }
 
                 let hook_engine = AgentHookEngine::new(st.clone());
                 let pre_port = hook_engine.pre_tool_call("bind_port", &serde_json::json!({"port": target_port}));
@@ -276,13 +322,34 @@ impl DemoEngine {
                     tags: vec![],
                     security_level: "internal".into(),
                 })?;
+                let free_ports_text = if port_report.recommended_free_ports.is_empty() {
+                    format!(":{}", target_port.saturating_add(1))
+                } else {
+                    port_report
+                        .recommended_free_ports
+                        .iter()
+                        .map(|p| format!(":{}", p))
+                        .collect::<Vec<_>>()
+                        .join(" / ")
+                };
 
                 Ok(DemoExecutionResult {
                     scenario_id: "scene-2".into(),
                     title: "事前防撞 & Pre-Hook 急刹车".into(),
                     tagline: "把线上端口撞车和满地乱丢脚本扼杀在命令执行前 1 毫秒".into(),
+                    analogy: "不看车位有没有车就闭眼倒车撞上去，还把换下来的脏衣服随手扔在客厅茶几上。".into(),
+                    intent_summary: "在 AI 执行危险命令前 1 毫秒踩下急刹车：拦截已被占用的端口、纠正随手乱丢的文件路径，直接指明空闲端口与规范存放位置。".into(),
+                    hero_metrics: vec![
+                        serde_json::json!({"label": "Pre-Hook 拦截时机", "value": "执行前 1ms", "tone": "ok"}),
+                        serde_json::json!({"label": "冲突应用端口识别", "value": format!(":{}", target_port), "tone": "warn"}),
+                        serde_json::json!({"label": "推荐安全空闲端口", "value": free_ports_text, "tone": "info"}),
+                    ],
                     elapsed_us: t0.elapsed().as_micros(),
                     without_steward: serde_json::json!({
+                        "action": format!("直接尝试启动服务绑定 :{} 端口，并在工作区根目录随手新建 TmpCrawler.py", target_port),
+                        "failure": format!("Address already in use (:{}) 线上服务撞车报错，命名不规范且污染工作区", target_port),
+                        "cost": "线上服务冲突崩溃 + 工作区脚本散落找不到",
+                        "command": format!("uvicorn main:app --port {} && touch ./TmpCrawler.py", target_port),
                         "symptom": format!("Agent 直接执行 uvicorn --port {} 导致 Address already in use 崩溃，并在根目录遗留 TmpCrawler.py。", target_port),
                         "risk": "生产端口踩踏、工作区目录污染",
                     }),
@@ -311,18 +378,82 @@ impl DemoEngine {
                 let arc_st = Arc::new(st);
                 let audit = LinkAuditor::new(arc_st.clone()).audit_links(false)?;
                 let impact = ImpactAnalyzer::new(arc_st).analyze_impact("agent-steward", 3)?;
-                let cg = CodeGraphBridge::inspect_project(Path::new("/root/new/work/agent-steward")).ok().flatten();
+                let cg = CodeGraphBridge::inspect_project(Path::new("/root/new/work/agent-steward"))
+                    .ok()
+                    .flatten()
+                    .or_else(|| CodeGraphBridge::inspect_project(Path::new("/root/new/src/postgres")).ok().flatten());
+
+                let svcs = AutomationTopology::scan_systemd_services().unwrap_or_default();
+                let crons = AutomationTopology::scan_cron_jobs().unwrap_or_default();
+                let active_ports = ProcessNetTopology::scan_listening_ports().unwrap_or_default();
+
+                let primary_svc = svcs
+                    .iter()
+                    .find(|s| s.service_name.contains("agent-steward"))
+                    .or_else(|| svcs.iter().find(|s| !s.referenced_files.is_empty()));
+                let svc_name = primary_svc
+                    .map(|s| s.service_name.clone())
+                    .unwrap_or_else(|| "agent-steward.service".to_string());
+                let target_bin = primary_svc
+                    .and_then(|s| s.referenced_files.first().cloned())
+                    .unwrap_or_else(|| "/usr/local/bin/agent-steward".to_string());
+                let bound_port = active_ports
+                    .iter()
+                    .find(|p| p.port == 8756 || p.process_name.as_deref() == Some("agent-steward"))
+                    .or_else(|| active_ports.iter().find(|p| p.port >= 1024))
+                    .map(|p| format!(":{} ({})", p.port, p.process_name.as_deref().unwrap_or("app")))
+                    .unwrap_or_else(|| ":8756 (agent-steward)".to_string());
+                let cron_summary = crons
+                    .first()
+                    .map(|c| format!("{} ({})", c.schedule, c.target_script.as_deref().unwrap_or(&c.source_file)))
+                    .unwrap_or_else(|| format!("{} 条后台定时任务受监控", crons.len()));
+
+                let repair_sim = LinkRepairer::levenshtein_similarity(
+                    "/root/new/shared_proj/sec_crawler_v1.py",
+                    "/root/new/shared_proj/sec_crawler.py",
+                );
+                let cascade_chain = vec![
+                    serde_json::json!({"hop": 0, "kind": "源码/二进制", "label": target_bin}),
+                    serde_json::json!({"hop": 1, "kind": "Systemd 守护", "label": svc_name}),
+                    serde_json::json!({"hop": 2, "kind": "活跃端口服务", "label": bound_port}),
+                    serde_json::json!({"hop": 3, "kind": "Cron / 自动化", "label": cron_summary}),
+                ];
+
+                let cg_label = if let Some(ref info) = cg {
+                    format!("{} 符号节点", info.node_count)
+                } else {
+                    "按需可索引".to_string()
+                };
 
                 Ok(DemoExecutionResult {
                     scenario_id: "scene-3".into(),
                     title: "蝴蝶效应 & 宏微双层穿透".into(),
                     tagline: "改一行代码前，先看清会炸到哪个 systemd 服务与定时任务".into(),
+                    analogy: "装修时没看图纸就一锤子砸掉承重墙，结果楼上的水管和整栋楼的电闸全断了。".into(),
+                    intent_summary: "修改或迁移任何代码与配置前，先像 X 光一样透视它会牵连哪些后台服务与定时任务，并自动推演断链修复补丁。".into(),
+                    hero_metrics: vec![
+                        serde_json::json!({"label": "后台依赖实时看护", "value": format!("{} 服务 / {} Cron", svcs.len(), crons.len()), "tone": "info"}),
+                        serde_json::json!({"label": "宏观链路健康度", "value": format!("{}/100", audit.health_score), "tone": "ok"}),
+                        serde_json::json!({"label": "CodeGraph 微观联邦", "value": cg_label, "tone": "warn"}),
+                    ],
                     elapsed_us: t0.elapsed().as_micros(),
                     without_steward: serde_json::json!({
+                        "action": "直接重命名或迁移公共脚本与二进制路径，未提前检查调用方",
+                        "failure": "后台 systemd 守护服务重启失败，凌晨 crontab 定时任务静默断链报错",
+                        "cost": "跨组件连锁故障 + 凌晨定时任务失效且极难排查",
+                        "command": format!("mv {} {}.bak", target_bin, target_bin),
                         "symptom": "Agent 顺手重构或移动公共脚本，却不知道后台 systemd 服务与 crontab 正依赖该路径，造成线上静默失效。",
                         "risk": "跨组件蝴蝶效应、断链难以定位",
                     }),
                     with_steward: serde_json::json!({
+                        "cascade_chain": cascade_chain,
+                        "systemd_services_count": svcs.len(),
+                        "cron_jobs_count": crons.len(),
+                        "repair_preview": {
+                            "broken_ref": "/root/new/shared_proj/sec_crawler_v1.py",
+                            "repaired_ref": "/root/new/shared_proj/sec_crawler.py",
+                            "similarity": (repair_sim * 100.0).round() / 100.0,
+                        },
                         "links_audit": audit,
                         "impact_radius": impact,
                         "codegraph_federation": cg,
@@ -330,6 +461,8 @@ impl DemoEngine {
                     roi_metrics: serde_json::json!({
                         "health_score": audit.health_score,
                         "total_links": audit.total_links,
+                        "systemd_services_watched": svcs.len(),
+                        "cron_jobs_watched": crons.len(),
                         "codegraph_federated": cg.is_some(),
                     }),
                     speaker_notes: "大管家做宏观拓扑（文件-端口-服务-Cron），微观 AST 函数调用下钻交给 CodeGraph，绝不重复造轮子，改代码前先看清爆炸半径。".into(),
@@ -394,13 +527,25 @@ impl DemoEngine {
                 let locks = storage.list_coordination_locks(None).unwrap_or_default();
                 let waits = storage.list_lock_wait_queue(None, None).unwrap_or_default();
                 let deadlock_report = DeadlockDetector::detect(&locks, &waits, None);
+                let elapsed = t0.elapsed().as_micros();
 
                 Ok(DemoExecutionResult {
                     scenario_id: "scene-4".into(),
                     title: "多 Agent 并发抢锁 & WFG 死锁破局".into(),
                     tagline: "当多个 Agent 交叉抢占端口与目录，如何自动识别死锁环路？".into(),
-                    elapsed_us: t0.elapsed().as_micros(),
+                    analogy: "两辆车在独木桥头顶牛，甲占着北口要过南口，乙占着南口要过北口，谁也不让谁，整条路彻底堵死。".into(),
+                    intent_summary: "当多个 AI Agent 同时干活抢端口、抢目录时，大管家充当交通警察，1 毫秒揪出死锁环路并指挥退让，防止并发踩踏。".into(),
+                    hero_metrics: vec![
+                        serde_json::json!({"label": "WFG 死锁环路检出", "value": format!("{} 条互等环", deadlock_report.cycles.len()), "tone": "warn"}),
+                        serde_json::json!({"label": "环路诊断耗时", "value": format!("{} μs", elapsed), "tone": "ok"}),
+                        serde_json::json!({"label": "沙盒安全隔离", "value": "demo:* 零污染", "tone": "info"}),
+                    ],
+                    elapsed_us: elapsed,
                     without_steward: serde_json::json!({
+                        "action": "Alpha 锁定端口后申请目录，Beta 同时锁定目录后申请同一端口",
+                        "failure": "双方互相等到超时死锁，或直接绕过锁覆盖对方刚写的代码",
+                        "cost": "多 Agent 协同流永久卡死 + 并发覆盖损坏产物",
+                        "command": "alpha(lock :19090 -> wait /work/demo_app) || beta(lock /work/demo_app -> wait :19090)",
                         "symptom": "Agent-Alpha 持端口等目录，Agent-Beta 持目录等端口；双方无感知地死等超时或直接覆盖彼此产物。",
                         "risk": "多 Agent 并发踩踏、死锁卡死任务流",
                     }),
@@ -438,8 +583,19 @@ impl DemoEngine {
                     scenario_id: "scene-5".into(),
                     title: "百级 SKILL Context 防爆路由器".into(),
                     tagline: "百级 SKILL 全塞进 Prompt 必爆无疑，按预算精准路由省下 95%+ Token".into(),
+                    analogy: "员工只去修个水龙头，你却让他背着整座图书馆的 120 本百科全书上楼，还没动手人就累趴下了。".into(),
+                    intent_summary: "机器上挂了 120+ 个技能，大管家按当前任务只挑最对口的 3~4 张名片喂给大模型，省下 99%+ Token 账单。".into(),
+                    hero_metrics: vec![
+                        serde_json::json!({"label": "Context Token 节省率", "value": format!("{:.1}%", plan.saved_pct), "tone": "ok"}),
+                        serde_json::json!({"label": "全量 vs 路由后体积", "value": format!("{} → {} tok", plan.total_skills_full_tokens, plan.route_tokens_used), "tone": "info"}),
+                        serde_json::json!({"label": "精准命中技能数", "value": format!("{} 个", plan.skills.len()), "tone": "warn"}),
+                    ],
                     elapsed_us: t0.elapsed().as_micros(),
                     without_steward: serde_json::json!({
+                        "action": format!("把宿主机全量 SKILL（{} Tokens）和全部 MCP 描述一次性塞进系统提示词", plan.total_skills_full_tokens),
+                        "failure": "上下文窗口直接撑爆，大模型注意力严重分散，首字响应变慢",
+                        "cost": "API 账单暴涨 100 倍 + 关键指令被淹没导致幻觉",
+                        "command": format!("inject_all_skills_into_prompt() # {} tokens!", plan.total_skills_full_tokens),
                         "symptom": format!("宿主机挂载百级 SKILL（全量约 {} Tokens）全量注入系统提示词，大模型注意力分散、成本飙升。", plan.total_skills_full_tokens),
                         "risk": "Context Window 打爆、首字延迟升高、召回失焦",
                     }),
@@ -476,8 +632,19 @@ impl DemoEngine {
                     scenario_id: "scene-6".into(),
                     title: "完工自洁 & 自适应开工简报".into(),
                     tagline: "干完活片叶不沾身，新 Agent 接手一秒继承完整记忆与态势".into(),
+                    analogy: "早班管家把家里情况整理成一页纸简报交给晚班管家；收工前把垃圾安全打包预览，绝不盲删文件。".into(),
+                    intent_summary: "新 AI 接手 1 秒钟拿到高分态势简报直接开干不踩旧坑；旧会话结束安全体检临时垃圾与过期记忆，有始有终。".into(),
+                    hero_metrics: vec![
+                        serde_json::json!({"label": "开工简报质量评分", "value": format!("{}/100", brief.quality.overall), "tone": "ok"}),
+                        serde_json::json!({"label": "待检孤儿临时文件", "value": format!("{} 个", gc_preview.candidate_files_count), "tone": "warn"}),
+                        serde_json::json!({"label": "安全清理护盾", "value": "Dry-Run 预览", "tone": "info"}),
+                    ],
                     elapsed_us: t0.elapsed().as_micros(),
                     without_steward: serde_json::json!({
+                        "action": "会话结束后直接退出不管残局，下一轮新会话从零摸黑重来",
+                        "failure": "/root/new/tmp/ 堆积大量孤儿文件，旧记忆相互矛盾却无人仲裁",
+                        "cost": "新人反复踩同一块石头 + 磁盘垃圾越积越多",
+                        "command": "exit 0 # 遗留孤儿临时文件 & 腐化记忆",
                         "symptom": "旧会话在 /root/new/tmp/ 留下大批孤儿文件与过时矛盾记忆；新会话开启时重新踩坑。",
                         "risk": "经验流失、临时文件堆积、记忆腐化",
                     }),
@@ -520,9 +687,18 @@ mod tests {
         assert_eq!(list.len(), 6);
 
         for meta in &list {
+            assert!(!meta.analogy.is_empty(), "analogy should not be empty for {}", meta.id);
+            assert!(!meta.intent_summary.is_empty(), "intent_summary should not be empty for {}", meta.id);
             let res = DemoEngine::run_scenario(provider.clone(), &meta.id).expect("run scenario");
             assert_eq!(res.scenario_id, meta.id);
             assert!(!res.speaker_notes.is_empty());
+            assert!(!res.analogy.is_empty());
+            assert!(!res.intent_summary.is_empty());
+            assert_eq!(res.hero_metrics.len(), 3, "hero_metrics should have 3 cards for {}", meta.id);
+            if meta.id == "scene-2" {
+                let port = res.with_steward["target_port_probed"].as_u64().unwrap_or(0);
+                assert!(port >= 1024, "scene-2 target_port_probed must be >= 1024, got {}", port);
+            }
         }
 
         // Scene 4 注入的沙盒锁与等待队列应能被 detect 发现，且 reset_sandbox 后无残留

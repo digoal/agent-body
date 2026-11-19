@@ -1,9 +1,9 @@
 # Agent Host Steward (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-19T09:55:00+08:00  
+> 最新更新: 2026-11-19T13:50:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: Phase 1~23 全部完成，39 个原生 MCP 工具（黑白屏 100% 同步），三层元数据 Key 体系与 Ollama 小模型双轨标注引擎已上线，全量测试 194 passed (0 failed, 1 ignored)
+> 当前状态: Phase 1~25 全部完成，39 个原生 MCP 工具（黑白屏 100% 同步），Web UI 2.0 昼夜双主题与三层故事化路演剧场已上线，全量测试 194 passed (0 failed, 1 ignored)
 
 ---
 
@@ -104,6 +104,8 @@
 | **Phase 21** | 黑白屏全能力双向同步与全景工作台升级（补齐 21 项缺失+7 项残缺白屏 API/UI + 黑屏命令镜像器 + 100% Parity 矩阵） | 待探讨 ISSUE #6 / 规约 #13 #16 | ✅ **已完成** | 2026-11-19 09:34 |
 | **Phase 22** | Web 路演演示剧场与产品营销互动引擎（6 大黄金剧目真引擎沙盒推演 + 左右分屏 + ROI 看板 + 第 39 工具 `steward_demo_scenario`） | 待探讨 ISSUE #7 & #6 / 规约 #5 #17 | ✅ **已完成** | 2026-11-19 09:55 |
 | **Phase 23** | 分层语义元数据 Key 体系与本地 Ollama 小模型双轨自动标注（L1 确定性提取 + L2 `qwen3.5:0.8b` 脱敏精炼 + 三级渐进披露 + 防覆写合并） | 待探讨 ISSUE #8 / 规约 #9 #10 #16 | ✅ **已完成** | 2026-11-19 12:00 |
+| **Phase 24** | 「比较优势」思想源起补完与双 HTML 演说「地层剖面 / 工程蓝图」重构 + Playwright 渲染自检 | 待探讨 ISSUE #9 & #10 | ✅ **已完成** | 2026-11-19 13:05 |
+| **Phase 25** | Web UI 美化（白天工程蓝图 / 夜间深空双主题切换 + 面板去裸 JSON）与「路演演示剧场」三层故事化重构 | 待探讨 ISSUE #11 & #12 | ✅ **已完成** | 2026-11-19 13:50 |
 
 > 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md) 与 [progress-phase21.md](progress-phase21.md)
 
