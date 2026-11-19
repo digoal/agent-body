@@ -224,7 +224,8 @@ mod tests {
 
         assert_eq!(v["id"], "req-2");
         let tools = v["result"]["tools"].as_array().expect("tools array");
-        assert_eq!(tools.len(), 38, "必须注册全部 38 个原生 MCP 工具");
+        assert_eq!(tools.len(), 39, "必须注册全部 39 个原生 MCP 工具");
+        assert!(tools.iter().any(|t| t["name"] == "steward_demo_scenario"));
         assert!(tools.iter().any(|t| t["name"] == "steward_mesh_query"));
         assert!(tools.iter().any(|t| t["name"] == "steward_lock_wait"));
         assert!(tools.iter().any(|t| t["name"] == "steward_lock_deadlock_check"));

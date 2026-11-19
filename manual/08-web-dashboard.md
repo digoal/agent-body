@@ -20,7 +20,11 @@
    - 浏览已纳管的 MCP Server、120+ SKILL 目录与脱敏后的外部服务通讯录；
    - 内置交互式 **Context Budget Router 演练沙盒**，输入任务意图与 Token 预算即可实时预览 Top-K 召回清单与节省 Token 百分比。
 5. **📐 规约 · 记忆 · 变更审计与 Mesh (Governance & Mesh)**：
-   - 集中展示 8 大资产放置规则、跨会话长期记忆（支持 FTS 搜索）、最近文件系统变更审计流、Preflight 运行依赖预检报告与 Peer Mesh 节点状态。
+   - 集中展示 `steward_brief` 自适应简报组装、8 大放置规则推导与自演化、跨会话记忆（写入/RRF 混合检索/衰减与矛盾审计）、DuckDB 变更热力图/趋势/导出、宿主 GC/会话结清 `dry-run` 预览、Peer Mesh 联邦探活与 `39/39` 黑白屏同步矩阵。
+6. **🎬 路演演示剧场 (Roadshow Live Demo Theater · Phase 22)**：
+   - 顶部实时展示宿主机商业价值 ROI 账单（Context Token 节省率、工具/资产/图谱规模、39/39 对齐认证）；
+   - 支持 6 大黄金路演剧目（防扫爆、Pre-Hook 防撞、宏微爆炸半径、WFG 死锁、Context 防爆、完工自洁与简报）真实引擎对比实跑（Without Steward vs With Steward）、8 秒/幕自动巡航（`Space` 暂停 / `←→` 切幕）、演讲者大屏模式与一键无痕重置 `demo:*` 沙盒；
+   - 左侧内置 `/deck`（[steward-deck.html](../steward-deck.html)）与 `/presentation`（[presentation.html](../presentation.html)）离线 PPT 直达入口，页脚内置全局「⌨️ 黑屏命令镜像器」实时回显等价 CLI 与 MCP JSON-RPC。
 
 ---
 
@@ -64,4 +68,8 @@ port = 8756
 | `GET` | `/api/v1/ecosystem/route?intent=<q>&budget=600` | Context 防爆路由器演练与 Token 节省估算 | 开放 |
 | `GET` | `/api/v1/governance?q=<kw>` | 放置规则、扫描策略、长期记忆、变更审计流与 Preflight 预检 | 开放 |
 | `GET` | `/api/v1/mesh/status` | 本机跨平台探针与 Peer Mesh 节点配置状态 | 开放 |
+| `GET` | `/api/v1/parity/matrix` | 黑白屏 39 工具 100% 映射对齐自检矩阵 | 开放 |
+| `GET` | `/api/v1/demo/scenarios` / `roi` | 6 大路演剧目列表与实时 ROI 商业价值核算 | 开放 |
+| `POST` | `/api/v1/demo/run` / `reset` | 真引擎实跑指定路演剧目与一键重置 `demo:*` 沙盒 | 开放 |
+| `GET` | `/deck` / `/presentation` | 内嵌离线版路演与架构演示 PPT | 开放 |
 | `GET` | `/api/v1/stream` | Server-Sent Events (SSE) 实时事件推流 | 开放 |

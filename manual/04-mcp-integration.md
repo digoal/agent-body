@@ -17,7 +17,7 @@ sequenceDiagram
     Agent->>Steward: JSON-RPC "initialize"
     Steward-->>Agent: capabilities (tools: true), serverInfo
     Agent->>Steward: JSON-RPC "tools/list"
-    Steward-->>Agent: 返回 38 个原生工具列表与 JSON Schema
+    Steward-->>Agent: 返回 39 个原生工具列表与 JSON Schema
     Agent->>Steward: JSON-RPC "tools/call" (steward_brief)
     Steward->>SQLite: 聚合查询环境与记忆
     Steward-->>Agent: 返回结果内容文本
@@ -53,9 +53,9 @@ sequenceDiagram
 
 ---
 
-## 3. 38 个原生 MCP 工具标准字典
+## 3. 39 个原生 MCP 工具标准字典
 
-大管家向 Agent 暴露 38 个原子级认知与管控工具：
+大管家向 Agent 暴露 39 个原子级认知与管控工具：
 
 | MCP 工具名 | 核心功能 | 核心参数说明 |
 |---|---|---|
@@ -97,6 +97,7 @@ sequenceDiagram
 | `steward_lock_wait` | 排队等待获取协作锁，支持超时与主动唤醒（含死锁拦截） | `resource_type`, `resource_id`, `holder_agent`, `timeout_secs` |
 | `steward_lock_deadlock_check` | 运行 Wait-For Graph (WFG) 环路检测，诊断多 Agent 死锁 | `agent` |
 | `steward_mesh_query` | 多机轻量 HTTP Peer Mesh 联邦查询与跨节点端口/锁协同 | `action`, `port`, `peer` |
+| `steward_demo_scenario` | Web 路演与黑屏同源场景演示引擎（6 大剧目、ROI、Parity、沙盒重置） | `action`, `scenario_id` |
 
 ---
 

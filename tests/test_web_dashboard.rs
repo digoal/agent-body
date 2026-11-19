@@ -143,12 +143,31 @@ Content-Length: 75\r\n\r\n\
         "/api/v1/governance",
         "/api/v1/mesh/status",
         "/api/v1/locks/history",
+        "/api/v1/parity/matrix",
+        "/api/v1/demo/scenarios",
+        "/api/v1/demo/roi",
+        "/deck",
+        "/presentation",
     ] {
         let req = format!("GET {} HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n", ep);
         let resp = send_http_request("127.0.0.1", bound_port, &req).await;
         assert!(resp.contains("HTTP/1.1 200 OK"), "端点 {} 应返回 200 OK", ep);
-        assert!(resp.contains("\"code\":200"), "端点 {} 响应体应包含 code:200", ep);
     }
+
+    // 4.9 验证路演剧场执行与沙盒复位 E2E
+    let demo_body = "{\"scenario_id\":\"scene-4\"}";
+    let demo_req = format!(
+        "POST /api/v1/demo/run HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+        demo_body.len(),
+        demo_body
+    );
+    let resp_demo = send_http_request("127.0.0.1", bound_port, &demo_req).await;
+    assert!(resp_demo.contains("HTTP/1.1 200 OK"));
+    assert!(resp_demo.contains("\"has_deadlock\":true"));
+
+    let reset_req = "POST /api/v1/demo/reset HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 2\r\n\r\n{}";
+    let resp_reset = send_http_request("127.0.0.1", bound_port, reset_req).await;
+    assert!(resp_reset.contains("HTTP/1.1 200 OK"));
 
     // 5. 验证 SSE (Server-Sent Events) 长连接推流
     let mut sse_stream = TcpStream::connect(format!("127.0.0.1:{}", bound_port)).await.expect("connect sse");

@@ -181,6 +181,29 @@ enum Commands {
         #[command(subcommand)]
         action: PlatformCommands,
     },
+
+    #[command(about = "路演场景演示与黑白屏同步自检引擎 (list/run/roi/parity/reset)")]
+    Demo {
+        #[command(subcommand)]
+        action: DemoCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum DemoCommands {
+    #[command(about = "列出 6 大黄金路演演示剧目")]
+    List,
+    #[command(about = "用真实宿主机引擎执行指定路演剧目 (scene-1 ~ scene-6)")]
+    Run {
+        #[arg(help = "剧目 ID，如 scene-1")]
+        scenario_id: String,
+    },
+    #[command(about = "核算宿主机实时商业价值 ROI 指标")]
+    Roi,
+    #[command(about = "输出黑白屏 39 工具对齐自检列表")]
+    Parity,
+    #[command(about = "一键清理 demo:* 沙盒隔离锁与等待队列")]
+    Reset,
 }
 
 #[derive(Subcommand)]
@@ -1480,6 +1503,36 @@ fn main() -> Result<()> {
                 }
             }
         }
+
+        Commands::Demo { action } => {
+            use agent_steward::api::mcp_tools::McpToolRegistry;
+            use agent_steward::demo::DemoEngine;
+            match action {
+                DemoCommands::List => {
+                    println!("{}", serde_json::to_string_pretty(&DemoEngine::list_scenarios())?);
+                }
+                DemoCommands::Run { scenario_id } => {
+                    let res = DemoEngine::run_scenario(storage.provider().clone(), &scenario_id)?;
+                    println!("{}", serde_json::to_string_pretty(&res)?);
+                }
+                DemoCommands::Roi => {
+                    let roi = DemoEngine::compute_roi(storage.provider().as_ref())?;
+                    println!("{}", serde_json::to_string_pretty(&roi)?);
+                }
+                DemoCommands::Parity => {
+                    let tools = McpToolRegistry::new(storage.clone()).list_tools();
+                    let names: Vec<_> = tools.iter().filter_map(|t| t.get("name").and_then(|v| v.as_str())).collect();
+                    println!("{}", serde_json::to_string_pretty(&serde_json::json!({
+                        "total_mcp_tools": names.len(),
+                        "tools": names,
+                    }))?);
+                }
+                DemoCommands::Reset => {
+                    let cleaned = DemoEngine::reset_sandbox(storage.provider().as_ref())?;
+                    println!("✅ 已清理 {} 条 demo:* 沙盒状态", cleaned);
+                }
+            }
+        }
     }
 
     Ok(())
@@ -1507,5 +1560,6 @@ mod tests {
         assert!(Cli::try_parse_from(["steward", "mesh", "port", "8080"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "mesh", "acquire", "--peer", "http://10.0.0.2:8756", "-t", "port", "-i", "9000"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "platform", "ports"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "demo", "run", "scene-1"]).is_ok());
     }
 }

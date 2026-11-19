@@ -27,7 +27,7 @@ use crate::storage::Storage;
 // ─── 质量分结构 ──────────────────────────────────────────────────────────────
 
 /// 情境简报质量评分（0-100）
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize)]
 pub struct BriefQuality {
     /// 事实覆盖率分（0-100）：工具/端口/仓库命中与查询词的匹配程度
     pub fact_coverage: u8,

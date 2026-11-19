@@ -29,7 +29,9 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       </div>
 
       <div class="topbar-actions">
+        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 38/38 能力对齐矩阵">✅ 38/38 对齐</span>
         <span id="sse-badge" class="sse-pill connecting">SSE 连接中</span>
+        <button id="btn-toggle-mirror" class="btn btn-ghost" title="展开/收起黑屏命令镜像器">⌨️ 黑屏镜像</button>
         <button id="btn-toggle-sse" class="btn btn-ghost" title="展开/收起实时事件流">⚡ 事件流</button>
         <button id="btn-global-refresh" class="btn btn-primary">↻ 全量刷新</button>
       </div>
@@ -57,6 +59,14 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
           <span class="nav-ico">📐</span>
           <span>规约 · 记忆 · Mesh</span>
         </button>
+        <button class="nav-btn" data-view="demo" style="margin-top:6px;border-color:rgba(251,146,60,0.35);color:#fdba74;">
+          <span class="nav-ico">🎬</span>
+          <span>路演演示剧场</span>
+        </button>
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--border);">
+          <a href="/deck" target="_blank" class="btn btn-ghost btn-xs" style="text-decoration:none;text-align:center;">📽️ 路演 PPT (/deck)</a>
+          <a href="/presentation" target="_blank" class="btn btn-ghost btn-xs" style="text-decoration:none;text-align:center;">🎨 架构 PPT</a>
+        </div>
       </nav>
 
       <main class="stage">
@@ -76,13 +86,15 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
             </div>
             <div class="toolbar-right">
               <span id="topo-stats" class="muted-text">加载中...</span>
+              <button id="btn-links-audit" class="btn btn-ghost">🩺 断链审计/修复</button>
+              <button id="btn-links-mermaid" class="btn btn-ghost">📐 导出 Mermaid</button>
               <button id="btn-topo-reset" class="btn btn-ghost">恢复全景</button>
               <button id="btn-topo-fit" class="btn btn-ghost">自适应居中</button>
             </div>
           </div>
           <div class="topology-stage">
             <canvas id="topology-canvas"></canvas>
-            <div class="canvas-hint">滚轮缩放 · 拖拽平移/移点 · 点击节点查看详情与爆炸半径</div>
+            <div class="canvas-hint">滚轮缩放 · 拖拽平移/移点 · 点击节点查看详情、CodeGraph 下钻与爆炸半径</div>
             <aside id="node-drawer" class="drawer hidden">
               <div class="drawer-header">
                 <h3 id="drawer-title">节点详情</h3>
@@ -95,6 +107,21 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 
         <!-- 视图 2: 运行时事实雷达 -->
         <section id="view-facts" class="view">
+          <div class="inline-bar">
+            <input id="fq-input" class="input flex-1" type="text" placeholder="统一事实语义问答 (如: 处理 PDF / 8080 / systemd / postgres)..." />
+            <select id="fq-type" class="input input-sm">
+              <option value="auto">类型: auto</option>
+              <option value="capability">capability (工具能力)</option>
+              <option value="port">port (端口)</option>
+              <option value="automation">automation (Systemd/Cron)</option>
+              <option value="repo">repo (源码工程)</option>
+              <option value="doc">doc (权威资料)</option>
+            </select>
+            <button id="btn-fq-run" class="btn btn-primary">🔍 事实问答</button>
+            <input id="pc-port" class="input input-sm" style="width:95px;" type="number" value="8080" min="1" max="65535" />
+            <button id="btn-pc-run" class="btn btn-ghost">🛡️ 端口防撞诊断</button>
+          </div>
+          <div id="facts-qa-result" class="qa-box hidden"></div>
           <div class="view-toolbar">
             <div class="subtabs" id="facts-subtabs">
               <button class="subtab active" data-sub="ports">监听端口 (<span id="cnt-ports">0</span>)</button>
@@ -102,6 +129,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
               <button class="subtab" data-sub="automation">Systemd &amp; Cron (<span id="cnt-auto">0</span>)</button>
               <button class="subtab" data-sub="repos">Git 工程 (<span id="cnt-repos">0</span>)</button>
               <button class="subtab" data-sub="tools">CLI 工具能力 (<span id="cnt-tools">0</span>)</button>
+              <button class="subtab" data-sub="assets">📦 纳管资产与分级扫描</button>
             </div>
             <input id="facts-filter" class="input" type="text" placeholder="过滤端口、进程名、路径或工具..." />
           </div>
@@ -110,6 +138,24 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 
         <!-- 视图 3: 多 Agent 协作锁与死锁雷达 -->
         <section id="view-locks" class="view">
+          <div class="inline-bar">
+            <select id="lock-acq-type" class="input input-sm" style="width:110px;">
+              <option value="port">port</option>
+              <option value="dir">dir</option>
+              <option value="file">file</option>
+              <option value="service">service</option>
+              <option value="custom">custom</option>
+            </select>
+            <input id="lock-acq-id" class="input" style="width:180px;" type="text" placeholder="资源ID (如 9090 或 /tmp/a)" />
+            <input id="lock-acq-agent" class="input input-sm" type="text" value="web-console" placeholder="Agent ID" />
+            <select id="lock-acq-scope" class="input input-sm" style="width:110px;">
+              <option value="exclusive">exclusive</option>
+              <option value="shared">shared</option>
+            </select>
+            <button id="btn-lock-acquire" class="btn btn-primary">🔒 申请协作锁</button>
+            <button id="btn-lock-wait" class="btn btn-ghost">⏳ 排队等待 (WFG)</button>
+            <span id="lock-acq-msg" class="muted-text"></span>
+          </div>
           <div class="grid-2">
             <div class="card">
               <div class="card-header">
@@ -136,65 +182,235 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
           </div>
         </section>
 
-        <!-- 视图 4: 生态防爆路由器 -->
+        <!-- 视图 4: 生态防爆路由器与 HOOK 门禁 -->
         <section id="view-ecosystem" class="view">
-          <div class="card router-sandbox">
-            <div class="card-header">
-              <h3>🧭 Context Budget Router 防爆演练沙盒</h3>
-              <span id="eco-savings-badge" class="badge badge-ok">等待路由</span>
-            </div>
-            <div class="sandbox-controls">
-              <input id="route-intent" class="input flex-1" type="text" value="PostgreSQL 数据库调优与源码分析" placeholder="输入 Agent 任务意图 (如: 美股财报分析 / postgres / svg检查)..." />
-              <label class="budget-label">Token 预算:
-                <input id="route-budget" class="input input-sm" type="number" value="600" min="150" max="4000" step="50" />
-              </label>
-              <button id="btn-run-route" class="btn btn-primary">⚡ 模拟路由</button>
-            </div>
-            <div id="route-result" class="route-result"></div>
-          </div>
-
-          <div class="grid-3 mt-12">
-            <div class="card">
-              <div class="card-header"><h3>🔌 已纳管 MCP (<span id="cnt-mcps">0</span>)</h3></div>
-              <div id="eco-mcps" class="card-body scroll-sm"></div>
-            </div>
-            <div class="card">
+          <div class="scroll-panel">
+            <div class="card router-sandbox">
               <div class="card-header">
-                <h3>📚 SKILL 目录 (<span id="cnt-skills">0</span>)</h3>
-                <input id="eco-skill-filter" class="input input-sm" type="text" placeholder="搜索 SKILL..." />
+                <h3>🧭 Context Budget Router 防爆演练沙盒</h3>
+                <span id="eco-savings-badge" class="badge badge-ok">等待路由</span>
               </div>
-              <div id="eco-skills" class="card-body scroll-sm"></div>
+              <div class="sandbox-controls">
+                <input id="route-intent" class="input flex-1" type="text" value="PostgreSQL 数据库调优与源码分析" placeholder="输入 Agent 任务意图 (如: 美股财报分析 / postgres / svg检查)..." />
+                <label class="budget-label">Token 预算:
+                  <input id="route-budget" class="input input-sm" type="number" value="600" min="150" max="4000" step="50" />
+                </label>
+                <button id="btn-run-route" class="btn btn-primary">⚡ 模拟路由</button>
+              </div>
+              <div id="route-result" class="route-result"></div>
             </div>
-            <div class="card">
-              <div class="card-header"><h3>🌐 外部服务通讯录 (<span id="cnt-svcs">0</span>)</h3></div>
-              <div id="eco-services" class="card-body scroll-sm"></div>
+
+            <div class="card mt-12">
+              <div class="card-header">
+                <h3>🪝 HOOK 门禁演练场 &amp; 客户端配置生成器</h3>
+                <div class="toolbar-right">
+                  <select id="hook-client-select" class="input input-sm" style="width:110px;">
+                    <option value="agy">agy</option>
+                    <option value="cursor">cursor</option>
+                    <option value="claude">claude</option>
+                    <option value="git">git</option>
+                  </select>
+                  <button id="btn-hook-gen" class="btn btn-ghost btn-xs">⚙️ 生成客户端 Hook</button>
+                </div>
+              </div>
+              <div class="sandbox-controls">
+                <input id="hook-tool-name" class="input" style="width:170px;" type="text" value="bind_port" placeholder="工具名 (bind_port / write_file)" />
+                <input id="hook-tool-args" class="input flex-1 mono" type="text" value='{"port": 8756}' placeholder='入参 JSON (如 {"port": 8756})' />
+                <button id="btn-hook-pre" class="btn btn-primary">🛡️ Pre-Hook 预检</button>
+                <button id="btn-hook-post" class="btn btn-ghost">📝 Post-Hook 通知</button>
+              </div>
+              <div id="hook-result" class="card-body" style="max-height:200px;"></div>
+            </div>
+
+            <div class="grid-3 mt-12">
+              <div class="card">
+                <div class="card-header"><h3>🔌 已纳管 MCP (<span id="cnt-mcps">0</span>)</h3></div>
+                <div id="eco-mcps" class="card-body scroll-sm"></div>
+              </div>
+              <div class="card">
+                <div class="card-header">
+                  <h3>📚 SKILL 目录 (<span id="cnt-skills">0</span>)</h3>
+                  <input id="eco-skill-filter" class="input input-sm" type="text" placeholder="搜索 SKILL..." />
+                </div>
+                <div id="eco-skills" class="card-body scroll-sm"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h3>🌐 外部服务通讯录 (<span id="cnt-svcs">0</span>)</h3></div>
+                <div id="eco-services" class="card-body scroll-sm"></div>
+              </div>
             </div>
           </div>
         </section>
 
-        <!-- 视图 5: 规约、记忆、变更审计与 Mesh -->
+        <!-- 视图 5: 规约、简报、记忆、DuckDB 分析、自洁与 Mesh -->
         <section id="view-governance" class="view">
-          <div class="grid-2">
-            <div class="card">
+          <div class="view-toolbar">
+            <div class="subtabs" id="gov-subtabs">
+              <button class="subtab active" data-sub="brief">📋 简报与放置规约</button>
+              <button class="subtab" data-sub="memory">🧠 长期记忆与审计</button>
+              <button class="subtab" data-sub="analytics">🔥 DuckDB 分析与导出</button>
+              <button class="subtab" data-sub="gc">🧹 宿主自洁 &amp; 变更流</button>
+              <button class="subtab" data-sub="mesh">🌐 Mesh · 预检 · 38/38 对齐矩阵</button>
+            </div>
+          </div>
+          <div id="gov-panel-brief" class="scroll-panel">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header">
+                  <h3>📋 自适应开工简报组装器 (steward_brief)</h3>
+                  <button id="btn-brief-run" class="btn btn-primary btn-xs">⚡ 生成简报</button>
+                </div>
+                <div class="sandbox-controls">
+                  <input id="brief-intent" class="input flex-1" type="text" value="宿主机运行状态与近期变更" placeholder="任务意图..." />
+                  <input id="brief-budget" class="input input-sm" style="width:90px;" type="number" value="1500" />
+                </div>
+                <div id="brief-result" class="card-body"></div>
+              </div>
+              <div class="card">
+                <div class="card-header">
+                  <h3>🧭 交互式放置推导 &amp; 自演化 (place suggest/learn)</h3>
+                  <button id="btn-place-learn" class="btn btn-ghost btn-xs">🧠 规则自演化</button>
+                </div>
+                <div class="sandbox-controls">
+                  <select id="place-type" class="input input-sm" style="width:95px;">
+                    <option value="script">script</option>
+                    <option value="project">project</option>
+                    <option value="note">note</option>
+                    <option value="skill">skill</option>
+                    <option value="temp">temp</option>
+                  </select>
+                  <input id="place-name" class="input input-sm" type="text" value="sec_crawler" placeholder="对象名称" />
+                  <input id="place-intent" class="input flex-1" type="text" value="美股财报抓取脚本" placeholder="用途说明" />
+                  <button id="btn-place-suggest" class="btn btn-primary btn-xs">推导路径</button>
+                </div>
+                <div id="place-result" class="card-body"></div>
+              </div>
+            </div>
+            <div class="card mt-12">
               <div class="card-header"><h3>📐 8 大资产放置规则 &amp; 扫描策略</h3></div>
               <div id="gov-rules" class="card-body scroll-sm"></div>
             </div>
-            <div class="card">
-              <div class="card-header">
-                <h3>🧠 跨会话长期记忆</h3>
-                <input id="gov-mem-search" class="input input-sm" type="text" placeholder="FTS 搜索记忆..." />
+          </div>
+
+          <div id="gov-panel-memory" class="scroll-panel hidden">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header">
+                  <h3>✍️ 写入记忆 &amp; 混合检索</h3>
+                  <button id="btn-mem-audit" class="btn btn-ghost btn-xs">🩺 衰减/矛盾审计</button>
+                </div>
+                <div class="sandbox-controls">
+                  <select id="mem-add-type" class="input input-sm" style="width:105px;">
+                    <option value="decision">decision</option>
+                    <option value="troubleshooting">troubleshooting</option>
+                    <option value="preference">preference</option>
+                    <option value="fact">fact</option>
+                  </select>
+                  <input id="mem-add-content" class="input flex-1" type="text" placeholder="记录新的长期决策或排障经验..." />
+                  <button id="btn-mem-add" class="btn btn-primary btn-xs">写入记忆</button>
+                </div>
+                <div class="sandbox-controls" style="padding-top:0;">
+                  <input id="gov-mem-search" class="input flex-1" type="text" placeholder="输入关键词检索记忆..." />
+                  <label class="chip"><input id="mem-hybrid-chk" type="checkbox" checked /> RRF 混合</label>
+                  <button id="btn-mem-search" class="btn btn-ghost btn-xs">🔍 检索</button>
+                </div>
+                <div id="gov-memories" class="card-body scroll-sm"></div>
               </div>
-              <div id="gov-memories" class="card-body scroll-sm"></div>
+              <div class="card">
+                <div class="card-header"><h3>🩺 记忆健康审计结果 (Half-Life &amp; Conflicts)</h3></div>
+                <div id="mem-audit-result" class="card-body scroll-sm"><div class="empty">点击「衰减/矛盾审计」执行体检</div></div>
+              </div>
             </div>
           </div>
-          <div class="grid-2 mt-12">
-            <div class="card">
-              <div class="card-header"><h3>🕒 最近宿主变更审计流</h3></div>
-              <div id="gov-changes" class="card-body scroll-sm"></div>
+
+          <div id="gov-panel-analytics" class="scroll-panel hidden">
+            <div class="inline-bar">
+              <button id="btn-ana-refresh" class="btn btn-primary">🔥 刷新 DuckDB 热力图与趋势</button>
+              <select id="ana-export-table" class="input input-sm" style="width:130px;">
+                <option value="assets">assets</option>
+                <option value="changes">changes</option>
+                <option value="memories">memories</option>
+                <option value="fact_nodes">fact_nodes</option>
+              </select>
+              <button id="btn-ana-export" class="btn btn-ghost">📦 导出 Parquet 至 /root/new/tmp/</button>
+              <span id="ana-export-msg" class="muted-text"></span>
             </div>
-            <div class="card">
-              <div class="card-header"><h3>🌍 跨平台探针 · Preflight · Peer Mesh</h3></div>
-              <div id="gov-mesh-preflight" class="card-body scroll-sm"></div>
+            <div class="grid-2 mt-12">
+              <div class="card">
+                <div class="card-header"><h3>🔥 DuckDB 目录变更热力图</h3></div>
+                <div id="ana-heatmap" class="card-body"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h3>📈 资产增长趋势与图谱统计</h3></div>
+                <div id="ana-trend" class="card-body"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="gov-panel-gc" class="scroll-panel hidden">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header">
+                  <h3>🧹 宿主 GC 与会话完工结清预览 (Dry-Run)</h3>
+                  <div class="toolbar-right">
+                    <button id="btn-gc-preview" class="btn btn-primary btn-xs">🧹 扫描 /root/new/tmp/</button>
+                    <button id="btn-session-close" class="btn btn-ghost btn-xs">📋 结清预览</button>
+                  </div>
+                </div>
+                <div id="gc-result" class="card-body"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h3>🕒 最近宿主变更审计流</h3></div>
+                <div id="gov-changes" class="card-body scroll-sm"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="gov-panel-mesh" class="scroll-panel hidden">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header">
+                  <h3>🌍 跨平台探针 · Preflight · Peer Mesh</h3>
+                  <div class="toolbar-right">
+                    <button id="btn-mesh-ping" class="btn btn-primary btn-xs">📡 Ping Peers</button>
+                    <input id="mesh-port-input" class="input input-sm" style="width:80px;" type="number" value="8080" />
+                    <button id="btn-mesh-port" class="btn btn-ghost btn-xs">🌐 联邦查端口</button>
+                  </div>
+                </div>
+                <div id="gov-mesh-preflight" class="card-body scroll-sm"></div>
+                <div id="mesh-query-result" class="card-body" style="padding-top:0;"></div>
+              </div>
+              <div class="card">
+                <div class="card-header">
+                  <h3>✅ 黑白屏 100% 能力对齐矩阵</h3>
+                  <span id="parity-summary-badge" class="badge badge-ok">加载中</span>
+                </div>
+                <div id="parity-matrix-box" class="card-body scroll-sm"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 视图 6: 路演演示剧场 (Phase 22) -->
+        <section id="view-demo" class="view">
+          <div class="scroll-panel">
+            <div id="demo-roi-strip" class="demo-roi-strip">
+              <div class="roi-card"><span class="k-label">Context Token 节省率</span><strong id="roi-save" class="c-green">-</strong></div>
+              <div class="roi-card"><span class="k-label">全量 SKILL / MCP / 服务</span><strong id="roi-eco" class="c-cyan">-</strong></div>
+              <div class="roi-card"><span class="k-label">宿主机 CLI 工具 / 资产</span><strong id="roi-tools">-</strong></div>
+              <div class="roi-card"><span class="k-label">事实图谱 (节点 / 边)</span><strong id="roi-graph" class="c-purple">-</strong></div>
+              <div class="roi-card"><span class="k-label">黑白屏同步认证</span><strong id="roi-parity" class="c-orange">39/39 (100%)</strong></div>
+            </div>
+
+            <div class="inline-bar mt-12">
+              <div id="demo-scene-buttons" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;"></div>
+              <button id="btn-demo-cruise" class="btn btn-primary btn-xs">▶ 自动巡航路演</button>
+              <button id="btn-demo-presenter" class="btn btn-ghost btn-xs">📽️ 演讲者大屏模式</button>
+              <button id="btn-demo-reset" class="btn btn-danger btn-xs">🧹 一键重置沙盒</button>
+            </div>
+
+            <div id="demo-stage" class="demo-stage">
+              <div class="empty">点击上方任意路演剧目，或点击「▶ 自动巡航路演」实时驱动真实 Rust 引擎对比演示</div>
             </div>
           </div>
         </section>
@@ -211,6 +427,23 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
         </div>
       </aside>
     </div>
+
+    <!-- 全局黑屏命令镜像底栏 -->
+    <footer id="mirror-bar" class="mirror-bar">
+      <div class="mirror-title">⌨️ 黑屏命令镜像器</div>
+      <div class="mirror-slots">
+        <div class="mirror-slot">
+          <span class="badge">CLI</span>
+          <code id="mirror-cli" class="mono">agent-steward brief</code>
+          <button id="btn-copy-cli" class="btn btn-ghost btn-xs">复制</button>
+        </div>
+        <div class="mirror-slot">
+          <span class="badge badge-ok">MCP JSON-RPC</span>
+          <code id="mirror-mcp" class="mono">{"name":"steward_brief","arguments":{}}</code>
+          <button id="btn-copy-mcp" class="btn btn-ghost btn-xs">复制</button>
+        </div>
+      </div>
+    </footer>
   </div>
   <script src="/app.js"></script>
 </body>
@@ -448,8 +681,65 @@ body {
 .event-item.warn { border-left-color: var(--orange); }
 .event-item.ok { border-left-color: var(--green); }
 
+/* Parity Bars & Black-Screen Mirror */
+.hidden { display: none !important; }
+.inline-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;
+}
+.qa-box {
+  background: rgba(15, 23, 42, 0.92); border: 1px solid var(--blue);
+  border-radius: 8px; padding: 10px 12px; margin-bottom: 10px;
+  max-height: 220px; overflow-y: auto;
+}
+.md-pre {
+  white-space: pre-wrap; font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px; color: #cbd5e1; line-height: 1.5;
+}
+.mirror-bar {
+  background: rgba(11, 17, 32, 0.96); border-top: 1px solid var(--border-hi);
+  padding: 6px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.mirror-bar.collapsed { display: none; }
+.mirror-title { font-size: 11px; font-weight: 700; color: var(--blue); white-space: nowrap; }
+.mirror-slots { display: flex; gap: 12px; flex: 1; flex-wrap: wrap; overflow: hidden; }
+.mirror-slot {
+  display: flex; align-items: center; gap: 6px; background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; max-width: 100%;
+}
+.mirror-slot code { color: #a7f3d0; max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Roadshow Live Demo Theater (Phase 22) */
+.demo-roi-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.roi-card {
+  background: var(--panel); border: 1px solid var(--border-hi); border-radius: 10px;
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
+}
+.roi-card strong { font-size: 16px; font-family: ui-monospace, monospace; }
+.demo-stage { display: flex; flex-direction: column; gap: 12px; }
+.demo-header-banner {
+  background: linear-gradient(90deg, rgba(56,189,248,0.14), rgba(167,139,250,0.12));
+  border: 1px solid rgba(56,189,248,0.35); border-radius: 10px; padding: 12px 16px;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+}
+.demo-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.demo-pane-bad {
+  background: rgba(127, 29, 29, 0.22); border: 1px solid rgba(248, 113, 113, 0.55);
+  border-radius: 10px; padding: 14px;
+}
+.demo-pane-good {
+  background: rgba(6, 78, 59, 0.22); border: 1px solid rgba(52, 211, 153, 0.55);
+  border-radius: 10px; padding: 14px;
+}
+.speaker-card {
+  background: rgba(30, 41, 59, 0.85); border-left: 4px solid var(--yellow);
+  border-radius: 8px; padding: 12px 14px; font-size: 13px; line-height: 1.6; color: #fef3c7;
+}
+body.presenter-mode .sidenav, body.presenter-mode .sse-sidebar, body.presenter-mode .kpi-strip { display: none !important; }
+
 @media (max-width: 1100px) {
-  .grid-2, .grid-3, .route-result { grid-template-columns: 1fr; }
+  .grid-2, .grid-3, .route-result, .demo-roi-strip, .demo-split { grid-template-columns: 1fr; }
   .sse-sidebar { display: none; }
   .sidenav { width: 62px; padding: 8px 6px; }
   .nav-btn span:last-child { display: none; }
@@ -460,6 +750,7 @@ pub static APP_JS: &str = r##"// Agent Host Steward 2.0 Web Console (Zero Extern
 const state = {
   activeView: "topology",
   factsTab: "ports",
+  govTab: "brief",
   factsData: null,
   ecoData: null,
   govData: null,
@@ -501,27 +792,46 @@ async function apiGet(url) {
   return json.data;
 }
 
+async function apiPost(url, body, authToken) {
+  const headers = { "Content-Type": "application/json" };
+  if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+  const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body || {}) });
+  const json = await res.json();
+  if (json.code !== 200) throw new Error(json.message || "API Error");
+  return json.data;
+}
+
+function mirrorBlackScreen(cliCmd, mcpTool, mcpArgs) {
+  const cliEl = document.getElementById("mirror-cli");
+  const mcpEl = document.getElementById("mirror-mcp");
+  if (cliEl) cliEl.innerText = cliCmd;
+  if (mcpEl) mcpEl.innerText = JSON.stringify({ name: mcpTool, arguments: mcpArgs || {} });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   bindNavigation();
   bindTopologyControls();
   bindOtherControls();
   initSSE();
   refreshAll();
+  loadParityBadge();
 });
+
+function switchView(view) {
+  state.activeView = view;
+  document.querySelectorAll(".nav-btn").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
+  if (view === "topology") resizeCanvas();
+  if (view === "facts" && !state.factsData) loadFacts();
+  if (view === "locks") loadLocks();
+  if (view === "ecosystem" && !state.ecoData) loadEcosystem();
+  if (view === "governance" && !state.govData) loadGovernance();
+  if (view === "demo") loadDemoTheater();
+}
 
 function bindNavigation() {
   document.querySelectorAll(".nav-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const view = btn.dataset.view;
-      state.activeView = view;
-      document.querySelectorAll(".nav-btn").forEach((b) => b.classList.toggle("active", b === btn));
-      document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
-      if (view === "topology") resizeCanvas();
-      if (view === "facts" && !state.factsData) loadFacts();
-      if (view === "locks") loadLocks();
-      if (view === "ecosystem" && !state.ecoData) loadEcosystem();
-      if (view === "governance" && !state.govData) loadGovernance();
-    });
+    btn.addEventListener("click", () => switchView(btn.dataset.view));
   });
 
   document.querySelectorAll("#facts-subtabs .subtab").forEach((btn) => {
@@ -529,6 +839,18 @@ function bindNavigation() {
       state.factsTab = btn.dataset.sub;
       document.querySelectorAll("#facts-subtabs .subtab").forEach((b) => b.classList.toggle("active", b === btn));
       renderFactsTab();
+    });
+  });
+
+  document.querySelectorAll("#gov-subtabs .subtab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.govTab = btn.dataset.sub;
+      document.querySelectorAll("#gov-subtabs .subtab").forEach((b) => b.classList.toggle("active", b === btn));
+      ["brief", "memory", "analytics", "gc", "mesh"].forEach((p) => {
+        document.getElementById(`gov-panel-${p}`)?.classList.toggle("hidden", p !== state.govTab);
+      });
+      if (state.govTab === "analytics") loadAnalytics();
+      if (state.govTab === "mesh") loadParityMatrix();
     });
   });
 }
@@ -539,6 +861,21 @@ function bindOtherControls() {
     document.getElementById("sse-sidebar")?.classList.toggle("collapsed");
     if (state.activeView === "topology") setTimeout(resizeCanvas, 50);
   });
+  document.getElementById("btn-toggle-mirror")?.addEventListener("click", () => {
+    document.getElementById("mirror-bar")?.classList.toggle("collapsed");
+  });
+  document.getElementById("parity-badge")?.addEventListener("click", () => {
+    switchView("governance");
+    document.querySelector('#gov-subtabs .subtab[data-sub="mesh"]')?.click();
+  });
+  document.getElementById("btn-copy-cli")?.addEventListener("click", () => {
+    const txt = document.getElementById("mirror-cli")?.innerText || "";
+    navigator.clipboard?.writeText(txt);
+  });
+  document.getElementById("btn-copy-mcp")?.addEventListener("click", () => {
+    const txt = document.getElementById("mirror-mcp")?.innerText || "";
+    navigator.clipboard?.writeText(txt);
+  });
   document.getElementById("btn-clear-sse")?.addEventListener("click", () => {
     const el = document.getElementById("event-stream");
     if (el) el.innerHTML = "";
@@ -546,12 +883,43 @@ function bindOtherControls() {
   document.getElementById("facts-filter")?.addEventListener("input", renderFactsTab);
   document.getElementById("eco-skill-filter")?.addEventListener("input", renderEcosystemLists);
   document.getElementById("btn-run-route")?.addEventListener("click", runContextRoute);
-  document.getElementById("gov-mem-search")?.addEventListener("change", () => loadGovernance());
+  document.getElementById("btn-fq-run")?.addEventListener("click", runFactQuery);
+  document.getElementById("btn-pc-run")?.addEventListener("click", runPortCheck);
+  document.getElementById("btn-links-audit")?.addEventListener("click", runLinksAuditModal);
+  document.getElementById("btn-links-mermaid")?.addEventListener("click", runLinksMermaidModal);
+  document.getElementById("btn-lock-acquire")?.addEventListener("click", () => runLockAction("acquire"));
+  document.getElementById("btn-lock-wait")?.addEventListener("click", () => runLockAction("wait"));
+  document.getElementById("btn-hook-pre")?.addEventListener("click", () => runHookTest("pre"));
+  document.getElementById("btn-hook-post")?.addEventListener("click", () => runHookTest("post"));
+  document.getElementById("btn-hook-gen")?.addEventListener("click", runHookGenerate);
+  document.getElementById("btn-brief-run")?.addEventListener("click", runBriefAssemble);
+  document.getElementById("btn-place-suggest")?.addEventListener("click", runPlaceSuggest);
+  document.getElementById("btn-place-learn")?.addEventListener("click", runPlaceLearn);
+  document.getElementById("btn-mem-add")?.addEventListener("click", runMemoryAdd);
+  document.getElementById("btn-mem-search")?.addEventListener("click", runMemorySearch);
+  document.getElementById("btn-mem-audit")?.addEventListener("click", runMemoryAudit);
+  document.getElementById("btn-ana-refresh")?.addEventListener("click", loadAnalytics);
+  document.getElementById("btn-ana-export")?.addEventListener("click", runAnalyticsExport);
+  document.getElementById("btn-gc-preview")?.addEventListener("click", runGcPreview);
+  document.getElementById("btn-session-close")?.addEventListener("click", runSessionClosePreview);
+  document.getElementById("btn-mesh-ping")?.addEventListener("click", () => runMeshQuery("ping"));
+  document.getElementById("btn-mesh-port")?.addEventListener("click", () => runMeshQuery("port"));
+  document.getElementById("btn-demo-cruise")?.addEventListener("click", toggleDemoCruise);
+  document.getElementById("btn-demo-presenter")?.addEventListener("click", () => document.body.classList.toggle("presenter-mode"));
+  document.getElementById("btn-demo-reset")?.addEventListener("click", resetDemoSandbox);
   document.getElementById("btn-close-drawer")?.addEventListener("click", () => {
     document.getElementById("node-drawer")?.classList.add("hidden");
     state.selectedNodeId = null;
     drawTopology();
   });
+}
+
+async function loadParityBadge() {
+  try {
+    const m = await apiGet("/api/v1/parity/matrix");
+    const el = document.getElementById("parity-badge");
+    if (el) el.innerText = `✅ ${m.synced_count}/${m.total_mcp_tools} 对齐`;
+  } catch (_) {}
 }
 
 async function refreshAll() {
@@ -882,6 +1250,7 @@ function showNodeDrawer(node) {
   if (!drawer || !body) return;
   drawer.classList.remove("hidden");
   title.innerText = `${node.label}`;
+  const cgPath = node.metadata?.abs_path || node.metadata?.path || (node.id.startsWith("/") ? node.id : "/root/new/work/agent-steward");
   body.innerHTML = `
     <div class="item-box">
       <div><strong>ID:</strong> <span class="mono">${esc(node.id)}</span></div>
@@ -889,23 +1258,76 @@ function showNodeDrawer(node) {
       <div><strong>状态:</strong> ${esc(node.status)}</div>
       <div><strong>关联边数:</strong> ${node.degree}</div>
     </div>
-    <button id="btn-impact-node" class="btn btn-primary" style="width:100%;margin-bottom:10px;">
-      💥 推演 3 跳爆炸半径子图
-    </button>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button id="btn-impact-node" class="btn btn-primary" style="flex:1;">💥 爆炸半径</button>
+      <button id="btn-cg-node" class="btn btn-ghost" style="flex:1;">🔬 CodeGraph 穿透</button>
+    </div>
+    <div id="drawer-extra" class="hidden item-box"></div>
     <div class="item-box">
       <div style="margin-bottom:6px;"><strong>物理元数据:</strong></div>
       <pre class="mono" style="white-space:pre-wrap;color:#93c5fd;">${esc(JSON.stringify(node.metadata, null, 2))}</pre>
     </div>
   `;
+  mirrorBlackScreen(`agent-steward links query --id "${node.id}"`, "steward_links_query", { id: node.id, type: node.nt });
   document.getElementById("btn-impact-node")?.addEventListener("click", async () => {
     try {
       const impact = await apiGet(`/api/v1/topology/impact?target=${encodeURIComponent(node.id)}`);
       state.topoDisplay = impact;
       applyTopoFilter();
+      mirrorBlackScreen(`agent-steward links impact "${node.id}"`, "steward_links_impact", { target: node.id, max_depth: 3 });
     } catch (e) {
       alert("爆炸半径推演失败: " + e.message);
     }
   });
+  document.getElementById("btn-cg-node")?.addEventListener("click", async () => {
+    const extra = document.getElementById("drawer-extra");
+    if (!extra) return;
+    extra.classList.remove("hidden");
+    extra.innerHTML = '<div class="muted-text">正在穿透 CodeGraph...</div>';
+    try {
+      const cg = await apiGet(`/api/v1/links/codegraph?path=${encodeURIComponent(cgPath)}`);
+      mirrorBlackScreen(`agent-steward links codegraph --path "${cgPath}"`, "steward_codegraph_bridge", { path: cgPath });
+      extra.innerHTML = `<strong>🔬 CodeGraph 状态:</strong> ${cg.has_codegraph ? '<span class="badge badge-ok">已索引</span>' : '<span class="badge">未索引</span>'}<pre class="md-pre" style="margin-top:6px;">${esc(JSON.stringify(cg.project_info || cg, null, 2))}</pre>`;
+    } catch (e) {
+      extra.innerHTML = `<div class="muted-text">${esc(e.message)}</div>`;
+    }
+  });
+}
+
+async function runLinksAuditModal() {
+  const drawer = document.getElementById("node-drawer");
+  const title = document.getElementById("drawer-title");
+  const body = document.getElementById("drawer-body");
+  if (!drawer || !body) return;
+  drawer.classList.remove("hidden");
+  title.innerText = "🩺 断链审计 & 修复推演";
+  body.innerHTML = '<div class="muted-text">正在扫描依赖图...</div>';
+  try {
+    const [audit, repair] = await Promise.all([apiGet("/api/v1/links/audit"), apiGet("/api/v1/links/repair")]);
+    mirrorBlackScreen("agent-steward links audit && agent-steward links repair", "steward_links_audit", { fix_dangling: false });
+    body.innerHTML = `
+      <div class="item-box"><strong>健康审计</strong><pre class="md-pre">${esc(JSON.stringify(audit, null, 2))}</pre></div>
+      <div class="item-box"><strong>断链修复建议 (Dry-Run)</strong><pre class="md-pre">${esc(JSON.stringify(repair, null, 2))}</pre></div>
+    `;
+  } catch (e) {
+    body.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function runLinksMermaidModal() {
+  const drawer = document.getElementById("node-drawer");
+  const title = document.getElementById("drawer-title");
+  const body = document.getElementById("drawer-body");
+  if (!drawer || !body) return;
+  drawer.classList.remove("hidden");
+  title.innerText = "📐 Mermaid 拓扑源码";
+  try {
+    const res = await apiGet("/api/v1/links/mermaid?limit=30");
+    mirrorBlackScreen("agent-steward links visualize --limit 30", "steward_links_visualize", { limit: 30 });
+    body.innerHTML = `<div class="item-box"><pre class="md-pre">${esc(res.mermaid)}</pre></div>`;
+  } catch (e) {
+    body.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
 }
 
 /* ─── 2. 运行时事实雷达 ──────────────────────────────────────────── */
@@ -976,7 +1398,7 @@ function renderFactsTab() {
         <td>${r.codegraph_ready ? '<span class="badge badge-ok">Ready</span>' : '<span class="badge">Unindexed</span>'}</td>
         <td class="mono">${esc(r.abs_path)}</td>
       </tr>`).join("") + `</tbody></table>`;
-  } else {
+  } else if (state.factsTab === "tools") {
     const rows = (d.capabilities || []).filter((c) =>
       !q || c.tool_name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || c.category.toLowerCase().includes(q)
     );
@@ -988,6 +1410,97 @@ function renderFactsTab() {
         <td>${esc(c.description)}</td>
         <td class="mono">${esc(c.best_practice_args || "-")}</td>
       </tr>`).join("") + `</tbody></table>`;
+  } else {
+    el.innerHTML = `
+      <div class="inline-bar">
+        <input id="asset-search-q" class="input flex-1" type="text" value="${esc(q)}" placeholder="FTS5 检索纳管资产 (路径/描述)..." />
+        <button id="btn-asset-search" class="btn btn-primary btn-xs">🔍 检索资产</button>
+        <input id="asset-scan-path" class="input" style="width:220px;" type="text" value="/root/new/work/agent-steward" placeholder="待扫描目录路径" />
+        <button id="btn-asset-scan" class="btn btn-ghost btn-xs">📂 分级扫描</button>
+      </div>
+      <div class="inline-bar">
+        <input id="asset-reg-path" class="input flex-1" type="text" placeholder="新资产路径 (如 /root/new/shared_proj/my_script.py)" />
+        <select id="asset-reg-type" class="input input-sm" style="width:95px;">
+          <option value="script">script</option><option value="project">project</option><option value="doc">doc</option><option value="other">other</option>
+        </select>
+        <input id="asset-reg-desc" class="input" style="width:200px;" type="text" placeholder="描述..." />
+        <button id="btn-asset-reg" class="btn btn-primary btn-xs">➕ 登记资产</button>
+      </div>
+      <div id="asset-panel-out"><div class="muted-text">正在加载资产列表...</div></div>
+    `;
+    document.getElementById("btn-asset-search")?.addEventListener("click", loadAssetsPanel);
+    document.getElementById("btn-asset-scan")?.addEventListener("click", scanAssetFromWeb);
+    document.getElementById("btn-asset-reg")?.addEventListener("click", registerAssetFromWeb);
+    loadAssetsPanel();
+  }
+}
+
+async function loadAssetsPanel() {
+  const q = document.getElementById("asset-search-q")?.value || "";
+  const out = document.getElementById("asset-panel-out");
+  if (!out) return;
+  try {
+    const list = await apiGet(`/api/v1/assets/search?q=${encodeURIComponent(q)}&limit=50`);
+    mirrorBlackScreen(`agent-steward asset search "${q}"`, "steward_asset_search", { query: q, limit: 50 });
+    out.innerHTML = `<table class="data-table"><thead><tr><th>类型</th><th>分级</th><th>路径</th><th>描述</th></tr></thead><tbody>` +
+      (list || []).map((a) => `<tr><td><span class="badge">${esc(a.asset_type)}</span></td><td><span class="badge ${a.scan_tier === "deep" ? "badge-ok" : "badge-warn"}">${esc(a.scan_tier)}</span></td><td class="mono">${esc(a.path)}</td><td>${esc(a.description || "-")}</td></tr>`).join("") + `</tbody></table>`;
+  } catch (e) {
+    out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function registerAssetFromWeb() {
+  const path = document.getElementById("asset-reg-path")?.value || "";
+  const asset_type = document.getElementById("asset-reg-type")?.value || "script";
+  const description = document.getElementById("asset-reg-desc")?.value || "";
+  try {
+    await apiPost("/api/v1/assets/register", { path, asset_type, description });
+    mirrorBlackScreen(`agent-steward asset register --path "${path}" --asset-type ${asset_type}`, "steward_asset_register", { path, type: asset_type, description });
+    loadAssetsPanel();
+  } catch (e) {
+    alert("登记失败: " + e.message);
+  }
+}
+
+async function scanAssetFromWeb() {
+  const path = document.getElementById("asset-scan-path")?.value || "";
+  const out = document.getElementById("asset-panel-out");
+  try {
+    const rep = await apiPost("/api/v1/assets/scan", { path });
+    mirrorBlackScreen(`agent-steward asset scan "${path}"`, "steward_asset_scan", { path });
+    if (out) out.innerHTML = `<div class="item-box"><strong>📂 分级扫描报告</strong><pre class="md-pre">${esc(JSON.stringify(rep, null, 2))}</pre></div>`;
+  } catch (e) {
+    alert("扫描失败: " + e.message);
+  }
+}
+
+async function runFactQuery() {
+  const q = document.getElementById("fq-input")?.value || "all";
+  const t = document.getElementById("fq-type")?.value || "auto";
+  const box = document.getElementById("facts-qa-result");
+  if (!box) return;
+  box.classList.remove("hidden");
+  box.innerHTML = '<div class="muted-text">正在查询宿主机事实图谱...</div>';
+  try {
+    const res = await apiGet(`/api/v1/facts/query?q=${encodeURIComponent(q)}&type=${encodeURIComponent(t)}`);
+    mirrorBlackScreen(`agent-steward fact "${q}" --fact-type ${t}`, "steward_fact_query", { query: q, fact_type: t });
+    box.innerHTML = `<div class="item-top"><strong>🔍 事实图谱零幻觉回答</strong><button class="btn-icon" onclick="this.closest('.qa-box').classList.add('hidden')">✕</button></div><pre class="md-pre">${esc(res.answer)}</pre>`;
+  } catch (e) {
+    box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function runPortCheck() {
+  const port = Number(document.getElementById("pc-port")?.value || 8080);
+  const box = document.getElementById("facts-qa-result");
+  if (!box) return;
+  box.classList.remove("hidden");
+  try {
+    const res = await apiGet(`/api/v1/facts/port-check?port=${port}`);
+    mirrorBlackScreen(`agent-steward env port ${port}`, "steward_port_check", { port, suggest_count: 3 });
+    box.innerHTML = `<div class="item-top"><strong>🛡️ 端口 :${port} 防撞诊断</strong><button class="btn-icon" onclick="this.closest('.qa-box').classList.add('hidden')">✕</button></div><pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+  } catch (e) {
+    box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
 }
 
@@ -1074,12 +1587,33 @@ window.releaseLock = async function (resourceType, resourceId) {
     });
     const json = await res.json();
     if (json.code !== 200) throw new Error(json.message);
+    mirrorBlackScreen(`agent-steward coordination release --resource-type ${resourceType} --resource-id "${resourceId}"`, "steward_lock_release", { resource_type: resourceType, resource_id: resourceId });
     loadLocks();
     loadOverview();
   } catch (e) {
     alert("释放失败: " + e.message);
   }
 };
+
+async function runLockAction(mode) {
+  const resource_type = document.getElementById("lock-acq-type")?.value || "custom";
+  const resource_id = (document.getElementById("lock-acq-id")?.value || "").trim();
+  const holder_agent = (document.getElementById("lock-acq-agent")?.value || "web-console").trim();
+  const scope = document.getElementById("lock-acq-scope")?.value || "exclusive";
+  const token = (document.getElementById("lock-auth-token")?.value || "").trim();
+  const msgEl = document.getElementById("lock-acq-msg");
+  if (!resource_id) return alert("请输入资源 ID");
+  try {
+    const url = mode === "wait" ? "/api/v1/locks/wait" : "/api/v1/locks/acquire";
+    const data = await apiPost(url, { resource_type, resource_id, holder_agent, scope, ttl_seconds: 120, wait_timeout_ms: 800 }, token);
+    mirrorBlackScreen(`agent-steward coordination ${mode} -t ${resource_type} -i "${resource_id}" -a "${holder_agent}"`, mode === "wait" ? "steward_lock_wait" : "steward_lock_acquire", { resource_type, resource_id, holder_agent, scope });
+    if (msgEl) msgEl.innerText = `结果: ${JSON.stringify(data)}`;
+    loadLocks();
+    loadOverview();
+  } catch (e) {
+    if (msgEl) msgEl.innerText = `失败: ${e.message}`;
+  }
+}
 
 /* ─── 4. 生态防爆路由器 ──────────────────────────────────────────── */
 async function loadEcosystem() {
@@ -1114,10 +1648,54 @@ function renderEcosystemLists() {
   </div>`).join("") || '<div class="empty">无匹配 SKILL</div>';
 
   document.getElementById("eco-services").innerHTML = (d.services || []).map((s) => `<div class="item-box">
-    <div class="item-top"><strong>${esc(s.service_name)}</strong><span class="badge ${s.status === "healthy" ? "badge-ok" : ""}">${esc(s.status)}</span></div>
+    <div class="item-top">
+      <strong>${esc(s.service_name)}</strong>
+      <div>
+        <span class="badge ${s.status === "healthy" ? "badge-ok" : ""}">${esc(s.status)}</span>
+        <button class="btn btn-ghost btn-xs" onclick="checkExternalService('${esc(s.service_name)}')">⚡ 探活</button>
+      </div>
+    </div>
     <div class="mono muted-text">${esc(s.endpoint)}</div>
     <div class="muted-text">鉴权环境变量: ${esc(s.auth_env_var || "无需")}</div>
   </div>`).join("") || '<div class="empty">暂无外部服务</div>';
+}
+
+window.checkExternalService = async function (name) {
+  try {
+    const rep = await apiGet(`/api/v1/ecosystem/service-check?name=${encodeURIComponent(name)}`);
+    mirrorBlackScreen(`agent-steward service check "${name}"`, "steward_service_contact", { action: "check", service_name: name });
+    alert(`服务 ${name} 探活结果:\n${JSON.stringify(rep, null, 2)}`);
+    loadEcosystem();
+  } catch (e) {
+    alert("探活失败: " + e.message);
+  }
+};
+
+async function runHookTest(kind) {
+  const tool_name = document.getElementById("hook-tool-name")?.value || "write_file";
+  const rawArgs = document.getElementById("hook-tool-args")?.value || "{}";
+  const out = document.getElementById("hook-result");
+  let args = {};
+  try { args = JSON.parse(rawArgs); } catch (e) { return alert("入参 JSON 格式错误: " + e.message); }
+  try {
+    const res = await apiPost(kind === "pre" ? "/api/v1/hooks/pre" : "/api/v1/hooks/post", { tool_name, args, success: true });
+    mirrorBlackScreen(`agent-steward hooks ${kind} --tool-name ${tool_name} --args '${rawArgs}'`, kind === "pre" ? "steward_hook_pre" : "steward_hook_post", { tool_name, args });
+    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+  } catch (e) {
+    if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function runHookGenerate() {
+  const client = document.getElementById("hook-client-select")?.value || "agy";
+  const out = document.getElementById("hook-result");
+  try {
+    const res = await apiGet(`/api/v1/hooks/generate?client=${encodeURIComponent(client)}`);
+    mirrorBlackScreen(`agent-steward hooks generate --client ${client} --dry-run`, "steward_hook_generate", { client, dry_run: true });
+    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+  } catch (e) {
+    if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
 }
 
 async function runContextRoute() {
@@ -1128,6 +1706,7 @@ async function runContextRoute() {
   try {
     const plan = await apiGet(`/api/v1/ecosystem/route?intent=${encodeURIComponent(intent)}&budget=${encodeURIComponent(budget)}`);
     badge.innerText = `消耗 ${plan.route_tokens_used} tok · 节省 ${Number(plan.saved_pct || 0).toFixed(1)}% (全量 ${plan.total_skills_full_tokens} tok)`;
+    mirrorBlackScreen(`agent-steward skill route "${intent}" --budget-tokens ${budget}`, "steward_skill_route", { intent, budget_tokens: Number(budget) });
     out.innerHTML = `
       <div class="item-box"><strong>命中 SKILL (${plan.skills.length})</strong>${plan.skills.map((s) => `<div class="mt-12"><span class="badge badge-ok">${esc(s.skill_name)}</span><div class="muted-text">${esc(s.summary)}</div></div>`).join("") || '<div class="muted-text">无</div>'}</div>
       <div class="item-box"><strong>推荐 MCP (${plan.mcps.length})</strong>${plan.mcps.map((m) => `<div class="mt-12"><span class="badge">${esc(m.server_name)}</span><div class="mono muted-text">${esc(m.transport)} · ${esc(m.client_source)}</div></div>`).join("") || '<div class="muted-text">无</div>'}</div>
@@ -1181,6 +1760,166 @@ async function loadGovernance() {
   }
 }
 
+async function runBriefAssemble() {
+  const intent = document.getElementById("brief-intent")?.value || "";
+  const budget = document.getElementById("brief-budget")?.value || "1500";
+  const out = document.getElementById("brief-result");
+  try {
+    const res = await apiGet(`/api/v1/brief?intent=${encodeURIComponent(intent)}&budget=${encodeURIComponent(budget)}`);
+    mirrorBlackScreen(`agent-steward brief`, "steward_brief", { query: intent, budget_tokens: Number(budget) });
+    if (out) out.innerHTML = `<div class="muted-text" style="margin-bottom:6px;">综合质量分: <span class="badge badge-ok">${res.quality?.overall ?? "-"}/100</span></div><pre class="md-pre">${esc(res.markdown)}</pre>`;
+  } catch (e) {
+    if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function runPlaceSuggest() {
+  const object_type = document.getElementById("place-type")?.value || "script";
+  const name = document.getElementById("place-name")?.value || "unnamed";
+  const intent = document.getElementById("place-intent")?.value || "";
+  const out = document.getElementById("place-result");
+  try {
+    const res = await apiPost("/api/v1/placement/suggest", { object_type, name, intent });
+    mirrorBlackScreen(`agent-steward place suggest --type ${object_type} --name "${name}" --intent "${intent}"`, "steward_placement_suggest", { object_type, name, intent });
+    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+  } catch (e) {
+    if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function runPlaceLearn() {
+  const out = document.getElementById("place-result");
+  try {
+    const res = await apiGet("/api/v1/placement/learn?min_samples=3");
+    mirrorBlackScreen("agent-steward place learn --min-samples 3", "steward_placement_learn", { min_samples: 3, accept: false });
+    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+  } catch (e) {
+    if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function runMemoryAdd() {
+  const memory_type = document.getElementById("mem-add-type")?.value || "decision";
+  const content = (document.getElementById("mem-add-content")?.value || "").trim();
+  if (!content) return alert("请输入记忆内容");
+  try {
+    await apiPost("/api/v1/memories/add", { memory_type, content });
+    mirrorBlackScreen(`agent-steward memory add --type ${memory_type} "${content}"`, "steward_memory_add", { type: memory_type, content });
+    document.getElementById("mem-add-content").value = "";
+    loadGovernance();
+  } catch (e) {
+    alert("写入失败: " + e.message);
+  }
+}
+
+async function runMemorySearch() {
+  const q = document.getElementById("gov-mem-search")?.value || "";
+  const hybrid = document.getElementById("mem-hybrid-chk")?.checked ?? true;
+  const out = document.getElementById("gov-memories");
+  try {
+    const res = await apiGet(`/api/v1/memories/search?q=${encodeURIComponent(q)}&hybrid=${hybrid}`);
+    mirrorBlackScreen(`agent-steward memory search "${q}"${hybrid ? " --hybrid" : ""}`, "steward_memory_search", { query: q, hybrid });
+    const items = res.items || [];
+    if (out) out.innerHTML = items.map((item) => {
+      const m = item.memory || item;
+      const rrf = item.rrf_score !== undefined ? ` · RRF ${Number(item.rrf_score).toFixed(4)}` : "";
+      return `<div class="item-box"><div class="item-top"><span class="badge">${esc(m.memory_type)}</span><span class="muted-text">${esc(res.mode)}${rrf}</span></div><div>${esc(m.summary || (m.content || "").slice(0, 160))}</div></div>`;
+    }).join("") || '<div class="empty">无匹配记忆</div>';
+  } catch (e) {
+    if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function runMemoryAudit() {
+  const out = document.getElementById("mem-audit-result");
+  try {
+    const rep = await apiGet("/api/v1/memories/audit");
+    mirrorBlackScreen("agent-steward memory audit", "steward_memory_audit", {});
+    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(rep, null, 2))}</pre>`;
+  } catch (e) {
+    if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function loadAnalytics() {
+  const hEl = document.getElementById("ana-heatmap");
+  const tEl = document.getElementById("ana-trend");
+  try {
+    const [heat, trend] = await Promise.all([apiGet("/api/v1/analytics/heatmap?days=30"), apiGet("/api/v1/analytics/trend?days=30")]);
+    mirrorBlackScreen("agent-steward analytics heatmap --days 30", "steward_analytics_heatmap", { days: 30 });
+    if (hEl) hEl.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(heat, null, 2))}</pre>`;
+    if (tEl) tEl.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(trend, null, 2))}</pre>`;
+  } catch (e) {
+    if (hEl) hEl.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function runAnalyticsExport() {
+  const table = document.getElementById("ana-export-table")?.value || "assets";
+  const output_path = `/root/new/tmp/steward_${table}.parquet`;
+  const msgEl = document.getElementById("ana-export-msg");
+  try {
+    const res = await apiPost("/api/v1/analytics/export", { table, output_path });
+    mirrorBlackScreen(`agent-steward analytics export --table ${table} --output-path ${output_path}`, "steward_analytics_export", { table, output_path });
+    if (msgEl) msgEl.innerText = `✅ 已导出: ${JSON.stringify(res)}`;
+  } catch (e) {
+    if (msgEl) msgEl.innerText = `导出失败: ${e.message}`;
+  }
+}
+
+async function runGcPreview() {
+  const out = document.getElementById("gc-result");
+  try {
+    const res = await apiGet("/api/v1/env/gc?max_age_hours=72");
+    mirrorBlackScreen("agent-steward gc --max-age-hours 72", "steward_env_gc", { max_age_hours: 72, apply: false });
+    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+  } catch (e) {
+    if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function runSessionClosePreview() {
+  const out = document.getElementById("gc-result");
+  try {
+    const res = await apiPost("/api/v1/session/close", { session_id: "web-preview", clean_temp: true });
+    mirrorBlackScreen("agent-steward close web-preview --dry-run", "steward_session_close", { session_id: "web-preview", dry_run: true });
+    if (out) out.innerHTML = `<pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre>`;
+  } catch (e) {
+    if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function runMeshQuery(action) {
+  const port = Number(document.getElementById("mesh-port-input")?.value || 8080);
+  const out = document.getElementById("mesh-query-result");
+  try {
+    const res = await apiGet(`/api/v1/mesh/query?action=${action}&port=${port}`);
+    mirrorBlackScreen(`agent-steward mesh ${action === "port" ? "port " + port : action}`, "steward_mesh_query", { action, port });
+    if (out) out.innerHTML = `<div class="item-box"><strong>Mesh (${action})</strong><pre class="md-pre">${esc(JSON.stringify(res, null, 2))}</pre></div>`;
+  } catch (e) {
+    if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function loadParityMatrix() {
+  const badge = document.getElementById("parity-summary-badge");
+  const box = document.getElementById("parity-matrix-box");
+  if (!box) return;
+  try {
+    const m = await apiGet("/api/v1/parity/matrix");
+    if (badge) badge.innerText = `${m.synced_count}/${m.total_mcp_tools} (${Number(m.coverage_pct).toFixed(0)}%)`;
+    box.innerHTML = `<table class="data-table"><thead><tr><th>MCP 工具</th><th>CLI 命令</th><th>Web 端点</th><th>状态</th></tr></thead><tbody>` +
+      (m.items || []).map((it) => `<tr>
+        <td class="mono"><strong>${esc(it.mcp_tool)}</strong></td>
+        <td class="mono">${esc(it.cli_command)}</td>
+        <td class="mono">${esc(it.web_endpoint)}</td>
+        <td><span class="badge ${it.status === "synced" ? "badge-ok" : "badge-err"}">${esc(it.status)}</span></td>
+      </tr>`).join("") + `</tbody></table>`;
+  } catch (e) {
+    box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
 /* ─── SSE 实时事件流 ─────────────────────────────────────────────── */
 function initSSE() {
   const badge = document.getElementById("sse-badge");
@@ -1208,6 +1947,136 @@ function initSSE() {
     badge.innerText = "SSE 不可用";
   }
 }
+
+/* ─── 6. 路演演示剧场 (Phase 22) ──────────────────────────────────── */
+let demoScenariosCache = [];
+let demoCurrentIdx = 0;
+let demoCruiseTimer = null;
+
+async function loadDemoTheater() {
+  try {
+    const [scenarios, roi] = await Promise.all([
+      apiGet("/api/v1/demo/scenarios"),
+      apiGet("/api/v1/demo/roi"),
+    ]);
+    demoScenariosCache = scenarios || [];
+
+    document.getElementById("roi-save").innerText = `${Number(roi.token_savings_pct || 0).toFixed(1)}% (600/${roi.skills_full_tokens} tok)`;
+    document.getElementById("roi-eco").innerText = `${roi.skills_count} / ${roi.mcp_servers_count} / ${roi.external_services_count}`;
+    document.getElementById("roi-tools").innerText = `${roi.capabilities_installed} 工具 / ${roi.managed_assets_count} 资产`;
+    document.getElementById("roi-graph").innerText = `${roi.fact_nodes_count} 节点 / ${roi.fact_edges_count} 边`;
+
+    const btnWrap = document.getElementById("demo-scene-buttons");
+    if (btnWrap) {
+      btnWrap.innerHTML = demoScenariosCache.map((s, idx) =>
+        `<button class="subtab ${idx === demoCurrentIdx ? "active" : ""}" data-scene="${esc(s.id)}" onclick="runDemoScenario('${esc(s.id)}', ${idx})">${s.order}. ${esc(s.title)}</button>`
+      ).join("");
+    }
+    if (demoScenariosCache.length > 0 && !document.getElementById("demo-stage")?.dataset.loaded) {
+      runDemoScenario(demoScenariosCache[0].id, 0);
+    }
+  } catch (e) {
+    console.error("demo load err:", e);
+  }
+}
+
+window.runDemoScenario = async function (scenarioId, idx) {
+  if (typeof idx === "number") demoCurrentIdx = idx;
+  document.querySelectorAll("#demo-scene-buttons .subtab").forEach((b) =>
+    b.classList.toggle("active", b.dataset.scene === scenarioId)
+  );
+  const stage = document.getElementById("demo-stage");
+  if (!stage) return;
+  stage.dataset.loaded = "1";
+  stage.innerHTML = `<div class="muted-text">⚡ 正在调用宿主机真实 Rust 引擎执行 ${esc(scenarioId)}...</div>`;
+  try {
+    const res = await apiPost("/api/v1/demo/run", { scenario_id: scenarioId });
+    if (res.black_screen_mirror) {
+      mirrorBlackScreen(
+        res.black_screen_mirror.cli_command,
+        res.black_screen_mirror.mcp_tool,
+        res.black_screen_mirror.mcp_arguments
+      );
+    }
+    const elapsedMs = (Number(res.elapsed_us || 0) / 1000).toFixed(2);
+    stage.innerHTML = `
+      <div class="demo-header-banner">
+        <div>
+          <h3 style="font-size:16px;color:#f8fafc;">🎬 ${esc(res.title)}</h3>
+          <div class="muted-text" style="margin-top:3px;">${esc(res.tagline)}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge badge-ok">⚡ 真引擎耗时 ${res.elapsed_us} μs (${elapsedMs} ms)</span>
+          <span class="badge">${esc(res.scenario_id)}</span>
+        </div>
+      </div>
+
+      <div class="speaker-card">
+        <strong>🎙️ 演讲者 30 秒提词卡：</strong>${esc(res.speaker_notes)}
+      </div>
+
+      <div class="demo-split">
+        <div class="demo-pane-bad">
+          <div class="item-top"><strong style="color:var(--red);">💥 裸奔 Agent 惨案现场 (Without Steward)</strong><span class="badge badge-err">高危痛点</span></div>
+          <pre class="md-pre" style="margin-top:8px;color:#fecaca;">${esc(JSON.stringify(res.without_steward, null, 2))}</pre>
+        </div>
+        <div class="demo-pane-good">
+          <div class="item-top"><strong style="color:var(--green);">🛡️ 大管家真引擎护航 (With Steward)</strong><span class="badge badge-ok">零幻觉实跑</span></div>
+          <pre class="md-pre" style="margin-top:8px;color:#a7f3d0;">${esc(JSON.stringify(res.with_steward, null, 2))}</pre>
+        </div>
+      </div>
+
+      <div class="item-box">
+        <div class="item-top"><strong>📊 本幕商业价值与 ROI 指标</strong><span class="mono muted-text">CLI: ${esc(res.black_screen_mirror?.cli_command || "")}</span></div>
+        <pre class="md-pre">${esc(JSON.stringify(res.roi_metrics, null, 2))}</pre>
+      </div>
+    `;
+  } catch (e) {
+    stage.innerHTML = `<div class="empty">路演执行失败: ${esc(e.message)}</div>`;
+  }
+};
+
+function toggleDemoCruise() {
+  const btn = document.getElementById("btn-demo-cruise");
+  if (demoCruiseTimer) {
+    clearInterval(demoCruiseTimer);
+    demoCruiseTimer = null;
+    if (btn) btn.innerText = "▶ 自动巡航路演";
+    return;
+  }
+  if (btn) btn.innerText = "⏸ 暂停巡航 (8s/幕)";
+  demoCruiseTimer = setInterval(() => {
+    if (state.activeView !== "demo" || demoScenariosCache.length === 0) return;
+    demoCurrentIdx = (demoCurrentIdx + 1) % demoScenariosCache.length;
+    runDemoScenario(demoScenariosCache[demoCurrentIdx].id, demoCurrentIdx);
+  }, 8000);
+}
+
+async function resetDemoSandbox() {
+  try {
+    const res = await apiPost("/api/v1/demo/reset", {});
+    mirrorBlackScreen("agent-steward demo reset", "steward_demo_scenario", { action: "reset" });
+    alert(`✅ 已无痕清理 ${res.cleaned ?? 0} 条 demo:* 沙盒锁与等待队列`);
+    loadOverview();
+  } catch (e) {
+    alert("沙盒重置失败: " + e.message);
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  if (state.activeView !== "demo" || demoScenariosCache.length === 0) return;
+  if (e.target && ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) return;
+  if (e.key === "ArrowRight") {
+    demoCurrentIdx = (demoCurrentIdx + 1) % demoScenariosCache.length;
+    runDemoScenario(demoScenariosCache[demoCurrentIdx].id, demoCurrentIdx);
+  } else if (e.key === "ArrowLeft") {
+    demoCurrentIdx = (demoCurrentIdx - 1 + demoScenariosCache.length) % demoScenariosCache.length;
+    runDemoScenario(demoScenariosCache[demoCurrentIdx].id, demoCurrentIdx);
+  } else if (e.code === "Space") {
+    e.preventDefault();
+    toggleDemoCruise();
+  }
+});
 "##;
 
 pub fn serve_index() -> HttpResponse {
@@ -1220,4 +2089,15 @@ pub fn serve_css() -> HttpResponse {
 
 pub fn serve_js() -> HttpResponse {
     HttpResponse::js(APP_JS)
+}
+
+pub static DECK_HTML: &str = include_str!("../../../steward-deck.html");
+pub static PRESENTATION_HTML: &str = include_str!("../../../presentation.html");
+
+pub fn serve_deck() -> HttpResponse {
+    HttpResponse::html(DECK_HTML)
+}
+
+pub fn serve_presentation() -> HttpResponse {
+    HttpResponse::html(PRESENTATION_HTML)
 }

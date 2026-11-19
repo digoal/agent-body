@@ -8,6 +8,7 @@ use crate::storage::StorageProvider;
 use crate::web::http::{HttpRequest, HttpResponse, Method, StatusCode};
 use crate::web::api;
 use crate::web::assets;
+use crate::web::parity_api;
 
 /// Web 服务器配置
 #[derive(Debug, Clone)]
@@ -155,13 +156,69 @@ impl WebServer {
         }
 
         // 统一路由分发 (在 spawn_blocking 中执行，避免阻塞 Tokio worker 并兼容同步预检/DB调用)
+        let is_demo_run = req.method == Method::Post && req.path == "/api/v1/demo/run";
+        let demo_path = req.path.clone();
         let resp = tokio::task::spawn_blocking(move || {
-            Self::route_request(&req, storage.as_ref(), &start_time, &auth_token)
+            Self::route_request_arc(&req, storage, &start_time, &auth_token)
         })
         .await?;
+        if is_demo_run && resp.status == StatusCode::OK {
+            let _ = event_tx.send(
+                serde_json::json!({
+                    "type": "demo_run",
+                    "path": demo_path,
+                    "timestamp": chrono::Utc::now().to_rfc3339(),
+                })
+                .to_string(),
+            );
+        }
         stream.write_all(&resp.to_bytes()).await?;
         stream.flush().await?;
         Ok(())
+    }
+
+    /// 持有 Arc<dyn StorageProvider> 的完整路由分发（覆盖 Phase 21 黑白屏全能力 API）
+    pub fn route_request_arc(
+        req: &HttpRequest,
+        storage: Arc<dyn StorageProvider>,
+        start_time: &Instant,
+        auth_token: &Option<String>,
+    ) -> HttpResponse {
+        match (req.method.clone(), req.path.as_str()) {
+            (Method::Get, "/api/v1/brief") => parity_api::handle_brief(req, storage),
+            (Method::Post, "/api/v1/placement/suggest") => parity_api::handle_placement_suggest(req, storage),
+            (Method::Get, "/api/v1/placement/learn") => parity_api::handle_placement_learn(req, storage),
+            (Method::Get, "/api/v1/assets/search") => parity_api::handle_assets_search(req, storage.as_ref()),
+            (Method::Post, "/api/v1/assets/register") => parity_api::handle_assets_register(req, storage.as_ref()),
+            (Method::Post, "/api/v1/assets/scan") => parity_api::handle_assets_scan(req, storage),
+            (Method::Get, "/api/v1/facts/port-check") => parity_api::handle_facts_port_check(req),
+            (Method::Get, "/api/v1/facts/query") => parity_api::handle_facts_query(req),
+            (Method::Get, "/api/v1/links/audit") => parity_api::handle_links_audit(storage),
+            (Method::Get, "/api/v1/links/repair") => parity_api::handle_links_repair(storage),
+            (Method::Get, "/api/v1/links/mermaid") => parity_api::handle_links_mermaid(req, storage),
+            (Method::Get, "/api/v1/links/codegraph") => parity_api::handle_links_codegraph(req),
+            (Method::Post, "/api/v1/hooks/pre") => parity_api::handle_hooks_pre(req, storage),
+            (Method::Post, "/api/v1/hooks/post") => parity_api::handle_hooks_post(req, storage),
+            (Method::Get, "/api/v1/hooks/generate") => parity_api::handle_hooks_generate(req),
+            (Method::Get, "/api/v1/analytics/heatmap") => parity_api::handle_analytics_heatmap(req, storage),
+            (Method::Get, "/api/v1/analytics/trend") => parity_api::handle_analytics_trend(req, storage),
+            (Method::Post, "/api/v1/analytics/export") => parity_api::handle_analytics_export(req, storage),
+            (Method::Post, "/api/v1/memories/add") => parity_api::handle_memories_add(req, storage),
+            (Method::Get, "/api/v1/memories/search") => parity_api::handle_memories_search(req, storage),
+            (Method::Get, "/api/v1/memories/audit") => parity_api::handle_memories_audit(storage),
+            (Method::Get, "/api/v1/env/gc") => parity_api::handle_env_gc(req),
+            (Method::Post, "/api/v1/session/close") => parity_api::handle_session_close(req, storage),
+            (Method::Post, "/api/v1/locks/acquire") => parity_api::handle_locks_acquire(req, storage, auth_token),
+            (Method::Post, "/api/v1/locks/wait") => parity_api::handle_locks_wait(req, storage, auth_token),
+            (Method::Get, "/api/v1/ecosystem/service-check") => parity_api::handle_service_check(req, storage),
+            (Method::Get, "/api/v1/mesh/query") => parity_api::handle_mesh_query(req),
+            (Method::Get, "/api/v1/parity/matrix") => parity_api::handle_parity_matrix(storage),
+            (Method::Get, "/api/v1/demo/scenarios") => parity_api::handle_demo_scenarios(),
+            (Method::Post, "/api/v1/demo/run") => parity_api::handle_demo_run(req, storage),
+            (Method::Post, "/api/v1/demo/reset") => parity_api::handle_demo_reset(storage.as_ref()),
+            (Method::Get, "/api/v1/demo/roi") => parity_api::handle_demo_roi(storage.as_ref()),
+            _ => Self::route_request(req, storage.as_ref(), start_time, auth_token),
+        }
     }
 
     /// 统一路由分发逻辑
@@ -177,6 +234,8 @@ impl WebServer {
                 "/" | "/index.html" => return assets::serve_index(),
                 "/app.css" => return assets::serve_css(),
                 "/app.js" => return assets::serve_js(),
+                "/deck" => return assets::serve_deck(),
+                "/presentation" => return assets::serve_presentation(),
                 _ => {}
             }
         }

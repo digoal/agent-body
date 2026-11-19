@@ -105,9 +105,9 @@
   - 多 Agent 协作锁与层级互斥传播算法（Advisory Lock + 祖先后代路径检测）；
   - 工业级 NFR 指标（单二进制交付、冷启动 `<50ms`、空闲内存 `<25MB`）与递弱代偿边界。
 - 🛠️ **[02-for-developers.md](arch/02-for-developers.md)**（面向研发工程师与贡献者）：
-  - 源码 22 大模块全景职责与依赖拓扑速查；
+  - 源码 23 大模块全景职责与依赖拓扑速查；
   - 核心扩展三大 How-To（添加原生 MCP 工具、实现新存储后端 SPI、新增环境预检项）；
-  - 185+ 项自动化测试套件与本地开发流；
+  - 189+ 项自动化测试套件与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
 - 🧭 **[03-for-users.md](arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
   - 大管家核心心智模型与物理世界哨兵定位；
@@ -124,7 +124,7 @@
 - 🚀 **[01-getting-started.md](manual/01-getting-started.md)**：快速上手、环境依赖准备与首次编译运行
 - 🧠 **[02-core-concepts.md](manual/02-core-concepts.md)**：核心理念：大管家定位、黑白名单浅层阻断、放置建议哲学
 - 📖 **[03-cli-reference.md](manual/03-cli-reference.md)**：全量 CLI 命令行实操字典（全子命令 + 真实输出）
-- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：38 个原生 MCP 工具与 Claude/Cursor 配置
+- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：39 个原生 MCP 工具与 Claude/Cursor 配置
 - 🔄 **[05-daemon-and-watcher.md](manual/05-daemon-and-watcher.md)**：后台常驻守护服务、inotify 300ms 防抖与 systemd 自启
 - ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：v3.1 进阶特性：断链智能修复、放置规则自演化、宿主资源 GC、记忆生命周期与 TUI 看板
 - 🛠️ **[07-troubleshooting.md](manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
@@ -269,6 +269,14 @@ cargo build --release
     - 微观符号调用（函数、类、AST）下钻交给 CodeGraph，大管家通过 `CodeGraphBridge` 无缝桥接。
     - 记忆模块通过 SPI 抽象，拥抱成熟开源生态（Mem0/Letta/PowerContext），绝不重复发明轮子。
 
+16. **黑白屏全能力双向同步规约 (Black/White-Screen Parity)**：
+    - 黑屏功能（MCP 工具、SKILL 指导、CLI 子命令）与白屏功能（Web UI 工作台、REST API）必须保持 **1:1 双向同步**，严禁出现仅存在于单侧的孤岛功能。
+    - 白屏端每次交互应同步镜像回显等价的 CLI 命令与 MCP JSON-RPC 请求体；并通过 `/api/v1/parity/matrix` 与自动化契约测试强制守卫 **100% 对齐率**。
+
+17. **产品路演与场景演示内建规约 (Built-in Roadshow & Live Demo)**：
+    - 从产品经理与市场营销推广视角，将高频痛点与核心护城河沉淀为 Web 端可交互的 **路演演示剧场（Roadshow Live Demo）**，与黑屏 `steward_demo_scenario` / `agent-steward demo` 同源演进。
+    - 所有路演剧目必须由真实引擎驱动（严禁硬编码假数据），状态写入严格限定在 `demo:*` 隔离沙盒并支持一键无痕复位；同时将离线路演 PPT（`/deck`、`/presentation`）与 ROI 实时账单内建于单二进制 Web 服务中，随版本同步刷新。
+
 ---
 
 ## 未来演进与待探讨 ISSUE (Roadmap & Open Issues)
@@ -287,6 +295,14 @@ cargo build --release
   
 5. **Web UI 显示内容优化与交互重构** `✅ Phase 19 已落地 Web UI 2.0 五大工作台与真实拓扑`：
    - Web UI 显示的内容有点简陋，也不美观。需要重新设计一下。
+
+6. **黑屏功能和白屏功能双向同步** `✅ Phase 21 已落地 39 工具 100% Parity 同步`：
+   - 黑屏功能和白屏功能要同步，白屏主要体现在WEB端，黑屏体现在 MCP,SKILL,CLI 侧（已升格为开发规约 #16）。
+
+7. **WEB 侧路演与对外分享演示剧场** `✅ Phase 22 已落地「🎬 路演演示剧场」与第 39 工具`：
+   - 要在WEB侧额外设计更多演示功能，路演和对外分享时使用，从产品经理和市场营销推广的角度来挑选哪些场景需要被拿来演示（已升格为开发规约 #17）。
+
+8. 元数据定义哪些Key，这个值得再深度探讨，目前我看到的似乎不是很充分，至少在不看内容之前我从元数据的KV看不出这个对象是干什么的。但也必须清楚，要掌握更多 Key 可能会消耗 Token，如果用本地 ollama 的小模型来生成就很好。
   
 ---
 

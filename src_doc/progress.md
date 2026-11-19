@@ -1,9 +1,9 @@
 # Agent Host Steward (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-19T08:23:00+08:00  
+> 最新更新: 2026-11-19T09:55:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: Phase 1~20 全部完成，38 个原生 MCP 工具，全量测试 186 passed (0 failed, 1 ignored)；Web UI 2.0 现网运行中
+> 当前状态: Phase 1~22 全部完成，39 个原生 MCP 工具（黑白屏 100% 同步），全量测试 189 passed (0 failed, 1 ignored)；Web 路演剧场现网运行中
 
 ---
 
@@ -101,8 +101,10 @@
 | **Phase 18** | 跨平台原生探测深化（macOS/Windows）与轻量多机联邦网格（HTTP Peer Mesh + 跨节点锁路由） | 待探讨 ISSUE #3 & #1 | ✅ **已完成** | 2026-11-19 00:19 |
 | **Phase 19** | 真实事实拓扑修正、进程去噪与 Web UI 2.0 全景交互指挥舱（5 大工作台 + Daemon SSE 实时推流） | 待探讨 ISSUE #5 / 规约 #5 #7 | ✅ **已完成** | 2026-11-19 08:21 |
 | **Phase 20** | 四层贯通文档刷新、全局 3 处 SKILL 镜像同步与现网守护热更新交付 | 规约 #10 #11 #13 #14 | ✅ **已完成** | 2026-11-19 08:23 |
+| **Phase 21** | 黑白屏全能力双向同步与全景工作台升级（补齐 21 项缺失+7 项残缺白屏 API/UI + 黑屏命令镜像器 + 100% Parity 矩阵） | 待探讨 ISSUE #6 / 规约 #13 #16 | ✅ **已完成** | 2026-11-19 09:34 |
+| **Phase 22** | Web 路演演示剧场与产品营销互动引擎（6 大黄金剧目真引擎沙盒推演 + 左右分屏 + ROI 看板 + 第 39 工具 `steward_demo_scenario`） | 待探讨 ISSUE #7 & #6 / 规约 #5 #17 | ✅ **已完成** | 2026-11-19 09:55 |
 
-> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md) 与 [progress-phase19.md](progress-phase19.md)
+> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md) 与 [progress-phase21.md](progress-phase21.md)
 
 ---
 

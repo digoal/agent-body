@@ -426,4 +426,9 @@ agent-steward [OPTIONS] <COMMAND>
 - `agent-steward platform <info|ports|services>`: 使用运行时 `PlatformProbe`（Linux `/proc`+systemd、macOS `lsof`+launchd、Windows `netstat`+schtasks）查看本机监听端口与自动化任务。
 - `agent-steward mesh <peers|local|ping|facts|locks|port|acquire>`: 对等节点只读联邦查询、跨机端口占用查询与 HTTP 租约锁申请（对应 `steward_mesh_query`）。
 
+---
+
+### 2.21 `demo` — 路演场景演示与黑白屏同步自检引擎 (Phase 22)
+- `agent-steward demo <list|run <scenario_id>|roi|parity|reset>`: 列出或用真实宿主机引擎执行 6 大黄金路演剧目（`scene-1`~`scene-6`）、核算实时商业价值 ROI、检查 39 工具黑白屏同步矩阵，或一键清理 `demo:*` 沙盒锁（对应 `steward_demo_scenario`）。
+
 

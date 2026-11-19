@@ -2,6 +2,7 @@ pub mod http;
 pub mod api;
 pub mod topology;
 pub mod locks_api;
+pub mod parity_api;
 pub mod assets;
 pub mod server;
 
@@ -359,5 +360,153 @@ mod tests {
         assert_eq!(r_hist.status, StatusCode::OK);
         let b_hist = std::str::from_utf8(&r_hist.body).unwrap();
         assert!(b_hist.contains("lock_acquired"));
+    }
+
+    #[test]
+    fn test_web_parity_matrix_100_percent() {
+        let storage = std::sync::Arc::new(SqliteStorageProvider::open_in_memory().expect("sqlite memory init"));
+        storage.init().expect("sqlite init");
+        let start_time = Instant::now();
+
+        let req = HttpRequest {
+            method: Method::Get,
+            path: "/api/v1/parity/matrix".to_string(),
+            raw_query: "".to_string(),
+            query_params: Default::default(),
+            headers: Default::default(),
+            body: Vec::new(),
+        };
+        let resp = server::WebServer::route_request_arc(&req, storage, &start_time, &None);
+        assert_eq!(resp.status, StatusCode::OK);
+        let json: serde_json::Value = serde_json::from_slice(&resp.body).unwrap();
+        let data = &json["data"];
+        assert_eq!(data["total_mcp_tools"].as_u64(), Some(39));
+        assert_eq!(data["synced_count"].as_u64(), Some(39));
+        assert_eq!(data["missing_count"].as_u64(), Some(0));
+        assert_eq!(data["coverage_pct"].as_f64(), Some(100.0));
+    }
+
+    #[test]
+    fn test_web_parity_endpoints_roundtrip() {
+        let storage = std::sync::Arc::new(SqliteStorageProvider::open_in_memory().expect("sqlite memory init"));
+        storage.init().expect("sqlite init");
+        let start_time = Instant::now();
+
+        let get_req = |path: &str, params: &[(&str, &str)]| -> HttpRequest {
+            let mut qp = std::collections::HashMap::new();
+            for (k, v) in params {
+                qp.insert((*k).to_string(), (*v).to_string());
+            }
+            HttpRequest {
+                method: Method::Get,
+                path: path.to_string(),
+                raw_query: "".to_string(),
+                query_params: qp,
+                headers: Default::default(),
+                body: Vec::new(),
+            }
+        };
+        let post_req = |path: &str, body: serde_json::Value| -> HttpRequest {
+            HttpRequest {
+                method: Method::Post,
+                path: path.to_string(),
+                raw_query: "".to_string(),
+                query_params: Default::default(),
+                headers: Default::default(),
+                body: serde_json::to_vec(&body).unwrap(),
+            }
+        };
+
+        // 1. Brief & Placement
+        let r_brief = server::WebServer::route_request_arc(&get_req("/api/v1/brief", &[("intent", "postgres")]), storage.clone(), &start_time, &None);
+        assert_eq!(r_brief.status, StatusCode::OK);
+        assert!(std::str::from_utf8(&r_brief.body).unwrap().contains("quality"));
+
+        let r_place = server::WebServer::route_request_arc(
+            &post_req("/api/v1/placement/suggest", serde_json::json!({"object_type": "script", "name": "demo_crawler", "intent": "抓取数据"})),
+            storage.clone(),
+            &start_time,
+            &None,
+        );
+        assert_eq!(r_place.status, StatusCode::OK);
+        assert!(std::str::from_utf8(&r_place.body).unwrap().contains("suggested_path"));
+
+        // 2. Assets register & search
+        let r_reg = server::WebServer::route_request_arc(
+            &post_req("/api/v1/assets/register", serde_json::json!({"path": "/root/new/shared_proj/demo_tool.py", "asset_type": "script", "description": "demo parity tool"})),
+            storage.clone(),
+            &start_time,
+            &None,
+        );
+        assert_eq!(r_reg.status, StatusCode::OK);
+
+        let r_asearch = server::WebServer::route_request_arc(&get_req("/api/v1/assets/search", &[("q", "demo_tool")]), storage.clone(), &start_time, &None);
+        assert_eq!(r_asearch.status, StatusCode::OK);
+        assert!(std::str::from_utf8(&r_asearch.body).unwrap().contains("demo_tool.py"));
+
+        // 3. Facts port-check & query
+        let r_port = server::WebServer::route_request_arc(&get_req("/api/v1/facts/port-check", &[("port", "59999")]), storage.clone(), &start_time, &None);
+        assert_eq!(r_port.status, StatusCode::OK);
+        assert!(std::str::from_utf8(&r_port.body).unwrap().contains("recommended_free_ports"));
+
+        let r_fq = server::WebServer::route_request_arc(&get_req("/api/v1/facts/query", &[("q", "pdf"), ("type", "capability")]), storage.clone(), &start_time, &None);
+        assert_eq!(r_fq.status, StatusCode::OK);
+        assert!(std::str::from_utf8(&r_fq.body).unwrap().contains("answer"));
+
+        // 4. Links audit, repair & mermaid
+        let r_laudit = server::WebServer::route_request_arc(&get_req("/api/v1/links/audit", &[]), storage.clone(), &start_time, &None);
+        assert_eq!(r_laudit.status, StatusCode::OK);
+        let r_lrep = server::WebServer::route_request_arc(&get_req("/api/v1/links/repair", &[]), storage.clone(), &start_time, &None);
+        assert_eq!(r_lrep.status, StatusCode::OK);
+        let r_lmer = server::WebServer::route_request_arc(&get_req("/api/v1/links/mermaid", &[]), storage.clone(), &start_time, &None);
+        assert_eq!(r_lmer.status, StatusCode::OK);
+        assert!(std::str::from_utf8(&r_lmer.body).unwrap().contains("graph LR"));
+
+        // 5. Hooks pre, post & generate
+        let r_hpre = server::WebServer::route_request_arc(
+            &post_req("/api/v1/hooks/pre", serde_json::json!({"tool_name": "write_file", "args": {"file_path": "/root/new/shared_proj/test.py"}})),
+            storage.clone(),
+            &start_time,
+            &None,
+        );
+        assert_eq!(r_hpre.status, StatusCode::OK);
+        let r_hgen = server::WebServer::route_request_arc(&get_req("/api/v1/hooks/generate", &[("client", "agy")]), storage.clone(), &start_time, &None);
+        assert_eq!(r_hgen.status, StatusCode::OK);
+
+        // 6. DuckDB Analytics heatmap & trend
+        let r_heat = server::WebServer::route_request_arc(&get_req("/api/v1/analytics/heatmap", &[("days", "30")]), storage.clone(), &start_time, &None);
+        assert_eq!(r_heat.status, StatusCode::OK);
+        let r_trend = server::WebServer::route_request_arc(&get_req("/api/v1/analytics/trend", &[("days", "30")]), storage.clone(), &start_time, &None);
+        assert_eq!(r_trend.status, StatusCode::OK);
+
+        // 7. Memories add, search & audit
+        let r_madd = server::WebServer::route_request_arc(
+            &post_req("/api/v1/memories/add", serde_json::json!({"memory_type": "decision", "content": "parity web memory test"})),
+            storage.clone(),
+            &start_time,
+            &None,
+        );
+        assert_eq!(r_madd.status, StatusCode::OK);
+        let r_ms = server::WebServer::route_request_arc(&get_req("/api/v1/memories/search", &[("q", "parity"), ("hybrid", "false")]), storage.clone(), &start_time, &None);
+        assert_eq!(r_ms.status, StatusCode::OK);
+        assert!(std::str::from_utf8(&r_ms.body).unwrap().contains("parity web memory test"));
+        let r_ma = server::WebServer::route_request_arc(&get_req("/api/v1/memories/audit", &[]), storage.clone(), &start_time, &None);
+        assert_eq!(r_ma.status, StatusCode::OK);
+
+        // 8. GC & Session close dry-run
+        let r_gc = server::WebServer::route_request_arc(&get_req("/api/v1/env/gc", &[]), storage.clone(), &start_time, &None);
+        assert_eq!(r_gc.status, StatusCode::OK);
+        let r_sc = server::WebServer::route_request_arc(&post_req("/api/v1/session/close", serde_json::json!({"session_id": "s-test"})), storage.clone(), &start_time, &None);
+        assert_eq!(r_sc.status, StatusCode::OK);
+
+        // 9. Locks acquire & wait
+        let r_la = server::WebServer::route_request_arc(
+            &post_req("/api/v1/locks/acquire", serde_json::json!({"resource_type": "custom", "resource_id": "demo-parity-res", "holder_agent": "agent-1"})),
+            storage.clone(),
+            &start_time,
+            &None,
+        );
+        assert_eq!(r_la.status, StatusCode::OK);
+        assert!(std::str::from_utf8(&r_la.body).unwrap().contains("\"granted\""));
     }
 }

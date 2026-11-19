@@ -614,6 +614,17 @@ impl McpToolRegistry {
                         "ttl_seconds": { "type": "integer", "default": 300 }
                     }
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_demo_scenario",
+                "description": "Web 路演与黑屏同源场景演示引擎（Phase 22）：列出或实跑 6 大黄金路演剧目（防扫爆/Pre-Hook防撞/爆炸半径/WFG死锁/Context防爆/完工简报），核算商业价值 ROI，检查黑白屏同步矩阵，或一键重置 demo:* 沙盒。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["list", "run", "roi", "parity", "reset"], "default": "list" },
+                        "scenario_id": { "type": "string", "description": "剧目 ID (scene-1 ~ scene-6，action=run 时必填)" }
+                    }
+                }
             })
         ]
     }
@@ -1230,6 +1241,34 @@ impl McpToolRegistry {
                         Ok(serde_json::to_string_pretty(&client.acquire_on_peer(peer, &req)?)?)
                     }
                     _ => Ok(serde_json::to_string_pretty(&client.ping_all())?),
+                }
+            }
+
+            "steward_demo_scenario" => {
+                use crate::demo::DemoEngine;
+                let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("list");
+                match action {
+                    "run" => {
+                        let id = args.get("scenario_id").and_then(|v| v.as_str()).unwrap_or("scene-1");
+                        let res = DemoEngine::run_scenario(self.storage.provider().clone(), id)?;
+                        Ok(serde_json::to_string_pretty(&res)?)
+                    }
+                    "roi" => {
+                        let roi = DemoEngine::compute_roi(self.storage.provider().as_ref())?;
+                        Ok(serde_json::to_string_pretty(&roi)?)
+                    }
+                    "reset" => {
+                        let cleaned = DemoEngine::reset_sandbox(self.storage.provider().as_ref())?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({ "cleaned": cleaned }))?)
+                    }
+                    "parity" => {
+                        let tools = self.list_tools();
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "total_mcp_tools": tools.len(),
+                            "tools": tools.iter().filter_map(|t| t.get("name").and_then(|v| v.as_str())).collect::<Vec<_>>(),
+                        }))?)
+                    }
+                    _ => Ok(serde_json::to_string_pretty(&DemoEngine::list_scenarios())?),
                 }
             }
 
