@@ -21,7 +21,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       <div class="brand">
         <span class="pulse-dot"></span>
         <div>
-          <h1>Agent Host Steward <span class="ver-badge">v0.3.4 · 2.0</span></h1>
+          <h1>Agent Host Steward <span class="ver-badge">v0.4.0 · 2.0</span></h1>
           <p class="subtitle">宿主机事实图谱 · 协作锁中枢 · Context 防爆路由器</p>
         </div>
       </div>

@@ -161,7 +161,10 @@ pub struct HttpResponse {
 impl HttpResponse {
     pub fn new(status: StatusCode) -> Self {
         let mut headers = HashMap::new();
-        headers.insert("Server".to_string(), "AgentSteward-Web/0.3.2".to_string());
+        headers.insert(
+            "Server".to_string(),
+            format!("AgentSteward-Web/{}", env!("CARGO_PKG_VERSION")),
+        );
         headers.insert("Access-Control-Allow-Origin".to_string(), "*".to_string());
         headers.insert("Access-Control-Allow-Methods".to_string(), "GET, POST, OPTIONS".to_string());
         headers.insert("Access-Control-Allow-Headers".to_string(), "Content-Type, Authorization".to_string());
