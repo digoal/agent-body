@@ -137,9 +137,11 @@ impl PreflightChecker {
 
         if let Some(cfg) = config {
             Self::check_ollama(&mut report, &cfg.embedding.ollama_url, &cfg.embedding.model, cfg.embedding.fallback_fts_only);
+            Self::check_annotation_model(&mut report, &cfg.annotation);
             Self::check_storage_backend(&mut report, cfg);
         } else {
             Self::check_ollama(&mut report, "http://localhost:11434", "nomic-embed-text", true);
+            Self::check_annotation_model(&mut report, &crate::config::AnnotationConfig::default());
         }
 
         // 3. 信息项 (Informational)
@@ -446,6 +448,66 @@ impl PreflightChecker {
                 message: format!("已发现 {} 个 SKILL 根目录: {}", existing.len(), existing.join(", ")),
                 remedy: None,
             });
+        }
+    }
+
+    /// 检查 Ollama 本地元数据自动标注小模型 (Phase 23)
+    pub fn check_annotation_model(report: &mut PreflightReport, cfg: &crate::config::AnnotationConfig) {
+        if !cfg.enabled {
+            report.add(CheckItem {
+                name: "Ollama 元数据标注模型".to_string(),
+                category: CheckCategory::Optional,
+                status: CheckStatus::Warn,
+                message: "已手动禁用 [annotation].enabled，将仅使用 L1 确定性语法提取".to_string(),
+                remedy: None,
+            });
+            return;
+        }
+        let tags_url = format!("{}/api/tags", cfg.ollama_url.trim_end_matches('/'));
+        let client = reqwest::blocking::Client::builder()
+            .timeout(Duration::from_millis(1500))
+            .build();
+        match client {
+            Ok(cli) => match cli.get(&tags_url).send() {
+                Ok(resp) if resp.status().is_success() => {
+                    let text = resp.text().unwrap_or_default();
+                    if text.contains(&cfg.model) {
+                        report.add(CheckItem {
+                            name: "Ollama 元数据标注模型".to_string(),
+                            category: CheckCategory::Optional,
+                            status: CheckStatus::Pass,
+                            message: format!("服务正常且已拉取小模型 `{}` (L2 自动语义标注就绪)", cfg.model),
+                            remedy: None,
+                        });
+                    } else {
+                        report.add(CheckItem {
+                            name: "Ollama 元数据标注模型".to_string(),
+                            category: CheckCategory::Optional,
+                            status: CheckStatus::Warn,
+                            message: format!("Ollama 在线，但未找到标注模型 `{}` (自动降级为 L1 确定性提取)", cfg.model),
+                            remedy: Some(format!("执行: ollama pull {}", cfg.model)),
+                        });
+                    }
+                }
+                _ => {
+                    report.add(CheckItem {
+                        name: "Ollama 元数据标注模型".to_string(),
+                        category: CheckCategory::Optional,
+                        status: CheckStatus::Warn,
+                        message: format!("无法连接 Ollama ({})，已自动降级为 L1 确定性元数据提取", cfg.ollama_url),
+                        remedy: Some("如需小模型语义标注，请启动 Ollama 并拉取 qwen3.5:0.8b".to_string()),
+                    });
+                }
+            },
+            Err(e) => {
+                report.add(CheckItem {
+                    name: "Ollama 元数据标注模型".to_string(),
+                    category: CheckCategory::Optional,
+                    status: CheckStatus::Warn,
+                    message: format!("HTTP 客户端构建失败: {}", e),
+                    remedy: None,
+                });
+            }
         }
     }
 

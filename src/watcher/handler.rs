@@ -62,28 +62,44 @@ impl ChangeHandler {
                         let size_bytes = metadata.map(|m| m.len() as i64);
                         let ext = event.path.extension().and_then(|s| s.to_str()).unwrap_or("");
                         let asset_type = match ext {
-                            "rs" | "py" | "sh" | "js" | "ts" => "script",
+                            "rs" | "py" | "sh" | "js" | "ts" | "go" => "script",
                             "md" | "txt" => "document",
-                            "toml" | "json" | "yaml" | "sql" => "config",
+                            "toml" | "json" | "yaml" | "yml" | "sql" | "service" | "conf" => "config",
                             _ => "other",
                         };
+
+                        let extracted = crate::scanner::metadata::HeuristicMetadataExtractor::extract(
+                            &event.path,
+                            asset_type,
+                            &tier,
+                            None,
+                            size_bytes,
+                        );
+                        let mut tags = if ext.is_empty() { vec![] } else { vec![ext.to_string()] };
+                        for t in extracted.extra_tags {
+                            if !tags.contains(&t) {
+                                tags.push(t);
+                            }
+                        }
 
                         let record = AssetRecord {
                             id: uuid::Uuid::new_v4().to_string(),
                             path: path_str.clone(),
                             asset_type: asset_type.to_string(),
                             owner: "user:digoal".to_string(),
-                            security_level: "internal".to_string(),
+                            security_level: extracted.security_level,
                             scan_tier: tier.clone(),
-                            description: Some(format!("文件变更动态同步 ({})", event.path.file_name().unwrap_or_default().to_string_lossy())),
-                            desc_kv: serde_json::json!({"watcher_sync": true}),
-                            usage: None,
+                            description: Some(extracted.description),
+                            desc_kv: extracted.desc_kv,
+                            usage: extracted.usage,
                             size_bytes,
                             file_count: None,
-                            tags: vec![ext.to_string()],
+                            tags,
                             status: "active".to_string(),
                         };
-                        self.storage.upsert_asset(&record)?;
+                        let existing = self.storage.get_asset_by_path(&path_str).ok().flatten();
+                        let merged = crate::scanner::metadata::merge_with_existing_asset(record, existing.as_ref());
+                        self.storage.upsert_asset(&merged)?;
                     }
 
                     // 写入变更审计日志

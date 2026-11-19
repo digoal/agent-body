@@ -35,7 +35,71 @@ pub struct Config {
     pub mesh: MeshConfig,
 
     #[serde(default)]
+    pub annotation: AnnotationConfig,
+
+    #[serde(default)]
     pub hooks: Vec<crate::hooks::HookRule>,
+}
+
+/// 资产语义元数据 Ollama 自动标注配置 (Phase 23)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnnotationConfig {
+    /// 是否启用本地 Ollama 小模型语义标注精炼
+    #[serde(default = "default_annotation_enabled")]
+    pub enabled: bool,
+
+    /// 本地或内网 Ollama 服务地址
+    #[serde(default = "default_ollama_url")]
+    pub ollama_url: String,
+
+    /// 用于生成资产结构化元数据的轻量小模型（推荐 qwen3.5:0.8b）
+    #[serde(default = "default_annotation_model")]
+    pub model: String,
+
+    /// 单文件标注请求超时毫秒
+    #[serde(default = "default_annotation_timeout_ms")]
+    pub timeout_ms: u64,
+
+    /// 送入小模型的文件头部最大摘录字符数
+    #[serde(default = "default_annotation_max_snippet_chars")]
+    pub max_snippet_chars: usize,
+
+    /// 守护进程每次巡检自动精炼的待标注资产批量上限
+    #[serde(default = "default_auto_enrich_batch_size")]
+    pub auto_enrich_batch_size: usize,
+}
+
+fn default_annotation_enabled() -> bool {
+    true
+}
+
+fn default_annotation_model() -> String {
+    "qwen3.5:0.8b".to_string()
+}
+
+fn default_annotation_timeout_ms() -> u64 {
+    15000
+}
+
+fn default_annotation_max_snippet_chars() -> usize {
+    1200
+}
+
+fn default_auto_enrich_batch_size() -> usize {
+    10
+}
+
+impl Default for AnnotationConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_annotation_enabled(),
+            ollama_url: default_ollama_url(),
+            model: default_annotation_model(),
+            timeout_ms: default_annotation_timeout_ms(),
+            max_snippet_chars: default_annotation_max_snippet_chars(),
+            auto_enrich_batch_size: default_auto_enrich_batch_size(),
+        }
+    }
 }
 
 /// 轻量多机联邦 (Peer Mesh) 配置 (Phase 18)
@@ -268,6 +332,7 @@ impl Default for Config {
             storage: StorageConfig::default(),
             web: WebConfig::default(),
             mesh: MeshConfig::default(),
+            annotation: AnnotationConfig::default(),
             hooks: vec![],
         }
     }
@@ -336,6 +401,12 @@ impl Config {
         if self.mesh.enabled && !self.mesh.peers.is_empty() && self.web.auth_token.is_none() {
             anyhow::bail!("启用 mesh 联邦且配置了 peers 时，必须设置 [web].auth_token 作为集群共享密钥");
         }
+        if self.annotation.enabled && self.annotation.timeout_ms < 500 {
+            anyhow::bail!("annotation.timeout_ms ({}) 不能小于 500ms", self.annotation.timeout_ms);
+        }
+        if self.annotation.enabled && self.annotation.max_snippet_chars < 200 {
+            anyhow::bail!("annotation.max_snippet_chars ({}) 不能小于 200", self.annotation.max_snippet_chars);
+        }
         Ok(())
     }
 }
@@ -382,6 +453,14 @@ mod tests {
         assert!(cfg.validate().is_err());
 
         cfg.storage.pg_url = Some("host=localhost dbname=steward".to_string());
+        assert!(cfg.validate().is_ok());
+
+        cfg.annotation.timeout_ms = 100;
+        assert!(cfg.validate().is_err());
+        cfg.annotation.timeout_ms = 8000;
+        cfg.annotation.max_snippet_chars = 50;
+        assert!(cfg.validate().is_err());
+        cfg.annotation.max_snippet_chars = 1200;
         assert!(cfg.validate().is_ok());
     }
 }

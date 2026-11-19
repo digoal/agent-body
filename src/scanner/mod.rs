@@ -1,9 +1,16 @@
 pub mod matcher;
 pub mod state_machine;
 pub mod importance;
+pub mod metadata;
+pub mod ollama_annotator;
 
 pub use state_machine::ScanStateMachine;
 pub use importance::{ImportanceScorer, NoiseFilter, ImportanceScore};
+pub use metadata::{
+    DetailLevel, ExtractedMetadata, HeuristicMetadataExtractor, SecretRedactor,
+    format_asset_line, merge_with_existing_asset, project_asset_view,
+};
+pub use ollama_annotator::{EnrichReport, EnrichedSample, OllamaAnnotator};
 
 use std::path::Path;
 use serde::{Deserialize, Serialize};
@@ -109,7 +116,7 @@ impl Scanner {
             } else if entry.file_type().is_file() {
                 // 文件处理 (处于 deep 或 restricted 模式下)
                 let tier = self.determine_tier(path);
-                let (asset_type, tags) = infer_file_attributes(path);
+                let (asset_type, mut tags) = infer_file_attributes(path);
                 let metadata = entry.metadata().ok();
                 let size_bytes = metadata.as_ref().map(|m| m.len() as i64);
                 let mtime_secs = metadata.as_ref()
@@ -124,21 +131,30 @@ impl Scanner {
                     continue;
                 }
 
+                // L1 确定性微秒级元数据提取 (<1ms, 0 LLM 开销)
+                let extracted = HeuristicMetadataExtractor::extract(
+                    path,
+                    &asset_type,
+                    &tier,
+                    Some(&imp_score),
+                    size_bytes,
+                );
+                for t in extracted.extra_tags {
+                    if !tags.contains(&t) {
+                        tags.push(t);
+                    }
+                }
+
                 let record = AssetRecord {
                     id: uuid::Uuid::new_v4().to_string(),
                     path: path_str,
                     asset_type,
                     owner: "user:digoal".to_string(),
-                    security_level: "internal".to_string(),
+                    security_level: extracted.security_level,
                     scan_tier: tier.clone(),
-                    description: Some(format!("资产文件 ({})", entry.file_name().to_string_lossy())),
-                    desc_kv: serde_json::json!({
-                        "filename": entry.file_name().to_string_lossy(),
-                        "tier": tier,
-                        "importance_score": imp_score.score,
-                        "importance_reason": imp_score.reason
-                    }),
-                    usage: None,
+                    description: Some(extracted.description),
+                    desc_kv: extracted.desc_kv,
+                    usage: extracted.usage,
                     size_bytes,
                     file_count: None,
                     tags,
@@ -167,7 +183,9 @@ impl Scanner {
 
     fn flush_batch(&self, records: &[AssetRecord]) -> Result<()> {
         for r in records {
-            self.storage.upsert_asset(r)?;
+            let existing = self.storage.get_asset_by_path(&r.path).ok().flatten();
+            let merged = merge_with_existing_asset(r.clone(), existing.as_ref());
+            self.storage.upsert_asset(&merged)?;
         }
         Ok(())
     }

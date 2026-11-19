@@ -176,7 +176,7 @@ impl ScanStateMachine {
                 }
             } else if entry.file_type().is_file() {
                 job.scanned_files += 1;
-                let (asset_type, tags) = infer_file_attributes(path);
+                let (asset_type, mut tags) = infer_file_attributes(path);
                 let metadata = entry.metadata().ok();
                 let size_bytes = metadata.as_ref().map(|m| m.len() as i64);
                 let mtime_secs = metadata.as_ref()
@@ -187,21 +187,29 @@ impl ScanStateMachine {
                 // 智能重要性与噪声过滤
                 let (should_record, imp_score) = self.noise_filter.should_record(path, &asset_type, size_bytes, mtime_secs);
                 if should_record {
+                    let extracted = crate::scanner::metadata::HeuristicMetadataExtractor::extract(
+                        path,
+                        &asset_type,
+                        &tier,
+                        Some(&imp_score),
+                        size_bytes,
+                    );
+                    for t in extracted.extra_tags {
+                        if !tags.contains(&t) {
+                            tags.push(t);
+                        }
+                    }
+
                     let record = AssetRecord {
                         id: uuid::Uuid::new_v4().to_string(),
                         path: path_str.clone(),
                         asset_type,
                         owner: "user:digoal".to_string(),
-                        security_level: "internal".to_string(),
+                        security_level: extracted.security_level,
                         scan_tier: tier.clone(),
-                        description: Some(format!("资产文件 ({})", entry.file_name().to_string_lossy())),
-                        desc_kv: serde_json::json!({
-                            "filename": entry.file_name().to_string_lossy(),
-                            "tier": tier,
-                            "importance_score": imp_score.score,
-                            "importance_reason": imp_score.reason
-                        }),
-                        usage: None,
+                        description: Some(extracted.description),
+                        desc_kv: extracted.desc_kv,
+                        usage: extracted.usage,
                         size_bytes,
                         file_count: None,
                         tags,
@@ -278,7 +286,9 @@ impl ScanStateMachine {
 
     fn flush_checkpoint(&self, job: &mut ScanJobRecord, records: &[AssetRecord]) -> Result<()> {
         for r in records {
-            self.storage.upsert_asset(r)?;
+            let existing = self.storage.get_asset_by_path(&r.path).ok().flatten();
+            let merged = crate::scanner::metadata::merge_with_existing_asset(r.clone(), existing.as_ref());
+            self.storage.upsert_asset(&merged)?;
         }
         self.storage.update_scan_job(job)?;
         Ok(())

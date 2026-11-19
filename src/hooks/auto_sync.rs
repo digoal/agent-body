@@ -88,25 +88,45 @@ impl AutoSyncEngine {
 
         let metadata = path.metadata().ok();
         let size_bytes = metadata.map(|m| m.len() as i64);
-
         let file_name = path.file_name().unwrap_or_default().to_string_lossy();
+
+        let extracted = crate::scanner::metadata::HeuristicMetadataExtractor::extract(
+            path,
+            asset_type,
+            "deep",
+            None,
+            size_bytes,
+        );
+        let mut tags = vec![ext.to_string(), "agent_output".to_string()];
+        for t in extracted.extra_tags {
+            if !tags.contains(&t) {
+                tags.push(t);
+            }
+        }
+        let mut desc_kv = extracted.desc_kv;
+        if let Some(obj) = desc_kv.as_object_mut() {
+            obj.insert("created_by_tool".to_string(), serde_json::json!(tool_name));
+        }
+
         let asset_rec = AssetRecord {
             id: uuid::Uuid::new_v4().to_string(),
             path: path_str.to_string(),
             asset_type: asset_type.to_string(),
             owner: "user:digoal".to_string(),
-            security_level: "internal".to_string(),
+            security_level: extracted.security_level,
             scan_tier: "deep".to_string(),
-            description: Some(format!("Agent 通过 `{}` 产出的新资产 ({})", tool_name, file_name)),
-            desc_kv: serde_json::json!({"created_by_tool": tool_name}),
-            usage: None,
+            description: Some(extracted.description),
+            desc_kv,
+            usage: extracted.usage,
             size_bytes,
             file_count: None,
-            tags: vec![ext.to_string(), "agent_output".to_string()],
+            tags,
             status: "active".to_string(),
         };
 
-        self.storage.upsert_asset(&asset_rec)?;
+        let existing = self.storage.get_asset_by_path(path_str).ok().flatten();
+        let merged = crate::scanner::metadata::merge_with_existing_asset(asset_rec, existing.as_ref());
+        self.storage.upsert_asset(&merged)?;
         res.asset_registered = true;
 
         // 3. 自动记忆沉淀门禁 (规约 #4 摄入门禁 & 规约 #2 禁止使用外部 LLM)

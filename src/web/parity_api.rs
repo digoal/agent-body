@@ -134,6 +134,8 @@ pub fn handle_assets_search(req: &HttpRequest, storage: &dyn StorageProvider) ->
         .parse::<usize>()
         .unwrap_or(40)
         .clamp(1, 200);
+    let detail_param = query_str(req, "detail", "standard");
+    let level = crate::scanner::DetailLevel::from_str_opt(Some(&detail_param));
 
     let res = if q.trim().is_empty() {
         storage.list_assets(limit)
@@ -141,7 +143,13 @@ pub fn handle_assets_search(req: &HttpRequest, storage: &dyn StorageProvider) ->
         storage.search_assets_fts(q.trim(), limit)
     };
     match res {
-        Ok(list) => WebResponse::success(list),
+        Ok(list) => {
+            let projected: Vec<serde_json::Value> = list
+                .iter()
+                .map(|a| crate::scanner::project_asset_view(a, level))
+                .collect();
+            WebResponse::success(projected)
+        }
         Err(e) => WebResponse::error(
             StatusCode::INTERNAL_SERVER_ERROR,
             &format!("Asset search failed: {}", e),
@@ -193,6 +201,14 @@ pub fn handle_assets_register(req: &HttpRequest, storage: &dyn StorageProvider) 
 #[derive(Debug, Deserialize)]
 pub struct AssetScanBody {
     pub path: String,
+    #[serde(default)]
+    pub enrich_with_ollama: bool,
+    #[serde(default = "default_enrich_limit")]
+    pub enrich_limit: usize,
+}
+
+fn default_enrich_limit() -> usize {
+    10
 }
 
 pub fn handle_assets_scan(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
@@ -204,7 +220,7 @@ pub fn handle_assets_scan(req: &HttpRequest, storage: Arc<dyn StorageProvider>) 
         return WebResponse::error(StatusCode::BAD_REQUEST, "path must not be empty");
     }
     let st = Storage::new(storage);
-    let scanner = match Scanner::new(st) {
+    let scanner = match Scanner::new(st.clone()) {
         Ok(s) => s,
         Err(e) => {
             return WebResponse::error(
@@ -214,7 +230,20 @@ pub fn handle_assets_scan(req: &HttpRequest, storage: Arc<dyn StorageProvider>) 
         }
     };
     match scanner.scan_path(&PathBuf::from(body.path.trim())) {
-        Ok(report) => WebResponse::success(report),
+        Ok(report) => {
+            let enrich_report = if body.enrich_with_ollama {
+                let annotator = crate::scanner::OllamaAnnotator::with_default_config(st);
+                annotator
+                    .enrich_pending_assets(body.enrich_limit.clamp(1, 50), Some(body.path.trim()))
+                    .ok()
+            } else {
+                None
+            };
+            WebResponse::success(serde_json::json!({
+                "scan_report": report,
+                "enrich_report": enrich_report,
+            }))
+        }
         Err(e) => WebResponse::error(
             StatusCode::INTERNAL_SERVER_ERROR,
             &format!("Scan failed: {}", e),

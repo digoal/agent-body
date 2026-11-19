@@ -63,9 +63,9 @@ sequenceDiagram
 | `steward_placement_suggest` | 索取新文件/工程的标准存放路径与命名建议 | `type`, `name`, `intent`, `security` |
 | `steward_placement_rules` | 查看生效的 8 大目录放置规范 | 无 |
 | `steward_placement_learn` | 放置规范自演化：聚类挖掘新规则候选与持久化 | `min_samples`, `accept` |
-| `steward_asset_search` | 全文与语义检索已知纳管资产 | `query`, `limit` |
+| `steward_asset_search` | 全文与语义检索已知纳管资产（支持三级渐进 Token 披露） | `query`, `limit`, `detail_level` (`micro`/`standard`/`full`) |
 | `steward_asset_register` | 手动注册一个新资产对象 | `path`, `type`, `owner`, `desc` |
-| `steward_asset_scan` | 触发指定目录白黑名单分级扫描 | `path` |
+| `steward_asset_scan` | 触发指定目录白黑名单分级扫描（含 L1 提取与可选 Ollama L2 标注） | `path`, `enrich_with_ollama`, `enrich_limit` |
 | `steward_env_processes` | 检索当前运行的普通任务进程 (过滤底噪) | 无 |
 | `steward_env_show` | 查看系统硬件规格 (CPU/内存/磁盘) | 无 |
 | `steward_env_gc` | 宿主垃圾回收：安全清理超期临时文件与孤儿进程 | `tmp_dir`, `max_age_hours`, `apply` |

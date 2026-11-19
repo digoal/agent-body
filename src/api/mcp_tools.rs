@@ -85,7 +85,7 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_asset_search",
-                "description": "全文检索与语义搜索宿主机已纳管的代码、工具、项目、文档及配置资产。",
+                "description": "全文检索与语义搜索宿主机已纳管的代码、工具、项目、文档及配置资产（支持 micro/standard/full 三级渐进式 Token 披露）。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -97,6 +97,12 @@ impl McpToolRegistry {
                             "type": "integer",
                             "default": 10,
                             "description": "最多返回结果数"
+                        },
+                        "detail_level": {
+                            "type": "string",
+                            "enum": ["micro", "standard", "full"],
+                            "default": "standard",
+                            "description": "元数据披露粒度: micro(~25 tok) | standard(~85 tok, 剥离管线噪音) | full(~180 tok, 含完整desc_kv)"
                         }
                     },
                     "required": ["query"]
@@ -128,11 +134,21 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_asset_scan",
-                "description": "对指定目录触发分级颗粒度扫描（白名单递归深入解析，黑名单严格止于当层，杜绝扫爆数据库）。",
+                "description": "对指定目录触发分级颗粒度扫描（同步完成 L1 确定性元数据提取；可选开启本地 Ollama 小模型 L2 异步语义精炼）。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "path": { "type": "string", "description": "要扫描的目标目录绝对路径" }
+                        "path": { "type": "string", "description": "要扫描的目标目录绝对路径" },
+                        "enrich_with_ollama": {
+                            "type": "boolean",
+                            "default": false,
+                            "description": "是否顺便调用本地 Ollama 小模型对高价值资产做 L2 语义精炼"
+                        },
+                        "enrich_limit": {
+                            "type": "integer",
+                            "default": 10,
+                            "description": "当 enrich_with_ollama=true 时本次最多精炼的资产数"
+                        }
                     },
                     "required": ["path"]
                 }
@@ -693,11 +709,15 @@ impl McpToolRegistry {
             "steward_asset_search" => {
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
                 let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
+                let detail = crate::scanner::DetailLevel::from_str_opt(
+                    args.get("detail_level").and_then(|v| v.as_str()),
+                );
 
                 let results = self.storage.search_assets_fts(query, limit)?;
-                let mut out = format!("资产搜索匹配结果 (共 {} 条):\n", results.len());
+                let mut out = format!("资产搜索匹配结果 (共 {} 条, detail={:?}):\n", results.len(), detail);
                 for a in results {
-                    out.push_str(&format!("  - [{}] {} | {}\n", a.asset_type, a.path, a.description.unwrap_or_default()));
+                    out.push_str(&crate::scanner::format_asset_line(&a, detail));
+                    out.push('\n');
                 }
                 Ok(out)
             }
@@ -731,15 +751,29 @@ impl McpToolRegistry {
 
             "steward_asset_scan" => {
                 let path_str = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                let enrich = args.get("enrich_with_ollama").and_then(|v| v.as_bool()).unwrap_or(false);
+                let enrich_limit = args.get("enrich_limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
+
                 let scanner = Scanner::new(self.storage.clone())?;
                 let report = scanner.scan_path(&PathBuf::from(path_str))?;
 
                 let mut out = format!("分级颗粒度扫描报告 ({:?}):\n", path_str);
                 out.push_str(&format!("  - 扫描目录数:       {}\n", report.scanned_dirs));
-                out.push_str(&format!("  - 深层索引文件数:   {}\n", report.deep_indexed_files));
+                out.push_str(&format!("  - 深层索引文件数:   {} (已完成 L1 确定性元数据提取)\n", report.deep_indexed_files));
                 out.push_str(&format!("  - 黑名单阻断目录数: {}\n", report.shallow_blocked_dirs.len()));
                 for b in report.shallow_blocked_dirs {
                     out.push_str(&format!("    ★ [Shallow 阻断] {} ({})\n", b.path, b.reason));
+                }
+                if enrich {
+                    let annotator = crate::scanner::OllamaAnnotator::with_default_config(self.storage.clone());
+                    let er = annotator.enrich_pending_assets(enrich_limit, Some(path_str))?;
+                    out.push_str(&format!(
+                        "  - Ollama L2 精炼:   模型={} | 在线={} | 成功={}/{} (耗时 {}ms)\n",
+                        er.model_used, er.ollama_available, er.enriched_count, er.total_candidates, er.elapsed_ms
+                    ));
+                    for s in er.samples {
+                        out.push_str(&format!("    🤖 [{}] {} -> {} (入口: {})\n", s.domain, s.path, s.purpose, s.entry_point));
+                    }
                 }
                 Ok(out)
             }

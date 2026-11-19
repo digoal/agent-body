@@ -548,10 +548,16 @@ enum PlaceCommands {
 
 #[derive(Subcommand)]
 enum AssetCommands {
-    #[command(about = "执行白黑名单分级扫描")]
+    #[command(about = "执行白黑名单分级扫描（含 L1 确定性元数据提取，可选 --enrich 触发本地 Ollama 语义标注）")]
     Scan {
         #[arg(help = "目标目录路径")]
         path: PathBuf,
+
+        #[arg(long, help = "调用本地 Ollama 小模型进行 L2 语义标注精炼")]
+        enrich: bool,
+
+        #[arg(long, default_value_t = 10, help = "Ollama 单次最多精炼资产数")]
+        enrich_limit: usize,
     },
 
     #[command(about = "全文与语义搜索资产")]
@@ -561,6 +567,9 @@ enum AssetCommands {
 
         #[arg(short, long, default_value_t = 10)]
         limit: usize,
+
+        #[arg(long, default_value = "standard", help = "披露粒度: micro | standard | full")]
+        detail: String,
     },
 
     #[command(about = "手动向大管家登记一个文件或目录资产")]
@@ -772,23 +781,35 @@ fn main() -> Result<()> {
 
         Commands::Asset { action } => {
             match action {
-                AssetCommands::Scan { path } => {
+                AssetCommands::Scan { path, enrich, enrich_limit } => {
                     println!("正在执行分级颗粒度扫描: {:?}", path);
-                    let scanner = Scanner::new(storage)?;
+                    let scanner = Scanner::new(storage.clone())?;
                     let report = scanner.scan_path(&path)?;
                     println!("扫描完成报告:");
                     println!("  - 扫描目录数:       {}", report.scanned_dirs);
-                    println!("  - 深层索引文件数:   {}", report.deep_indexed_files);
+                    println!("  - 深层索引文件数:   {} (已完成 L1 确定性元数据提取)", report.deep_indexed_files);
                     println!("  - 黑名单阻断目录数: {}", report.shallow_blocked_dirs.len());
                     for b in report.shallow_blocked_dirs {
                         println!("    ★ [Shallow Tier 阻断] {} ({})", b.path, b.reason);
                     }
+                    if enrich {
+                        let prefix = path.to_string_lossy().to_string();
+                        println!("\n🤖 正在调用本地 Ollama 小模型进行 L2 语义标注精炼 (limit={})...", enrich_limit);
+                        let annotator = agent_steward::scanner::OllamaAnnotator::with_default_config(storage);
+                        let er = annotator.enrich_pending_assets(enrich_limit, Some(&prefix))?;
+                        println!("  - 模型: {} | 在线: {} | 候选: {} | 成功: {} | 跳过: {} | 失败: {} | 耗时: {}ms",
+                            er.model_used, er.ollama_available, er.total_candidates, er.enriched_count, er.skipped_count, er.failed_count, er.elapsed_ms);
+                        for s in er.samples {
+                            println!("    ✅ [{}] {} -> {} (入口: {})", s.domain, s.path, s.purpose, s.entry_point);
+                        }
+                    }
                 }
-                AssetCommands::Search { query, limit } => {
+                AssetCommands::Search { query, limit, detail } => {
+                    let level = agent_steward::scanner::DetailLevel::from_str_opt(Some(&detail));
                     let results = storage.search_assets_fts(&query, limit)?;
-                    println!("资产搜索匹配结果 (共 {} 条):", results.len());
+                    println!("资产搜索匹配结果 (共 {} 条, detail={:?}):", results.len(), level);
                     for a in results {
-                        println!("  - [{}] {} ({:?})", a.asset_type, a.path, a.description);
+                        println!("{}", agent_steward::scanner::format_asset_line(&a, level));
                     }
                 }
                 AssetCommands::Register { path, r#type, owner, security_level, description, desc_kv } => {

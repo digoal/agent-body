@@ -14,6 +14,7 @@ pub struct SchedulerCycleReport {
     pub memory_conflicts_found: usize,
     pub scan_job_resumed: bool,
     pub expired_locks_cleaned: usize,
+    pub assets_enriched: usize,
 }
 
 /// 后台巡查与增量调度引擎
@@ -66,6 +67,19 @@ impl BackgroundScheduler {
         let skill_scanner = crate::ecosystem::SkillCatalogScanner::new(self.storage.clone());
         let _ = skill_scanner.scan_default_roots();
 
+        // 7. 后台异步增量精炼待标注资产元数据 (Phase 23 Ollama 小模型)
+        let cfg = crate::config::Config::load_or_default(None).unwrap_or_default();
+        let assets_enriched = if cfg.annotation.enabled && cfg.annotation.auto_enrich_batch_size > 0 {
+            let batch_size = cfg.annotation.auto_enrich_batch_size;
+            let annotator = crate::scanner::OllamaAnnotator::new(self.storage.clone(), cfg.annotation);
+            annotator
+                .enrich_pending_assets(batch_size, None)
+                .map(|r| r.enriched_count)
+                .unwrap_or(0)
+        } else {
+            0
+        };
+
         Ok(SchedulerCycleReport {
             synced_processes,
             graph_nodes_updated: graph_nodes,
@@ -73,6 +87,7 @@ impl BackgroundScheduler {
             memory_conflicts_found: memory_conflicts,
             scan_job_resumed,
             expired_locks_cleaned,
+            assets_enriched,
         })
     }
 }

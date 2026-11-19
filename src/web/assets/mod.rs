@@ -1413,9 +1413,17 @@ function renderFactsTab() {
   } else {
     el.innerHTML = `
       <div class="inline-bar">
-        <input id="asset-search-q" class="input flex-1" type="text" value="${esc(q)}" placeholder="FTS5 检索纳管资产 (路径/描述)..." />
+        <input id="asset-search-q" class="input flex-1" type="text" value="${esc(q)}" placeholder="FTS5 检索纳管资产 (路径/用途/能力/符号)..." />
+        <select id="asset-detail-level" class="input input-sm" style="width:108px;" title="Token 披露粒度">
+          <option value="standard">standard</option>
+          <option value="micro">micro</option>
+          <option value="full">full</option>
+        </select>
         <button id="btn-asset-search" class="btn btn-primary btn-xs">🔍 检索资产</button>
-        <input id="asset-scan-path" class="input" style="width:220px;" type="text" value="/root/new/work/agent-steward" placeholder="待扫描目录路径" />
+        <input id="asset-scan-path" class="input" style="width:200px;" type="text" value="/root/new/work/agent-steward" placeholder="待扫描目录路径" />
+        <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
+          <input id="asset-scan-enrich" type="checkbox" /> 🤖 Ollama精炼
+        </label>
         <button id="btn-asset-scan" class="btn btn-ghost btn-xs">📂 分级扫描</button>
       </div>
       <div class="inline-bar">
@@ -1437,13 +1445,24 @@ function renderFactsTab() {
 
 async function loadAssetsPanel() {
   const q = document.getElementById("asset-search-q")?.value || "";
+  const detail = document.getElementById("asset-detail-level")?.value || "standard";
   const out = document.getElementById("asset-panel-out");
   if (!out) return;
   try {
-    const list = await apiGet(`/api/v1/assets/search?q=${encodeURIComponent(q)}&limit=50`);
-    mirrorBlackScreen(`agent-steward asset search "${q}"`, "steward_asset_search", { query: q, limit: 50 });
-    out.innerHTML = `<table class="data-table"><thead><tr><th>类型</th><th>分级</th><th>路径</th><th>描述</th></tr></thead><tbody>` +
-      (list || []).map((a) => `<tr><td><span class="badge">${esc(a.asset_type)}</span></td><td><span class="badge ${a.scan_tier === "deep" ? "badge-ok" : "badge-warn"}">${esc(a.scan_tier)}</span></td><td class="mono">${esc(a.path)}</td><td>${esc(a.description || "-")}</td></tr>`).join("") + `</tbody></table>`;
+    const list = await apiGet(`/api/v1/assets/search?q=${encodeURIComponent(q)}&limit=50&detail=${encodeURIComponent(detail)}`);
+    mirrorBlackScreen(`agent-steward asset search "${q}" --detail ${detail}`, "steward_asset_search", { query: q, limit: 50, detail_level: detail });
+    out.innerHTML = `<table class="data-table"><thead><tr><th>类型 / 域</th><th>路径</th><th>核心用途与结构化 KV</th></tr></thead><tbody>` +
+      (list || []).map((a) => {
+        const typ = a.type || a.asset_type || "other";
+        const kv = a.desc_kv || {};
+        const domain = a.domain || kv.domain || "-";
+        const purpose = a.purpose || kv.purpose || a.description || "-";
+        const caps = Array.isArray(kv.capabilities) ? kv.capabilities.map((c) => `<span class="badge badge-ok" style="margin-right:4px;">${esc(c)}</span>`).join("") : "";
+        const symsArr = kv.symbols || kv.headings || kv.config_sections || [];
+        const syms = Array.isArray(symsArr) && symsArr.length ? `<div class="mono" style="font-size:11px;color:var(--muted);margin-top:3px;">符号/章节: ${esc(symsArr.slice(0, 5).join(", "))}</div>` : "";
+        const modelBadge = kv.annotation_model ? `<span class="badge">${esc(kv.annotation_model)}</span>` : "";
+        return `<tr><td><span class="badge">${esc(typ)}</span> <span class="badge">${esc(domain)}</span> ${modelBadge}</td><td class="mono">${esc(a.path)}</td><td><div>${esc(purpose)}</div><div style="margin-top:3px;">${caps}</div>${syms}</td></tr>`;
+      }).join("") + `</tbody></table>`;
   } catch (e) {
     out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
@@ -1464,11 +1483,13 @@ async function registerAssetFromWeb() {
 
 async function scanAssetFromWeb() {
   const path = document.getElementById("asset-scan-path")?.value || "";
+  const enrich = Boolean(document.getElementById("asset-scan-enrich")?.checked);
   const out = document.getElementById("asset-panel-out");
   try {
-    const rep = await apiPost("/api/v1/assets/scan", { path });
-    mirrorBlackScreen(`agent-steward asset scan "${path}"`, "steward_asset_scan", { path });
-    if (out) out.innerHTML = `<div class="item-box"><strong>📂 分级扫描报告</strong><pre class="md-pre">${esc(JSON.stringify(rep, null, 2))}</pre></div>`;
+    const rep = await apiPost("/api/v1/assets/scan", { path, enrich_with_ollama: enrich, enrich_limit: 5 });
+    const cliCmd = enrich ? `agent-steward asset scan "${path}" --enrich --enrich-limit 5` : `agent-steward asset scan "${path}"`;
+    mirrorBlackScreen(cliCmd, "steward_asset_scan", { path, enrich_with_ollama: enrich, enrich_limit: 5 });
+    if (out) out.innerHTML = `<div class="item-box"><strong>📂 分级扫描 & 元数据标注报告</strong><pre class="md-pre">${esc(JSON.stringify(rep, null, 2))}</pre></div>`;
   } catch (e) {
     alert("扫描失败: " + e.message);
   }
