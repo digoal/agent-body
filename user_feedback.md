@@ -155,7 +155,7 @@ flowchart LR
   - 在 `Makefile` 新增安全 `sync-mirror` 目标并同步更新 `agent-steward-developer` SKILL，固化 `rsync -a --delete --exclude 'target/'`。
 
 ### `CON-07` `[P0 · 安全纵深防御缺口]` 缺乏系统级安全规约且采集/执行/Web 写接口/抗投毒存在 5 处纵深断点 (`SEC-GAP-01~05`)
-- **状态**: `🗓️ Planned (Phase 32~33)` · **首次记录**: 2026-11-20 · **发现渠道**: 全量源码安全基线审计
+- **状态**: `✅ Verified (Phase 32~33)` · **首次记录**: 2026-11-20 · **发现渠道**: 全量源码安全基线审计 · **验证实测**: `W11` 4/4 安全拦截 (脱敏/Hook转义/抗投毒/零误杀, `68 μs`)、`DQ4` 现网库 76/76 卫生度 `100.0%` & 全量 `cargo test` 223 passed (0 failed, 1 ignored)
 - **现象与复现证据**:
   1. **`SEC-GAP-01` 采集与记忆未全链路脱敏**：[src/fact/process_net.rs](src/fact/process_net.rs#L268-L280) 与 [src/env/mod.rs](src/env/mod.rs#L120-L149) 原样采集 `/proc/<pid>/cmdline` 入库，[src/memory/mod.rs](src/memory/mod.rs#L29-L94) `MemoryManager::add` 与 `record_change` 未调用 `SecretRedactor::redact()`，且 `SecretRedactor` 尚缺 URI 口令、JWT 与私钥头规则；
   2. **`SEC-GAP-02` Hook 命令拼接注入与导出底层校验缺失**：[src/hooks/dispatcher.rs](src/hooks/dispatcher.rs#L147-L185) 将 `{path}` 裸替换后交由 `sh -c` 执行，恶意文件名可触发 Shell 注入；[src/storage/duckdb_analytics.rs](src/storage/duckdb_analytics.rs#L238-L274) 直接拼接 `output_path` 进 DuckDB `COPY ... TO` SQL（目前仅 Web 层 [src/web/parity_api.rs](src/web/parity_api.rs#L515) 校验 `/root/new/tmp/`）；
@@ -211,7 +211,7 @@ flowchart LR
 | **`REQ-04`** | **经验自动提炼入 `memories` 与简报冷启动融合** | 将已验证反馈、会话复盘与避坑经验向量化存入 `memories`，激活 `BriefAssembler` 40% 记忆预算 | P1 | Phase 30.5 | `🗓️ Planned` |
 | **`REQ-05`** | **全渠道生产效能存证扩展 (`PR-01 ~ PR-10`)** | 覆盖 CLI、Web REST API、语义搜索与反馈沉淀，让生产账本真实反映大管家全部战绩 | P1 | Phase 30.4 | `🗓️ Planned` |
 | **`REQ-06`** | **补齐安全方向顶层规约、纵深防御架构规格与演进规划** | 针对安全方向缺少顶层规格与系统规划问题，确立规约 #19、`design_doc/11-security-spec.md`、`src_doc/roadmap-phase32.md` 及代码级 `security` 规约 | P0 | Phase 32.0 | `✅ Verified` |
-| **`REQ-07`** | **落地全链路脱敏、Hook 防注入、Web 全量写鉴权、抗投毒与 `W11`/`DQ4` 安全基准** | 闭环消除 `CON-07`（`SEC-GAP-01~05`），把明文零泄露、防命令注入、最小文件权限与抗提示词投毒固化为自动化测试与基准门禁 | P0 | Phase 32 ~ Phase 33 | `🗓️ Planned` |
+| **`REQ-07`** | **落地全链路脱敏、Hook 防注入、Web 全量写鉴权、抗投毒与 `W11`/`DQ4` 安全基准** | 闭环消除 `CON-07`（`SEC-GAP-01~05`），把明文零泄露、防命令注入、最小文件权限与抗提示词投毒固化为自动化测试与基准门禁 | P0 | Phase 32 ~ Phase 33 | `✅ Verified` |
 
 ---
 

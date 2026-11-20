@@ -402,7 +402,8 @@ impl BriefAssembler {
         if !session_id.is_empty() {
             if let Ok(ctx) = provider.get_context(session_id) {
                 for (i, item) in ctx.key_decisions.iter().take(3).enumerate() {
-                    let preview = item.content.chars().take(80).collect::<String>();
+                    let clean = crate::scanner::metadata::PromptInjectionScanner::scan_and_sanitize(&item.content).sanitized;
+                    let preview = clean.chars().take(80).collect::<String>();
                     lines.push(format!("{}. [决策] {}\n", i + 1, preview));
                     score = score.saturating_add(10);
                 }
@@ -420,7 +421,8 @@ impl BriefAssembler {
         if let Ok(items) = provider.search(search_query, 5, Some(&filter)) {
             let offset = lines.len() - 1; // 已添加的决策条数
             for (i, item) in items.iter().take(5).enumerate() {
-                let preview = item.content.chars().take(80).collect::<String>();
+                let clean = crate::scanner::metadata::PromptInjectionScanner::scan_and_sanitize(&item.content).sanitized;
+                let preview = clean.chars().take(80).collect::<String>();
                 let score_str = item.score.map(|s| format!(" ({:.2})", s)).unwrap_or_default();
                 lines.push(format!(
                     "{}. [{}]{} {}\n",

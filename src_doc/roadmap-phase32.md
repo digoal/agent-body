@@ -3,7 +3,7 @@
 > **编制**: Antigravity · **日期**: 2026-11-20  
 > **基线 Commit**: `5001ed9` (`v0.4.0` + Phase 30~31 反馈闭环 & Benchmark v2.0 已合入)  
 > **安全规格基线**: [11-security-spec.md](../design_doc/11-security-spec.md) · [README.md 规约 #8 & #19](../README.md) · [user_feedback.md](../user_feedback.md) (`CON-07`, `REQ-06`, `REQ-07`)  
-> **当前状态**: 📋 规划就绪 (`Planned` — 待按序串行实施)
+> **当前状态**: ✅ Phase 32 ~ Phase 33 全部完成 (`2026-11-20`) · `v2.1` 安全基准 (`W11`/`DQ4`) 已上线
 
 ---
 
@@ -87,10 +87,10 @@ flowchart LR
 | | **32.4** | `AgentHookEngine::pre_tool_call` 高危路径与破坏性指令 `CRITICAL` 拦截 | `SEC-GAP-04`, `CON-07` | ✅ 已完成 | 2026-11-20 |
 | | **32.5** | 存储 `0600`/`0700` 权限收敛 & `PreflightChecker::check_security_posture` | `SEC-GAP-05`, `CON-07` | ✅ 已完成 | 2026-11-20 |
 | | **32.6** | Phase 32 全量单测、集成测试与现网 `preflight` 回归验收 | Phase 32 DoD | ✅ 已完成 | 2026-11-20 |
-| **Phase 33** | **33.1** | `PromptInjectionScanner` 外部语料与记忆抗投毒清洗防线 | `SEC-GAP-04`, `CON-07` | ⬜ 待执行 | — |
-| | **33.2** | Benchmark `v2.1` 安全回归扩展（`W11` 与 `DQ4`） | `SEC-GAP-05`, `REQ-07` | ⬜ 待执行 | — |
-| | **33.3** | WebUI 安全态势面板升级与黑白屏 100% Parity 对齐 | 规约 #16 | ⬜ 待执行 | — |
-| | **33.4** | 四层文档/SKILL 同步、`CON-07`/`REQ-07` 闭环核验与现网热部署 | 规约 #10~#19 | ⬜ 待执行 | — |
+| **Phase 33** | **33.1** | `PromptInjectionScanner` 外部语料与记忆抗投毒清洗防线 | `SEC-GAP-04`, `CON-07` | ✅ 已完成 | 2026-11-20 |
+| | **33.2** | Benchmark `v2.1` 安全回归扩展（`W11` 与 `DQ4`） | `SEC-GAP-05`, `REQ-07` | ✅ 已完成 | 2026-11-20 |
+| | **33.3** | WebUI 安全态势面板升级与黑白屏 100% Parity 对齐 | 规约 #16 | ✅ 已完成 | 2026-11-20 |
+| | **33.4** | 四层文档/SKILL 同步、`CON-07`/`REQ-07` 闭环核验与现网热部署 | 规约 #10~#19 | ✅ 已完成 | 2026-11-20 |
 
 ---
 

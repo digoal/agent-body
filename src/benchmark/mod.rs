@@ -17,7 +17,7 @@ use crate::benchmark::workloads::{run_all_workloads, run_workload, WorkloadResul
 use crate::storage::models::BenchmarkRunRecord;
 use crate::storage::StorageProvider;
 
-pub const BENCHMARK_SPEC_VERSION: &str = "2.0";
+pub const BENCHMARK_SPEC_VERSION: &str = "2.1";
 
 pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
     if workloads.is_empty() {
@@ -34,7 +34,7 @@ pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
 pub fn compute_query_guard_speedup(workloads: &[WorkloadResult]) -> f64 {
     let subset: Vec<&WorkloadResult> = workloads
         .iter()
-        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9"))
+        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9" | "W11"))
         .collect();
     if subset.is_empty() {
         return 1.0;
@@ -232,10 +232,10 @@ mod tests {
         let report = BenchmarkEngine::run_suite(provider.clone(), "full", true, Some("bench:test"))
             .expect("run full suite");
 
-        assert_eq!(report.workloads.len(), 10);
+        assert_eq!(report.workloads.len(), 11);
         assert_eq!(report.micro_benchmarks.len(), 5);
-        assert_eq!(report.data_quality.len(), 3);
-        assert_eq!(report.spec_version, "2.0");
+        assert_eq!(report.data_quality.len(), 4);
+        assert_eq!(report.spec_version, "2.1");
         assert_eq!(report.report_sha256.len(), 64);
         assert!(
             report.overall_token_savings_pct > 50.0,

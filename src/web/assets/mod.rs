@@ -486,10 +486,10 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
             <div class="view-toolbar mt-12" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);">
               <div class="toolbar-left">
                 <select id="bench-suite-select" class="input" style="width:200px;">
-                  <option value="full">全量套件 v2.0 (W1~W10 + M1~M5 + DQ1~DQ3)</option>
-                  <option value="macro">宏观业务 A/B (W1~W10)</option>
+                  <option value="full">全量套件 v2.1 (W1~W11 + M1~M5 + DQ1~DQ4)</option>
+                  <option value="macro">宏观业务 A/B (W1~W11)</option>
                   <option value="micro">内核微基准 SLA (M1~M5)</option>
-                  <option value="dq">宿主机数据质量 (DQ1~DQ3)</option>
+                  <option value="dq">宿主机数据与安全质量 (DQ1~DQ4)</option>
                   <option value="W1">W1 · 宿主工具发现</option>
                   <option value="W2">W2 · 端口防撞选址</option>
                   <option value="W3">W3 · 分级扫描阻断</option>
@@ -498,6 +498,9 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                   <option value="W6">W6 · 多 Agent 死锁破局</option>
                   <option value="W7">W7 · 百级 SKILL 路由</option>
                   <option value="W8">W8 · 冷启动态势简报</option>
+                  <option value="W9">W9 · 混合语义检索 Recall@5</option>
+                  <option value="W10">W10 · 依赖抽取抗假阳性</option>
+                  <option value="W11">W11 · 全链路脱敏与抗投毒安全防线</option>
                 </select>
                 <button id="btn-bench-run" class="btn btn-primary btn-xs">▶ 真机运行 A/B 基准</button>
                 <select id="bench-window-select" class="input" style="width:120px;">
