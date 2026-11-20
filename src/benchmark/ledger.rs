@@ -41,6 +41,12 @@ pub struct RunComparison {
     pub run_b_id: String,
     pub run_a_version: String,
     pub run_b_version: String,
+    #[serde(default)]
+    pub run_a_spec_version: String,
+    #[serde(default)]
+    pub run_b_spec_version: String,
+    #[serde(default)]
+    pub spec_version_changed: bool,
     pub speedup_a: f64,
     pub speedup_b: f64,
     pub token_savings_a_pct: f64,
@@ -79,18 +85,33 @@ impl EffectivenessLedger {
         }
     }
 
-    /// 根据 MCP 工具名与实际输出自动按 PR-01~PR-08 推导并记入生产效能账本
+    /// 根据 MCP 工具名与实际输出自动按 PR-01~PR-10 推导并记入生产效能账本
     pub fn record_mcp_call(
         storage: &dyn StorageProvider,
         tool_name: &str,
         output_text: &str,
         elapsed_us: i64,
     ) {
-        if tool_name == "steward_benchmark" || tool_name == "steward_demo_scenario" {
+        Self::record_channel_call(storage, "mcp", tool_name, output_text, elapsed_us);
+    }
+
+    /// 全渠道统一轻量记账入口：支持 mcp / cli / web / hook，单次调用耗时 < 100 μs
+    pub fn record_channel_call(
+        storage: &dyn StorageProvider,
+        channel: &str,
+        tool_or_action: &str,
+        output_text: &str,
+        elapsed_us: i64,
+    ) {
+        if tool_or_action == "steward_benchmark"
+            || tool_or_action == "steward_demo_scenario"
+            || tool_or_action == "bench"
+        {
             return;
         }
+        let session_id = format!("{}-live", channel);
         let stew_tokens = estimate_tokens(output_text);
-        let input = match tool_name {
+        let input = match tool_or_action {
             "steward_skill_route" | "steward_mcp_catalog" | "steward_service_contact" => {
                 let skills_tok: i64 = storage
                     .list_skills_catalog()
@@ -102,9 +123,9 @@ impl EffectivenessLedger {
                     .unwrap_or(0);
                 let base = (skills_tok + mcps_tok).max(stew_tokens);
                 LedgerEventInput {
-                    session_id: "mcp-live".into(),
-                    source_channel: "mcp".into(),
-                    tool_or_action: tool_name.into(),
+                    session_id,
+                    source_channel: channel.into(),
+                    tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr01SkillMcpRouting,
                     baseline_tokens: base,
                     steward_tokens: stew_tokens,
@@ -117,9 +138,9 @@ impl EffectivenessLedger {
                 }
             }
             "steward_asset_search" | "steward_asset_register" => LedgerEventInput {
-                session_id: "mcp-live".into(),
-                source_channel: "mcp".into(),
-                tool_or_action: tool_name.into(),
+                session_id,
+                source_channel: channel.into(),
+                tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr02ProgressiveAssetSearch,
                 baseline_tokens: stew_tokens.saturating_mul(4).max(400),
                 steward_tokens: stew_tokens,
@@ -140,9 +161,9 @@ impl EffectivenessLedger {
                     return;
                 }
                 LedgerEventInput {
-                    session_id: "mcp-live".into(),
+                    session_id,
                     source_channel: "hook".into(),
-                    tool_or_action: tool_name.into(),
+                    tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr03PreHookInterception,
                     baseline_tokens: 600,
                     steward_tokens: stew_tokens,
@@ -154,13 +175,14 @@ impl EffectivenessLedger {
                     evidence_summary: "PR-03: Pre-Hook 执行前静态拦截冲突/违规".into(),
                 }
             }
-            "steward_fact_query" | "steward_port_check" | "steward_env_processes" | "steward_env_show" => {
-                let occupied = tool_name == "steward_port_check"
+            "steward_fact_query" | "steward_port_check" | "steward_env_processes" | "steward_env_show"
+            | "steward_placement_suggest" | "steward_changes_since" => {
+                let occupied = tool_or_action == "steward_port_check"
                     && (output_text.contains("occupied") || output_text.contains("已被占用"));
                 LedgerEventInput {
-                    session_id: "mcp-live".into(),
-                    source_channel: "mcp".into(),
-                    tool_or_action: tool_name.into(),
+                    session_id,
+                    source_channel: channel.into(),
+                    tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr04HostFactQuery,
                     baseline_tokens: stew_tokens.saturating_mul(3).max(300),
                     steward_tokens: stew_tokens,
@@ -169,14 +191,14 @@ impl EffectivenessLedger {
                     hazard_intercepted: if occupied { 1 } else { 0 },
                     noise_blocked: 0,
                     elapsed_us,
-                    evidence_summary: format!("PR-04: 宿主机只读物理事实查询 ({} tok, {} μs)", stew_tokens, elapsed_us),
+                    evidence_summary: format!("PR-04: 宿主机只读物理事实/放置查询 ({} tok, {} μs)", stew_tokens, elapsed_us),
                 }
             }
             "steward_links_impact" | "steward_links_audit" | "steward_links_repair" | "steward_codegraph_bridge" => {
                 LedgerEventInput {
-                    session_id: "mcp-live".into(),
-                    source_channel: "mcp".into(),
-                    tool_or_action: tool_name.into(),
+                    session_id,
+                    source_channel: channel.into(),
+                    tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr05GraphImpactAndAudit,
                     baseline_tokens: stew_tokens.saturating_mul(4).max(500),
                     steward_tokens: stew_tokens,
@@ -196,9 +218,9 @@ impl EffectivenessLedger {
                     return;
                 }
                 LedgerEventInput {
-                    session_id: "mcp-live".into(),
-                    source_channel: "mcp".into(),
-                    tool_or_action: tool_name.into(),
+                    session_id,
+                    source_channel: channel.into(),
+                    tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr07LockDeadlockGuard,
                     baseline_tokens: 400,
                     steward_tokens: stew_tokens,
@@ -211,9 +233,9 @@ impl EffectivenessLedger {
                 }
             }
             "steward_brief" => LedgerEventInput {
-                session_id: "mcp-live".into(),
-                source_channel: "mcp".into(),
-                tool_or_action: tool_name.into(),
+                session_id,
+                source_channel: channel.into(),
+                tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr08AdaptiveBriefColdStart,
                 baseline_tokens: stew_tokens.saturating_mul(3).max(1800),
                 steward_tokens: stew_tokens,
@@ -223,6 +245,34 @@ impl EffectivenessLedger {
                 noise_blocked: 0,
                 elapsed_us,
                 evidence_summary: format!("PR-08: 冷启动自适应简报组装 ({} tok, 免 5 轮探查)", stew_tokens),
+            },
+            "steward_memory_search" => LedgerEventInput {
+                session_id,
+                source_channel: channel.into(),
+                tool_or_action: tool_or_action.into(),
+                rule: ProvenanceRule::Pr09HybridSemanticSearch,
+                baseline_tokens: stew_tokens.saturating_mul(4).max(600),
+                steward_tokens: stew_tokens,
+                baseline_rounds: 3,
+                steward_rounds: 1,
+                hazard_intercepted: 0,
+                noise_blocked: 0,
+                elapsed_us,
+                evidence_summary: format!("PR-09: 语义向量+FTS 混合检索 ({} tok)", stew_tokens),
+            },
+            "steward_memory_add" | "steward_session_close" | "steward_feedback" => LedgerEventInput {
+                session_id,
+                source_channel: channel.into(),
+                tool_or_action: tool_or_action.into(),
+                rule: ProvenanceRule::Pr10FeedbackAndMemoryLoop,
+                baseline_tokens: stew_tokens.saturating_mul(3).max(450),
+                steward_tokens: stew_tokens,
+                baseline_rounds: 2,
+                steward_rounds: 1,
+                hazard_intercepted: 0,
+                noise_blocked: 0,
+                elapsed_us,
+                evidence_summary: format!("PR-10: 实际反馈与长期记忆沉淀 ({} tok)", stew_tokens),
             },
             _ => return,
         };
@@ -275,11 +325,28 @@ impl EffectivenessLedger {
             }
         }
 
+        let spec_a = a
+            .results_json
+            .get("spec_version")
+            .and_then(|v| v.as_str())
+            .unwrap_or("1.0")
+            .to_string();
+        let spec_b = b
+            .results_json
+            .get("spec_version")
+            .and_then(|v| v.as_str())
+            .unwrap_or("1.0")
+            .to_string();
+        let spec_version_changed = spec_a != spec_b;
+
         RunComparison {
             run_a_id: a.run_id.clone(),
             run_b_id: b.run_id.clone(),
             run_a_version: a.app_version.clone(),
             run_b_version: b.app_version.clone(),
+            run_a_spec_version: spec_a,
+            run_b_spec_version: spec_b,
+            spec_version_changed,
             speedup_a: a.overall_speedup_factor,
             speedup_b: b.overall_speedup_factor,
             token_savings_a_pct: a.overall_token_savings_pct,
@@ -287,5 +354,36 @@ impl EffectivenessLedger {
             workloads_diff: diffs,
             has_regression,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::storage::SqliteStorageProvider;
+
+    #[test]
+    fn test_record_channel_call_cli_web_pr09_pr10() {
+        let provider = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        EffectivenessLedger::record_channel_call(
+            &provider,
+            "cli",
+            "steward_memory_search",
+            "命中 3 条混合语义记忆",
+            180,
+        );
+        EffectivenessLedger::record_channel_call(
+            &provider,
+            "web",
+            "steward_feedback",
+            "已记录 CON-01 并沉淀记忆",
+            95,
+        );
+        let summary = provider
+            .query_effectiveness_ledger("7d", None, 10)
+            .expect("query ledger");
+        assert_eq!(summary.total_events, 2);
+        assert!(summary.by_rule.iter().any(|r| r.provenance_rule == "PR-09"));
+        assert!(summary.by_rule.iter().any(|r| r.provenance_rule == "PR-10"));
     }
 }

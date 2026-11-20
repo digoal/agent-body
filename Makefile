@@ -6,7 +6,7 @@ SHELL := /bin/bash
 TARGET := target/release/agent-steward
 INSTALL_PATH ?= /usr/local/bin/agent-steward
 
-.PHONY: all build check test preflight install restart clean docker-build lint-panic
+.PHONY: all build check test preflight install restart clean docker-build lint-panic sync-mirror
 
 all: build
 
@@ -43,6 +43,11 @@ restart: install
 # 清理构建缓存产物
 clean:
 	cargo clean
+
+# 安全镜像同步至开源仓库（强制排除 target/ 避免占满根分区）
+sync-mirror:
+	rsync -a --delete --exclude 'target/' /root/new/work/agent-steward/ /root/new/shared_git/agent-steward/
+	@echo "✅ 已安全镜像同步至 /root/new/shared_git/agent-steward/"
 
 # 构建生产 Docker 容器镜像
 docker-build:

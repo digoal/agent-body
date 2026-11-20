@@ -53,6 +53,7 @@ fn check_auth(req: &HttpRequest, auth_token: &Option<String>) -> Option<HttpResp
 /* ─── 21.1.1 领域 A/B/C: Brief / Placement / Assets / Facts / Links ─── */
 
 pub fn handle_brief(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let t0 = std::time::Instant::now();
     let query = query_str(req, "intent", "");
     let session_id = query_str(req, "session_id", "web-console");
     let budget = query_str(req, "budget", "1500")
@@ -60,6 +61,7 @@ pub fn handle_brief(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> Htt
         .unwrap_or(1500)
         .clamp(300, 8000);
 
+    let storage_ref = storage.clone();
     let st = Storage::new(storage);
     let provider = Arc::new(BuiltinMemoryProvider::new(st.clone()));
     let assembler = BriefAssembler::new(st, Some(provider));
@@ -69,11 +71,20 @@ pub fn handle_brief(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> Htt
         budget_tokens: budget,
     };
     match assembler.assemble(&brief_req) {
-        Ok(output) => WebResponse::success(serde_json::json!({
-            "markdown": output.markdown,
-            "budget_tokens": budget,
-            "quality": output.quality,
-        })),
+        Ok(output) => {
+            crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage_ref.as_ref(),
+                "web",
+                "steward_brief",
+                &output.markdown,
+                t0.elapsed().as_micros() as i64,
+            );
+            WebResponse::success(serde_json::json!({
+                "markdown": output.markdown,
+                "budget_tokens": budget,
+                "quality": output.quality,
+            }))
+        }
         Err(e) => WebResponse::error(
             StatusCode::INTERNAL_SERVER_ERROR,
             &format!("Failed to assemble brief: {}", e),
@@ -129,6 +140,7 @@ pub fn handle_placement_learn(req: &HttpRequest, storage: Arc<dyn StorageProvide
 }
 
 pub fn handle_assets_search(req: &HttpRequest, storage: &dyn StorageProvider) -> HttpResponse {
+    let t0 = std::time::Instant::now();
     let q = query_str(req, "q", "");
     let limit = query_str(req, "limit", "40")
         .parse::<usize>()
@@ -148,6 +160,14 @@ pub fn handle_assets_search(req: &HttpRequest, storage: &dyn StorageProvider) ->
                 .iter()
                 .map(|a| crate::scanner::project_asset_view(a, level))
                 .collect();
+            let summary_txt = serde_json::to_string(&projected).unwrap_or_default();
+            crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage,
+                "web",
+                "steward_asset_search",
+                &summary_txt,
+                t0.elapsed().as_micros() as i64,
+            );
             WebResponse::success(projected)
         }
         Err(e) => WebResponse::error(
@@ -285,9 +305,20 @@ pub fn handle_facts_query(req: &HttpRequest) -> HttpResponse {
 }
 
 pub fn handle_links_audit(storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let t0 = std::time::Instant::now();
+    let storage_ref = storage.clone();
     let auditor = LinkAuditor::new(Arc::new(Storage::new(storage)));
     match auditor.audit_links(false) {
-        Ok(rep) => WebResponse::success(rep),
+        Ok(rep) => {
+            crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage_ref.as_ref(),
+                "web",
+                "steward_links_audit",
+                &rep.summary,
+                t0.elapsed().as_micros() as i64,
+            );
+            WebResponse::success(rep)
+        }
         Err(e) => WebResponse::error(
             StatusCode::INTERNAL_SERVER_ERROR,
             &format!("Links audit failed: {}", e),
@@ -801,6 +832,7 @@ fn map_tool_parity(tool_name: &str) -> (&'static str, &'static str, &'static str
         "steward_mesh_query" => ("agent-steward mesh", "GET /api/v1/mesh/query", "governance", "synced"),
         "steward_demo_scenario" => ("agent-steward demo", "POST /api/v1/demo/run", "demo", "synced"),
         "steward_benchmark" => ("agent-steward bench", "POST /api/v1/benchmark/run", "benchmark", "synced"),
+        "steward_feedback" => ("agent-steward feedback", "GET/POST /api/v1/feedback", "benchmark", "synced"),
         _ => ("", "", "", "missing"),
     }
 }
@@ -1005,5 +1037,75 @@ pub fn handle_benchmark_reset(storage: &dyn StorageProvider) -> HttpResponse {
             StatusCode::INTERNAL_SERVER_ERROR,
             &format!("Benchmark sandbox reset failed: {}", e),
         ),
+    }
+}
+
+pub fn handle_feedback_list() -> HttpResponse {
+    let fb_path = crate::feedback::FeedbackEngine::default_feedback_path();
+    match crate::feedback::FeedbackEngine::list_items(&fb_path) {
+        Ok(items) => WebResponse::success(serde_json::json!({
+            "path": fb_path.to_string_lossy(),
+            "count": items.len(),
+            "items": items,
+        })),
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FeedbackActionBody {
+    pub action: Option<String>,
+    pub category: Option<String>,
+    pub priority: Option<String>,
+    pub title: Option<String>,
+    pub evidence: Option<String>,
+    pub target: Option<String>,
+}
+
+pub fn handle_feedback_post(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let t0 = std::time::Instant::now();
+    let body: FeedbackActionBody = match req.json() {
+        Ok(b) => b,
+        Err(e) => return WebResponse::error(StatusCode::BAD_REQUEST, &format!("Invalid JSON: {}", e)),
+    };
+    let fb_path = crate::feedback::FeedbackEngine::default_feedback_path();
+    let action = body.action.as_deref().unwrap_or("sync");
+    match action {
+        "add" => {
+            let cat = body.category.as_deref().unwrap_or("CON");
+            let prio = body.priority.as_deref().unwrap_or("P1");
+            let title = body.title.as_deref().unwrap_or("");
+            let evidence = body.evidence.as_deref().unwrap_or("");
+            let target = body.target.as_deref().unwrap_or("");
+            match crate::feedback::FeedbackEngine::add_item(&fb_path, cat, prio, title, evidence, target) {
+                Ok(item) => {
+                    crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.as_ref(),
+                        "web",
+                        "steward_feedback",
+                        &item.title,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    WebResponse::success(item)
+                }
+                Err(e) => WebResponse::error(StatusCode::BAD_REQUEST, &e.to_string()),
+            }
+        }
+        _ => {
+            let st = Storage::new(storage.clone());
+            match crate::feedback::FeedbackEngine::sync_verified_to_memories(&fb_path, &st) {
+                Ok(added) => {
+                    crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.as_ref(),
+                        "web",
+                        "steward_feedback",
+                        &format!("synced {} items", added),
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    WebResponse::success(serde_json::json!({ "synced_to_memories": added }))
+                }
+                Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+            }
+        }
     }
 }

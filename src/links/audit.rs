@@ -45,15 +45,43 @@ impl LinkAuditor {
         let mut fixed_count = 0;
 
         for link in &all_links {
+            // 过滤早期版本遗留的模板/占位符/临时日志/纯数据 JSON 端口等假阳性边
+            // 注意：当 source 与 target 同处于 /tmp/ 测试沙盒目录时保留审计（供 TempDir 单元测试与 W5 基准使用）
+            let both_in_sys_tmp = link.source_id.starts_with("/tmp/") && link.target_id.starts_with("/tmp/");
+            let is_false_positive = if link.target_type == "asset" {
+                (!both_in_sys_tmp && crate::links::is_non_static_link_target(&link.target_id, None))
+                    || (both_in_sys_tmp && crate::links::is_non_static_link_target(&link.target_id, None) && !link.target_id.starts_with("/tmp/"))
+                    || (link.source_id.ends_with(".md")
+                        && link.target_id.ends_with('/')
+                        && !Path::new(&link.target_id).exists())
+            } else if link.target_type == "service" {
+                crate::links::is_pure_data_file(&link.source_id)
+            } else {
+                false
+            };
+
+            if is_false_positive {
+                if fix_dangling && link.auto_discovered {
+                    let _ = self.storage.delete_links_for_target(&link.target_id);
+                    fixed_count += 1;
+                }
+                continue;
+            }
+
             if link.target_type == "asset" {
                 let p = Path::new(&link.target_id);
                 // 仅对绝对路径做物理检查
                 if p.is_absolute() && !p.exists() {
+                    let severity = if link.source_id.ends_with(".md") {
+                        "LOW".to_string()
+                    } else {
+                        "HIGH".to_string()
+                    };
                     issues.push(LinkAuditIssue {
                         source: link.source_id.clone(),
                         target: link.target_id.clone(),
                         issue_type: "MISSING_ASSET".to_string(),
-                        severity: "HIGH".to_string(),
+                        severity,
                         line_number: link.line_number,
                         snippet: link.snippet.clone(),
                         description: format!("目标资产文件在宿主文件系统上不存在: {}", link.target_id),

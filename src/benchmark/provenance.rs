@@ -28,7 +28,7 @@ pub fn sha256_hex(input: &str) -> String {
     digest.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
-/// 生产效能存证账本确定性推导规则 (PR-01 ~ PR-08)
+/// 生产效能存证账本确定性推导规则 (PR-01 ~ PR-10)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProvenanceRule {
     Pr01SkillMcpRouting,
@@ -39,6 +39,8 @@ pub enum ProvenanceRule {
     Pr06GranularityNoiseGate,
     Pr07LockDeadlockGuard,
     Pr08AdaptiveBriefColdStart,
+    Pr09HybridSemanticSearch,
+    Pr10FeedbackAndMemoryLoop,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,6 +62,8 @@ impl ProvenanceRule {
             Self::Pr06GranularityNoiseGate => "PR-06",
             Self::Pr07LockDeadlockGuard => "PR-07",
             Self::Pr08AdaptiveBriefColdStart => "PR-08",
+            Self::Pr09HybridSemanticSearch => "PR-09",
+            Self::Pr10FeedbackAndMemoryLoop => "PR-10",
         }
     }
 
@@ -73,6 +77,8 @@ impl ProvenanceRule {
             Self::Pr06GranularityNoiseGate => "黑白名单与噪音门禁阻断",
             Self::Pr07LockDeadlockGuard => "多 Agent 协作锁与 WFG 死锁防护",
             Self::Pr08AdaptiveBriefColdStart => "冷启动自适应态势简报组装",
+            Self::Pr09HybridSemanticSearch => "语义向量 + FTS RRF 混合检索",
+            Self::Pr10FeedbackAndMemoryLoop => "使用反馈与长期记忆自动沉淀",
         }
     }
 
@@ -102,6 +108,12 @@ impl ProvenanceRule {
             Self::Pr08AdaptiveBriefColdStart => {
                 "baseline_rounds = 6, steward_rounds = 1, baseline_tokens = calibrated_w8_tokens (or 1800 floor)"
             }
+            Self::Pr09HybridSemanticSearch => {
+                "baseline_tokens = max(steward_tokens * 4, 600), baseline_rounds = 3, steward_rounds = 1"
+            }
+            Self::Pr10FeedbackAndMemoryLoop => {
+                "baseline_tokens = max(steward_tokens * 3, 450), baseline_rounds = 2, steward_rounds = 1"
+            }
         }
     }
 
@@ -115,6 +127,8 @@ impl ProvenanceRule {
             (Self::Pr06GranularityNoiseGate, "steward_asset_scan, Scanner"),
             (Self::Pr07LockDeadlockGuard, "steward_lock_acquire, steward_lock_wait, steward_lock_deadlock_check"),
             (Self::Pr08AdaptiveBriefColdStart, "steward_brief"),
+            (Self::Pr09HybridSemanticSearch, "steward_memory_search, memory search --hybrid"),
+            (Self::Pr10FeedbackAndMemoryLoop, "steward_feedback, steward_memory_add, steward_session_close"),
         ];
         all.iter()
             .map(|(r, tools)| ProvenanceRuleMeta {

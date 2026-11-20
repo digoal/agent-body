@@ -36,7 +36,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       </div>
 
       <div class="topbar-actions">
-        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 40/40 能力对齐矩阵">✅ 40/40</span>
+        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 41/41 能力对齐矩阵">✅ 41/41</span>
         <span id="sse-badge" class="sse-pill connecting">SSE</span>
         <button id="btn-theme-toggle" class="btn btn-theme btn-sm" title="切换白天工程蓝图 / 夜间深空指挥舱 (快捷键 T)">☀️ 蓝图</button>
         <button id="btn-toggle-mirror" class="btn btn-ghost btn-sm" title="展开/收起黑屏命令镜像器">⌨️ 镜像</button>
@@ -297,7 +297,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
               <button class="subtab" data-sub="memory">🧠 长期记忆与审计</button>
               <button class="subtab" data-sub="analytics">🔥 DuckDB 分析与导出</button>
               <button class="subtab" data-sub="gc">🧹 宿主自洁 &amp; 变更流</button>
-              <button class="subtab" data-sub="mesh">🌐 Mesh · 预检 · 40/40 对齐矩阵</button>
+              <button class="subtab" data-sub="mesh">🌐 Mesh · 预检 · 41/41 对齐矩阵</button>
             </div>
           </div>
           <div id="gov-panel-brief" class="scroll-panel">
@@ -454,7 +454,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
               <div class="roi-card"><span class="k-label">全量 SKILL / MCP / 服务</span><strong id="roi-eco" class="c-cyan">-</strong></div>
               <div class="roi-card"><span class="k-label">宿主机 CLI 工具 / 资产</span><strong id="roi-tools">-</strong></div>
               <div class="roi-card"><span class="k-label">事实图谱 (节点 / 边)</span><strong id="roi-graph" class="c-purple">-</strong></div>
-              <div class="roi-card"><span class="k-label">黑白屏同步认证</span><strong id="roi-parity" class="c-orange">40/40 (100%)</strong></div>
+              <div class="roi-card"><span class="k-label">黑白屏同步认证</span><strong id="roi-parity" class="c-orange">41/41 (100%)</strong></div>
             </div>
 
             <div class="demo-control-bar mt-12">
@@ -485,10 +485,11 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 
             <div class="view-toolbar mt-12" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);">
               <div class="toolbar-left">
-                <select id="bench-suite-select" class="input" style="width:170px;">
-                  <option value="full">全量套件 (W1~W8 + M1~M5)</option>
-                  <option value="macro">宏观业务 A/B (W1~W8)</option>
+                <select id="bench-suite-select" class="input" style="width:200px;">
+                  <option value="full">全量套件 v2.0 (W1~W10 + M1~M5 + DQ1~DQ3)</option>
+                  <option value="macro">宏观业务 A/B (W1~W10)</option>
                   <option value="micro">内核微基准 SLA (M1~M5)</option>
+                  <option value="dq">宿主机数据质量 (DQ1~DQ3)</option>
                   <option value="W1">W1 · 宿主工具发现</option>
                   <option value="W2">W2 · 端口防撞选址</option>
                   <option value="W3">W3 · 分级扫描阻断</option>
@@ -3407,7 +3408,7 @@ async function loadDemoTheater() {
       const speedupHint = roi.latest_benchmark_speedup
         ? ` · 实测 ${Number(roi.latest_benchmark_speedup).toFixed(2)}x`
         : "";
-      parityEl.innerText = `40/40 (100%)${speedupHint}${ledgerHint}`;
+      parityEl.innerText = `41/41 (100%)${speedupHint}${ledgerHint}`;
     }
 
     const btnWrap = document.getElementById("demo-scene-buttons");
@@ -3802,10 +3803,11 @@ function renderBenchmarkReportPayload(rep) {
   const sp = document.getElementById("bench-kpi-speedup");
   const sha = document.getElementById("bench-sha-badge");
   const sla = document.getElementById("bench-sla-badge");
-  if (sp) sp.innerText = `${Number(rep.overall_speedup_factor || 1).toFixed(2)}x`;
+  const gm = rep.geometric_mean_speedup || rep.overall_speedup_factor || 1;
+  if (sp) sp.innerText = `${Number(gm).toFixed(2)}x (v${rep.spec_version || "1.0"})`;
   if (sha) sha.innerText = `SHA-256: ${String(rep.report_sha256 || "").slice(0, 16)}...`;
   if (sla) {
-    sla.innerText = rep.sla_passed ? "✅ SLA PASS" : "❌ SLA FAIL";
+    sla.innerText = rep.sla_passed ? `✅ SLA PASS · D6 ${Number(rep.d6_quality_score || 100).toFixed(0)}分` : "❌ SLA FAIL";
     sla.className = rep.sla_passed ? "badge badge-ok" : "badge badge-err";
   }
 

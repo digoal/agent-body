@@ -199,10 +199,11 @@ fn bench_empirical_mcp_ledger_and_ab_suite() {
     let storage = Storage::new(provider.clone());
     let registry = McpToolRegistry::new(storage.clone());
 
-    // 1. 验证 MCP 工具已注册至 40 个且包含 steward_benchmark
+    // 1. 验证 MCP 工具已注册至 41 个且包含 steward_benchmark 与 steward_feedback
     let tools = registry.list_tools();
-    assert_eq!(tools.len(), 40, "原生 MCP 工具数应为 40 个");
+    assert_eq!(tools.len(), 41, "原生 MCP 工具数应为 41 个");
     assert!(tools.iter().any(|t| t.get("name").and_then(|v| v.as_str()) == Some("steward_benchmark")));
+    assert!(tools.iter().any(|t| t.get("name").and_then(|v| v.as_str()) == Some("steward_feedback")));
 
     // 2. 调用典型工具并验证生产效能账本真实带出处入账
     let _ = registry.call_tool("steward_brief", serde_json::json!({"query": "benchmark test", "budget_tokens": 800})).expect("brief");

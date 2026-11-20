@@ -242,4 +242,16 @@ CREATE INDEX IF NOT EXISTS idx_ledger_rule ON effectiveness_ledger(provenance_ru
   - 顶部 KPI 呈现生产态累计真实战绩（累计节省 Token、累计缩减探索轮次、累计拦截高危冲突、累计阻断垃圾文件、最新 Benchmark 综合加速比与 SHA-256 存证徽章）；
   - 主体提供「🧪 一键运行 A/B 对照基准（W1~W8 + M1~M5 实测对比柱状条）」、「📒 生产效能溯源账本（按 PR-01~PR-08 规则过滤+查看推导依据）」与「🔁 跨版本回归对比器」；
   - **路演演示剧场联动**：在 `DemoEngine::compute_roi()` 与 `scene-1`~`scene-6` 底部补充“📎 关联最新实证 Benchmark 批次与生产账本实测锚点”。
-- **Parity 矩阵门禁**：`GET /api/v1/parity/matrix` 与契约测试自动升级为校验 **40/40 原生工具 100% 映射**。
+- **Parity 矩阵门禁**：`GET /api/v1/parity/matrix` 与契约测试自动校验原生工具 **100% 映射**（Phase 30 已随 `steward_feedback` 扩展至 **41/41**）。
+
+---
+
+## 八、Benchmark 标准 v2.0 持续迭代增量规格（Phase 31）
+
+1. **版本化协议 (`spec_version`)**：`BenchmarkReportPayload` 与 `benchmark_runs.results_json` 显式标记 `spec_version = "2.0"`，历史 `v1.0` 记录向后兼容反序列化，跨版本比对自动标记 `spec_version_changed`。
+2. **科学综合加速比**：采用几何平均加速比 `geometric_mean_speedup = (∏ speedup_i)^(1/N)` 为主口径，并拆分 `query_guard_speedup`（`W1,W2,W4,W6,W7,W8,W9`）与原始算术总比对照。
+3. **新增 D6 质量维度 (`Quality & Precision`)**：
+   - **`W9 (hybrid_semantic_recall)`**：混合语义检索 `Recall@5 >= 90%`；
+   - **`W10 (link_precision_regression)`**：`CON-02` 对抗样本依赖抽取 `Precision >= 95%` (`FPR <= 5%`)；
+   - **`DQ1 ~ DQ3`**：宿主机真实库描述覆盖率、Ollama Embedding 向量覆盖率与依赖拓扑纯净度审计。
+4. **全渠道账本 (`PR-01 ~ PR-10`)**：扩展 `PR-09`（混合检索）与 `PR-10`（反馈与长期记忆沉淀），打通 `mcp` / `cli` / `web` / `hook` 统一 `record_channel_call` 记账。

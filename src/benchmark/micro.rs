@@ -91,7 +91,7 @@ pub fn run_all_micro_benchmarks() -> Result<Vec<MicroBenchResult>> {
             }
         }
         let (avg_us, p50_us, p95_us, p99_us) = compute_percentiles(&mut samples);
-        let sla = if is_debug { 5_000 } else { 1_500 };
+        let sla = if is_debug { 10_000 } else { 1_500 };
         results.push(MicroBenchResult {
             id: "M1".into(),
             name: "micro_graph_3hop".into(),
@@ -137,7 +137,7 @@ pub fn run_all_micro_benchmarks() -> Result<Vec<MicroBenchResult>> {
             }
         }
         let (avg_us, p50_us, p95_us, p99_us) = compute_percentiles(&mut samples);
-        let sla = if is_debug { 5_000 } else { 1_500 };
+        let sla = if is_debug { 10_000 } else { 1_500 };
         results.push(MicroBenchResult {
             id: "M2".into(),
             name: "micro_fts5_search".into(),

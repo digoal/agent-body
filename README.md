@@ -203,6 +203,7 @@ cargo build --release
 - src_doc : 本项目的开发文档
 - tests : 测试代码
 - README.md : 本文件
+- user_feedback.md : 实际使用反馈总账（优点、缺点痛点、新需求与 Benchmark 迭代记录）
 - presentation.html : 产品路演 PPT
 - steward-deck.html : 产品交流 PPT
   
@@ -361,6 +362,14 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 13. **实证 Benchmark 对照评测体系与生产效能存证账本（确保使用效果有据可查）** `✅ Phase 27~28 已落地双轨实证引擎、PR-01~08 生产账本与 40/40 黑白屏同步`:
     - 构建「实验室 A/B 可复现对照基准（8 大标准宿主工作负载：Without Steward 裸奔物理探针基线 vs With Steward 真引擎实测 + 5 大内核微基准 SLA）」与「生产运行态每次调用效能存证账本（Token 节省、轮次缩减、端口/锁/断链/乱放冲突拦截、黑名单噪音阻断实时带出处入账）」双轨闭环；
     - 通过第 40 个原生 MCP 工具 `steward_benchmark`、CLI `agent-steward bench` 与 Web UI「📊 实证基准与账本」工作台实现 40/40 黑白屏双向同步与 SHA-256 存证签名，让每一项收益均可量化、可复现、可审计（已升格为开发规约 #18）。
+
+14. **实际使用反馈闭环与痛点持续治理 (`user_feedback.md` & Feedback-to-Memory Loop)** `📋 Phase 30 规划中`:
+    - 建立 [user_feedback.md](user_feedback.md) 作为主理人与 Agent 实际使用体验的一手反馈总账（覆盖 `PRO-XX` 优点、`CON-XX` 痛点、`BENCH-XX` 评测失真与 `REQ-XX` 新需求），打通「使用反馈 → 根因修复 → 记忆沉淀 → 回归门禁」双闭环；
+    - Phase 30 优先攻克现网实测暴露的 `steward_brief` 474ms 冷启动瓶颈、`LinksEngine` 76.2% 假阳性断链、`effectiveness_ledger` 全渠道记账漏失与 `memories` 长期记忆饥饿问题。
+
+15. **Benchmark 标准持续迭代机制 (`Benchmark Spec v1.0 → v2.0+ Six-Dimension Matrix`)** `📋 Phase 31 规划中`:
+    - 引入 `spec_version` 基准协议版本化，从算术总耗时比演进为**几何平均加速比（Geometric Mean Speedup）+ 分组加速比**，新增 **D6 认知质量与准确率维度 (`Recall@K / Precision / 覆盖率`)**；
+    - 校准 `W2/W3/W4/W7` 物理等价基线，并新增 `W9`（向量+属性混合检索召回）、`W10`（模板抗假阳性回归）与 `DQ1~DQ3`（现网宿主机数据健康度）基准负载（详见 [roadmap-phase30.md](src_doc/roadmap-phase30.md)）。
   
 ---
 

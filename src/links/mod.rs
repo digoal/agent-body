@@ -12,6 +12,55 @@ pub struct LinksEngine {
     storage: Arc<Storage>,
 }
 
+/// 判断路径是否为动态格式化模板、示例占位符或临时日志路径（避免产生假阳性依赖边）
+pub(crate) fn is_non_static_link_target(target: &str, trailing_char: Option<char>) -> bool {
+    if target.is_empty() {
+        return true;
+    }
+    if target.ends_with('_') || target.ends_with('-') {
+        return true;
+    }
+    if let Some(ch) = trailing_char {
+        if matches!(ch, '%' | '{' | '<' | '$' | '*') {
+            return true;
+        }
+    }
+    let lower = target.to_lowercase();
+    if target.contains("...")
+        || lower.contains("/xxx")
+        || lower.contains("_xxx")
+        || lower.contains("placeholder")
+        || target.contains("YYYY")
+        || target.contains("MM-DD")
+        || target.contains('{')
+        || target.contains('}')
+        || target.contains('<')
+        || target.contains('>')
+        || target.contains("%s")
+        || target.contains("%d")
+        || target.contains("%f")
+    {
+        return true;
+    }
+    is_ephemeral_or_log_path(target)
+}
+
+pub(crate) fn is_ephemeral_or_log_path(target: &str) -> bool {
+    target.starts_with("/tmp/")
+        || target.starts_with("/root/new/tmp/")
+        || target.contains("/_scratch/")
+        || target.ends_with(".log")
+        || target.ends_with(".tmp")
+}
+
+pub(crate) fn is_pure_data_file(path: &str) -> bool {
+    let lower = path.to_lowercase();
+    lower.ends_with(".json")
+        || lower.ends_with(".jsonl")
+        || lower.ends_with(".csv")
+        || lower.ends_with(".log")
+}
+
 impl LinksEngine {
     pub fn new(storage: Arc<Storage>) -> Self {
         Self { storage }
@@ -86,6 +135,8 @@ impl LinksEngine {
         let is_python = asset_path.ends_with(".py");
         let is_shell = asset_path.ends_with(".sh") || asset_path.ends_with(".bash");
         let is_js = asset_path.ends_with(".js") || asset_path.ends_with(".ts");
+        let is_md = asset_path.ends_with(".md");
+        let is_data = is_pure_data_file(asset_path);
 
         // 编译常用提取正则
         use anyhow::Context;
@@ -208,9 +259,16 @@ impl LinksEngine {
                 }
             }
 
-            // 4. 绝对路径正则探测 (/root/new/...)
-            for cap in path_re.captures_iter(line) {
-                let matched_path = &cap[1];
+            // 4. 绝对路径正则探测 (/root/new/...)，严格过滤模板截断、占位符与临时输出路径
+            for m in path_re.find_iter(line) {
+                let matched_path = m.as_str();
+                let trailing_char = line[m.end()..].chars().next();
+                if is_non_static_link_target(matched_path, trailing_char) {
+                    continue;
+                }
+                if is_md && matched_path.ends_with('/') && !std::path::Path::new(matched_path).exists() {
+                    continue;
+                }
                 if matched_path != asset_path {
                     let link = LinkRecord {
                         id: None,
@@ -231,8 +289,8 @@ impl LinksEngine {
                 }
             }
 
-            // 5. 常见数据库与网络服务依赖
-            if line.contains("5432") || line.contains("postgresql://") {
+            // 5. 常见数据库与网络服务依赖（纯数据文件如 .json/.csv 跳过数字误判）
+            if !is_data && (line.contains("5432") || line.contains("postgresql://")) {
                 let link = LinkRecord {
                     id: None,
                     source_type: "asset".to_string(),
@@ -251,7 +309,7 @@ impl LinksEngine {
                 count += 1;
             }
 
-            if line.contains("11434") || line.contains("ollama") {
+            if !is_data && (line.contains("11434") || line.contains("ollama")) {
                 let link = LinkRecord {
                     id: None,
                     source_type: "asset".to_string(),
@@ -270,7 +328,7 @@ impl LinksEngine {
                 count += 1;
             }
 
-            if line.contains("6379") || line.contains("redis://") {
+            if !is_data && (line.contains("6379") || line.contains("redis://")) {
                 let link = LinkRecord {
                     id: None,
                     source_type: "asset".to_string(),
@@ -442,5 +500,32 @@ conn = "postgresql://localhost:5432/mydb"
         );
         let cnt = engine.discover_links_from_script("/root/new/work/cn_test.md", &long_cn).unwrap();
         assert_eq!(cnt, 1);
+    }
+
+    #[test]
+    fn test_discover_links_filters_templates_placeholders_and_json_ports() {
+        let storage = Arc::new(Storage::open_in_memory().expect("open_in_memory"));
+        let engine = LinksEngine::new(storage.clone());
+
+        let py_code = r#"
+p1 = "/root/new/shared_proj/sat_%s_%s.json" % (a, b)
+p2 = f"/root/new/cron/earnings-analysis/_scratch/pool_timing_{run}.json"
+p3 = "/root/new/tmp/kvaxis/warm1_%s.log" % tag
+p4 = "/root/new/video/xxx"
+p5 = "/root/new/skills/..."
+p6 = "/root/new/new_tmp_placeholder"
+p7 = "/root/new/cron/introspections/YYYY-MM-DD-HH-hot.md"
+p8 = "/root/new/work/KFS_articles_" + suffix
+"#;
+        let cnt_py = engine
+            .discover_links_from_script("/root/new/shared_proj/sample.py", py_code)
+            .unwrap();
+        assert_eq!(cnt_py, 0, "模板/占位符/临时路径不应被抽取为静态依赖边");
+
+        let json_data = r#"[{"job":"x","tot":6379,"port":5432,"ts":11434}]"#;
+        let cnt_json = engine
+            .discover_links_from_script("/root/new/shared_proj/data.json", json_data)
+            .unwrap();
+        assert_eq!(cnt_json, 0, "纯数据 JSON 中的数字不应误判为服务端口依赖");
     }
 }

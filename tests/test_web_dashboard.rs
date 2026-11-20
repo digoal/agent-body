@@ -78,7 +78,7 @@ async fn test_web_dashboard_e2e_lifecycle() {
     assert!(resp_index.contains("data-theme"));
     assert!(resp_index.contains("btn-theme-toggle"));
     assert!(resp_index.contains("v0.4.0"));
-    assert!(resp_index.contains("40/40 对齐"));
+    assert!(resp_index.contains("41/41 对齐"));
 
     // 3.2 静态 CSS (验证包含白天与夜间双色调语义变量)
     let resp_css = send_http_request("127.0.0.1", bound_port, "GET /app.css HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
@@ -165,10 +165,10 @@ Content-Length: 75\r\n\r\n\
         assert!(resp.contains("HTTP/1.1 200 OK"), "端点 {} 应返回 200 OK", ep);
     }
 
-    // 4.8.1 验证 40/40 黑白屏同步矩阵覆盖率 = 100%
+    // 4.8.1 验证 41/41 黑白屏同步矩阵覆盖率 = 100%
     let resp_parity = send_http_request("127.0.0.1", bound_port, "GET /api/v1/parity/matrix HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
-    assert!(resp_parity.contains("\"total_mcp_tools\":40"));
-    assert!(resp_parity.contains("\"synced_count\":40"));
+    assert!(resp_parity.contains("\"total_mcp_tools\":41"));
+    assert!(resp_parity.contains("\"synced_count\":41"));
     assert!(resp_parity.contains("\"coverage_pct\":100.0"));
 
     // 4.8.2 验证 Benchmark 跑批与重置 API

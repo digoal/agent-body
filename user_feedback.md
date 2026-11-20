@@ -1,0 +1,214 @@
+# Agent Host Steward — 实际使用反馈总账 (`user_feedback.md`)
+
+> **文档定位**: 主理人（Human）与智能体（AI Agent）在真实生产环境中高频使用 `agent-steward` 后沉淀的一手反馈权威总账。  
+> **首次建立**: 2026-11-19 (基于现网 `v0.4.0` + Phase 29 状态实测盘点)  
+> **关联路线图**: [roadmap-phase30.md](src_doc/roadmap-phase30.md) · [progress-phase30.md](src_doc/progress-phase30.md) · [10-benchmark-spec.md](design_doc/10-benchmark-spec.md)
+
+---
+
+## 一、反馈治理闭环与编号约定 (Feedback-to-Benchmark Flywheel)
+
+本文件拒绝“只吐槽不落地”或“只修 Bug 不更新评测标准”。每一条进入 `user_feedback.md` 的有效反馈，必须绑定唯一编号并沿闭环流转，最终转化为**代码修复 + 持久化记忆 + 升级版 Benchmark 回归门禁**。
+
+```mermaid
+flowchart LR
+    U["真实生产使用<br/>(CLI / MCP / Hook / WebUI)"] --> F["登记 user_feedback.md<br/>(PRO / CON / BENCH / REQ)"]
+    F --> R["逆向根因剖析<br/>(代码定位 + 现网数据核验)"]
+    R --> P["纳入 Phase 演进计划<br/>(src_doc/roadmap-phase*.md)"]
+    P --> C["代码修复与功能落地<br/>(TDD + 零 Panic + Parity)"]
+    C --> B["升级 Benchmark 标准<br/>(新增回归用例 / 校准基线 / 收紧 SLA)"]
+    B --> L["生产效能账本持续验证<br/>(effectiveness_ledger + memories)"]
+    L --> U
+```
+
+### 1.1 四类反馈编号体系
+
+| 编号前缀 | 类别 | 核心用途 |
+|:---:|---|---|
+| **`PRO-XX`** | 实际使用优点 | 记录已通过真机实测验证的高价值优势特性（含实证命令与量化数据），避免后续重构退化。 |
+| **`CON-XX`** | 缺点、痛点与缺陷 | 记录真实使用中的慢路径、误报噪音、记账漏失、记忆冷清或交互摩擦（含复现命令、代码定位与目标 SLA）。 |
+| **`BENCH-XX`** | Benchmark 标准失真与迭代诉求 | 专门记录在对照现网数据时暴露出的基线不等价、指标算法扭曲、维度缺失或覆盖盲区，驱动 Benchmark 持续升级。 |
+| **`REQ-XX`** | 新需求与架构演进 | 记录从日常 Agent 协作场景中生长出的新能力诉求，严守产品边界（规约 #2）后再排期立项。 |
+
+### 1.2 状态流转字典
+
+- `📥 Open`：已登记并核验现网事实，等待排期；
+- `🗓️ Planned`：已纳入具体 Phase 演进路线图与原子任务清单；
+- `⏳ In Progress`：正在按路线图实施开发；
+- `✅ Verified`：已完成代码修复、通过全量测试与新 Benchmark 门禁，且经验已沉淀至 `memories` 表。
+
+---
+
+## 二、现网盘点基线快照 (2026-11-19 21:40 CST)
+
+本文件首批反馈均直接基于本机现网数据库 `/root/.steward/steward.db` 与 Release 二进制 `./target/release/agent-steward` 实测采集，零估算、零捏造：
+
+| 现网实测维度 | 采集命令 / 来源 | 实测数值 |
+|---|---|---|
+| **纳管资产与描述/向量覆盖** | `sqlite3 /root/.steward/steward.db` + `bench run` | `assets = 21,188`，`description` = `100%` (`DQ1 ✅`)；注：早期库中 `embedding` 默认值为 `'[]'`，实际非空向量仍在后台批处理补齐（`DQ2` 抽样实测 `27.5%` ❌） |
+| **事实图谱节点与向量覆盖** | `sqlite3 /root/.steward/steward.db` | `fact_nodes = 350`，含 `embedding` = `350 (100%)` |
+| **依赖边与变更流水** | `sqlite3 /root/.steward/steward.db` | `links = 6,421`，`changes = 9,597` |
+| **长期记忆与生产账本** | `sqlite3 /root/.steward/steward.db` | `memories = 2`（均含 `embedding`），`effectiveness_ledger = 4` 条（`PR-06` x2 + `PR-04` x2），`benchmark_runs = 3` |
+| **最近一次 Benchmark 报告** | `./target/release/agent-steward bench report` (`run-449aa7ab-...`) | Token 节省 **`-99.58%`**（`483,125 → 2,041 tok`）、风险拦截 **16 次**、噪音阻断 **397 个**、综合加速比 **`0.38x`**、SLA **PASS** |
+| **依赖断链健康度审计** | `./target/release/agent-steward links audit` | 检出 **101** 处断链（健康分 **`0/100`**），其中命中模板/占位符/临时路径/纯 JSON 源等机械特征共 **77 处 (`76.2%`)** |
+
+---
+
+## 三、第一部分：实际使用已验证的优点 (`PRO-01` ~ `PRO-05`)
+
+### `PRO-01` 全景属性字典与分层元数据覆盖（含 Ollama Embedding 引擎就绪）
+- **状态**: `✅ Verified` · **首次记录**: 2026-11-19
+- **实测表现**: Phase 29 落地后，`steward.db` 中 `21,188` 条资产已 **100%** 补齐 `description`（`DQ1 = 100.0%`）；WebUI 拓扑抽屉已能完整展示 L1/L2/L0 分层属性与向量维度预览。注：Phase 31 `DQ2` 实测暴露出旧库大量节点 `embedding` 为 `'[]'` 空数组，非空向量尚待后台持续补齐。
+- **复用价值**: 下游检索与拓扑理解可以直接消费丰富语义与向量，且零云端 Token 支出。
+
+### `PRO-02` 内核图遍历、FTS5 检索与放置决策达到亚毫秒级 SLA
+- **状态**: `✅ Verified` · **首次记录**: 2026-11-19
+- **实测证据**: `./target/release/agent-steward bench report`（5 大微基准）实测：
+  - `M1`（100 节点属性图 3 跳遍历）：平均 `132 μs`，P50 `129 μs`（SLA `< 1,500 μs`）；
+  - `M2`（300 资产 SQLite FTS5 检索）：平均 `255 μs`，P50 `250 μs`（SLA `< 1,500 μs`）；
+  - `M3`（8 规则放置引擎意图推导）：平均 `38 μs`，P50 `33 μs`（SLA `< 400 μs`）。
+- **核心优点**: 本地嵌入式索引路径极轻极快，不会成为 Agent 工具调用链路上的延迟瓶颈。
+
+### `PRO-03` 黑白名单分级扫描与底噪阻断极为可靠
+- **状态**: `✅ Verified` · **首次记录**: 2026-11-19
+- **实测证据**:
+  - `W3` 混合树（含 `node_modules/` 120 文件、`.git/objects/` 80 文件、`__pycache__/` 40 文件、`.cache/` 40 文件）测试中，黑名单子文件逃逸数 **`0`**，Token 节省 `95.8%`；
+  - 现网 `effectiveness_ledger` 中 2 次 `Scanner` 扫描（`PR-06`）已累计拦截 5 个黑名单目录与 **1,028** 个噪音文件，节省 **`25,700 tok`**。
+- **核心优点**: 彻底防住了大型开源仓库、依赖缓存和编辑器临时文件打爆 SQLite/FTS 索引。
+
+### `PRO-04` 百级 SKILL 与 MCP 预算路由大幅防止 Context 爆仓
+- **状态**: `✅ Verified` · **首次记录**: 2026-11-19
+- **实测证据**: `W7 (context_budget_routing)` 在宿主机真实技能与 MCP 清单上实测，将全量注入所需的 **`450,003 tok`** 压缩至精准 Top-K 召回 **`358 tok`**，Token 压缩率 **`99.9%`**。
+- **核心优点**: 解决了多技能、多 MCP 挂载环境下大模型系统提示词膨胀与注意力稀释难题。
+
+### `PRO-05` 40/40 黑白屏全能力双向同步与双主题可解释 WebUI
+- **状态**: `✅ Verified` · **首次记录**: 2026-11-19
+- **实测表现**: 40 个原生 MCP 工具、CLI 子命令、Web REST API 与 Web UI 7 大工作台保持 100% Parity 契约映射；「☀️ 白天工程蓝图 / 🌙 夜间深空」双主题及路演剧场三层故事化展示让原本隐形的后台护航能力可观察、可演示、可审计。
+
+---
+
+## 四、第二部分：实际使用暴露的缺点与痛点 (`CON-01` ~ `CON-06`)
+
+### `CON-01` `[P0 · 性能瓶颈]` `steward_brief` 冷启动简报组装耗时 `474.18 ms`，存在绕过缓存库直扫磁盘与派生子进程问题
+- **状态**: `✅ Verified (Phase 30.2)` · **首次记录**: 2026-11-19 · **验证实测**: `W8` 由 `474,178 μs (0.09x)` 降至 `10,315 μs (2.08x)`，提速 `46.0x`
+- **现象与复现**:
+  - 在 `./target/release/agent-steward bench report` 中，`W8 (adaptive_brief_assembly)` 实测 `steward_elapsed_us = 474,178 μs`（`474.18 ms`），竟然比裸奔连续执行 `uname/df/ps/ss/ls/env` 6 条 Shell 命令（`43,990 μs`）慢了 **10.7 倍**（加速比 `0.09x`）。
+- **代码根因**:
+  1. [src/brief/assembler.rs](src/brief/assembler.rs#L170-L229) 的 `build_fact_section()` 没有优先读取持久化表 `fact_nodes` 与 `assets`，而是每次调用都直接执行 `FactFacade::query_tools()`、`FactFacade::query_ports()`、`FactFacade::query_repos()`；
+  2. [src/fact/assets_catalog.rs](src/fact/assets_catalog.rs#L57-L85) 的 `scan_repos()` 每次都遍历 `/root/new/src`、`/root/new/work`、`/root/new/shared_git` 全目录并对每个 Git 仓库调用 `probe_git_branch()` 派生外部 `git` 进程；
+  3. `CapabilityEngine::scan_host()` 与 `ProcessNetTopology::scan_listening_ports()` 在每次简报请求时重复全量扫描系统 `PATH` 和 `/proc`。
+- **修复目标**:
+  - `BriefAssembler` 默认改为**索引优先（Index-First）**：优先从 SQLite `fact_nodes`（`tool`/`port`/`project`）和 `assets` 索引毫秒级查询组装，仅当库内无事实或显式请求 `fresh=true` 时才触发物理探针；
+  - 将 `steward_brief` 端到端延迟从 `474.18 ms` 压降至 **`< 10 ms`**（提速 `>= 40x`）。
+
+### `CON-02` `[P0 · 准确率/误报]` `LinksEngine` 静态依赖抽取存在三类假阳性，导致现网 `links audit` 健康分跌至 `0/100`
+- **状态**: `✅ Verified (Phase 30.3)` · **首次记录**: 2026-11-19 · **验证实测**: `W10 Precision = 100.0%` (`FPR = 0%`)，现网 `links audit --fix` 清理 `316` 条死链/假边，`DQ3` 纯净度 `97.7%`
+- **现象与复现**:
+  - 执行 `./target/release/agent-steward links audit` 报告 **101 处异常断链**，健康分直接归零（`0/100`）。
+  - 对全量 101 条输出做统计分析，**至少 77 处（`76.2%`）属于明显误报（假阳性）**，主要集中在三类：
+    1. **动态格式化模板截断（47 处含模板/占位语法）**：Python `%s`/`%d` 与 f-string 被硬截成无效半截路径，例如：
+       - `sat.py:153`：`"/root/new/shared_proj/sat_%s_%s.json" % (a.model, a.dtype)` → 误抽取为 `/root/new/shared_proj/sat_`；
+       - `pool_timing.py:138`：`f"/root/new/cron/earnings-analysis/_scratch/pool_timing_{run}.json"` → 误抽取为 `.../pool_timing_`；
+    2. **文档占位符与临时输出路径混入硬依赖（其中 47 处涉及 `/root/new/tmp` 或 `/tmp/`）**：
+       - 如 `cron_quota/README.md:557` 中的示例路径 `/root/new/skills/...`、`slide_gate.py:20` 注释里的 `/root/new/video/xxx`、`build_t7d_2026_10_17.py:30` 中的 `/root/new/new_tmp_placeholder`，以及 `warm1.py` 写入 `/root/new/tmp/kvaxis/warm1_` 的临时日志；
+    3. **纯数据 JSON 文件误匹配服务端口（4 处源为 `.json`）**：
+       - 如 `attributed.json:1` 被误判为依赖离线服务 `redis:6379`。
+- **危害**: 大量假断链淹没真正有风险的断链，使 Agent 与用户无法信任 `links audit` 告警，甚至不敢运行 `--fix`。
+- **修复目标**:
+  - 在 `src/links/` 抽取器过滤含 `%s`/`%d`/`%f`/`{`/`}`/`<`/`>`/`...`/`xxx`/`placeholder` 的模板占位字符串；
+  - 跳过纯数据 `.json`/`.jsonl`/`.csv` 文件的端口依赖正则匹配；
+  - 对 `/tmp/`、`/root/new/tmp/` 临时路径标记为 `ephemeral`（不计入断链扣分）；
+  - 重新审计清理现网 `links` 表假边，将现网 `links audit` 假阳性率压降至 **`< 5%`**，恢复健康分的真实区分度。
+
+### `CON-03` `[P1 · 记账漏失]` 生产效能存证账本仅覆盖 18+1 个通道，CLI 与 Web REST API 调用未记账
+- **状态**: `✅ Verified (Phase 30.4)` · **首次记录**: 2026-11-19 · **验证实测**: 扩展 `PR-01~PR-10` 与 `record_channel_call`，现网 `cli-live` `PR-05`/`PR-10` 已实时落库
+- **现象与复现**:
+  - 现网虽然高频使用 CLI（`status`、`brief`、`fact`、`links`、`search`、`bench`）与 WebUI，但 `effectiveness_ledger` 仅记录了 **4 条**记录（2 条来自 `Scanner` `PR-06`，2 条来自 MCP `steward_port_check` `PR-04`）。
+- **代码根因**:
+  - [src/benchmark/ledger.rs](src/benchmark/ledger.rs#L83-L230) 中 `record_mcp_call()` 仅覆盖 18 个 MCP 工具，且只在 `mcp.rs` 与 `Scanner::scan_path` 调用；CLI 子命令（`src/main.rs`）与 Web REST API（`src/web/`）完全没有写入 `effectiveness_ledger`。
+  - 同时，Phase 29 新增的语义向量混合检索、以及反馈/记忆写入等高频收益操作尚未分配推导规则编号。
+- **修复目标**:
+  - 扩展 `PR-01 ~ PR-10` 推导规则字典，并在 CLI 核心命令与 Web 交互动作打通非阻塞 `< 100 μs` 记账，让账本真实反映全渠道收益。
+
+### `CON-04` `[P1 · 记忆冷清]` `memories` 表仅 2 条记录，缺少“使用反馈与排障经验 → 长期记忆”自动沉淀漏斗
+- **状态**: `✅ Verified (Phase 30.5)` · **首次记录**: 2026-11-19 · **验证实测**: `agent-steward feedback sync` 已自动幂等沉淀已验证条目至 `memories`
+- **现象与复现**:
+  - 现网 `assets` 有 `21,188` 条、`fact_nodes` 有 `350` 个，但 `memories` 表仅有 **`2`** 条记录！而 `BriefAssembler` 把高达 **`40%`** 的 Token 预算分配给记忆模块（[src/brief/assembler.rs](src/brief/assembler.rs#L12)），导致简报在“历史踩坑与经验沉淀”维度长期处于饥饿状态。
+- **修复目标**:
+  - 打通 `user_feedback.md` 已验证条目、`session_close` 结项总结与 `hook_post` 纠偏事件的自动提炼入库管道，同步生成 Ollama Embedding 写入 `memories`。
+
+### `CON-05` `[P2 · 反馈交互]` 缺少 CLI / MCP / WebUI 直接查阅与追加 `user_feedback.md` 的双向入口
+- **状态**: `✅ Verified (Phase 30.5)` · **首次记录**: 2026-11-19 · **验证实测**: 新增第 41 工具 `steward_feedback` + CLI `feedback` + `/api/v1/feedback`（41/41 100% Parity）
+- **痛点**: Agent 在执行任务中发现工具报错或数据不准时，只能口头抱怨而没有标准原语把反馈结构化追加到 `user_feedback.md`；主理人在 WebUI 看到异常节点时也无法一键提交反馈单。
+- **修复目标**: 在保持 `user_feedback.md` 为可读权威单源的前提下，提供结构化读写/追加视图与黑白屏同步入口。
+
+### `CON-06` `[P0 · 磁盘水位与 GC 盲区]` 宿主机根分区满盘预警缺失 & `HostGarbageCollector` 未覆盖镜像仓库重复 `target/` 巨型构建缓存
+- **状态**: `✅ Verified (Phase 30.6)` · **首次记录**: 2026-11-19 · **验证实测**: `preflight` 实测报出 `Disk Watermark ⚠️ WARN (88.4%)`，`Makefile` 已固化 `sync-mirror` (`--exclude 'target/'`)
+- **现象与复现**:
+  - 2026-11-19 21:54 在将工作区同步至开源镜像 `/root/new/shared_git/agent-steward/` 时，因执行 `rsync -a --delete` 未排除被 `.gitignore` 忽略的 `target/` 目录，触发 `No space left on device (28)` 报错。
+  - `df -h` 与 `du -sh` 实测：233GB 根分区 `/` 被打满至 **`100%` (`0 Avail`)**；其中 `/root/new/work/agent-steward/target` 占用 **`53GB`**，镜像仓库 `/root/new/shared_git/agent-steward/target` 冗余占用 **`38GB`**（双份共 **`91GB`**），手动清理镜像侧 `target/` 后空间才恢复至 `27G Avail (88%)`。
+- **根因定位**:
+  1. `HostGarbageCollector` (`steward_env_gc`) 与 `PreflightChecker` 缺乏根分区高水位（如 `>= 85%` / `>= 95%`）主动告警与构建产物（`shared_git/*/target/`、`node_modules/`）巡检能力；
+  2. 工程同步规范与 `Makefile` / `skills/agent-steward-developer/SKILL.md` 未固化 `--exclude 'target/'` 安全镜像模板。
+- **修复目标**:
+  - 在 `PreflightChecker`、`HostGarbageCollector` 与 `steward_brief` 增加宿主机磁盘高水位预警与安全 GC 建议（默认 `dry-run`，严格白名单）；
+  - 在 `Makefile` 新增安全 `sync-mirror` 目标并同步更新 `agent-steward-developer` SKILL，固化 `rsync -a --delete --exclude 'target/'`。
+
+---
+
+## 五、第三部分：Benchmark 标准失真诊断与持续迭代诉求 (`BENCH-01` ~ `BENCH-04`)
+
+### `BENCH-01` `[P0 · 指标算法缺陷]` 算术总耗时比 (`sum(base_us) / sum(stew_us)`) 导致综合加速比失真为 `0.38x`
+- **状态**: `✅ Verified (Phase 31.1)` · **首次记录**: 2026-11-19 · **验证实测**: 升级为 `v2.0` 几何平均加速比 `1.35x`（`Query/Guard: 2.30x`）
+- **实测证据**: [src/benchmark/mod.rs](src/benchmark/mod.rs#L70-L76) 直接将 8 个工作负载的微秒耗时相加再相除：
+  - 总基线耗时 `≈ 202 ms`，总管家耗时 `≈ 528 ms`（仅 `W8` 单项就占 `474 ms`），导致最终对外展示的“综合执行加速比”为 **`0.38x`**（即“用了大管家反而变慢 2.6 倍”），完全掩盖了 `W1` **`571.96x`** 与 `W6` **`53.25x`** 的真实加速。
+- **标准迭代方向**:
+  - 采纳计算机体系结构经典基准（SPEC CPU）通行的**几何平均加速比（Geometric Mean Speedup）**：`geomean(speedup_1..N)` 作为综合加速比主口径；
+  - 同时拆分 **“只读认知与裁决类（Query/Guard）”** 与 **“重治理索引建库类（Index/Governance）”** 分组加速比，避免把一次建库耗时和百次查询混为一谈。
+
+### `BENCH-02` `[P0 · 对照组物理不等价]` `W2` / `W3` / `W4` / `W7` 的 Without vs With 对照存在严重 Apples-to-Oranges 偏差
+- **状态**: `✅ Verified (Phase 31.2)` · **首次记录**: 2026-11-19 · **验证实测**: `W3` 提速 `5.39x`、`W4` 由 `-48.7%` 修正为 `+73.1%`、`W7` 由 `1.00x` 修正为 `8.18x`
+- **逐项审计（依据 [src/benchmark/workloads.rs](src/benchmark/workloads.rs) 源码）**:
+  1. **`W2 (port_collision_avoidance)`**: Baseline 仅在同进程用 `TcpListener::bind` 撞端口（`39 μs`），而 Steward 侧连续调用 `hook_pre` + `PortChecker::check_port` 扫描了两次 `/proc`（`26,769 μs`，`0.00x`）。真实裸奔 Agent 查端口需要派生 `ss -tlnp` / `lsof` 外部命令并试错重连，同时 Steward 也应合并 `/proc` 探针消除二次扫描。
+  2. **`W3 (granularity_scan_noise_gate)`**: Baseline 仅运行 `WalkDir` 拼接路径字符串（`182 μs`，**未读取任何文件内容，也未写入 SQLite/FTS**），Steward 却执行了完整的元数据解析 + SQLite 事务落盘 + FTS5 建索引（`9,580 μs`，`0.02x`）。等价 Baseline 必须是“未开分级策略将 290 个文件全部读取并写入 SQLite + FTS5”，才能真正衡量分层门禁对建库耗时与索引膨胀的削减。
+  3. **`W4 (placement_governance)`**: Baseline 仅用 `format!` 拼了 8 行短字符串（`119 tok`, `3 μs`），Steward 返回完整 JSON（`177 tok`, `15,783 μs`），结果产生 **`-48.7%` 负 Token 节省率** 的荒诞数字！真实裸奔 Agent 放错 8 个文件后，需经历“定位错放位置 + 规范审查打回 + `mv` 搬移 + 修正引用”的多轮上下文，基线应真实测量发现与搬移修正的等价上下文/文件操作开销。
+  4. **`W7 (context_budget_routing)`**: [src/benchmark/workloads.rs](src/benchmark/workloads.rs#L889) 直接写了 `base_us.max(stew_us)`，Baseline 仅从 SQLite 读取缓存整型列 `est_tokens` 求和，没有真实读取宿主机 `SKILL.md` 文件，导致加速比恒死锁在 `1.00x`。
+
+### `BENCH-03` `[P1 · 评估维度缺失]` 五维矩阵缺少“D6 认知质量与准确率 (Quality & Precision)”门禁
+- **状态**: `✅ Verified (Phase 31.1 & 31.3)` · **首次记录**: 2026-11-19 · **验证实测**: 六维矩阵 D6 (`85.0/100`) 上线，`DQ2` 真实捕获现网旧库向量 `'[]'` 覆盖率仅 `27.5%` 缺陷
+- **痛点**: 现有的 D1（Token）、D2（轮次）、D3（延迟）、D4（拦截率）、D5（噪音削减率）全部偏重“省、快、拦”，没有一个维度考核 **“结果准不准、数据全不全”**。极端情况下，如果检索什么都不返回，D1 节省率甚至接近 100%。
+- **标准迭代方向**: 在 Benchmark v2.0 正式增设 **D6 质量与准确率维度（Quality & Precision）**：
+  - 检索召回率 `Recall@K` 与倒数排名 `MRR`；
+  - 依赖抽取精确率 `Precision`（假阳性率 `FPR <= 5%`）；
+  - 宿主机真实库元数据/描述覆盖率与 Ollama Embedding 向量覆盖率（`>= 99%`）。
+
+### `BENCH-04` `[P1 · 负载覆盖滞后]` 评测套件未跟上 Phase 23/29 新特性（语义检索、模板抗误报与现网数据健康度）
+- **状态**: `✅ Verified (Phase 31.3 & 31.4)` · **首次记录**: 2026-11-19 · **验证实测**: `W9` (`Recall@5=100%`)、`W10` (`Precision=100%`) 与 `DQ1~DQ3` 全部入库运行
+- **痛点**: Phase 23 与 Phase 29 已投入大量算力完成了三层属性字典与 21,538 条资产/节点 Embedding 向量化，但 Benchmark `W1~W8` 对此完全无感知；同时 `CON-02` 暴露的 77 条假断链也未进入基准回归门禁。
+- **标准迭代方向**: 新增 **`W9`（混合向量检索召回率对比）**、**`W10`（复杂模板代码依赖抽取抗假阳性对比）** 与 **`DQ1~DQ3`（现网宿主机数据质量门禁）**。
+
+---
+
+## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-05`)
+
+| ID | 需求简述 | 提出背景 / 触发场景 | 优先级 | 目标归属 | 状态 |
+|:---:|---|---|:---:|:---:|:---:|
+| **`REQ-01`** | **建立 `user_feedback.md` 反馈总账与双向记录工作流** | 沉淀实际使用中的优缺点、新需求与 Benchmark 迭代线索，形成闭环飞轮 | P0 | Phase 30.1 / 30.5 | `⏳ In Progress` |
+| **`REQ-02`** | **建立 Benchmark 标准版本化演进协议 (`v1.0 → v2.0`)** | 支持 `spec_version` 字段隔离对比与标准持续迭代，绝不破坏历史可比性 | P0 | Phase 31.1 | `🗓️ Planned` |
+| **`REQ-03`** | **反馈驱动的回归语料库 (`Feedback Regression Corpus`)** | 每修完一个真实使用痛点（如 `CON-01` / `CON-02`），自动将其复现样本固化为 Benchmark 永久 SLA 测试项 | P1 | Phase 31.3 / 31.4 | `🗓️ Planned` |
+| **`REQ-04`** | **经验自动提炼入 `memories` 与简报冷启动融合** | 将已验证反馈、会话复盘与避坑经验向量化存入 `memories`，激活 `BriefAssembler` 40% 记忆预算 | P1 | Phase 30.5 | `🗓️ Planned` |
+| **`REQ-05`** | **全渠道生产效能存证扩展 (`PR-01 ~ PR-10`)** | 覆盖 CLI、Web REST API、语义搜索与反馈沉淀，让生产账本真实反映大管家全部战绩 | P1 | Phase 30.4 | `🗓️ Planned` |
+
+---
+
+## 七、第五部分：后续新增反馈标准模板
+
+后续主理人或任何 AI Agent 在使用中发现新优点、踩坑、新需求或 Benchmark 偏差时，请按以下格式直接追加到对应分区：
+
+```markdown
+### `<PRO|CON|BENCH|REQ>-XX` `[P0/P1/P2 · 类别标签]` <一句话概括标题>
+- **状态**: `📥 Open` · **记录日期**: YYYY-MM-DD · **发现渠道**: CLI / MCP / WebUI / 实际任务
+- **现象与复现证据**: <给出真实执行的命令、返回输出、耗时或数据库查询事实，严禁主观猜测>
+- **根因定位 / 影响边界**: <关联源码文件、函数名或设计假设边界>
+- **预期目标与 Benchmark 联动**: <修复后的目标 SLA，以及是否需要同步更新/新增 Benchmark 测试项>
+```

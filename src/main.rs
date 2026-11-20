@@ -193,6 +193,33 @@ enum Commands {
         #[command(subcommand)]
         action: BenchCommands,
     },
+
+    #[command(about = "实际使用反馈总账 (user_feedback.md) 查看、追加与沉淀至长期记忆")]
+    Feedback {
+        #[command(subcommand)]
+        action: FeedbackCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum FeedbackCommands {
+    #[command(about = "列出 user_feedback.md 中的反馈条目")]
+    List,
+    #[command(about = "追加一条新反馈到 user_feedback.md")]
+    Add {
+        #[arg(long, default_value = "CON")]
+        category: String,
+        #[arg(long, default_value = "P1")]
+        priority: String,
+        #[arg(long)]
+        title: String,
+        #[arg(long, default_value = "")]
+        evidence: String,
+        #[arg(long, default_value = "")]
+        target: String,
+    },
+    #[command(about = "将已验证反馈 (✅ Verified) 沉淀入长期记忆库")]
+    Sync,
 }
 
 #[derive(Subcommand)]
@@ -747,22 +774,32 @@ fn main() -> Result<()> {
         }
 
         Commands::Brief => {
+            let t0 = std::time::Instant::now();
             let env_collector = EnvCollector::new(storage.clone());
             let summary = env_collector.collect_system_summary();
             let procs = env_collector.collect_and_sync_processes()?;
             let assets = storage.list_assets(5)?;
 
-            println!("=== Steward Brief 上下文简报 ===");
-            println!("系统: {} | 内核: {} | 内存使用率: {:.1}%", summary.os_name, summary.kernel_version, summary.memory_used_pct);
-            println!("活跃动态任务进程 (前 5):");
+            let mut out = String::new();
+            out.push_str("=== Steward Brief 上下文简报 ===\n");
+            out.push_str(&format!("系统: {} | 内核: {} | 内存使用率: {:.1}%\n", summary.os_name, summary.kernel_version, summary.memory_used_pct));
+            out.push_str("活跃动态任务进程 (前 5):\n");
             for p in procs.iter().take(5) {
                 let mem_mb = p.mem_bytes as f64 / (1024.0 * 1024.0);
-                println!("  - [PID {}] {} (CPU {:.1}%, 内存 {:.1}MB) -> {}", p.pid, p.name, p.cpu_pct, mem_mb, p.command);
+                out.push_str(&format!("  - [PID {}] {} (CPU {:.1}%, 内存 {:.1}MB) -> {}\n", p.pid, p.name, p.cpu_pct, mem_mb, p.command));
             }
-            println!("最近活跃资产:");
+            out.push_str("最近活跃资产:\n");
             for a in assets {
-                println!("  - [{}] {} ({})", a.asset_type, a.path, a.scan_tier);
+                out.push_str(&format!("  - [{}] {} ({})\n", a.asset_type, a.path, a.scan_tier));
             }
+            print!("{}", out);
+            agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage.provider().as_ref(),
+                "cli",
+                "steward_brief",
+                &out,
+                t0.elapsed().as_micros() as i64,
+            );
         }
 
         Commands::Place { action } => {
@@ -858,12 +895,22 @@ fn main() -> Result<()> {
                     }
                 }
                 AssetCommands::Search { query, limit, detail } => {
+                    let t0 = std::time::Instant::now();
                     let level = agent_steward::scanner::DetailLevel::from_str_opt(Some(&detail));
                     let results = storage.search_assets_fts(&query, limit)?;
-                    println!("资产搜索匹配结果 (共 {} 条, detail={:?}):", results.len(), level);
+                    let mut out = format!("资产搜索匹配结果 (共 {} 条, detail={:?}):\n", results.len(), level);
                     for a in results {
-                        println!("{}", agent_steward::scanner::format_asset_line(&a, level));
+                        out.push_str(&agent_steward::scanner::format_asset_line(&a, level));
+                        out.push('\n');
                     }
+                    print!("{}", out);
+                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "steward_asset_search",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
                 }
                 AssetCommands::Register { path, r#type, owner, security_level, description, desc_kv } => {
                     let parsed_kv: serde_json::Value = serde_json::from_str(&desc_kv)
@@ -997,26 +1044,37 @@ fn main() -> Result<()> {
                     println!("✅ 记忆已保存, ID: {}", id);
                 }
                 MemoryCommands::Search { query, limit, hybrid } => {
+                    let t0 = std::time::Instant::now();
+                    let provider_ref = storage.provider().clone();
+                    let mut out = String::new();
                     if hybrid {
                         let arc_storage = std::sync::Arc::new(storage);
                         let results = tokio::runtime::Runtime::new()?.block_on(async {
                             let engine = agent_steward::memory::hybrid::HybridSearchEngine::new(arc_storage);
                             engine.search_hybrid(&query, limit).await
                         })?;
-                        println!("记忆搜索结果 (混合模式 RRF, 共 {} 条):", results.len());
+                        out.push_str(&format!("记忆搜索结果 (混合模式 RRF, 共 {} 条):\n", results.len()));
                         for r in results {
                             let sim_str = r.cosine_similarity.map(|s| format!(" (语义相似度: {:.2})", s)).unwrap_or_default();
-                            println!("  - [{}] {} [RRF: {:.4}]{} (ID: {})",
-                                r.memory.memory_type, r.memory.content, r.rrf_score, sim_str, r.memory.id);
+                            out.push_str(&format!("  - [{}] {} [RRF: {:.4}]{} (ID: {})\n",
+                                r.memory.memory_type, r.memory.content, r.rrf_score, sim_str, r.memory.id));
                         }
                     } else {
                         let mm = MemoryManager::new(storage);
                         let results = mm.search(&query, limit)?;
-                        println!("记忆搜索结果 (FTS 纯文本, 共 {} 条):", results.len());
+                        out.push_str(&format!("记忆搜索结果 (FTS 纯文本, 共 {} 条):\n", results.len()));
                         for m in results {
-                            println!("  - [{}] {} (ID: {})", m.memory_type, m.content, m.id);
+                            out.push_str(&format!("  - [{}] {} (ID: {})\n", m.memory_type, m.content, m.id));
                         }
                     }
+                    print!("{}", out);
+                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        provider_ref.as_ref(),
+                        "cli",
+                        "steward_memory_search",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
                 }
                 MemoryCommands::Audit { archive_id } => {
                     let mgr = agent_steward::memory::lifecycle::MemoryLifecycleManager::new(&storage);
@@ -1080,7 +1138,8 @@ fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&res)?);
                 }
                 LinksCommands::Audit { fix } => {
-                    let auditor = agent_steward::links::audit::LinkAuditor::new(arc_storage);
+                    let t0 = std::time::Instant::now();
+                    let auditor = agent_steward::links::audit::LinkAuditor::new(arc_storage.clone());
                     let rep = auditor.audit_links(fix)?;
                     println!("{}", rep.summary);
                     if !rep.issues.is_empty() {
@@ -1094,6 +1153,13 @@ fn main() -> Result<()> {
                             println!("    建议: {}", iss.suggested_fix);
                         }
                     }
+                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        arc_storage.provider().as_ref(),
+                        "cli",
+                        "steward_links_audit",
+                        &rep.summary,
+                        t0.elapsed().as_micros() as i64,
+                    );
                 }
                 LinksCommands::Repair { apply } => {
                     let repairer = agent_steward::links::repair::LinkRepairer::new(arc_storage);
@@ -1180,9 +1246,17 @@ fn main() -> Result<()> {
         }
 
         Commands::Fact { query, fact_type } => {
+            let t0 = std::time::Instant::now();
             let q = query.unwrap_or_else(|| "all".to_string());
             let report = agent_steward::fact::FactFacade::query_facts(&fact_type, &q)?;
             println!("{}", report);
+            agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage.provider().as_ref(),
+                "cli",
+                "steward_fact_query",
+                &report,
+                t0.elapsed().as_micros() as i64,
+            );
         }
 
         Commands::Storage { action } => {
@@ -1699,6 +1773,47 @@ fn main() -> Result<()> {
                 }
             }
         }
+
+        Commands::Feedback { action } => {
+            let t0 = std::time::Instant::now();
+            let fb_path = agent_steward::feedback::FeedbackEngine::default_feedback_path();
+            match action {
+                FeedbackCommands::List => {
+                    let items = agent_steward::feedback::FeedbackEngine::list_items(&fb_path)?;
+                    println!("📋 反馈总账 ({}, 共 {} 条):", fb_path.display(), items.len());
+                    for it in &items {
+                        println!("  - [{}][{}] {} ({})", it.id, it.priority, it.title, it.status);
+                    }
+                }
+                FeedbackCommands::Add { category, priority, title, evidence, target } => {
+                    let item = agent_steward::feedback::FeedbackEngine::add_item(
+                        &fb_path, &category, &priority, &title, &evidence, &target,
+                    )?;
+                    println!("✅ 已写入反馈 {}: [{}] {}", item.id, item.priority, item.title);
+                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "steward_feedback",
+                        &item.title,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                }
+                FeedbackCommands::Sync => {
+                    let provider_ref = storage.provider().clone();
+                    let added = agent_steward::feedback::FeedbackEngine::sync_verified_to_memories(
+                        &fb_path, &storage,
+                    )?;
+                    println!("✅ 已将 {} 条已验证反馈沉淀至长期记忆库 (memories)", added);
+                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        provider_ref.as_ref(),
+                        "cli",
+                        "steward_feedback",
+                        &format!("synced {} items", added),
+                        t0.elapsed().as_micros() as i64,
+                    );
+                }
+            }
+        }
     }
 
     Ok(())
@@ -1727,5 +1842,7 @@ mod tests {
         assert!(Cli::try_parse_from(["steward", "mesh", "acquire", "--peer", "http://10.0.0.2:8756", "-t", "port", "-i", "9000"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "platform", "ports"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "demo", "run", "scene-1"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "feedback", "list"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "feedback", "sync"]).is_ok());
     }
 }

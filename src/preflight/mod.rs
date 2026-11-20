@@ -134,6 +134,7 @@ impl PreflightChecker {
         Self::check_systemd(&mut report);
         Self::check_codegraph(&mut report);
         Self::check_ecosystem_skills(&mut report);
+        Self::check_disk_watermark(&mut report);
 
         if let Some(cfg) = config {
             Self::check_ollama(&mut report, &cfg.embedding.ollama_url, &cfg.embedding.model, cfg.embedding.fallback_fts_only);
@@ -579,6 +580,57 @@ impl PreflightChecker {
     /// 检查后端存储配置（如配置了 PostgreSQL，验证其连通性与 pgvector）
     pub fn check_storage_backend(_report: &mut PreflightReport, _config: &crate::config::Config) {
         // 若未来支持从 config 直接读 storage_backend，在此做连接探活
+    }
+
+    /// 检查根分区磁盘水位与冗余镜像构建缓存（CON-06 防满盘预警）
+    pub fn check_disk_watermark(report: &mut PreflightReport) {
+        let disks = sysinfo::Disks::new_with_refreshed_list();
+        let mut root_used_pct: Option<f64> = None;
+        let mut root_avail_gb: f64 = 0.0;
+        for d in disks.list() {
+            if d.mount_point() == Path::new("/") {
+                let total = d.total_space();
+                let avail = d.available_space();
+                if total > 0 {
+                    let used = total.saturating_sub(avail);
+                    root_used_pct = Some((used as f64 / total as f64) * 100.0);
+                    root_avail_gb = avail as f64 / (1024.0 * 1024.0 * 1024.0);
+                }
+                break;
+            }
+        }
+        let redundant = crate::env::gc::HostGarbageCollector::scan_redundant_build_caches(&[
+            Path::new("/root/new/shared_git"),
+        ]);
+        let redundant_mb: u64 = redundant.iter().map(|c| c.size_mb).sum();
+
+        match root_used_pct {
+            Some(pct) if pct >= 85.0 || redundant_mb > 512 => {
+                report.add(CheckItem {
+                    name: "Disk Watermark".to_string(),
+                    category: CheckCategory::Optional,
+                    status: CheckStatus::Warn,
+                    message: format!(
+                        "根分区使用率 {:.1}% (可用 {:.1} GB)，检出 {} 处镜像冗余构建缓存 (约 {} MB)",
+                        pct,
+                        root_avail_gb,
+                        redundant.len(),
+                        redundant_mb
+                    ),
+                    remedy: Some("执行 agent-steward env gc --dry-run 查看清理建议，同步镜像请用 make sync-mirror (--exclude 'target/')".to_string()),
+                });
+            }
+            Some(pct) => {
+                report.add(CheckItem {
+                    name: "Disk Watermark".to_string(),
+                    category: CheckCategory::Optional,
+                    status: CheckStatus::Pass,
+                    message: format!("根分区使用率 {:.1}% (可用 {:.1} GB)", pct, root_avail_gb),
+                    remedy: None,
+                });
+            }
+            None => {}
+        }
     }
 
     /// 收集系统信息

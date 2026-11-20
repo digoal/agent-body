@@ -362,6 +362,20 @@ impl CapabilityEngine {
         }
     }
 
+    /// 轻量级宿主机路径扫描：仅在 $PATH 中探测可执行文件是否存在，不派生 `--version` 子进程（< 100 μs）
+    pub fn scan_host_paths_only(&mut self) {
+        for (name, cap) in self.registry.iter_mut() {
+            if let Some(abs_path) = Self::find_binary_in_paths(name, &self.path_dirs) {
+                cap.installed = true;
+                cap.path = Some(abs_path.to_string_lossy().to_string());
+            } else {
+                cap.installed = false;
+                cap.path = None;
+                cap.version = None;
+            }
+        }
+    }
+
     /// 获取注册表中的所有工具能力列表
     pub fn all_capabilities(&self) -> Vec<ToolCapability> {
         self.registry.values().cloned().collect()

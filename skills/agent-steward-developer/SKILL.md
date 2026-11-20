@@ -161,5 +161,5 @@ flowchart TD
 - [ ] 是否执行了 `agent-steward preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？
 - [ ] 相关的文档（`product-manual.md` / `INSTALL.md` / `roadmap-phase*.md`）是否已同步刷新？
-- [ ] 工作区改动是否已通过 `rsync` 镜像同步至 `/root/new/shared_git/agent-steward`？
+- [ ] 工作区改动是否已通过 `make sync-mirror`（`rsync -a --delete --exclude 'target/'`）镜像同步至 `/root/new/shared_git/agent-steward`？
 - [ ] 是否给出了清晰规范的 Git Commit 建议？

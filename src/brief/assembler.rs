@@ -165,17 +165,66 @@ impl BriefAssembler {
         })
     }
 
-    // ── 事实模块 ─────────────────────────────────────────────────────────
+    // ── 事实模块（Index-First：优先读取 fact_nodes / assets 持久化索引） ────────
 
     fn build_fact_section(&self, query: &str, budget_tokens: usize) -> (String, u8) {
         let mut lines: Vec<String> = vec!["## 🔧 宿主机事实\n".to_string()];
         let mut score: u8 = 60; // 基础分
+        let q_lower = query.trim().to_lowercase();
+        let q_terms: Vec<&str> = q_lower
+            .split(|c: char| !c.is_alphanumeric() && c != '_' && c != '-')
+            .filter(|s| s.len() >= 2)
+            .collect();
 
-        // 工具能力
-        let tool_query = if query.is_empty() { "文件处理" } else { query };
-        match FactFacade::query_tools(tool_query) {
-            Ok(tools) if !tools.is_empty() => {
-                let tool_line = tools
+        // 一次批量拉取持久化事实图谱节点（SQLite < 500 μs，避免扫盘与派生子进程）
+        let all_nodes = self.storage.list_all_fact_nodes(500).unwrap_or_default();
+        let tool_nodes: Vec<_> = all_nodes.iter().filter(|n| n.node_type == "tool").collect();
+        let port_nodes: Vec<_> = all_nodes.iter().filter(|n| n.node_type == "port").collect();
+        let proj_nodes: Vec<_> = all_nodes.iter().filter(|n| n.node_type == "project").collect();
+
+        // 1. 工具能力：优先消费 fact_nodes(tool)，空库时走免子进程路径探测
+        if !tool_nodes.is_empty() {
+            let mut scored_tools: Vec<(usize, &crate::storage::models::FactNodeRecord)> = tool_nodes
+                .iter()
+                .map(|n| {
+                    let hay = format!(
+                        "{} {} {}",
+                        n.name.to_lowercase(),
+                        n.label.to_lowercase(),
+                        n.properties
+                            .get("description")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_lowercase()
+                    );
+                    let hits = q_terms.iter().filter(|t| hay.contains(*t)).count();
+                    (hits, *n)
+                })
+                .collect();
+            scored_tools.sort_by(|a, b| b.0.cmp(&a.0));
+            let tool_line = scored_tools
+                .iter()
+                .take(5)
+                .map(|(_, n)| {
+                    let desc = n
+                        .properties
+                        .get("description")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&n.label);
+                    format!("{} ({})", n.name, desc.chars().take(30).collect::<String>())
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            lines.push(format!("- **可用工具**: {}\n", tool_line));
+            score = score.saturating_add(15);
+        } else {
+            let tool_query = if query.is_empty() { "文件处理" } else { query };
+            let mut cap_engine = crate::fact::CapabilityEngine::new();
+            cap_engine.scan_host_paths_only();
+            let res = cap_engine.query(tool_query);
+            if !res.all_matching_tools.is_empty() {
+                let tool_line = res
+                    .all_matching_tools
                     .iter()
                     .take(5)
                     .map(|t| format!("{} ({})", t.tool_name, t.description.chars().take(30).collect::<String>()))
@@ -183,45 +232,123 @@ impl BriefAssembler {
                     .join(", ");
                 lines.push(format!("- **可用工具**: {}\n", tool_line));
                 score = score.saturating_add(15);
-            }
-            _ => {
+            } else {
                 lines.push("- **可用工具**: 无法获取\n".to_string());
             }
         }
 
-        // 活跃监听端口
-        match FactFacade::query_ports() {
-            Ok(ports) if !ports.is_empty() => {
-                let port_line = ports
-                    .iter()
-                    .take(5)
-                    .map(|p| format!(":{} ({})", p.port, p.process_name.as_deref().unwrap_or("未知").chars().take(20).collect::<String>()))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                lines.push(format!("- **活跃端口**: {}\n", port_line));
-                score = score.saturating_add(10);
-            }
-            _ => {
-                lines.push("- **活跃端口**: 无监听信息\n".to_string());
+        // 2. 活跃监听端口：优先消费 fact_nodes(port)，空库时回退物理探针
+        if !port_nodes.is_empty() {
+            let port_line = port_nodes
+                .iter()
+                .take(5)
+                .map(|n| {
+                    let port_str = n
+                        .properties
+                        .get("port")
+                        .and_then(|v| v.as_u64())
+                        .map(|p| p.to_string())
+                        .unwrap_or_else(|| n.name.trim_start_matches("port:").to_string());
+                    let proc_name = n
+                        .properties
+                        .get("process_name")
+                        .or_else(|| n.properties.get("process"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("未知");
+                    format!(":{} ({})", port_str, proc_name.chars().take(20).collect::<String>())
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            lines.push(format!("- **活跃端口**: {}\n", port_line));
+            score = score.saturating_add(10);
+        } else {
+            match FactFacade::query_ports() {
+                Ok(ports) if !ports.is_empty() => {
+                    let port_line = ports
+                        .iter()
+                        .take(5)
+                        .map(|p| format!(":{} ({})", p.port, p.process_name.as_deref().unwrap_or("未知").chars().take(20).collect::<String>()))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    lines.push(format!("- **活跃端口**: {}\n", port_line));
+                    score = score.saturating_add(10);
+                }
+                _ => {
+                    lines.push("- **活跃端口**: 无监听信息\n".to_string());
+                }
             }
         }
 
-        // 相关 Git 仓库
-        match FactFacade::query_repos(query) {
-            Ok(repos) if !repos.is_empty() => {
-                let repo_line = repos
-                    .iter()
-                    .take(3)
-                    .map(|r| {
-                        let cg = if r.codegraph_ready { " [codegraph✓]" } else { "" };
-                        format!("{}{}", r.abs_path.chars().take(50).collect::<String>(), cg)
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                lines.push(format!("- **相关仓库**: {}\n", repo_line));
-                score = score.saturating_add(15);
+        // 3. 相关 Git 仓库/工程：优先消费 fact_nodes(project)，其次 assets FTS，避免派生 git 子进程扫盘
+        if !proj_nodes.is_empty() {
+            let mut scored_proj: Vec<(usize, &crate::storage::models::FactNodeRecord)> = proj_nodes
+                .iter()
+                .map(|n| {
+                    let path_str = n
+                        .properties
+                        .get("canonical_path")
+                        .or_else(|| n.properties.get("path"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&n.name);
+                    let hay = format!(
+                        "{} {} {}",
+                        n.name.to_lowercase(),
+                        path_str.to_lowercase(),
+                        n.properties
+                            .get("description")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_lowercase()
+                    );
+                    let hits = q_terms.iter().filter(|t| hay.contains(*t)).count();
+                    (hits, *n)
+                })
+                .collect();
+            scored_proj.sort_by(|a, b| b.0.cmp(&a.0));
+            let repo_line = scored_proj
+                .iter()
+                .take(3)
+                .map(|(_, n)| {
+                    let path_str = n
+                        .properties
+                        .get("canonical_path")
+                        .or_else(|| n.properties.get("path"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&n.name);
+                    let cg = if n
+                        .properties
+                        .get("codegraph_ready")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false)
+                        || std::path::Path::new(path_str).join(".codegraph").exists()
+                    {
+                        " [codegraph✓]"
+                    } else {
+                        ""
+                    };
+                    format!("{}{}", path_str.chars().take(50).collect::<String>(), cg)
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            lines.push(format!("- **相关仓库**: {}\n", repo_line));
+            score = score.saturating_add(15);
+        } else if !q_lower.is_empty() {
+            if let Ok(assets) = self.storage.search_assets_fts(query, 3) {
+                let repos: Vec<_> = assets
+                    .into_iter()
+                    .filter(|a| a.asset_type == "project" || a.asset_type == "repo")
+                    .collect();
+                if !repos.is_empty() {
+                    let repo_line = repos
+                        .iter()
+                        .take(3)
+                        .map(|a| a.path.chars().take(50).collect::<String>())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    lines.push(format!("- **相关仓库**: {}\n", repo_line));
+                    score = score.saturating_add(15);
+                }
             }
-            _ => {}
         }
 
         let section = truncate_to_budget(lines.join(""), budget_tokens);
@@ -474,5 +601,58 @@ mod tests {
             output.markdown.contains("BriefAssembler") || output.markdown.contains("Phase 4"),
             "简报应包含预植入记忆内容"
         );
+    }
+
+    #[test]
+    fn test_brief_index_first_uses_fact_nodes() {
+        use crate::storage::models::FactNodeRecord;
+
+        let storage = Storage::open_in_memory().expect("in-memory");
+        storage
+            .upsert_fact_node(&FactNodeRecord {
+                id: "tool:rg".to_string(),
+                node_type: "tool".to_string(),
+                name: "rg".to_string(),
+                label: "ripgrep".to_string(),
+                properties: serde_json::json!({"description": "极速代码检索工具"}),
+                updated_at: None,
+            })
+            .expect("upsert tool");
+        storage
+            .upsert_fact_node(&FactNodeRecord {
+                id: "port:8765".to_string(),
+                node_type: "port".to_string(),
+                name: "port:8765".to_string(),
+                label: "8765".to_string(),
+                properties: serde_json::json!({"port": 8765, "process_name": "agent-steward"}),
+                updated_at: None,
+            })
+            .expect("upsert port");
+        storage
+            .upsert_fact_node(&FactNodeRecord {
+                id: "project:agent-steward".to_string(),
+                node_type: "project".to_string(),
+                name: "agent-steward".to_string(),
+                label: "agent-steward".to_string(),
+                properties: serde_json::json!({
+                    "canonical_path": "/root/new/work/agent-steward",
+                    "description": "宿主大管家"
+                }),
+                updated_at: None,
+            })
+            .expect("upsert project");
+
+        let assembler = BriefAssembler::new(storage, None);
+        let output = assembler
+            .assemble(&BriefRequest {
+                query: "agent-steward".to_string(),
+                session_id: "sess-idx".to_string(),
+                budget_tokens: 1500,
+            })
+            .expect("assemble");
+
+        assert!(output.markdown.contains("rg (极速代码检索工具)"));
+        assert!(output.markdown.contains(":8765 (agent-steward)"));
+        assert!(output.markdown.contains("/root/new/work/agent-steward"));
     }
 }

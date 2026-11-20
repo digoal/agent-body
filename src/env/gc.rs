@@ -25,6 +25,13 @@ pub struct OrphanProcessCandidate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildCacheCandidate {
+    pub path: String,
+    pub kind: String,
+    pub size_mb: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HostGcReport {
     pub tmp_dir_scanned: String,
     pub candidate_files_count: usize,
@@ -33,6 +40,8 @@ pub struct HostGcReport {
     pub deleted_bytes_reclaimed: u64,
     pub tmp_files: Vec<TmpFileCandidate>,
     pub orphan_processes: Vec<OrphanProcessCandidate>,
+    #[serde(default)]
+    pub build_caches: Vec<BuildCacheCandidate>,
     pub dry_run: bool,
 }
 
@@ -110,6 +119,8 @@ impl HostGarbageCollector {
 
         // 诊断孤儿进程 (PPID == 1 或 PPID 不在活跃列表中的 Agent Worker)
         let orphan_processes = Self::diagnose_orphan_processes();
+        // 只读巡检镜像仓库中的冗余构建缓存（target/、node_modules/），绝不自动删除
+        let build_caches = Self::scan_redundant_build_caches(&[Path::new("/root/new/shared_git")]);
 
         let candidate_files_count = candidate_files.len();
         Ok(HostGcReport {
@@ -120,8 +131,46 @@ impl HostGarbageCollector {
             deleted_bytes_reclaimed,
             tmp_files: candidate_files,
             orphan_processes,
+            build_caches,
             dry_run,
         })
+    }
+
+    /// 只读巡检给定根目录下各子项目的冗余构建缓存（target/、node_modules/），返回可回收体积建议
+    pub fn scan_redundant_build_caches(roots: &[&Path]) -> Vec<BuildCacheCandidate> {
+        let mut results = Vec::new();
+        for root in roots {
+            if !root.exists() || !root.is_dir() {
+                continue;
+            }
+            if let Ok(entries) = fs::read_dir(root) {
+                for entry in entries.flatten() {
+                    let proj = entry.path();
+                    if !proj.is_dir() {
+                        continue;
+                    }
+                    for (sub_name, kind) in [("target", "rust_target"), ("node_modules", "node_modules")] {
+                        let cache_dir = proj.join(sub_name);
+                        if cache_dir.is_dir() {
+                            let bytes: u64 = WalkDir::new(&cache_dir)
+                                .max_depth(6)
+                                .into_iter()
+                                .filter_map(|e| e.ok())
+                                .filter_map(|e| e.metadata().ok())
+                                .filter(|m| m.is_file())
+                                .map(|m| m.len())
+                                .sum();
+                            results.push(BuildCacheCandidate {
+                                path: cache_dir.to_string_lossy().to_string(),
+                                kind: kind.to_string(),
+                                size_mb: bytes / (1024 * 1024),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        results
     }
 
     /// 诊断宿主机孤儿/失控测试与 Worker 进程

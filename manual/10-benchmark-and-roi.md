@@ -58,4 +58,16 @@ agent-steward bench reset
 }
 ```
 
-支持 `action`: `"workloads" | "run" | "report" | "ledger" | "compare" | "export" | "reset"`，与 CLI 和 Web UI「📊 实证基准与账本」工作台保持 **40/40 (100%)** 双向同步。
+支持 `action`: `"workloads" | "run" | "report" | "ledger" | "compare" | "export" | "reset"`，与 CLI 和 Web UI「📊 实证基准与账本」工作台保持 **41/41 (100%)** 双向同步。
+
+---
+
+## 四、Benchmark 标准 v2.0 演进（Phase 31）
+
+- **`spec_version = "2.0"`**：兼容读取 `v1.0` 历史评测批次，`compare_runs` 自动标注口径版本变化；
+- **几何平均加速比（Geomean）+ 分组加速比**：主指标采用几何平均加速比，并独立展示 `Query/Guard` 子集加速比；
+- **新增 D6 认知质量与准确率维度**：
+  - `W9`（`hybrid_semantic_recall`）：混合语义检索 `Recall@5 >= 90%`；
+  - `W10`（`link_precision_regression`）：`CON-02` 模板/占位符/`.json` 抗假阳性抽取 `Precision >= 95%`；
+  - `DQ1 ~ DQ3`（宿主机数据质量门禁）：资产描述覆盖率 `>= 99%`、本地向量覆盖率 `>= 95%`、依赖拓扑非假阳性健康度 `>= 85%`。
+- **全渠道 `PR-01 ~ PR-10` 生产账本**：覆盖 MCP、CLI（`brief`/`search`/`fact`/`links audit`/`feedback`）与 Web REST API。

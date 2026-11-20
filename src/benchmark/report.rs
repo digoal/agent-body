@@ -8,8 +8,25 @@ use crate::benchmark::provenance::sha256_hex;
 use crate::benchmark::workloads::WorkloadResult;
 use crate::storage::models::BenchmarkRunRecord;
 
+fn default_spec_version() -> String {
+    "1.0".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataQualityResult {
+    pub id: String,
+    pub name: String,
+    pub title: String,
+    pub measured_pct: f64,
+    pub target_pct: f64,
+    pub passed: bool,
+    pub detail: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkReportPayload {
+    #[serde(default = "default_spec_version")]
+    pub spec_version: String,
     pub run_id: String,
     pub suite_name: String,
     pub git_commit: String,
@@ -17,10 +34,18 @@ pub struct BenchmarkReportPayload {
     pub host_fingerprint: serde_json::Value,
     pub workloads: Vec<WorkloadResult>,
     pub micro_benchmarks: Vec<MicroBenchResult>,
+    #[serde(default)]
+    pub data_quality: Vec<DataQualityResult>,
     pub total_baseline_tokens: i64,
     pub total_steward_tokens: i64,
     pub overall_token_savings_pct: f64,
     pub overall_speedup_factor: f64,
+    #[serde(default)]
+    pub geometric_mean_speedup: f64,
+    #[serde(default)]
+    pub query_guard_speedup: f64,
+    #[serde(default)]
+    pub d6_quality_score: f64,
     pub total_hazards_intercepted: i64,
     pub total_noise_blocked: i64,
     pub sla_passed: bool,
@@ -50,6 +75,12 @@ impl BenchmarkReportPayload {
     }
 
     pub fn from_record(rec: &BenchmarkRunRecord) -> Self {
+        let spec_version = rec
+            .results_json
+            .get("spec_version")
+            .and_then(|v| v.as_str())
+            .unwrap_or("1.0")
+            .to_string();
         let workloads: Vec<WorkloadResult> = rec
             .results_json
             .get("workloads")
@@ -60,7 +91,28 @@ impl BenchmarkReportPayload {
             .get("micro_benchmarks")
             .and_then(|v| serde_json::from_value(v.clone()).ok())
             .unwrap_or_default();
+        let data_quality: Vec<DataQualityResult> = rec
+            .results_json
+            .get("data_quality")
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_default();
+        let geometric_mean_speedup = rec
+            .results_json
+            .get("geometric_mean_speedup")
+            .and_then(|v| v.as_f64())
+            .unwrap_or_else(|| crate::benchmark::compute_geomean_speedup(&workloads));
+        let query_guard_speedup = rec
+            .results_json
+            .get("query_guard_speedup")
+            .and_then(|v| v.as_f64())
+            .unwrap_or_else(|| crate::benchmark::compute_query_guard_speedup(&workloads));
+        let d6_quality_score = rec
+            .results_json
+            .get("d6_quality_score")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
         Self {
+            spec_version,
             run_id: rec.run_id.clone(),
             suite_name: rec.suite_name.clone(),
             git_commit: rec.git_commit.clone(),
@@ -68,10 +120,14 @@ impl BenchmarkReportPayload {
             host_fingerprint: rec.host_fingerprint.clone(),
             workloads,
             micro_benchmarks,
+            data_quality,
             total_baseline_tokens: rec.total_baseline_tokens,
             total_steward_tokens: rec.total_steward_tokens,
             overall_token_savings_pct: rec.overall_token_savings_pct,
             overall_speedup_factor: rec.overall_speedup_factor,
+            geometric_mean_speedup,
+            query_guard_speedup,
+            d6_quality_score,
             total_hazards_intercepted: rec.total_hazards_intercepted,
             total_noise_blocked: rec.total_noise_blocked,
             sla_passed: rec.sla_passed,
@@ -85,7 +141,7 @@ impl BenchmarkReportPayload {
 pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String> {
     let mut md = String::new();
     writeln!(md, "# Agent Host Steward 实证基准评测报告 ({})\n", report.run_id)?;
-    writeln!(md, "- **版本 / Commit**: `v{}` (`{}`)", report.app_version, report.git_commit)?;
+    writeln!(md, "- **版本 / Commit**: `v{}` (`{}`) · **Benchmark 规格**: `v{}`", report.app_version, report.git_commit, report.spec_version)?;
     writeln!(md, "- **评测套件**: `{}` · **运行时间**: `{}` · **总耗时**: `{} ms`", report.suite_name, report.created_at, report.duration_ms)?;
     writeln!(md, "- **报告 SHA-256 存证指纹**: `{}`", report.report_sha256)?;
     writeln!(md, "- **SLA 总检门禁**: {}\n", if report.sla_passed { "✅ PASS" } else { "❌ FAIL" })?;
@@ -95,7 +151,7 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     writeln!(md, "|---|---:|---:|---:|")?;
     writeln!(
         md,
-        "| **Prompt Token 消耗** | {} tok | {} tok | **-{:.2}%** ({} tok saved) |",
+        "| **Prompt Token 消耗 (D1)** | {} tok | {} tok | **-{:.2}%** ({} tok saved) |",
         report.total_baseline_tokens,
         report.total_steward_tokens,
         report.overall_token_savings_pct,
@@ -103,8 +159,15 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     )?;
     writeln!(
         md,
-        "| **综合执行加速比** | - | - | **{:.2}x** |",
+        "| **几何平均加速比 (Geomean, D3 主口径)** | - | - | **{:.2}x** (Query/Guard: {:.2}x · 算术总比: {:.2}x) |",
+        report.geometric_mean_speedup,
+        report.query_guard_speedup,
         report.overall_speedup_factor
+    )?;
+    writeln!(
+        md,
+        "| **D6 认知质量与准确率** | - | - | **{:.1}/100** |",
+        report.d6_quality_score
     )?;
     writeln!(
         md,
@@ -158,6 +221,25 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
                 m.p99_us,
                 m.sla_limit_us,
                 if m.passed { "✅" } else { "❌" }
+            )?;
+        }
+        writeln!(md)?;
+    }
+
+    if !report.data_quality.is_empty() {
+        writeln!(md, "## 四、宿主机数据质量与 D6 准确率门禁 (DQ1~DQ3)\n")?;
+        writeln!(md, "| ID | 检查项 | 实测指标 | SLA 目标 | 状态 | 详情 |")?;
+        writeln!(md, "|:---:|---|---:|---:|:---:|---|")?;
+        for dq in &report.data_quality {
+            writeln!(
+                md,
+                "| {} | {} | {:.1}% | >= {:.1}% | {} | {} |",
+                dq.id,
+                dq.title,
+                dq.measured_pct,
+                dq.target_pct,
+                if dq.passed { "✅" } else { "❌" },
+                dq.detail
             )?;
         }
         writeln!(md)?;

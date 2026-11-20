@@ -1,3 +1,4 @@
+pub mod dq;
 pub mod ledger;
 pub mod micro;
 pub mod provenance;
@@ -9,11 +10,42 @@ use std::time::Instant;
 
 use anyhow::Result;
 
+use crate::benchmark::dq::run_data_quality_checks;
 use crate::benchmark::micro::{run_all_micro_benchmarks, MicroBenchResult};
-use crate::benchmark::report::BenchmarkReportPayload;
+use crate::benchmark::report::{BenchmarkReportPayload, DataQualityResult};
 use crate::benchmark::workloads::{run_all_workloads, run_workload, WorkloadResult};
 use crate::storage::models::BenchmarkRunRecord;
 use crate::storage::StorageProvider;
+
+pub const BENCHMARK_SPEC_VERSION: &str = "2.0";
+
+pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
+    if workloads.is_empty() {
+        return 1.0;
+    }
+    let log_sum: f64 = workloads
+        .iter()
+        .map(|w| w.speedup_factor.max(0.01).ln())
+        .sum();
+    let gm = (log_sum / workloads.len() as f64).exp();
+    (gm * 100.0).round() / 100.0
+}
+
+pub fn compute_query_guard_speedup(workloads: &[WorkloadResult]) -> f64 {
+    let subset: Vec<&WorkloadResult> = workloads
+        .iter()
+        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9"))
+        .collect();
+    if subset.is_empty() {
+        return 1.0;
+    }
+    let log_sum: f64 = subset
+        .iter()
+        .map(|w| w.speedup_factor.max(0.01).ln())
+        .sum();
+    let gm = (log_sum / subset.len() as f64).exp();
+    (gm * 100.0).round() / 100.0
+}
 
 pub struct BenchmarkEngine;
 
@@ -47,16 +79,29 @@ impl BenchmarkEngine {
     ) -> Result<BenchmarkReportPayload> {
         let t0 = Instant::now();
         let suite_norm = suite.trim();
-        let (workloads, micro_benchmarks): (Vec<WorkloadResult>, Vec<MicroBenchResult>) =
-            if suite_norm.eq_ignore_ascii_case("full") || suite_norm.is_empty() {
-                (run_all_workloads(storage.clone())?, run_all_micro_benchmarks()?)
-            } else if suite_norm.eq_ignore_ascii_case("macro") {
-                (run_all_workloads(storage.clone())?, Vec::new())
-            } else if suite_norm.eq_ignore_ascii_case("micro") {
-                (Vec::new(), run_all_micro_benchmarks()?)
-            } else {
-                (vec![run_workload(storage.clone(), suite_norm)?], Vec::new())
-            };
+        let (workloads, micro_benchmarks, data_quality): (
+            Vec<WorkloadResult>,
+            Vec<MicroBenchResult>,
+            Vec<DataQualityResult>,
+        ) = if suite_norm.eq_ignore_ascii_case("full") || suite_norm.is_empty() {
+            (
+                run_all_workloads(storage.clone())?,
+                run_all_micro_benchmarks()?,
+                run_data_quality_checks(storage.as_ref()),
+            )
+        } else if suite_norm.eq_ignore_ascii_case("macro") {
+            (run_all_workloads(storage.clone())?, Vec::new(), Vec::new())
+        } else if suite_norm.eq_ignore_ascii_case("micro") {
+            (Vec::new(), run_all_micro_benchmarks()?, Vec::new())
+        } else if suite_norm.eq_ignore_ascii_case("dq") {
+            (Vec::new(), Vec::new(), run_data_quality_checks(storage.as_ref()))
+        } else {
+            (
+                vec![run_workload(storage.clone(), suite_norm)?],
+                Vec::new(),
+                Vec::new(),
+            )
+        };
 
         let total_baseline_tokens: i64 = workloads.iter().map(|w| w.baseline_tokens).sum();
         let total_steward_tokens: i64 = workloads.iter().map(|w| w.steward_tokens).sum();
@@ -75,10 +120,27 @@ impl BenchmarkEngine {
             1.0
         };
 
+        let geometric_mean_speedup = compute_geomean_speedup(&workloads);
+        let query_guard_speedup = compute_query_guard_speedup(&workloads);
+        let mut d6_samples: Vec<f64> = workloads
+            .iter()
+            .filter_map(|w| w.quality_score)
+            .collect();
+        for dq in &data_quality {
+            d6_samples.push(dq.measured_pct);
+        }
+        let d6_quality_score = if d6_samples.is_empty() {
+            100.0
+        } else {
+            let avg = d6_samples.iter().sum::<f64>() / d6_samples.len() as f64;
+            (avg * 100.0).round() / 100.0
+        };
+
         let total_hazards_intercepted: i64 = workloads.iter().map(|w| w.hazards_intercepted).sum();
         let total_noise_blocked: i64 = workloads.iter().map(|w| w.blocked_noise as i64).sum();
         let sla_passed = workloads.iter().all(|w| w.sla_passed)
-            && micro_benchmarks.iter().all(|m| m.passed);
+            && micro_benchmarks.iter().all(|m| m.passed)
+            && data_quality.iter().all(|d| d.passed);
 
         let prefix = run_id_prefix.unwrap_or("run");
         let run_id = format!("{}-{}", prefix, uuid::Uuid::new_v4());
@@ -96,6 +158,7 @@ impl BenchmarkEngine {
         let created_at = chrono::Utc::now().to_rfc3339();
 
         let payload = BenchmarkReportPayload {
+            spec_version: BENCHMARK_SPEC_VERSION.to_string(),
             run_id: run_id.clone(),
             suite_name: suite_norm.to_string(),
             git_commit: git_commit.clone(),
@@ -103,10 +166,14 @@ impl BenchmarkEngine {
             host_fingerprint: host_fingerprint.clone(),
             workloads: workloads.clone(),
             micro_benchmarks: micro_benchmarks.clone(),
+            data_quality: data_quality.clone(),
             total_baseline_tokens,
             total_steward_tokens,
             overall_token_savings_pct,
             overall_speedup_factor,
+            geometric_mean_speedup,
+            query_guard_speedup,
+            d6_quality_score,
             total_hazards_intercepted,
             total_noise_blocked,
             sla_passed,
@@ -126,13 +193,18 @@ impl BenchmarkEngine {
                 total_baseline_tokens,
                 total_steward_tokens,
                 overall_token_savings_pct,
-                overall_speedup_factor,
+                overall_speedup_factor: geometric_mean_speedup,
                 total_hazards_intercepted,
                 total_noise_blocked,
                 sla_passed,
                 results_json: serde_json::json!({
+                    "spec_version": BENCHMARK_SPEC_VERSION,
+                    "geometric_mean_speedup": geometric_mean_speedup,
+                    "query_guard_speedup": query_guard_speedup,
+                    "d6_quality_score": d6_quality_score,
                     "workloads": workloads,
                     "micro_benchmarks": micro_benchmarks,
+                    "data_quality": data_quality,
                 }),
                 report_sha256,
                 duration_ms,
@@ -160,8 +232,10 @@ mod tests {
         let report = BenchmarkEngine::run_suite(provider.clone(), "full", true, Some("bench:test"))
             .expect("run full suite");
 
-        assert_eq!(report.workloads.len(), 8);
+        assert_eq!(report.workloads.len(), 10);
         assert_eq!(report.micro_benchmarks.len(), 5);
+        assert_eq!(report.data_quality.len(), 3);
+        assert_eq!(report.spec_version, "2.0");
         assert_eq!(report.report_sha256.len(), 64);
         assert!(
             report.overall_token_savings_pct > 50.0,

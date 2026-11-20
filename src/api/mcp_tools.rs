@@ -660,6 +660,21 @@ impl McpToolRegistry {
                         "limit": { "type": "integer", "default": 20 }
                     }
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_feedback",
+                "description": "实际使用反馈总账 (user_feedback.md) 双向查阅、结构化追加与已验证反馈→长期记忆沉淀 (Phase 30)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["list", "add", "sync"], "default": "list" },
+                        "category": { "type": "string", "enum": ["PRO", "CON", "BENCH", "REQ"], "default": "CON" },
+                        "priority": { "type": "string", "enum": ["P0", "P1", "P2"], "default": "P1" },
+                        "title": { "type": "string" },
+                        "evidence": { "type": "string" },
+                        "target": { "type": "string" }
+                    }
+                }
             })
         ]
     }
@@ -1423,6 +1438,43 @@ impl McpToolRegistry {
                         Ok(serde_json::to_string_pretty(&serde_json::json!({ "cleaned": cleaned }))?)
                     }
                     other => bail!("未知 benchmark action: {}", other),
+                }
+            }
+
+            "steward_feedback" => {
+                let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("list");
+                let fb_path = crate::feedback::FeedbackEngine::default_feedback_path();
+                match action {
+                    "list" => {
+                        let items = crate::feedback::FeedbackEngine::list_items(&fb_path)?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "path": fb_path.to_string_lossy(),
+                            "count": items.len(),
+                            "items": items
+                        }))?)
+                    }
+                    "add" => {
+                        let category = args.get("category").and_then(|v| v.as_str()).unwrap_or("CON");
+                        let priority = args.get("priority").and_then(|v| v.as_str()).unwrap_or("P1");
+                        let title = args.get("title").and_then(|v| v.as_str()).unwrap_or("");
+                        let evidence = args.get("evidence").and_then(|v| v.as_str()).unwrap_or("");
+                        let target = args.get("target").and_then(|v| v.as_str()).unwrap_or("");
+                        let item = crate::feedback::FeedbackEngine::add_item(
+                            &fb_path, category, priority, title, evidence, target,
+                        )?;
+                        Ok(serde_json::to_string_pretty(&item)?)
+                    }
+                    "sync" => {
+                        let added = crate::feedback::FeedbackEngine::sync_verified_to_memories(
+                            &fb_path,
+                            &self.storage,
+                        )?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "synced_to_memories": added,
+                            "path": fb_path.to_string_lossy()
+                        }))?)
+                    }
+                    other => bail!("未知 feedback action: {}", other),
                 }
             }
 
