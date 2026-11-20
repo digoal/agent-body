@@ -25,7 +25,7 @@ impl MemoryManager {
         Self { storage }
     }
 
-    /// 写入一条新记忆
+    /// 写入一条新记忆（入库前强制经 SecretRedactor 全链路脱敏）
     pub fn add(
         &self,
         memory_type: &str,
@@ -34,17 +34,65 @@ impl MemoryManager {
         source_agent: Option<&str>,
         tags: Vec<String>,
     ) -> Result<String> {
+        let sanitized_content = crate::scanner::metadata::SecretRedactor::redact_preserving_newlines(content);
+        let sanitized_summary = summary.map(crate::scanner::metadata::SecretRedactor::redact_single_line);
         let filter = MemoryIntakeFilter::default();
-        let eval = filter.evaluate(memory_type, content);
+        let eval = filter.evaluate(memory_type, &sanitized_content);
         let weight = if eval.accepted { eval.calculated_weight } else { 0.5 };
+        self.insert_sanitized_record(
+            memory_type,
+            sanitized_content,
+            sanitized_summary,
+            source_agent,
+            tags,
+            weight,
+        )
+    }
 
+    /// 智能门禁入库：经过脱敏、重要性评估与噪声过滤后写入，返回 (Option<id>, 评估报告)
+    pub fn add_filtered(
+        &self,
+        memory_type: &str,
+        content: &str,
+        summary: Option<&str>,
+        source_agent: Option<&str>,
+        tags: Vec<String>,
+    ) -> Result<(Option<String>, MemoryIntakeEvaluation)> {
+        let sanitized_content = crate::scanner::metadata::SecretRedactor::redact_preserving_newlines(content);
+        let sanitized_summary = summary.map(crate::scanner::metadata::SecretRedactor::redact_single_line);
+        let filter = MemoryIntakeFilter::default();
+        let eval = filter.evaluate(memory_type, &sanitized_content);
+        if !eval.accepted {
+            return Ok((None, eval));
+        }
+
+        let id = self.insert_sanitized_record(
+            memory_type,
+            sanitized_content,
+            sanitized_summary,
+            source_agent,
+            tags,
+            eval.calculated_weight,
+        )?;
+        Ok((Some(id), eval))
+    }
+
+    fn insert_sanitized_record(
+        &self,
+        memory_type: &str,
+        content: String,
+        summary: Option<String>,
+        source_agent: Option<&str>,
+        tags: Vec<String>,
+        weight: f32,
+    ) -> Result<String> {
         let id = format!("mem-{}", uuid::Uuid::new_v4());
-        let emb = Self::try_embed_memory(content, summary);
+        let emb = Self::try_embed_memory(&content, summary.as_deref());
         let record = MemoryRecord {
             id: id.clone(),
             memory_type: memory_type.to_string(),
-            content: content.to_string(),
-            summary: summary.map(|s| s.to_string()),
+            content,
+            summary,
             source_agent: source_agent.map(|s| s.to_string()),
             source_session: None,
             tags,
@@ -56,41 +104,6 @@ impl MemoryManager {
 
         self.storage.insert_memory(&record)?;
         Ok(id)
-    }
-
-    /// 智能门禁入库：经过重要性评估与噪声过滤后写入，返回 (Option<id>, 评估报告)
-    pub fn add_filtered(
-        &self,
-        memory_type: &str,
-        content: &str,
-        summary: Option<&str>,
-        source_agent: Option<&str>,
-        tags: Vec<String>,
-    ) -> Result<(Option<String>, MemoryIntakeEvaluation)> {
-        let filter = MemoryIntakeFilter::default();
-        let eval = filter.evaluate(memory_type, content);
-        if !eval.accepted {
-            return Ok((None, eval));
-        }
-
-        let id = format!("mem-{}", uuid::Uuid::new_v4());
-        let emb = Self::try_embed_memory(content, summary);
-        let record = MemoryRecord {
-            id: id.clone(),
-            memory_type: memory_type.to_string(),
-            content: content.to_string(),
-            summary: summary.map(|s| s.to_string()),
-            source_agent: source_agent.map(|s| s.to_string()),
-            source_session: None,
-            tags,
-            weight: eval.calculated_weight,
-            pinned: false,
-            status: "active".to_string(),
-            embedding: emb,
-        };
-
-        self.storage.insert_memory(&record)?;
-        Ok((Some(id), eval))
     }
 
     /// 全文检索记忆
@@ -187,5 +200,25 @@ mod tests {
         assert!(id_ok.is_some());
         assert!(eval_ok.accepted);
         assert!(eval_ok.calculated_weight >= 0.85);
+    }
+
+    #[test]
+    fn test_memory_add_redacts_secrets() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let mm = MemoryManager::new(storage.clone());
+
+        let id = mm.add(
+            "experience",
+            "连接 PG postgres://steward:MyPgSecret77@127.0.0.1:5432/db 与 OPENAI_API_KEY=sk-1234567890abcdef 排障",
+            Some("TOKEN=ghp_1234567890abcdef 备注"),
+            Some("agent:sec"),
+            vec!["security".to_string()],
+        ).expect("add secret memory");
+
+        let list = storage.list_all_active_memories(10).expect("list");
+        let rec = list.iter().find(|m| m.id == id).expect("found");
+        assert!(!rec.content.contains("MyPgSecret77"));
+        assert!(!rec.content.contains("sk-1234567890abcdef"));
+        assert!(!rec.summary.as_deref().unwrap_or("").contains("ghp_1234567890abcdef"));
     }
 }

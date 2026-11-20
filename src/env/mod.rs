@@ -118,14 +118,15 @@ impl EnvCollector {
 
             let name = proc.name().to_string();
             let cmd_parts: Vec<String> = proc.cmd().iter().map(|s| s.to_string()).collect();
-            let command = cmd_parts.join(" ");
+            let raw_command = cmd_parts.join(" ");
             let pid_u32 = pid.as_u32();
             let listening_ports = pid_to_ports.get(&pid_u32).cloned().unwrap_or_default();
 
             // 过滤系统底噪：只关注应用进程、脚本、构建任务与监听端口的服务
-            if listening_ports.is_empty() && is_noise_process(&name, &command) {
+            if listening_ports.is_empty() && is_noise_process(&name, &raw_command) {
                 continue;
             }
+            let command = crate::scanner::metadata::SecretRedactor::redact_single_line(&raw_command);
 
             let cpu_pct = proc.cpu_usage();
             let mem_bytes = proc.memory();
@@ -268,5 +269,32 @@ mod tests {
         assert!(is_noise_process("python3", ""));
         assert!(!is_noise_process("agent-steward", "/usr/local/bin/agent-steward daemon"));
         assert!(!is_noise_process("python3", "python3 /root/new/shared_proj/bot.py"));
+    }
+
+    #[test]
+    fn test_process_command_redaction_before_storage() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let sanitized_cmd = crate::scanner::metadata::SecretRedactor::redact_single_line(
+            "uvicorn app:main --password=mySecret123 --port 8080",
+        );
+        let rec = ActiveProcessRecord {
+            id: "proc-99999".to_string(),
+            pid: 99999,
+            name: "uvicorn".to_string(),
+            command: sanitized_cmd.clone(),
+            owner: "root".to_string(),
+            associated_path: None,
+            listening_ports: vec![8080],
+            status: "running".to_string(),
+            cpu_pct: 0.1,
+            mem_bytes: 1024,
+            gpu_allocated_mb: 0,
+            started_at: None,
+        };
+        storage.replace_active_processes(&[rec]).expect("replace");
+        let list = storage.list_active_processes().expect("list");
+        assert_eq!(list.len(), 1);
+        assert!(!list[0].command.contains("mySecret123"));
+        assert!(list[0].command.contains("<REDACTED>"));
     }
 }

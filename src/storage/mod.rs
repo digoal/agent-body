@@ -193,7 +193,13 @@ impl Storage {
     // ─── Changes ─────────────────────────────────────────────────────
 
     pub fn record_change(&self, change: &ChangeRecord) -> Result<()> {
-        self.provider.record_change(change)
+        let mut sanitized = change.clone();
+        sanitized.description = change
+            .description
+            .as_deref()
+            .map(crate::scanner::metadata::SecretRedactor::redact_single_line);
+        sanitized.details = crate::scanner::metadata::SecretRedactor::redact_json_value(&change.details);
+        self.provider.record_change(&sanitized)
     }
 
     pub fn list_changes(&self, limit: usize) -> Result<Vec<ChangeRecord>> {
@@ -736,5 +742,31 @@ mod tests {
         assert_eq!(removed, 2); // run + ev2
         let after = storage.query_effectiveness_ledger("7d", None, 10).expect("query after");
         assert_eq!(after.total_events, 1);
+    }
+
+    #[test]
+    fn test_record_change_redacts_secrets() {
+        let storage = Storage::open_in_memory().expect("open");
+        storage.record_change(&ChangeRecord {
+            id: None,
+            change_type: "agent_tool:exec".to_string(),
+            target: "/root/new/work/app.py".to_string(),
+            description: Some("执行命令 --password=ChangeSecret123 连接 postgres://u:DbPass99@127.0.0.1/db".to_string()),
+            details: serde_json::json!({
+                "api_key": "sk-1234567890abcdef",
+                "cmd": "curl -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload.sig' http://localhost"
+            }),
+            source: "test".to_string(),
+            created_at: None,
+        }).expect("record_change");
+
+        let changes = storage.list_changes(5).expect("list_changes");
+        assert_eq!(changes.len(), 1);
+        let desc = changes[0].description.as_deref().unwrap_or("");
+        assert!(!desc.contains("ChangeSecret123"));
+        assert!(!desc.contains("DbPass99"));
+        let details_str = serde_json::to_string(&changes[0].details).unwrap_or_default();
+        assert!(!details_str.contains("sk-1234567890abcdef"));
+        assert!(!details_str.contains("eyJhbGciOiJIUzI1NiJ9"));
     }
 }

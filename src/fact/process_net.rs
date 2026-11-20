@@ -265,9 +265,9 @@ impl ProcessNetTopology {
             .map(|s| s.trim().to_string())
             .unwrap_or_else(|_| "unknown".to_string());
 
-        // 2. 读取 cmdline (以 \0 分隔)
+        // 2. 读取 cmdline (以 \0 分隔) 并全链路脱敏
         let cmdline_path = pid_dir.join("cmdline");
-        let command = fs::read(cmdline_path)
+        let raw_command = fs::read(cmdline_path)
             .map(|bytes| {
                 let s = bytes.split(|&b| b == 0)
                     .filter(|part| !part.is_empty())
@@ -277,6 +277,7 @@ impl ProcessNetTopology {
                 if s.is_empty() { name.clone() } else { s }
             })
             .unwrap_or_else(|_| name.clone());
+        let command = crate::scanner::metadata::SecretRedactor::redact_single_line(&raw_command);
 
         // 3. 读取 cwd 软链接
         let cwd_path = pid_dir.join("cwd");
@@ -440,5 +441,14 @@ mod tests {
         assert!(report.contains("8080"));
         assert!(report.contains("python3"));
         assert!(report.contains("/root/new/work/api-service"));
+    }
+
+    #[test]
+    fn test_proc_command_redaction_strips_uri_and_flags() {
+        let raw = "python3 worker.py --db postgres://admin:TopSecret9@10.0.0.5:5432/app --api-key=sk-1234567890abcdef";
+        let sanitized = crate::scanner::metadata::SecretRedactor::redact_single_line(raw);
+        assert!(!sanitized.contains("TopSecret9"));
+        assert!(!sanitized.contains("sk-1234567890abcdef"));
+        assert!(sanitized.contains("postgres://admin:<REDACTED>@10.0.0.5:5432/app"));
     }
 }

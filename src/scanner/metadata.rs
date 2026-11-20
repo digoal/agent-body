@@ -210,52 +210,296 @@ pub fn is_sensitive_file(path: &Path) -> bool {
     false
 }
 
-/// 密钥与敏感凭据脱敏器（送入本地 Ollama 前强制调用）
+/// 密钥与敏感凭据脱敏器（覆盖文件摘要、/proc cmdline、记忆与变更流全链路）
 pub struct SecretRedactor;
 
 impl SecretRedactor {
+    /// 多行脱敏（用于送入本地大模型的文件摘录等，保留文本行结构）
     pub fn redact(input: &str) -> String {
-        let mut out = String::with_capacity(input.len());
-        for line in input.lines() {
-            let lower = line.to_lowercase();
-            let looks_like_secret_kv = (lower.contains("api_key")
-                || lower.contains("apikey")
-                || lower.contains("secret_key")
-                || lower.contains("access_token")
-                || lower.contains("auth_token")
-                || lower.contains("password")
-                || lower.contains("passwd"))
-                && (line.contains('=') || line.contains(':'));
-
-            if looks_like_secret_kv && !line.trim_start().starts_with("//") && !line.trim_start().starts_with('#') {
-                if let Some(idx) = line.find('=').or_else(|| line.find(':')) {
-                    let key_part = &line[..=idx];
-                    out.push_str(key_part);
-                    out.push_str(" \"<REDACTED>\"\n");
-                    continue;
-                }
-            }
-
-            let masked = Self::mask_inline_tokens(line);
-            out.push_str(&masked);
+        let mut out = Self::redact_preserving_newlines(input);
+        if !input.is_empty() && !out.ends_with('\n') {
             out.push('\n');
         }
         out
     }
 
+    /// 单行脱敏（用于 /proc cmdline、摘要、description 等单行字段，不追加多余换行）
+    pub fn redact_single_line(input: &str) -> String {
+        let cleaned = Self::redact_private_keys(input);
+        Self::redact_line(&cleaned)
+    }
+
+    /// 保留原始换行结构的多行脱敏（用于长期记忆 content 等）
+    pub fn redact_preserving_newlines(input: &str) -> String {
+        if input.is_empty() {
+            return String::new();
+        }
+        let had_trailing_nl = input.ends_with('\n');
+        let pk_cleaned = Self::redact_private_keys(input);
+        let lines: Vec<String> = pk_cleaned.lines().map(Self::redact_line).collect();
+        let mut out = lines.join("\n");
+        if had_trailing_nl && !out.ends_with('\n') {
+            out.push('\n');
+        }
+        out
+    }
+
+    /// 递归脱敏 JSON 值中的字符串与敏感键值
+    pub fn redact_json_value(val: &Value) -> Value {
+        match val {
+            Value::String(s) => Value::String(Self::redact_preserving_newlines(s)),
+            Value::Array(arr) => Value::Array(arr.iter().map(Self::redact_json_value).collect()),
+            Value::Object(map) => {
+                let mut out = Map::new();
+                for (k, v) in map {
+                    let kl = k.to_lowercase();
+                    let is_secret_key = kl.contains("password")
+                        || kl.contains("passwd")
+                        || kl.contains("api_key")
+                        || kl.contains("apikey")
+                        || kl.contains("secret_key")
+                        || kl.contains("access_token")
+                        || kl.contains("auth_token")
+                        || kl == "token"
+                        || kl == "secret";
+                    if is_secret_key && (v.is_string() || v.is_number()) {
+                        out.insert(k.clone(), Value::String("<REDACTED>".to_string()));
+                    } else {
+                        out.insert(k.clone(), Self::redact_json_value(v));
+                    }
+                }
+                Value::Object(out)
+            }
+            other => other.clone(),
+        }
+    }
+
+    fn redact_line(line: &str) -> String {
+        let lower = line.to_ascii_lowercase();
+        let trimmed_start = line.trim_start();
+        let looks_like_secret_kv = (lower.contains("api_key")
+            || lower.contains("apikey")
+            || lower.contains("secret_key")
+            || lower.contains("access_token")
+            || lower.contains("auth_token")
+            || lower.contains("password")
+            || lower.contains("passwd"))
+            && (line.contains('=') || line.contains(':'))
+            && !trimmed_start.starts_with("//")
+            && !trimmed_start.starts_with('#')
+            // CLI 命令行（含空格与 `--flag`）交由内联参数脱敏器精准替换参数值，避免整行截断丢失命令上下文
+            && !lower.contains("--password")
+            && !lower.contains("--passwd")
+            && !lower.contains("--token")
+            && !lower.contains("://");
+
+        if looks_like_secret_kv {
+            if let Some(idx) = line.find('=').or_else(|| line.find(':')) {
+                let key_part = &line[..=idx];
+                return format!("{} \"<REDACTED>\"", key_part);
+            }
+        }
+
+        Self::mask_inline_tokens(line)
+    }
+
+    fn redact_private_keys(input: &str) -> String {
+        let mut result = input.to_string();
+        loop {
+            let Some(begin_idx) = result.find("-----BEGIN ") else {
+                break;
+            };
+            let rest = &result[begin_idx..];
+            let Some(header_end_rel) = rest.find("PRIVATE KEY-----") else {
+                break;
+            };
+            let after_header = begin_idx + header_end_rel + "PRIVATE KEY-----".len();
+            if let Some(end_begin_rel) = result[after_header..].find("-----END ") {
+                let end_pos = after_header + end_begin_rel;
+                if let Some(end_finish_rel) = result[end_pos..].find("PRIVATE KEY-----") {
+                    let replace_end = end_pos + end_finish_rel + "PRIVATE KEY-----".len();
+                    result.replace_range(begin_idx..replace_end, "<REDACTED_PRIVATE_KEY>");
+                    continue;
+                }
+            }
+            // 未找到闭合 END 标记（如单行/截断内容），替换至行尾
+            let line_end = result[after_header..]
+                .find('\n')
+                .map(|o| after_header + o)
+                .unwrap_or(result.len());
+            result.replace_range(begin_idx..line_end, "<REDACTED_PRIVATE_KEY>");
+        }
+        result
+    }
+
     fn mask_inline_tokens(line: &str) -> String {
-        let mut result = line.to_string();
-        for prefix in &["sk-", "ghp_", "gho_", "glpat-", "xoxb-", "AKIA"] {
-            while let Some(pos) = result.find(prefix) {
+        let mut result = Self::mask_uri_credentials(line);
+        result = Self::mask_cli_flags(&result);
+        result = Self::mask_bearer_tokens(&result);
+
+        for prefix in &["sk-", "ghp_", "gho_", "glpat-", "xoxb-", "xoxp-", "AKIA"] {
+            let mut search_from = 0usize;
+            while search_from < result.len() {
+                let Some(rel_pos) = result[search_from..].find(prefix) else {
+                    break;
+                };
+                let pos = search_from + rel_pos;
                 let end = result[pos..]
-                    .find(|c: char| c.is_whitespace() || c == '"' || c == '\'' || c == ',' || c == ';')
+                    .find(|c: char| {
+                        c.is_whitespace() || matches!(c, '"' | '\'' | ',' | ';' | ')' | '>')
+                    })
                     .map(|off| pos + off)
                     .unwrap_or(result.len());
                 if end - pos >= 12 {
                     result.replace_range(pos..end, "<REDACTED_TOKEN>");
+                    search_from = pos + "<REDACTED_TOKEN>".len();
                 } else {
-                    break;
+                    search_from = pos + prefix.len();
                 }
+            }
+        }
+        result
+    }
+
+    /// 脱敏 URI 内嵌凭据: scheme://user:password@host -> scheme://user:<REDACTED>@host
+    fn mask_uri_credentials(input: &str) -> String {
+        let mut result = input.to_string();
+        let mut search_from = 0usize;
+        while search_from < result.len() {
+            let Some(rel) = result[search_from..].find("://") else {
+                break;
+            };
+            let auth_start = search_from + rel + 3;
+            let token_end = result[auth_start..]
+                .find(|c: char| {
+                    c.is_whitespace() || matches!(c, '"' | '\'' | ',' | ';' | ')' | '>')
+                })
+                .map(|off| auth_start + off)
+                .unwrap_or(result.len());
+            let segment = &result[auth_start..token_end];
+            if let Some(at_rel) = segment.find('@') {
+                // 不跨越路径分隔符 `/`
+                if !segment[..at_rel].contains('/') {
+                    if let Some(colon_rel) = segment[..at_rel].find(':') {
+                        let pwd_start = auth_start + colon_rel + 1;
+                        let pwd_end = auth_start + at_rel;
+                        let pwd = &result[pwd_start..pwd_end];
+                        if !pwd.is_empty() && pwd != "<REDACTED>" && pwd != "***" {
+                            result.replace_range(pwd_start..pwd_end, "<REDACTED>");
+                            search_from = pwd_start + "<REDACTED>".len();
+                            continue;
+                        }
+                    }
+                }
+            }
+            search_from = auth_start;
+        }
+        result
+    }
+
+    /// 脱敏 CLI 敏感标志参数: --password=xxx / --password xxx / --token=xxx 等
+    fn mask_cli_flags(input: &str) -> String {
+        let flags = [
+            "--password",
+            "--passwd",
+            "--secret-key",
+            "--access-token",
+            "--auth-token",
+            "--api-key",
+            "--apikey",
+            "--token",
+            "--secret",
+        ];
+        let mut result = input.to_string();
+        for flag in flags {
+            let mut search_from = 0usize;
+            while search_from < result.len() {
+                let lower = result.to_ascii_lowercase();
+                let Some(rel) = lower[search_from..].find(flag) else {
+                    break;
+                };
+                let pos = search_from + rel;
+                // 确认前边界（行首、空白或引号）
+                let prev_ok = pos == 0
+                    || result[..pos]
+                        .chars()
+                        .next_back()
+                        .map(|c| c.is_whitespace() || c == '"' || c == '\'')
+                        .unwrap_or(true);
+                let after_flag = pos + flag.len();
+                if !prev_ok || after_flag >= result.len() {
+                    search_from = after_flag;
+                    continue;
+                }
+
+                let rest = &result[after_flag..];
+                if rest.starts_with('=') {
+                    let val_start = after_flag + 1;
+                    let val_end = Self::scan_cli_value_end(&result, val_start);
+                    if val_end > val_start && &result[val_start..val_end] != "<REDACTED>" {
+                        result.replace_range(val_start..val_end, "<REDACTED>");
+                        search_from = val_start + "<REDACTED>".len();
+                        continue;
+                    }
+                } else if rest.starts_with(' ') || rest.starts_with('\t') {
+                    let ws_len = rest.len() - rest.trim_start_matches([' ', '\t']).len();
+                    let val_start = after_flag + ws_len;
+                    if val_start < result.len() && !result[val_start..].starts_with('-') {
+                        let val_end = Self::scan_cli_value_end(&result, val_start);
+                        if val_end > val_start && &result[val_start..val_end] != "<REDACTED>" {
+                            result.replace_range(val_start..val_end, "<REDACTED>");
+                            search_from = val_start + "<REDACTED>".len();
+                            continue;
+                        }
+                    }
+                }
+                search_from = after_flag;
+            }
+        }
+        result
+    }
+
+    fn scan_cli_value_end(s: &str, val_start: usize) -> usize {
+        if val_start >= s.len() {
+            return val_start;
+        }
+        let slice = &s[val_start..];
+        if let Some(quote) = slice.chars().next().filter(|&c| c == '"' || c == '\'') {
+            if let Some(close_rel) = slice[1..].find(quote) {
+                return val_start + 1 + close_rel + 1;
+            }
+        }
+        slice
+            .find(|c: char| c.is_whitespace() || c == ',' || c == ';')
+            .map(|off| val_start + off)
+            .unwrap_or(s.len())
+    }
+
+    /// 脱敏 Authorization Bearer 令牌（含 JWT eyJ...）
+    fn mask_bearer_tokens(input: &str) -> String {
+        let mut result = input.to_string();
+        let mut search_from = 0usize;
+        while search_from < result.len() {
+            let lower = result.to_ascii_lowercase();
+            let Some(rel) = lower[search_from..].find("bearer ") else {
+                break;
+            };
+            let pos = search_from + rel;
+            let token_start = pos + "bearer ".len();
+            let trimmed_ws = result[token_start..].len() - result[token_start..].trim_start().len();
+            let actual_start = token_start + trimmed_ws;
+            let token_end = result[actual_start..]
+                .find(|c: char| c.is_whitespace() || matches!(c, '"' | '\'' | ',' | ';'))
+                .map(|off| actual_start + off)
+                .unwrap_or(result.len());
+            if token_end > actual_start
+                && token_end - actual_start >= 8
+                && !result[actual_start..token_end].starts_with("<REDACTED")
+            {
+                result.replace_range(actual_start..token_end, "<REDACTED_TOKEN>");
+                search_from = actual_start + "<REDACTED_TOKEN>".len();
+            } else {
+                search_from = token_end.max(token_start);
             }
         }
         result
@@ -969,6 +1213,42 @@ mod tests {
         let redacted = SecretRedactor::redact(raw);
         assert!(!redacted.contains("sk-1234567890abcdef"));
         assert!(redacted.contains("<REDACTED>"));
+    }
+
+    #[test]
+    fn test_secret_redactor_extended_patterns() {
+        // 1. URI 内嵌口令 + CLI 标志 + 中文混合
+        let cmd = "psql postgres://steward:MyDbPass99@127.0.0.1:5432/prod --password=cliSecret42 --token tokVal9988 中文备注";
+        let out = SecretRedactor::redact_single_line(cmd);
+        assert!(!out.contains("MyDbPass99"), "URI 密码必须脱敏: {}", out);
+        assert!(!out.contains("cliSecret42"), "CLI --password= 必须脱敏: {}", out);
+        assert!(!out.contains("tokVal9988"), "CLI --token 空格参数必须脱敏: {}", out);
+        assert!(out.contains("postgres://steward:<REDACTED>@127.0.0.1:5432/prod"));
+        assert!(out.contains("中文备注"));
+        assert!(!out.ends_with('\n'), "单行脱敏不应追加换行");
+
+        // 2. Bearer JWT
+        let auth = "curl -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.abc.def' https://api.example.com";
+        let out_auth = SecretRedactor::redact_single_line(auth);
+        assert!(!out_auth.contains("eyJhbGciOi"));
+        assert!(out_auth.contains("Bearer <REDACTED_TOKEN>"));
+
+        // 3. PEM 私钥块
+        let pem = "prefix\n-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA\n-----END RSA PRIVATE KEY-----\nsuffix";
+        let out_pem = SecretRedactor::redact_preserving_newlines(pem);
+        assert!(!out_pem.contains("MIIEpAIBAAKCAQEA"));
+        assert!(out_pem.contains("<REDACTED_PRIVATE_KEY>"));
+
+        // 4. JSON 递归脱敏
+        let j = json!({
+            "cmd": "python3 app.py --password=xyz123",
+            "auth_token": "plain-secret",
+            "nested": ["postgres://u:p123@host/db"]
+        });
+        let redacted_j = SecretRedactor::redact_json_value(&j);
+        assert_eq!(redacted_j["auth_token"], "<REDACTED>");
+        assert!(!redacted_j["cmd"].as_str().unwrap().contains("xyz123"));
+        assert!(!redacted_j["nested"][0].as_str().unwrap().contains("p123"));
     }
 
     #[test]

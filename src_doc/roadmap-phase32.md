@@ -81,7 +81,7 @@ flowchart LR
 | 阶段 | 步骤 ID | 任务摘要 | 对应缺口 / 反馈 | 状态 | 完成时间 |
 |:---:|:---:|---|---|:---:|---|
 | **前置基线** | **32.0** | 补齐安全架构规格（`design_doc/11-security-spec.md`）、顶层规约 #19、代码 `conventions.rs` 安全规则、`CON-07`/`REQ-06`/`REQ-07` 与本路线图 | 安全方向规约与规划缺失 | ✅ 已规划就绪 | 2026-11-20 |
-| **Phase 32** | **32.1** | 全链路 `SecretRedactor` 扩展与 `/proc`/`memory`/`changes` 挂载 | `SEC-GAP-01`, `CON-07` | ⬜ 待执行 | — |
+| **Phase 32** | **32.1** | 全链路 `SecretRedactor` 扩展与 `/proc`/`memory`/`changes` 挂载 | `SEC-GAP-01`, `CON-07` | ✅ 已完成 | 2026-11-20 |
 | | **32.2** | `HookDispatcher` 防命令注入 & `DuckDbAnalyticsEngine` 导出底层沙盒校验 | `SEC-GAP-02`, `CON-07` | ⬜ 待执行 | — |
 | | **32.3** | Web REST API 全量写操作 & GC 端点统一 `check_auth` 与非回环门禁 | `SEC-GAP-03`, `CON-07` | ⬜ 待执行 | — |
 | | **32.4** | `AgentHookEngine::pre_tool_call` 高危路径与破坏性指令 `CRITICAL` 拦截 | `SEC-GAP-04`, `CON-07` | ⬜ 待执行 | — |
