@@ -38,6 +38,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       <div class="topbar-actions">
         <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 41/41 能力对齐矩阵">✅ 41/41</span>
         <span id="sse-badge" class="sse-pill connecting">SSE</span>
+        <button id="btn-auth-token" class="btn btn-ghost btn-sm" title="配置 [web].auth_token 用于写操作与 GC 鉴权">🔑 Token</button>
         <button id="btn-theme-toggle" class="btn btn-theme btn-sm" title="切换白天工程蓝图 / 夜间深空指挥舱 (快捷键 T)">☀️ 蓝图</button>
         <button id="btn-toggle-mirror" class="btn btn-ghost btn-sm" title="展开/收起黑屏命令镜像器">⌨️ 镜像</button>
         <button id="btn-toggle-sse" class="btn btn-ghost btn-sm" title="展开/收起实时事件流">⚡ 事件 <span id="sse-unread-badge" class="badge hidden">0</span></button>
@@ -1309,18 +1310,59 @@ function toggleTheme() {
   applyTheme(state.theme === "light" ? "dark" : "light", true);
 }
 
+function getStoredAuthToken() {
+  try {
+    return (localStorage.getItem("steward_auth_token") || "").trim();
+  } catch (_) {
+    return "";
+  }
+}
+
+function updateAuthTokenButton() {
+  const btn = document.getElementById("btn-auth-token");
+  if (!btn) return;
+  const has = getStoredAuthToken().length > 0;
+  btn.innerText = has ? "🔑 已鉴权" : "🔑 Token";
+  btn.title = has
+    ? "已配置 Web Bearer Token (点击修改或留空清除)"
+    : "配置 [web].auth_token 用于写操作与 GC 鉴权";
+}
+
+function promptAuthToken() {
+  const current = getStoredAuthToken();
+  const hint = current ? `当前已配置 (${current.slice(0, 8)}...)，输入新 Token 替换或留空清除：` : "请输入 ~/.steward/config.toml 中配置的 [web].auth_token：";
+  const next = window.prompt(hint, "");
+  if (next === null) return;
+  const trimmed = next.trim();
+  try {
+    if (trimmed) localStorage.setItem("steward_auth_token", trimmed);
+    else localStorage.removeItem("steward_auth_token");
+  } catch (_) {}
+  updateAuthTokenButton();
+}
+
 async function apiGet(url) {
-  const res = await fetch(url);
+  const headers = {};
+  const tok = getStoredAuthToken();
+  if (tok) headers["Authorization"] = `Bearer ${tok}`;
+  const res = await fetch(url, { headers });
   const json = await res.json();
+  if (json.code === 401) {
+    throw new Error(`${json.message || "Unauthorized"}（请点击右上角「🔑 Token」填入 [web].auth_token）`);
+  }
   if (json.code !== 200) throw new Error(json.message || "API Error");
   return json.data;
 }
 
 async function apiPost(url, body, authToken) {
   const headers = { "Content-Type": "application/json" };
-  if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+  const tok = (authToken || getStoredAuthToken() || "").trim();
+  if (tok) headers["Authorization"] = `Bearer ${tok}`;
   const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body || {}) });
   const json = await res.json();
+  if (json.code === 401) {
+    throw new Error(`${json.message || "Unauthorized"}（请点击右上角「🔑 Token」填入 [web].auth_token）`);
+  }
   if (json.code !== 200) throw new Error(json.message || "API Error");
   return json.data;
 }
@@ -1383,6 +1425,8 @@ function bindNavigation() {
 }
 
 function bindOtherControls() {
+  updateAuthTokenButton();
+  document.getElementById("btn-auth-token")?.addEventListener("click", promptAuthToken);
   document.getElementById("btn-theme-toggle")?.addEventListener("click", toggleTheme);
   document.getElementById("btn-global-refresh")?.addEventListener("click", refreshAll);
   document.getElementById("btn-toggle-sse")?.addEventListener("click", () => {
