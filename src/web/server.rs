@@ -28,6 +28,58 @@ impl Default for WebConfig {
     }
 }
 
+impl WebConfig {
+    /// 判断是否绑定在非回环地址（如 0.0.0.0 或局域网 IP）
+    pub fn is_non_loopback(&self) -> bool {
+        !matches!(self.host.trim(), "127.0.0.1" | "localhost" | "::1")
+    }
+}
+
+/// 恒定时间字节比较，降低 Bearer Token 时序侧信道风险
+fn constant_time_eq(a: &str, b: &str) -> bool {
+    let ab = a.as_bytes();
+    let bb = b.as_bytes();
+    if ab.len() != bb.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (&x, &y) in ab.iter().zip(bb.iter()) {
+        diff |= x ^ y;
+    }
+    diff == 0
+}
+
+/// 统一校验写端点与敏感端点的 Bearer Token 鉴权
+fn check_write_or_sensitive_auth(
+    req: &HttpRequest,
+    auth_token: &Option<String>,
+    require_token_if_empty: bool,
+) -> Option<HttpResponse> {
+    let is_protected = req.method == Method::Post || req.path == "/api/v1/env/gc";
+    if !is_protected {
+        return None;
+    }
+
+    match auth_token.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        Some(expected) => {
+            let auth_header = req.headers.get("authorization").cloned().unwrap_or_default();
+            let token = auth_header.strip_prefix("Bearer ").unwrap_or(&auth_header);
+            if !constant_time_eq(token, expected) {
+                return Some(crate::web::api::WebResponse::error(
+                    StatusCode::UNAUTHORIZED,
+                    "Unauthorized: invalid or missing Bearer auth_token",
+                ));
+            }
+            None
+        }
+        None if require_token_if_empty => Some(crate::web::api::WebResponse::error(
+            StatusCode::FORBIDDEN,
+            "Forbidden: write and sensitive endpoints require [web].auth_token when bound to non-loopback address",
+        )),
+        None => None,
+    }
+}
+
 /// Web 服务器实例
 pub struct WebServer {
     config: WebConfig,
@@ -67,6 +119,20 @@ impl WebServer {
         println!("│  URL: http://{:<45} │", addr);
         println!("╰────────────────────────────────────────────────────────────╯");
 
+        let non_loopback = self.config.is_non_loopback();
+        let has_token = self
+            .config
+            .auth_token
+            .as_deref()
+            .map(|s| !s.trim().is_empty())
+            .unwrap_or(false);
+        if non_loopback && !has_token {
+            eprintln!(
+                "[Web][SECURITY WARN] 服务绑定在非回环地址 `{}` 且未配置 [web].auth_token，所有写端点与 /api/v1/env/gc 将强制返回 403 Forbidden！",
+                self.config.host
+            );
+        }
+
         let storage = self.storage.clone();
         let start_time = self.start_time;
         let event_tx = self.event_tx.clone();
@@ -79,7 +145,16 @@ impl WebServer {
                     let event_tx = event_tx.clone();
                     let auth_token = auth_token.clone();
                     tokio::spawn(async move {
-                        if let Err(e) = Self::handle_connection(stream, storage, start_time, event_tx, auth_token).await {
+                        if let Err(e) = Self::handle_connection(
+                            stream,
+                            storage,
+                            start_time,
+                            event_tx,
+                            auth_token,
+                            non_loopback,
+                        )
+                        .await
+                        {
                             eprintln!("[Web] Connection error: {}", e);
                         }
                     });
@@ -98,6 +173,7 @@ impl WebServer {
         start_time: Instant,
         event_tx: broadcast::Sender<String>,
         auth_token: Option<String>,
+        enforce_token_for_writes: bool,
     ) -> anyhow::Result<()> {
         let mut buffer = [0u8; 4096];
         let bytes_read = stream.read(&mut buffer).await?;
@@ -160,7 +236,13 @@ impl WebServer {
         let is_bench_run = req.method == Method::Post && req.path == "/api/v1/benchmark/run";
         let demo_path = req.path.clone();
         let resp = tokio::task::spawn_blocking(move || {
-            Self::route_request_arc(&req, storage, &start_time, &auth_token)
+            Self::route_request_arc_with_policy(
+                &req,
+                storage,
+                &start_time,
+                &auth_token,
+                enforce_token_for_writes,
+            )
         })
         .await?;
         if (is_demo_run || is_bench_run) && resp.status == StatusCode::OK {
@@ -178,13 +260,29 @@ impl WebServer {
         Ok(())
     }
 
-    /// 持有 Arc<dyn StorageProvider> 的完整路由分发（覆盖 Phase 21 黑白屏全能力 API）
+    /// 持有 Arc<dyn StorageProvider> 的完整路由分发（默认本机回环策略）
     pub fn route_request_arc(
         req: &HttpRequest,
         storage: Arc<dyn StorageProvider>,
         start_time: &Instant,
         auth_token: &Option<String>,
     ) -> HttpResponse {
+        Self::route_request_arc_with_policy(req, storage, start_time, auth_token, false)
+    }
+
+    /// 持有 Arc<dyn StorageProvider> 的完整路由分发（支持非回环强制鉴权策略）
+    pub fn route_request_arc_with_policy(
+        req: &HttpRequest,
+        storage: Arc<dyn StorageProvider>,
+        start_time: &Instant,
+        auth_token: &Option<String>,
+        enforce_token_for_writes: bool,
+    ) -> HttpResponse {
+        if let Some(err_resp) =
+            check_write_or_sensitive_auth(req, auth_token, enforce_token_for_writes)
+        {
+            return err_resp;
+        }
         match (req.method.clone(), req.path.as_str()) {
             (Method::Get, "/api/v1/brief") => parity_api::handle_brief(req, storage),
             (Method::Post, "/api/v1/placement/suggest") => parity_api::handle_placement_suggest(req, storage),

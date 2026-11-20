@@ -171,10 +171,18 @@ Content-Length: 75\r\n\r\n\
     assert!(resp_parity.contains("\"synced_count\":41"));
     assert!(resp_parity.contains("\"coverage_pct\":100.0"));
 
-    // 4.8.2 验证 Benchmark 跑批与重置 API
+    // 4.8.2 验证 Benchmark 跑批与重置 API (无 Token 应被 401 拦截，带 Token 放行)
     let bench_body = "{\"suite\":\"macro\",\"save\":true}";
-    let bench_req = format!(
+    let bench_unauth_req = format!(
         "POST /api/v1/benchmark/run HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+        bench_body.len(),
+        bench_body
+    );
+    let resp_bench_unauth = send_http_request("127.0.0.1", bound_port, &bench_unauth_req).await;
+    assert!(resp_bench_unauth.contains("HTTP/1.1 401 Unauthorized"));
+
+    let bench_req = format!(
+        "POST /api/v1/benchmark/run HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
         bench_body.len(),
         bench_body
     );
@@ -189,7 +197,7 @@ Content-Length: 75\r\n\r\n\
 
     let demo_body = "{\"scenario_id\":\"scene-4\"}";
     let demo_req = format!(
-        "POST /api/v1/demo/run HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+        "POST /api/v1/demo/run HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
         demo_body.len(),
         demo_body
     );
@@ -200,7 +208,7 @@ Content-Length: 75\r\n\r\n\
     assert!(resp_demo.contains("\"intent_summary\""));
     assert!(resp_demo.contains("\"hero_metrics\""));
 
-    let reset_req = "POST /api/v1/demo/reset HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 2\r\n\r\n{}";
+    let reset_req = "POST /api/v1/demo/reset HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Length: 2\r\n\r\n{}";
     let resp_reset = send_http_request("127.0.0.1", bound_port, reset_req).await;
     assert!(resp_reset.contains("HTTP/1.1 200 OK"));
 

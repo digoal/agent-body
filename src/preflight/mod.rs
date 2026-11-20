@@ -135,6 +135,7 @@ impl PreflightChecker {
         Self::check_codegraph(&mut report);
         Self::check_ecosystem_skills(&mut report);
         Self::check_disk_watermark(&mut report);
+        Self::check_security_posture(&mut report, data_dir, config);
 
         if let Some(cfg) = config {
             Self::check_ollama(&mut report, &cfg.embedding.ollama_url, &cfg.embedding.model, cfg.embedding.fallback_fts_only);
@@ -149,6 +150,78 @@ impl PreflightChecker {
         Self::collect_sys_info(&mut report);
 
         report
+    }
+
+    /// 检查本地存储最小权限 (0700/0600) 与接口暴露安全基线
+    pub fn check_security_posture(
+        report: &mut PreflightReport,
+        data_dir: &Path,
+        config: Option<&crate::config::Config>,
+    ) {
+        let mut issues: Vec<String> = Vec::new();
+        let mut remedies: Vec<String> = Vec::new();
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if data_dir.exists() {
+                if let Ok(meta) = fs::metadata(data_dir) {
+                    let mode = meta.permissions().mode() & 0o777;
+                    if (mode & 0o077) != 0 {
+                        issues.push(format!("数据目录 {} 权限过宽 ({:03o})", data_dir.display(), mode));
+                        remedies.push(format!("chmod 700 {}", data_dir.display()));
+                    }
+                }
+            }
+
+            let config_file = data_dir.join("config.toml");
+            let db_file = config
+                .map(|c| c.db_path.clone())
+                .unwrap_or_else(|| data_dir.join("steward.db"));
+            for path in [&config_file, &db_file] {
+                if path.exists() {
+                    if let Ok(meta) = fs::metadata(path) {
+                        let mode = meta.permissions().mode() & 0o777;
+                        if (mode & 0o077) != 0 {
+                            issues.push(format!("敏感文件 {} 权限过宽 ({:03o})", path.display(), mode));
+                            remedies.push(format!("chmod 600 {}", path.display()));
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(cfg) = config {
+            let non_loopback = !matches!(cfg.web.host.trim(), "127.0.0.1" | "localhost" | "::1");
+            let empty_token = cfg
+                .web
+                .auth_token
+                .as_deref()
+                .map(|s| s.trim().is_empty())
+                .unwrap_or(true);
+            if cfg.web.enabled && non_loopback && empty_token {
+                issues.push(format!("Web 服务监听非回环地址 `{}` 且未配置 auth_token", cfg.web.host));
+                remedies.push("在 config.toml 的 [web] 下配置强 auth_token，或将 host 收敛回 127.0.0.1".to_string());
+            }
+        }
+
+        if issues.is_empty() {
+            report.add(CheckItem {
+                name: "安全基线与文件权限".to_string(),
+                category: CheckCategory::Optional,
+                status: CheckStatus::Pass,
+                message: "本地存储权限 (0700/0600) 与接口暴露策略合规".to_string(),
+                remedy: None,
+            });
+        } else {
+            report.add(CheckItem {
+                name: "安全基线与文件权限".to_string(),
+                category: CheckCategory::Optional,
+                status: CheckStatus::Warn,
+                message: issues.join("; "),
+                remedy: Some(remedies.join(" && ")),
+            });
+        }
     }
 
     /// 检查 /proc 虚拟文件系统 (Linux 进程与端口拓扑依赖)
@@ -703,5 +776,35 @@ mod tests {
         assert!(table.contains("PASS"));
         assert!(table.contains("WARN"));
         assert!(table.contains("apt install xxx"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_preflight_security_posture_detects_wide_permissions_and_passes_strict() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().expect("tempdir");
+        let data_dir = dir.path().join(".steward");
+        fs::create_dir_all(&data_dir).expect("mkdir");
+        let db_file = data_dir.join("steward.db");
+        fs::write(&db_file, b"").expect("write db");
+
+        // 1. 故意放宽权限到 0755 / 0644 -> 应检测为 Warn
+        fs::set_permissions(&data_dir, fs::Permissions::from_mode(0o755)).expect("chmod dir");
+        fs::set_permissions(&db_file, fs::Permissions::from_mode(0o644)).expect("chmod db");
+
+        let mut report_warn = PreflightReport::new();
+        PreflightChecker::check_security_posture(&mut report_warn, &data_dir, None);
+        let item_warn = report_warn.items.iter().find(|i| i.name.contains("安全基线")).expect("item");
+        assert_eq!(item_warn.status, CheckStatus::Warn);
+        assert!(item_warn.remedy.as_deref().unwrap_or("").contains("chmod 600"));
+
+        // 2. 收敛权限为 0700 / 0600 -> 应检测为 Pass
+        crate::config::restrict_private_permissions(&data_dir, true);
+        crate::config::restrict_private_permissions(&db_file, false);
+
+        let mut report_ok = PreflightReport::new();
+        PreflightChecker::check_security_posture(&mut report_ok, &data_dir, None);
+        let item_ok = report_ok.items.iter().find(|i| i.name.contains("安全基线")).expect("item");
+        assert_eq!(item_ok.status, CheckStatus::Pass);
     }
 }

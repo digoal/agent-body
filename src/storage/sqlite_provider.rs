@@ -17,9 +17,11 @@ impl SqliteStorageProvider {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
                 .with_context(|| format!("创建数据库目录失败: {:?}", parent))?;
+            crate::config::restrict_private_permissions(parent, true);
         }
         let conn = Connection::open(path)
             .with_context(|| format!("打开 SQLite 数据库失败: {:?}", path))?;
+        crate::config::restrict_private_permissions(path, false);
         let provider = Self {
             conn: Arc::new(Mutex::new(conn)),
         };

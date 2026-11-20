@@ -365,11 +365,13 @@ impl Config {
             if let Some(parent) = config_path.parent() {
                 std::fs::create_dir_all(parent)
                     .with_context(|| format!("创建配置目录失败: {:?}", parent))?;
+                restrict_private_permissions(parent, true);
             }
             let toml_str = toml::to_string_pretty(&cfg)
                 .context("序列化默认配置失败")?;
             std::fs::write(&config_path, toml_str)
                 .with_context(|| format!("写入默认配置文件失败: {:?}", config_path))?;
+            restrict_private_permissions(&config_path, false);
             cfg.validate()?;
             Ok(cfg)
         }
@@ -408,6 +410,26 @@ impl Config {
             anyhow::bail!("annotation.max_snippet_chars ({}) 不能小于 200", self.annotation.max_snippet_chars);
         }
         Ok(())
+    }
+}
+
+/// 在 Unix 平台将私密目录收敛为 0700、私密文件（config.toml / steward.db）收敛为 0600
+pub fn restrict_private_permissions(path: &Path, is_dir: bool) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = if is_dir { 0o700 } else { 0o600 };
+        if let Ok(meta) = std::fs::metadata(path) {
+            let mut perms = meta.permissions();
+            if (perms.mode() & 0o777) != mode {
+                perms.set_mode(mode);
+                let _ = std::fs::set_permissions(path, perms);
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (path, is_dir);
     }
 }
 

@@ -509,4 +509,74 @@ mod tests {
         assert_eq!(r_la.status, StatusCode::OK);
         assert!(std::str::from_utf8(&r_la.body).unwrap().contains("\"granted\""));
     }
+
+    #[test]
+    fn test_web_write_and_gc_auth_enforcement() {
+        let storage = std::sync::Arc::new(SqliteStorageProvider::open_in_memory().expect("sqlite memory init"));
+        storage.init().expect("sqlite init");
+        let start_time = Instant::now();
+        let token = Some("top-secret-token".to_string());
+
+        let make_req = |method: Method, path: &str, bearer: Option<&str>, body: Vec<u8>| -> HttpRequest {
+            let mut headers = std::collections::HashMap::new();
+            if let Some(t) = bearer {
+                headers.insert("authorization".to_string(), format!("Bearer {}", t));
+            }
+            HttpRequest {
+                method,
+                path: path.to_string(),
+                raw_query: String::new(),
+                query_params: Default::default(),
+                headers,
+                body,
+            }
+        };
+
+        // 1. 配置 auth_token 时，无 Token 访问各写端点与 GC 必须返回 401
+        let protected = [
+            (Method::Post, "/api/v1/assets/register", b"{}".to_vec()),
+            (Method::Post, "/api/v1/memories/add", br#"{"content":"test memory"}"#.to_vec()),
+            (Method::Post, "/api/v1/analytics/export", b"{}".to_vec()),
+            (Method::Post, "/api/v1/demo/reset", b"{}".to_vec()),
+            (Method::Get, "/api/v1/env/gc", vec![]),
+        ];
+        for (m, p, b) in &protected {
+            let r_unauth = server::WebServer::route_request_arc(
+                &make_req(m.clone(), p, None, b.clone()),
+                storage.clone(),
+                &start_time,
+                &token,
+            );
+            assert_eq!(r_unauth.status, StatusCode::UNAUTHORIZED, "端点 {} {} 无 Token 应返回 401", m.as_str(), p);
+        }
+
+        // 2. 携带正确 Token 放行
+        let r_ok = server::WebServer::route_request_arc(
+            &make_req(Method::Get, "/api/v1/env/gc", Some("top-secret-token"), vec![]),
+            storage.clone(),
+            &start_time,
+            &token,
+        );
+        assert_eq!(r_ok.status, StatusCode::OK);
+
+        // 3. 非回环暴露且未配置 Token 时，写端点与 GC 必须返回 403 Forbidden
+        let r_forbidden = server::WebServer::route_request_arc_with_policy(
+            &make_req(Method::Post, "/api/v1/memories/add", None, br#"{"content":"remote write"}"#.to_vec()),
+            storage.clone(),
+            &start_time,
+            &None,
+            true,
+        );
+        assert_eq!(r_forbidden.status, StatusCode::FORBIDDEN);
+
+        // 只读健康检查仍可正常访问
+        let r_health = server::WebServer::route_request_arc_with_policy(
+            &make_req(Method::Get, "/api/v1/health", None, vec![]),
+            storage,
+            &start_time,
+            &None,
+            true,
+        );
+        assert_eq!(r_health.status, StatusCode::OK);
+    }
 }

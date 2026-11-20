@@ -197,8 +197,7 @@ impl HookPipelineEngine {
     async fn execute_step(&self, step: &HookStep, event: &StewardEvent) -> Result<()> {
         match &step.action {
             HookAction::Exec { command } => {
-                let target = event.target_path().unwrap_or("");
-                let cmd_interpolated = command.replace("{path}", target);
+                let cmd_interpolated = super::dispatcher::interpolate_hook_command(command, event)?;
                 let out = tokio::process::Command::new("sh")
                     .arg("-c")
                     .arg(&cmd_interpolated)

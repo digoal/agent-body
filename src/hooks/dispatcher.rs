@@ -90,6 +90,36 @@ pub struct HookRule {
     pub action: HookAction,
 }
 
+/// POSIX Shell 单引号安全转义：将任意文本包裹为安全的单引号字面量，防止 sh -c 命令注入
+pub fn shell_escape_posix(input: &str) -> String {
+    let mut out = String::with_capacity(input.len() + 2);
+    out.push('\'');
+    for ch in input.chars() {
+        if ch == '\'' {
+            out.push_str("'\\''");
+        } else {
+            out.push(ch);
+        }
+    }
+    out.push('\'');
+    out
+}
+
+/// 安全插值 Hook 执行命令（拒绝控制字符，并对 `{path}` / `{event}` 执行 POSIX 单引号转义）
+pub fn interpolate_hook_command(template: &str, event: &StewardEvent) -> anyhow::Result<String> {
+    let mut result = template.to_string();
+    if let Some(path) = event.target_path() {
+        if path.chars().any(|c| c == '\0' || c == '\n' || c == '\r') {
+            anyhow::bail!("安全拦截：Hook 目标路径包含非法控制字符，已拒绝插值执行");
+        }
+        let escaped_path = shell_escape_posix(path);
+        result = result.replace("{path}", &escaped_path);
+    }
+    let escaped_event = shell_escape_posix(event.event_type());
+    result = result.replace("{event}", &escaped_event);
+    Ok(result)
+}
+
 /// 钩子分发器
 pub struct HookDispatcher {
     rules: Vec<HookRule>,
@@ -145,7 +175,9 @@ impl HookDispatcher {
             // 执行 action
             match &rule.action {
                 HookAction::Exec { command } => {
-                    let cmd_interpolated = self.interpolate_command(command, &event);
+                    let Ok(cmd_interpolated) = interpolate_hook_command(command, &event) else {
+                        continue;
+                    };
                     executed_actions.push(format!("exec: {}", cmd_interpolated));
 
                     // 异步在后台执行，避免阻塞
@@ -173,15 +205,6 @@ impl HookDispatcher {
         }
 
         executed_actions
-    }
-
-    fn interpolate_command(&self, template: &str, event: &StewardEvent) -> String {
-        let mut result = template.to_string();
-        if let Some(path) = event.target_path() {
-            result = result.replace("{path}", path);
-        }
-        result = result.replace("{event}", event.event_type());
-        result
     }
 }
 
@@ -226,7 +249,7 @@ mod tests {
         });
         let actions1 = dispatcher.dispatch(ev1).await;
         assert_eq!(actions1.len(), 1);
-        assert_eq!(actions1[0], "exec: echo file /root/new/work/notes.md");
+        assert_eq!(actions1[0], "exec: echo file '/root/new/work/notes.md'");
 
         // 2. 扩展名不匹配 (.rs)
         let ev2 = Arc::new(StewardEvent::FileCreated {
@@ -245,5 +268,28 @@ mod tests {
         });
         let actions3 = dispatcher.dispatch(ev3).await;
         assert!(actions3.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_dispatcher_escapes_shell_injection_in_path() {
+        let marker = std::env::temp_dir().join(format!("steward_pwn_{}", uuid::Uuid::new_v4()));
+        let malicious_path = format!("/root/new/work/evil'; touch {}; echo '.md", marker.display());
+        let ev = StewardEvent::FileCreated {
+            path: malicious_path,
+            source: "test".to_string(),
+            timestamp: Local::now().to_rfc3339(),
+        };
+        let cmd = interpolate_hook_command("echo {path}", &ev).expect("should escape");
+        let out = Command::new("sh").arg("-c").arg(&cmd).output().expect("run sh");
+        assert!(out.status.success());
+        assert!(!marker.exists(), "恶意注入的 touch 命令绝不能被执行！");
+
+        // 含换行控制字符应被直接拒绝
+        let ev_nl = StewardEvent::FileCreated {
+            path: "/root/new/work/bad\ntouch /tmp/x.md".to_string(),
+            source: "test".to_string(),
+            timestamp: Local::now().to_rfc3339(),
+        };
+        assert!(interpolate_hook_command("echo {path}", &ev_nl).is_err());
     }
 }

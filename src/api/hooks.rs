@@ -72,6 +72,9 @@ impl AgentHookEngine {
             .and_then(|v| v.as_str());
 
         if let Some(path_str) = path_opt {
+            // 0. 高危系统与凭据路径安全红线检测 (Phase 32.4)
+            Self::check_critical_path_guard(&tool_lower, path_str, &mut warnings, &mut suggestions);
+
             // 协作锁排斥检查（文件锁与父目录锁传递）
             let coord = crate::coordination::CoordinationEngine::new(self.storage.provider().clone());
             if let Ok(Some(lock)) = coord.check_resource(&crate::coordination::ResourceType::File, path_str) {
@@ -149,6 +152,15 @@ impl AgentHookEngine {
             }
         }
 
+        // 4. 破坏性命令模式预警 (如 run_command / bash / exec)
+        if let Some(cmd_str) = args
+            .get("command")
+            .or_else(|| args.get("cmd"))
+            .and_then(|v| v.as_str())
+        {
+            Self::check_destructive_command_guard(cmd_str, &mut warnings, &mut suggestions);
+        }
+
         let has_warnings = !warnings.is_empty();
 
         PreHookResult {
@@ -156,6 +168,78 @@ impl AgentHookEngine {
             has_warnings,
             warnings,
             suggestions,
+        }
+    }
+
+    /// 检查高危系统/凭据路径（表驱动安全红线）
+    fn check_critical_path_guard(
+        tool_lower: &str,
+        path_str: &str,
+        warnings: &mut Vec<String>,
+        suggestions: &mut Vec<String>,
+    ) {
+        let is_read_only = tool_lower.starts_with("read")
+            || tool_lower.starts_with("view")
+            || tool_lower.starts_with("list")
+            || tool_lower.starts_with("get");
+        if is_read_only {
+            return;
+        }
+
+        let lower_path = path_str.replace('\\', "/").to_lowercase();
+        let critical_rules: &[(&str, &str)] = &[
+            ("/etc/shadow", "系统用户密码哈希文件，直接修改可能导致认证瘫痪"),
+            ("/etc/gshadow", "系统组密码哈希文件"),
+            ("/etc/sudoers", "提权策略文件，语法错误将锁定 sudo 权限"),
+            ("/etc/passwd", "系统账户核心文件"),
+            ("/.ssh/", "SSH 私钥与 authorized_keys 凭据目录"),
+            ("/.gnupg/", "GPG 私钥与信任链目录"),
+            ("/boot/", "系统内核与引导分区目录"),
+            ("/.steward/steward.db", "大管家主 SQLite 数据库文件，禁止绕过 Steward API 直接写文件"),
+        ];
+
+        for (pattern, desc) in critical_rules {
+            if lower_path.contains(pattern) {
+                warnings.push(format!(
+                    "🛑 [CRITICAL · 安全红线] 检测到高危路径操作 `{}` ({})",
+                    path_str, desc
+                ));
+                suggestions.push(
+                    "请再次确认人工授权；涉及认证/系统配置建议先备份并在受控变更窗口操作，涉及数据库请通过 steward CLI/MCP 接口写入。".to_string(),
+                );
+                break;
+            }
+        }
+    }
+
+    /// 检查高危破坏性命令模式
+    fn check_destructive_command_guard(
+        cmd_str: &str,
+        warnings: &mut Vec<String>,
+        suggestions: &mut Vec<String>,
+    ) {
+        let normalized = cmd_str.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+        let destructive_patterns: &[(&str, &str)] = &[
+            ("rm -rf / ", "根目录递归强制删除风险"),
+            ("rm -rf /*", "根目录通配递归强制删除风险"),
+            ("rm -fr / ", "根目录递归强制删除风险"),
+            ("mkfs.", "磁盘分区格式化指令"),
+            ("dd if=", "底层块设备裸写指令 (若 of=/dev/... 将不可逆覆盖磁盘)"),
+            ("chmod -r 777 /", "全局放开根目录权限将破坏系统安全模型"),
+            (":(){ :|:& };:", "Fork 炸弹拒绝服务模式"),
+        ];
+
+        let check_target = format!("{} ", normalized);
+        for (pat, desc) in destructive_patterns {
+            if check_target.contains(pat) {
+                warnings.push(format!(
+                    "🛑 [CRITICAL · 安全红线] 检测到高危破坏性命令模式 `{}` ({})",
+                    pat.trim(),
+                    desc
+                ));
+                suggestions.push("请先执行只读预览或确认目标路径与设备，切勿在无隔离环境下直接执行全盘破坏性命令。".to_string());
+                break;
+            }
         }
     }
 
@@ -298,5 +382,37 @@ mod tests {
         }));
         assert!(res.has_warnings, "父目录被锁时写子路径必须告警");
         assert!(res.warnings.iter().any(|w| w.contains("已被 Agent `agent-alpha` 加协作锁")));
+    }
+
+    #[test]
+    fn test_agent_pre_hook_critical_path_and_command_guard() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let hook_engine = AgentHookEngine::new(storage);
+
+        // 1. 高危路径写入触发 CRITICAL 告警
+        let res_sudo = hook_engine.pre_tool_call("write_file", &serde_json::json!({
+            "path": "/etc/sudoers"
+        }));
+        assert!(res_sudo.has_warnings);
+        assert!(res_sudo.warnings.iter().any(|w| w.contains("CRITICAL") && w.contains("/etc/sudoers")));
+
+        let res_ssh = hook_engine.pre_tool_call("edit_file", &serde_json::json!({
+            "file_path": "/root/.ssh/authorized_keys"
+        }));
+        assert!(res_ssh.has_warnings);
+        assert!(res_ssh.warnings.iter().any(|w| w.contains("CRITICAL")));
+
+        // 只读工具访问不误报高危写入
+        let res_read = hook_engine.pre_tool_call("read_file", &serde_json::json!({
+            "path": "/etc/passwd"
+        }));
+        assert!(!res_read.warnings.iter().any(|w| w.contains("CRITICAL")));
+
+        // 2. 破坏性命令触发 CRITICAL 告警
+        let res_cmd = hook_engine.pre_tool_call("run_command", &serde_json::json!({
+            "command": "rm -rf / --no-preserve-root"
+        }));
+        assert!(res_cmd.has_warnings);
+        assert!(res_cmd.warnings.iter().any(|w| w.contains("CRITICAL")));
     }
 }

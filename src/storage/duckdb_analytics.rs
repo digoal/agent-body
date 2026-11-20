@@ -242,24 +242,29 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
             anyhow::bail!("不支持导出表: {}, 仅允许: {:?}", table, valid_tables);
         }
 
+        // 底层沙盒路径与防 SQL 注入校验
+        let safe_path = validate_safe_export_path(output_path)?;
+        let safe_path_str = safe_path.to_string_lossy().to_string();
+
         // 统计行数
         let count_query = format!("SELECT count(*) FROM {}", table);
         let row_count: i64 = conn.query_row(&count_query, [], |r| r.get(0))?;
 
         // 确保父目录存在
-        if let Some(parent) = std::path::Path::new(output_path).parent() {
+        if let Some(parent) = safe_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
 
         // 尝试 DuckDB 原生导出：
         // 优先尝试 PARQUET；若当前环境未内置/无法在线拉取 parquet 扩展，则回退到 CSV 格式以保证离线强壮性
-        let is_csv_requested = output_path.ends_with(".csv");
+        let is_csv_requested = safe_path_str.ends_with(".csv");
+        let sql_escaped_path = safe_path_str.replace('\'', "''");
         let mut exported = false;
 
         if !is_csv_requested {
             // 禁用在线自动下载扩展，避免在离线/内网环境下挂死
             let _ = conn.execute_batch("SET autoinstall_known_extensions=false; SET autoload_known_extensions=false;");
-            let parquet_sql = format!("COPY (SELECT * FROM {}) TO '{}' (FORMAT PARQUET)", table, output_path);
+            let parquet_sql = format!("COPY (SELECT * FROM {}) TO '{}' (FORMAT PARQUET)", table, sql_escaped_path);
             if conn.execute(&parquet_sql, []).is_ok() {
                 exported = true;
             }
@@ -268,20 +273,87 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
         if !exported {
             // 回退到 DuckDB 核心原生内置的 CSV 格式（无外部依赖，零挂死）
             // 显式指定 FORMAT CSV，避免 DuckDB 根据 .parquet 后缀推断调用缺失的 parquet 扩展
-            let csv_sql = format!("COPY (SELECT * FROM {}) TO '{}' (FORMAT CSV, HEADER, DELIMITER ',')", table, output_path);
+            let csv_sql = format!("COPY (SELECT * FROM {}) TO '{}' (FORMAT CSV, HEADER, DELIMITER ',')", table, sql_escaped_path);
             conn.execute(&csv_sql, [])
                 .with_context(|| format!("DuckDB 导出数据失败: {}", csv_sql))?;
         }
 
-        let file_size_bytes = std::fs::metadata(output_path)
+        let file_size_bytes = std::fs::metadata(&safe_path)
             .map(|m| m.len())
             .unwrap_or(0);
 
         Ok(ExportSummary {
             table: table.to_string(),
             row_count: row_count as usize,
-            output_path: output_path.to_string(),
+            output_path: safe_path_str,
             file_size_bytes,
         })
+    }
+}
+
+/// 校验 DuckDB 导出路径：禁止控制字符、单引号、`..` 穿越与软链接逃逸，限定于安全临时导出目录
+pub fn validate_safe_export_path(output_path: &str) -> Result<std::path::PathBuf> {
+    let trimmed = output_path.trim();
+    if trimmed.is_empty() {
+        anyhow::bail!("安全拦截：导出路径不能为空");
+    }
+    if trimmed.chars().any(|c| c == '\0' || c == '\n' || c == '\r' || c == '\'') {
+        anyhow::bail!("安全拦截：导出路径包含非法字符（控制字符或单引号）: {}", trimmed);
+    }
+
+    let path = std::path::Path::new(trimmed);
+    if !path.is_absolute() {
+        anyhow::bail!("安全拦截：导出路径必须为绝对路径: {}", trimmed);
+    }
+    if path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+        anyhow::bail!("安全拦截：导出路径禁止包含 '..' 目录穿越组件: {}", trimmed);
+    }
+
+    let allowed_roots = [
+        std::path::PathBuf::from("/root/new/tmp"),
+        std::path::PathBuf::from("/tmp"),
+        std::env::temp_dir(),
+    ];
+
+    let in_allowed_lexical = allowed_roots.iter().any(|root| path.starts_with(root));
+    if !in_allowed_lexical {
+        anyhow::bail!(
+            "安全拦截：导出路径仅允许位于 /root/new/tmp/ 或系统临时目录下: {}",
+            trimmed
+        );
+    }
+
+    // 若父目录已存在，进一步解析真实规范路径防止软链接逃逸
+    if let Some(parent) = path.parent() {
+        if parent.exists() {
+            let canon_parent = std::fs::canonicalize(parent)?;
+            let canon_allowed = allowed_roots.iter().any(|root| {
+                std::fs::canonicalize(root)
+                    .map(|cr| canon_parent.starts_with(&cr))
+                    .unwrap_or_else(|_| canon_parent.starts_with(root))
+            });
+            if !canon_allowed {
+                anyhow::bail!("安全拦截：导出目录软链接逃逸出安全白名单: {}", canon_parent.display());
+            }
+        }
+    }
+
+    Ok(path.to_path_buf())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::storage::duckdb_provider::DuckDbStorageProvider;
+
+    #[test]
+    fn test_export_blocks_path_traversal_and_sql_injection() {
+        let provider = DuckDbStorageProvider::open_in_memory().expect("open");
+        let engine = DuckDbAnalyticsEngine::new(provider.conn());
+
+        assert!(engine.export_to_parquet("assets", "/etc/passwd.csv").is_err());
+        assert!(engine.export_to_parquet("assets", "/root/new/tmp/../../etc/shadow.csv").is_err());
+        assert!(engine.export_to_parquet("assets", "/tmp/bad'inject.csv").is_err());
+        assert!(engine.export_to_parquet("assets", "relative/out.csv").is_err());
     }
 }
