@@ -94,6 +94,7 @@
 - 📐 **[05-architecture.md](design_doc/05-architecture.md)**：三模块分层架构与系统规格说明书
 - 📖 **[03-feature-spec.md](design_doc/03-feature-spec.md)**：三模块功能规格详细定义
 - 📊 **[10-benchmark-spec.md](design_doc/10-benchmark-spec.md)**：实证 Benchmark 对照评测与生产效能存证账本设计规格说明书（双轨闭环确保使用效果 100% 有据可查）
+- 🛡️ **[11-security-spec.md](design_doc/11-security-spec.md)**：宿主大管家安全架构、威胁建模与纵深防御规格说明书（全链路脱敏、高危拦截、写鉴权与抗投毒防线）
 
 ---
 
@@ -237,7 +238,7 @@ cargo build --release
 7. **动态进程过滤底噪**：
    - 进程纳管只抓取 Agent 会话任务、Python 脚本、构建编译 Worker 等应用进程；系统底噪（内核工作线程 `kworker`、systemd 基础进程等）通过白名单与启发式规则过滤。
 
-### 安全与性能
+### 安全、隐私与纵深防御
 
 8. **只读探测为主、破坏性操作强制干预**：
    - 垃圾清理（GC）默认强制 `dry-run` 预览，绝不静默硬删除；强制限定白名单目录。
@@ -284,6 +285,12 @@ cargo build --release
 18. **实证基准与效能有据可查规约 (Empirical Benchmark & Verifiable ROI Ledger)**：
     - 任何宣称的效能提升（Token 节省率、探索轮次缩减、微秒级响应延迟、故障/冲突拦截率、垃圾噪音阻断率）必须通过可复现的 **A/B 对照基准套件（Without Steward 裸奔基线 vs With Steward 管家赋能）** 与 **生产运行态效能存证账本（Effectiveness Telemetry Ledger）** 双轨实证，严禁无出处估算或主观拍脑袋指标。
     - 基准测试必须基于宿主机真实物理探针与 `bench:*` 隔离沙盒实跑（覆盖内核微基准延迟 SLA 与 8 大宏观业务负载）；每次评测与日常工具调用的真实耗时（`elapsed_us`）、Token 缩减量（`tokens_saved`）、探索轮次缩减（`rounds_saved`）及风险拦截事件（`hazard_intercepted`）均须携带确定性推导规则编号（`provenance_rule`）落库留痕，支持通过 CLI（`agent-steward bench`）、MCP（`steward_benchmark`）、Web UI 与 DuckDB 导出报告随时溯源核验与跨版本回归比对，确保大管家使用效果 100% 有据可查。
+
+19. **纵深安全防御、全链路脱敏与抗投毒规约 (Defense-in-Depth Security, End-to-End Redaction & Anti-Poisoning)**：
+    - **全链路凭据零落盘**：在文件扫描、`/proc` `cmdline` 采集、MCP 配置解析、外部服务登记、长期记忆写入、变更审计流水与本地模型推理前，统一强制经过 `SecretRedactor` 脱敏与敏感文件阻断（`.env*`、`.ssh/`、`*.pem`/`*.key`、URI 口令与高危令牌前缀），严禁明文凭据入库或经由 Brief / Mesh 泄露。
+    - **执行门禁与防注入沙盒**：`HookDispatcher` 禁止裸拼接未转义路径交由 `sh -c` 执行；DuckDB 导出在引擎底层强制校验目录白名单与 SQL 转义；`steward_hook_pre` 对高危系统路径（`/etc/shadow`、`/etc/sudoers`、`~/.ssh/` 等）与破坏性操作给出 `CRITICAL` 预警。
+    - **接口最小暴露与写鉴权**：Web/Mesh 默认绑定 `127.0.0.1` 回环地址；全量 Web 写端点及 GC 端点统一受 `auth_token` Bearer 保护，非回环暴露未配置 `auth_token` 时拒绝写操作。
+    - **存储最小权限与抗上下文投毒**：`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限收敛并通过 `preflight` 巡检；对外部仓库/文档语料识别并清洗间接提示词注入（Indirect Prompt Injection），同时纳入 `W11` 与 `DQ4` 安全回归基准（详见 [11-security-spec.md](design_doc/11-security-spec.md)）。
 
 ---
 
@@ -370,6 +377,9 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 15. **Benchmark 标准持续迭代机制 (`Benchmark Spec v1.0 → v2.0+ Six-Dimension Matrix`)** `📋 Phase 31 规划中`:
     - 引入 `spec_version` 基准协议版本化，从算术总耗时比演进为**几何平均加速比（Geometric Mean Speedup）+ 分组加速比**，新增 **D6 认知质量与准确率维度 (`Recall@K / Precision / 覆盖率`)**；
     - 校准 `W2/W3/W4/W7` 物理等价基线，并新增 `W9`（向量+属性混合检索召回）、`W10`（模板抗假阳性回归）与 `DQ1~DQ3`（现网宿主机数据健康度）基准负载（详见 [roadmap-phase30.md](src_doc/roadmap-phase30.md)）。
+
+16. **宿主大管家安全纵深防御、全链路脱敏与抗投毒体系演进 (`design_doc/11-security-spec.md` & Phase 32~33)** `📋 Phase 32~33 规划就绪`:
+    - 补齐安全架构规格（[11-security-spec.md](design_doc/11-security-spec.md)）与顶层安全规约 #19，围绕代码审计暴露的 `SEC-GAP-01~05`（`/proc` `cmdline` 与记忆/变更未脱敏、Hook `sh -c` 拼接注入、Web 写接口鉴权不全、高危路径与外部语料抗投毒缺失、存储 `0600` 权限预检缺失）推进 Phase 32~33 工程落地与 `W11`/`DQ4` 安全回归基准建设（详见 [roadmap-phase32.md](src_doc/roadmap-phase32.md)）。
   
 ---
 

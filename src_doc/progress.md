@@ -112,8 +112,10 @@
 | **Phase 29** | 事实对象全景属性字典重构、全链路 Ollama Embedding 向量化与 WebUI 元数据深度贯通 | 用户反馈 / ISSUE #8 | ✅ **已完成** | 2026-11-19 20:17 |
 | **Phase 30** | 实际使用反馈闭环（`user_feedback.md`）、`BriefAssembler` 加速、`LinksEngine` 假阳性治理、全渠道账本与记忆沉淀 | [user_feedback.md](../user_feedback.md) / ISSUE #14 | ✅ **已完成** | 2026-11-19 22:57 |
 | **Phase 31** | Benchmark 标准 `v2.0` 持续迭代（`spec_version`、几何平均加速比、D6 质量维度、`W9~W10` 与 `DQ1~DQ3`） | [user_feedback.md](../user_feedback.md) / ISSUE #15 | ✅ **已完成** | 2026-11-19 22:57 |
+| **Phase 32** | 安全基线硬化（全链路 `SecretRedactor`、Hook 防注入、DuckDB 导出校验、Web 全量写鉴权、`0600/0700` 权限与 Pre-Hook 高危拦截） | [11-security-spec.md](../design_doc/11-security-spec.md) / ISSUE #16 | 📋 **规划就绪** | — |
+| **Phase 33** | 外部语料与记忆抗投毒防线（`PromptInjectionScanner`）、Benchmark `v2.1` 安全回归（`W11` & `DQ4`）与四层验收 | [11-security-spec.md](../design_doc/11-security-spec.md) / ISSUE #16 | 📋 **规划就绪** | — |
 
-> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md)、[progress-phase27.md](progress-phase27.md)、[roadmap-phase29.md](roadmap-phase29.md)、[roadmap-phase30.md](roadmap-phase30.md) 与 [progress-phase30.md](progress-phase30.md)
+> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md)、[progress-phase27.md](progress-phase27.md)、[roadmap-phase29.md](roadmap-phase29.md)、[roadmap-phase30.md](roadmap-phase30.md)、[progress-phase30.md](progress-phase30.md) 与 [roadmap-phase32.md](roadmap-phase32.md)
 
 ---
 
@@ -161,7 +163,7 @@
 如果任务中断，重新启动时只需：
 1. 读取本文件 `src_doc/progress.md`；
 2. 查看当前全部完成的里程碑记录与下一阶段规划；
-3. 当前已完成 Phase 1~29；下一步待启动的 **Phase 30 ~ Phase 31** 详细任务与检查点位于 [roadmap-phase30.md](roadmap-phase30.md) 与 [progress-phase30.md](progress-phase30.md)，一手反馈总账位于 [user_feedback.md](../user_feedback.md)（Benchmark 规格基线见 [10-benchmark-spec.md](../design_doc/10-benchmark-spec.md)），按标准流程串行推进。
+3. 当前已完成 Phase 1~31（Phase 30~31 验收记录见 [progress-phase30.md](progress-phase30.md)）；下一阶段待启动的 **Phase 32 ~ Phase 33（安全纵深防御体系与实证安全基准）** 详细规格与原子任务清单位于 [11-security-spec.md](../design_doc/11-security-spec.md) 与 [roadmap-phase32.md](roadmap-phase32.md)，一手反馈总账位于 [user_feedback.md](../user_feedback.md)（`CON-07`, `REQ-06`, `REQ-07`），按标准流程串行推进。
 
 🎉 **Phase 12（运行依赖显式化与可移植部署）已 100% 全量串行交付**：
 - 严格对齐 README.md ISSUE #10 四层贯通要求；

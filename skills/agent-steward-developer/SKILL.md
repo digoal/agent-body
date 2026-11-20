@@ -28,6 +28,10 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
    - 微观符号调用（函数、类、AST）下钻交给 **CodeGraph**，大管家通过 `CodeGraphBridge` 无缝桥接，绝不重复造轮子。
 6. **零破坏与断点续传（No Breaking & Resumable）**:
    - 严禁一次性大范围盲改；必须使用串行原子化分步执行，在 `src_doc/roadmap-phase*.md` 中建立检查点追踪。
+7. **纵深安全防御、全链路脱敏与抗投毒（Defense-in-Depth，对齐规约 #8 & #19）**:
+   - 任何写入资产库、`/proc` 进程记录、长期记忆、变更审计流水与本地大模型输入的内容，必须经过 `SecretRedactor` 脱敏；
+   - `HookDispatcher` 命令插值强制安全转义防 Shell 注入，导出操作严格限定目录白名单与 SQL 转义；
+   - Web REST 写端点及敏感接口必须统一校验 `auth_token`，`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 保持最小权限；外部语料入库需警惕间接提示词注入。
 
 ---
 
@@ -155,6 +159,7 @@ flowchart TD
 
 - [ ] 是否在任务开始前已将任务标记为 `⏳ 进行中`？
 - [ ] 代码中是否存在对黑名单目录进行深度递归扫描的风险？
+- [ ] **安全自检（规约 #19）**：新增采集/记忆/变更路径是否经过 `SecretRedactor` 脱敏？新增 Web 写端点是否已接入 `check_auth`？Hook 命令插值与导出路径是否已防注入与防目录穿越？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
 - [ ] 是否执行了 `make lint-panic`（生产代码 0 `unwrap`/`expect`）且 `cargo test` 全部通过（**要求 >= 202 tests 全部通过，零 warning**）？

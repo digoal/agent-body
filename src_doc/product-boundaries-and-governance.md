@@ -37,3 +37,22 @@ Host Steward 是每位 Agent 高频调用的基石底座，核心 API（端口�
 
 ### 原则四：多引擎无缝演进 (Storage Pluggability)
 单机研发默认零配置嵌入式 SQLite（免任何外部依赖开箱即用）；跨节点集群或企业级多 Agent 协作时，一键热迁移至 PostgreSQL（原生向量检索 `pgvector` + 全文分词 + JSONB），实现数据零丢失。
+
+### 原则五：纵深安全防御、全链路脱敏与抗投毒 (Defense-in-Depth & Zero-Secret-Leakage)
+1. **凭据零落盘与全链路脱敏**：任何进入资产库、`/proc` 进程记录、长期记忆、变更审计流水与本地大模型输入的内容，必须经由统一 `SecretRedactor` 脱敏，严禁明文密钥/URI 口令落盘或跨 Mesh 传输。
+2. **安全执行与最小暴露**：Hook 命令插值强制 Shell 安全转义，DuckDB 导出在引擎层锁定白名单目录，Web/Mesh 默认绑定 `127.0.0.1` 且写端点/GC 统一受 `auth_token` 保护。
+3. **上下文抗投毒与最小文件权限**：外部仓库与第三方技能摘要在注入 `steward_brief` 前需识别隔离间接提示词注入；`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限纳入 `PreflightChecker` 强制基线。
+
+---
+
+## 4. 安全威胁边界与五层纵深防御规约 (Security Governance Matrix)
+
+完整威胁建模（`SEC-GAP-01` ~ `SEC-GAP-05`）、`S1` ~ `S5` 安全规格与演进路线详见 [11-security-spec.md](../design_doc/11-security-spec.md) 与 [roadmap-phase32.md](roadmap-phase32.md)。
+
+| 防御层级 | 核心机制 | 强制基线与对应阶段 |
+|---|---|---|
+| **L1 采集准入与脱敏** | `is_sensitive_file` + `shallow` 黑名单 + 全链路 `SecretRedactor` | 敏感文件零内容读取；`/proc` `cmdline`、记忆与变更流全脱敏 (`Phase 32.1`) |
+| **L2 动作与执行门禁** | `steward_hook_pre` 高危路径告警 + Hook 参数转义 + 导出沙盒 | 拦截 `/etc/shadow`/`~/.ssh/` 高危写；防 `sh -c` 与 SQL 导出注入 (`Phase 32.2, 32.4`) |
+| **L3 接口与联邦鉴权** | 默认 `127.0.0.1` + 全量写端点 `check_auth` + Mesh Bearer | 未带合法 Token 返回 `401`；非回环无 Token 拒绝写请求 (`Phase 32.3`) |
+| **L4 本地存储与审计** | Unix `0700`/`0600` 最小权限 + `PreflightChecker` 安全探针 | 权限越界预检触发 `WARN` 修复提示；变更流水脱敏可追溯 (`Phase 32.5`) |
+| **L5 抗投毒与安全基准** | `PromptInjectionScanner` 清洗 + `W11` / `DQ4` 安全回归 | 识别隔离外部语料越狱指令；现网明文密钥残留 `== 0%` (`Phase 33.1~33.2`) |

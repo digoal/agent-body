@@ -87,7 +87,7 @@ flowchart LR
 
 ---
 
-## 四、第二部分：实际使用暴露的缺点与痛点 (`CON-01` ~ `CON-06`)
+## 四、第二部分：实际使用暴露的缺点与痛点 (`CON-01` ~ `CON-07`)
 
 ### `CON-01` `[P0 · 性能瓶颈]` `steward_brief` 冷启动简报组装耗时 `474.18 ms`，存在绕过缓存库直扫磁盘与派生子进程问题
 - **状态**: `✅ Verified (Phase 30.2)` · **首次记录**: 2026-11-19 · **验证实测**: `W8` 由 `474,178 μs (0.09x)` 降至 `10,315 μs (2.08x)`，提速 `46.0x`
@@ -154,6 +154,18 @@ flowchart LR
   - 在 `PreflightChecker`、`HostGarbageCollector` 与 `steward_brief` 增加宿主机磁盘高水位预警与安全 GC 建议（默认 `dry-run`，严格白名单）；
   - 在 `Makefile` 新增安全 `sync-mirror` 目标并同步更新 `agent-steward-developer` SKILL，固化 `rsync -a --delete --exclude 'target/'`。
 
+### `CON-07` `[P0 · 安全纵深防御缺口]` 缺乏系统级安全规约且采集/执行/Web 写接口/抗投毒存在 5 处纵深断点 (`SEC-GAP-01~05`)
+- **状态**: `🗓️ Planned (Phase 32~33)` · **首次记录**: 2026-11-20 · **发现渠道**: 全量源码安全基线审计
+- **现象与复现证据**:
+  1. **`SEC-GAP-01` 采集与记忆未全链路脱敏**：[src/fact/process_net.rs](src/fact/process_net.rs#L268-L280) 与 [src/env/mod.rs](src/env/mod.rs#L120-L149) 原样采集 `/proc/<pid>/cmdline` 入库，[src/memory/mod.rs](src/memory/mod.rs#L29-L94) `MemoryManager::add` 与 `record_change` 未调用 `SecretRedactor::redact()`，且 `SecretRedactor` 尚缺 URI 口令、JWT 与私钥头规则；
+  2. **`SEC-GAP-02` Hook 命令拼接注入与导出底层校验缺失**：[src/hooks/dispatcher.rs](src/hooks/dispatcher.rs#L147-L185) 将 `{path}` 裸替换后交由 `sh -c` 执行，恶意文件名可触发 Shell 注入；[src/storage/duckdb_analytics.rs](src/storage/duckdb_analytics.rs#L238-L274) 直接拼接 `output_path` 进 DuckDB `COPY ... TO` SQL（目前仅 Web 层 [src/web/parity_api.rs](src/web/parity_api.rs#L515) 校验 `/root/new/tmp/`）；
+  3. **`SEC-GAP-03` Web REST API 写操作鉴权覆盖不全**：[src/web/server.rs](src/web/server.rs#L182-L231) 仅对锁释放/申请与 Mesh 加锁校验了 `auth_token`，`POST /api/v1/assets/scan`、`assets/register`、`memories/add`、`session/close`、`analytics/export`、`feedback`、`demo/run|reset`、`benchmark/run|reset` 及 `GET /api/v1/env/gc` 均未调用 `check_auth`；
+  4. **`SEC-GAP-04` 高危路径门禁与外部语料抗投毒缺位**：[src/api/hooks.rs](src/api/hooks.rs#L68-L159) `pre_tool_call` 未拦截 `/etc/shadow`、`/etc/sudoers`、`~/.ssh/` 等高危路径；扫描 `/root/new/src/` 外部源码或第三方 `SKILL.md` 提取摘要注入 `steward_brief` 前缺少 `PromptInjectionScanner` 清洗；
+  5. **`SEC-GAP-05` 最小文件权限预检与安全基准缺失**：[src/preflight/mod.rs](src/preflight/mod.rs#L123-L152) 未检查 `~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限；Benchmark `v2.0` 尚无安全维度负载。
+- **修复目标与 Benchmark 联动**:
+  - 先期已补齐顶层安全规约 #19、[11-security-spec.md](design_doc/11-security-spec.md) 与 [roadmap-phase32.md](src_doc/roadmap-phase32.md)；
+  - 按 Phase 32~33 闭环修复 `SEC-GAP-01~05`，并纳入 Benchmark `v2.1` 新增的 `W11 (security_redaction_and_guardrail)` 与 `DQ4 (secret_hygiene_and_perm_gate)` 门禁（要求明文凭据残留率 `0%`、注入逃逸 `0`）。
+
 ---
 
 ## 五、第三部分：Benchmark 标准失真诊断与持续迭代诉求 (`BENCH-01` ~ `BENCH-04`)
@@ -189,7 +201,7 @@ flowchart LR
 
 ---
 
-## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-05`)
+## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-07`)
 
 | ID | 需求简述 | 提出背景 / 触发场景 | 优先级 | 目标归属 | 状态 |
 |:---:|---|---|:---:|:---:|:---:|
@@ -198,6 +210,8 @@ flowchart LR
 | **`REQ-03`** | **反馈驱动的回归语料库 (`Feedback Regression Corpus`)** | 每修完一个真实使用痛点（如 `CON-01` / `CON-02`），自动将其复现样本固化为 Benchmark 永久 SLA 测试项 | P1 | Phase 31.3 / 31.4 | `🗓️ Planned` |
 | **`REQ-04`** | **经验自动提炼入 `memories` 与简报冷启动融合** | 将已验证反馈、会话复盘与避坑经验向量化存入 `memories`，激活 `BriefAssembler` 40% 记忆预算 | P1 | Phase 30.5 | `🗓️ Planned` |
 | **`REQ-05`** | **全渠道生产效能存证扩展 (`PR-01 ~ PR-10`)** | 覆盖 CLI、Web REST API、语义搜索与反馈沉淀，让生产账本真实反映大管家全部战绩 | P1 | Phase 30.4 | `🗓️ Planned` |
+| **`REQ-06`** | **补齐安全方向顶层规约、纵深防御架构规格与演进规划** | 针对安全方向缺少顶层规格与系统规划问题，确立规约 #19、`design_doc/11-security-spec.md`、`src_doc/roadmap-phase32.md` 及代码级 `security` 规约 | P0 | Phase 32.0 | `✅ Verified` |
+| **`REQ-07`** | **落地全链路脱敏、Hook 防注入、Web 全量写鉴权、抗投毒与 `W11`/`DQ4` 安全基准** | 闭环消除 `CON-07`（`SEC-GAP-01~05`），把明文零泄露、防命令注入、最小文件权限与抗提示词投毒固化为自动化测试与基准门禁 | P0 | Phase 32 ~ Phase 33 | `🗓️ Planned` |
 
 ---
 
