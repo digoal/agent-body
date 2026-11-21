@@ -9,6 +9,15 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 
 ---
 
+## 零、零重扫三步开工协议（Zero-Rescan Protocol，必先执行）
+
+任何新会话接手迭代任务时，**严禁全仓 `grep` 或扫描历史 `src_doc/roadmap-phase2..33.md` / `progress-phase*.md`**，必须先执行以下 3 步（2 轮内精准锁定改点）：
+1. **读 `Tier-0` 入口（仅 2 文件）**：[EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md)（8 大演进场景 O(1) 变更触点矩阵）+ 当前活跃 `src_doc/roadmap-phase*.md`；
+2. **跑确定性架构快照**：`make evolution-check`（`<200ms` 获取最新模块/MCP/SPI/表/Benchmark 计数与零漂移校验）；
+3. **查符号用 CodeGraph**：`codegraph explore "<SymbolName>"` 穿透源码定义与调用链。
+
+---
+
 ## 一、项目核心信条与设计红线（必须严格遵守）
 
 接手修改任何代码或文档前，必须在脑中重放本项目的核心定位与架构红线：
@@ -55,7 +64,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/daemon/` | 常驻守护进程主循环与定时轮询、依赖预检 | 优雅信号捕获与 Systemd 托管 |
 | ├── `src/links/` | 关联拓扑图、Mermaid 导出、断链审计与 CodeGraph 桥接 | AST 引用提取与宏微联邦 |
 | ├── `src/changes/` | 变更历史回溯与 Agent 会话简报 | 生成开工 markdown |
-| └── `src/api/` | 40 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI/Web 1:1:1 映射 |
+| └── `src/api/` | 41 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI/Web 1:1:1 映射 |
 | └── `src/benchmark/` | 双轨实证 Benchmark 引擎（W1~W8 + M1~M5 + PR-01~08 账本） | 必须真机实测与 SHA-256 存证 |
 | └── `src/demo/` | 路演沙盒引擎（6 大黄金剧目、ROI 核算、`demo:*` 隔离） | 严禁假数据，必须真引擎实跑 |
 | └── `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | 解析函数纯函数跨平台编译 |

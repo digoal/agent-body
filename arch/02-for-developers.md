@@ -53,7 +53,7 @@ graph TD
 | `src/memory/` | 跨会话长期记忆与三方适配 | `MemoryManager`, `BuiltinLocalProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
 | `src/links/` | 依赖关系网与爆炸半径推演 | `LinksEngine`, `CodeGraphBridge`, `LinkRepairer` |
 | `src/scanner/` | 资产扫描与断点续扫状态机 | `Scanner`, `ScanStateMachine`, `ImportanceScorer` |
-| `src/api/` | 40 个原生 MCP 工具服务端 | `McpServer`, `AgentHookEngine`, `StewardResponse` |
+| `src/api/` | 41 个原生 MCP 工具服务端 | `McpServer`, `AgentHookEngine`, `StewardResponse` |
 | `src/benchmark/` | 双轨实证 Benchmark 引擎与生产效能存证账本 | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
 | `src/demo/` | 路演沙盒引擎与 ROI 核算 | `DemoEngine`, `DemoExecutionResult`, `RoiReport` |
 | `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` |
@@ -115,7 +115,7 @@ cargo build --release
 
 ### How-To 1: 如何添加一个新的原生 MCP 工具？
 
-系统原生注册了 40 个 MCP 工具。若需新增一个例如 `steward_system_clean` 工具：
+系统原生注册了 41 个 MCP 工具。若需新增一个例如 `steward_system_clean` 工具：
 
 1. **在 `src/api/mcp_tools.rs` 中声明工具元数据**：
    ```rust

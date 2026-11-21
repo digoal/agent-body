@@ -1,3 +1,4 @@
+pub mod competitors;
 pub mod dq;
 pub mod ledger;
 pub mod micro;
@@ -10,6 +11,10 @@ use std::time::Instant;
 
 use anyhow::Result;
 
+use crate::benchmark::competitors::{
+    build_competitor_capability_matrix, run_all_competitor_benchmarks, run_competitor_track,
+    CompetitorCapabilityRow, CompetitorComparisonResult,
+};
 use crate::benchmark::dq::run_data_quality_checks;
 use crate::benchmark::micro::{run_all_micro_benchmarks, MicroBenchResult};
 use crate::benchmark::report::{BenchmarkReportPayload, DataQualityResult};
@@ -17,7 +22,7 @@ use crate::benchmark::workloads::{run_all_workloads, run_workload, WorkloadResul
 use crate::storage::models::BenchmarkRunRecord;
 use crate::storage::StorageProvider;
 
-pub const BENCHMARK_SPEC_VERSION: &str = "2.1";
+pub const BENCHMARK_SPEC_VERSION: &str = "3.1";
 
 pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
     if workloads.is_empty() {
@@ -79,25 +84,41 @@ impl BenchmarkEngine {
     ) -> Result<BenchmarkReportPayload> {
         let t0 = Instant::now();
         let suite_norm = suite.trim();
-        let (workloads, micro_benchmarks, data_quality): (
+        let (workloads, micro_benchmarks, data_quality, competitors, competitor_matrix): (
             Vec<WorkloadResult>,
             Vec<MicroBenchResult>,
             Vec<DataQualityResult>,
+            Vec<CompetitorComparisonResult>,
+            Vec<CompetitorCapabilityRow>,
         ) = if suite_norm.eq_ignore_ascii_case("full") || suite_norm.is_empty() {
             (
                 run_all_workloads(storage.clone())?,
                 run_all_micro_benchmarks()?,
                 run_data_quality_checks(storage.as_ref()),
+                run_all_competitor_benchmarks(storage.clone())?,
+                build_competitor_capability_matrix(),
             )
         } else if suite_norm.eq_ignore_ascii_case("macro") {
-            (run_all_workloads(storage.clone())?, Vec::new(), Vec::new())
+            (run_all_workloads(storage.clone())?, Vec::new(), Vec::new(), Vec::new(), Vec::new())
         } else if suite_norm.eq_ignore_ascii_case("micro") {
-            (Vec::new(), run_all_micro_benchmarks()?, Vec::new())
+            (Vec::new(), run_all_micro_benchmarks()?, Vec::new(), Vec::new(), Vec::new())
         } else if suite_norm.eq_ignore_ascii_case("dq") {
-            (Vec::new(), Vec::new(), run_data_quality_checks(storage.as_ref()))
+            (Vec::new(), Vec::new(), run_data_quality_checks(storage.as_ref()), Vec::new(), Vec::new())
+        } else if suite_norm.eq_ignore_ascii_case("competitors")
+            || suite_norm.to_ascii_uppercase().starts_with("COMP-")
+        {
+            (
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                run_competitor_track(storage.clone(), suite_norm)?,
+                build_competitor_capability_matrix(),
+            )
         } else {
             (
                 vec![run_workload(storage.clone(), suite_norm)?],
+                Vec::new(),
+                Vec::new(),
                 Vec::new(),
                 Vec::new(),
             )
@@ -136,11 +157,57 @@ impl BenchmarkEngine {
             (avg * 100.0).round() / 100.0
         };
 
+        let base_q_samples: Vec<f64> = workloads
+            .iter()
+            .filter(|w| w.required_facts_total > 0)
+            .map(|w| w.baseline_quality_score)
+            .collect();
+        let stew_q_samples: Vec<f64> = workloads
+            .iter()
+            .filter(|w| w.required_facts_total > 0)
+            .map(|w| w.steward_quality_score)
+            .collect();
+        let overall_baseline_quality_score = if base_q_samples.is_empty() {
+            0.0
+        } else {
+            ((base_q_samples.iter().sum::<f64>() / base_q_samples.len() as f64) * 100.0).round() / 100.0
+        };
+        let overall_steward_quality_score = if stew_q_samples.is_empty() {
+            d6_quality_score
+        } else {
+            ((stew_q_samples.iter().sum::<f64>() / stew_q_samples.len() as f64) * 100.0).round() / 100.0
+        };
+        let overall_quality_delta = if base_q_samples.is_empty() {
+            0.0
+        } else {
+            ((overall_steward_quality_score - overall_baseline_quality_score) * 100.0).round() / 100.0
+        };
+        let density_samples: Vec<f64> = workloads
+            .iter()
+            .filter(|w| w.info_density_gain > 0.0)
+            .map(|w| w.info_density_gain)
+            .collect();
+        let overall_info_density_gain = if density_samples.is_empty() {
+            1.0
+        } else {
+            let log_sum: f64 = density_samples.iter().map(|v| v.max(0.01).ln()).sum();
+            ((log_sum / density_samples.len() as f64).exp() * 100.0).round() / 100.0
+        };
+        let quality_non_degraded = workloads
+            .iter()
+            .filter(|w| w.required_facts_total > 0)
+            .all(|w| w.steward_quality_score >= w.baseline_quality_score && w.steward_facts_hit == w.required_facts_total)
+            && competitors
+                .iter()
+                .filter(|c| c.required_facts_total > 0)
+                .all(|c| c.steward_quality_score >= c.competitor_quality_score && c.steward_facts_hit == c.required_facts_total);
+
         let total_hazards_intercepted: i64 = workloads.iter().map(|w| w.hazards_intercepted).sum();
         let total_noise_blocked: i64 = workloads.iter().map(|w| w.blocked_noise as i64).sum();
         let sla_passed = workloads.iter().all(|w| w.sla_passed)
             && micro_benchmarks.iter().all(|m| m.passed)
-            && data_quality.iter().all(|d| d.passed);
+            && data_quality.iter().all(|d| d.passed)
+            && competitors.iter().all(|c| c.passed);
 
         let prefix = run_id_prefix.unwrap_or("run");
         let run_id = format!("{}-{}", prefix, uuid::Uuid::new_v4());
@@ -167,6 +234,8 @@ impl BenchmarkEngine {
             workloads: workloads.clone(),
             micro_benchmarks: micro_benchmarks.clone(),
             data_quality: data_quality.clone(),
+            competitors: competitors.clone(),
+            competitor_matrix: competitor_matrix.clone(),
             total_baseline_tokens,
             total_steward_tokens,
             overall_token_savings_pct,
@@ -174,6 +243,10 @@ impl BenchmarkEngine {
             geometric_mean_speedup,
             query_guard_speedup,
             d6_quality_score,
+            overall_baseline_quality_score,
+            overall_quality_delta,
+            overall_info_density_gain,
+            quality_non_degraded,
             total_hazards_intercepted,
             total_noise_blocked,
             sla_passed,
@@ -202,9 +275,15 @@ impl BenchmarkEngine {
                     "geometric_mean_speedup": geometric_mean_speedup,
                     "query_guard_speedup": query_guard_speedup,
                     "d6_quality_score": d6_quality_score,
+                    "overall_baseline_quality_score": overall_baseline_quality_score,
+                    "overall_quality_delta": overall_quality_delta,
+                    "overall_info_density_gain": overall_info_density_gain,
+                    "quality_non_degraded": quality_non_degraded,
                     "workloads": workloads,
                     "micro_benchmarks": micro_benchmarks,
                     "data_quality": data_quality,
+                    "competitors": competitors,
+                    "competitor_matrix": competitor_matrix,
                 }),
                 report_sha256,
                 duration_ms,
@@ -235,7 +314,11 @@ mod tests {
         assert_eq!(report.workloads.len(), 11);
         assert_eq!(report.micro_benchmarks.len(), 5);
         assert_eq!(report.data_quality.len(), 4);
-        assert_eq!(report.spec_version, "2.1");
+        assert_eq!(report.competitors.len(), 4);
+        assert_eq!(report.spec_version, "3.1");
+        assert!(report.quality_non_degraded, "所有负载上下文质量必须不降反升");
+        assert!(report.overall_quality_delta > 20.0, "整体上下文质量净提升应 > 20 分，实测: {}", report.overall_quality_delta);
+        assert!(report.overall_info_density_gain > 5.0, "有效信息密度应提升 > 5x，实测: {}", report.overall_info_density_gain);
         assert_eq!(report.report_sha256.len(), 64);
         assert!(
             report.overall_token_savings_pct > 50.0,

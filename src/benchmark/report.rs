@@ -3,6 +3,7 @@ use std::fmt::Write as _;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
+use crate::benchmark::competitors::{CompetitorCapabilityRow, CompetitorComparisonResult};
 use crate::benchmark::micro::MicroBenchResult;
 use crate::benchmark::provenance::sha256_hex;
 use crate::benchmark::workloads::WorkloadResult;
@@ -36,6 +37,10 @@ pub struct BenchmarkReportPayload {
     pub micro_benchmarks: Vec<MicroBenchResult>,
     #[serde(default)]
     pub data_quality: Vec<DataQualityResult>,
+    #[serde(default)]
+    pub competitors: Vec<CompetitorComparisonResult>,
+    #[serde(default)]
+    pub competitor_matrix: Vec<CompetitorCapabilityRow>,
     pub total_baseline_tokens: i64,
     pub total_steward_tokens: i64,
     pub overall_token_savings_pct: f64,
@@ -46,6 +51,14 @@ pub struct BenchmarkReportPayload {
     pub query_guard_speedup: f64,
     #[serde(default)]
     pub d6_quality_score: f64,
+    #[serde(default)]
+    pub overall_baseline_quality_score: f64,
+    #[serde(default)]
+    pub overall_quality_delta: f64,
+    #[serde(default)]
+    pub overall_info_density_gain: f64,
+    #[serde(default)]
+    pub quality_non_degraded: bool,
     pub total_hazards_intercepted: i64,
     pub total_noise_blocked: i64,
     pub sla_passed: bool,
@@ -96,6 +109,16 @@ impl BenchmarkReportPayload {
             .get("data_quality")
             .and_then(|v| serde_json::from_value(v.clone()).ok())
             .unwrap_or_default();
+        let competitors: Vec<CompetitorComparisonResult> = rec
+            .results_json
+            .get("competitors")
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_default();
+        let competitor_matrix: Vec<CompetitorCapabilityRow> = rec
+            .results_json
+            .get("competitor_matrix")
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_default();
         let geometric_mean_speedup = rec
             .results_json
             .get("geometric_mean_speedup")
@@ -111,6 +134,26 @@ impl BenchmarkReportPayload {
             .get("d6_quality_score")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
+        let overall_baseline_quality_score = rec
+            .results_json
+            .get("overall_baseline_quality_score")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let overall_quality_delta = rec
+            .results_json
+            .get("overall_quality_delta")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+        let overall_info_density_gain = rec
+            .results_json
+            .get("overall_info_density_gain")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(1.0);
+        let quality_non_degraded = rec
+            .results_json
+            .get("quality_non_degraded")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
         Self {
             spec_version,
             run_id: rec.run_id.clone(),
@@ -121,6 +164,8 @@ impl BenchmarkReportPayload {
             workloads,
             micro_benchmarks,
             data_quality,
+            competitors,
+            competitor_matrix,
             total_baseline_tokens: rec.total_baseline_tokens,
             total_steward_tokens: rec.total_steward_tokens,
             overall_token_savings_pct: rec.overall_token_savings_pct,
@@ -128,6 +173,10 @@ impl BenchmarkReportPayload {
             geometric_mean_speedup,
             query_guard_speedup,
             d6_quality_score,
+            overall_baseline_quality_score,
+            overall_quality_delta,
+            overall_info_density_gain,
+            quality_non_degraded,
             total_hazards_intercepted: rec.total_hazards_intercepted,
             total_noise_blocked: rec.total_noise_blocked,
             sla_passed: rec.sla_passed,
@@ -166,8 +215,17 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     )?;
     writeln!(
         md,
-        "| **D6 认知质量与准确率** | - | - | **{:.1}/100** |",
-        report.d6_quality_score
+        "| **D6 上下文质量 (基线 → 管家)** | {:.1}/100 | **{:.1}/100** | **+{:.1} 分** (不降反升: {}) |",
+        report.overall_baseline_quality_score,
+        report.d6_quality_score,
+        report.overall_quality_delta,
+        if report.quality_non_degraded { "✅" } else { "❌" }
+    )?;
+    writeln!(
+        md,
+        "| **有效信息密度 (Facts/1k-tok)** | 1.00x | **{:.1}x** | **密度提升 {:.1} 倍** |",
+        report.overall_info_density_gain,
+        report.overall_info_density_gain
     )?;
     writeln!(
         md,
@@ -181,23 +239,25 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     )?;
 
     if !report.workloads.is_empty() {
-        writeln!(md, "## 二、8 大标准宿主负载 A/B 实测明细\n")?;
-        writeln!(md, "| ID | 场景 | 基线 Token | 管家 Token | 节省率 | 基线耗时 (μs) | 管家耗时 (μs) | 加速比 | 风险拦截 | 噪音阻断 | 状态 |")?;
-        writeln!(md, "|:---:|---|---:|---:|---:|---:|---:|---:|---:|---:|:---:|")?;
+        writeln!(md, "## 二、11 大标准宿主负载 A/B 实测明细（省 Token × 质量提升帕累托双门禁）\n")?;
+        writeln!(md, "| ID | 场景 | Token (基线→管家) | 节省率 | 上下文质量 (基线→管家) | 事实命中 | 信息密度 | 加速比 | 状态 |")?;
+        writeln!(md, "|:---:|---|---:|---:|---:|:---:|---:|---:|:---:|")?;
         for w in &report.workloads {
             writeln!(
                 md,
-                "| {} | {} | {} | {} | {:.1}% | {} | {} | {:.2}x | {} | {} | {} |",
+                "| {} | {} | {} → {} | {:.1}% | {:.1} → **{:.1}** (+{:.1}) | {}/{} | {:.1}x | {:.2}x | {} |",
                 w.id,
                 w.title,
                 w.baseline_tokens,
                 w.steward_tokens,
                 w.token_savings_pct,
-                w.baseline_elapsed_us,
-                w.steward_elapsed_us,
+                w.baseline_quality_score,
+                w.steward_quality_score,
+                w.quality_delta,
+                w.steward_facts_hit,
+                w.required_facts_total,
+                w.info_density_gain,
                 w.speedup_factor,
-                w.hazards_intercepted,
-                w.blocked_noise,
                 if w.sla_passed { "✅" } else { "❌" }
             )?;
         }
@@ -227,7 +287,7 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     }
 
     if !report.data_quality.is_empty() {
-        writeln!(md, "## 四、宿主机数据质量与 D6 准确率门禁 (DQ1~DQ3)\n")?;
+        writeln!(md, "## 四、宿主机数据质量与 D6 准确率门禁 (DQ1~DQ4)\n")?;
         writeln!(md, "| ID | 检查项 | 实测指标 | SLA 目标 | 状态 | 详情 |")?;
         writeln!(md, "|:---:|---|---:|---:|:---:|---|")?;
         for dq in &report.data_quality {
@@ -240,6 +300,32 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
                 dq.target_pct,
                 if dq.passed { "✅" } else { "❌" },
                 dq.detail
+            )?;
+        }
+        writeln!(md)?;
+    }
+
+    if !report.competitors.is_empty() {
+        writeln!(md, "## 五、热门开源竞品横向对标实测 (`COMP-C1 ~ COMP-C4`, `LIVE_BENCHMARKED`)\n")?;
+        writeln!(md, "| ID | 赛道 | 对标对象 | 竞品指标 | Steward 指标 | 上下文质量 (竞品→Steward) | 信息密度 | Token 节省 | 状态 |")?;
+        writeln!(md, "|:---:|---|---|---|---|---:|---:|---:|:---:|")?;
+        for c in &report.competitors {
+            writeln!(
+                md,
+                "| {} | {} | {} | {} (`{} μs`) | {} (`{} μs`) | {:.1} → **{:.1}** (+{:.1}) | {:.1}x | {:.1}% | {} |",
+                c.id,
+                c.title,
+                c.competitor_name,
+                c.competitor_metric_value,
+                c.competitor_elapsed_us,
+                c.steward_metric_value,
+                c.steward_elapsed_us,
+                c.competitor_quality_score,
+                c.steward_quality_score,
+                c.quality_delta,
+                c.info_density_gain,
+                c.token_savings_pct,
+                if c.passed { "✅" } else { "❌" }
             )?;
         }
         writeln!(md)?;

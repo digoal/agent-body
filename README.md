@@ -127,7 +127,7 @@
 - 🚀 **[01-getting-started.md](manual/01-getting-started.md)**：快速上手、环境依赖准备与首次编译运行
 - 🧠 **[02-core-concepts.md](manual/02-core-concepts.md)**：核心理念：大管家定位、黑白名单浅层阻断、放置建议哲学
 - 📖 **[03-cli-reference.md](manual/03-cli-reference.md)**：全量 CLI 命令行实操字典（全子命令 + 真实输出）
-- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：40 个原生 MCP 工具与 Claude/Cursor 配置
+- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：41 个原生 MCP 工具与 Claude/Cursor 配置
 - 🔄 **[05-daemon-and-watcher.md](manual/05-daemon-and-watcher.md)**：后台常驻守护服务、inotify 300ms 防抖与 systemd 自启
 - ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：进阶特性：端口防撞、断链智能修复、放置规则自演化、三层元数据、WFG 死锁检测、宿主资源 GC、记忆生命周期与 TUI 看板
 - 🛠️ **[07-troubleshooting.md](manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
@@ -283,14 +283,19 @@ cargo build --release
     - 所有路演剧目必须由真实引擎驱动（严禁硬编码假数据），状态写入严格限定在 `demo:*` 隔离沙盒并支持一键无痕复位；同时将离线路演 PPT（`/deck`、`/presentation`）与 ROI 实时账单内建于单二进制 Web 服务中，随版本同步刷新。
 
 18. **实证基准与效能有据可查规约 (Empirical Benchmark & Verifiable ROI Ledger)**：
-    - 任何宣称的效能提升（Token 节省率、探索轮次缩减、微秒级响应延迟、故障/冲突拦截率、垃圾噪音阻断率）必须通过可复现的 **A/B 对照基准套件（Without Steward 裸奔基线 vs With Steward 管家赋能）** 与 **生产运行态效能存证账本（Effectiveness Telemetry Ledger）** 双轨实证，严禁无出处估算或主观拍脑袋指标。
-    - 基准测试必须基于宿主机真实物理探针与 `bench:*` 隔离沙盒实跑（覆盖内核微基准延迟 SLA 与 8 大宏观业务负载）；每次评测与日常工具调用的真实耗时（`elapsed_us`）、Token 缩减量（`tokens_saved`）、探索轮次缩减（`rounds_saved`）及风险拦截事件（`hazard_intercepted`）均须携带确定性推导规则编号（`provenance_rule`）落库留痕，支持通过 CLI（`agent-steward bench`）、MCP（`steward_benchmark`）、Web UI 与 DuckDB 导出报告随时溯源核验与跨版本回归比对，确保大管家使用效果 100% 有据可查。
+    - 任何宣称的效能提升（Token 节省率、上下文质量净提升、探索轮次缩减、微秒级响应延迟、故障/冲突拦截率、垃圾噪音阻断率）必须通过可复现的 **A/B 对照基准套件（Without Steward 裸奔基线 vs With Steward 管家赋能）** 与 **生产运行态效能存证账本（Effectiveness Telemetry Ledger）** 双轨实证，严禁无出处估算或主观拍脑袋指标。
+    - **帕累托双门禁（既省 Token，上下文质量不降反升）**：严禁通过丢弃关键事实或返回空洞摘要来骗取高 Token 压缩率；每个基准负载与竞品对标轨道必须同时考核 **关键事实完整度（Fact Recall）**、**信噪比/纯净度（Signal Precision）**、**结构化可行动性（Actionability）** 与 **有效信息密度提升倍数（Info Density Gain: Facts/1k-tok）**，强制满足 $Q_{\text{steward}} \ge Q_{\text{baseline}}$ 且必含事实 100% 命中。
+    - 基准测试必须基于宿主机真实物理探针与 `bench:*` 隔离沙盒实跑（覆盖内核微基准延迟 SLA 与宏观业务负载）；每次评测与日常工具调用的真实耗时（`elapsed_us`）、Token 缩减量（`tokens_saved`）、探索轮次缩减（`rounds_saved`）及风险拦截事件（`hazard_intercepted`）均须携带确定性推导规则编号（`provenance_rule`）落库留痕，支持通过 CLI（`agent-steward bench`）、MCP（`steward_benchmark`）、Web UI 与 DuckDB 导出报告随时溯源核验与跨版本回归比对，确保大管家使用效果 100% 有据可查。
 
 19. **纵深安全防御、全链路脱敏与抗投毒规约 (Defense-in-Depth Security, End-to-End Redaction & Anti-Poisoning)**：
     - **全链路凭据零落盘**：在文件扫描、`/proc` `cmdline` 采集、MCP 配置解析、外部服务登记、长期记忆写入、变更审计流水与本地模型推理前，统一强制经过 `SecretRedactor` 脱敏与敏感文件阻断（`.env*`、`.ssh/`、`*.pem`/`*.key`、URI 口令与高危令牌前缀），严禁明文凭据入库或经由 Brief / Mesh 泄露。
     - **执行门禁与防注入沙盒**：`HookDispatcher` 禁止裸拼接未转义路径交由 `sh -c` 执行；DuckDB 导出在引擎底层强制校验目录白名单与 SQL 转义；`steward_hook_pre` 对高危系统路径（`/etc/shadow`、`/etc/sudoers`、`~/.ssh/` 等）与破坏性操作给出 `CRITICAL` 预警。
     - **接口最小暴露与写鉴权**：Web/Mesh 默认绑定 `127.0.0.1` 回环地址；全量 Web 写端点及 GC 端点统一受 `auth_token` Bearer 保护，非回环暴露未配置 `auth_token` 时拒绝写操作。
     - **存储最小权限与抗上下文投毒**：`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限收敛并通过 `preflight` 巡检；对外部仓库/文档语料识别并清洗间接提示词注入（Indirect Prompt Injection），同时纳入 `W11` 与 `DQ4` 安全回归基准（详见 [11-security-spec.md](design_doc/11-security-spec.md)）。
+
+20. **零重扫演进导航与横向竞品实证对标规约 (Zero-Rescan Evolution & Competitor Benchmarking)**：
+    - **零重扫演进活地图**：新会话演进优先查阅根目录演进指南（Phase 34 规划的 `EVOLUTION_GUIDE.md`）、运行架构清单门禁（`make evolution-check`）并使用本项目 `.codegraph/` 符号地图定位触点，严禁把历史冻结 `roadmap-phase*.md` 全盘扫描一遍。
+    - **横向竞品同场实证**：Benchmark 在与裸奔自对比和生产账本对齐的同时，必须纳入与主流 Agent 基础设施（Mem0 / Letta / PowerContext / Shodh-Memory / OpenViking / AgentFS / rg+psutil）的同机实跑与源码级能力对标，严格区分 `LIVE_BENCHMARKED`（实跑）与 `ARCH_VERIFIED`（源码核实），绝不捏造竞品跑分。
 
 ---
 
@@ -370,16 +375,29 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - 构建「实验室 A/B 可复现对照基准（8 大标准宿主工作负载：Without Steward 裸奔物理探针基线 vs With Steward 真引擎实测 + 5 大内核微基准 SLA）」与「生产运行态每次调用效能存证账本（Token 节省、轮次缩减、端口/锁/断链/乱放冲突拦截、黑名单噪音阻断实时带出处入账）」双轨闭环；
     - 通过第 40 个原生 MCP 工具 `steward_benchmark`、CLI `agent-steward bench` 与 Web UI「📊 实证基准与账本」工作台实现 40/40 黑白屏双向同步与 SHA-256 存证签名，让每一项收益均可量化、可复现、可审计（已升格为开发规约 #18）。
 
-14. **实际使用反馈闭环与痛点持续治理 (`user_feedback.md` & Feedback-to-Memory Loop)** `📋 Phase 30 规划中`:
+14. **实际使用反馈闭环与痛点持续治理 (`user_feedback.md` & Feedback-to-Memory Loop)** `✅ Phase 30 已落地`:
     - 建立 [user_feedback.md](user_feedback.md) 作为主理人与 Agent 实际使用体验的一手反馈总账（覆盖 `PRO-XX` 优点、`CON-XX` 痛点、`BENCH-XX` 评测失真与 `REQ-XX` 新需求），打通「使用反馈 → 根因修复 → 记忆沉淀 → 回归门禁」双闭环；
-    - Phase 30 优先攻克现网实测暴露的 `steward_brief` 474ms 冷启动瓶颈、`LinksEngine` 76.2% 假阳性断链、`effectiveness_ledger` 全渠道记账漏失与 `memories` 长期记忆饥饿问题。
+    - Phase 30 已攻克现网实测暴露的 `steward_brief` 474ms 冷启动瓶颈、`LinksEngine` 76.2% 假阳性断链、`effectiveness_ledger` 全渠道记账漏失、`memories` 长期记忆饥饿与 91GB `target/` 满盘预警问题。
 
-15. **Benchmark 标准持续迭代机制 (`Benchmark Spec v1.0 → v2.0+ Six-Dimension Matrix`)** `📋 Phase 31 规划中`:
+15. **Benchmark 标准持续迭代机制 (`Benchmark Spec v1.0 → v2.0+ Six-Dimension Matrix`)** `✅ Phase 31 已落地`:
     - 引入 `spec_version` 基准协议版本化，从算术总耗时比演进为**几何平均加速比（Geometric Mean Speedup）+ 分组加速比**，新增 **D6 认知质量与准确率维度 (`Recall@K / Precision / 覆盖率`)**；
-    - 校准 `W2/W3/W4/W7` 物理等价基线，并新增 `W9`（向量+属性混合检索召回）、`W10`（模板抗假阳性回归）与 `DQ1~DQ3`（现网宿主机数据健康度）基准负载（详见 [roadmap-phase30.md](src_doc/roadmap-phase30.md)）。
+    - 完成 `W2/W3/W4/W7` 物理等价基线校准，并上线 `W9`（向量+属性混合检索召回）、`W10`（模板抗假阳性回归）与 `DQ1~DQ3`（现网宿主机数据健康度）基准负载（详见 [roadmap-phase30.md](src_doc/roadmap-phase30.md)）。
 
-16. **宿主大管家安全纵深防御、全链路脱敏与抗投毒体系演进 (`design_doc/11-security-spec.md` & Phase 32~33)** `📋 Phase 32~33 规划就绪`:
-    - 补齐安全架构规格（[11-security-spec.md](design_doc/11-security-spec.md)）与顶层安全规约 #19，围绕代码审计暴露的 `SEC-GAP-01~05`（`/proc` `cmdline` 与记忆/变更未脱敏、Hook `sh -c` 拼接注入、Web 写接口鉴权不全、高危路径与外部语料抗投毒缺失、存储 `0600` 权限预检缺失）推进 Phase 32~33 工程落地与 `W11`/`DQ4` 安全回归基准建设（详见 [roadmap-phase32.md](src_doc/roadmap-phase32.md)）。
+16. **宿主大管家安全纵深防御、全链路脱敏与抗投毒体系演进 (`design_doc/11-security-spec.md` & Phase 32~33)** `✅ Phase 32~33 已落地`:
+    - 补齐安全架构规格（[11-security-spec.md](design_doc/11-security-spec.md)）与顶层安全规约 #19，围绕代码审计暴露的 `SEC-GAP-01~05` 完成全链路 `SecretRedactor`、Hook/DuckDB 防注入、Web 全量写鉴权、`PromptInjectionScanner` 抗投毒、`0600/0700` 权限收敛与 `W11`/`DQ4` 安全回归基准落地（详见 [roadmap-phase32.md](src_doc/roadmap-phase32.md)）。
+  
+17. **零重扫项目演进指南与架构防漂移门禁 (`EVOLUTION_GUIDE.md` + 自建 CodeGraph + 清单自检)** `✅ Phase 34 已落地`:
+    - 建立方便后续项目演进的零重扫导航体系，避免新会话每次重复扫描 25 个模块（3.8 万行源码）和 48 份历史 `src_doc/` 文档；
+    - Phase 34 已落地四位一体防重扫体系：根目录 O(1) 演进活地图 [EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md)（8 大演进场景变更触点矩阵 + `Tier-0/1/2` 文档分级禁扫令）、本仓 `.codegraph/` 符号地图、确定性架构检查脚本 `scripts/evolution_manifest.py`（`make evolution-check`）及 `SKILL` 零重扫开工协议（详见 [roadmap-phase34-35.md](src_doc/roadmap-phase34-35.md)）。
+  
+18. **热门开源竞品横向对标与 Benchmark `v3.0` 轨道 C (`Horizontal Competitor Benchmark`)** `✅ Phase 35 已落地`:
+    - Benchmark 不仅和裸奔自己比，也与外部主流产品同场实测比对；
+    - Phase 35 已构建四大赛道竞品对标体系：**C1 长期记忆**（Mem0 / Letta / PowerContext / Shodh-Memory）、**C2 上下文数据库与路由**（OpenViking / 全量静态注入）、**C3 Agent 文件与协同治理**（AgentFS / OpenEnv）、**C4 宿主探针与代码依赖**（`rg`+`psutil`+`ss`+`git` / CodeGraph），在 Benchmark `v3.0` 上线 `COMP-C1~C4` 同机同数据集真跑负载与 12 维源码能力矩阵（严格区分 `LIVE_BENCHMARKED` 与 `ARCH_VERIFIED`，详见 [12-competitor-benchmark-spec.md](design_doc/12-competitor-benchmark-spec.md)）。
+
+19. **Benchmark `v3.1`「既省 Token × 上下文质量不降反升」帕累托双门禁演进 (`Token-Quality Pareto Dual-Gate`)** `✅ Phase 36 已落地`:
+    - 关于 Benchmark 的核心修正准则：不能只体现省 Token，**既要省 Token，同时上下文质量不能下降甚至应该有显著提升**；
+    - Phase 36 已消除 `W1~W8` 质量评分缺口（`BENCH-06`），落地确定性四维上下文质量模型 $Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$ 与**有效信息密度倍数（`Facts / 1k Tokens`）**，为 `W1~W11` 与 `COMP-C1~C4` 全量实装真值事实断言、`Baseline Q vs Steward Q (+ΔQ)` 成对比较及防截断帕累托 SLA 硬门禁（详见 [roadmap-phase36.md](src_doc/roadmap-phase36.md)）。
+
   
 ---
 

@@ -487,7 +487,8 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
             <div class="view-toolbar mt-12" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);">
               <div class="toolbar-left">
                 <select id="bench-suite-select" class="input" style="width:200px;">
-                  <option value="full">全量套件 v2.1 (W1~W11 + M1~M5 + DQ1~DQ4)</option>
+                  <option value="full">全量套件 v3.1 (省Token×提质量帕累托 + 竞品)</option>
+                  <option value="competitors">🏆 热门竞品横向对标 (COMP-C1~C4)</option>
                   <option value="macro">宏观业务 A/B (W1~W11)</option>
                   <option value="micro">内核微基准 SLA (M1~M5)</option>
                   <option value="dq">宿主机数据与安全质量 (DQ1~DQ4)</option>
@@ -538,7 +539,12 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
             </div>
 
             <div class="card mt-12">
-              <div class="item-top"><strong>📒 生产运行态效能存证账本（带 PR-01~PR-08 确定性溯源依据）</strong></div>
+              <div class="item-top"><strong>🏆 热门开源竞品横向对标 (轨道 C · LIVE_BENCHMARKED + ARCH_VERIFIED)</strong><span class="badge">Mem0 / OpenViking / AgentFS / rg+psutil</span></div>
+              <div id="bench-competitors-box" class="mt-8"><div class="empty">运行「全量套件 v3.0」或「🏆 热门竞品横向对标」查看同机实测结果与 12 维能力矩阵</div></div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top"><strong>📒 生产运行态效能存证账本（带 PR-01~PR-10 确定性溯源依据）</strong></div>
               <div id="bench-rules-strip" class="mt-8"></div>
               <div id="bench-ledger-list" class="mt-8"><div class="empty">暂无生产流水记录</div></div>
             </div>
@@ -3854,7 +3860,12 @@ function renderBenchmarkReportPayload(rep) {
   if (sp) sp.innerText = `${Number(gm).toFixed(2)}x (v${rep.spec_version || "1.0"})`;
   if (sha) sha.innerText = `SHA-256: ${String(rep.report_sha256 || "").slice(0, 16)}...`;
   if (sla) {
-    sla.innerText = rep.sla_passed ? `✅ SLA PASS · D6 ${Number(rep.d6_quality_score || 100).toFixed(0)}分` : "❌ SLA FAIL";
+    const qBase = Number(rep.overall_baseline_quality_score || 0).toFixed(0);
+    const qStew = Number(rep.d6_quality_score || 100).toFixed(0);
+    const qDelta = Number(rep.overall_quality_delta || 0).toFixed(1);
+    const dens = Number(rep.overall_info_density_gain || 1).toFixed(1);
+    const qHint = rep.overall_baseline_quality_score ? ` · 质量 ${qBase}→${qStew} (+${qDelta}) · 密度 ${dens}x` : ` · D6 ${qStew}分`;
+    sla.innerText = rep.sla_passed ? `✅ 帕累托 PASS${qHint}` : "❌ SLA FAIL";
     sla.className = rep.sla_passed ? "badge badge-ok" : "badge badge-err";
   }
 
@@ -3866,10 +3877,13 @@ function renderBenchmarkReportPayload(rep) {
     } else {
       wbox.innerHTML = workloads.map((w) => {
         const pct = Math.max(0, Math.min(100, Number(w.token_savings_pct || 0)));
+        const qBadge = w.required_facts_total
+          ? ` · 质量 ${Number(w.baseline_quality_score || 0).toFixed(0)}→${Number(w.steward_quality_score || 0).toFixed(0)} (+${Number(w.quality_delta || 0).toFixed(1)}) · 事实 ${w.steward_facts_hit}/${w.required_facts_total} · 密度 ${Number(w.info_density_gain || 1).toFixed(1)}x`
+          : "";
         return `<div class="card" style="padding:10px;margin-bottom:8px;">
           <div class="item-top">
             <strong>${esc(w.id)} · ${esc(w.title)}</strong>
-            <span class="badge ${w.sla_passed ? "badge-ok" : "badge-err"}">${w.sla_passed ? "PASS" : "FAIL"} · 省 ${pct.toFixed(1)}%</span>
+            <span class="badge ${w.sla_passed ? "badge-ok" : "badge-err"}">${w.sla_passed ? "PASS" : "FAIL"} · 省 ${pct.toFixed(1)}%${qBadge}</span>
           </div>
           <div class="muted-text" style="font-size:12px;margin-top:4px;">${esc(w.evidence_detail)}</div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:6px;font-size:11px;">
@@ -3896,6 +3910,36 @@ function renderBenchmarkReportPayload(rep) {
           <span class="mono">${m.avg_us} μs (P95: ${m.p95_us} / SLA &lt; ${m.sla_limit_us}) ${m.passed ? "✅" : "❌"}</span>
         </div>
       `).join("");
+    }
+  }
+
+  const cbox = document.getElementById("bench-competitors-box");
+  const comps = rep.competitors || [];
+  const matrix = rep.competitor_matrix || [];
+  if (cbox) {
+    if (comps.length === 0 && matrix.length === 0) {
+      cbox.innerHTML = `<div class="empty">当前历史批次为 v${esc(rep.spec_version || "1.0")}，选择「🏆 热门竞品横向对标」运行轨道 C 实测</div>`;
+    } else {
+      const compCards = comps.map((c) => {
+        const cq = c.required_facts_total
+          ? ` · 质量 ${Number(c.competitor_quality_score || 0).toFixed(0)}→${Number(c.steward_quality_score || 0).toFixed(0)} (+${Number(c.quality_delta || 0).toFixed(1)}) · 密度 ${Number(c.info_density_gain || 1).toFixed(1)}x`
+          : "";
+        return `
+        <div class="card" style="padding:10px;margin-bottom:8px;">
+          <div class="item-top">
+            <strong>${esc(c.id)} · ${esc(c.title)} vs ${esc(c.competitor_name)}</strong>
+            <span class="badge ${c.passed ? "badge-ok" : "badge-err"}">${esc(c.evidence_tier)} · 省 ${Number(c.token_savings_pct || 0).toFixed(1)}%${cq}</span>
+          </div>
+          <div class="muted-text" style="font-size:12px;margin-top:4px;">竞品: ${esc(c.competitor_metric_value)} (${c.competitor_elapsed_us} μs) ｜ Steward: ${esc(c.steward_metric_value)} (${c.steward_elapsed_us} μs)</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--green);">优势: ${esc(c.steward_advantage)} · 互补: ${esc(c.complement_note)}</div>
+        </div>`;
+      }).join("");
+      const matRows = matrix.slice(0, 9).map((r) => `
+        <div class="item-top" style="padding:4px 0;border-bottom:1px dashed var(--border);font-size:11px;">
+          <span><strong>${esc(r.product)}</strong> <span class="badge">${esc(r.evidence_tier)}</span></span>
+          <span class="muted-text">${esc(r.relationship)}</span>
+        </div>`).join("");
+      cbox.innerHTML = compCards + (matRows ? `<div style="margin-top:10px;"><strong>12 维源码核验能力定位:</strong>${matRows}</div>` : "");
     }
   }
 }

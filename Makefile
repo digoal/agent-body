@@ -6,7 +6,7 @@ SHELL := /bin/bash
 TARGET := target/release/agent-steward
 INSTALL_PATH ?= /usr/local/bin/agent-steward
 
-.PHONY: all build check test preflight install restart clean docker-build lint-panic sync-mirror
+.PHONY: all build check test preflight install restart clean docker-build lint-panic sync-mirror codegraph evolution-check
 
 all: build
 
@@ -52,3 +52,11 @@ sync-mirror:
 # 构建生产 Docker 容器镜像
 docker-build:
 	docker build -t agent-steward:latest .
+
+# 初始化/刷新本项目 CodeGraph 符号地图（供 Agent 零重扫定位代码）
+codegraph:
+	codegraph init
+
+# 确定性架构清单生成与文档数字防漂移门禁
+evolution-check:
+	python3 scripts/evolution_manifest.py --check

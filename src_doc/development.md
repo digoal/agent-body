@@ -88,7 +88,7 @@ agent-steward/
     ├── mesh/                # 轻量多机联邦 HTTP Peer Mesh
     ├── demo/                # 路演沙盒引擎（6 大剧目、ROI 核算）
     ├── benchmark/           # 双轨实证 Benchmark 引擎（W1~W8 + M1~M5 + PR-01~08 账本）
-    └── api/                 # 40 个原生 MCP 工具端点与 Hook 门禁
+    └── api/                 # 41 个原生 MCP 工具端点与 Hook 门禁
 ```
 
 ---

@@ -255,3 +255,18 @@ CREATE INDEX IF NOT EXISTS idx_ledger_rule ON effectiveness_ledger(provenance_ru
    - **`W10 (link_precision_regression)`**：`CON-02` 对抗样本依赖抽取 `Precision >= 95%` (`FPR <= 5%`)；
    - **`DQ1 ~ DQ3`**：宿主机真实库描述覆盖率、Ollama Embedding 向量覆盖率与依赖拓扑纯净度审计。
 4. **全渠道账本 (`PR-01 ~ PR-10`)**：扩展 `PR-09`（混合检索）与 `PR-10`（反馈与长期记忆沉淀），打通 `mcp` / `cli` / `web` / `hook` 统一 `record_channel_call` 记账。
+
+---
+
+## 九、Benchmark `v3.1`「既省 Token × 质量不降反升」帕累托双门禁规格（Phase 36）
+
+为贯彻 [ISSUE #19](../README.md#L397)（不能只体现省 Token，必须同时实证上下文质量不降反升），确立以下确定性四维上下文质量评分公式（$Q \in [0, 100]$）：
+
+$$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\text{signal}} + 0.20 \cdot A_{\text{action}} + 0.10 \cdot S_{\text{safety}})\Big)$$
+
+1. **$R_{\text{fact}} = \text{facts\_hit} / \text{required\_facts\_total}$**（关键事实完整度，权重 40%）：在真实输出中逐项核验完成任务必需的真值事实清单；
+2. **$P_{\text{signal}}$**（信噪比/纯净度，权重 30%）：有效信号条目或字节占总返回量的比例；
+3. **$A_{\text{action}}$**（结构化可行动性，权重 20%）：是否直接包含推荐命令、规范路径、修复补丁或死锁裁决；
+4. **$S_{\text{safety}}$**（安全与抗污染度，权重 10%）：明文凭据脱敏率、防命令注入与抗提示词投毒合规度。
+5. **有效信息密度与密度提升倍数**：$\rho = (\text{facts\_hit} / \max(\text{tokens}, 1)) \times 1000$，$\text{info\_density\_gain} = \rho_{\text{steward}} / \max(\rho_{\text{baseline}}, 0.01)$。
+6. **帕累托 SLA 双门禁**：`W1~W11` 与 `COMP-C1~C4` 必须同时满足效率达标、`steward_facts_hit == required_facts_total` 及 `steward_quality_score >= baseline_quality_score`，严禁通过丢失关键事实骗取高 Token 节省率。

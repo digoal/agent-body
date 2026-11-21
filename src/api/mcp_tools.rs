@@ -644,12 +644,13 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_benchmark",
-                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（Phase 27）：运行 8 大 A/B 对照负载与 5 大微基准、查看带 SHA-256 签名的实证报告、审计生产效能账本 (PR-01~PR-08) 或跨版本回归比对。",
+                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v3.0）：运行 A/B 对照负载(W1~W11)、内核微基准(M1~M5)、数据质量(DQ1~DQ4)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-10)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "action": { "type": "string", "enum": ["workloads", "run", "report", "ledger", "compare", "export", "reset"], "default": "report" },
-                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | W1~W8" },
+                        "action": { "type": "string", "enum": ["workloads", "run", "report", "ledger", "compare", "export", "reset", "competitors"], "default": "report" },
+                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | dq | competitors | W1~W11 | COMP-C1~C4" },
+                        "track": { "type": "string", "default": "all", "description": "竞品对标赛道: all | C1 | C2 | C3 | C4" },
                         "save": { "type": "boolean", "default": true },
                         "run_id": { "type": "string" },
                         "run_a": { "type": "string" },
@@ -1436,6 +1437,19 @@ impl McpToolRegistry {
                     "reset" => {
                         let cleaned = BenchmarkEngine::reset_sandbox(self.storage.provider().as_ref())?;
                         Ok(serde_json::to_string_pretty(&serde_json::json!({ "cleaned": cleaned }))?)
+                    }
+                    "competitors" => {
+                        let track = args.get("track").and_then(|v| v.as_str()).unwrap_or("all");
+                        let results = crate::benchmark::competitors::run_competitor_track(
+                            self.storage.provider().clone(),
+                            track,
+                        )?;
+                        let matrix = crate::benchmark::competitors::build_competitor_capability_matrix();
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "spec_version": crate::benchmark::BENCHMARK_SPEC_VERSION,
+                            "results": results,
+                            "capability_matrix": matrix,
+                        }))?)
                     }
                     other => bail!("未知 benchmark action: {}", other),
                 }

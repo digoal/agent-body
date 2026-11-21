@@ -1040,6 +1040,21 @@ pub fn handle_benchmark_reset(storage: &dyn StorageProvider) -> HttpResponse {
     }
 }
 
+pub fn handle_benchmark_competitors(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let track = query_str(req, "track", "all");
+    match crate::benchmark::competitors::run_competitor_track(storage, &track) {
+        Ok(results) => WebResponse::success(serde_json::json!({
+            "spec_version": crate::benchmark::BENCHMARK_SPEC_VERSION,
+            "results": results,
+            "capability_matrix": crate::benchmark::competitors::build_competitor_capability_matrix(),
+        })),
+        Err(e) => WebResponse::error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Competitor benchmark failed: {}", e),
+        ),
+    }
+}
+
 pub fn handle_feedback_list() -> HttpResponse {
     let fb_path = crate::feedback::FeedbackEngine::default_feedback_path();
     match crate::feedback::FeedbackEngine::list_items(&fb_path) {

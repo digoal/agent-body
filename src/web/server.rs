@@ -321,6 +321,7 @@ impl WebServer {
             (Method::Get, "/api/v1/benchmark/report") => parity_api::handle_benchmark_report(req, storage.as_ref()),
             (Method::Get, "/api/v1/benchmark/ledger") => parity_api::handle_benchmark_ledger(req, storage.as_ref()),
             (Method::Get, "/api/v1/benchmark/compare") => parity_api::handle_benchmark_compare(req, storage.as_ref()),
+            (Method::Get, "/api/v1/benchmark/competitors") => parity_api::handle_benchmark_competitors(req, storage),
             (Method::Post, "/api/v1/benchmark/reset") => parity_api::handle_benchmark_reset(storage.as_ref()),
             (Method::Get, "/api/v1/feedback") => parity_api::handle_feedback_list(),
             (Method::Post, "/api/v1/feedback") => parity_api::handle_feedback_post(req, storage),

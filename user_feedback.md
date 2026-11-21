@@ -199,19 +199,35 @@ flowchart LR
 - **痛点**: Phase 23 与 Phase 29 已投入大量算力完成了三层属性字典与 21,538 条资产/节点 Embedding 向量化，但 Benchmark `W1~W8` 对此完全无感知；同时 `CON-02` 暴露的 77 条假断链也未进入基准回归门禁。
 - **标准迭代方向**: 新增 **`W9`（混合向量检索召回率对比）**、**`W10`（复杂模板代码依赖抽取抗假阳性对比）** 与 **`DQ1~DQ3`（现网宿主机数据质量门禁）**。
 
+### `BENCH-05` `[P1 · 横向参照系缺失]` Benchmark 仅与“裸奔基线”纵向自对比，缺乏与热门开源竞品的同场实证对标
+- **状态**: `✅ Verified (Phase 35)` · **首次记录**: 2026-11-21 · **提出依据**: [README.md ISSUE #18](README.md#L386) · **验证实测**: `src/benchmark/competitors.rs` (`COMP-C1~C4` + 12 维能力矩阵) 单测及现网 `bench v3.0` 实跑全部 PASS
+- **现状核实**: 现行 Benchmark `v2.1` 已涵盖轨道 A（`W1~W11` 裸奔自对比）与轨道 B（`PR-01~10` 生产账本），但尚无轨道 C 对标行业主流产品（**记忆赛道**: Mem0 / Letta / PowerContext / Shodh-Memory；**上下文数据库**: OpenViking；**Agent 文件系统**: AgentFS；**宿主探针与检索**: `rg` + `psutil` + `ss` + `git`）。
+- **标准迭代方向**: 在 Phase 35 升级 Benchmark Spec 至 `v3.0`，落地 `src/benchmark/competitors.rs`（`COMP-C1 ~ COMP-C4` 同机同数据集真跑）与 12 维源码能力对标矩阵，严格区分 `LIVE_BENCHMARKED` 与 `ARCH_VERIFIED`。
+
+### `BENCH-06` `[P0 · 质量对照与帕累托门禁缺失]` Benchmark 过度突出“省 Token”，缺少 `W1~W8` 质量评分、「基线质量 vs 管家质量 ($\Delta Q$)」成对比较与防截断门禁
+- **状态**: `✅ Verified (Phase 36)` · **首次记录**: 2026-11-21 · **提出依据**: [README.md ISSUE #19](README.md#L396) · **验证实测**: `W1~W11` & `COMP-C1~C4` 全量实装四维质量评分与帕累托防截断门禁，现网 `v3.1` 实跑全绿
+- **源码审计证据**:
+  1. `src/benchmark/workloads.rs:292` (`make_result`) 中 `W1~W8` 的 `quality_score` 全部为 `None`，仅 `W9/W10/W11` 计算了单侧质量分；
+  2. `WorkloadResult`、`CompetitorComparisonResult` 与 `report.rs` 缺少 `baseline_quality_score`、`quality_delta` 与 `info_density_gain`（每千 Token 有效事实密度倍数），导致报告汇总表中基线质量栏为 `-`；
+  3. `sla_passed` 未强制校验「必含真值事实 100% 命中且 $Q_{\text{steward}} \ge Q_{\text{baseline}}$」，理论上存在“删减关键上下文换取高省 Token 率”的盲区。
+- **标准迭代方向**: 在 Phase 36 升级至 Benchmark `v3.1`，引入四维确定性上下文质量公式 $Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$，为 `W1~W11` 与 `COMP-C1~C4` 全量实装真值事实断言、成对质量对照与帕累托双门禁（详见 [roadmap-phase36.md](src_doc/roadmap-phase36.md)）。
+
 ---
 
-## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-07`)
+## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-10`)
 
 | ID | 需求简述 | 提出背景 / 触发场景 | 优先级 | 目标归属 | 状态 |
 |:---:|---|---|:---:|:---:|:---:|
-| **`REQ-01`** | **建立 `user_feedback.md` 反馈总账与双向记录工作流** | 沉淀实际使用中的优缺点、新需求与 Benchmark 迭代线索，形成闭环飞轮 | P0 | Phase 30.1 / 30.5 | `⏳ In Progress` |
-| **`REQ-02`** | **建立 Benchmark 标准版本化演进协议 (`v1.0 → v2.0`)** | 支持 `spec_version` 字段隔离对比与标准持续迭代，绝不破坏历史可比性 | P0 | Phase 31.1 | `🗓️ Planned` |
-| **`REQ-03`** | **反馈驱动的回归语料库 (`Feedback Regression Corpus`)** | 每修完一个真实使用痛点（如 `CON-01` / `CON-02`），自动将其复现样本固化为 Benchmark 永久 SLA 测试项 | P1 | Phase 31.3 / 31.4 | `🗓️ Planned` |
-| **`REQ-04`** | **经验自动提炼入 `memories` 与简报冷启动融合** | 将已验证反馈、会话复盘与避坑经验向量化存入 `memories`，激活 `BriefAssembler` 40% 记忆预算 | P1 | Phase 30.5 | `🗓️ Planned` |
-| **`REQ-05`** | **全渠道生产效能存证扩展 (`PR-01 ~ PR-10`)** | 覆盖 CLI、Web REST API、语义搜索与反馈沉淀，让生产账本真实反映大管家全部战绩 | P1 | Phase 30.4 | `🗓️ Planned` |
+| **`REQ-01`** | **建立 `user_feedback.md` 反馈总账与双向记录工作流** | 沉淀实际使用中的优缺点、新需求与 Benchmark 迭代线索，形成闭环飞轮 | P0 | Phase 30.1 / 30.5 | `✅ Verified` |
+| **`REQ-02`** | **建立 Benchmark 标准版本化演进协议 (`v1.0 → v2.0`)** | 支持 `spec_version` 字段隔离对比与标准持续迭代，绝不破坏历史可比性 | P0 | Phase 31.1 | `✅ Verified` |
+| **`REQ-03`** | **反馈驱动的回归语料库 (`Feedback Regression Corpus`)** | 每修完一个真实使用痛点（如 `CON-01` / `CON-02`），自动将其复现样本固化为 Benchmark 永久 SLA 测试项 | P1 | Phase 31.3 / 31.4 | `✅ Verified` |
+| **`REQ-04`** | **经验自动提炼入 `memories` 与简报冷启动融合** | 将已验证反馈、会话复盘与避坑经验向量化存入 `memories`，激活 `BriefAssembler` 40% 记忆预算 | P1 | Phase 30.5 | `✅ Verified` |
+| **`REQ-05`** | **全渠道生产效能存证扩展 (`PR-01 ~ PR-10`)** | 覆盖 CLI、Web REST API、语义搜索与反馈沉淀，让生产账本真实反映大管家全部战绩 | P1 | Phase 30.4 | `✅ Verified` |
 | **`REQ-06`** | **补齐安全方向顶层规约、纵深防御架构规格与演进规划** | 针对安全方向缺少顶层规格与系统规划问题，确立规约 #19、`design_doc/11-security-spec.md`、`src_doc/roadmap-phase32.md` 及代码级 `security` 规约 | P0 | Phase 32.0 | `✅ Verified` |
 | **`REQ-07`** | **落地全链路脱敏、Hook 防注入、Web 全量写鉴权、抗投毒与 `W11`/`DQ4` 安全基准** | 闭环消除 `CON-07`（`SEC-GAP-01~05`），把明文零泄露、防命令注入、最小文件权限与抗提示词投毒固化为自动化测试与基准门禁 | P0 | Phase 32 ~ Phase 33 | `✅ Verified` |
+| **`REQ-08`** | **建立零重扫演进活地图 (`EVOLUTION_GUIDE.md`)、自建 `.codegraph/` 与 `make evolution-check` 防漂移门禁** | 解决随 25 模块 / 3.8 万行源码与 48 份 `src_doc/` 文档增长导致的重复扫代码和重读文档开销（ISSUE #17） | P0 | Phase 34.1 ~ 34.5 | `✅ Verified` |
+| **`REQ-09`** | **建立 Benchmark `v3.0` 轨道 C 四大赛道热门竞品同场实跑与 12 维源码能力对标体系** | 解决仅与裸奔自己比缺乏行业横向对照问题，接入 Mem0/Letta/PowerContext/Shodh-Memory/OpenViking/AgentFS/rg+psutil 等对标（ISSUE #18） | P0 | Phase 35.1 ~ 35.6 | `✅ Verified` |
+| **`REQ-10`** | **落地 Benchmark `v3.1`「既省 Token × 质量不降反升」帕累托双门禁与全负载成对质量实证** | 消除 `W1~W8` 质量评分盲区，同场量化 `Baseline Q vs Steward Q (+ΔQ)`、关键事实命中率与有效信息密度提升倍数（ISSUE #19） | P0 | Phase 36.1 ~ 36.6 | `✅ Verified` |
 
 ---
 

@@ -263,6 +263,13 @@ enum BenchCommands {
     },
     #[command(about = "清理 bench:* 隔离测试数据")]
     Reset,
+    #[command(about = "运行四大赛道热门竞品横向实证对标 (C1记忆 / C2上下文DB / C3 AgentFS / C4宿主探针)")]
+    Competitors {
+        #[arg(long, default_value = "all")]
+        track: String,
+        #[arg(long, default_value = "markdown")]
+        format: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1770,6 +1777,26 @@ fn main() -> Result<()> {
                 BenchCommands::Reset => {
                     let cleaned = BenchmarkEngine::reset_sandbox(storage.provider().as_ref())?;
                     println!("✅ 已清理 {} 条 bench:* 沙盒状态", cleaned);
+                }
+                BenchCommands::Competitors { track, format } => {
+                    let suite = if track.eq_ignore_ascii_case("all") {
+                        "competitors".to_string()
+                    } else if track.to_ascii_uppercase().starts_with("COMP-") {
+                        track
+                    } else {
+                        format!("COMP-{}", track.to_ascii_uppercase())
+                    };
+                    let report = BenchmarkEngine::run_suite(
+                        storage.provider().clone(),
+                        &suite,
+                        false,
+                        Some("bench:comp"),
+                    )?;
+                    match format.as_str() {
+                        "json" => println!("{}", serde_json::to_string_pretty(&report)?),
+                        "csv" => println!("{}", render_csv_report(&report)?),
+                        _ => println!("{}", render_markdown_report(&report)?),
+                    }
                 }
             }
         }
