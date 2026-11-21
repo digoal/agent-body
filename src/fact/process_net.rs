@@ -277,7 +277,7 @@ impl ProcessNetTopology {
                 if s.is_empty() { name.clone() } else { s }
             })
             .unwrap_or_else(|_| name.clone());
-        let command = crate::scanner::metadata::SecretRedactor::redact_single_line(&raw_command);
+        let command = crate::env::normalize_process_command(&raw_command);
 
         // 3. 读取 cwd 软链接
         let cwd_path = pid_dir.join("cwd");

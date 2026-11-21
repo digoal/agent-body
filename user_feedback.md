@@ -166,6 +166,35 @@ flowchart LR
   - 先期已补齐顶层安全规约 #19、[11-security-spec.md](design_doc/11-security-spec.md) 与 [roadmap-phase32.md](src_doc/roadmap-phase32.md)；
   - 按 Phase 32~33 闭环修复 `SEC-GAP-01~05`，并纳入 Benchmark `v2.1` 新增的 `W11 (security_redaction_and_guardrail)` 与 `DQ4 (secret_hygiene_and_perm_gate)` 门禁（要求明文凭据残留率 `0%`、注入逃逸 `0`）。
 
+### `CON-08` `[P0 · 黑白屏与 Hook 简报分裂]` CLI `agent-steward brief` 未接入 `BriefAssembler` 且多行内联脚本进程刷屏截断 `SessionStart` 简报
+- **状态**: `✅ Verified (Phase 37.1)` · **首次记录**: 2026-11-21 · **发现渠道**: 现网 `SessionStart` Hook 实测 · **验证实测**: `agent-steward brief` `15ms` 输出三位一体简报 (`92/100`)，`normalize_process_command` 折叠截断多行脚本
+- **现象与复现证据**:
+  - 全局 `SessionStart` 钩子执行 `agent-steward brief` 时，输出停留在 14 行极简格式，直接打印 `node -e "<1500B watchdog 脚本>"` 与 `python3 -I -c "<60行 hermes 脚本>"` 多行内联代码并在 1500 字符处被 `... (truncated)` 截断；
+  - [src/main.rs](src/main.rs#L783-L810) 的 `Commands::Brief` 绕过 `BriefAssembler`，既缺少事实图谱工具/仓库、8 大放置规约、工程习惯红线，也未能利用库内已有 `17` 条长期记忆，与 MCP `steward_brief` 严重分裂（违反规约 #16）。
+- **修复目标**:
+  - 统一 `Commands::Brief` 至 `BriefAssembler`（支持 `--query` / `--session-id` / `--budget-tokens` / `--legacy`）；
+  - 在 `src/env/mod.rs` 与 `src/fact/process_net.rs` 规范化/折叠单行截断内联脚本命令行并过滤 `CODEGRAPH_NO_WATCHDOG` 等看门狗噪声进程。
+
+### `CON-09` `[P0 · 依赖拓扑自污染]` `LinksEngine` 扫描本仓 `.rs` 测试代码与 `.md` 示例路径导致现网 `links audit` 检出 107 处假断链（健康分 `0/100`）
+- **状态**: `✅ Verified (Phase 37.2)` · **首次记录**: 2026-11-21 · **发现渠道**: 现网 `./target/release/agent-steward links audit` 实测 · **验证实测**: `links audit --fix` 清理后现网健康分恢复 **`100/100` (`0` 断链)**，`W10 Precision = 100.0%`
+- **现象与复现证据**:
+  - 执行 `./target/release/agent-steward links audit` 检出 `107` 处异常断链，健康分跌至 `0/100`；统计显示其中 `66` 处来自 `.rs`（`tests/*.rs` 测试夹具、`#[cfg(test)]` 块断言、`///` 注释、前端 `placeholder`），`41` 处来自 `.md` 文档中的代码块教学示例路径（如 `/root/new/work/demo.rs`、`/root/new/shared_proj/test.py`）。
+- **修复目标**:
+  - 在 `LinksEngine::discover_links_from_script` 与 `LinkAuditor::audit_links` 中免疫 `tests/`、`#[cfg(test)]`、`//` 注释、`placeholder=` 及 `.md` 中物理不存在的示例代码路径（保留 `/tmp/` 隔离沙盒测试用例）；
+  - 运行 `links audit --fix` 清理历史假边，使现网健康分恢复 `100/100`，并扩充 `W10` 回归样本。
+
+### `CON-10` `[P1 · Systemd 守护 PATH 盲区]` `agent-steward.service` 在最小环境变量下找不到 `codegraph`，触发宏微联邦降级告警
+- **状态**: `✅ Verified (Phase 37.3)` · **首次记录**: 2026-11-21 · **发现渠道**: `journalctl -u agent-steward` 巡检 · **验证实测**: `resolve_binary_path` + Systemd `PATH` 对齐后重启零降级告警
+- **现象与复现证据**:
+  - 宿主机已安装 `/root/.nvm/versions/node/v24.20.0/bin/codegraph`，但 `journalctl -u agent-steward` 启动日志持续报 `⚠️ [Preflight 降级提示] CodeGraph 宏微联邦引擎: 未在 PATH 中检测到 codegraph 命令`。
+  - 根因在于 [src/preflight/mod.rs](src/preflight/mod.rs#L468-L494) 仅执行 `which codegraph`，未探测 NVM / Cargo / `.local/bin` 常见宿主机工具链目录，且 `/etc/systemd/system/agent-steward.service` 与 `INSTALL.md` 未补齐工具链 `PATH`。
+- **修复目标**: 实现 `resolve_binary_path` 跨目录工具链探测，并按规约 #10 四层贯通同步 Systemd Unit 与 `INSTALL.md`。
+
+### `CON-11` `[P1 · 零 Panic 规约漏洞]` CLI 输出遇管道提前关闭（如 `| head`）触发 `Broken pipe (os error 32)` Panic
+- **状态**: `✅ Verified (Phase 37.1)` · **首次记录**: 2026-11-21 · **发现渠道**: `./target/release/agent-steward links audit | head -n 30` · **验证实测**: `links audit | head -n 20` 与 `env processes | head -n 15` 均零 Panic 正常退出
+- **现象与复现证据**: 命令行管道截断输出时，Rust 默认忽略 `SIGPIPE` 导致 `println!` 抛出 `panicked at ... failed printing to stdout: Broken pipe (os error 32)`，违反规约 #12。
+- **修复目标**: 在 `src/main.rs` 入口重置 Unix `SIGPIPE` 为 `SIG_DFL`，确保管道截断优雅退出零 Panic。
+
 ---
 
 ## 五、第三部分：Benchmark 标准失真诊断与持续迭代诉求 (`BENCH-01` ~ `BENCH-04`)
@@ -212,9 +241,23 @@ flowchart LR
   3. `sla_passed` 未强制校验「必含真值事实 100% 命中且 $Q_{\text{steward}} \ge Q_{\text{baseline}}$」，理论上存在“删减关键上下文换取高省 Token 率”的盲区。
 - **标准迭代方向**: 在 Phase 36 升级至 Benchmark `v3.1`，引入四维确定性上下文质量公式 $Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$，为 `W1~W11` 与 `COMP-C1~C4` 全量实装真值事实断言、成对质量对照与帕累托双门禁（详见 [roadmap-phase36.md](src_doc/roadmap-phase36.md)）。
 
+### `BENCH-07` `[P0 · DQ3 口径失真]` `DQ3 (links_topology_health)` 仅校验静态模板特征而未核验物理断链，与 `links audit = 0/100` 严重背离
+- **状态**: `✅ Verified (Phase 37.4)` · **首次记录**: 2026-11-21 · **发现渠道**: 现网 `bench report` 与 `links audit` 交叉比对 · **验证实测**: `DQ3` 联合物理核验与 `links audit` 双双达成 `100.0%` (`2000/2000`)
+- **源码与实测证据**:
+  - `bench report` 显示 `DQ3 = 97.7% ✅ PASS`，但同机同时刻 `agent-steward links audit` 报告 `107` 处断链（健康分 `0/100`）；
+  - [src/benchmark/dq.rs](src/benchmark/dq.rs#L94-L106) 仅调用 `is_non_static_link_target` 与 `is_pure_data_file`，未核验 `asset` 目标路径的物理存在性与测试/示例过滤。
+- **标准迭代方向**: 在 Benchmark `v3.2` 中使 `DQ3` 联合过滤测试/示例假边并核验物理存在性，与 `LinkAuditor` 健康度口径 100% 拉齐。
+
+### `BENCH-08` `[P1 · COMP-C4 基线不等价]` `COMP-C4` 竞品侧 `psutil` 仅输出 1 个整数导致报告出现 `Token 节省: -112.9%` 反常负值
+- **状态**: `✅ Verified (Phase 37.4)` · **首次记录**: 2026-11-21 · **发现渠道**: 现网 `bench report` 竞品表核验 · **验证实测**: `v3.2` 实测 `COMP-C4` Token 节省 **`56.7%`**、`37.3 → 97.5 (+60.2)`、密度 `6.9x`、`✅ PASS`
+- **源码与实测证据**:
+  - [src/benchmark/competitors.rs](src/benchmark/competitors.rs#L766-L773) 竞品侧运行 `python3 -c "import psutil; print(len(...))"` 仅返回 1 个整数，导致 `COMP-C4` 呈现 `Token 节省: -112.9%`；
+  - 真实等价对照应由 `rg` 检索工程引用上下文、`ss -tlnp` 输出套接字表、`psutil` 输出进程 PID/名称/命令行明细。
+- **标准迭代方向**: 校准 `COMP-C4` 为真实等价物理采集口径，回归正向省 Token 与质量跃升。
+
 ---
 
-## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-10`)
+## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-11`)
 
 | ID | 需求简述 | 提出背景 / 触发场景 | 优先级 | 目标归属 | 状态 |
 |:---:|---|---|:---:|:---:|:---:|
@@ -228,6 +271,7 @@ flowchart LR
 | **`REQ-08`** | **建立零重扫演进活地图 (`EVOLUTION_GUIDE.md`)、自建 `.codegraph/` 与 `make evolution-check` 防漂移门禁** | 解决随 25 模块 / 3.8 万行源码与 48 份 `src_doc/` 文档增长导致的重复扫代码和重读文档开销（ISSUE #17） | P0 | Phase 34.1 ~ 34.5 | `✅ Verified` |
 | **`REQ-09`** | **建立 Benchmark `v3.0` 轨道 C 四大赛道热门竞品同场实跑与 12 维源码能力对标体系** | 解决仅与裸奔自己比缺乏行业横向对照问题，接入 Mem0/Letta/PowerContext/Shodh-Memory/OpenViking/AgentFS/rg+psutil 等对标（ISSUE #18） | P0 | Phase 35.1 ~ 35.6 | `✅ Verified` |
 | **`REQ-10`** | **落地 Benchmark `v3.1`「既省 Token × 质量不降反升」帕累托双门禁与全负载成对质量实证** | 消除 `W1~W8` 质量评分盲区，同场量化 `Baseline Q vs Steward Q (+ΔQ)`、关键事实命中率与有效信息密度提升倍数（ISSUE #19） | P0 | Phase 36.1 ~ 36.6 | `✅ Verified` |
+| **`REQ-11`** | **落地 Phase 37 生产运行态深度对齐、拓扑零误报硬化与 Benchmark `v3.2` 等价校准** | 消除 CLI/Hook 简报分裂、多行进程刷屏、`SIGPIPE` Panic、测试/示例假断链与 `DQ3`/`COMP-C4` 口径偏差（ISSUE #20） | P0 | Phase 37.1 ~ 37.6 | `✅ Verified` |
 
 ---
 

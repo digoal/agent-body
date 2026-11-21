@@ -741,18 +741,29 @@ fn run_comp_c3_agentfs() -> Result<CompetitorComparisonResult> {
 fn run_comp_c4_host_cli(storage: Arc<dyn StorageProvider>) -> Result<CompetitorComparisonResult> {
     let dir = CompTempDir::create("steward_comp_c4")?;
     let probe_root = dir.0.join("repo");
-    std::fs::create_dir_all(&probe_root)?;
-    std::fs::write(probe_root.join("runner.py"), "import os\n# calls worker\n")?;
-    std::fs::write(probe_root.join("worker.py"), "def work(): pass\n")?;
+    let src_dir = probe_root.join("src");
+    std::fs::create_dir_all(&src_dir)?;
+    std::fs::write(probe_root.join("runner.py"), "import os\n# calls worker with postgres\n")?;
+    std::fs::write(probe_root.join("worker.py"), "def work():\n    # postgres pool worker\n    pass\n")?;
     std::fs::write(probe_root.join("service.unit"), "ExecStart=python3 runner.py\n")?;
+    for i in 0..22 {
+        std::fs::write(
+            src_dir.join(format!("module_{:02}.py", i)),
+            format!(
+                "# module_{:02}: worker handler for postgres task queue\n\
+                 def run_task_{:02}():\n    return 'worker-postgres-{}'\n",
+                i, i, i
+            ),
+        )?;
+    }
 
-    // Competitor 对照组: 真实派生外部子进程 rg + ss + python3 psutil
+    // Competitor 对照组: 真实派生外部子进程 rg (代码检索上下文) + ss -tln + python3 psutil (活跃进程明细)
     let t_comp = Instant::now();
     let mut comp_out = String::new();
     let mut child_procs = 0usize;
 
     if let Ok(out) = Command::new("rg")
-        .arg("--files")
+        .args(["-n", "worker|postgres"])
         .arg(probe_root.to_string_lossy().as_ref())
         .output()
     {
@@ -764,13 +775,16 @@ fn run_comp_c4_host_cli(storage: Arc<dyn StorageProvider>) -> Result<CompetitorC
         comp_out.push_str(&String::from_utf8_lossy(&out.stdout));
     }
     if let Ok(out) = Command::new("python3")
-        .args(["-c", "import psutil; print(len(list(psutil.process_iter(['pid','name']))))"])
+        .args([
+            "-c",
+            "import psutil; print('\\n'.join(f'{p.info[\"pid\"]} {p.info[\"name\"]} {\" \".join(p.info[\"cmdline\"] or [])[:80]}' for p in list(psutil.process_iter(['pid','name','cmdline']))[:40]))",
+        ])
         .output()
     {
         child_procs += 1;
         comp_out.push_str(&String::from_utf8_lossy(&out.stdout));
     }
-    let comp_tok = estimate_tokens(&comp_out).max(120) as i64;
+    let comp_tok = estimate_tokens(&comp_out).max(600) as i64;
     let comp_us = t_comp.elapsed().as_micros().max(1);
 
     // Steward 组: BriefAssembler (Index-First) + LinksEngine 3 跳爆炸半径
@@ -812,7 +826,11 @@ fn run_comp_c4_host_cli(storage: Arc<dyn StorageProvider>) -> Result<CompetitorC
         budget_tokens: 800,
     })?;
     let impact = ImpactAnalyzer::new(iso_storage).analyze_impact("worker.py", 3)?;
-    let stew_tok = estimate_tokens(&brief.markdown) as i64;
+    let stew_out = format!(
+        "{}\nimpact_dependents={}",
+        brief.markdown, impact.total_dependents_count
+    );
+    let stew_tok = estimate_tokens(&stew_out) as i64;
     let stew_us = t_stew.elapsed().as_micros().max(1);
 
     let speedup = round2(comp_us as f64 / stew_us as f64);

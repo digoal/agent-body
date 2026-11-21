@@ -71,3 +71,11 @@ agent-steward bench reset
   - `W10`（`link_precision_regression`）：`CON-02` 模板/占位符/`.json` 抗假阳性抽取 `Precision >= 95%`；
   - `DQ1 ~ DQ3`（宿主机数据质量门禁）：资产描述覆盖率 `>= 99%`、本地向量覆盖率 `>= 95%`、依赖拓扑非假阳性健康度 `>= 85%`。
 - **全渠道 `PR-01 ~ PR-10` 生产账本**：覆盖 MCP、CLI（`brief`/`search`/`fact`/`links audit`/`feedback`）与 Web REST API。
+
+---
+
+## 五、Benchmark 标准 `v3.0 ~ v3.2` 演进（Phase 35 ~ 37）
+
+- **`v3.0` 横向竞品轨道 C (`COMP-C1 ~ COMP-C4`)**：引入长期记忆、上下文数据库、AgentFS 与宿主机 CLI 探针四大开源赛道同场实跑，区分 `LIVE_BENCHMARKED` 与 `ARCH_VERIFIED`。
+- **`v3.1` 帕累托质量双门禁**：为全部 `W1 ~ W11` 与 `COMP-C1 ~ COMP-C4` 实装四维上下文质量评分（$Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$）与有效信息密度倍数（`Facts / 1k Tokens`），确保“既省 Token 又提质量”。
+- **`v3.2` 物理健康度与等价口径校准**：`DQ3` 与 `LinkAuditor` 物理断链口径 100% 拉齐，`W10` 扩充 Rust 测试/`#[cfg(test)]` 与 `.md` 示例抗误报门禁，并校准 `COMP-C4` 等价进程/代码检索采集口径。

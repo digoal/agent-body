@@ -351,6 +351,19 @@ impl BriefAssembler {
             }
         }
 
+        // 4. 活跃动态任务（索引优先读取 active_processes 表，避免阻塞扫 /proc）
+        if let Ok(procs) = self.storage.list_active_processes() {
+            if !procs.is_empty() {
+                let proc_line = procs
+                    .iter()
+                    .take(3)
+                    .map(|p| format!("{} (PID {})", p.name, p.pid))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                lines.push(format!("- **活跃任务**: {}\n", proc_line));
+            }
+        }
+
         let section = truncate_to_budget(lines.join(""), budget_tokens);
         (section, score.min(100))
     }
@@ -656,5 +669,40 @@ mod tests {
         assert!(output.markdown.contains("rg (极速代码检索工具)"));
         assert!(output.markdown.contains(":8765 (agent-steward)"));
         assert!(output.markdown.contains("/root/new/work/agent-steward"));
+    }
+
+    #[test]
+    fn test_brief_includes_active_process_index() {
+        use crate::storage::models::ActiveProcessRecord;
+
+        let storage = Storage::open_in_memory().expect("in-memory");
+        storage
+            .replace_active_processes(&[ActiveProcessRecord {
+                id: "proc-1234".to_string(),
+                pid: 1234,
+                name: "uvicorn".to_string(),
+                command: "uvicorn app:main --port 8000".to_string(),
+                owner: "user:digoal".to_string(),
+                associated_path: None,
+                listening_ports: vec![8000],
+                status: "running".to_string(),
+                cpu_pct: 1.0,
+                mem_bytes: 1024 * 1024,
+                gpu_allocated_mb: 0,
+                started_at: None,
+            }])
+            .expect("replace active procs");
+
+        let assembler = BriefAssembler::new(storage, None);
+        let output = assembler
+            .assemble(&BriefRequest {
+                query: "uvicorn".to_string(),
+                session_id: String::new(),
+                budget_tokens: 1500,
+            })
+            .expect("assemble");
+
+        assert!(output.markdown.contains("活跃任务"));
+        assert!(output.markdown.contains("uvicorn (PID 1234)"));
     }
 }

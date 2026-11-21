@@ -10,7 +10,7 @@
 
 1. **只读 Tier-0 文档（仅 2 份）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构地图 + 变更触点矩阵）；
-   - 当前活跃路线图 [src_doc/roadmap-phase36.md](src_doc/roadmap-phase36.md)（断点续传状态表；已完成的前序阶段见 [src_doc/roadmap-phase34-35.md](src_doc/roadmap-phase34-35.md)）。
+   - 当前活跃路线图 [src_doc/roadmap-phase37.md](src_doc/roadmap-phase37.md)（断点续传状态表；已完成的前序阶段见 [src_doc/roadmap-phase36.md](src_doc/roadmap-phase36.md) 与 [src_doc/roadmap-phase34-35.md](src_doc/roadmap-phase34-35.md)）。
 2. **运行 O(1) 实时架构快照（`<100ms`，禁止手动数模块/工具数）**：
    ```bash
    make evolution-check

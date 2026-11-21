@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
@@ -464,8 +464,59 @@ impl PreflightChecker {
         }
     }
 
+    /// 按优先级解析宿主机可执行文件路径（兼容 Systemd 最小 PATH 下定位 NVM / Cargo / local 工具链）
+    pub fn resolve_binary_path(bin_name: &str) -> Option<PathBuf> {
+        if let Some(path_env) = std::env::var_os("PATH") {
+            for dir in std::env::split_paths(&path_env) {
+                let cand = dir.join(bin_name);
+                if cand.is_file() {
+                    return Some(cand);
+                }
+            }
+        }
+
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
+        let mut candidate_dirs = vec![
+            PathBuf::from("/usr/local/bin"),
+            PathBuf::from("/usr/bin"),
+            PathBuf::from(&home).join(".cargo/bin"),
+            PathBuf::from(&home).join(".local/bin"),
+        ];
+
+        let nvm_versions = PathBuf::from(&home).join(".nvm/versions/node");
+        if let Ok(entries) = fs::read_dir(&nvm_versions) {
+            let mut nvm_bins: Vec<PathBuf> = entries
+                .filter_map(|e| e.ok())
+                .map(|e| e.path().join("bin"))
+                .filter(|p| p.is_dir())
+                .collect();
+            nvm_bins.sort();
+            nvm_bins.reverse();
+            candidate_dirs.extend(nvm_bins);
+        }
+
+        for dir in candidate_dirs {
+            let cand = dir.join(bin_name);
+            if cand.is_file() {
+                return Some(cand);
+            }
+        }
+        None
+    }
+
     /// 检查 CodeGraph 宏微联邦支持
     pub fn check_codegraph(report: &mut PreflightReport) {
+        if let Some(path) = Self::resolve_binary_path("codegraph") {
+            report.add(CheckItem {
+                name: "CodeGraph 宏微联邦引擎".to_string(),
+                category: CheckCategory::Optional,
+                status: CheckStatus::Pass,
+                message: format!("已安装 codegraph CLI: {}", path.display()),
+                remedy: None,
+            });
+            return;
+        }
+
         let which_codegraph = std::process::Command::new("which")
             .arg("codegraph")
             .output();
@@ -806,5 +857,11 @@ mod tests {
         PreflightChecker::check_security_posture(&mut report_ok, &data_dir, None);
         let item_ok = report_ok.items.iter().find(|i| i.name.contains("安全基线")).expect("item");
         assert_eq!(item_ok.status, CheckStatus::Pass);
+    }
+
+    #[test]
+    fn test_resolve_binary_path_finds_sh_and_handles_missing() {
+        assert!(PreflightChecker::resolve_binary_path("sh").is_some());
+        assert!(PreflightChecker::resolve_binary_path("__nonexistent_steward_bin_999__").is_none());
     }
 }

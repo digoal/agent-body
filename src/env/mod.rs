@@ -126,7 +126,7 @@ impl EnvCollector {
             if listening_ports.is_empty() && is_noise_process(&name, &raw_command) {
                 continue;
             }
-            let command = crate::scanner::metadata::SecretRedactor::redact_single_line(&raw_command);
+            let command = normalize_process_command(&raw_command);
 
             let cpu_pct = proc.cpu_usage();
             let mem_bytes = proc.memory();
@@ -158,9 +158,28 @@ impl EnvCollector {
     }
 }
 
+/// 规范化进程命令行：全链路脱敏 + 折叠多行空白 + 截断超长内联脚本（避免 node -e / python3 -c 刷屏简报）
+pub fn normalize_process_command(raw: &str) -> String {
+    let redacted = crate::scanner::metadata::SecretRedactor::redact_single_line(raw);
+    let collapsed = redacted.split_whitespace().collect::<Vec<_>>().join(" ");
+    let has_inline_script = collapsed.contains(" -e ")
+        || collapsed.contains(" -c ")
+        || collapsed.contains(" eval ");
+    let char_count = collapsed.chars().count();
+    if char_count > 180 || (has_inline_script && char_count > 120) {
+        let head: String = collapsed.chars().take(180).collect();
+        format!("{} ... [inline-script-truncated]", head)
+    } else {
+        collapsed
+    }
+}
+
 fn is_noise_process(name: &str, command: &str) -> bool {
     let lower = name.to_lowercase();
     if command.trim().is_empty() {
+        return true;
+    }
+    if command.contains("CODEGRAPH_NO_WATCHDOG") {
         return true;
     }
     const NOISE_PREFIXES: &[&str] = &[
@@ -296,5 +315,24 @@ mod tests {
         assert_eq!(list.len(), 1);
         assert!(!list[0].command.contains("mySecret123"));
         assert!(list[0].command.contains("<REDACTED>"));
+    }
+
+    #[test]
+    fn test_normalize_process_command_folds_multiline_and_truncates_inline_script() {
+        let raw = "node -e \"\nconst fs = require('fs');\nconst token = 'sk-ant-api03-abcdef1234567890abcdef';\n".to_string()
+            + &"console.log(1);\n".repeat(20)
+            + "\"";
+        let norm = normalize_process_command(&raw);
+        assert!(!norm.contains('\n'), "不应包含换行符");
+        assert!(!norm.contains("sk-ant-api03"), "仍须经过全链路脱敏");
+        assert!(norm.contains("[inline-script-truncated]"), "超长内联脚本应被截断");
+    }
+
+    #[test]
+    fn test_is_noise_process_filters_codegraph_watchdog() {
+        assert!(is_noise_process(
+            "MainThread",
+            "node -e console.log(1) // CODEGRAPH_NO_WATCHDOG=1"
+        ));
     }
 }

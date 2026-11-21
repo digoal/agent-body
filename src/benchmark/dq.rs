@@ -90,14 +90,32 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
             detail: "当前库无悬空依赖边 (100/100)".into(),
         }
     } else {
-        // 统计非假阳性边比例作为拓扑纯净度指标
+        // 统计非假阳性边且物理有效（asset 物理存在、非测试/文档示例误报）的健康度比例，与 LinkAuditor 口径一致
         let clean_count = links
             .iter()
             .filter(|l| {
+                let both_in_sys_tmp =
+                    l.source_id.starts_with("/tmp/") && l.target_id.starts_with("/tmp/");
                 if l.target_type == "asset" {
-                    !crate::links::is_non_static_link_target(&l.target_id, None)
+                    let is_fp = (!both_in_sys_tmp
+                        && crate::links::is_non_static_link_target(&l.target_id, None))
+                        || (!both_in_sys_tmp
+                            && crate::links::is_test_or_example_link(
+                                &l.source_id,
+                                &l.target_id,
+                                l.snippet.as_deref(),
+                            ))
+                        || (!l.source_id.starts_with("/tmp/")
+                            && l.source_id.ends_with(".md")
+                            && !std::path::Path::new(&l.target_id).exists()
+                            && !crate::links::is_explicit_markdown_link(l.snippet.as_deref()));
+                    if is_fp {
+                        return false;
+                    }
+                    let p = std::path::Path::new(&l.target_id);
+                    !p.is_absolute() || p.exists()
                 } else if l.target_type == "service" {
-                    !crate::links::is_pure_data_file(&l.source_id)
+                    !crate::links::is_pure_data_file(&l.source_id) && !l.source_id.ends_with(".md")
                 } else {
                     true
                 }
@@ -107,11 +125,15 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
         DataQualityResult {
             id: "DQ3".into(),
             name: "links_topology_health".into(),
-            title: "依赖拓扑纯净度与健康度".into(),
+            title: "依赖拓扑纯净度与物理健康度".into(),
             measured_pct: pct,
             target_pct: 85.0,
             passed: pct >= 85.0,
-            detail: format!("全量 {} 条依赖边中 {} 条为有效非假阳性拓扑边", links.len(), clean_count),
+            detail: format!(
+                "全量 {} 条依赖边中 {} 条为物理有效且非假阳性拓扑边",
+                links.len(),
+                clean_count
+            ),
         }
     };
     results.push(dq3);
@@ -189,4 +211,36 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
     results.push(dq4);
 
     results
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::storage::models::LinkRecord;
+    use crate::storage::sqlite_provider::SqliteStorageProvider;
+
+    #[test]
+    fn test_dq3_detects_physically_missing_dangling_links() {
+        let storage = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        storage
+            .add_link(&LinkRecord {
+                id: None,
+                source_type: "asset".into(),
+                source_id: "/root/new/work/real.py".into(),
+                target_type: "asset".into(),
+                target_id: "/root/new/definitely_missing_target_abc_999.py".into(),
+                relation: "depends_on".into(),
+                confidence: 0.9,
+                auto_discovered: true,
+                line_number: Some(1),
+                snippet: Some("import missing".into()),
+                provenance: Some("ast_import".into()),
+                created_at: None,
+            })
+            .expect("add link");
+        let results = run_data_quality_checks(&storage);
+        let dq3 = results.iter().find(|r| r.id == "DQ3").expect("DQ3");
+        assert_eq!(dq3.measured_pct, 0.0, "物理不存在的断链在 DQ3 中应准确检出");
+        assert!(!dq3.passed);
+    }
 }

@@ -41,6 +41,7 @@ Benchmark `v2.1` 已建立轨道 A（`W1~W11` 裸奔自对比）与轨道 B（`P
 
 - `BenchmarkReportPayload` 增加 `competitors: Vec<CompetitorComparisonResult>` 与 `competitor_matrix: Vec<CompetitorCapabilityRow>`，带 `#[serde(default)]` 向后兼容读取 `v1.0`/`v2.0`/`v2.1`/`v3.0` 历史批次。
 - `v3.1` 增补竞品侧与 Steward 侧成对上下文质量评分（`competitor_quality_score` vs `steward_quality_score`、`quality_delta`、`info_density_gain` 及 `required_facts_total` 核验），确保横向对标同时证明「省 Token + 上下文质量不降反升」。
+- `v3.2` 校准 `COMP-C4` 等价物理采集基线（`25` 文件工程树上的 `rg -n` 上下文搜索 + `ss -tln` + `psutil` 进程明细输出），消除 `psutil` 仅输出单整数导致的负省 Token 失真（`BENCH-08`）。
 - **MCP**：`steward_benchmark(action="competitors", suite="competitors" | "COMP-C1".."COMP-C4")`
 - **CLI**：`agent-steward bench competitors [--track all|C1|C2|C3|C4] [--format table|json|markdown]`
 - **Web REST**：`GET /api/v1/benchmark/competitors` & `POST /api/v1/benchmark/run` (`suite="competitors"`)

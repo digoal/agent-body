@@ -398,6 +398,13 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - 关于 Benchmark 的核心修正准则：不能只体现省 Token，**既要省 Token，同时上下文质量不能下降甚至应该有显著提升**；
     - Phase 36 已消除 `W1~W8` 质量评分缺口（`BENCH-06`），落地确定性四维上下文质量模型 $Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$ 与**有效信息密度倍数（`Facts / 1k Tokens`）**，为 `W1~W11` 与 `COMP-C1~C4` 全量实装真值事实断言、`Baseline Q vs Steward Q (+ΔQ)` 成对比较及防截断帕累托 SLA 硬门禁（详见 [roadmap-phase36.md](src_doc/roadmap-phase36.md)）。
 
+20. **生产运行态深度对齐、拓扑零误报硬化与 Benchmark `v3.2` 等价校准 (`Production Polish & Topology Hygiene`)** `✅ Phase 37 已落地`:
+    - **CLI `brief` 与 `BriefAssembler` 统一 & 进程命令去噪**：消除 `SessionStart` 钩子仅输出旧版浅表进程列表的分裂问题（规约 #16），并规范化/折叠超长多行内联脚本进程（`node -e` / `python3 -c`），同时重置 Unix `SIGPIPE` 彻底消灭管道截断 Panic（规约 #12）；
+    - **`LinksEngine` 测试/注释/文档示例免疫**：排除 `.rs` 测试夹具/`#[cfg(test)]`/`placeholder` 与 `.md` 示例代码路径导致的假断链自污染，使现网 `links audit` 恢复 `100/100` 健康分；
+    - **Systemd 守护工具链探测 & Benchmark `v3.2`**：让 `PreflightChecker` 自动识别 NVM/Cargo 路径下的 `codegraph`；对齐 `DQ3` 物理健康度口径并校准 `COMP-C4` 等价采集基线（详见 [roadmap-phase37.md](src_doc/roadmap-phase37.md)）。
+  
+21. 需要防止信息过旧问题，例如文件被修改了，对应的语义或其他描述确没有更新。或者文件被删除、或新增了，但数据库里还是旧信息。除此以外，可能还有其他信息过旧问题，需要思考一下，并给出解决方案
+
   
 ---
 

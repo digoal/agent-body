@@ -7,6 +7,7 @@ use agent_steward::placement::{PlacementEngine, PlacementRequest};
 use agent_steward::scanner::Scanner;
 use agent_steward::env::EnvCollector;
 use agent_steward::memory::MemoryManager;
+use agent_steward::brief::{BriefAssembler, BriefRequest};
 
 #[derive(Parser)]
 #[command(name = "steward", version = agent_steward::VERSION, about = "Agent Host Steward — 宿主环境大管家 (Rust 版)")]
@@ -29,8 +30,20 @@ enum Commands {
         interval: u64,
     },
 
-    #[command(about = "一键获取宿主环境与上下文简报")]
-    Brief,
+    #[command(about = "一键获取宿主环境与上下文简报 (默认走 BriefAssembler 三位一体组装)")]
+    Brief {
+        #[arg(short, long, default_value = "", help = "任务查询意图关键词")]
+        query: String,
+
+        #[arg(short, long, default_value = "", help = "会话 ID (可选，用于召回本会话关键决策)")]
+        session_id: String,
+
+        #[arg(short = 'b', long, default_value_t = 1500, help = "Token 预算上限")]
+        budget_tokens: usize,
+
+        #[arg(long, default_value_t = false, help = "使用兼容旧版极简动态扫描输出")]
+        legacy: bool,
+    },
 
     #[command(about = "新对象放置与目录位置建议")]
     Place {
@@ -747,6 +760,15 @@ enum MemoryCommands {
 }
 
 fn main() -> Result<()> {
+    #[cfg(unix)]
+    unsafe {
+        extern "C" {
+            fn signal(sig: i32, handler: usize) -> usize;
+        }
+        // 恢复 SIGPIPE 默认行为，避免输出被管道下游（如 | head）提前关闭时触发 Broken pipe panic
+        signal(13, 0);
+    }
+
     let cli = Cli::parse();
     let cfg = Config::load_or_default(cli.config.as_deref())?;
     let storage = Storage::from_config(&cfg)?;
@@ -780,25 +802,39 @@ fn main() -> Result<()> {
             })?;
         }
 
-        Commands::Brief => {
+        Commands::Brief { query, session_id, budget_tokens, legacy } => {
             let t0 = std::time::Instant::now();
-            let env_collector = EnvCollector::new(storage.clone());
-            let summary = env_collector.collect_system_summary();
-            let procs = env_collector.collect_and_sync_processes()?;
-            let assets = storage.list_assets(5)?;
+            let out = if legacy {
+                let env_collector = EnvCollector::new(storage.clone());
+                let summary = env_collector.collect_system_summary();
+                let procs = env_collector.collect_and_sync_processes()?;
+                let assets = storage.list_assets(5)?;
 
-            let mut out = String::new();
-            out.push_str("=== Steward Brief 上下文简报 ===\n");
-            out.push_str(&format!("系统: {} | 内核: {} | 内存使用率: {:.1}%\n", summary.os_name, summary.kernel_version, summary.memory_used_pct));
-            out.push_str("活跃动态任务进程 (前 5):\n");
-            for p in procs.iter().take(5) {
-                let mem_mb = p.mem_bytes as f64 / (1024.0 * 1024.0);
-                out.push_str(&format!("  - [PID {}] {} (CPU {:.1}%, 内存 {:.1}MB) -> {}\n", p.pid, p.name, p.cpu_pct, mem_mb, p.command));
-            }
-            out.push_str("最近活跃资产:\n");
-            for a in assets {
-                out.push_str(&format!("  - [{}] {} ({})\n", a.asset_type, a.path, a.scan_tier));
-            }
+                let mut buf = String::new();
+                buf.push_str("=== Steward Brief 上下文简报 ===\n");
+                buf.push_str(&format!("系统: {} | 内核: {} | 内存使用率: {:.1}%\n", summary.os_name, summary.kernel_version, summary.memory_used_pct));
+                buf.push_str("活跃动态任务进程 (前 5):\n");
+                for p in procs.iter().take(5) {
+                    let mem_mb = p.mem_bytes as f64 / (1024.0 * 1024.0);
+                    buf.push_str(&format!("  - [PID {}] {} (CPU {:.1}%, 内存 {:.1}MB) -> {}\n", p.pid, p.name, p.cpu_pct, mem_mb, p.command));
+                }
+                buf.push_str("最近活跃资产:\n");
+                for a in assets {
+                    buf.push_str(&format!("  - [{}] {} ({})\n", a.asset_type, a.path, a.scan_tier));
+                }
+                buf
+            } else {
+                let provider = std::sync::Arc::new(
+                    agent_steward::memory::builtin_provider::BuiltinMemoryProvider::new(storage.clone()),
+                );
+                let assembler = BriefAssembler::new(storage.clone(), Some(provider));
+                let output = assembler.assemble(&BriefRequest {
+                    query,
+                    session_id,
+                    budget_tokens,
+                })?;
+                output.markdown
+            };
             print!("{}", out);
             agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
                 storage.provider().as_ref(),
@@ -1875,5 +1911,8 @@ mod tests {
         assert!(Cli::try_parse_from(["steward", "demo", "run", "scene-1"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "feedback", "list"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "feedback", "sync"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "brief"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "brief", "--query", "postgres", "--budget-tokens", "1200"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "brief", "--legacy"]).is_ok());
     }
 }

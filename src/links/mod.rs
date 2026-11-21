@@ -61,6 +61,78 @@ pub(crate) fn is_pure_data_file(path: &str) -> bool {
         || lower.ends_with(".log")
 }
 
+/// 判断是否为显式 Markdown 文件链接 (`[text](/root/new/...)` 或 `[text](file:///root/new/...)`)
+pub(crate) fn is_explicit_markdown_link(snippet: Option<&str>) -> bool {
+    match snippet {
+        Some(s) => s.contains("](/root/new/") || s.contains("](file:///root/new/"),
+        None => false,
+    }
+}
+
+/// 判断静态抽取出的引用边是否属于测试夹具、注释、UI 占位符或 Markdown 文档示例（避免假断链自污染）
+pub(crate) fn is_test_or_example_link(
+    source_path: &str,
+    target_path: &str,
+    snippet: Option<&str>,
+) -> bool {
+    let in_sys_tmp = source_path.starts_with("/tmp/");
+    if !in_sys_tmp
+        && (source_path.contains("/tests/")
+            || source_path.ends_with("_test.rs")
+            || source_path.ends_with("_test.py"))
+    {
+        return true;
+    }
+
+    if let Some(snip) = snippet {
+        let trimmed = snip.trim();
+        let lower = trimmed.to_lowercase();
+        if !in_sys_tmp
+            && (trimmed.starts_with("//")
+                || trimmed.starts_with("///")
+                || trimmed.starts_with("//!")
+                || trimmed.starts_with("* "))
+        {
+            return true;
+        }
+        if source_path.ends_with(".rs")
+            && !in_sys_tmp
+            && (lower.contains("placeholder=")
+                || lower.contains("assert!")
+                || lower.contains("assert_eq!")
+                || lower.contains("assert_ne!")
+                || lower.contains("expect(")
+                || lower.contains("${esc(")
+                || lower.contains("broken_ref")
+                || lower.contains("repaired_ref")
+                || lower.contains("示例")
+                || lower.contains("adversarial_")
+                || trimmed.starts_with("target_id:"))
+        {
+            return true;
+        }
+    }
+
+    if source_path.ends_with(".rs")
+        && !in_sys_tmp
+        && (source_path.contains("/demo/") || source_path.contains("/benchmark/"))
+        && !std::path::Path::new(target_path).exists()
+    {
+        return true;
+    }
+
+    if source_path.ends_with(".md")
+        && !in_sys_tmp
+        && std::path::Path::new(source_path).exists()
+        && !std::path::Path::new(target_path).exists()
+        && !is_explicit_markdown_link(snippet)
+    {
+        return true;
+    }
+
+    false
+}
+
 impl LinksEngine {
     pub fn new(storage: Arc<Storage>) -> Self {
         Self { storage }
@@ -131,7 +203,17 @@ impl LinksEngine {
 
     /// 自动分析脚本/代码文件内容中的跨资产引用或服务依赖 (支持精准行号、切片与多语言语法抽取)
     pub fn discover_links_from_script(&self, asset_path: &str, content: &str) -> Result<usize> {
+        // 测试目录内的集成测试夹具（非 /tmp/ 沙盒）不纳入宿主拓扑图
+        if !asset_path.starts_with("/tmp/")
+            && (asset_path.contains("/tests/")
+                || asset_path.ends_with("_test.rs")
+                || asset_path.ends_with("_test.py"))
+        {
+            return Ok(0);
+        }
+
         let mut count = 0;
+        let is_rust = asset_path.ends_with(".rs");
         let is_python = asset_path.ends_with(".py");
         let is_shell = asset_path.ends_with(".sh") || asset_path.ends_with(".bash");
         let is_js = asset_path.ends_with(".js") || asset_path.ends_with(".ts");
@@ -151,6 +233,10 @@ impl LinksEngine {
             let trimmed = line.trim();
             if trimmed.is_empty() {
                 continue;
+            }
+            // Rust 源码进入 #[cfg(test)] 单元测试块后立即停止抽取，防止测试字符串假路径污染生产拓扑
+            if is_rust && !asset_path.starts_with("/tmp/") && trimmed.starts_with("#[cfg(test)]") {
+                break;
             }
 
             let snippet_str = if trimmed.chars().count() > 120 {
@@ -266,6 +352,9 @@ impl LinksEngine {
                 if is_non_static_link_target(matched_path, trailing_char) {
                     continue;
                 }
+                if is_test_or_example_link(asset_path, matched_path, Some(&snippet_str)) {
+                    continue;
+                }
                 if is_md && matched_path.ends_with('/') && !std::path::Path::new(matched_path).exists() {
                     continue;
                 }
@@ -289,8 +378,9 @@ impl LinksEngine {
                 }
             }
 
-            // 5. 常见数据库与网络服务依赖（纯数据文件如 .json/.csv 跳过数字误判）
-            if !is_data && (line.contains("5432") || line.contains("postgresql://")) {
+            // 5. 常见数据库与网络服务依赖（纯数据文件如 .json/.csv、.md 文档以及链接检测器自身源码跳过字面量误判）
+            let skip_port_detect = is_data || is_md || asset_path.ends_with("/links/mod.rs") || trimmed.starts_with("target_id:");
+            if !skip_port_detect && (line.contains("5432") || line.contains("postgresql://")) {
                 let link = LinkRecord {
                     id: None,
                     source_type: "asset".to_string(),
@@ -309,7 +399,7 @@ impl LinksEngine {
                 count += 1;
             }
 
-            if !is_data && (line.contains("11434") || line.contains("ollama")) {
+            if !skip_port_detect && (line.contains("11434") || line.contains("ollama")) {
                 let link = LinkRecord {
                     id: None,
                     source_type: "asset".to_string(),
@@ -328,7 +418,7 @@ impl LinksEngine {
                 count += 1;
             }
 
-            if !is_data && (line.contains("6379") || line.contains("redis://")) {
+            if !skip_port_detect && (line.contains("6379") || line.contains("redis://")) {
                 let link = LinkRecord {
                     id: None,
                     source_type: "asset".to_string(),
@@ -527,5 +617,46 @@ p8 = "/root/new/work/KFS_articles_" + suffix
             .discover_links_from_script("/root/new/shared_proj/data.json", json_data)
             .unwrap();
         assert_eq!(cnt_json, 0, "纯数据 JSON 中的数字不应误判为服务端口依赖");
+    }
+
+    #[test]
+    fn test_discover_links_ignores_rust_tests_comments_and_md_examples() {
+        let storage = Arc::new(Storage::open_in_memory().expect("open_in_memory"));
+        let engine = LinksEngine::new(storage.clone());
+
+        let rs_code = r##"
+/// 示例路径: /root/new/shared_proj/doc_example.py
+fn helper() {
+    let html = r#"<input placeholder="/root/new/shared_proj/my_script.py" />"#;
+    let _ = html;
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn fake_test() {
+        let p = "/root/new/work/fake_unit_test_fixture.rs";
+        assert!(!p.is_empty());
+    }
+}
+"##;
+        let cnt_rs = engine
+            .discover_links_from_script("/root/new/work/agent-steward/src/demo_mod.rs", rs_code)
+            .unwrap();
+        assert_eq!(cnt_rs, 0, "Rust 注释、placeholder 与 #[cfg(test)] 内假路径不应入图");
+
+        let cnt_tests_dir = engine
+            .discover_links_from_script(
+                "/root/new/work/agent-steward/tests/integration_fixture.rs",
+                "let x = \"/root/new/work/fake_integ.rs\";",
+            )
+            .unwrap();
+        assert_eq!(cnt_tests_dir, 0, "/tests/ 夹具不应纳入生产拓扑");
+
+        let md_example = "示例 CLI:\n`agent-steward links impact /root/new/shared_proj/nonexistent_demo.py`\n如 redis:6379 被误判";
+        let cnt_md = engine
+            .discover_links_from_script("/root/new/work/agent-steward/README.md", md_example)
+            .unwrap();
+        assert_eq!(cnt_md, 0, "真实 .md 中的 CLI 示例与端口文本不应产生假边");
     }
 }

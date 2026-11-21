@@ -51,18 +51,36 @@ impl LinkAuditor {
             let is_false_positive = if link.target_type == "asset" {
                 (!both_in_sys_tmp && crate::links::is_non_static_link_target(&link.target_id, None))
                     || (both_in_sys_tmp && crate::links::is_non_static_link_target(&link.target_id, None) && !link.target_id.starts_with("/tmp/"))
-                    || (link.source_id.ends_with(".md")
-                        && link.target_id.ends_with('/')
-                        && !Path::new(&link.target_id).exists())
+                    || (!both_in_sys_tmp
+                        && crate::links::is_test_or_example_link(
+                            &link.source_id,
+                            &link.target_id,
+                            link.snippet.as_deref(),
+                        ))
+                    || (!link.source_id.starts_with("/tmp/")
+                        && link.source_id.ends_with(".md")
+                        && !Path::new(&link.target_id).exists()
+                        && !crate::links::is_explicit_markdown_link(link.snippet.as_deref()))
             } else if link.target_type == "service" {
                 crate::links::is_pure_data_file(&link.source_id)
+                    || link.source_id.ends_with(".md")
+                    || (!both_in_sys_tmp
+                        && crate::links::is_test_or_example_link(
+                            &link.source_id,
+                            &link.target_id,
+                            link.snippet.as_deref(),
+                        ))
             } else {
                 false
             };
 
             if is_false_positive {
                 if fix_dangling && link.auto_discovered {
-                    let _ = self.storage.delete_links_for_target(&link.target_id);
+                    if let Some(id) = link.id {
+                        let _ = self.storage.delete_link(id);
+                    } else if link.target_type == "asset" {
+                        let _ = self.storage.delete_links_for_target(&link.target_id);
+                    }
                     fixed_count += 1;
                 }
                 continue;
@@ -192,5 +210,49 @@ mod tests {
         let final_report = auditor.audit_links(false).unwrap();
         assert_eq!(final_report.dangling_count, 0);
         assert_eq!(final_report.health_score, 100);
+    }
+
+    #[test]
+    fn test_audit_links_ignores_and_fixes_md_service_false_positive_without_deleting_real_py_link() {
+        let storage = Arc::new(Storage::open_in_memory().expect("open_in_memory"));
+        let auditor = LinkAuditor::new(storage.clone());
+
+        // 1. 历史遗留 .md 误判 service 边
+        storage.add_link(&LinkRecord {
+            id: None,
+            source_type: "asset".to_string(),
+            source_id: "/root/new/work/agent-steward/user_feedback.md".to_string(),
+            target_type: "service".to_string(),
+            target_id: "redis:6379".to_string(),
+            relation: "depends_on".to_string(),
+            confidence: 0.88,
+            auto_discovered: true,
+            line_number: Some(115),
+            snippet: Some("redis:6379".to_string()),
+            provenance: Some("port_detect".to_string()),
+            created_at: None,
+        }).unwrap();
+
+        // 2. 真实 .py 脚本依赖边
+        storage.add_link(&LinkRecord {
+            id: None,
+            source_type: "asset".to_string(),
+            source_id: "/root/new/shared_proj/real_worker.py".to_string(),
+            target_type: "service".to_string(),
+            target_id: "redis:6379".to_string(),
+            relation: "depends_on".to_string(),
+            confidence: 0.9,
+            auto_discovered: true,
+            line_number: Some(10),
+            snippet: Some("redis://127.0.0.1:6379".to_string()),
+            provenance: Some("port_detect".to_string()),
+            created_at: None,
+        }).unwrap();
+
+        let fix_rep = auditor.audit_links(true).unwrap();
+        assert_eq!(fix_rep.fixed_count, 1, "只应清理 1 条 .md 假阳性边");
+
+        let remaining = storage.query_links_for_node("asset", "/root/new/shared_proj/real_worker.py").unwrap();
+        assert_eq!(remaining.len(), 1, "不应误删真实 .py 的 redis:6379 依赖边");
     }
 }

@@ -162,6 +162,7 @@ RestartSec=5s
 User=root
 WorkingDirectory=/root
 Environment="RUST_LOG=info"
+Environment="PATH=/root/.cargo/bin:/root/.local/bin:/root/.nvm/versions/node/v24.20.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 LimitNOFILE=65535
 
 [Install]

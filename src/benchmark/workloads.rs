@@ -1457,11 +1457,25 @@ fn run_w10_link_precision_regression() -> Result<WorkloadResult> {
     let adversarial_json = r#"[{"job":"finance","tot":6379,"port":5432,"ts":11434}]"#;
     std::fs::write(&json_path, adversarial_json)?;
 
-    // Without Steward: 朴素正则统计 /root/new/ 与数字端口产生 11 个假阳性候选项
+    let adversarial_rs = r#"
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn sample() {
+        let p = "/root/new/work/fake_rs_unit_path.rs";
+    }
+}
+"#;
+    let adversarial_md = "示例命令: `agent-steward links impact /root/new/shared_proj/fake_doc_ref.py` | redis:6379";
+
+    // Without Steward: 朴素正则统计 /root/new/ 与数字端口产生 13 个假阳性候选项
     let t_base = Instant::now();
-    let naive_fp_count = adversarial_code.matches("/root/new/").count() + 3; // 8 路径 + 3 json 端口
+    let naive_fp_count = adversarial_code.matches("/root/new/").count() + 3 + 2; // 8 py + 3 json + 1 rs + 1 md
     let base_us = t_base.elapsed().as_micros();
-    let base_tokens = estimate_tokens(&adversarial_code) + estimate_tokens(adversarial_json);
+    let base_tokens = estimate_tokens(&adversarial_code)
+        + estimate_tokens(adversarial_json)
+        + estimate_tokens(adversarial_rs)
+        + estimate_tokens(adversarial_md);
 
     // With Steward: LinksEngine 脱敏抽取 + LinkAuditor 审计
     let mem = Arc::new(Storage::open_in_memory()?);
@@ -1469,10 +1483,12 @@ fn run_w10_link_precision_regression() -> Result<WorkloadResult> {
     let t_stew = Instant::now();
     let cnt_py = engine.discover_links_from_script(&script_path.to_string_lossy(), &adversarial_code)?;
     let cnt_json = engine.discover_links_from_script(&json_path.to_string_lossy(), adversarial_json)?;
+    let cnt_rs = engine.discover_links_from_script("/root/new/work/agent-steward/src/sample_mod.rs", adversarial_rs)?;
+    let cnt_md = engine.discover_links_from_script("/root/new/work/agent-steward/README.md", adversarial_md)?;
     let audit = LinkAuditor::new(mem).audit_links(false)?;
     let stew_us = t_stew.elapsed().as_micros();
 
-    let total_extracted = cnt_py + cnt_json;
+    let total_extracted = cnt_py + cnt_json + cnt_rs + cnt_md;
     // 期望仅抽取 dep_a, dep_b 2 条真依赖，假阳性 = 0
     let false_positives = total_extracted.saturating_sub(2);
     let precision_pct = if total_extracted == 0 {
@@ -1509,7 +1525,7 @@ fn run_w10_link_precision_regression() -> Result<WorkloadResult> {
         format!("朴素正则扫描含 %s/f-string/占位符/JSON 数字产生 {} 个假阳性", naive_fp_count),
         "LinksEngine::discover_links_from_script + LinkAuditor".into(),
         format!(
-            "2 真依赖 + 11 对抗干扰项中精准抽取 {} 条（假阳性={}, Precision={:.1}%）",
+            "2 真依赖 + 13 对抗干扰项中精准抽取 {} 条（假阳性={}, Precision={:.1}%）",
             total_extracted, false_positives, precision_pct
         ),
     );
