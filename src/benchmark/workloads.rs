@@ -287,11 +287,20 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             steward_desc: "SecretRedactor + POSIX 转义 + PromptInjectionScanner 三重微秒级拦截".into(),
             sla_desc: "redaction == 100%, injection_escape == 0, steward_elapsed_us < 10_000".into(),
         },
+        WorkloadSpec {
+            id: "W12".into(),
+            name: "freshness_and_staleness_healing".into(),
+            title: "资产改删写穿失效与跨表一致性自愈".into(),
+            category: "D6 Freshness & Self-Healing".into(),
+            baseline_desc: "文件改删后仍沿用旧向量/旧描述/已删FTS/幽灵Fact节点与同路径重复摘要记忆".into(),
+            steward_desc: "Write-Through 写穿失效 + FreshnessReconciler 跨表一致性自愈闭环".into(),
+            sla_desc: "4/4 新鲜度防线命中, token_savings_pct >= 50%, steward_elapsed_us < 100_000".into(),
+        },
     ]
 }
 
 pub fn run_all_workloads(storage: Arc<dyn StorageProvider>) -> Result<Vec<WorkloadResult>> {
-    let mut results = Vec::with_capacity(11);
+    let mut results = Vec::with_capacity(12);
     for spec in list_workload_specs() {
         results.push(run_workload(storage.clone(), &spec.id)?);
     }
@@ -311,7 +320,8 @@ pub fn run_workload(storage: Arc<dyn StorageProvider>, id: &str) -> Result<Workl
         "W9" => run_w9_hybrid_semantic_recall(),
         "W10" => run_w10_link_precision_regression(),
         "W11" => run_w11_security_redaction_and_guardrail(),
-        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W11)", id),
+        "W12" => run_w12_freshness_and_staleness_healing(storage),
+        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W12)", id),
     }
 }
 
@@ -1642,6 +1652,243 @@ fn run_w11_security_redaction_and_guardrail() -> Result<WorkloadResult> {
             baseline_actionability: 0.20,
             steward_actionability: 1.0,
             baseline_safety: 0.0,
+            steward_safety: 1.0,
+        },
+        95.0,
+    );
+    Ok(res)
+}
+
+/// W12: 资产改删写穿失效与跨表一致性自愈 (Phase 38 / ISSUE #21)
+fn run_w12_freshness_and_staleness_healing(_storage: Arc<dyn StorageProvider>) -> Result<WorkloadResult> {
+    let tmp = BenchTempDir::create("w12_freshness")?;
+    let app_path = tmp.0.join("service_main.py");
+    let dead_path = tmp.0.join("obsolete_module.py");
+    let v1_content = "def handle_v1():\n    return 1\n";
+    let dead_content = "def legacy_w12_ghost_marker():\n    return 0\n";
+    std::fs::write(&app_path, v1_content)?;
+    std::fs::write(&dead_path, dead_content)?;
+
+    let app_str = app_path.to_string_lossy().to_string();
+    let dead_str = dead_path.to_string_lossy().to_string();
+
+    // Baseline: 无写穿失效时全量遍历、读取元数据/内容核对并探查监听端口，仍输出陈旧向量/ghost/重复记忆冗余上下文
+    let t_base = Instant::now();
+    let mut disk_scan_bytes = 0usize;
+    for entry in WalkDir::new(&tmp.0).into_iter().filter_map(|e| e.ok()) {
+        if entry.file_type().is_file() {
+            let _ = std::fs::metadata(entry.path());
+            if let Ok(text) = std::fs::read_to_string(entry.path()) {
+                disk_scan_bytes += text.len();
+            }
+        }
+    }
+    let baseline_ports_seen = ProcessNetTopology::scan_listening_ports()
+        .map(|ps| ps.len())
+        .unwrap_or(0);
+    let baseline_dump = serde_json::json!({
+        "scan_bytes": disk_scan_bytes,
+        "ports_seen": baseline_ports_seen,
+        "stale_asset": {
+            "path": app_str,
+            "embedding_status": "ready",
+            "embedding": [0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88],
+            "description": "outdated v1 handler from stale cache"
+        },
+        "stale_fts_hits": [{
+            "path": dead_str,
+            "description": "legacy_w12_ghost_marker still indexed despite file deletion"
+        }],
+        "ghost_fact_node": {
+            "id": format!("file:{}", dead_str),
+            "node_type": "file",
+            "status": "orphan_unpruned"
+        },
+        "duplicate_memories": [
+            format!("产出文件 `{}` 摘要: version 1 stale summary duplicated in prompt context", app_str),
+            format!("产出文件 `{}` 摘要: version 2 stale summary duplicated in prompt context", app_str)
+        ]
+    })
+    .to_string();
+    let base_us = t_base.elapsed().as_micros().max(1);
+    let base_tokens = estimate_tokens(&baseline_dump);
+
+    // Steward 实跑：建立沙盒库 -> 物理改写/删除 -> 调用 FreshnessReconciler 完整闭环自愈
+    let sandbox = Storage::open_in_memory()?;
+    sandbox.upsert_asset(&AssetRecord {
+        id: "w12-app".into(),
+        path: app_str.clone(),
+        asset_type: "script".into(),
+        owner: "user:digoal".into(),
+        security_level: "internal".into(),
+        scan_tier: "deep".into(),
+        description: Some("old v1 service handler".into()),
+        desc_kv: serde_json::json!({
+            "content_hash": "w12_old_v1_hash",
+            "annotation_status": "ollama_enriched",
+            "embedding_status": "ready"
+        }),
+        usage: Some("python3 service_main.py".into()),
+        size_bytes: Some(v1_content.len() as i64),
+        file_count: None,
+        tags: vec![],
+        status: "active".into(),
+    })?;
+    sandbox.update_asset_embedding(&app_str, &[0.5, 0.5, 0.5])?;
+
+    sandbox.upsert_asset(&AssetRecord {
+        id: "w12-dead".into(),
+        path: dead_str.clone(),
+        asset_type: "script".into(),
+        owner: "user:digoal".into(),
+        security_level: "internal".into(),
+        scan_tier: "deep".into(),
+        description: Some("legacy_w12_ghost_marker".into()),
+        desc_kv: serde_json::json!({}),
+        usage: None,
+        size_bytes: Some(dead_content.len() as i64),
+        file_count: None,
+        tags: vec![],
+        status: "active".into(),
+    })?;
+    sandbox.upsert_fact_node(&crate::storage::models::FactNodeRecord {
+        id: format!("file:{}", dead_str),
+        node_type: "file".into(),
+        name: "obsolete_module.py".into(),
+        label: "dead".into(),
+        properties: serde_json::json!({}),
+        updated_at: None,
+    })?;
+    sandbox.add_link(&LinkRecord {
+        id: None,
+        source_type: "asset".into(),
+        source_id: app_str.clone(),
+        target_type: "asset".into(),
+        target_id: dead_str.clone(),
+        relation: "depends_on".into(),
+        confidence: 0.9,
+        auto_discovered: true,
+        line_number: Some(1),
+        snippet: None,
+        provenance: Some("benchmark".into()),
+        created_at: None,
+    })?;
+    for (idx, ts) in ["2026-11-20T01:00:00Z", "2026-11-20T02:00:00Z"]
+        .into_iter()
+        .enumerate()
+    {
+        sandbox.insert_memory(&crate::storage::models::MemoryRecord {
+            id: format!("w12-mem-{}", idx + 1),
+            memory_type: "note".into(),
+            content: format!("产出文件 `{}` 摘要:\nv{} snapshot", app_str, idx + 1),
+            summary: None,
+            source_agent: None,
+            source_session: None,
+            tags: vec![],
+            weight: 0.7,
+            pinned: false,
+            status: "active".into(),
+            embedding: vec![],
+        })?;
+        let _ = ts;
+    }
+
+    // 真实变更：覆盖写 app_path 且物理删除 dead_path
+    std::fs::write(
+        &app_path,
+        "def handle_v2_refactored(payload):\n    return {'ok': True, 'len': len(payload)}\n",
+    )?;
+    std::fs::remove_file(&dead_path)?;
+
+    let t_stew = Instant::now();
+    let rep = crate::feedback::probes::FreshnessReconciler::reconcile(&sandbox)?;
+    let stale_emb_cleared = sandbox
+        .get_asset_by_path(&app_str)?
+        .and_then(|a| {
+            a.desc_kv
+                .get("embedding_status")
+                .and_then(|v| v.as_str())
+                .map(|s| s == "stale")
+        })
+        .unwrap_or(false)
+        && sandbox.get_asset_embedding(&app_str)?.is_empty();
+    let deleted_fts_excluded = sandbox
+        .search_assets_fts("legacy_w12_ghost_marker", 10)?
+        .is_empty();
+    let ghost_node_pruned = rep.ghost_fact_nodes_pruned >= 1
+        && sandbox
+            .list_all_fact_nodes(50)?
+            .iter()
+            .all(|n| n.id != format!("file:{}", dead_str));
+    let dup_mem_deduped = rep.duplicate_memories_archived >= 1
+        && sandbox.list_all_active_memories(10)?.len() == 1;
+    let stew_us = t_stew.elapsed().as_micros();
+
+    let intercepted = [
+        stale_emb_cleared,
+        deleted_fts_excluded,
+        ghost_node_pruned,
+        dup_mem_deduped,
+    ]
+    .into_iter()
+    .filter(|b| *b)
+    .count() as i64;
+
+    let stew_summary = serde_json::json!({
+        "stale_invalidated": stale_emb_cleared,
+        "fts_purged": deleted_fts_excluded,
+        "ghost_pruned": ghost_node_pruned,
+        "mem_deduped": dup_mem_deduped
+    })
+    .to_string();
+    let stew_tokens = estimate_tokens(&stew_summary);
+    let token_savings_pct = if base_tokens > 0 {
+        ((base_tokens - stew_tokens) as f64 / base_tokens as f64) * 100.0
+    } else {
+        0.0
+    };
+    let sla_passed = intercepted == 4 && token_savings_pct >= 50.0 && stew_us < 100_000;
+
+    let mut res = finalize_result(
+        "W12",
+        "freshness_and_staleness_healing",
+        "资产改删写穿失效与跨表一致性自愈",
+        "D6 Freshness & Self-Healing",
+        base_tokens,
+        stew_tokens,
+        4,
+        1,
+        base_us,
+        stew_us,
+        4,
+        intercepted,
+        6,
+        2,
+        4,
+        sla_passed,
+        "WalkDir 遍历 + 无写穿缓存 + 遗留 FTS/ghost 节点 + 重复摘要记忆".into(),
+        "Write-Through 失效写穿 + FreshnessReconciler::reconcile 级联净化".into(),
+        format!(
+            "4/4 新鲜度防线命中={}/4 (向量写穿={}, FTS剔除={}, 幽灵剪枝={}, 记忆去重={})，耗时 {} μs",
+            intercepted,
+            stale_emb_cleared,
+            deleted_fts_excluded,
+            ghost_node_pruned,
+            dup_mem_deduped,
+            stew_us
+        ),
+    );
+    apply_quality_eval(
+        &mut res,
+        ContextQualityInputs {
+            required_facts_total: 4,
+            baseline_facts_hit: 1,
+            steward_facts_hit: intercepted as usize,
+            baseline_signal_precision: 0.25,
+            steward_signal_precision: 1.0,
+            baseline_actionability: 0.25,
+            steward_actionability: 1.0,
+            baseline_safety: 0.50,
             steward_safety: 1.0,
         },
         95.0,

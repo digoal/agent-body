@@ -59,6 +59,9 @@ pub trait StorageProvider: Send + Sync {
     fn traverse_fact_graph(&self, root_id: &str, max_hops: usize) -> Result<SubGraph>;
     fn list_all_fact_nodes(&self, limit: usize) -> Result<Vec<FactNodeRecord>>;
     fn list_all_fact_edges(&self, limit: usize) -> Result<Vec<FactEdgeRecord>>;
+    fn delete_fact_node(&self, _id: &str) -> Result<usize> {
+        Ok(0)
+    }
 
     // ─── Embedding Vectors (Phase 29 全链路向量存储) ───────────────────
     fn update_asset_embedding(&self, _path: &str, _embedding: &[f32]) -> Result<()> {

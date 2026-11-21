@@ -644,12 +644,12 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_benchmark",
-                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v3.0）：运行 A/B 对照负载(W1~W11)、内核微基准(M1~M5)、数据质量(DQ1~DQ4)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-10)。",
+                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v3.3）：运行 A/B 对照负载(W1~W12)、内核微基准(M1~M5)、数据质量与新鲜度(DQ1~DQ5)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-10)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "action": { "type": "string", "enum": ["workloads", "run", "report", "ledger", "compare", "export", "reset", "competitors"], "default": "report" },
-                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | dq | competitors | W1~W11 | COMP-C1~C4" },
+                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | dq | competitors | W1~W12 | COMP-C1~C4" },
                         "track": { "type": "string", "default": "all", "description": "竞品对标赛道: all | C1 | C2 | C3 | C4" },
                         "save": { "type": "boolean", "default": true },
                         "run_id": { "type": "string" },
@@ -664,16 +664,18 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_feedback",
-                "description": "实际使用反馈总账 (user_feedback.md) 双向查阅、结构化追加与已验证反馈→长期记忆沉淀 (Phase 30)",
+                "description": "实际使用反馈总账 (user_feedback.md) 双向查阅、结构化追加、已验证反馈沉淀记忆，以及 Phase 38~39 信息新鲜度对账 (reconcile) 与五点执行回路对比探针 (probes)",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "action": { "type": "string", "enum": ["list", "add", "sync"], "default": "list" },
+                        "action": { "type": "string", "enum": ["list", "add", "sync", "reconcile", "probes"], "default": "list" },
                         "category": { "type": "string", "enum": ["PRO", "CON", "BENCH", "REQ"], "default": "CON" },
                         "priority": { "type": "string", "enum": ["P0", "P1", "P2"], "default": "P1" },
                         "title": { "type": "string" },
                         "evidence": { "type": "string" },
-                        "target": { "type": "string" }
+                        "target": { "type": "string" },
+                        "auto_heal": { "type": "boolean", "default": true, "description": "action=probes 时是否自动执行 FreshnessReconciler 自愈" },
+                        "auto_feedback": { "type": "boolean", "default": false, "description": "action=probes 时是否将越阈值异常自动去重写入 user_feedback.md" }
                     }
                 }
             })
@@ -1487,6 +1489,21 @@ impl McpToolRegistry {
                             "synced_to_memories": added,
                             "path": fb_path.to_string_lossy()
                         }))?)
+                    }
+                    "reconcile" => {
+                        let rep = crate::feedback::probes::FreshnessReconciler::reconcile(&self.storage)?;
+                        Ok(serde_json::to_string_pretty(&rep)?)
+                    }
+                    "probes" => {
+                        let auto_heal = args.get("auto_heal").and_then(|v| v.as_bool()).unwrap_or(true);
+                        let auto_feedback = args.get("auto_feedback").and_then(|v| v.as_bool()).unwrap_or(false);
+                        let rep = crate::feedback::probes::SelfEvolutionProbeEngine::run_probes(
+                            &self.storage,
+                            &fb_path,
+                            auto_heal,
+                            auto_feedback,
+                        )?;
+                        Ok(serde_json::to_string_pretty(&rep)?)
                     }
                     other => bail!("未知 feedback action: {}", other),
                 }

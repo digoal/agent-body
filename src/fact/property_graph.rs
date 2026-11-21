@@ -24,11 +24,14 @@ impl PropertyGraphOrganizer {
     pub fn build_host_graph(&self) -> Result<(usize, usize)> {
         let mut node_count = 0usize;
         let mut edge_count = 0usize;
+        let mut active_port_ids = std::collections::HashSet::new();
+        let mut active_project_ids = std::collections::HashSet::new();
 
         // 1. 挖掘系统源码工程节点 (Projects)
         if let Ok(repos) = AssetsCatalogEngine::scan_repos(None) {
             for r in repos {
                 let node_id = format!("project:{}", r.name);
+                active_project_ids.insert(node_id.clone());
                 let repo_path = Path::new(&r.abs_path);
                 let placement_zone = infer_placement_zone(&r.abs_path);
                 let git_remote = if r.is_git_repo {
@@ -81,6 +84,7 @@ impl PropertyGraphOrganizer {
         if let Ok(ports) = ProcessNetTopology::scan_listening_ports() {
             for p in ports {
                 let port_id = format!("port:{}", p.port);
+                active_port_ids.insert(port_id.clone());
                 let exposure_scope = if p.bind_ip == "127.0.0.1" || p.bind_ip == "::1" {
                     "loopback_safe"
                 } else {
@@ -363,6 +367,38 @@ impl PropertyGraphOrganizer {
             };
             self.storage.upsert_fact_node(&tnode)?;
             node_count += 1;
+        }
+
+        // 5. 剪除幽灵节点（规约 #21：已关闭端口、已删文件节点与失踪工程节点）
+        if let Ok(existing_nodes) = self.storage.list_all_fact_nodes(2000) {
+            for node in existing_nodes {
+                if node.id.contains("bench:") || node.id.contains("demo:") {
+                    continue;
+                }
+                match node.node_type.as_str() {
+                    "port" if !active_port_ids.is_empty() && !active_port_ids.contains(&node.id) => {
+                        let _ = self.storage.delete_fact_node(&node.id);
+                    }
+                    "file" => {
+                        if let Some(p) = node.id.strip_prefix("file:") {
+                            if p.starts_with('/') && !Path::new(p).exists() {
+                                let _ = self.storage.delete_fact_node(&node.id);
+                            }
+                        }
+                    }
+                    "project" if !active_project_ids.is_empty() && !active_project_ids.contains(&node.id) => {
+                        let canon = node
+                            .properties
+                            .get("canonical_path")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        if canon.is_empty() || !Path::new(canon).exists() {
+                            let _ = self.storage.delete_fact_node(&node.id);
+                        }
+                    }
+                    _ => {}
+                }
+            }
         }
 
         Ok((node_count, edge_count))

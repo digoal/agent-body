@@ -189,6 +189,17 @@ impl StorageProvider for SqliteStorageProvider {
         let conn = self.lock_conn()?;
         let desc_kv_str = serde_json::to_string(&asset.desc_kv)?;
         let tags_str = serde_json::to_string(&asset.tags)?;
+        let invalidate_embedding: i32 = if asset
+            .desc_kv
+            .get("embedding_status")
+            .and_then(|v| v.as_str())
+            == Some("stale")
+            || asset.status == "missing"
+        {
+            1
+        } else {
+            0
+        };
 
         conn.execute(
             "INSERT INTO assets (id, path, type, owner, security_level, scan_tier, description, desc_kv, usage, size_bytes, file_count, tags, status, updated_at)
@@ -205,6 +216,7 @@ impl StorageProvider for SqliteStorageProvider {
                 file_count = excluded.file_count,
                 tags = excluded.tags,
                 status = excluded.status,
+                embedding = CASE WHEN ?14 != 0 THEN '[]' ELSE assets.embedding END,
                 updated_at = strftime('%Y-%m-%dT%H:%M:%f+00:00','now')",
             params![
                 asset.id,
@@ -220,6 +232,7 @@ impl StorageProvider for SqliteStorageProvider {
                 asset.file_count,
                 tags_str,
                 asset.status,
+                invalidate_embedding,
             ],
         )?;
         Ok(())
@@ -265,7 +278,7 @@ impl StorageProvider for SqliteStorageProvider {
             "SELECT a.id, a.path, a.type, a.owner, a.security_level, a.scan_tier, a.description, a.desc_kv, a.usage, a.size_bytes, a.file_count, a.tags, a.status
              FROM assets_fts f
              JOIN assets a ON f.rowid = a.rowid
-             WHERE assets_fts MATCH ?1
+             WHERE assets_fts MATCH ?1 AND a.status = 'active'
              ORDER BY rank
              LIMIT ?2"
         )?;
@@ -1008,6 +1021,16 @@ impl StorageProvider for SqliteStorageProvider {
             })
         })?.collect::<Result<Vec<_>, _>>()?;
         Ok(edges)
+    }
+
+    fn delete_fact_node(&self, id: &str) -> Result<usize> {
+        let conn = self.lock_conn()?;
+        conn.execute(
+            "DELETE FROM fact_edges WHERE source_id = ?1 OR target_id = ?1",
+            params![id],
+        )?;
+        let affected = conn.execute("DELETE FROM fact_nodes WHERE id = ?1", params![id])?;
+        Ok(affected)
     }
 
     fn update_asset_embedding(&self, path: &str, embedding: &[f32]) -> Result<()> {

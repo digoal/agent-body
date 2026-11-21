@@ -644,6 +644,11 @@ impl HeuristicMetadataExtractor {
         let loc = snippet.lines().count();
         let fs_meta = std::fs::metadata(path).ok();
         let actual_size = size_bytes.or_else(|| fs_meta.as_ref().map(|m| m.len() as i64));
+        let mtime_secs = fs_meta
+            .as_ref()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs());
         let last_modified_at = fs_meta
             .as_ref()
             .and_then(|m| m.modified().ok())
@@ -668,6 +673,9 @@ impl HeuristicMetadataExtractor {
         }
         if let Some(sz) = actual_size {
             kv.insert("size_bytes".to_string(), json!(sz));
+        }
+        if let Some(secs) = mtime_secs {
+            kv.insert("mtime_secs".to_string(), json!(secs));
         }
         if let Some(ref mode) = file_mode {
             kv.insert("file_mode".to_string(), json!(mode));
@@ -1100,7 +1108,7 @@ impl HeuristicMetadataExtractor {
     }
 }
 
-/// 防覆写智能合并：保护已有的 Ollama/手动丰富元数据不被 Watcher 或重扫抹除
+/// 防覆写与变更写穿智能合并：保护未变资产的丰富元数据，文件变化时立即写穿失效旧向量与旧 L2 标注
 pub fn merge_with_existing_asset(mut new_rec: AssetRecord, existing: Option<&AssetRecord>) -> AssetRecord {
     let Some(old) = existing else {
         return new_rec;
@@ -1117,16 +1125,49 @@ pub fn merge_with_existing_asset(mut new_rec: AssetRecord, existing: Option<&Ass
         .unwrap_or("");
 
     let is_rich_old = matches!(old_status, "ollama_enriched" | "manual");
+    let size_changed = old.size_bytes.is_some()
+        && new_rec.size_bytes.is_some()
+        && old.size_bytes != new_rec.size_bytes;
+    let hash_changed = old_hash.is_some() && old_hash != new_hash;
+    let content_changed = hash_changed || size_changed;
 
-    if is_rich_old && old_hash.is_some() && old_hash == new_hash {
-        // 文件实质内容未变，完整保留已有的 Ollama 语义标注与用法
-        new_rec.description = old.description.clone();
-        new_rec.usage = old.usage.clone();
-        new_rec.desc_kv = old.desc_kv.clone();
-    } else if is_rich_old && old_hash != new_hash {
-        // 文件内容发生实质变更，采用新 L1 事实并标记需要重新精炼
+    if !content_changed && old_hash.is_some() && old_hash == new_hash {
+        let fresh_mtime = new_rec.desc_kv.get("mtime_secs").cloned();
+        if is_rich_old {
+            // 文件实质内容未变，完整保留已有的 Ollama 语义标注、用法与向量状态
+            new_rec.description = old.description.clone();
+            new_rec.usage = old.usage.clone();
+            new_rec.desc_kv = old.desc_kv.clone();
+            if let Some(m) = fresh_mtime {
+                if let Some(obj) = new_rec.desc_kv.as_object_mut() {
+                    obj.insert("mtime_secs".to_string(), m);
+                }
+            }
+        } else if old
+            .desc_kv
+            .get("embedding_status")
+            .and_then(|v| v.as_str())
+            == Some("ready")
+        {
+            // 内容未变的启发式资产：保留已有向量就绪状态，避免无谓重算
+            if let Some(new_obj) = new_rec.desc_kv.as_object_mut() {
+                for key in ["embedding_status", "embedding_model", "embedding_dim", "embedded_at"] {
+                    if let Some(val) = old.desc_kv.get(key) {
+                        new_obj.insert(key.to_string(), val.clone());
+                    }
+                }
+            }
+        }
+    } else if content_changed {
+        // 文件内容或尺寸发生实质变更：写穿失效旧向量，并通知 L2 重新精炼
         if let Some(obj) = new_rec.desc_kv.as_object_mut() {
-            obj.insert("annotation_status".to_string(), json!("needs_re_enrich"));
+            obj.insert("embedding_status".to_string(), json!("stale"));
+            if let Some(oh) = old_hash {
+                obj.insert("prev_content_hash".to_string(), json!(oh));
+            }
+            if is_rich_old {
+                obj.insert("annotation_status".to_string(), json!("needs_re_enrich"));
+            }
         }
     }
 
@@ -1398,5 +1439,26 @@ mod tests {
         assert_eq!(merged.desc_kv["annotation_status"], "ollama_enriched");
         assert_eq!(merged.desc_kv["purpose"], "高精度Ollama标注");
         assert_eq!(merged.usage.as_deref(), Some("run_a()"));
+
+        // 验证变更写穿失效：hash/尺寸变动时旧向量标记 stale、旧 L2 标为 needs_re_enrich
+        let modified_new = AssetRecord {
+            id: "new-id-2".to_string(),
+            path: "/tmp/a.rs".to_string(),
+            asset_type: "script".to_string(),
+            owner: "user:digoal".to_string(),
+            security_level: "internal".to_string(),
+            scan_tier: "deep".to_string(),
+            description: Some("new heuristic".to_string()),
+            desc_kv: json!({"content_hash": "def456", "annotation_status": "heuristic_only", "embedding_status": "pending"}),
+            usage: Some("run_b()".to_string()),
+            size_bytes: Some(256),
+            file_count: None,
+            tags: vec![],
+            status: "active".to_string(),
+        };
+        let stale_merged = merge_with_existing_asset(modified_new, Some(&existing));
+        assert_eq!(stale_merged.desc_kv["embedding_status"], "stale");
+        assert_eq!(stale_merged.desc_kv["annotation_status"], "needs_re_enrich");
+        assert_eq!(stale_merged.desc_kv["prev_content_hash"], "abc123");
     }
 }

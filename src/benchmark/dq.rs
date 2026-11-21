@@ -1,9 +1,9 @@
 use crate::benchmark::report::DataQualityResult;
 use crate::storage::StorageProvider;
 
-/// 运行宿主机数据质量与 D6 准确率门禁 (DQ1~DQ3)
+/// 运行宿主机数据质量与 D6 准确率/新鲜度门禁 (DQ1~DQ5)
 pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQualityResult> {
-    let mut results = Vec::with_capacity(4);
+    let mut results = Vec::with_capacity(5);
 
     // DQ1: 资产描述覆盖率 (采样最近 1,000 条资产)
     let assets = storage.list_assets(1000).unwrap_or_default();
@@ -210,6 +210,134 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
     };
     results.push(dq4);
 
+    // DQ5: 全链路信息新鲜度与跨表一致性对账健康度 (Phase 39 / ISSUE #21)
+    let fresh_assets = storage.list_assets(2000).unwrap_or_default();
+    let active_physical: Vec<_> = fresh_assets
+        .iter()
+        .filter(|a| {
+            a.status == "active"
+                && !a.path.starts_with("bench:")
+                && !a.path.starts_with("demo:")
+        })
+        .take(500)
+        .collect();
+    let live_ports: std::collections::HashSet<String> =
+        crate::fact::process_net::ProcessNetTopology::scan_listening_ports()
+            .map(|ps| ps.into_iter().map(|p| format!("port:{}", p.port)).collect())
+            .unwrap_or_default();
+    let all_nodes = storage.list_all_fact_nodes(1000).unwrap_or_default();
+    let active_memories = storage.list_all_active_memories(500).unwrap_or_default();
+
+    let mut inspected_fresh = 0usize;
+    let mut healthy_fresh = 0usize;
+    let mut missing_cnt = 0usize;
+    let mut unreconciled_drift_cnt = 0usize;
+    let mut ghost_node_cnt = 0usize;
+    let mut dup_mem_cnt = 0usize;
+
+    for a in &active_physical {
+        inspected_fresh += 1;
+        let p = std::path::Path::new(&a.path);
+        if !p.exists() {
+            missing_cnt += 1;
+        } else if p.is_file() && a.scan_tier == "deep" {
+            let meta_drifted = std::fs::metadata(p)
+                .map(|m| a.size_bytes.map(|s| s != m.len() as i64).unwrap_or(false))
+                .unwrap_or(false);
+            let marked_stale = a
+                .desc_kv
+                .get("embedding_status")
+                .and_then(|v| v.as_str())
+                == Some("stale");
+            if meta_drifted && !marked_stale {
+                unreconciled_drift_cnt += 1;
+            } else {
+                healthy_fresh += 1;
+            }
+        } else {
+            healthy_fresh += 1;
+        }
+    }
+
+    for n in &all_nodes {
+        if n.id.contains("bench:") || n.id.contains("demo:") {
+            continue;
+        }
+        match n.node_type.as_str() {
+            "port" if !live_ports.is_empty() => {
+                inspected_fresh += 1;
+                if live_ports.contains(&n.id) {
+                    healthy_fresh += 1;
+                } else {
+                    ghost_node_cnt += 1;
+                }
+            }
+            "file" => {
+                if let Some(fp) = n.id.strip_prefix("file:") {
+                    if fp.starts_with('/') {
+                        inspected_fresh += 1;
+                        if std::path::Path::new(fp).exists() {
+                            healthy_fresh += 1;
+                        } else {
+                            ghost_node_cnt += 1;
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut seen_auto_paths = std::collections::HashSet::new();
+    for m in &active_memories {
+        if let Some(start) = m.content.find("产出文件 `") {
+            let rest = &m.content[start + "产出文件 `".len()..];
+            if let Some(end_rel) = rest.find("` 摘要:") {
+                let fp = &rest[..end_rel];
+                if fp.starts_with('/') && !fp.starts_with("bench:") && !fp.starts_with("demo:") {
+                    inspected_fresh += 1;
+                    if !std::path::Path::new(fp).exists() || !seen_auto_paths.insert(fp.to_string()) {
+                        dup_mem_cnt += 1;
+                    } else {
+                        healthy_fresh += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    let dq5 = if inspected_fresh == 0 {
+        DataQualityResult {
+            id: "DQ5".into(),
+            name: "freshness_and_reconciliation_health".into(),
+            title: "全链路新鲜度与一致性对账健康度".into(),
+            measured_pct: 100.0,
+            target_pct: 98.0,
+            passed: true,
+            detail: "空沙盒库（0 条采样），基线通过".into(),
+        }
+    } else {
+        let pct = ((healthy_fresh as f64 / inspected_fresh as f64) * 100.0 * 100.0).round() / 100.0;
+        DataQualityResult {
+            id: "DQ5".into(),
+            name: "freshness_and_reconciliation_health".into(),
+            title: "全链路新鲜度与一致性对账健康度".into(),
+            measured_pct: pct,
+            target_pct: 98.0,
+            passed: pct >= 98.0,
+            detail: format!(
+                "抽检 {} 项 (资产/Fact节点/自动记忆): 健康 {} | 失活资产 {} | 未标志漂移 {} | 幽灵节点 {} | 冗余记忆 {}",
+                inspected_fresh,
+                healthy_fresh,
+                missing_cnt,
+                unreconciled_drift_cnt,
+                ghost_node_cnt,
+                dup_mem_cnt
+            ),
+        }
+    };
+    results.push(dq5);
+
     results
 }
 
@@ -242,5 +370,24 @@ mod tests {
         let dq3 = results.iter().find(|r| r.id == "DQ3").expect("DQ3");
         assert_eq!(dq3.measured_pct, 0.0, "物理不存在的断链在 DQ3 中应准确检出");
         assert!(!dq3.passed);
+    }
+
+    #[test]
+    fn test_dq5_detects_missing_asset_ghost_node_and_duplicate_memory() {
+        let storage = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        storage
+            .upsert_fact_node(&crate::storage::models::FactNodeRecord {
+                id: "file:/root/new/non_existent_dq5_ghost_999.py".into(),
+                node_type: "file".into(),
+                name: "non_existent_dq5_ghost_999.py".into(),
+                label: "ghost".into(),
+                properties: serde_json::json!({}),
+                updated_at: None,
+            })
+            .expect("upsert fact node");
+        let results = run_data_quality_checks(&storage);
+        let dq5 = results.iter().find(|r| r.id == "DQ5").expect("DQ5");
+        assert_eq!(dq5.measured_pct, 0.0, "物理缺失 file: 节点应触发 DQ5 不健康告警");
+        assert!(!dq5.passed);
     }
 }

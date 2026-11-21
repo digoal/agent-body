@@ -288,6 +288,10 @@ impl Storage {
         self.provider.list_all_fact_edges(limit)
     }
 
+    pub fn delete_fact_node(&self, id: &str) -> Result<usize> {
+        self.provider.delete_fact_node(id)
+    }
+
     // ─── Embedding Vectors (Phase 29) ────────────────────────────────
 
     pub fn update_asset_embedding(&self, path: &str, embedding: &[f32]) -> Result<()> {
@@ -524,6 +528,25 @@ mod tests {
         let search_res = storage.search_assets_fts("scraper", 10).expect("search_assets_fts");
         assert_eq!(search_res.len(), 1);
         assert_eq!(search_res[0].id, "test-asset-1");
+
+        // 标记 stale 后 upsert 应自动清空 embedding；标记 missing 后 search_assets_fts 应过滤僵尸资产
+        storage.update_asset_embedding("/root/new/shared_proj/sec_fetcher", &[0.1, 0.2]).expect("set emb");
+        assert_eq!(storage.get_asset_embedding("/root/new/shared_proj/sec_fetcher").unwrap().len(), 2);
+
+        let mut stale_asset = fetched.clone();
+        stale_asset.desc_kv = serde_json::json!({"purpose": "finance_tool", "embedding_status": "stale"});
+        storage.upsert_asset(&stale_asset).expect("upsert stale");
+        assert!(
+            storage.get_asset_embedding("/root/new/shared_proj/sec_fetcher").unwrap().is_empty(),
+            "embedding_status=stale 必须写穿清空旧向量"
+        );
+
+        stale_asset.status = "missing".to_string();
+        storage.upsert_asset(&stale_asset).expect("upsert missing");
+        assert!(
+            storage.search_assets_fts("scraper", 10).unwrap().is_empty(),
+            "status=missing 的僵尸资产不应被 FTS 召回"
+        );
     }
 
     #[test]

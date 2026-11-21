@@ -239,7 +239,11 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     )?;
 
     if !report.workloads.is_empty() {
-        writeln!(md, "## 二、11 大标准宿主负载 A/B 实测明细（省 Token × 质量提升帕累托双门禁）\n")?;
+        writeln!(
+            md,
+            "## 二、{} 大标准宿主负载 A/B 实测明细（省 Token × 质量提升帕累托双门禁）\n",
+            report.workloads.len()
+        )?;
         writeln!(md, "| ID | 场景 | Token (基线→管家) | 节省率 | 上下文质量 (基线→管家) | 事实命中 | 信息密度 | 加速比 | 状态 |")?;
         writeln!(md, "|:---:|---|---:|---:|---:|:---:|---:|---:|:---:|")?;
         for w in &report.workloads {
@@ -287,7 +291,7 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     }
 
     if !report.data_quality.is_empty() {
-        writeln!(md, "## 四、宿主机数据质量与 D6 准确率门禁 (DQ1~DQ4)\n")?;
+        writeln!(md, "## 四、宿主机数据质量与 D6 准确率门禁 (DQ1~DQ5)\n")?;
         writeln!(md, "| ID | 检查项 | 实测指标 | SLA 目标 | 状态 | 详情 |")?;
         writeln!(md, "|:---:|---|---:|---:|:---:|---|")?;
         for dq in &report.data_quality {

@@ -1,6 +1,6 @@
 # Agent Host Steward — 零重扫项目演进指南 (`EVOLUTION_GUIDE.md`)
 
-<!-- MANIFEST: modules=25 mcp_tools=41 spi_methods=65 tables=23 workloads=11 micro=5 dq=4 pr_rules=10 -->
+<!-- MANIFEST: modules=25 mcp_tools=41 spi_methods=66 tables=23 workloads=12 micro=5 dq=5 pr_rules=10 -->
 
 > **核心定位（解决 ISSUE #17）**：让任何新接手的 AI Agent 或开发者在 **不重复扫描 3.8 万行源码与 48 份历史 `src_doc/` 文档** 的前提下，**2 轮以内**完成需求定位、触点锁定与规范演进。
 
@@ -10,7 +10,7 @@
 
 1. **只读 Tier-0 文档（仅 2 份）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构地图 + 变更触点矩阵）；
-   - 当前活跃路线图 [src_doc/roadmap-phase37.md](src_doc/roadmap-phase37.md)（断点续传状态表；已完成的前序阶段见 [src_doc/roadmap-phase36.md](src_doc/roadmap-phase36.md) 与 [src_doc/roadmap-phase34-35.md](src_doc/roadmap-phase34-35.md)）。
+   - 当前活跃路线图 [src_doc/roadmap-phase38-39.md](src_doc/roadmap-phase38-39.md)（断点续传状态表；已完成的前序阶段见 [src_doc/roadmap-phase37.md](src_doc/roadmap-phase37.md) 与 [src_doc/roadmap-phase36.md](src_doc/roadmap-phase36.md)）。
 2. **运行 O(1) 实时架构快照（`<100ms`，禁止手动数模块/工具数）**：
    ```bash
    make evolution-check

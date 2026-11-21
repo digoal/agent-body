@@ -1,9 +1,9 @@
 # Agent Host Steward (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-21T16:30:00+08:00  
+> 最新更新: 2026-11-21T22:42:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: Phase 1~37 全部完成（v0.4.0 + 全景属性字典 & 全链路 Ollama Embedding + 反馈闭环 + 纵深安全防御 + 零重扫演进指南 + Benchmark v3.2 帕累托双门禁与等价校准），41 个原生 MCP 工具（黑白屏 100% 同步），25 个 `src/lib.rs` 模块，65 个 SPI 方法，23 张 SQLite 表
+> 当前状态: Phase 1~39 全部完成（v0.4.0 + 全生命周期信息新鲜度写穿失效 & `FreshnessReconciler` 对账 + 五点对比探针自进化引擎 + Benchmark `v3.3` `W12`/`DQ5` 帕累托双门禁），41 个原生 MCP 工具（黑白屏 100% 同步），25 个 `src/lib.rs` 模块，66 个 SPI 方法，23 张 SQLite 表
 
 ---
 
@@ -118,8 +118,10 @@
 | **Phase 35** | 四大赛道热门竞品对标与 Benchmark `v3.0` 轨道 C（`COMP-C1~C4` 同机同数据实跑 + 12 维源码能力矩阵 + 41/41 黑白屏对齐） | [roadmap-phase34-35.md](roadmap-phase34-35.md) / ISSUE #18 | ✅ **已完成** | 2026-11-21 |
 | **Phase 36** | Benchmark `v3.1`「既省 Token × 上下文质量不降反升」帕累托双门禁（`W1~W11` & `COMP-C1~C4` 成对质量分、真值事实断言、信息密度倍数与防截断门禁） | [roadmap-phase36.md](roadmap-phase36.md) / ISSUE #19 | ✅ **已完成** | 2026-11-21 |
 | **Phase 37** | 生产运行态深度对齐（CLI `brief` 接入 `BriefAssembler`、内联脚本折叠、Unix `SIGPIPE` 零 Panic）、`LinksEngine` 测试/示例免疫（现网 `100/100`）、Systemd `codegraph` PATH 探测与 Benchmark `v3.2` (`DQ3` 联合门禁 & `COMP-C4` 等价校准) | [roadmap-phase37.md](roadmap-phase37.md) / ISSUE #20 | ✅ **已完成** | 2026-11-21 |
+| **Phase 38** | 全生命周期信息新鲜度与写穿失效体系（规约 #9/#13/#14/#21 升级、`mtime_secs` + `stale` 写穿重置旧向量、三后端 FTS `status='active'`、SPI `delete_fact_node`、`AutoSyncEngine` 幂等归档、`ChangeHandler` 删除级联清理、`PropertyGraphOrganizer` 幽灵节点剪枝与 `backfill_embeddings.py` `'ready'` 复位） | [roadmap-phase38-39.md](roadmap-phase38-39.md) / ISSUE #21 | ✅ **已完成** | 2026-11-21 |
+| **Phase 39** | 五点对比探针自进化引擎与 Benchmark `v3.3`（`P1~P5` 对比探针、`FeedbackEngine::add_item_deduped`、`FreshnessReconciler` 守护调度与黑白屏 `feedback reconcile/probes`、`W12` + `DQ5`，实测 `237/237` 全测试 PASS、探针 `5/5 ✅`、`DQ1~DQ5 100.0%`） | [roadmap-phase38-39.md](roadmap-phase38-39.md) / ISSUE #22 | ✅ **已完成** | 2026-11-21 |
 
-> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md)、[progress-phase27.md](progress-phase27.md)、[roadmap-phase29.md](roadmap-phase29.md)、[roadmap-phase30.md](roadmap-phase30.md)、[progress-phase30.md](progress-phase30.md)、[roadmap-phase32.md](roadmap-phase32.md)、[roadmap-phase34-35.md](roadmap-phase34-35.md) 与 [roadmap-phase36.md](roadmap-phase36.md)
+> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md)、[progress-phase27.md](progress-phase27.md)、[roadmap-phase29.md](roadmap-phase29.md)、[roadmap-phase30.md](roadmap-phase30.md)、[progress-phase30.md](progress-phase30.md)、[roadmap-phase32.md](roadmap-phase32.md)、[roadmap-phase34-35.md](roadmap-phase34-35.md)、[roadmap-phase36.md](roadmap-phase36.md)、[roadmap-phase37.md](roadmap-phase37.md) 与 [roadmap-phase38-39.md](roadmap-phase38-39.md)
 
 ---
 

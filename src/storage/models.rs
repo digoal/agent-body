@@ -277,7 +277,7 @@ pub struct RuleAggregate {
 }
 
 /// 生产运行态效能存证汇总账单
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EffectivenessSummary {
     pub window: String,
     pub total_events: usize,

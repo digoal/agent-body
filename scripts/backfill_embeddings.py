@@ -44,9 +44,12 @@ def backfill_table(
     dry_run: bool,
 ) -> tuple[int, int]:
     cur = conn.cursor()
+    where_clause = "embedding IS NULL OR embedding = '' OR embedding = '[]'"
+    if table == "assets":
+        where_clause += " OR json_extract(desc_kv, '$.embedding_status') = 'stale'"
     rows = cur.execute(
         f"SELECT {key_col}, {text_sql} FROM {table} "
-        f"WHERE embedding IS NULL OR embedding = '' OR embedding = '[]' LIMIT ?",
+        f"WHERE {where_clause} LIMIT ?",
         (limit,),
     ).fetchall()
     if not rows:
@@ -60,10 +63,20 @@ def backfill_table(
             continue
         try:
             emb = fetch_ollama_embedding(ollama_url, model, prompt)
-            cur.execute(
-                f"UPDATE {table} SET embedding = ? WHERE {key_col} = ?",
-                (json.dumps(emb), key),
-            )
+            if table == "assets":
+                cur.execute(
+                    "UPDATE assets SET embedding = ?, "
+                    "desc_kv = CASE WHEN json_valid(desc_kv) "
+                    "THEN json_set(desc_kv, '$.embedding_status', 'ready') "
+                    "ELSE json_object('embedding_status', 'ready') END "
+                    "WHERE path = ?",
+                    (json.dumps(emb), key),
+                )
+            else:
+                cur.execute(
+                    f"UPDATE {table} SET embedding = ? WHERE {key_col} = ?",
+                    (json.dumps(emb), key),
+                )
             updated += 1
         except Exception as exc:
             failed += 1
@@ -99,7 +112,9 @@ def main() -> int:
         total_failed += fail
         print(f"[backfill] {table}: updated={upd}, failed={fail}")
 
-    rem_assets = conn.execute("SELECT COUNT(*) FROM assets WHERE embedding IS NULL OR embedding = '' OR embedding = '[]'").fetchone()[0]
+    rem_assets = conn.execute(
+        "SELECT COUNT(*) FROM assets WHERE embedding IS NULL OR embedding = '' OR embedding = '[]' OR json_extract(desc_kv, '$.embedding_status') = 'stale'"
+    ).fetchone()[0]
     rem_facts = conn.execute("SELECT COUNT(*) FROM fact_nodes WHERE embedding IS NULL OR embedding = '' OR embedding = '[]'").fetchone()[0]
     rem_mems = conn.execute("SELECT COUNT(*) FROM memories WHERE embedding IS NULL OR embedding = '' OR embedding = '[]'").fetchone()[0]
     conn.close()

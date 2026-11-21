@@ -195,6 +195,30 @@ flowchart LR
 - **现象与复现证据**: 命令行管道截断输出时，Rust 默认忽略 `SIGPIPE` 导致 `println!` 抛出 `panicked at ... failed printing to stdout: Broken pipe (os error 32)`，违反规约 #12。
 - **修复目标**: 在 `src/main.rs` 入口重置 Unix `SIGPIPE` 为 `SIG_DFL`，确保管道截断优雅退出零 Panic。
 
+### `CON-12` `[P0 · 信息过旧]` 文件修改后旧向量 (`embedding`) 与 L2 语义描述未写穿失效（34 条磁盘尺寸漂移）
+- **状态**: `✅ Verified (Phase 38.2 & Phase 39)` · **首次记录**: 2026-11-21 · **验证实测**: `P4` 抽检 `1,000` 条 `drifted=0`、`backfill_embeddings.py` 补齐并复位 `embedding_status="ready"`（`剩余缺失: assets=0`）
+- **现象与复现证据**:
+  - 现网 `steward.db` 存在 `34` 条 `status='active'` 资产的磁盘 `st_size` 已与库内 `size_bytes` 漂移；
+  - `merge_with_existing_asset()` 在 `old_hash != new_hash` 时未标记 `embedding_status="stale"`，且 `SqliteStorageProvider::upsert_asset()` 不重置 `embedding` 列，导致旧向量僵尸驻留。
+- **修复落实**: 已实装修改写穿失效（刷新 `mtime_secs`、标记 `stale`/`needs_re_enrich`、清空旧向量 `'[]'`）与 `backfill_embeddings.py` 复位 `'ready'` 闭环。
+
+### `CON-13` `[P0 · 信息过旧]` 已删文件仍被 FTS 召回 (`19` 条 `missing`) 且 `fact_nodes` 残留 `84` 个历史幽灵端口节点
+- **状态**: `✅ Verified (Phase 38.2 & 38.3)` · **首次记录**: 2026-11-21 · **验证实测**: `P3` `zombie=0`、`P5` `ghost_ports=0`、`DQ5` `598/598 (100.0%)`
+- **现象与复现证据**:
+  - `assets` 表有 `19` 条 `status='missing'`，但 `search_assets_fts` 未过滤 `a.status = 'active'`；
+  - `fact_nodes` 存在 `84` 个 `port:*` 节点（70+ 为历史测试端口）与 `1` 个已不存在文件的 `file:` 节点。
+- **修复落实**: 三后端 `search_assets_fts` 强制 `status='active'`，新增 SPI `delete_fact_node`，`ChangeHandler`、`PropertyGraphOrganizer` 与 `FreshnessReconciler` 级联清理幽灵节点（实测 `reconcile` 巡检 `21,180` 资产、`ghost_ports=0`）。
+
+### `CON-14` `[P0 · 简报记忆污染]` `AutoSyncEngine` 对同文件重复插入旧版摘要记忆霸屏 `steward_brief`
+- **状态**: `✅ Verified (Phase 38.3)` · **首次记录**: 2026-11-21 · **验证实测**: `P1` 唯一率 **`100.0%`**、`brief` Top 记忆恢复单一最新摘要
+- **现象与复现证据**: `AutoSyncEngine::sync_file_output` 每次编辑均新增记忆而不归档旧版，导致 `user_feedback.md` 摘要在简报 Top-5 记忆中重复出现。
+- **修复落实**: 同路径摘要写入前自动归档旧记忆为 `"archived"` 并刷新 `LinksEngine`，`FreshnessReconciler` 幂等清理存量重复记忆。
+
+### `CON-15` `[P1 · 自进化闭环缺失]` 执行回路缺少可量化对比探针与去重自上报机制
+- **状态**: `✅ Verified (Phase 39.1 & 39.2)` · **首次记录**: 2026-11-21 · **验证实测**: `agent-steward feedback probes --auto-heal` 首轮即真实捕获 `P3 stale_vec=3` 缺口，修复后达成 **`5/5 健康 ✅`**
+- **现象与复现证据**: 缺少 `P1~P5` 执行回路对比探针及 `FeedbackEngine::add_item_deduped` 联动。
+- **修复落实**: 已落地五点对比探针、`BackgroundScheduler` 自动对账及 `feedback reconcile`/`probes` MCP/CLI/Web 1:1:1 通道。
+
 ---
 
 ## 五、第三部分：Benchmark 标准失真诊断与持续迭代诉求 (`BENCH-01` ~ `BENCH-04`)
@@ -255,9 +279,13 @@ flowchart LR
   - 真实等价对照应由 `rg` 检索工程引用上下文、`ss -tlnp` 输出套接字表、`psutil` 输出进程 PID/名称/命令行明细。
 - **标准迭代方向**: 校准 `COMP-C4` 为真实等价物理采集口径，回归正向省 Token 与质量跃升。
 
+### `BENCH-09` `[P0 · 新鲜度基准缺失]` Benchmark 缺少文件改删写穿失效 (`W12`) 与现网信息新鲜度门禁 (`DQ5`)
+- **状态**: `✅ Verified (Phase 39.3 & v3.3)` · **首次记录**: 2026-11-21 · **验证实测**: `run-b832f01c-346c-4058-91af-fcab428b2dda` (`v3.3`, `✅ PASS`): **`W12`** `240 → 21 tok (-91.2%)`、`27.5 → 100.0 (+72.5)`、`4/4` 命中；**`DQ5`** `598/598 (100.0%)`
+- **标准迭代方向**: 升级 Benchmark 至 `v3.3`，新增 `W12 (freshness_and_staleness_healing)` 与 `DQ5 (freshness_and_reconciliation_health)`，并通过 `report.rs` 动态展示 `12` 大负载。
+
 ---
 
-## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-11`)
+## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-13`)
 
 | ID | 需求简述 | 提出背景 / 触发场景 | 优先级 | 目标归属 | 状态 |
 |:---:|---|---|:---:|:---:|:---:|
@@ -272,6 +300,8 @@ flowchart LR
 | **`REQ-09`** | **建立 Benchmark `v3.0` 轨道 C 四大赛道热门竞品同场实跑与 12 维源码能力对标体系** | 解决仅与裸奔自己比缺乏行业横向对照问题，接入 Mem0/Letta/PowerContext/Shodh-Memory/OpenViking/AgentFS/rg+psutil 等对标（ISSUE #18） | P0 | Phase 35.1 ~ 35.6 | `✅ Verified` |
 | **`REQ-10`** | **落地 Benchmark `v3.1`「既省 Token × 质量不降反升」帕累托双门禁与全负载成对质量实证** | 消除 `W1~W8` 质量评分盲区，同场量化 `Baseline Q vs Steward Q (+ΔQ)`、关键事实命中率与有效信息密度提升倍数（ISSUE #19） | P0 | Phase 36.1 ~ 36.6 | `✅ Verified` |
 | **`REQ-11`** | **落地 Phase 37 生产运行态深度对齐、拓扑零误报硬化与 Benchmark `v3.2` 等价校准** | 消除 CLI/Hook 简报分裂、多行进程刷屏、`SIGPIPE` Panic、测试/示例假断链与 `DQ3`/`COMP-C4` 口径偏差（ISSUE #20） | P0 | Phase 37.1 ~ 37.6 | `✅ Verified` |
+| **`REQ-12`** | **建立全生命周期信息新鲜度写穿失效与 `FreshnessReconciler` 现实对账体系** | 彻底根治修改后向量/描述僵尸、删后 FTS 僵尸召回、重复记忆霸屏与幽灵端口堆积（ISSUE #21） | P0 | Phase 38.1 ~ 38.3 | `✅ Verified` |
+| **`REQ-13`** | **构建五点对比探针驱动的自进化引擎与 `FeedbackEngine::add_item_deduped` 闭环** | 在执行回路部署 `P1~P5` 对比探针，以数字差值佐证自愈并自动接入反馈总账与 Benchmark `v3.3`（ISSUE #22） | P0 | Phase 39.1 ~ 39.4 | `✅ Verified` |
 
 ---
 

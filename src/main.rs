@@ -233,6 +233,20 @@ enum FeedbackCommands {
     },
     #[command(about = "将已验证反馈 (✅ Verified) 沉淀入长期记忆库")]
     Sync,
+    #[command(about = "执行全生命周期信息新鲜度对账（资产写穿失效/幽灵节点剪枝/记忆去重）")]
+    Reconcile {
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "运行 Agent 执行回路五点对比自进化探针 (P1~P5)")]
+    Probes {
+        #[arg(long, default_value_t = false)]
+        auto_heal: bool,
+        #[arg(long, default_value_t = false)]
+        auto_feedback: bool,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1879,6 +1893,72 @@ fn main() -> Result<()> {
                         t0.elapsed().as_micros() as i64,
                     );
                 }
+                FeedbackCommands::Reconcile { json } => {
+                    let rep = agent_steward::feedback::probes::FreshnessReconciler::reconcile(&storage)?;
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&rep)?);
+                    } else {
+                        println!(
+                            "🧹 全生命周期新鲜度对账完成 ({} μs): 检查资产 {} | 标记失活 {} | 内容漂移失效写穿 {} | 剪枝幽灵节点 {} | 归档重复记忆 {} | 过期 CodeGraph 仓库 {:?}",
+                            rep.elapsed_us,
+                            rep.checked_assets,
+                            rep.missing_assets_marked,
+                            rep.drifted_assets_refreshed,
+                            rep.ghost_fact_nodes_pruned,
+                            rep.duplicate_memories_archived,
+                            rep.stale_codegraph_repos
+                        );
+                    }
+                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "steward_feedback",
+                        &format!(
+                            "reconcile missing={} drifted={} ghost={} dup_mem={}",
+                            rep.missing_assets_marked,
+                            rep.drifted_assets_refreshed,
+                            rep.ghost_fact_nodes_pruned,
+                            rep.duplicate_memories_archived
+                        ),
+                        t0.elapsed().as_micros() as i64,
+                    );
+                }
+                FeedbackCommands::Probes { auto_heal, auto_feedback, json } => {
+                    let rep = agent_steward::feedback::probes::SelfEvolutionProbeEngine::run_probes(
+                        &storage,
+                        &fb_path,
+                        auto_heal,
+                        auto_feedback,
+                    )?;
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&rep)?);
+                    } else {
+                        println!("🔬 {}", rep.summary);
+                        for p in &rep.probes {
+                            println!(
+                                "  {} [{}] {}: {} (基线: {}) | Δ: {} | 自愈: {} | {}",
+                                if p.healthy { "✅" } else { "⚠️" },
+                                p.probe_id,
+                                p.hook_stage,
+                                p.measured_value,
+                                p.comparator_baseline,
+                                p.delta_summary,
+                                p.healed_action,
+                                p.recommendation
+                            );
+                        }
+                        if !rep.feedback_items_created.is_empty() {
+                            println!("📝 本次自动去重写入反馈: {:?}", rep.feedback_items_created);
+                        }
+                    }
+                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "steward_feedback",
+                        &format!("probes healthy={} auto_heal={}", rep.overall_healthy, auto_heal),
+                        t0.elapsed().as_micros() as i64,
+                    );
+                }
             }
         }
     }
@@ -1911,6 +1991,8 @@ mod tests {
         assert!(Cli::try_parse_from(["steward", "demo", "run", "scene-1"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "feedback", "list"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "feedback", "sync"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "feedback", "reconcile"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "feedback", "probes", "--auto-heal"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "brief"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "brief", "--query", "postgres", "--budget-tokens", "1200"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "brief", "--legacy"]).is_ok());

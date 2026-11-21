@@ -1075,6 +1075,8 @@ pub struct FeedbackActionBody {
     pub title: Option<String>,
     pub evidence: Option<String>,
     pub target: Option<String>,
+    pub auto_heal: Option<bool>,
+    pub auto_feedback: Option<bool>,
 }
 
 pub fn handle_feedback_post(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
@@ -1104,6 +1106,27 @@ pub fn handle_feedback_post(req: &HttpRequest, storage: Arc<dyn StorageProvider>
                     WebResponse::success(item)
                 }
                 Err(e) => WebResponse::error(StatusCode::BAD_REQUEST, &e.to_string()),
+            }
+        }
+        "reconcile" => {
+            let st = Storage::new(storage.clone());
+            match crate::feedback::probes::FreshnessReconciler::reconcile(&st) {
+                Ok(rep) => WebResponse::success(rep),
+                Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+            }
+        }
+        "probes" => {
+            let st = Storage::new(storage.clone());
+            let auto_heal = body.auto_heal.unwrap_or(true);
+            let auto_feedback = body.auto_feedback.unwrap_or(false);
+            match crate::feedback::probes::SelfEvolutionProbeEngine::run_probes(
+                &st,
+                &fb_path,
+                auto_heal,
+                auto_feedback,
+            ) {
+                Ok(rep) => WebResponse::success(rep),
+                Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
             }
         }
         _ => {

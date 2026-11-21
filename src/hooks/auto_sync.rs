@@ -129,13 +129,28 @@ impl AutoSyncEngine {
         self.storage.upsert_asset(&merged)?;
         res.asset_registered = true;
 
-        // 3. 自动记忆沉淀门禁 (规约 #4 摄入门禁 & 规约 #2 禁止使用外部 LLM)
+        // 同步刷新脚本/文档静态依赖边（保持拓扑实时新鲜）
+        if matches!(ext, "rs" | "py" | "sh" | "bash" | "js" | "ts" | "toml" | "yaml" | "yml" | "md") {
+            let links_engine = crate::links::LinksEngine::new(std::sync::Arc::new(self.storage.clone()));
+            let _ = links_engine.refresh_links_for_asset(path);
+        }
+
+        // 3. 自动记忆沉淀门禁 (规约 #4 摄入门禁、#2 禁止外部 LLM、#21 同文件记忆幂等去重归档)
         if ext == "md" || ext == "toml" || ext == "json" || path_str.contains("SKILL.md") {
             let score = self.scorer.score_asset(path, asset_type, size_bytes, None);
 
             // 只要不是被明确判定为噪音垃圾 (is_noise = false)，对于显式产出的知识文档或配置，提取关键首部沉淀为长期记忆
             if !score.is_noise {
                 if let Ok(content) = fs::read_to_string(path) {
+                    let prefix_marker = format!("产出文件 `{}` 摘要:", path_str);
+                    if let Ok(active_mems) = self.storage.list_all_active_memories(500) {
+                        for old_mem in active_mems {
+                            if old_mem.content.contains(&prefix_marker) {
+                                let _ = self.storage.update_memory_status(&old_mem.id, "archived");
+                            }
+                        }
+                    }
+
                     let mut summary_lines = Vec::new();
                     for line in content.lines().take(5) {
                         let trimmed = line.trim();
@@ -149,7 +164,7 @@ impl AutoSyncEngine {
                     let mem_rec = MemoryRecord {
                         id: mem_id.clone(),
                         memory_type: "note".to_string(),
-                        content: format!("产出文件 `{}` 摘要:\n{}", path_str, summary_str),
+                        content: format!("{}\n{}", prefix_marker, summary_str),
                         summary: Some(format!("文件产出沉淀: {}", file_name)),
                         source_agent: Some(format!("hook:{}", tool_name)),
                         source_session: None,
@@ -228,6 +243,17 @@ mod tests {
         // 验证 FTS 检索
         let fts_mems = storage.search_memories_fts("Architecture", 5).unwrap();
         assert!(!fts_mems.is_empty());
+
+        // 再次编辑同一文件，应自动归档旧记忆且活跃记忆只保留最新 1 条
+        fs::write(&file_path, "# Architecture v2 架构演进\n全新 Phase 38 更新").expect("rewrite");
+        let sync_res2 = engine.sync_file_output(path, "edit_file").expect("sync2");
+        assert!(sync_res2.memory_created.is_some());
+        let active_after = storage.list_all_active_memories(20).unwrap();
+        let same_file_count = active_after
+            .iter()
+            .filter(|m| m.content.contains(&format!("产出文件 `{}` 摘要:", path)))
+            .count();
+        assert_eq!(same_file_count, 1, "同一文件多次编辑应只保留 1 条最新活跃摘要记忆");
     }
 
     #[test]

@@ -487,11 +487,11 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
             <div class="view-toolbar mt-12" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);">
               <div class="toolbar-left">
                 <select id="bench-suite-select" class="input" style="width:200px;">
-                  <option value="full">全量套件 v3.1 (省Token×提质量帕累托 + 竞品)</option>
+                  <option value="full">全量套件 v3.3 (省Token×提质量帕累托 + 竞品 + 新鲜度)</option>
                   <option value="competitors">🏆 热门竞品横向对标 (COMP-C1~C4)</option>
-                  <option value="macro">宏观业务 A/B (W1~W11)</option>
+                  <option value="macro">宏观业务 A/B (W1~W12)</option>
                   <option value="micro">内核微基准 SLA (M1~M5)</option>
-                  <option value="dq">宿主机数据与安全质量 (DQ1~DQ4)</option>
+                  <option value="dq">宿主机数据与新鲜度质量 (DQ1~DQ5)</option>
                   <option value="W1">W1 · 宿主工具发现</option>
                   <option value="W2">W2 · 端口防撞选址</option>
                   <option value="W3">W3 · 分级扫描阻断</option>
@@ -503,6 +503,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                   <option value="W9">W9 · 混合语义检索 Recall@5</option>
                   <option value="W10">W10 · 依赖抽取抗假阳性</option>
                   <option value="W11">W11 · 全链路脱敏与抗投毒安全防线</option>
+                  <option value="W12">W12 · 资产改删写穿失效与一致性自愈</option>
                 </select>
                 <button id="btn-bench-run" class="btn btn-primary btn-xs">▶ 真机运行 A/B 基准</button>
                 <select id="bench-window-select" class="input" style="width:120px;">

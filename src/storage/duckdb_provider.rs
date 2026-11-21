@@ -273,7 +273,7 @@ impl StorageProvider for DuckDbStorageProvider {
         let mut stmt = conn.prepare(
             "SELECT id, path, type, owner, security_level, scan_tier, description, desc_kv, usage, size_bytes, file_count, tags, status
              FROM assets
-             WHERE path ILIKE ?1 OR description ILIKE ?1 OR usage ILIKE ?1 OR tags ILIKE ?1
+             WHERE status = 'active' AND (path ILIKE ?1 OR description ILIKE ?1 OR usage ILIKE ?1 OR tags ILIKE ?1)
              ORDER BY updated_at DESC
              LIMIT ?2"
         )?;
@@ -1049,6 +1049,16 @@ impl StorageProvider for DuckDbStorageProvider {
         })?.collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(rows)
+    }
+
+    fn delete_fact_node(&self, id: &str) -> Result<usize> {
+        let conn = self.lock_conn()?;
+        conn.execute(
+            "DELETE FROM fact_edges WHERE source_id = ?1 OR target_id = ?1",
+            params![id],
+        )?;
+        let affected = conn.execute("DELETE FROM fact_nodes WHERE id = ?1", params![id])?;
+        Ok(affected)
     }
 
     fn update_asset_embedding(&self, path: &str, embedding: &[f32]) -> Result<()> {

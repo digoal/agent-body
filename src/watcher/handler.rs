@@ -174,6 +174,17 @@ impl ChangeHandler {
                         self.storage.upsert_asset(&asset)?;
                     }
                     let _ = self.storage.delete_auto_links_for_source(&path_str);
+                    let _ = self.storage.delete_links_for_target(&path_str);
+                    let _ = self.storage.delete_fact_node(&format!("file:{}", path_str));
+
+                    let marker = format!("产出文件 `{}` 摘要:", path_str);
+                    if let Ok(mems) = self.storage.list_all_active_memories(500) {
+                        for m in mems {
+                            if m.content.contains(&marker) {
+                                let _ = self.storage.update_memory_status(&m.id, "archived");
+                            }
+                        }
+                    }
 
                     self.storage.record_change(&ChangeRecord {
                         id: None,
@@ -263,5 +274,67 @@ mod tests {
         assert!(storage.get_asset_by_path(&log_path.to_string_lossy()).unwrap().is_none());
         assert!(storage.get_asset_by_path(&git_cfg.to_string_lossy()).unwrap().is_none());
         assert!(storage.list_changes(10).unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_change_handler_deleted_cascades_fts_fact_node_and_memories() {
+        use crate::storage::models::{FactNodeRecord, MemoryRecord};
+
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let handler = ChangeHandler::new(storage.clone()).expect("new handler");
+
+        let tmp = tempdir().expect("tempdir");
+        let file_path = tmp.path().join("ephemeral_tool.py");
+        File::create(&file_path).unwrap().write_all(b"print('hi')").unwrap();
+        let path_str = file_path.to_string_lossy().to_string();
+
+        handler
+            .process_events(&[FileChangeEvent {
+                path: file_path.clone(),
+                kind: FileChangeKind::Created,
+            }])
+            .unwrap();
+        storage
+            .upsert_fact_node(&FactNodeRecord {
+                id: format!("file:{}", path_str),
+                node_type: "file".to_string(),
+                name: "ephemeral_tool.py".to_string(),
+                label: "ephemeral_tool".to_string(),
+                properties: serde_json::json!({}),
+                updated_at: None,
+            })
+            .unwrap();
+        storage
+            .insert_memory(&MemoryRecord {
+                id: "mem-del-1".to_string(),
+                memory_type: "note".to_string(),
+                content: format!("产出文件 `{}` 摘要:\nprint('hi')", path_str),
+                summary: None,
+                source_agent: None,
+                source_session: None,
+                tags: vec![],
+                weight: 0.7,
+                pinned: false,
+                status: "active".to_string(),
+                embedding: vec![],
+            })
+            .unwrap();
+
+        assert!(!storage.search_assets_fts("ephemeral_tool", 10).unwrap().is_empty());
+
+        std::fs::remove_file(&file_path).unwrap();
+        handler
+            .process_events(&[FileChangeEvent {
+                path: file_path,
+                kind: FileChangeKind::Deleted,
+            }])
+            .unwrap();
+
+        assert!(
+            storage.search_assets_fts("ephemeral_tool", 10).unwrap().is_empty(),
+            "已删除文件不应再被 FTS 召回"
+        );
+        assert!(storage.get_fact_node(&format!("file:{}", path_str)).unwrap().is_none());
+        assert!(storage.list_all_active_memories(10).unwrap().is_empty());
     }
 }

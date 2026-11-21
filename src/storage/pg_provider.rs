@@ -255,10 +255,12 @@ impl StorageProvider for PgStorageProvider {
         let rows = client.query(
             "SELECT id, path, type, owner, security_level, scan_tier, description, desc_kv, usage, size_bytes, file_count, tags, status
              FROM assets
-             WHERE fts_doc @@ plainto_tsquery('simple', $1)
-                OR path ILIKE '%' || $1 || '%'
-                OR description ILIKE '%' || $1 || '%'
-                OR usage ILIKE '%' || $1 || '%'
+             WHERE status = 'active' AND (
+                 fts_doc @@ plainto_tsquery('simple', $1)
+                 OR path ILIKE '%' || $1 || '%'
+                 OR description ILIKE '%' || $1 || '%'
+                 OR usage ILIKE '%' || $1 || '%'
+             )
              ORDER BY 
                 CASE WHEN fts_doc @@ plainto_tsquery('simple', $1) 
                      THEN ts_rank(fts_doc, plainto_tsquery('simple', $1)) + 1.0 
@@ -1023,6 +1025,16 @@ impl StorageProvider for PgStorageProvider {
             });
         }
         Ok(edges)
+    }
+
+    fn delete_fact_node(&self, id: &str) -> Result<usize> {
+        let mut client = self.lock_client()?;
+        client.execute(
+            "DELETE FROM fact_edges WHERE source_id = $1 OR target_id = $1",
+            &[&id],
+        )?;
+        let affected = client.execute("DELETE FROM fact_nodes WHERE id = $1", &[&id])?;
+        Ok(affected as usize)
     }
 
     fn update_asset_embedding(&self, path: &str, embedding: &[f32]) -> Result<()> {

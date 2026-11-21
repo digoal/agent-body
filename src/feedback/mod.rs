@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use crate::memory::MemoryManager;
 use crate::storage::Storage;
 
+pub mod probes;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeedbackItem {
     pub id: String,
@@ -171,6 +173,32 @@ impl FeedbackEngine {
         })
     }
 
+    /// 幂等去重追加反馈（用于自进化探针自动入账：相同未闭环标题或探针标签不重复刷屏）
+    pub fn add_item_deduped(
+        path: &Path,
+        category: &str,
+        priority: &str,
+        title: &str,
+        evidence: &str,
+        target: &str,
+    ) -> Result<(FeedbackItem, bool)> {
+        let cat_upper = category.trim().to_uppercase();
+        let trimmed_title = title.trim();
+        let probe_prefix = extract_probe_prefix(trimmed_title);
+        let existing = Self::list_items(path)?;
+        if let Some(found) = existing.into_iter().find(|it| {
+            !it.status.contains("Verified")
+                && it.category == cat_upper
+                && (it.title.eq_ignore_ascii_case(trimmed_title)
+                    || (probe_prefix.is_some()
+                        && extract_probe_prefix(&it.title) == probe_prefix))
+        }) {
+            return Ok((found, false));
+        }
+        let added = Self::add_item(path, category, priority, title, evidence, target)?;
+        Ok((added, true))
+    }
+
     /// 将 user_feedback.md 中已验证（✅ Verified）的条目沉淀入长期记忆库（去重幂等）
     pub fn sync_verified_to_memories(path: &Path, storage: &Storage) -> Result<usize> {
         let items = Self::list_items(path)?;
@@ -216,6 +244,15 @@ fn parse_priority_and_title(raw: &str) -> (String, String) {
         }
     }
     ("P1".to_string(), trimmed.to_string())
+}
+
+fn extract_probe_prefix(title: &str) -> Option<&str> {
+    if title.starts_with("[Probe:") {
+        if let Some(end) = title.find(']') {
+            return Some(&title[..=end]);
+        }
+    }
+    None
 }
 
 #[cfg(test)]

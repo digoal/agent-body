@@ -269,7 +269,7 @@ $$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\
 3. **$A_{\text{action}}$**（结构化可行动性，权重 20%）：是否直接包含推荐命令、规范路径、修复补丁或死锁裁决；
 4. **$S_{\text{safety}}$**（安全与抗污染度，权重 10%）：明文凭据脱敏率、防命令注入与抗提示词投毒合规度。
 5. **有效信息密度与密度提升倍数**：$\rho = (\text{facts\_hit} / \max(\text{tokens}, 1)) \times 1000$，$\text{info\_density\_gain} = \rho_{\text{steward}} / \max(\rho_{\text{baseline}}, 0.01)$。
-6. **帕累托 SLA 双门禁**：`W1~W11` 与 `COMP-C1~C4` 必须同时满足效率达标、`steward_facts_hit == required_facts_total` 及 `steward_quality_score >= baseline_quality_score`，严禁通过丢失关键事实骗取高 Token 节省率。
+6. **帕累托 SLA 双门禁**：`W1~W12` 与 `COMP-C1~C4` 必须同时满足效率达标、`steward_facts_hit == required_facts_total` 及 `steward_quality_score >= baseline_quality_score`，严禁通过丢失关键事实骗取高 Token 节省率。
 
 ---
 
@@ -277,3 +277,10 @@ $$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\
 
 1. **`DQ3` 物理健康度联合门禁 (`BENCH-07`)**：与 `LinkAuditor` 100% 拉齐，同时排除测试夹具/`#[cfg(test)]`/Markdown 示例假边并核验 `asset` 物理文件存在性，避免出现“`DQ3` 高分 PASS 但 `links audit` 跌至 `0/100`”的口径撕裂。
 2. **`W10` 抗测试/文档自污染回归**：新增 Rust `#[cfg(test)]` 与 `.md` 代码块示例对抗样本（`13` 项干扰 `0` 误报）。
+
+---
+
+## 十一、Benchmark `v3.3` 实时新鲜度与自愈评测基准（Phase 38~39）
+
+1. **新增 `W12 (freshness_and_staleness_healing)`**：面向 [ISSUE #21](../README.md#L401) 构建沙盒实测负载，模拟单次操作同时触发“活跃文件改写内容漂移 + 旧文件物理删除 + 幽灵 `file:` 事实节点 + 同路径多版本 `auto_sync` 记忆重复”，对比无写穿失效基线与 `FreshnessReconciler` 自愈链路：要求 `embedding_status="stale"` 与 `embedding='[]'` 清空、已删除资产 FTS 零命中、幽灵节点剪枝及同路径重复记忆归档 `4/4` 全命中且帕累托质量净胜。
+2. **新增 `DQ5 (freshness_and_reconciliation_health)`**：抽检宿主机活跃资产物理存在性、未标 `stale` 漂移率、幽灵 `port:/file:` 事实节点与 `auto_sync` 同路径重复记忆，要求综合新鲜度健康率 `>= 98.0%`。

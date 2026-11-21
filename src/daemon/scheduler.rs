@@ -71,7 +71,10 @@ impl BackgroundScheduler {
         let skill_scanner = crate::ecosystem::SkillCatalogScanner::new(self.storage.clone());
         let _ = skill_scanner.scan_default_roots();
 
-        // 7. 后台异步增量精炼待标注资产元数据 (Phase 23 Ollama 小模型)
+        // 7. 全生命周期信息新鲜度与现实对账 (规约 #21：清理漂移/失踪资产、幽灵端口节点与重复摘要记忆)
+        let _reconcile_rep = crate::feedback::probes::FreshnessReconciler::reconcile(&self.storage);
+
+        // 8. 后台异步增量精炼待标注资产元数据 (Phase 23 Ollama 小模型)
         let cfg = crate::config::Config::load_or_default(None).unwrap_or_default();
         let assets_enriched = if cfg.annotation.enabled && cfg.annotation.auto_enrich_batch_size > 0 {
             let batch_size = cfg.annotation.auto_enrich_batch_size;

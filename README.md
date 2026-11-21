@@ -95,6 +95,7 @@
 - 📖 **[03-feature-spec.md](design_doc/03-feature-spec.md)**：三模块功能规格详细定义
 - 📊 **[10-benchmark-spec.md](design_doc/10-benchmark-spec.md)**：实证 Benchmark 对照评测与生产效能存证账本设计规格说明书（双轨闭环确保使用效果 100% 有据可查）
 - 🛡️ **[11-security-spec.md](design_doc/11-security-spec.md)**：宿主大管家安全架构、威胁建模与纵深防御规格说明书（全链路脱敏、高危拦截、写鉴权与抗投毒防线）
+- 🔄 **[13-freshness-and-self-evolution-spec.md](design_doc/13-freshness-and-self-evolution-spec.md)**：全生命周期信息新鲜度对账与五点对比探针闭环自进化规格说明书（写穿失效、僵尸清理、`FreshnessReconciler` 与 `P1~P5` 探针反馈闭环）
 
 ---
 
@@ -108,9 +109,9 @@
   - 多 Agent 协作锁与层级互斥传播算法（Advisory Lock + 祖先后代路径检测）；
   - 工业级 NFR 指标（单二进制交付、冷启动 `<50ms`、空闲内存 `<25MB`）与递弱代偿边界。
 - 🛠️ **[02-for-developers.md](arch/02-for-developers.md)**（面向研发工程师与贡献者）：
-  - 源码 24 大模块全景职责与依赖拓扑速查；
+  - 源码 25 大模块全景职责与依赖拓扑速查；
   - 核心扩展三大 How-To（添加原生 MCP 工具、实现新存储后端 SPI、新增环境预检项）；
-  - 202 项自动化测试套件（179 单元 + 23 集成）与本地开发流；
+  - 235+ 项自动化测试套件与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
 - 🧭 **[03-for-users.md](arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
   - 大管家核心心智模型与物理世界哨兵定位；
@@ -246,8 +247,8 @@ cargo build --release
    - 会话结清（`session_close`）提供可审计的结项清单。
 
 9. **极速与轻量化 (Sub-Millisecond Response)**：
-   - 核心 API 端到端响应必须在毫秒级以内（实测基准：放置决策 120 μs，图遍历 498 μs，FTS 检索 805 μs），不能成为 Agent 执行链路的性能瓶颈。
-   - 常驻守护内存 < 30MB、CPU 空闲 < 0.5%。
+   - 核心只读/决策 API 端到端响应必须在毫秒/微秒级以内（实测微基准：放置决策 `~30 μs`，3 跳图遍历 `~120 μs`，FTS5 检索 `~250 μs`，三位一体冷启动简报 `< 15 ms`），绝不能成为 Agent 执行链路的性能瓶颈。
+   - CLI/MCP 单次进程常驻内存 `< 15 MB`，内嵌 Web + DuckDB + inotify 的全功能常驻守护内存 `< 90 MB`、空闲 CPU `< 0.5%`。
 
 ### 工程开发规约
 
@@ -261,13 +262,13 @@ cargo build --release
     - 在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误，保证服务 7×24 稳定运行。
 
 13. **测试驱动与零警告**：
-    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试。
+    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 235+ 项自动化测试）。
     - 任何提交前必须 `cargo check --tests` 通过零警告门禁。
-    - MCP 工具与 CLI 子命令必须保持一一映射。
+    - MCP 工具与 CLI 子命令必须保持一一映射（当前 41/41 同步）。
 
 14. **断点续传检查点机制**：
-    - 开发任何跨步骤大型特性时，必须在 `src_doc/progress-phase*.md` 建立检查点表格和 `src_doc/roadmap-phase*.md` 路线图。
-    - 确保中断后任何新会话均能通过读取 `progress-phase*.md` 恢复上下文无缝继续。
+    - 开发任何跨步骤大型特性时，必须在当前活跃的 `src_doc/roadmap-phase*.md` 内建立原子检查点追踪表，并在总表 [src_doc/progress.md](src_doc/progress.md) 登记阶段状态（与规约 #20 零重扫配合，不再为每个 Phase 额外生成碎片化的 `progress-phase*.md`）。
+    - 确保中断后任何新会话均能通过读取 `EVOLUTION_GUIDE.md` + 当前活跃 `roadmap-phase*.md` 恢复上下文无缝继续。
 
 15. **宏微联邦、不重复造轮子**：
     - 大管家负责宏观宿主拓扑（文件、服务、端口、定时任务间的依赖网络）。
@@ -294,8 +295,17 @@ cargo build --release
     - **存储最小权限与抗上下文投毒**：`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限收敛并通过 `preflight` 巡检；对外部仓库/文档语料识别并清洗间接提示词注入（Indirect Prompt Injection），同时纳入 `W11` 与 `DQ4` 安全回归基准（详见 [11-security-spec.md](design_doc/11-security-spec.md)）。
 
 20. **零重扫演进导航与横向竞品实证对标规约 (Zero-Rescan Evolution & Competitor Benchmarking)**：
-    - **零重扫演进活地图**：新会话演进优先查阅根目录演进指南（Phase 34 规划的 `EVOLUTION_GUIDE.md`）、运行架构清单门禁（`make evolution-check`）并使用本项目 `.codegraph/` 符号地图定位触点，严禁把历史冻结 `roadmap-phase*.md` 全盘扫描一遍。
+    - **零重扫演进活地图**：新会话演进优先查阅根目录演进指南（[EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md)）、运行架构清单门禁（`make evolution-check`）并使用本项目 `.codegraph/` 符号地图定位触点，严禁把历史冻结 `roadmap-phase*.md` 全盘扫描一遍。
     - **横向竞品同场实证**：Benchmark 在与裸奔自对比和生产账本对齐的同时，必须纳入与主流 Agent 基础设施（Mem0 / Letta / PowerContext / Shodh-Memory / OpenViking / AgentFS / rg+psutil）的同机实跑与源码级能力对标，严格区分 `LIVE_BENCHMARKED`（实跑）与 `ARCH_VERIFIED`（源码核实），绝不捏造竞品跑分。
+
+21. **全生命周期信息新鲜度、写穿失效与现实对账规约 (Information Freshness, Write-Through Invalidation & Reality Reconciliation)**：
+    - **内容变更写穿失效**：当文件 `content_hash` 或 `size_bytes` 变化时，必须同步将 `desc_kv["embedding_status"]` 标为 `"stale"` 并清空旧向量 `'[]'`、将旧 L2 标注标为 `"needs_re_enrich"` 并刷新拓扑依赖边，严禁旧语义与旧向量僵尸驻留。
+    - **物理消亡级联净化**：文件删除后必须在检索层（`search_assets_fts` 强制 `status = 'active'`）零召回，并级联清理 `fact_nodes`、`links` 与关联 `auto_sync` 记忆；同路径 `auto_sync` 记忆实行“新写归档旧版”幂等去重，杜绝单文件反复修改霸屏简报。
+    - **周期性现实对账 (`FreshnessReconciler`)**：守护进程与按需 CLI/MCP 定期比对库内快照、磁盘文件状态、`/proc` 实时监听端口与 `.codegraph/codegraph.db` `mtime`，自动剪除幽灵端口节点与过旧资产。
+
+22. **内生对比探针驱动的闭环自进化规约 (Probe-Driven Closed-Loop Self-Evolution & Auto-Feedback Flywheel)**：
+    - **五点回路对比探针**：在 `SessionStart(Brief)`、`PreToolUse(Guard)`、`InFlight(Search)`、`PostToolUse(Drift)` 与 `Periodic(Regression)` 五个执行切面部署确定性对比探针（`P1~P5`），以实测物理态 vs 历史快照/SLA/上一版本 Benchmark 为参照系，量化记录每一项偏差与改善幅度。
+    - **数字佐证与去重自上报**：严禁拍脑袋优化。任何自愈修复与能力演进必须提供探针实测数字差值（Before/After/Delta）佐证；当越过退化阈值时自动调用幂等去重的 `FeedbackEngine::add_item_deduped` 写入 [user_feedback.md](user_feedback.md)，形成“探针发现 → 数字佐证 → 自动自愈/反馈 → Benchmark 固化”的自进化飞轮（详见 [13-freshness-and-self-evolution-spec.md](design_doc/13-freshness-and-self-evolution-spec.md)）。
 
 ---
 
@@ -403,7 +413,11 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - **`LinksEngine` 测试/注释/文档示例免疫**：排除 `.rs` 测试夹具/`#[cfg(test)]`/`placeholder` 与 `.md` 示例代码路径导致的假断链自污染，使现网 `links audit` 恢复 `100/100` 健康分；
     - **Systemd 守护工具链探测 & Benchmark `v3.2`**：让 `PreflightChecker` 自动识别 NVM/Cargo 路径下的 `codegraph`；对齐 `DQ3` 物理健康度口径并校准 `COMP-C4` 等价采集基线（详见 [roadmap-phase37.md](src_doc/roadmap-phase37.md)）。
   
-21. 需要防止信息过旧问题，例如文件被修改了，对应的语义或其他描述确没有更新。或者文件被删除、或新增了，但数据库里还是旧信息。除此以外，可能还有其他信息过旧问题，需要思考一下，并给出解决方案
+21. **全生命周期信息新鲜度治理与现实对账体系 (`Information Freshness & Reality Reconciliation`)** `✅ Phase 38 已落地`:
+    - 彻底治理七大陈旧漏斗（`STALE-01~07`）：文件修改后写穿重置旧向量 (`embedding = '[]'`, `embedding_status = "stale"`) 与旧 L2 标注 (`needs_re_enrich`)；文件删除后 FTS 强制 `status = 'active'` 零僵尸召回并级联清理 `fact_nodes` / `links` / `auto_sync` 记忆；`AutoSyncEngine` 对同路径摘要记忆幂等去重归档；`PropertyGraphOrganizer` 与 `FreshnessReconciler` 自动剪除已关闭的幽灵端口节点、核销 `scripts/backfill_embeddings.py` 回填态 (`"ready"`) 并核验 `.codegraph/codegraph.db` 滞后度；现网 `DQ5` 抽检 `598` 项达成 **`100.0%` ✅**（详见 [roadmap-phase38-39.md](src_doc/roadmap-phase38-39.md)）。
+  
+22. **内生对比探针驱动的闭环自进化引擎 (`Probe-Driven Closed-Loop Self-Evolution`)** `✅ Phase 39 已落地`:
+    - 在 Agent 执行回路的 5 个关键切面（`P1 开工 Brief` / `P2 事前 Pre-Hook` / `P3 检索效用` / `P4 事后漂移` / `P5 周期回归与图谱`）部署微秒级对比探针，以物理真值、SLA 基线与历史 Benchmark 批次为参照系量化输出数字差值（Before/After/Delta），并集成去重幂等的 `FeedbackEngine::add_item_deduped` 自动驱动 `user_feedback.md`、自愈对账与 Benchmark `v3.3` (`W12` + `DQ5`) 闭环自进化；首轮部署即由 `P3` 探针真实捕获 `stale_vec=3` 缺口并自愈至 **`5/5 ✅`**，现网 `v3.3` 全量评测 `D1 -99.65%`、`D6 37.6 → 99.8 (+62.1)` 全面通过（详见 [13-freshness-and-self-evolution-spec.md](design_doc/13-freshness-and-self-evolution-spec.md)）。
 
   
 ---
