@@ -504,7 +504,8 @@ mod tests {
         assert_eq!(v_gen["id"], 108);
         assert_eq!(v_gen["result"]["isError"], false);
         let text_gen = v_gen["result"]["content"][0]["text"].as_str().expect("text");
-        assert!(text_gen.contains("steward-hooks.md"));
+        assert!(text_gen.contains(".gemini/config/hooks.json"));
+        assert!(text_gen.contains("steward_bridge.py"));
     }
 
     #[test]

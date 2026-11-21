@@ -41,6 +41,15 @@ impl std::fmt::Display for ClientType {
     }
 }
 
+/// 配套生成文件（例如 AGY hooks.json 对应的桥接脚本）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GeneratedCompanionFile {
+    pub relative_path: String,
+    pub content: String,
+    pub executable: bool,
+    pub written_path: Option<String>,
+}
+
 /// 客户端 Hook 配置生成结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneratedHookConfig {
@@ -50,7 +59,297 @@ pub struct GeneratedHookConfig {
     pub executable: bool,
     pub is_dry_run: bool,
     pub written_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub companion_files: Vec<GeneratedCompanionFile>,
 }
+
+const AGY_HOOKS_JSON_TEMPLATE: &str = r#"{
+  "agent-steward": {
+    "enabled": true,
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "python3 ./hooks/steward_bridge.py session_start",
+        "timeout": 5
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "write_file|edit_file|run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ./hooks/steward_bridge.py pre_tool",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "write_file|edit_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ./hooks/steward_bridge.py post_tool",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
+"#;
+
+const AGY_BRIDGE_SCRIPT_TEMPLATE: &str = r##"#!/usr/bin/env python3
+"""
+Antigravity (agy) <-> Agent Host Steward (CLI) 生命周期硬 Hook 桥接脚本
+由 `agent-steward hooks generate --client agy` 自动生成。
+
+用法（由 ~/.gemini/config/hooks.json 调用）:
+  steward_bridge.py session_start
+  steward_bridge.py pre_tool
+  steward_bridge.py post_tool
+"""
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from typing import Any, Dict, Optional
+
+STEWARD_BIN = shutil.which("agent-steward") or "/usr/local/bin/agent-steward"
+
+# 仅匹配明确“启动监听服务/端口绑定”的命令，避免误拦 psql -p 5432 / curl :8080 等客户端命令
+LISTEN_PORT_PATTERNS = [
+    re.compile(r"\bhttp\.server\s+(\d{2,5})\b"),
+    re.compile(r"\b(?:uvicorn|gunicorn|flask\s+run|vite|webpack-dev-server|streamlit\s+run)\b[^\n]*?(?:--port|-p)[=\s]+(\d{2,5})\b"),
+    re.compile(r"\b(?:next\s+dev|nuxt\s+dev|astro\s+dev)\b[^\n]*?(?:--port|-p)[=\s]+(\d{2,5})\b"),
+    re.compile(r"\bdocker\s+run\b[^\n]*?(?:-p|--publish)[=\s]+(?:[\d.]+:)?(\d{2,5}):\d{2,5}\b"),
+    re.compile(r"\bpg_ctl\b[^\n]*?\bstart\b[^\n]*?-p\s+(\d{2,5})\b"),
+    re.compile(r"\b(?:nc|ncat|socat)\b[^\n]*?-[a-zA-Z]*l[a-zA-Z]*[^\n]*?\s(\d{2,5})\b"),
+    re.compile(r"\bserve\b[^\n]*?(?:-l|--listen)[=\s]+(?:tcp://[^:]+:)?(\d{2,5})\b"),
+]
+
+NOISE_PATH_PREFIXES = (
+    "/tmp/",
+    "/var/tmp/",
+    "/root/.gemini/",
+    "/root/.steward/",
+)
+
+
+def read_stdin_json() -> Dict[str, Any]:
+    try:
+        raw = sys.stdin.read()
+        if not raw.strip():
+            return {}
+        return json.loads(raw)
+    except Exception:
+        return {}
+
+
+def emit(obj: Dict[str, Any]) -> None:
+    sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
+
+
+def is_noise_path(path: str) -> bool:
+    if not path:
+        return True
+    home_gemini = os.path.expanduser("~/.gemini/")
+    home_steward = os.path.expanduser("~/.steward/")
+    prefixes = NOISE_PATH_PREFIXES + (home_gemini, home_steward)
+    return any(path.startswith(prefix) for prefix in prefixes)
+
+
+def extract_listen_port(cmd: str) -> Optional[int]:
+    for pat in LISTEN_PORT_PATTERNS:
+        m = pat.search(cmd)
+        if m:
+            try:
+                port = int(m.group(1))
+                if 1 <= port <= 65535:
+                    return port
+            except ValueError:
+                pass
+    return None
+
+
+def handle_session_start() -> None:
+    if not os.path.exists(STEWARD_BIN):
+        emit({})
+        return
+    try:
+        proc = subprocess.run(
+            [STEWARD_BIN, "brief"],
+            capture_output=True,
+            text=True,
+            timeout=2.5,
+            check=False,
+        )
+        out = (proc.stdout or "").strip()
+        if proc.returncode == 0 and out:
+            if len(out) > 2500:
+                out = out[:2500] + "\n... (truncated)"
+            emit(
+                {
+                    "injectSteps": [
+                        {
+                            "systemMessage": {
+                                "systemMessage": f"[Agent Host Steward 自动开工简报]\n{out}"
+                            }
+                        }
+                    ]
+                }
+            )
+            return
+    except Exception:
+        pass
+    emit({})
+
+
+def handle_pre_tool() -> None:
+    payload = read_stdin_json()
+    if not os.path.exists(STEWARD_BIN):
+        emit({"decision": "allow"})
+        return
+
+    tool_call = payload.get("toolCall") or {}
+    tool_name = str(tool_call.get("name") or "")
+    raw_args = tool_call.get("args") or {}
+    if not isinstance(raw_args, dict):
+        emit({"decision": "allow"})
+        return
+
+    steward_args: Dict[str, Any] = {}
+    if tool_name in ("write_file", "edit_file"):
+        path = str(raw_args.get("Path") or raw_args.get("path") or "")
+        if is_noise_path(path):
+            emit({"decision": "allow"})
+            return
+        steward_args["path"] = path
+    elif tool_name == "run_command":
+        cmd = str(raw_args.get("CommandLine") or raw_args.get("command") or "")
+        if not cmd:
+            emit({"decision": "allow"})
+            return
+        port = extract_listen_port(cmd)
+        if port is None:
+            emit({"decision": "allow"})
+            return
+        steward_args["command"] = cmd
+        steward_args["port"] = port
+    else:
+        emit({"decision": "allow"})
+        return
+
+    try:
+        proc = subprocess.run(
+            [
+                STEWARD_BIN,
+                "hooks",
+                "pre",
+                "-t",
+                tool_name,
+                "-a",
+                json.dumps(steward_args, ensure_ascii=False),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=2.0,
+            check=False,
+        )
+        if proc.returncode != 0 or not proc.stdout.strip():
+            emit({"decision": "allow"})
+            return
+
+        res = json.loads(proc.stdout)
+        allowed = res.get("allowed", True)
+        has_warnings = bool(res.get("has_warnings", False))
+        warnings = res.get("warnings") or []
+        suggestions = res.get("suggestions") or []
+
+        if not allowed:
+            reason_parts = warnings + suggestions
+            reason = "[agent-steward 阻断] " + " ; ".join(reason_parts) if reason_parts else "[agent-steward 阻断] 命中安全/协作锁策略"
+            emit({"decision": "deny", "reason": reason})
+            return
+
+        if has_warnings:
+            reason_parts = warnings + suggestions
+            reason = "[agent-steward 风险预警] " + " ; ".join(reason_parts)
+            emit({"decision": "ask", "reason": reason})
+            return
+    except Exception:
+        pass
+
+    emit({"decision": "allow"})
+
+
+def handle_post_tool() -> None:
+    payload = read_stdin_json()
+    if not os.path.exists(STEWARD_BIN):
+        emit({})
+        return
+
+    if payload.get("error"):
+        emit({})
+        return
+
+    tool_call = payload.get("toolCall") or {}
+    tool_name = str(tool_call.get("name") or "")
+    raw_args = tool_call.get("args") or {}
+    if tool_name not in ("write_file", "edit_file") or not isinstance(raw_args, dict):
+        emit({})
+        return
+
+    path = str(raw_args.get("Path") or raw_args.get("path") or "")
+    if is_noise_path(path):
+        emit({})
+        return
+
+    steward_args = {"path": path}
+    try:
+        subprocess.Popen(
+            [
+                STEWARD_BIN,
+                "hooks",
+                "post",
+                "-t",
+                tool_name,
+                "-a",
+                json.dumps(steward_args, ensure_ascii=False),
+                "--success",
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception:
+        pass
+
+    emit({})
+
+
+def main() -> None:
+    mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    if mode == "session_start":
+        handle_session_start()
+    elif mode == "pre_tool":
+        handle_pre_tool()
+    elif mode == "post_tool":
+        handle_post_tool()
+    else:
+        emit({})
+
+
+if __name__ == "__main__":
+    main()
+"##;
 
 /// Agent 客户端 Hook 自动生成器 (规约 #13 MCP 与 CLI 1:1 映射)
 pub struct ClientHookGenerator;
@@ -59,42 +358,29 @@ impl ClientHookGenerator {
     /// 根据客户端类型生成默认相对文件名
     pub fn default_relative_path(client: ClientType) -> &'static str {
         match client {
-            ClientType::Agy => ".gemini/antigravity-cli/rules/steward-hooks.md",
+            ClientType::Agy => ".gemini/config/hooks.json",
             ClientType::Cursor => ".cursorrules",
             ClientType::Claude => "CLAUDE.md",
             ClientType::Git => ".git/hooks/post-commit",
         }
     }
 
+    /// 配套生成文件清单（如 AGY 的桥接脚本）
+    pub fn companion_templates(client: ClientType) -> Vec<(&'static str, &'static str, bool)> {
+        match client {
+            ClientType::Agy => vec![(
+                ".gemini/config/hooks/steward_bridge.py",
+                AGY_BRIDGE_SCRIPT_TEMPLATE,
+                true,
+            )],
+            _ => Vec::new(),
+        }
+    }
+
     /// 生成配置内容模板
     pub fn render_template(client: ClientType) -> (&'static str, bool) {
         match client {
-            ClientType::Agy => (
-                r#"# Agent Host Steward (AGY) Hook 协同规约
-
-> 本文件由 `agent-steward hooks generate --client agy` 自动生成。
-> 用于确保 Antigravity Agent 在执行宿主机任务时与 Agent Host Steward 大管家深度协同。
-
-## 1. 开工前置检查 (Pre-Tool Hook)
-在准备执行任何涉及宿主环境变动的操作（如启动新服务、占用端口、创建工程、修改共享代码）前：
-- **互斥锁与端口检查**：调用 `steward_hook_pre(tool_name, arguments)` 或 `steward_lock_acquire`。
-  - 若返回 `warning` 或 `has_conflict=true`，严禁盲目强行占用，必须排查冲突进程或更换空闲端口。
-- **目录放置规范**：创建新工程、脚本或文档前，调用 `steward_placement_suggest(intent, path)` 获取符合宿主规划的最佳路径。
-
-## 2. 完工后置回写 (Post-Tool Hook)
-在通过 `write_file`、`edit_file` 或编译脚本产出重要资产后：
-- 调用 `steward_hook_post(tool_name, arguments, result_summary)`。
-- 大管家内置的 `AutoSyncEngine` 将自动执行：
-  - 白黑名单过滤（严禁 `node_modules`、`.git`、`target` 等底噪入库）；
-  - 自动资产目录建档 (`upsert_asset`)；
-  - 重要性规则评分门禁，提取高价值文档首部摘要沉淀为长期记忆 (`insert_memory`)；
-  - 属性图拓扑节点刷新 (`upsert_fact_node`)。
-
-## 3. 会话收敛
-- 会话结束前，调用 `steward_session_close(session_id, clean_temp=true)` 结清临时文件与归档会话纪要。
-"#,
-                false,
-            ),
+            ClientType::Agy => (AGY_HOOKS_JSON_TEMPLATE, false),
             ClientType::Cursor => (
                 r#"# Cursor Rules for Agent Host Steward
 
@@ -179,6 +465,36 @@ exit 0
             written_path = Some(full_path.to_string_lossy().to_string());
         }
 
+        let mut companion_files = Vec::new();
+        for (comp_rel, comp_content, comp_exec) in Self::companion_templates(client) {
+            let mut comp_written = None;
+            if let Some(base_dir) = target_dir {
+                let comp_full = base_dir.join(comp_rel);
+                if !dry_run {
+                    if let Some(parent) = comp_full.parent() {
+                        fs::create_dir_all(parent)
+                            .with_context(|| format!("创建配套脚本目录失败: {:?}", parent))?;
+                    }
+                    fs::write(&comp_full, comp_content)
+                        .with_context(|| format!("写入配套 Hook 脚本失败: {:?}", comp_full))?;
+
+                    #[cfg(unix)]
+                    if comp_exec {
+                        use std::os::unix::fs::PermissionsExt;
+                        let perms = fs::Permissions::from_mode(0o755);
+                        let _ = fs::set_permissions(&comp_full, perms);
+                    }
+                }
+                comp_written = Some(comp_full.to_string_lossy().to_string());
+            }
+            companion_files.push(GeneratedCompanionFile {
+                relative_path: comp_rel.to_string(),
+                content: comp_content.to_string(),
+                executable: comp_exec,
+                written_path: comp_written,
+            });
+        }
+
         Ok(GeneratedHookConfig {
             client: client.to_string(),
             relative_path: relative_path.to_string(),
@@ -186,6 +502,7 @@ exit 0
             executable,
             is_dry_run: dry_run,
             written_path,
+            companion_files,
         })
     }
 }
@@ -208,9 +525,46 @@ mod tests {
     fn test_generate_dry_run() {
         let res = ClientHookGenerator::generate(ClientType::Agy, None, true).unwrap();
         assert_eq!(res.client, "agy");
-        assert!(res.content.contains("steward_hook_pre"));
+        assert_eq!(res.relative_path, ".gemini/config/hooks.json");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&res.content).expect("AGY hooks.json 必须是合法 JSON");
+        assert!(parsed["agent-steward"]["PreToolUse"].is_array());
+        assert!(parsed["agent-steward"]["PostToolUse"].is_array());
+        assert!(parsed["agent-steward"]["SessionStart"].is_array());
+        assert_eq!(res.companion_files.len(), 1);
+        assert_eq!(
+            res.companion_files[0].relative_path,
+            ".gemini/config/hooks/steward_bridge.py"
+        );
+        assert!(res.companion_files[0].executable);
         assert!(res.written_path.is_none());
         assert!(res.is_dry_run);
+    }
+
+    #[test]
+    fn test_generate_agy_write_to_directory() {
+        let dir = tempdir().unwrap();
+        let res = ClientHookGenerator::generate(ClientType::Agy, Some(dir.path()), false).unwrap();
+        assert_eq!(res.client, "agy");
+        assert!(res.written_path.is_some());
+        assert_eq!(res.companion_files.len(), 1);
+        assert!(res.companion_files[0].written_path.is_some());
+
+        let hooks_file = dir.path().join(".gemini/config/hooks.json");
+        let bridge_file = dir.path().join(".gemini/config/hooks/steward_bridge.py");
+        assert!(hooks_file.exists());
+        assert!(bridge_file.exists());
+
+        let parsed: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&hooks_file).unwrap()).unwrap();
+        assert_eq!(parsed["agent-steward"]["enabled"], true);
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = fs::metadata(&bridge_file).unwrap().permissions().mode();
+            assert_eq!(mode & 0o111, 0o111, "steward_bridge.py 必须具有可执行权限");
+        }
     }
 
     #[test]

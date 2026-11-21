@@ -1465,6 +1465,10 @@ fn main() -> Result<()> {
                     if let Some(ref path) = res.written_path {
                         println!("║ 落地物理路径: {:<75} ║", path);
                     }
+                    for comp in &res.companion_files {
+                        let comp_display = comp.written_path.as_deref().unwrap_or(&comp.relative_path);
+                        println!("║ 配套脚本路径: {:<75} ║", comp_display);
+                    }
                     println!("╚══════════════════════════════════════════════════════════════════════════════════════════╝");
                     println!("\n--- 生成内容预览 ---\n{}", res.content);
                 }

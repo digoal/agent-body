@@ -1,7 +1,9 @@
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use anyhow::Result;
-use tokio::time::interval;
+use tokio::time::{interval, interval_at, Instant};
 use crate::config::Config;
 use crate::storage::Storage;
 use crate::env::EnvCollector;
@@ -30,7 +32,17 @@ impl StewardDaemon {
         println!("数据库路径:     {:?}", self.config.db_path);
 
         // 0. 执行运行时环境依赖预检 (Preflight)
-        let preflight = crate::preflight::PreflightChecker::run_all(&self.config.data_dir, Some(&self.config));
+        // 在脱离 Tokio 上下文的独立 OS 线程中运行，避免内部 reqwest::blocking 与 Tokio 运行时死锁/忙等
+        let preflight_data_dir = self.config.data_dir.clone();
+        let preflight_cfg = self.config.clone();
+        let (pf_tx, pf_rx) = tokio::sync::oneshot::channel();
+        std::thread::spawn(move || {
+            let res = crate::preflight::PreflightChecker::run_all(&preflight_data_dir, Some(&preflight_cfg));
+            let _ = pf_tx.send(res);
+        });
+        let preflight = pf_rx
+            .await
+            .map_err(|_| anyhow::anyhow!("Preflight 检查线程异常中止"))?;
         if !preflight.passed_required {
             eprintln!("{}", preflight.format_table());
             anyhow::bail!("Preflight 检查失败：存在 REQUIRED 关键运行依赖未满足，守护进程终止启动。");
@@ -98,7 +110,13 @@ impl StewardDaemon {
         // 3. 定时器
         let mut process_interval = interval(Duration::from_secs(60));
         let mut watch_poll_interval = interval(Duration::from_millis(500));
-        let mut inspection_interval = interval(Duration::from_secs(1800)); // 每 30 分钟一次深度全量巡检
+        // 首次巡检延迟 10 秒执行，避免与启动阶段抢占资源；之后每 30 分钟一次深度全量巡检
+        let mut inspection_interval = interval_at(
+            Instant::now() + Duration::from_secs(10),
+            Duration::from_secs(1800),
+        );
+        let inspection_running = Arc::new(AtomicBool::new(false));
+        let _ = bg_scheduler; // 保留构造校验，实际每次巡检在独立 OS 线程执行以隔离 reqwest::blocking
 
         println!("✅ 动态任务进程定时采集就绪 (每 60 秒轮询 /proc)");
         println!("✅ 后台自主深度巡查与属性图增量同步就绪 (每 1800 秒自动巡查)");
@@ -137,23 +155,40 @@ impl StewardDaemon {
                 }
 
                 // 定时自主深度巡查与属性图同步
+                // 必须在脱离 Tokio 运行时的独立 OS 线程中执行，避免内部 reqwest::blocking 导致主线程 100% CPU 忙等死锁
                 _ = inspection_interval.tick() => {
-                    if let Ok(report) = bg_scheduler.run_inspection_cycle() {
-                        println!("[Scheduler] 深度巡检完成: 同步进程 {}, 属性图节点更新 {}, 边更新 {}",
-                            report.synced_processes, report.graph_nodes_updated, report.graph_edges_updated);
-                        if let Some(ref tx) = sse_broadcaster {
-                            let msg = serde_json::json!({
-                                "type": "SchedulerCycle",
-                                "payload": {
-                                    "synced_processes": report.synced_processes,
-                                    "graph_nodes": report.graph_nodes_updated,
-                                    "graph_edges": report.graph_edges_updated,
-                                    "expired_locks_cleaned": report.expired_locks_cleaned,
-                                    "timestamp": chrono::Local::now().to_rfc3339(),
+                    if inspection_running
+                        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+                        .is_ok()
+                    {
+                        let storage_for_cycle = self.storage.clone();
+                        let sse_for_cycle = sse_broadcaster.clone();
+                        let running_flag = Arc::clone(&inspection_running);
+                        std::thread::spawn(move || {
+                            let scheduler = BackgroundScheduler::new(storage_for_cycle);
+                            if let Ok(report) = scheduler.run_inspection_cycle() {
+                                println!(
+                                    "[Scheduler] 深度巡检完成: 同步进程 {}, 属性图节点更新 {}, 边更新 {}",
+                                    report.synced_processes,
+                                    report.graph_nodes_updated,
+                                    report.graph_edges_updated
+                                );
+                                if let Some(ref tx) = sse_for_cycle {
+                                    let msg = serde_json::json!({
+                                        "type": "SchedulerCycle",
+                                        "payload": {
+                                            "synced_processes": report.synced_processes,
+                                            "graph_nodes": report.graph_nodes_updated,
+                                            "graph_edges": report.graph_edges_updated,
+                                            "expired_locks_cleaned": report.expired_locks_cleaned,
+                                            "timestamp": chrono::Local::now().to_rfc3339(),
+                                        }
+                                    });
+                                    let _ = tx.send(msg.to_string());
                                 }
-                            });
-                            let _ = tx.send(msg.to_string());
-                        }
+                            }
+                            running_flag.store(false, Ordering::SeqCst);
+                        });
                     }
                 }
 

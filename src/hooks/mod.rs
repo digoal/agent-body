@@ -11,7 +11,7 @@ pub mod pipeline;
 pub use event_bus::{EventBus, EventBusHandle};
 pub use dispatcher::{HookDispatcher, HookRule, HookAction, HookFilter};
 pub use auto_sync::{AutoSyncEngine, AutoSyncResult};
-pub use client_gen::{ClientHookGenerator, ClientType, GeneratedHookConfig};
+pub use client_gen::{ClientHookGenerator, ClientType, GeneratedCompanionFile, GeneratedHookConfig};
 pub use push::{WebhookPusher, WebhookDeliveryReport, bridge_event_bus_to_sse};
 #[cfg(unix)]
 pub use push::UdsBroadcaster;
