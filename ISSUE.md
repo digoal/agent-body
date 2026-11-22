@@ -154,4 +154,9 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 
 32. 数据库有等待事件、统计信息采样快照、ebpf、AWR等分析性能的手段，是否可以借鉴到当前项目？目的是设计一个可以用于项目自身性能基准抓取或设定,性能诊断,优化的功能。 
 
-33. WEB UI 中实证基准与账本中执行真机运行A/B基准（全量套件）时，我看到打叉的 SLA FAIL.
+33. **代码质量治理、`W10`/`DQ5` SLA 全绿修复、位置无关性硬化与五重质量门禁 (`Phase 49`)** `✅ Phase 49 已全量落地（对应规约 #9, #11, #13, #28）`:
+    > 原始反馈：WEB UI 中实证基准与账本中执行真机运行A/B基准（全量套件）时，我看到打叉的 SLA FAIL 以及打叉的 W10 · 复杂模板依赖抽取抗假阳性 FAIL · 省 88.9% · 质量 56→90 (+34.0) · 事实 2/2 · 密度 9.0x。改过名字后，似乎代码质量下降了，请治理一下代码质量。
+    - **实证根因**：① `W10` 在生产基准代码中硬编码了编译期宏 `env!("CARGO_MANIFEST_DIR")`，仓库改名为 `agent-body` 后旧二进制指向失效的 `/root/new/work/agent-steward/README.md`，导致 `.md` 示例免疫失效产生 1 条假阳性；② 目录改名后现网遗留 `247` 个失活资产、`98` 个幽灵节点与 `10` 条冗余记忆，使 `DQ5` 跌至 `45.3%`；③ `Dockerfile`/`docker-compose.yml`/`config.example.toml` 残留 `/.steward` 路径断链，且缺少代码卫生/位置无关/吞错门禁。
+    - **已落地治理**：移除生产路径 `CARGO_MANIFEST_DIR` 实现 100% 位置无关二进制；修复 Docker/配置/CLI Help/Web UI 残留；治理 `scheduler`/`watcher`/`probes`/`property_graph`/`links` 核心自治路径静默 `let _ =` 吞错；新增 `scripts/code_hygiene.py` 与 `make quality-gate` 五重门禁；模块化拆分 `mcp_schemas.rs`、`cli_args.rs`、`benchmark/workloads/{mod,advanced}.rs`；收敛 SQLite 页缓存 + 巡检后 `malloc_trim(0)` 压降守护进程 RSS；升级 README 规约 #11/#13 并新增规约 #28（详见 [roadmap-phase49.md](docs/src_doc/roadmap-phase49.md)）。
+
+34. README.md 项目结构中，根目录核心文件中的每个文件都要有描述。

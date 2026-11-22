@@ -122,7 +122,6 @@ pub(crate) fn is_test_or_example_link(
     }
 
     if source_path.ends_with(".md")
-        && !in_sys_tmp
         && std::path::Path::new(source_path).exists()
         && !std::path::Path::new(target_path).exists()
         && !is_explicit_markdown_link(snippet)
@@ -197,7 +196,9 @@ impl LinksEngine {
             Err(_) => return Ok(0),
         };
         let path_str = asset_path.to_string_lossy().to_string();
-        let _ = self.storage.delete_auto_links_for_source(&path_str);
+        if let Err(e) = self.storage.delete_auto_links_for_source(&path_str) {
+            eprintln!("[Links][WARN] 清理旧自动链接失败 ({}): {}", path_str, e);
+        }
         self.discover_links_from_script(&path_str, &content)
     }
 
@@ -235,7 +236,7 @@ impl LinksEngine {
                 continue;
             }
             // Rust 源码进入 #[cfg(test)] 单元测试块后立即停止抽取，防止测试字符串假路径污染生产拓扑
-            if is_rust && !asset_path.starts_with("/tmp/") && trimmed.starts_with("#[cfg(test)]") {
+            if is_rust && trimmed.starts_with("#[cfg(test)]") {
                 break;
             }
 
@@ -288,7 +289,9 @@ impl LinksEngine {
                                 provenance: Some("ast_import".to_string()),
                                 created_at: None,
                             };
-                            let _ = self.storage.add_link(&link);
+                            if let Err(e) = self.storage.add_link(&link) {
+                                eprintln!("[Links][WARN] 写入依赖边失败 ({} -> {}): {}", link.source_id, link.target_id, e);
+                            }
                             count += 1;
                         }
                     }
@@ -314,7 +317,9 @@ impl LinksEngine {
                         provenance: Some("ast_import".to_string()),
                         created_at: None,
                     };
-                    let _ = self.storage.add_link(&link);
+                    if let Err(e) = self.storage.add_link(&link) {
+                        eprintln!("[Links][WARN] 写入依赖边失败 ({} -> {}): {}", link.source_id, link.target_id, e);
+                    }
                     count += 1;
                 }
                 }
@@ -339,7 +344,9 @@ impl LinksEngine {
                         provenance: Some("ast_import".to_string()),
                         created_at: None,
                     };
-                    let _ = self.storage.add_link(&link);
+                    if let Err(e) = self.storage.add_link(&link) {
+                        eprintln!("[Links][WARN] 写入依赖边失败 ({} -> {}): {}", link.source_id, link.target_id, e);
+                    }
                     count += 1;
                 }
                 }
@@ -373,7 +380,9 @@ impl LinksEngine {
                         provenance: Some("path_regex".to_string()),
                         created_at: None,
                     };
-                    let _ = self.storage.add_link(&link);
+                    if let Err(e) = self.storage.add_link(&link) {
+                        eprintln!("[Links][WARN] 写入依赖边失败 ({} -> {}): {}", link.source_id, link.target_id, e);
+                    }
                     count += 1;
                 }
             }
@@ -395,7 +404,9 @@ impl LinksEngine {
                     provenance: Some("port_detect".to_string()),
                     created_at: None,
                 };
-                let _ = self.storage.add_link(&link);
+                if let Err(e) = self.storage.add_link(&link) {
+                    eprintln!("[Links][WARN] 写入依赖边失败 ({} -> {}): {}", link.source_id, link.target_id, e);
+                }
                 count += 1;
             }
 
@@ -414,7 +425,9 @@ impl LinksEngine {
                     provenance: Some("port_detect".to_string()),
                     created_at: None,
                 };
-                let _ = self.storage.add_link(&link);
+                if let Err(e) = self.storage.add_link(&link) {
+                    eprintln!("[Links][WARN] 写入依赖边失败 ({} -> {}): {}", link.source_id, link.target_id, e);
+                }
                 count += 1;
             }
 
@@ -433,7 +446,9 @@ impl LinksEngine {
                     provenance: Some("port_detect".to_string()),
                     created_at: None,
                 };
-                let _ = self.storage.add_link(&link);
+                if let Err(e) = self.storage.add_link(&link) {
+                    eprintln!("[Links][WARN] 写入依赖边失败 ({} -> {}): {}", link.source_id, link.target_id, e);
+                }
                 count += 1;
             }
         }
@@ -654,10 +669,12 @@ mod tests {
         assert_eq!(cnt_tests_dir, 0, "/tests/ 夹具不应纳入生产拓扑");
 
         let md_example = "示例 CLI:\n`agent-body links impact /root/new/shared_proj/nonexistent_demo.py`\n如 redis:6379 被误判";
-        let real_readme = concat!(env!("CARGO_MANIFEST_DIR"), "/README.md");
+        let tmp_md = std::env::temp_dir().join(format!("agent_body_md_test_{}.md", uuid::Uuid::new_v4()));
+        std::fs::write(&tmp_md, md_example).expect("write tmp md");
         let cnt_md = engine
-            .discover_links_from_script(real_readme, md_example)
+            .discover_links_from_script(&tmp_md.to_string_lossy(), md_example)
             .unwrap();
+        let _ = std::fs::remove_file(&tmp_md);
         assert_eq!(cnt_md, 0, "真实 .md 中的 CLI 示例与端口文本不应产生假边");
     }
 }

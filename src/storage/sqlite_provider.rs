@@ -21,6 +21,10 @@ impl SqliteStorageProvider {
         }
         let conn = Connection::open(path)
             .with_context(|| format!("打开 SQLite 数据库失败: {:?}", path))?;
+        // 收敛 SQLite 页缓存至 8MB，防止常驻守护进程 RSS 突破规约 #9 (<90MB) 红线
+        if let Err(e) = conn.execute_batch("PRAGMA cache_size = -8000; PRAGMA temp_store = FILE;") {
+            eprintln!("[SQLite][WARN] 设置内存收敛 PRAGMA 失败: {}", e);
+        }
         crate::config::restrict_private_permissions(path, false);
         let provider = Self {
             conn: Arc::new(Mutex::new(conn)),

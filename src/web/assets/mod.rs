@@ -536,8 +536,8 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 
             <div class="panel-grid-2 mt-12">
               <div class="card">
-                <div class="item-top"><strong>🧪 实验室 A/B 对照实测 (Without vs With Steward)</strong><span id="bench-sla-badge" class="badge">-</span></div>
-                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 15 大负载对照实测</div></div>
+                <div class="item-top"><strong>🧪 实验室 A/B 对照实测 (Without vs With Agent Body)</strong><span id="bench-sla-badge" class="badge">-</span></div>
+                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 17 大负载对照实测</div></div>
               </div>
               <div class="card">
                 <div class="item-top"><strong>⚡ 5 大内核微基准 SLA & 跨版本回归比对</strong></div>
@@ -3470,7 +3470,7 @@ async function loadAnalytics() {
 
 async function runAnalyticsExport() {
   const table = document.getElementById("ana-export-table")?.value || "assets";
-  const output_path = `/root/new/tmp/steward_${table}.parquet`;
+  const output_path = `/root/new/tmp/agent_body_${table}.parquet`;
   const msgEl = document.getElementById("ana-export-msg");
   try {
     const res = await apiPost("/api/v1/analytics/export", { table, output_path });
@@ -4082,7 +4082,7 @@ function renderBenchmarkReportPayload(rep) {
             <div style="flex:1;height:6px;background:var(--border);border-radius:4px;overflow:hidden;">
               <div style="width:${(100 - pct).toFixed(1)}%;height:100%;background:var(--green);"></div>
             </div>
-            <span style="min-width:95px;text-align:right;">管家 ${w.steward_tokens} tok</span>
+            <span style="min-width:95px;text-align:right;">本体 ${w.steward_tokens} tok</span>
           </div>
         </div>`;
       }).join("");

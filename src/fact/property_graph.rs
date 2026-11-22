@@ -379,18 +379,26 @@ impl PropertyGraphOrganizer {
                 }
                 match node.node_type.as_str() {
                     "port" if !active_port_ids.is_empty() && !active_port_ids.contains(&node.id) => {
-                        let _ = self.storage.delete_fact_node(&node.id);
+                        if let Err(e) = self.storage.delete_fact_node(&node.id) {
+                            eprintln!("[PropertyGraph][WARN] 剪枝幽灵端口节点失败 ({}): {}", node.id, e);
+                        }
                     }
                     "service" if !active_service_ids.is_empty() && !active_service_ids.contains(&node.id) => {
-                        let _ = self.storage.delete_fact_node(&node.id);
+                        if let Err(e) = self.storage.delete_fact_node(&node.id) {
+                            eprintln!("[PropertyGraph][WARN] 剪枝幽灵服务节点失败 ({}): {}", node.id, e);
+                        }
                     }
                     "cron" if !active_cron_ids.is_empty() && !active_cron_ids.contains(&node.id) => {
-                        let _ = self.storage.delete_fact_node(&node.id);
+                        if let Err(e) = self.storage.delete_fact_node(&node.id) {
+                            eprintln!("[PropertyGraph][WARN] 剪枝幽灵 Cron 节点失败 ({}): {}", node.id, e);
+                        }
                     }
                     "file" => {
                         if let Some(p) = node.id.strip_prefix("file:") {
                             if p.starts_with('/') && !Path::new(p).exists() {
-                                let _ = self.storage.delete_fact_node(&node.id);
+                                if let Err(e) = self.storage.delete_fact_node(&node.id) {
+                                    eprintln!("[PropertyGraph][WARN] 剪枝幽灵文件节点失败 ({}): {}", node.id, e);
+                                }
                             }
                         }
                     }
@@ -401,7 +409,9 @@ impl PropertyGraphOrganizer {
                             .and_then(|v| v.as_str())
                             .unwrap_or("");
                         if canon.is_empty() || !Path::new(canon).exists() {
-                            let _ = self.storage.delete_fact_node(&node.id);
+                            if let Err(e) = self.storage.delete_fact_node(&node.id) {
+                                eprintln!("[PropertyGraph][WARN] 剪枝幽灵工程节点失败 ({}): {}", node.id, e);
+                            }
                         }
                     }
                     _ => {}

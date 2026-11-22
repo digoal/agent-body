@@ -195,8 +195,8 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     writeln!(md, "- **报告 SHA-256 存证指纹**: `{}`", report.report_sha256)?;
     writeln!(md, "- **SLA 总检门禁**: {}\n", if report.sla_passed { "✅ PASS" } else { "❌ FAIL" })?;
 
-    writeln!(md, "## 一、总体收益汇总 (Without Steward vs With Steward)\n")?;
-    writeln!(md, "| 指标维度 | 基线 (Without Steward) | 管家赋能 (With Steward) | 净收益 |")?;
+    writeln!(md, "## 一、总体收益汇总 (Without Agent Body vs With Agent Body)\n")?;
+    writeln!(md, "| 指标维度 | 基线 (Without Body) | 本体赋能 (With Body) | 净收益 |")?;
     writeln!(md, "|---|---:|---:|---:|")?;
     writeln!(
         md,
@@ -215,7 +215,7 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     )?;
     writeln!(
         md,
-        "| **D6 上下文质量 (基线 → 管家)** | {:.1}/100 | **{:.1}/100** | **+{:.1} 分** (不降反升: {}) |",
+        "| **D6 上下文质量 (基线 → 本体)** | {:.1}/100 | **{:.1}/100** | **+{:.1} 分** (不降反升: {}) |",
         report.overall_baseline_quality_score,
         report.d6_quality_score,
         report.overall_quality_delta,
@@ -244,7 +244,7 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
             "## 二、{} 大标准宿主负载 A/B 实测明细（省 Token × 质量提升帕累托双门禁）\n",
             report.workloads.len()
         )?;
-        writeln!(md, "| ID | 场景 | Token (基线→管家) | 节省率 | 上下文质量 (基线→管家) | 事实命中 | 信息密度 | 加速比 | 状态 |")?;
+        writeln!(md, "| ID | 场景 | Token (基线→本体) | 节省率 | 上下文质量 (基线→本体) | 事实命中 | 信息密度 | 加速比 | 状态 |")?;
         writeln!(md, "|:---:|---|---:|---:|---:|:---:|---:|---:|:---:|")?;
         for w in &report.workloads {
             writeln!(
@@ -311,7 +311,7 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
 
     if !report.competitors.is_empty() {
         writeln!(md, "## 五、热门开源竞品横向对标实测 (`COMP-C1 ~ COMP-C4`, `LIVE_BENCHMARKED`)\n")?;
-        writeln!(md, "| ID | 赛道 | 对标对象 | 竞品指标 | Steward 指标 | 上下文质量 (竞品→Steward) | 信息密度 | Token 节省 | 状态 |")?;
+        writeln!(md, "| ID | 赛道 | 对标对象 | 竞品指标 | Agent Body 指标 | 上下文质量 (竞品→Body) | 信息密度 | Token 节省 | 状态 |")?;
         writeln!(md, "|:---:|---|---|---|---|---:|---:|---:|:---:|")?;
         for c in &report.competitors {
             writeln!(

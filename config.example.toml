@@ -3,18 +3,18 @@
 # ==============================================================================
 #
 # 配置文件默认查找路径:
-#   1. 环境变量: STEWARD_CONFIG (最高优先级)
+#   1. 环境变量: AGENT_BODY_CONFIG / STEWARD_CONFIG (最高优先级)
 #   2. 命令行参数: agent-body --config <path> ...
 #   3. 用户家目录: ~/.agent-body/config.toml (默认路径)
 #
-# 首次运行任何 steward 命令时，若上述路径均不存在配置文件，
+# 首次运行任何 agent-body 命令时，若上述路径均不存在配置文件，
 # 系统将自动根据本模板创建默认的 ~/.agent-body/config.toml。
 # ==============================================================================
 
 # 基础数据存储目录 (SQLite 数据库、本地缓存、备份文件均存放于此)
 # 依赖: 该目录必须具备当前运行用户的读写权限，且磁盘剩余空间建议 >= 100MB
-# 默认: "/root/.steward" (或 "$HOME/.steward")
-data_dir = "/root/.steward"
+# 默认: "/root/.agent-body" (或 "$HOME/.agent-body")
+data_dir = "/root/.agent-body"
 
 # SQLite 主存储数据库文件绝对路径
 # 默认: "{data_dir}/body.db"

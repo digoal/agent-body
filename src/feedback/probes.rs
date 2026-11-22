@@ -81,9 +81,15 @@ impl FreshnessReconciler {
             if !path.exists() {
                 let mut missing_rec = asset.clone();
                 missing_rec.status = "missing".to_string();
-                let _ = storage.upsert_asset(&missing_rec);
-                let _ = storage.delete_auto_links_for_source(&asset.path);
-                let _ = storage.delete_links_for_target(&asset.path);
+                if let Err(e) = storage.upsert_asset(&missing_rec) {
+                    eprintln!("[Reconcile][WARN] 标记失活资产失败 ({}): {}", asset.path, e);
+                }
+                if let Err(e) = storage.delete_auto_links_for_source(&asset.path) {
+                    eprintln!("[Reconcile][WARN] 清理失活资产源边失败 ({}): {}", asset.path, e);
+                }
+                if let Err(e) = storage.delete_links_for_target(&asset.path) {
+                    eprintln!("[Reconcile][WARN] 清理失活资产目标边失败 ({}): {}", asset.path, e);
+                }
                 if storage
                     .delete_fact_node(&format!("file:{}", asset.path))
                     .unwrap_or(0)
@@ -95,8 +101,11 @@ impl FreshnessReconciler {
                 let marker = format!("产出文件 `{}` 摘要:", asset.path);
                 for m in &active_memories {
                     if m.content.contains(&marker) && archived_mem_ids.insert(m.id.clone()) {
-                        let _ = storage.update_memory_status(&m.id, "archived");
-                        rep.duplicate_memories_archived += 1;
+                        if let Err(e) = storage.update_memory_status(&m.id, "archived") {
+                            eprintln!("[Reconcile][WARN] 归档失活资产记忆失败 ({}): {}", m.id, e);
+                        } else {
+                            rep.duplicate_memories_archived += 1;
+                        }
                     }
                 }
                 rep.missing_assets_marked += 1;
@@ -149,9 +158,13 @@ impl FreshnessReconciler {
                         .get("embedding_status")
                         .and_then(|v| v.as_str())
                         == Some("stale");
-                    let _ = storage.upsert_asset(&merged);
+                    if let Err(e) = storage.upsert_asset(&merged) {
+                        eprintln!("[Reconcile][WARN] 回写漂移资产失败 ({}): {}", asset.path, e);
+                    }
                     if size_drifted || became_stale {
-                        let _ = links_engine.refresh_links_for_asset(path);
+                        if let Err(e) = links_engine.refresh_links_for_asset(path) {
+                            eprintln!("[Reconcile][WARN] 刷新漂移资产链接失败 ({}): {}", asset.path, e);
+                        }
                         rep.drifted_assets_refreshed += 1;
                     }
                 }
@@ -212,8 +225,11 @@ impl FreshnessReconciler {
             if let Some(file_path) = extract_auto_sync_path(&m.content) {
                 if !Path::new(&file_path).exists() || !seen_auto_paths.insert(file_path) {
                     if archived_mem_ids.insert(m.id.clone()) {
-                        let _ = storage.update_memory_status(&m.id, "archived");
-                        rep.duplicate_memories_archived += 1;
+                        if let Err(e) = storage.update_memory_status(&m.id, "archived") {
+                            eprintln!("[Reconcile][WARN] 归档重复记忆失败 ({}): {}", m.id, e);
+                        } else {
+                            rep.duplicate_memories_archived += 1;
+                        }
                     }
                 }
             }

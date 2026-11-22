@@ -139,7 +139,7 @@
 - 🛠️ **[07-troubleshooting.md](docs/manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
 - 🌐 **[08-web-dashboard.md](docs/manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级大管家拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
 - 🪝 **[09-hooks-integration.md](docs/manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
-- 📊 **[10-benchmark-and-roi.md](docs/manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.6 与生产效能存证账本（W1~W16 A/B 负载 + M1~M5 微基准 + DQ1~DQ7 + COMP-C1~C4 竞品对标 + PR-01~12 溯源流水）
+- 📊 **[10-benchmark-and-roi.md](docs/manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.6 与生产效能存证账本（`W1~W16` A/B 负载 + `M1~M5` 微基准 + `DQ1~DQ7` + `COMP-C1~C4` 竞品对标 + `PR-01~12` 溯源流水）
 
 ---
 
@@ -155,7 +155,7 @@ export PATH="/root/.cargo/bin:$PATH"
 # 编译 release 生产二进制
 cargo build --release
 
-# 查看运行状态 (自动完成 ~/.agent-body 数据初始化)
+# 查看运行状态 (自动完成 `~/.agent-body` 数据初始化)
 ./target/release/agent-body status
 ```
 
@@ -269,13 +269,14 @@ cargo build --release
 11. **开发原则与三层命名兼容纪律**：
     - 本项目使用 AI Agent 开发，收到任务后，先进行任务分解。任务拆解要细致、要按工业级产品标准来要求功能设计/开发/测试/文档、要在任何时刻任何情况任务失败后可以"断点续传"。开发完成后，如有必要记得要及时更新手册、SKILL、MCP 等相关的文档或代码。要将 SKILL、手册、MCP 和代码一样当成一等公民来对待。
     - **三层命名兼容纪律**：品牌愿景与交互文档/代码注释统一围绕「Agent 本体（脑体分离）」叙事演进，同时底层稳定协议标识（Crate/二进制名 `agent-body`、目录 `~/.agent-body/`、既有 `body_*` MCP 工具与 CLI 子命令）严格保持 100% 向后兼容。
+    - **发版二进制一致性与现网对账红线**：涉及改名、路径调整或核心修复的提交，必须在 `git commit` 之后执行 `make install && systemctl restart agent-body.service`，核验 `agent-body --version` 的 `git_hash` 与 `HEAD` 一致，并执行 `agent-body feedback reconcile` 确认现网 `DQ5 >= 98.0%`。
 
 12. **零 Panic 原则**：
     - 在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误，保证服务 7×24 稳定运行。
 
-13. **测试驱动、零警告与架构防漂移门禁**：
-    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 252+ 项自动化测试）。
-    - 任何提交前必须同时通过三大确定性门禁：`make evolution-check`（架构计数 0 漂移）、`make lint-panic`（生产代码 0 `unwrap`/`expect`）与 `cargo check --tests`（零警告编译）。
+13. **测试驱动、零警告与五重确定性门禁**：
+    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 268+ 项自动化测试）。
+    - 任何提交前必须通过一键五重确定性门禁 `make quality-gate && make test`：`make evolution-check`（架构计数、活跃路线图、CLI 帮助与部署路径 0 漂移）、`make lint-panic`（生产代码 0 `unwrap`/`expect`）、`make lint-hygiene`（位置无关性、配置卫生与静默吞错预算检查）、`make lint-strict`（本 crate `-D warnings` 严格编译 + 自动联动 `clippy`）及 `cargo test` 全绿。
     - MCP 工具与 CLI 子命令必须保持一一映射（Phase 44 已实现 43/43 同步）。
 
 14. **断点续传检查点机制**：
@@ -341,8 +342,13 @@ cargo build --release
 
 27. **Agent 本体具身底座、跨大脑连续性、五维稳态自治与三层命名兼容规约 (Agent Embodiment Substrate, Cross-Brain Continuity, Homeostasis & Three-Tier Naming Compatibility)**：
     - **脑体分离与具身着陆 (`BodyManifest` & `ContinuityCapsule`)**：确立 LLM/客户端为瞬态大脑、本项目为永驻宿主机的 Agent 本体；任何新接入大脑均可在 `< 10 ms` 内获取确定性 `body_id`、六器官健康自省及 `<= 300 tok` 跨大脑工作态接力胶囊（全量经 `SecretRedactor` 脱敏与 `PromptInjectionScanner` 抗投毒清洗，支持换脑不失忆、多本体只读名片发现）。
-    - **五维生命体征与 `L1` 自主稳态反射 (`HomeostasisVitals`)**：聚合感官清晰度、反射灵敏度、海马体纯净度、代谢健康度与免疫可溯度为 0~100 综合稳态分，低于阈值时仅在 `L1_AUTONOMIC` 包络内触发可逆自愈，严禁越界执行 `L2/L3` 动作，并通过 `W17` 与 `DQ8` 基准门禁持续验证。
+    - **五维生命体征与 `L1` 自主稳态反射 (`HomeostasisVitals`)**：聚合感官清晰度、反射灵敏度、海马体纯净度、代谢健康度与免疫可溯度为 `0~100` 综合稳态分，低于阈值时仅在 `L1_AUTONOMIC` 包络内触发可逆自愈，严禁越界执行 `L2/L3` 动作，并通过 `W17` 与 `DQ8` 基准门禁持续验证。
     - **三层命名兼容底线**：对外品牌、架构文档、代码注释、WebUI 与演说物料全面围绕「Agent 本体」叙事升级，同时底层 Crate/二进制（`agent-body`）、配置目录（`~/.agent-body/`）与既有 `body_*` MCP/CLI 契约严格保持 100% 向后兼容（详见 [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)）。
+
+28. **二进制位置无关性、模块化复杂度与错误可观测性规约 (Relocatable Binary, Modularity & Observable Error Hygiene)**：
+    - **二进制 100% 位置无关**：生产路径及内嵌 Benchmark/Demo 严禁依赖编译期源码绝对路径（如 `env!("CARGO_MANIFEST_DIR")`），单二进制搬移至任意目录、改名或运行于容器内必须 100% 通过 `bench run --suite full`（由 `make lint-hygiene` 强制守卫）。
+    - **模块化复杂度红线**：新代码与治理重构后单 `.rs` 生产文件原则上不超过 `1,500` 行，单函数原则上不超过 `150` 行，核心路由/Schema/基准负载按领域拆分为独立子模块。
+    - **错误可观测性底线**：后台自治巡检（`BackgroundScheduler`）、新鲜度对账（`FreshnessReconciler`）、图谱构建（`PropertyGraphOrganizer`）与文件监听（`ChangeHandler`）等关键写路径严禁使用裸 `let _ = ...` 静默吞错，必须记录结构化降级告警并受 `scripts/code_hygiene.py` 预算上限约束。
 
 ---
 

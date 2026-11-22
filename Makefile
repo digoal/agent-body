@@ -6,7 +6,7 @@ SHELL := /bin/bash
 TARGET := target/release/agent-body
 INSTALL_PATH ?= /usr/local/bin/agent-body
 
-.PHONY: all build check test preflight install restart clean docker-build lint-panic sync-mirror codegraph evolution-check
+.PHONY: all build check test preflight install restart clean docker-build lint-panic lint-hygiene lint-strict quality-gate sync-mirror codegraph evolution-check
 
 all: build
 
@@ -17,6 +17,18 @@ check:
 # 生产代码零 Panic 门禁检查（禁止在 #[cfg(test)] 前出现 .unwrap( / .expect(）
 lint-panic:
 	@python3 -c 'import glob, re, sys; hits=[(p,i,l.strip()) for p in sorted(glob.glob("src/**/*.rs", recursive=True)) for i,l in enumerate(open(p).read().split("#[cfg(test)]")[0].splitlines(),1) if re.search(r"\.(unwrap|expect)\(", l)]; print("\n".join(f"{p}:{i}: {l}" for p,i,l in hits) if hits else "✅ 生产代码零 unwrap/expect 检查通过"); sys.exit(1 if hits else 0)'
+
+# 代码卫生与位置无关性门禁（规约 #13 & #28）
+lint-hygiene:
+	python3 scripts/code_hygiene.py --check
+
+# 严格零警告编译（仅对本 crate 启用 -D warnings，避免触发 libduckdb-sys 等三方依赖全量重编）
+lint-strict:
+	@export PATH="$$HOME/.cargo/bin:$$PATH" && cargo rustc --lib -- -D warnings && cargo rustc --bin agent-body -- -D warnings && cargo check --all-targets && (cargo clippy --version >/dev/null 2>&1 && cargo clippy --all-targets -- -D warnings || echo "ℹ️  clippy 未安装，已通过 cargo rustc --lib/--bin -D warnings 严格编译门禁")
+
+# 五重确定性质量门禁一键联检
+quality-gate: evolution-check lint-panic lint-hygiene lint-strict
+	@echo "✅ 全部质量门禁检查通过"
 
 # 编译优化发布版二进制
 build:

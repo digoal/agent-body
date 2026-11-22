@@ -23,9 +23,13 @@ def extract_manifest() -> dict:
     lib_rs = (ROOT / "src/lib.rs").read_text(encoding="utf-8")
     modules = re.findall(r"^pub\s+mod\s+([a-zA-Z0-9_]+);", lib_rs, flags=re.MULTILINE)
 
-    mcp_rs = (ROOT / "src/api/mcp_tools.rs").read_text(encoding="utf-8")
-    list_tools_block = mcp_rs.split("pub fn call_tool")[0]
-    mcp_tools = re.findall(r'"name"\s*:\s*"(body_[a-zA-Z0-9_]+)"', list_tools_block)
+    mcp_schemas_path = ROOT / "src/api/mcp_schemas.rs"
+    if mcp_schemas_path.exists():
+        mcp_tools = re.findall(r'"name"\s*:\s*"(body_[a-zA-Z0-9_]+)"', mcp_schemas_path.read_text(encoding="utf-8"))
+    else:
+        mcp_rs = (ROOT / "src/api/mcp_tools.rs").read_text(encoding="utf-8")
+        list_tools_block = mcp_rs.split("pub fn call_tool")[0]
+        mcp_tools = re.findall(r'"name"\s*:\s*"(body_[a-zA-Z0-9_]+)"', list_tools_block)
 
     spi_rs = (ROOT / "src/storage/spi.rs").read_text(encoding="utf-8")
     spi_methods = re.findall(r"^\s*fn\s+([a-zA-Z0-9_]+)\s*\(", spi_rs, flags=re.MULTILINE)
@@ -37,7 +41,11 @@ def extract_manifest() -> dict:
         flags=re.IGNORECASE,
     )
 
-    workloads_rs = (ROOT / "src/benchmark/workloads.rs").read_text(encoding="utf-8")
+    wl_dir = ROOT / "src/benchmark/workloads"
+    if wl_dir.is_dir():
+        workloads_rs = "\n".join(p.read_text(encoding="utf-8") for p in sorted(wl_dir.glob("*.rs")))
+    else:
+        workloads_rs = (ROOT / "src/benchmark/workloads.rs").read_text(encoding="utf-8")
     workloads = sorted(
         set(re.findall(r'id:\s*"(W\d+)"', workloads_rs)),
         key=lambda x: int(x[1:]),
@@ -74,8 +82,13 @@ def extract_manifest() -> dict:
     spec_match = re.search(r'BENCHMARK_SPEC_VERSION\s*:\s*&str\s*=\s*"([^"]+)"', bench_mod)
     bench_spec_version = spec_match.group(1) if spec_match else "unknown"
 
-    main_rs = (ROOT / "src/main.rs").read_text(encoding="utf-8")
-    cmd_block = main_rs.split("enum Commands {")[1].split("\n}")[0]
+    cli_args_path = ROOT / "src/cli_args.rs"
+    cli_src_text = (
+        cli_args_path.read_text(encoding="utf-8")
+        if cli_args_path.exists()
+        else (ROOT / "src/main.rs").read_text(encoding="utf-8")
+    )
+    cmd_block = cli_src_text.split("enum Commands {")[1].split("\n}")[0]
     cli_commands = re.findall(r"^\s{4}([A-Z][A-Za-z0-9_]*)\s*(?:\{|,)", cmd_block, flags=re.MULTILINE)
 
     return {
@@ -190,6 +203,44 @@ def check_drift(manifest: dict) -> list[str]:
         p = ROOT / doc_rel
         if p.exists() and "Agent 本体" not in p.read_text(encoding="utf-8"):
             errors.append(f"{doc_rel} 缺少 Tier-1 定位表达「Agent 本体」")
+
+    # 校验 EVOLUTION_GUIDE.md 指向的活跃 roadmap-phase*.md 为最新阶段
+    roadmap_files = sorted(
+        (ROOT / "docs/src_doc").glob("roadmap-phase*.md"),
+        key=lambda p: max([int(n) for n in re.findall(r"\d+", p.stem)] or [0]),
+    )
+    if roadmap_files and guide_path.exists():
+        latest_roadmap = roadmap_files[-1].name
+        guide_text = guide_path.read_text(encoding="utf-8")
+        if latest_roadmap not in guide_text:
+            errors.append(
+                f"EVOLUTION_GUIDE.md 活跃路线图漂移: 最新路线图为 {latest_roadmap}，但未在 Tier-0 入口登记"
+            )
+
+    # 校验 CLI --help (src/cli_args.rs / src/main.rs) 中不再残留过时的 Benchmark 计数
+    cli_help_text = (
+        (ROOT / "src/cli_args.rs").read_text(encoding="utf-8")
+        if (ROOT / "src/cli_args.rs").exists()
+        else (ROOT / "src/main.rs").read_text(encoding="utf-8")
+    )
+    wl_cnt = counts["workloads"]
+    pr_cnt = counts["pr_rules"]
+    for m in re.finditer(r"W1~W(\d+)", cli_help_text):
+        if int(m.group(1)) != wl_cnt:
+            errors.append(
+                f"CLI help 漂移: 发现 '{m.group(0)}'，源码实测为 W1~W{wl_cnt}"
+            )
+    for m in re.finditer(r"PR-01~(\d+)", cli_help_text):
+        if int(m.group(1)) != pr_cnt:
+            errors.append(
+                f"CLI help 漂移: 发现 '{m.group(0)}'，源码实测为 PR-01~{pr_cnt}"
+            )
+
+    # 校验活跃部署与示例配置严禁残留旧路径 /.steward
+    for deploy_rel in ("Dockerfile", "docker-compose.yml", "config.example.toml"):
+        dp = ROOT / deploy_rel
+        if dp.exists() and "/.steward" in dp.read_text(encoding="utf-8"):
+            errors.append(f"{deploy_rel} 仍残留旧数据目录路径 '/.steward'，请统一改为 '/.agent-body'")
 
     return errors
 

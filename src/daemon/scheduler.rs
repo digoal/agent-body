@@ -77,7 +77,28 @@ impl BackgroundScheduler {
         let _ = skill_scanner.scan_default_roots();
 
         // 7. 全生命周期信息新鲜度与现实对账 (规约 #21：清理漂移/失踪资产、幽灵端口节点与重复摘要记忆)
-        let _reconcile_rep = crate::feedback::probes::FreshnessReconciler::reconcile(&self.storage);
+        match crate::feedback::probes::FreshnessReconciler::reconcile(&self.storage) {
+            Ok(rep) => {
+                if rep.missing_assets_marked > 0
+                    || rep.drifted_assets_refreshed > 0
+                    || rep.ghost_fact_nodes_pruned > 0
+                    || rep.duplicate_memories_archived > 0
+                {
+                    println!(
+                        "[Scheduler][Reconcile] 对账完成: checked={}, missing={}, drifted={}, ghost_pruned={}, dup_mem_archived={}, elapsed={}μs",
+                        rep.checked_assets,
+                        rep.missing_assets_marked,
+                        rep.drifted_assets_refreshed,
+                        rep.ghost_fact_nodes_pruned,
+                        rep.duplicate_memories_archived,
+                        rep.elapsed_us
+                    );
+                }
+            }
+            Err(e) => {
+                eprintln!("[Scheduler][Reconcile][WARN] 新鲜度对账失败: {}", e);
+            }
+        }
 
         // 8. 后台异步增量精炼待标注资产元数据 (Phase 23 Ollama 小模型)
         let cfg = crate::config::Config::load_or_default(None).unwrap_or_default();
@@ -124,11 +145,22 @@ impl BackgroundScheduler {
                 "daemon_cycle",
                 "run_inspection_cycle",
             )
-            .with_target("host", "steward-daemon")
+            .with_target("host", "agent-body-daemon")
             .with_outcome("success")
             .with_elapsed_us(t0.elapsed().as_micros() as i64)
             .with_delta(serde_json::to_value(&report).unwrap_or_default()),
         );
+
+        // 巡检结束后主动归还 glibc 空闲堆页，保障常驻守护进程 RSS 稳定 < 90MB（规约 #9）
+        #[cfg(target_os = "linux")]
+        {
+            unsafe extern "C" {
+                fn malloc_trim(pad: usize) -> i32;
+            }
+            unsafe {
+                let _ = malloc_trim(0);
+            }
+        }
 
         Ok(report)
     }

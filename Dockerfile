@@ -19,10 +19,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /usr/src/agent-body
 
-# 复制源码树与构建脚本
+# 复制源码树、文档与构建脚本
 COPY Cargo.toml Cargo.lock build.rs ./
 COPY src ./src
-COPY src_doc ./src_doc
+COPY docs ./docs
 COPY tests ./tests
 
 # 执行 Release 工业级全量优化编译
@@ -45,7 +45,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /usr/src/agent-body/target/release/agent-body /usr/local/bin/agent-body
 
 # 默认数据存储卷
-VOLUME ["/root/.steward"]
+VOLUME ["/root/.agent-body"]
 
 # 暴露 HTTP API 端口
 EXPOSE 9527

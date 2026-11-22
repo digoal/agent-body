@@ -130,7 +130,9 @@ impl ChangeHandler {
 
                         if tier == "deep" {
                             let links_engine = crate::links::LinksEngine::new(std::sync::Arc::new(self.storage.clone()));
-                            let _ = links_engine.refresh_links_for_asset(&event.path);
+                            if let Err(e) = links_engine.refresh_links_for_asset(&event.path) {
+                                eprintln!("[Watcher][WARN] 刷新资产链接失败 ({}): {}", path_str, e);
+                            }
                         }
                     }
 
@@ -185,15 +187,23 @@ impl ChangeHandler {
                         asset.status = "missing".to_string();
                         self.storage.upsert_asset(&asset)?;
                     }
-                    let _ = self.storage.delete_auto_links_for_source(&path_str);
-                    let _ = self.storage.delete_links_for_target(&path_str);
-                    let _ = self.storage.delete_fact_node(&format!("file:{}", path_str));
+                    if let Err(e) = self.storage.delete_auto_links_for_source(&path_str) {
+                        eprintln!("[Watcher][WARN] 清理已删文件源边失败 ({}): {}", path_str, e);
+                    }
+                    if let Err(e) = self.storage.delete_links_for_target(&path_str) {
+                        eprintln!("[Watcher][WARN] 清理已删文件目标边失败 ({}): {}", path_str, e);
+                    }
+                    if let Err(e) = self.storage.delete_fact_node(&format!("file:{}", path_str)) {
+                        eprintln!("[Watcher][WARN] 清理已删文件事实节点失败 ({}): {}", path_str, e);
+                    }
 
                     let marker = format!("产出文件 `{}` 摘要:", path_str);
                     if let Ok(mems) = self.storage.list_all_active_memories(500) {
                         for m in mems {
                             if m.content.contains(&marker) {
-                                let _ = self.storage.update_memory_status(&m.id, "archived");
+                                if let Err(e) = self.storage.update_memory_status(&m.id, "archived") {
+                                    eprintln!("[Watcher][WARN] 归档已删文件关联记忆失败 ({}): {}", m.id, e);
+                                }
                             }
                         }
                     }

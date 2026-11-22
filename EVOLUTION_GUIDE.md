@@ -10,7 +10,7 @@
 
 1. **只读 Tier-0 文档（仅 2 份）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构地图 + 变更触点矩阵）；
-   - 当前活跃路线图 [docs/src_doc/roadmap-phase46.md](docs/src_doc/roadmap-phase46.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase44-45.md](docs/src_doc/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/roadmap-phase43.md)、[docs/src_doc/roadmap-phase42.md](docs/src_doc/roadmap-phase42.md)、[docs/src_doc/roadmap-phase40-41.md](docs/src_doc/roadmap-phase40-41.md)、[docs/src_doc/roadmap-phase38-39.md](docs/src_doc/roadmap-phase38-39.md) 与 [docs/src_doc/roadmap-phase37.md](docs/src_doc/roadmap-phase37.md)）。
+   - 当前活跃路线图 [docs/src_doc/roadmap-phase49.md](docs/src_doc/roadmap-phase49.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase48.md](docs/src_doc/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/roadmap-phase43.md)、[docs/src_doc/roadmap-phase42.md](docs/src_doc/roadmap-phase42.md) 与 [docs/src_doc/roadmap-phase40-41.md](docs/src_doc/roadmap-phase40-41.md)）。
 2. **运行 O(1) 实时架构快照（`<100ms`，禁止手动数模块/工具数）**：
    ```bash
    make evolution-check
@@ -84,5 +84,5 @@
 
 ```bash
 export PATH="/root/.cargo/bin:$PATH"
-make evolution-check && make lint-panic && make check && make test && make sync-mirror
+make quality-gate && make test && make sync-mirror
 ```
