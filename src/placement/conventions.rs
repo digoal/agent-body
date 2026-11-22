@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 /// 宿主机工程与协作操作规约实体
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EngineeringConvention {
-    /// 规约分类: "tooling", "timezone", "integrity", "presentation", "security", "graph", "mesh"
+    /// 规约分类: "tooling", "timezone", "integrity", "presentation", "security", "graph", "mesh", "concurrency"
     pub category: String,
     /// 规约标题
     pub rule_title: String,
@@ -120,6 +120,15 @@ impl ConventionsEngine {
                 requirement: "跨节点 Mesh 写操作、结构化对话与文件投递必须使用 MeshEnvelope v1.0 (HMAC-SHA256 签名 + +-300s Nonce 防重放 + Peer Scope)；对话双向经 SecretRedactor 脱敏与抗投毒扫描，文件投递限 <=10MB 且仅落盘 ~/.steward/mesh_inbox/ 沙盒，严禁跨机直写业务或系统路径。".to_string(),
                 applies_to: vec!["all".to_string(), "ops".to_string()],
                 severity: "CRITICAL".to_string(),
+            },
+
+            // 7. 悲观 vs 乐观自适应并发控制 (Phase 42 / 规约 #25)
+            EngineeringConvention {
+                category: "concurrency".to_string(),
+                rule_title: "乐观直通与悲观门禁自适应准则 (AOPCC)".to_string(),
+                requirement: "涉及端口 bind、高爆炸半径文件写、跨 Agent 锁与敏感路径时强制走悲观前置检查 (steward_hook_pre)；对于只读查询、服务客户端直连 (如本机 :5432) 与高置信度开工租约覆盖的可逆验证，优先乐观直行免前置查询，一旦失败由 steward_hook_post 触发 <2ms 自愈处方。".to_string(),
+                applies_to: vec!["all".to_string(), "code".to_string(), "script".to_string(), "ops".to_string()],
+                severity: "HIGH".to_string(),
             },
         ]
     }
@@ -253,5 +262,15 @@ mod tests {
         assert!(ops.brief_prompt_injection.contains("L1_EXPLICIT"));
         assert!(ops.brief_prompt_injection.contains("MeshEnvelope v1.0"));
         assert!(ops.brief_prompt_injection.contains("mesh_inbox"));
+    }
+
+    #[test]
+    fn test_aopcc_concurrency_convention() {
+        let all = ConventionsEngine::get_all_conventions();
+        assert!(all.iter().any(|c| c.category == "concurrency" && c.rule_title.contains("AOPCC")));
+
+        let code = ConventionsEngine::get_conventions_for_context("code", true);
+        assert!(code.brief_prompt_injection.contains("乐观直通"));
+        assert!(code.brief_prompt_injection.contains("steward_hook_post"));
     }
 }

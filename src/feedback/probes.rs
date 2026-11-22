@@ -265,27 +265,41 @@ impl SelfEvolutionProbeEngine {
                 .round()
                 / 10.0
         };
+        let lease_cnt = brief_out
+            .optimistic_leases
+            .iter()
+            .filter(|l| l.confidence >= 0.85)
+            .count();
+        let miss_cnt = storage
+            .list_changes(100)
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|c| c.change_type == "optimistic_miss")
+            .count();
+
         let p1_healthy = brief_us <= 25_000 && dup_ratio >= 85.0 && !brief_out.markdown.is_empty();
         probes.push(ComparativeProbeReading {
             probe_id: "P1".into(),
             hook_stage: "SessionStart(Brief)".into(),
-            metric_name: "简报组装延迟与记忆去重率".into(),
+            metric_name: "简报组装延迟、记忆去重与开工乐观租约签发".into(),
             comparator_baseline: "SLA <= 25,000 μs & 记忆唯一率 >= 85%".into(),
-            measured_value: format!("{} μs · 唯一率 {:.1}%", brief_us, dup_ratio),
+            measured_value: format!("{} μs · 唯一率 {:.1}% · 乐观租约 {} 条", brief_us, dup_ratio, lease_cnt),
             delta_summary: format!(
-                "简报体积 {} tok · 重复记忆从 {} -> {} 条",
+                "简报体积 {} tok · 重复记忆从 {} -> {} 条 · 有效租约={} (碰壁降级记录={})",
                 brief_out.tokens_used,
                 pre_stats.duplicate_auto_sync_count,
-                post_stats.duplicate_auto_sync_count
+                post_stats.duplicate_auto_sync_count,
+                lease_cnt,
+                miss_cnt
             ),
             healthy: p1_healthy,
             healed_action: if auto_heal && pre_stats.duplicate_auto_sync_count > 0 {
                 format!("已自动归档 {} 条重复旧摘要记忆", pre_stats.duplicate_auto_sync_count)
             } else {
-                "无需处理".into()
+                "保持 MVCC 乐观直通契约按需签发与自动降级".into()
             },
             recommendation: if p1_healthy {
-                "保持 BriefAssembler 索引优先路径与记忆幂等去重".into()
+                "保持 BriefAssembler 索引优先路径与高置信乐观租约签发".into()
             } else {
                 "建议排查 Brief 慢路径或运行 `agent-steward feedback reconcile`".into()
             },
@@ -310,7 +324,7 @@ impl SelfEvolutionProbeEngine {
                 ledger.total_hazards_intercepted, ledger.total_rounds_saved
             ),
             healthy: p2_healthy,
-            healed_action: "持续经由 PR-01~PR-10 账本带出处留痕".into(),
+            healed_action: "持续经由 PR-01~PR-11 账本带出处留痕与三态 AOPCC 路由".into(),
             recommendation: "若发现高频违规目录可运行 `agent-steward place learn` 自动演化规则".into(),
         });
 
@@ -346,29 +360,30 @@ impl SelfEvolutionProbeEngine {
             },
         });
 
-        // P4: 事后漂移探针 (DB Snapshot vs Disk Reality)
+        // P4: 事后漂移探针 (DB Snapshot vs Disk Reality & AOPCC 碰壁自愈)
         let p4_healthy = post_stats.drifted_sample_count == 0 && post_stats.missing_active_sample_count == 0;
         probes.push(ComparativeProbeReading {
             probe_id: "P4".into(),
             hook_stage: "PostToolUse(Drift)".into(),
-            metric_name: "库内资产快照 vs 磁盘物理文件漂移率".into(),
+            metric_name: "库内资产快照漂移率与 AOPCC 碰壁自愈追踪".into(),
             comparator_baseline: "drifted == 0 & missing_active == 0".into(),
             measured_value: format!(
-                "抽检 {} 条: drifted={}, missing_active={}",
-                post_stats.sampled_assets, post_stats.drifted_sample_count, post_stats.missing_active_sample_count
+                "抽检 {} 条: drifted={}, missing_active={}, optimistic_miss={}",
+                post_stats.sampled_assets, post_stats.drifted_sample_count, post_stats.missing_active_sample_count, miss_cnt
             ),
             delta_summary: format!(
-                "对账前 drifted={}, missing={} -> 对账后 drifted={}, missing={}",
+                "对账前 drifted={}, missing={} -> 对账后 drifted={}, missing={} (碰壁降级 {})",
                 pre_stats.drifted_sample_count,
                 pre_stats.missing_active_sample_count,
                 post_stats.drifted_sample_count,
-                post_stats.missing_active_sample_count
+                post_stats.missing_active_sample_count,
+                miss_cnt
             ),
             healthy: p4_healthy,
             healed_action: if let Some(ref rr) = reconcile_report {
                 format!(
-                    "刷新 {} 个漂移资产，标记 {} 个失踪资产",
-                    rr.drifted_assets_refreshed, rr.missing_assets_marked
+                    "刷新 {} 个漂移资产，标记 {} 个失踪资产（已跟踪 {} 次乐观碰壁降级）",
+                    rr.drifted_assets_refreshed, rr.missing_assets_marked, miss_cnt
                 )
             } else {
                 "仅只读探测".into()

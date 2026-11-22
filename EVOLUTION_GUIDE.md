@@ -1,6 +1,6 @@
 # Agent Host Steward — 零重扫项目演进指南 (`EVOLUTION_GUIDE.md`)
 
-<!-- MANIFEST: modules=25 mcp_tools=41 spi_methods=74 tables=25 workloads=14 micro=5 dq=6 pr_rules=10 -->
+<!-- MANIFEST: modules=25 mcp_tools=41 spi_methods=74 tables=25 workloads=15 micro=5 dq=6 pr_rules=11 -->
 
 > **核心定位（解决 ISSUE #17）**：让任何新接手的 AI Agent 或开发者在 **不重复扫描 3.8 万行源码与 48 份历史 `src_doc/` 文档** 的前提下，**2 轮以内**完成需求定位、触点锁定与规范演进。
 
@@ -10,7 +10,7 @@
 
 1. **只读 Tier-0 文档（仅 2 份）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构地图 + 变更触点矩阵）；
-   - 当前活跃路线图 [src_doc/roadmap-phase40-41.md](src_doc/roadmap-phase40-41.md)（断点续传状态表；已完成的前序阶段见 [src_doc/roadmap-phase38-39.md](src_doc/roadmap-phase38-39.md)、[src_doc/roadmap-phase37.md](src_doc/roadmap-phase37.md) 与 [src_doc/roadmap-phase36.md](src_doc/roadmap-phase36.md)）。
+   - 当前活跃路线图 [src_doc/roadmap-phase42.md](src_doc/roadmap-phase42.md)（断点续传状态表；已完成的前序阶段见 [src_doc/roadmap-phase40-41.md](src_doc/roadmap-phase40-41.md)、[src_doc/roadmap-phase38-39.md](src_doc/roadmap-phase38-39.md) 与 [src_doc/roadmap-phase37.md](src_doc/roadmap-phase37.md)）。
 2. **运行 O(1) 实时架构快照（`<100ms`，禁止手动数模块/工具数）**：
    ```bash
    make evolution-check
@@ -51,7 +51,7 @@
 | 模块路径 | 核心公开 Struct / Trait | 职责边界（严守规约 #2） |
 |---|---|---|
 | `src/api/` | `McpToolRegistry`, `AgentHookEngine`, `McpServer` | 41 个原生 MCP stdio 工具注册与 Hook 门禁（不写业务逻辑） |
-| `src/benchmark/` | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` | 双轨/三轨实证评测、Micro/DQ/竞品对标与 `PR-01~10` 存证 |
+| `src/benchmark/` | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` | 双轨/三轨实证评测、Micro/DQ/竞品对标与 `PR-01~11` 存证 |
 | `src/brief/` | `BriefAssembler`, `BriefRequest` | 索引优先自适应情境组装（`<10ms`，40% 记忆预算） |
 | `src/changes/` | `ChangesEngine` | 宿主变更审计流与开工回溯摘要（含脱敏） |
 | `src/config/` | `Config`, `WebConfig`, `StorageConfig` | TOML 配置加载、校验与 `~/.steward/` 权限收敛 |

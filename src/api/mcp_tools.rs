@@ -379,7 +379,7 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_hook_post",
-                "description": "Agent 工作流后置通知钩子。在 Agent 完成工具执行后调用，通知大管家记录事实变更并触发事实属性图与依赖链增量刷新。",
+                "description": "Agent 工作流后置通知与 AOPCC 碰壁秒级自愈钩子。成功时记录事实变更并增量更新拓扑；当 success=false 且传入 error_output 时，在 <2ms 内反查宿主机真实端口/工具/服务状态并注入自愈处方。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -395,6 +395,10 @@ impl McpToolRegistry {
                             "type": "boolean",
                             "default": true,
                             "description": "该工具执行是否成功"
+                        },
+                        "error_output": {
+                            "type": "string",
+                            "description": "可选失败报错输出（如 Connection refused / command not found / Address already in use）"
                         }
                     },
                     "required": ["tool_name", "args"]
@@ -660,12 +664,12 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_benchmark",
-                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v3.3）：运行 A/B 对照负载(W1~W12)、内核微基准(M1~M5)、数据质量与新鲜度(DQ1~DQ5)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-10)。",
+                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v3.5）：运行 A/B 对照负载(W1~W15)、内核微基准(M1~M5)、数据质量与图谱健康(DQ1~DQ6)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-11)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "action": { "type": "string", "enum": ["workloads", "run", "report", "ledger", "compare", "export", "reset", "competitors"], "default": "report" },
-                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | dq | competitors | W1~W12 | COMP-C1~C4" },
+                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | dq | competitors | W1~W15 | COMP-C1~C4" },
                         "track": { "type": "string", "default": "all", "description": "竞品对标赛道: all | C1 | C2 | C3 | C4" },
                         "save": { "type": "boolean", "default": true },
                         "run_id": { "type": "string" },
@@ -1100,8 +1104,9 @@ impl McpToolRegistry {
                 let tool_name = args.get("tool_name").and_then(|v| v.as_str()).unwrap_or("");
                 let tool_args = args.get("args").cloned().unwrap_or(serde_json::json!({}));
                 let success = args.get("success").and_then(|v| v.as_bool()).unwrap_or(true);
+                let error_output = args.get("error_output").and_then(|v| v.as_str());
                 let engine = crate::api::hooks::AgentHookEngine::new(self.storage.clone());
-                let res = engine.post_tool_call(tool_name, &tool_args, success);
+                let res = engine.post_tool_call_with_error(tool_name, &tool_args, success, error_output);
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 

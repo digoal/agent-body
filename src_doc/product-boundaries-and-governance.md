@@ -29,10 +29,11 @@
 ### 原则一：实事求是，绝不捏造 (Ground Reality, Zero Simulation)
 所有暴露给 Agent 的事实（端口、进程、Systemd、Cron、文件关联）必须源自真实 Linux 宿主机物理状态（`/proc`、`/sys`、`/etc/systemd`、`socket`、`inotify`）。严禁在缺少证据的情况下推测或编造虚拟状态。
 
-### 原则二：只读探测为主，破坏性动作强制干预与防线 (Safety First)
+### 原则二：悲观红线前置干预 × 乐观直通后置自愈 (Adaptive Guard & Fail-Fast Recovery)
 1. 垃圾清理（GC）默认强制 `dry-run` 预览，绝不静默硬删除；强制限定白名单目录（如 `/root/new/tmp/`）。
-2. Agent 执行动作前通过 `steward_hook_pre` 进行静态冲突预测（如端口已被监听、文件被重要服务依赖）；如果违规给出确定性告警阻断或提示。
-3. 会话结清（`session_close`）提供可审计的结项清单，让临时资源随用随清。
+2. **悲观前置门禁 (`PESSIMISTIC_LOCK`)**：涉及启动监听端口、修改被 Systemd/Cron 依赖文件、高危敏感路径与跨 Agent 排他锁时，通过 `steward_hook_pre` 进行强前置冲突预测与阻断。
+3. **乐观直通与碰壁自愈 (`OPTIMISTIC`)**：对可逆/低失败代价操作（如本地客户端直连 `:5432` PostgreSQL、调已安装 CLI 工具），优先通过 `steward_brief` 开工租约零前置查询直接执行；一旦失败由 `steward_hook_post` 在 `< 2ms` 内反查事实图谱注入替代处方。
+4. 会话结清（`session_close`）提供可审计的结项清单，让临时资源随用随清。
 
 ### 原则三：极速与轻量化 (Sub-Millisecond Response)
 Host Steward 是每位 Agent 高频调用的基石底座，核心 API（端口探测、规则放置匹配、属性图遍历、FTS 全文检索）端到端响应必须在毫秒级以内（实测基准：放置决策 120 μs，图遍历 498 μs，FTS 检索 805 μs），坚决避免成为 Agent 执行链路的性能瓶颈。

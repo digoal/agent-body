@@ -262,10 +262,11 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                 </div>
               </div>
               <div class="sandbox-controls">
-                <input id="hook-tool-name" class="input" style="width:170px;" type="text" value="bind_port" placeholder="工具名 (bind_port / write_file)" />
-                <input id="hook-tool-args" class="input flex-1 mono" type="text" value='{"port": 8756}' placeholder='入参 JSON (如 {"port": 8756})' />
+                <input id="hook-tool-name" class="input" style="width:150px;" type="text" value="run_command" placeholder="工具名 (run_command / write_file)" />
+                <input id="hook-tool-args" class="input flex-1 mono" type="text" value='{"command": "psql -h 127.0.0.1 -p 5432"}' placeholder='入参 JSON (如 {"port": 8756})' />
+                <input id="hook-error-output" class="input flex-1 mono" type="text" value="" placeholder="可选 Post-Hook 报错文本 (如 Connection refused)" />
                 <button id="btn-hook-pre" class="btn btn-primary">🛡️ Pre-Hook 预检</button>
-                <button id="btn-hook-post" class="btn btn-ghost">📝 Post-Hook 通知</button>
+                <button id="btn-hook-post" class="btn btn-ghost">📝 Post-Hook 通知/自愈</button>
               </div>
               <div id="hook-result" class="card-body" style="max-height:240px;"></div>
             </div>
@@ -548,7 +549,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
             </div>
 
             <div class="card mt-12">
-              <div class="item-top"><strong>📒 生产运行态效能存证账本（带 PR-01~PR-10 确定性溯源依据）</strong></div>
+              <div class="item-top"><strong>📒 生产运行态效能存证账本（带 PR-01~PR-11 确定性溯源依据）</strong></div>
               <div id="bench-rules-strip" class="mt-8"></div>
               <div id="bench-ledger-list" class="mt-8"><div class="empty">暂无生产流水记录</div></div>
             </div>
@@ -3054,22 +3055,43 @@ window.checkExternalService = async function (name) {
 async function runHookTest(kind) {
   const tool_name = document.getElementById("hook-tool-name")?.value || "write_file";
   const rawArgs = document.getElementById("hook-tool-args")?.value || "{}";
+  const error_output = document.getElementById("hook-error-output")?.value?.trim() || "";
   const out = document.getElementById("hook-result");
   let args = {};
   try { args = JSON.parse(rawArgs); } catch (e) { return alert("入参 JSON 格式错误: " + e.message); }
+  const isFailure = kind === "post" && error_output.length > 0;
   try {
-    const res = await apiPost(kind === "pre" ? "/api/v1/hooks/pre" : "/api/v1/hooks/post", { tool_name, args, success: true });
-    mirrorBlackScreen(`agent-steward hooks ${kind} --tool-name ${tool_name} --args '${rawArgs}'`, kind === "pre" ? "steward_hook_pre" : "steward_hook_post", { tool_name, args });
+    const reqBody = kind === "pre"
+      ? { tool_name, args }
+      : { tool_name, args, success: !isFailure, error_output: isFailure ? error_output : null };
+    const res = await apiPost(kind === "pre" ? "/api/v1/hooks/pre" : "/api/v1/hooks/post", reqBody);
+    const cliMirror = isFailure
+      ? `agent-steward hooks post --tool-name ${tool_name} --args '${rawArgs}' --success=false --error-output '${error_output}'`
+      : `agent-steward hooks ${kind} --tool-name ${tool_name} --args '${rawArgs}'`;
+    mirrorBlackScreen(cliMirror, kind === "pre" ? "steward_hook_pre" : "steward_hook_post", reqBody);
     if (out) {
       const hasWarn = Boolean(res.has_warnings || (res.warnings && res.warnings.length));
       const allowed = res.allowed !== false;
-      const badgeCls = !allowed ? "badge-err" : hasWarn ? "badge-warn" : "badge-ok";
-      const badgeTxt = !allowed ? "🛑 已拦截 (BLOCK)" : hasWarn ? "⚠️ 触发告警与建议" : "✅ 安全放行";
+      const rx = res.recovery_prescription;
+      const modeBadge = res.concurrency_mode
+        ? `<span class="badge">${esc(res.concurrency_mode)}</span>`
+        : "";
+      const badgeCls = !allowed ? "badge-err" : (hasWarn || rx) ? "badge-warn" : "badge-ok";
+      const badgeTxt = !allowed ? "🛑 已拦截 (BLOCK)" : rx ? `⚡ 自愈处方 (${esc(rx.failure_kind)})` : hasWarn ? "⚠️ 触发告警与建议" : "✅ 安全放行";
       const warns = (res.warnings || []).map((w) => `<div class="item-box" style="border-color:var(--orange);">${esc(w)}</div>`).join("");
       const sugs = (res.suggestions || []).map((s) => `<div class="item-box">${esc(s)}</div>`).join("");
+      const rxHtml = rx
+        ? `<div class="item-box" style="border-color:var(--orange);">
+             <div><strong>🔧 ${esc(rx.failure_kind)}</strong> (${esc(rx.target)} · ${rx.elapsed_us} μs${rx.lease_downgraded ? " · 已降级乐观租约" : ""})</div>
+             <div class="muted-text mt-4">${esc(rx.root_cause)}</div>
+             ${(rx.recovery_actions || []).map((a) => `<div class="mt-4">• ${esc(a)}</div>`).join("")}
+           </div>`
+        : "";
+      const modeReason = res.concurrency_reason ? `<div class="muted-text mt-4">${esc(res.concurrency_reason)}</div>` : "";
       out.innerHTML = `
-        <div class="item-top"><strong>${kind === "pre" ? "Pre-Hook 预检结果" : "Post-Hook 回写结果"}</strong><span class="badge ${badgeCls}">${badgeTxt}</span></div>
-        <div class="mt-8">${warns}${sugs || (!warns ? '<div class="muted-text">未发现冲突，操作已记录。</div>' : "")}</div>
+        <div class="item-top"><strong>${kind === "pre" ? "Pre-Hook 预检结果" : "Post-Hook 回写与自愈结果"}</strong><div>${modeBadge} <span class="badge ${badgeCls}">${badgeTxt}</span></div></div>
+        ${modeReason}
+        <div class="mt-8">${rxHtml}${warns}${sugs || (!warns && !rx ? '<div class="muted-text">未发现冲突，操作已记录。</div>' : "")}</div>
         ${rawJsonDrawer(res, "查看 Hook 原始 JSON")}
       `;
     }

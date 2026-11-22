@@ -13,9 +13,10 @@
 2. **缺乏原子保障**：文件产出后如果没有手动注册，宿主机资产索引就会脱节；
 3. **协同成本高**：每个会话都需要注入繁琐的 Prompt 提示。
 
-**HOOK 模式**将大管家能力深度内嵌进宿主与会话执行回路：
-- **执行前（Pre-Hook）**：自动排查物理端口冲突、文件爆炸半径与多 Agent 协作锁排他互斥；
-- **执行后（Post-Hook）**：自动登记资产索引、自动通过重要性评分门禁沉淀核心记忆、自动维护宏观拓扑图谱；
+**HOOK 模式（Phase 42 已升级 AOPCC 悲观-乐观自适应并发控制）**将大管家能力深度内嵌进宿主与会话执行回路：
+- **开工阶段（SessionStart / `steward_brief`）**：签发 MVCC **乐观直通契约 (`Optimistic Leases`)**（`<= 120 tok`），允许高置信可逆操作（如本机 `psql -p 5432`、`/root/new/tmp/` 沙盒与已装 CLI）免除回路前置查询税；
+- **执行前（Pre-Hook）**：通过 `ConcurrencyPolicyClassifier` 划分 `OPTIMISTIC` / `CAUTIOUS_CAS` / `PESSIMISTIC_LOCK`，对端口 `bind`、高危系统路径、破坏性命令与多 Agent 锁冲突执行强制悲观前置排查，并对乐观客户端动作零阻塞放行；
+- **执行后（Post-Hook）**：成功写操作自动登记资产索引与拓扑；当乐观执行报错（`Connection refused` / `password authentication failed` / `command not found` / `Address already in use`）时，`OptimisticFailureDiagnoser` 在 `< 2 ms` 内反查宿主机真实端口/工具/服务并注入自愈处方，同时触发对应乐观租约置信度降级；
 - **守护端（EventBus）**：inotify 与内核态变更事件由异步总线快速广播（延迟 < 1ms），按规则触发外部脚本或 Webhook。
 
 ---

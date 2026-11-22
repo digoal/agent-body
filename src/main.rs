@@ -534,7 +534,7 @@ enum HooksCommands {
         #[arg(short, long, default_value = "{}", help = "工具入参 JSON 字符串")]
         args: String,
     },
-    #[command(about = "执行后置变更通知与自动事实同步")]
+    #[command(about = "执行后置变更通知、自动事实同步与 AOPCC 碰壁自愈")]
     Post {
         #[arg(short, long, help = "刚执行完成的工具名")]
         tool_name: String,
@@ -542,8 +542,18 @@ enum HooksCommands {
         #[arg(short, long, default_value = "{}", help = "工具入参 JSON 字符串")]
         args: String,
 
-        #[arg(long, default_value_t = true, help = "该工具调用是否成功")]
+        #[arg(
+            long,
+            default_value_t = true,
+            num_args = 0..=1,
+            default_missing_value = "true",
+            action = clap::ArgAction::Set,
+            help = "该工具调用是否成功 (兼容 --success 与 --success=false)"
+        )]
         success: bool,
+
+        #[arg(short = 'e', long, help = "可选失败错误输出（触发 AOPCC 秒级自愈处方）")]
+        error_output: Option<String>,
     },
 }
 
@@ -1623,11 +1633,11 @@ fn main() -> Result<()> {
                     let res = engine.pre_tool_call(&tool_name, &parsed_args);
                     println!("{}", serde_json::to_string_pretty(&res)?);
                 }
-                HooksCommands::Post { tool_name, args, success } => {
+                HooksCommands::Post { tool_name, args, success, error_output } => {
                     let parsed_args: serde_json::Value = serde_json::from_str(&args)
                         .unwrap_or_else(|_| serde_json::json!({}));
                     let engine = agent_steward::api::hooks::AgentHookEngine::new(storage);
-                    let res = engine.post_tool_call(&tool_name, &parsed_args, success);
+                    let res = engine.post_tool_call_with_error(&tool_name, &parsed_args, success, error_output.as_deref());
                     println!("{}", serde_json::to_string_pretty(&res)?);
                 }
             }

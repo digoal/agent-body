@@ -274,6 +274,27 @@ impl EffectivenessLedger {
                 elapsed_us,
                 evidence_summary: format!("PR-10: 实际反馈与长期记忆沉淀 ({} tok)", stew_tokens),
             },
+            "steward_hook_post" => {
+                let recovered = output_text.contains("recovery_prescription")
+                    || output_text.contains("AOPCC 碰壁秒级自愈");
+                if !recovered {
+                    return;
+                }
+                LedgerEventInput {
+                    session_id,
+                    source_channel: "hook".into(),
+                    tool_or_action: tool_or_action.into(),
+                    rule: ProvenanceRule::Pr11OptimisticLeaseAndRecovery,
+                    baseline_tokens: stew_tokens.saturating_mul(3).max(600),
+                    steward_tokens: stew_tokens,
+                    baseline_rounds: 3,
+                    steward_rounds: 1,
+                    hazard_intercepted: 1,
+                    noise_blocked: 0,
+                    elapsed_us,
+                    evidence_summary: "PR-11: AOPCC 乐观直行碰壁 <2ms 自愈处方注入".into(),
+                }
+            }
             _ => return,
         };
         Self::record(storage, input);

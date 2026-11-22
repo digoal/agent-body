@@ -407,6 +407,7 @@ pub struct HookCallBody {
     pub tool_name: String,
     pub args: Option<serde_json::Value>,
     pub success: Option<bool>,
+    pub error_output: Option<String>,
 }
 
 pub fn handle_hooks_pre(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
@@ -427,7 +428,12 @@ pub fn handle_hooks_post(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -
     };
     let engine = AgentHookEngine::new(Storage::new(storage));
     let args = body.args.unwrap_or_else(|| serde_json::json!({}));
-    let res = engine.post_tool_call(&body.tool_name, &args, body.success.unwrap_or(true));
+    let res = engine.post_tool_call_with_error(
+        &body.tool_name,
+        &args,
+        body.success.unwrap_or(true),
+        body.error_output.as_deref(),
+    );
     WebResponse::success(res)
 }
 

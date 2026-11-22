@@ -12,6 +12,10 @@ pub struct PreHookResult {
     pub has_warnings: bool,
     pub warnings: Vec<String>,
     pub suggestions: Vec<String>,
+    #[serde(default)]
+    pub concurrency_mode: String,
+    #[serde(default)]
+    pub concurrency_reason: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,6 +23,10 @@ pub struct PostHookResult {
     pub recorded: bool,
     pub message: String,
     pub affected_services: Vec<String>,
+    #[serde(default)]
+    pub concurrency_mode: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recovery_prescription: Option<crate::hooks::FailureRecoveryPrescription>,
 }
 
 /// Agent 工作流动作前置与后置 Hook 引擎
@@ -31,8 +39,11 @@ impl AgentHookEngine {
         Self { storage }
     }
 
-    /// 前置校验：Agent 执行工具调用前的安全性、端口冲突、文件放置违规诊断
+    /// 前置校验：Agent 执行工具调用前的安全性、端口冲突、文件放置违规诊断（集成 AOPCC 三态路由）
     pub fn pre_tool_call(&self, tool_name: &str, args: &Value) -> PreHookResult {
+        use crate::hooks::{ActionConcurrencyMode, ConcurrencyPolicyClassifier};
+
+        let mut class = ConcurrencyPolicyClassifier::classify(tool_name, args);
         let mut warnings = Vec::new();
         let mut suggestions = Vec::new();
 
@@ -95,15 +106,17 @@ impl AgentHookEngine {
                 }
             }
 
-            // A. 反向依赖影响排查
-            if let Ok(report) = AutomationTopology::find_impact_on_file(path_str) {
-                if !report.impacted_services.is_empty() || !report.impacted_cron_jobs.is_empty() {
-                    warnings.push(format!("⚠️ 正在修改具有重要系统依赖的文件 `{}`: {}", path_str, report.advice));
-                    for s in report.impacted_services {
-                        suggestions.push(format!("需要注意守护服务 `{}` 依赖此文件，改动后须重启服务", s.service_name));
-                    }
-                    for c in report.impacted_cron_jobs {
-                        suggestions.push(format!("需要注意定时调度 [{}] (用户: `{}`) 依赖此文件", c.schedule, c.user));
+            // A. 反向依赖影响排查（乐观直通动作与非绝对路径跳过重磁盘扫描，践行 AOPCC 零无效税原则）
+            if class.mode != ActionConcurrencyMode::Optimistic && path_str.starts_with('/') {
+                if let Ok(report) = AutomationTopology::find_impact_on_file(path_str) {
+                    if !report.impacted_services.is_empty() || !report.impacted_cron_jobs.is_empty() {
+                        warnings.push(format!("⚠️ 正在修改具有重要系统依赖的文件 `{}`: {}", path_str, report.advice));
+                        for s in report.impacted_services {
+                            suggestions.push(format!("需要注意守护服务 `{}` 依赖此文件，改动后须重启服务", s.service_name));
+                        }
+                        for c in report.impacted_cron_jobs {
+                            suggestions.push(format!("需要注意定时调度 [{}] (用户: `{}`) 依赖此文件", c.schedule, c.user));
+                        }
                     }
                 }
             }
@@ -162,12 +175,18 @@ impl AgentHookEngine {
         }
 
         let has_warnings = !warnings.is_empty();
+        if has_warnings && class.mode != ActionConcurrencyMode::PessimisticLock {
+            class.mode = ActionConcurrencyMode::PessimisticLock;
+            class.reason = "命中资源锁/依赖爆炸半径/安全红线冲突，自动升级为悲观强门禁 (PESSIMISTIC_LOCK)".to_string();
+        }
 
         PreHookResult {
             allowed: true, // 管家默认采取建议式，不直接强制阻断
             has_warnings,
             warnings,
             suggestions,
+            concurrency_mode: class.mode.as_str().to_string(),
+            concurrency_reason: class.reason,
         }
     }
 
@@ -243,13 +262,41 @@ impl AgentHookEngine {
         }
     }
 
-    /// 后置通知：Agent 工具调用成功后，记录变更并通知管家增量更新拓扑
+    /// 后置通知：Agent 工具调用完成（成功入库并同步拓扑；失败时触发 AOPCC <2ms 秒级自愈诊断）
     pub fn post_tool_call(&self, tool_name: &str, args: &Value, success: bool) -> PostHookResult {
+        self.post_tool_call_with_error(tool_name, args, success, None)
+    }
+
+    /// 后置通知增强版（支持透传错误输出，触发 OptimisticFailureDiagnoser 碰壁自愈）
+    pub fn post_tool_call_with_error(
+        &self,
+        tool_name: &str,
+        args: &Value,
+        success: bool,
+        error_output: Option<&str>,
+    ) -> PostHookResult {
+        use crate::hooks::{ConcurrencyPolicyClassifier, OptimisticFailureDiagnoser};
+
+        let class = ConcurrencyPolicyClassifier::classify(tool_name, args);
+        let mode_str = class.mode.as_str().to_string();
+
         if !success {
+            let err_str = error_output.unwrap_or("");
+            if let Some(rx) = OptimisticFailureDiagnoser::diagnose(&self.storage, tool_name, args, err_str) {
+                return PostHookResult {
+                    recorded: true,
+                    message: format!("⚡ [AOPCC 碰壁秒级自愈] {}: {}", rx.failure_kind, rx.root_cause),
+                    affected_services: vec![],
+                    concurrency_mode: mode_str,
+                    recovery_prescription: Some(rx),
+                };
+            }
             return PostHookResult {
                 recorded: false,
-                message: "工具执行失败，忽略后置事实图同步".to_string(),
+                message: "工具执行失败，未匹配特定自愈模式，已忽略后置事实图同步".to_string(),
                 affected_services: vec![],
+                concurrency_mode: mode_str,
+                recovery_prescription: None,
             };
         }
 
@@ -289,6 +336,8 @@ impl AgentHookEngine {
             recorded: true,
             message: format!("管家已成功捕获工具 `{}` 产生的事实变更，并记录审计流水", tool_name),
             affected_services: affected,
+            concurrency_mode: mode_str,
+            recovery_prescription: None,
         }
     }
 }
@@ -414,5 +463,38 @@ mod tests {
         }));
         assert!(res_cmd.has_warnings);
         assert!(res_cmd.warnings.iter().any(|w| w.contains("CRITICAL")));
+    }
+
+    #[test]
+    fn test_agent_aopcc_three_mode_and_post_failure_recovery() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let hook_engine = AgentHookEngine::new(storage.clone());
+
+        // 1. 客户端直连 psql -p 5432 归为 OPTIMISTIC 且不触发端口占用拦截
+        let pre_opt = hook_engine.pre_tool_call(
+            "run_command",
+            &serde_json::json!({"command": "psql -h 127.0.0.1 -p 5432 -c 'SELECT 1'"}),
+        );
+        assert_eq!(pre_opt.concurrency_mode, "OPTIMISTIC");
+        assert!(!pre_opt.has_warnings);
+
+        // 2. 服务端端口绑定 uvicorn --port 8000 归为 PESSIMISTIC_LOCK
+        let pre_pess = hook_engine.pre_tool_call(
+            "run_command",
+            &serde_json::json!({"command": "uvicorn app:main --port 8000"}),
+        );
+        assert_eq!(pre_pess.concurrency_mode, "PESSIMISTIC_LOCK");
+
+        // 3. 乐观直连失败后，PostToolUse 返回秒级自愈处方并降级租约
+        let post_rx = hook_engine.post_tool_call_with_error(
+            "run_command",
+            &serde_json::json!({"command": "psql -h 127.0.0.1 -p 59876 -c 'SELECT 1'"}),
+            false,
+            Some("psql: error: connection to server at \"127.0.0.1\", port 59876 failed: Connection refused"),
+        );
+        assert!(post_rx.recorded);
+        let rx = post_rx.recovery_prescription.expect("应返回碰壁自愈处方");
+        assert_eq!(rx.failure_kind, "CONNECTION_REFUSED");
+        assert!(rx.lease_downgraded);
     }
 }

@@ -45,6 +45,8 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
    - 所有跨实体关系边必须标明 `evidence_tier`（`L1_EXPLICIT` 物理事实 / `L2_STRUCTURAL` 结构聚合 / `L3_SEMANTIC` 向量标签隐式发现）、方向语义与合法权重；严禁将语义相似边混作物理硬依赖。
 9. **联邦网格信封协议与沙盒收件箱隔离（Mesh Wire Protocol & Sandbox，对齐规约 #2, #19 & #24）**:
    - 跨节点协同（对话、文件投递、跨机锁）必须走 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + 时间窗/Nonce 防重放 + Peer Scope 校验）；文件传输严格限制体积上限并隔离落盘至 `~/.steward/mesh_inbox/`，严禁跨机直写宿主机路径。
+10. **悲观与乐观并发自适应（AOPCC，对齐规约 #8 & #25）**:
+   - 高危/写共享/绑定端口/高爆炸半径操作必须坚守悲观前置门禁（`steward_hook_pre`）；可逆只读/服务客户端连接/已授权工具优先消费开工乐观租约直行，并由 `steward_hook_post` 兜底碰壁秒级自愈，禁止低风险回路强行加塞无谓全悲观查询税。
 
 ---
 
@@ -69,7 +71,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/links/` | 关联拓扑图、Mermaid 导出、断链审计与 CodeGraph 桥接 | AST 引用提取与宏微联邦 |
 | ├── `src/changes/` | 变更历史回溯与 Agent 会话简报 | 生成开工 markdown |
 | └── `src/api/` | 41 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI/Web 1:1:1 映射 |
-| └── `src/benchmark/` | 双轨实证 Benchmark 引擎（W1~W8 + M1~M5 + PR-01~08 账本） | 必须真机实测与 SHA-256 存证 |
+| └── `src/benchmark/` | 双轨实证 Benchmark 引擎（`W1~W15` + `M1~M5` + `DQ1~DQ6` + `COMP-C1~C4` + `PR-01~11` 账本） | 必须真机实测与 SHA-256 存证 |
 | └── `src/demo/` | 路演沙盒引擎（6 大黄金剧目、ROI 核算、`demo:*` 隔离） | 严禁假数据，必须真引擎实跑 |
 | └── `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | 解析函数纯函数跨平台编译 |
 | └── `src/mesh/` | 轻量多机联邦 HTTP Peer Mesh | 写接口强校验 auth_token |
@@ -91,13 +93,13 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 flowchart TD
     A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 src_doc/roadmap-phase*.md)"]
     B --> C["步骤 3: 串行编码与单元测试驱动<br/>(TDD + cargo test 局部验证)"]
-    C --> D["步骤 4: 编译检查与全量回归<br/>(cargo test 237+ 项全绿 + release 构建)"]
+    C --> D["步骤 4: 编译检查与全量回归<br/>(cargo test 252+ 项全绿 + release 构建)"]
     D --> E["步骤 5: 文档同步与交付三段式小结<br/>(更新手册/README + 状态标记)"]
 ```
 
 ### 步骤 1: 需求对齐与设计查验
 1. 检查用户的需求是否符合第一节的“核心信条与设计红线”。
-2. 查阅 `design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../design_doc/08-graph-intelligence.md) 与 [14-graph-intelligence-and-mesh-protocol-spec.md](../../design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)）。
+2. 查阅 `design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../design_doc/08-graph-intelligence.md) 与 [14-graph-intelligence-and-mesh-protocol-spec.md](../../design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)，AOPCC 并发策略查 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](../../design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)）。
 3. 如涉及新增数据表或字段，先在 `src/storage/schema.sql`、`src/storage/models.rs`、`src/storage/mod.rs` 设计对齐。
 
 ### 步骤 2: 任务拆解与断点登记（严禁大步跨越）
@@ -120,7 +122,7 @@ flowchart TD
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo test
    ```
-   **门禁要求**: 目前必须达到 **237+ 个 tests 全部 `ok`**，0 failed（另允许 1 项 doc-test ignored）。
+   **门禁要求**: 目前必须达到 **252+ 个 tests 全部 `ok`**，0 failed（另允许 1 项 doc-test ignored）。
 2. 运行 release 生产构建：
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo build --release
@@ -174,9 +176,10 @@ flowchart TD
 - [ ] 代码中是否存在对黑名单目录进行深度递归扫描的风险？
 - [ ] **安全自检（规约 #19 & #24）**：新增采集/记忆/变更/跨机对话路径是否经过 `SecretRedactor` 脱敏与 `PromptInjectionScanner` 检查？新增 Web 写端点是否已接入 `check_auth`？Mesh 协同是否校验证书/HMAC 签名、防重放与 `~/.steward/mesh_inbox/` 沙盒？Hook 命令插值与导出路径是否已防注入与防目录穿越？
 - [ ] **图谱分级自检（规约 #5 & #23）**：新增图谱连边是否已明确标注 `evidence_tier`（`L1_EXPLICIT`/`L2_STRUCTURAL`/`L3_SEMANTIC`）、方向语义与合法权重，避免语义边伪装物理硬依赖？
+- [ ] **并发模式自检（规约 #8 & #25）**：涉及高危/写共享/绑定端口是否坚守悲观门禁？可逆/客户端连接等高频路径是否支持消费开工乐观租约直行并由 `post_tool_call` 兜底碰壁自愈？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
-- [ ] 是否执行了 `make lint-panic`（生产代码 0 `unwrap`/`expect`）且 `cargo test` 全部通过（**要求 >= 237 tests 全部通过，零 warning**）？
+- [ ] 是否执行了 `make lint-panic`（生产代码 0 `unwrap`/`expect`）且 `cargo test` 全部通过（**要求 >= 252 tests 全部通过，零 warning**）？
 - [ ] 是否执行了 `agent-steward preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？
 - [ ] 相关的文档（`product-manual.md` / `INSTALL.md` / `roadmap-phase*.md`）是否已同步刷新？

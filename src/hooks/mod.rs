@@ -1,21 +1,31 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub mod event_bus;
-pub mod dispatcher;
 pub mod auto_sync;
 pub mod client_gen;
-pub mod push;
+pub mod diagnoser;
+pub mod dispatcher;
+pub mod event_bus;
 pub mod pipeline;
+pub mod push;
 
-pub use event_bus::{EventBus, EventBusHandle};
-pub use dispatcher::{HookDispatcher, HookRule, HookAction, HookFilter};
 pub use auto_sync::{AutoSyncEngine, AutoSyncResult};
-pub use client_gen::{ClientHookGenerator, ClientType, GeneratedCompanionFile, GeneratedHookConfig};
-pub use push::{WebhookPusher, WebhookDeliveryReport, bridge_event_bus_to_sse};
+pub use client_gen::{
+    ClientHookGenerator, ClientType, GeneratedCompanionFile, GeneratedHookConfig,
+};
+pub use diagnoser::{
+    ActionConcurrencyMode, ConcurrencyClassification, ConcurrencyPolicyClassifier,
+    FailureRecoveryPrescription, OptimisticFailureDiagnoser,
+};
+pub use dispatcher::{HookAction, HookDispatcher, HookFilter, HookRule};
+pub use event_bus::{EventBus, EventBusHandle};
+pub use pipeline::{
+    HookAuditRecord, HookPipeline, HookPipelineEngine, HookStep, OnFailureStrategy,
+    PipelineExecutionStatus,
+};
 #[cfg(unix)]
 pub use push::UdsBroadcaster;
-pub use pipeline::{HookPipeline, HookStep, HookPipelineEngine, HookAuditRecord, OnFailureStrategy, PipelineExecutionStatus};
+pub use push::{bridge_event_bus_to_sse, WebhookDeliveryReport, WebhookPusher};
 
 /// Steward 系统生命周期与宿主物理事实事件枚举 (零捏造，规约 #5)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

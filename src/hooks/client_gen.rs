@@ -87,7 +87,7 @@ const AGY_HOOKS_JSON_TEMPLATE: &str = r#"{
     ],
     "PostToolUse": [
       {
-        "matcher": "write_file|edit_file",
+        "matcher": "write_file|edit_file|run_command",
         "hooks": [
           {
             "type": "command",
@@ -289,20 +289,111 @@ def handle_pre_tool() -> None:
     emit({"decision": "allow"})
 
 
+def extract_failure_text(payload: Dict[str, Any]) -> Optional[str]:
+    err_obj = payload.get("error")
+    if err_obj:
+        if isinstance(err_obj, dict):
+            msg = err_obj.get("message") or err_obj.get("error") or json.dumps(err_obj, ensure_ascii=False)
+            return str(msg)[:800]
+        return str(err_obj)[:800]
+
+    for key in ("toolResult", "response", "result", "output"):
+        val = payload.get(key)
+        if not val:
+            continue
+        if isinstance(val, dict):
+            code = val.get("exitCode") or val.get("returncode") or val.get("exit_code")
+            txt = str(val.get("stderr") or val.get("output") or val.get("error") or val.get("content") or "")
+            if (code is not None and str(code) not in ("0", "")) or any(
+                m in txt
+                for m in (
+                    "Connection refused",
+                    "ECONNREFUSED",
+                    "could not connect to server",
+                    "password authentication failed",
+                    "command not found",
+                    "Address already in use",
+                    "EADDRINUSE",
+                )
+            ):
+                return txt[:800] if txt else f"exitCode={code}"
+        elif isinstance(val, str) and any(
+            m in val
+            for m in (
+                "Connection refused",
+                "ECONNREFUSED",
+                "could not connect to server",
+                "password authentication failed",
+                "command not found",
+                "Address already in use",
+                "EADDRINUSE",
+            )
+        ):
+            return val[:800]
+    return None
+
+
 def handle_post_tool() -> None:
     payload = read_stdin_json()
     if not os.path.exists(STEWARD_BIN):
         emit({})
         return
 
-    if payload.get("error"):
-        emit({})
-        return
-
     tool_call = payload.get("toolCall") or {}
     tool_name = str(tool_call.get("name") or "")
     raw_args = tool_call.get("args") or {}
-    if tool_name not in ("write_file", "edit_file") or not isinstance(raw_args, dict):
+    if not isinstance(raw_args, dict):
+        raw_args = {}
+
+    # AOPCC 失败早回退（OCC Abort Recovery）：工具执行出错时 1.5s 内同步诊断并回注自愈处方
+    err_text = extract_failure_text(payload)
+    if err_text:
+        steward_args: Dict[str, Any] = {}
+        cmd = raw_args.get("CommandLine") or raw_args.get("command") or ""
+        path = raw_args.get("Path") or raw_args.get("path") or ""
+        if cmd:
+            steward_args["command"] = str(cmd)
+        if path:
+            steward_args["path"] = str(path)
+        try:
+            proc = subprocess.run(
+                [
+                    STEWARD_BIN,
+                    "hooks",
+                    "post",
+                    "-t",
+                    tool_name or "run_command",
+                    "-a",
+                    json.dumps(steward_args, ensure_ascii=False),
+                    "--success=false",
+                    "--error-output",
+                    err_text,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=1.5,
+                check=False,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                res = json.loads(proc.stdout)
+                rx = res.get("recovery_prescription")
+                if isinstance(rx, dict):
+                    actions = rx.get("recovery_actions") or []
+                    hint = (
+                        f"[agent-steward AOPCC 自愈处方 | {rx.get('failure_kind', '')}] "
+                        f"{rx.get('root_cause', '')}"
+                    )
+                    if actions:
+                        hint += " | 建议动作: " + " ; ".join(str(a) for a in actions[:3])
+                    emit({"additionalContext": hint})
+                    return
+        except Exception:
+            pass
+        emit({})
+        return
+
+    # 正常乐观执行的 run_command 零阻塞退出，仅 write_file/edit_file 走异步资产建档
+    if tool_name not in ("write_file", "edit_file"):
         emit({})
         return
 
@@ -530,12 +621,18 @@ mod tests {
             serde_json::from_str(&res.content).expect("AGY hooks.json 必须是合法 JSON");
         assert!(parsed["agent-steward"]["PreToolUse"].is_array());
         assert!(parsed["agent-steward"]["PostToolUse"].is_array());
+        assert_eq!(
+            parsed["agent-steward"]["PostToolUse"][0]["matcher"],
+            "write_file|edit_file|run_command"
+        );
         assert!(parsed["agent-steward"]["SessionStart"].is_array());
         assert_eq!(res.companion_files.len(), 1);
         assert_eq!(
             res.companion_files[0].relative_path,
             ".gemini/config/hooks/steward_bridge.py"
         );
+        assert!(res.companion_files[0].content.contains("extract_failure_text"));
+        assert!(res.companion_files[0].content.contains("--error-output"));
         assert!(res.companion_files[0].executable);
         assert!(res.written_path.is_none());
         assert!(res.is_dry_run);

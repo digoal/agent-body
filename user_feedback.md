@@ -87,7 +87,7 @@ flowchart LR
 
 ---
 
-## 四、第二部分：实际使用暴露的缺点与痛点 (`CON-01` ~ `CON-17`)
+## 四、第二部分：实际使用暴露的缺点与痛点 (`CON-01` ~ `CON-18`)
 
 ### `CON-01` `[P0 · 性能瓶颈]` `steward_brief` 冷启动简报组装耗时 `474.18 ms`，存在绕过缓存库直扫磁盘与派生子进程问题
 - **状态**: `✅ Verified (Phase 30.2)` · **首次记录**: 2026-11-19 · **验证实测**: `W8` 由 `474,178 μs (0.09x)` 降至 `10,315 μs (2.08x)`，提速 `46.0x`
@@ -233,6 +233,13 @@ flowchart LR
   - [src/web/server.rs](src/web/server.rs#L192) 将全部 HTTP Body 截断在 `64KB`；`steward_mesh_query` 仅支持基础状态/端口/锁操作，缺少跨机结构化 Agent 对话、联邦图谱探查与受控沙盒文件投递。
 - **修复目标**: 按 [14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 实现 `MeshEnvelope v1.0` HMAC-SHA256 防重放认证、`mesh/graph`、`mesh/dialogue`（双向脱敏+抗投毒）与 `mesh/transfer`（`<=10MB` + SHA-256 + `~/.steward/mesh_inbox/` 隔离）。
 
+### `CON-18` `[P1 · 执行回路全悲观对话税与失败未自愈]` 低风险验证强制前置查表触发整轮对话税，且 `post_tool_call` 在执行失败时直接丢弃未触发诊断
+- **状态**: `✅ Verified (Phase 42)` · **首次记录**: 2026-11-22 · **验证实测**: `W15 (83.9% Token saved, 52.0→100.0, 省 8 轮对话税 ✅)`、CLI `hooks pre`/`hooks post --success=false`（`4.1 ms` 返回 `pdftoppm`/`pdfunite`/`pdftotext` 自愈处方）与全库 `252` 项测试全绿
+- **现象与复现证据**:
+  - 在 Agent 回路中强迫每步事前查询 `agent-steward` 虽本地仅耗时 `~1 ms`，但引发额外 1 整轮大模型推理（重发上下文 `5k~30k tok` 与 `1.5~4s` 等待延迟），对于可逆/高稳定验证（如直连本机 `:5432` PostgreSQL、调用已装 CLI 工具）数学期望代价劣于乐观直行；
+  - [src/api/hooks.rs](src/api/hooks.rs#L248-L254) 与 `steward_bridge.py:298` 在工具失败（`success=false` / `error`）时直接跳过返回，导致乐观假设碰壁后缺少毫秒级事实自愈处方注入。
+- **修复目标**: 按 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md) 与 [roadmap-phase42.md](src_doc/roadmap-phase42.md) 落地开工乐观直通契约、三态并发分类器与 `PostToolUse` 碰壁自愈引擎。
+
 ---
 
 ## 五、第三部分：Benchmark 标准失真诊断与持续迭代诉求 (`BENCH-01` ~ `BENCH-04`)
@@ -301,9 +308,13 @@ flowchart LR
 - **状态**: `✅ Verified (Phase 41.5 & v3.4)` · **首次记录**: 2026-11-22 · **验证实测**: `W13` (`158→24 tok`, `19.5→100.0`, `4/4` ✅)、`W14` (`58→23 tok`, `12.5→100.0`, `4/4` ✅)、`DQ6` (`776/776 100.0%` | `215/215 100.0%` ✅)
 - **标准迭代方向**: 升级 Benchmark 至 `v3.4`，新增 **`W13 (semantic_and_weighted_graph_discovery)`**（跨项目隐式发现与物理/语义分层过滤）、**`W14 (mesh_protocol_security_and_collab)`**（HMAC 合法放行 100%、重放/篡改/敏感投递拦截 100%）与 **`DQ6 (graph_connectivity_and_tier_hygiene)`**（现网项目连通度显著跃升且全量边分层合法）。
 
+### `BENCH-11` `[P1 · 回路级对话税基准缺失]` 缺少“全悲观前置查询 vs 裸奔盲猜 vs AOPCC 乐观直通+失败回退”的整轮对话税评测
+- **状态**: `✅ Verified (Phase 42.6 & v3.5)` · **首次记录**: 2026-11-22 · **验证实测**: `W15` 实测 `174→28 tok (-83.9%)`、`52.0→100.0 (+48.0)`、`4/4` 断言命中、省 8 轮对话税 ✅
+- **标准迭代方向**: 升级 Benchmark 至 `v3.5`，新增 **`W15 (optimistic_vs_pessimistic_execution_loop)`**，混合 8 项高稳定可逆验证与 2 项环境漂移碰壁场景，同场检验三组在 `rounds_saved`、Token 与 100% 事实恢复率上的差异。
+
 ---
 
-## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-15`)
+## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-16`)
 
 | ID | 需求简述 | 提出背景 / 触发场景 | 优先级 | 目标归属 | 状态 |
 |:---:|---|---|:---:|:---:|:---:|
@@ -322,6 +333,7 @@ flowchart LR
 | **`REQ-13`** | **构建五点对比探针驱动的自进化引擎与 `FeedbackEngine::add_item_deduped` 闭环** | 在执行回路部署 `P1~P5` 对比探针，以数字差值佐证自愈并自动接入反馈总账与 Benchmark `v3.3`（ISSUE #22） | P0 | Phase 39.1 ~ 39.4 | `✅ Verified` |
 | **`REQ-14`** | **多维证据分层有向加权图谱与隐式语义关系发现（规约 #23）** | 解决现网 99.5% 工程节点孤立、`links` 与 `fact_edges` 割裂及向量未参与隐式关系挖掘问题（ISSUE #23） | P0 | Phase 40.1 ~ 40.5 | `✅ Verified` |
 | **`REQ-15`** | **联邦网格 `MeshEnvelope v1.0` 签名防重放协议与跨机对话/沙盒文件协同（规约 #24）** | 解决 Peer Mesh 缺信封协议、缺防重放认证及缺少跨机结构化对话与受控文件投递能力问题（ISSUE #24） | P0 | Phase 41.1 ~ 41.6 | `✅ Verified` |
+| **`REQ-16`** | **乐观-悲观自适应并发控制 AOPCC 与失败早回退机制（规约 #8, #18, #22, #25）** | 消除回路中对高置信可逆动作的强制 PCC 事前查询整轮对话税 $C_{\text{turn}}$，落地 MVCC 乐观假设租约、三态分级路由与 `PostToolUse` `<2 ms` 自愈诊断（ISSUE #25） | P0 | Phase 42.1 ~ 42.6 | `✅ Verified` |
 
 ---
 

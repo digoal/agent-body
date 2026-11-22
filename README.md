@@ -99,6 +99,7 @@ PS: 可能叫 Agent 本体 更恰当？
 - 🛡️ **[11-security-spec.md](design_doc/11-security-spec.md)**：宿主大管家安全架构、威胁建模与纵深防御规格说明书（全链路脱敏、高危拦截、写鉴权与抗投毒防线）
 - 🔄 **[13-freshness-and-self-evolution-spec.md](design_doc/13-freshness-and-self-evolution-spec.md)**：全生命周期信息新鲜度对账与五点对比探针闭环自进化规格说明书（写穿失效、僵尸清理、`FreshnessReconciler` 与 `P1~P5` 探针反馈闭环）
 - 🕸️ **[14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)**：多维证据分层有向加权图谱与联邦网格信封协同协议规格说明书（`L1/L2/L3` 三层关系本体、结构上卷与向量语义发现、`MeshEnvelope v1.0` HMAC 防重放认证、跨机对话与沙盒文件投递）
+- ⚡ **[15-adaptive-optimistic-pessimistic-concurrency-spec.md](design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)**：乐观-悲观自适应并发控制（AOPCC）与失败早回退规格说明书（期望代价数学边界、开工乐观直通租约、三态动作分级器与 `PostToolUse` 碰壁秒级自愈）
 
 ---
 
@@ -245,9 +246,10 @@ cargo build --release
 
 ### 安全、隐私与纵深防御
 
-8. **只读探测为主、破坏性操作强制干预**：
+8. **风险分级干预与失败后置自愈（悲观红线 × 乐观直通）**：
    - 垃圾清理（GC）默认强制 `dry-run` 预览，绝不静默硬删除；强制限定白名单目录。
-   - Agent 执行动作前通过 `steward_hook_pre` 进行静态冲突预测；违规时给出确定性告警或提示。
+   - 对高危、不可逆或共享资源写操作（端口 bind、高爆炸半径文件写、系统敏感路径、跨 Agent 锁），通过 `steward_hook_pre` 执行**悲观前置拦截与冲突预测**。
+   - 对可逆/低失败代价操作允许依据开工乐观租约直行，并在 `steward_hook_post` 捕获 `success=false`（乐观碰壁）时自动触发宿主机事实反查与替代处方注入。
    - 会话结清（`session_close`）提供可审计的结项清单。
 
 9. **极速与轻量化 (Sub-Millisecond Response)**：
@@ -291,7 +293,7 @@ cargo build --release
 18. **实证基准与效能有据可查规约 (Empirical Benchmark & Verifiable ROI Ledger)**：
     - 任何宣称的效能提升（Token 节省率、上下文质量净提升、探索轮次缩减、微秒级响应延迟、故障/冲突拦截率、垃圾噪音阻断率）必须通过可复现的 **A/B 对照基准套件（Without Steward 裸奔基线 vs With Steward 管家赋能）** 与 **生产运行态效能存证账本（Effectiveness Telemetry Ledger）** 双轨实证，严禁无出处估算或主观拍脑袋指标。
     - **帕累托双门禁（既省 Token，上下文质量不降反升）**：严禁通过丢弃关键事实或返回空洞摘要来骗取高 Token 压缩率；每个基准负载与竞品对标轨道必须同时考核 **关键事实完整度（Fact Recall）**、**信噪比/纯净度（Signal Precision）**、**结构化可行动性（Actionability）** 与 **有效信息密度提升倍数（Info Density Gain: Facts/1k-tok）**，强制满足 $Q_{\text{steward}} \ge Q_{\text{baseline}}$ 且必含事实 100% 命中。
-    - 基准测试必须基于宿主机真实物理探针与 `bench:*` 隔离沙盒实跑（覆盖内核微基准延迟 SLA 与宏观业务负载）；每次评测与日常工具调用的真实耗时（`elapsed_us`）、Token 缩减量（`tokens_saved`）、探索轮次缩减（`rounds_saved`）及风险拦截事件（`hazard_intercepted`）均须携带确定性推导规则编号（`provenance_rule`）落库留痕，支持通过 CLI（`agent-steward bench`）、MCP（`steward_benchmark`）、Web UI 与 DuckDB 导出报告随时溯源核验与跨版本回归比对，确保大管家使用效果 100% 有据可查。
+    - 基准测试必须基于宿主机真实物理探针与 `bench:*` 隔离沙盒实跑（覆盖内核微基准延迟 SLA 与宏观业务负载），并同步核算通过开工乐观租约省去的**整轮对话税 (`rounds_saved` / 回路工具调用轮次)**；每次评测与日常工具调用的真实耗时（`elapsed_us`）、Token 缩减量（`tokens_saved`）、探索轮次缩减（`rounds_saved`）及风险拦截事件（`hazard_intercepted`）均须携带确定性推导规则编号（`provenance_rule`）落库留痕，支持通过 CLI（`agent-steward bench`）、MCP（`steward_benchmark`）、Web UI 与 DuckDB 导出报告随时溯源核验与跨版本回归比对，确保大管家使用效果 100% 有据可查。
 
 19. **纵深安全防御、全链路脱敏与抗投毒规约 (Defense-in-Depth Security, End-to-End Redaction & Anti-Poisoning)**：
     - **全链路凭据零落盘**：在文件扫描、`/proc` `cmdline` 采集、MCP 配置解析、外部服务登记、长期记忆写入、变更审计流水、跨机 Mesh 对话与本地模型推理前，统一强制经过 `SecretRedactor` 脱敏与敏感文件阻断（`.env*`、`.ssh/`、`*.pem`/`*.key`、URI 口令与高危令牌前缀），严禁明文凭据入库或经由 Brief / Mesh 泄露。
@@ -309,7 +311,7 @@ cargo build --release
     - **周期性现实对账 (`FreshnessReconciler`)**：守护进程与按需 CLI/MCP 定期比对库内快照、磁盘文件状态、`/proc` 实时监听端口与 `.codegraph/codegraph.db` `mtime`，自动剪除幽灵端口节点与过旧资产。
 
 22. **内生对比探针驱动的闭环自进化规约 (Probe-Driven Closed-Loop Self-Evolution & Auto-Feedback Flywheel)**：
-    - **五点回路对比探针**：在 `SessionStart(Brief)`、`PreToolUse(Guard)`、`InFlight(Search)`、`PostToolUse(Drift)` 与 `Periodic(Regression)` 五个执行切面部署确定性对比探针（`P1~P5`），以实测物理态 vs 历史快照/SLA/上一版本 Benchmark 为参照系，量化记录每一项偏差与改善幅度。
+    - **五点回路对比探针**：在 `SessionStart(Brief)`、`PreToolUse(Guard)`、`InFlight(Search)`、`PostToolUse(Drift)` 与 `Periodic(Regression)` 五个执行切面部署确定性对比探针（`P1~P5`），以实测物理态 vs 历史快照/SLA/上一版本 Benchmark 为参照系，量化记录每一项偏差与改善幅度；并在 `P1/P2/P4` 中闭环跟踪乐观租约有效率 ($P_{\text{valid}}$) 与碰壁自愈率，当某项服务频发失效时自动降级其乐观直通权限。
     - **数字佐证与去重自上报**：严禁拍脑袋优化。任何自愈修复与能力演进必须提供探针实测数字差值（Before/After/Delta）佐证；当越过退化阈值时自动调用幂等去重的 `FeedbackEngine::add_item_deduped` 写入 [user_feedback.md](user_feedback.md)，形成“探针发现 → 数字佐证 → 自动自愈/反馈 → Benchmark 固化”的自进化飞轮（详见 [13-freshness-and-self-evolution-spec.md](design_doc/13-freshness-and-self-evolution-spec.md)）。
 
 23. **多维证据分层、有向加权与隐式语义图谱规约 (Multi-Tier Evidence, Directed Weighted & Semantic Graph Intelligence)**：
@@ -319,6 +321,10 @@ cargo build --release
 24. **联邦网格信封协议、零信任签名认证与受控沙盒协同规约 (Federated Mesh Wire Protocol, Zero-Trust Auth & Sandboxed Collaboration)**：
     - **信封协议与双向防重放**：跨主机 Mesh 协同统一采用 `MeshEnvelope v1.0` 线协议，写与协同请求强制携带 `timestamp_ms`、`nonce`、`scopes`、`payload_sha256` 及 `HMAC-SHA256` 规范签名；服务端校验 `+-300s` 时间窗、`NonceCache` 防重放与 Peer Scope 最小授权（支持 `read:facts` / `write:locks` / `exchange:dialogue` / `transfer:artifact`）。
     - **受控协同原语**：跨机对话仅限结构化意图（`ASK_CONTEXT` / `HANDOFF_TASK` / `SHARE_MEMORY` / `REPLY`），入出双向经由 `SecretRedactor` 与 `PromptInjectionScanner` 过滤；跨机文件传输严格限额 `<= 10MB`、校验 SHA-256 与阻断敏感文件，隔离落盘至 `~/.steward/mesh_inbox/`（`0600`）待本机显式 `accept`/`reject` 后方可使用（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)）。
+
+25. **乐观-悲观自适应并发控制与失败早回退规约 (Adaptive Optimistic-Pessimistic Concurrency Control & Fail-Fast Fallback, AOPCC)**：
+    - **三态动作并发分级**：依据可逆性、失败代价 ($C_{\text{fail}}$) 与冲突概率，将 Agent 动作划分为 `OPTIMISTIC`（只读、服务客户端直连如本机 `:5432`、已授权工具、`/root/new/tmp/` 沙盒验证——0 前置查询直接执行）、`CAUTIOUS_CAS`（常规新建文件的静默本地规则校验）与 `PESSIMISTIC_LOCK`（端口 bind、高爆炸半径文件修改、系统高危路径、跨 Agent 排他锁——强制前置拦截）。
+    - **开工乐观租约与碰壁秒级自愈**：`steward_brief` 在 `SessionStart` 签发高置信度（$P_{\text{valid}} \ge 0.90$）且带纪元指纹（`epoch_hash`）的乐观直通契约；若乐观直行报错（如 `Connection refused` / `command not found` / `Address already in use`），必须由 `steward_hook_post(success=false)` 在 `< 2ms` 内反查宿主机真实状态并注入替代处方，消除整轮对话税（详见 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)）。
 
 ---
 
@@ -441,9 +447,12 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     > 原始探讨：mesh, 除了能通信，是否还要设计通信协议，基于通信的功能点，例如传送文件，交换对话，对话间的身份认证安全措施等。
     - **演进方案**：遵循递弱代偿原则（不造 Raft/Rsync/聊天软件 IM），已落地 **`MeshEnvelope v1.0`** 线协议（`HMAC-SHA256` 规范签名 + `+-300s` 时间窗与 `NonceCache` 防重放 + `Peer Scopes` 最小权限），在此之上交付 **跨机图谱联邦探查 (`mesh/graph`)**、**双向脱敏抗投毒结构化对话 (`mesh/dialogue`)** 与 **限额 `<=10MB` + SHA-256 校验 + `~/.steward/mesh_inbox/` 隔离沙盒投递 (`mesh/transfer`)**，同步补齐 `W13`/`W14`/`DQ6` Benchmark `v3.4`（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 与 [roadmap-phase40-41.md](src_doc/roadmap-phase40-41.md)）。
 
-25. 我从数据库悲观锁和乐观锁想到一个问题，如果你没次都从agent-steward获取（执行回路中强制）这不就悲观锁么，但这一定好吗？有时乐观锁可能更合适，例如我要做个postgresql验证，我可以假设本机5432已经默认有一个可用的实例，且无需密码，直接就连了。不需要从agent-steward先获取一次事实信息啊。你觉得呢？这个想法对接下来的agent-steward产品优化有什么作用么？
+25. **Agent 并发控制：乐观直通 + 悲观门禁自适应控制 (AOPCC)** `✅ Phase 42 已落地（对应规约 #8, #18, #22, #25）`:
+   > 原始探讨：我从数据库悲观锁和乐观锁想到一个问题，如果你没次都从agent-steward获取（执行回路中强制）这不就悲观锁么，但这一定好吗？有时乐观锁可能更合适，例如我要做个postgresql验证，我可以假设本机5432已经默认有一个可用的实例，且无需密码，直接就连了。不需要从agent-steward先获取一次事实信息啊。你觉得呢？这个想法对接下来的agent-steward产品优化有什么作用么？
 
-  
+   - **核心收敛判断**：在 Agent 执行回路中强制事前查 `steward` 本质是**悲观并发控制（PCC）**——即便 `steward` 响应仅 `~1 ms`，也会迫使 Agent 多走一整轮 LLM 对话（重发 `5k~30k` 上下文 + `1.5s~4s` 推理延迟，即**整轮对话税 $C_{\text{turn}}$**）。面向本机 PostgreSQL `:5432` 等高置信、可逆、低回滚代价的只读/试探动作，应采用**乐观直通（`OPTIMISTIC`）**；而涉及破坏性写操作、端口绑定冲突、多 Agent 写锁与生产路径变更时，仍强制**悲观门禁（`PESSIMISTIC_LOCK`）**；介于两者之间的依赖写入采用**轻量条件校验（`CAUTIOUS_CAS`）**。
+   - **已落地三层引擎**：(1) `OptimisticLeaseEngine` 在 `SessionStart (steward_brief)` 签发 `<=120 tok` 的 **MVCC 短时乐观直通契约 (`Optimistic Leases`)**；(2) `ConcurrencyPolicyClassifier` 精确区分客户端连接（如 `psql -p 5432`）与服务端端口绑定（如 `uvicorn --port`）；(3) `OptimisticFailureDiagnoser` 在 `PostToolUse(success=false)` 与 `steward_bridge.py` 中捕获 `ECONNREFUSED`、`password authentication failed`、`command not found`、`EADDRINUSE` 并在毫秒级内反查宿主机注入替代处方且自动降级失效租约，同步交付 Benchmark `v3.5`（`W15` + `PR-11`，详见 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md) 与 [roadmap-phase42.md](src_doc/roadmap-phase42.md)）。
+
 ---
 
 ## 开源协议

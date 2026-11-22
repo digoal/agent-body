@@ -28,7 +28,7 @@ pub fn sha256_hex(input: &str) -> String {
     digest.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
-/// 生产效能存证账本确定性推导规则 (PR-01 ~ PR-10)
+/// 生产效能存证账本确定性推导规则 (PR-01 ~ PR-11)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProvenanceRule {
     Pr01SkillMcpRouting,
@@ -41,6 +41,7 @@ pub enum ProvenanceRule {
     Pr08AdaptiveBriefColdStart,
     Pr09HybridSemanticSearch,
     Pr10FeedbackAndMemoryLoop,
+    Pr11OptimisticLeaseAndRecovery,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,6 +65,7 @@ impl ProvenanceRule {
             Self::Pr08AdaptiveBriefColdStart => "PR-08",
             Self::Pr09HybridSemanticSearch => "PR-09",
             Self::Pr10FeedbackAndMemoryLoop => "PR-10",
+            Self::Pr11OptimisticLeaseAndRecovery => "PR-11",
         }
     }
 
@@ -79,6 +81,7 @@ impl ProvenanceRule {
             Self::Pr08AdaptiveBriefColdStart => "冷启动自适应态势简报组装",
             Self::Pr09HybridSemanticSearch => "语义向量 + FTS RRF 混合检索",
             Self::Pr10FeedbackAndMemoryLoop => "使用反馈与长期记忆自动沉淀",
+            Self::Pr11OptimisticLeaseAndRecovery => "AOPCC 乐观直通租约与碰壁秒级自愈",
         }
     }
 
@@ -114,6 +117,9 @@ impl ProvenanceRule {
             Self::Pr10FeedbackAndMemoryLoop => {
                 "baseline_tokens = max(steward_tokens * 3, 450), baseline_rounds = 2, steward_rounds = 1"
             }
+            Self::Pr11OptimisticLeaseAndRecovery => {
+                "Optimistic lease hits save 1 turn/step (C_turn); on abort PostToolUse(success=false) heals in <2ms, rounds_saved = 2"
+            }
         }
     }
 
@@ -129,6 +135,7 @@ impl ProvenanceRule {
             (Self::Pr08AdaptiveBriefColdStart, "steward_brief"),
             (Self::Pr09HybridSemanticSearch, "steward_memory_search, memory search --hybrid"),
             (Self::Pr10FeedbackAndMemoryLoop, "steward_feedback, steward_memory_add, steward_session_close"),
+            (Self::Pr11OptimisticLeaseAndRecovery, "steward_brief(leases), steward_hook_pre(mode), steward_hook_post(success=false)"),
         ];
         all.iter()
             .map(|(r, tools)| ProvenanceRuleMeta {

@@ -79,4 +79,5 @@ agent-steward bench reset
 - **`v3.0` 横向竞品轨道 C (`COMP-C1 ~ COMP-C4`)**：引入长期记忆、上下文数据库、AgentFS 与宿主机 CLI 探针四大开源赛道同场实跑，区分 `LIVE_BENCHMARKED` 与 `ARCH_VERIFIED`。
 - **`v3.1` 帕累托质量双门禁**：为全部 `W1 ~ W11` 与 `COMP-C1 ~ COMP-C4` 实装四维上下文质量评分（$Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$）与有效信息密度倍数（`Facts / 1k Tokens`），确保“既省 Token 又提质量”。
 - **`v3.2` 物理健康度与等价口径校准**：`DQ3` 与 `LinkAuditor` 物理断链口径 100% 拉齐，`W10` 扩充 Rust 测试/`#[cfg(test)]` 与 `.md` 示例抗误报门禁，并校准 `COMP-C4` 等价进程/代码检索采集口径。
-- **`v3.3` 实时新鲜度与自进化对账门禁**：新增 `W12`（资产改删写穿失效与跨表自愈闭环）与 `DQ5`（宿主机新鲜度与一致性对账健康度 `>= 98%`），并接入 5 点自进化探针与去重反馈自动沉淀。
+- **`v3.4` 分层加权图谱与 Mesh 安全协同门禁（Phase 40 ~ 41）**：新增 `W13`（`L2` 上卷 + `L3` 向量隐式语义发现与加权衰减爆炸半径）、`W14`（`MeshEnvelope v1.0` HMAC 防重放与沙盒收件箱投递）与 `DQ6`（现网工程图谱连通度与分层边健康度门禁）。
+- **`v3.5` AOPCC 并发回路门禁（Phase 42 · ISSUE #25）**：新增 `W15`（`optimistic_vs_pessimistic_execution_loop`：同场对比全悲观前置查询 vs 裸奔盲猜 vs AOPCC 乐观直通+碰壁秒级自愈，考核整轮对话税 `rounds_saved` 与 100% 事实恢复）与 `PR-11`（乐观直通租约命中与 `<2ms` 自愈处方存证规则）。

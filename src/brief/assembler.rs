@@ -18,6 +18,7 @@
 use anyhow::Result;
 use chrono::Local;
 
+use crate::brief::optimistic::{OptimisticLease, OptimisticLeaseEngine};
 use crate::fact::FactFacade;
 use crate::memory::{MemoryFilter, MemoryProvider};
 use crate::placement::conventions::ConventionsEngine;
@@ -84,6 +85,8 @@ pub struct BriefOutput {
     pub tokens_used: usize,
     /// 质量评分
     pub quality: BriefQuality,
+    /// 开工签发的 MVCC 乐观直通租约列表 (Phase 42 AOPCC)
+    pub optimistic_leases: Vec<OptimisticLease>,
 }
 
 // ─── 组装器主体 ─────────────────────────────────────────────────────────────
@@ -119,6 +122,14 @@ impl BriefAssembler {
         // ── 1. 事实模块采样 ───────────────────────────────────────────────
         let (fact_section, fact_score) = self.build_fact_section(&req.query, fact_budget);
 
+        // ── 1.5 开工乐观直通租约签发 (Phase 42 AOPCC) ─────────────────────
+        let lease_report = OptimisticLeaseEngine::issue_leases(&self.storage, &req.query);
+        let lease_section = if budget <= 350 {
+            String::new()
+        } else {
+            lease_report.markdown_section.clone()
+        };
+
         // ── 2. 偏好规约采样 ───────────────────────────────────────────────
         let (pref_section, pref_score) = self.build_pref_section(&req.query, pref_budget);
 
@@ -144,6 +155,7 @@ impl BriefAssembler {
             "# 🏠 大管家开工简报 (steward_brief)\n\n\
              **时间**: {now} | **会话**: {session_disp} | **质量分**: {overall}/100\n\n\
              {fact_section}\n\
+             {lease_section}\
              {pref_section}\n\
              {mem_section}\
              {eco_section}",
@@ -151,6 +163,7 @@ impl BriefAssembler {
             session_disp = session_disp,
             overall = quality.overall,
             fact_section = fact_section,
+            lease_section = lease_section,
             pref_section = pref_section,
             mem_section = mem_section,
             eco_section = eco_section,
@@ -162,6 +175,7 @@ impl BriefAssembler {
             markdown,
             tokens_used,
             quality,
+            optimistic_leases: lease_report.leases,
         })
     }
 
