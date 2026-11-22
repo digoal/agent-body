@@ -20,6 +20,7 @@ impl DuckDbStorageProvider {
         }
         let conn = Connection::open(path)
             .with_context(|| format!("打开 DuckDB 数据库文件失败: {:?}", path))?;
+        let _ = conn.execute_batch("SET threads = 2; SET memory_limit = '256MB';");
         let provider = Self {
             conn: Arc::new(Mutex::new(conn)),
         };
@@ -30,6 +31,7 @@ impl DuckDbStorageProvider {
     pub fn open_in_memory() -> Result<Self> {
         let conn = Connection::open_in_memory()
             .context("打开 DuckDB 内存数据库失败")?;
+        let _ = conn.execute_batch("SET threads = 2; SET memory_limit = '256MB';");
         let provider = Self {
             conn: Arc::new(Mutex::new(conn)),
         };
@@ -39,6 +41,26 @@ impl DuckDbStorageProvider {
 
     pub fn conn(&self) -> Arc<Mutex<Connection>> {
         self.conn.clone()
+    }
+
+    pub fn begin_transaction(&self) -> Result<()> {
+        let conn = self.lock_conn()?;
+        conn.execute_batch("BEGIN TRANSACTION;")
+            .context("开启 DuckDB 事务失败")?;
+        Ok(())
+    }
+
+    pub fn commit_transaction(&self) -> Result<()> {
+        let conn = self.lock_conn()?;
+        conn.execute_batch("COMMIT;")
+            .context("提交 DuckDB 事务失败")?;
+        Ok(())
+    }
+
+    pub fn rollback_transaction(&self) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let _ = conn.execute_batch("ROLLBACK;");
+        Ok(())
     }
 
     fn lock_conn(&self) -> Result<std::sync::MutexGuard<'_, Connection>> {

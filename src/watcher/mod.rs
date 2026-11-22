@@ -20,12 +20,12 @@ pub struct FileChangeEvent {
 }
 
 pub struct FileWatcher {
-    _watcher: RecommendedWatcher,
+    watcher: std::sync::Mutex<RecommendedWatcher>,
     rx: Receiver<notify::Result<Event>>,
 }
 
 impl FileWatcher {
-    /// 创建文件监听器并绑定待监听目录
+    /// 创建文件监听器并绑定待监听目录（跳过 target/.git/node_modules 等黑名单目录，避免数千个无效 inotify 句柄）
     pub fn new(watch_paths: &[PathBuf]) -> Result<Self> {
         let (tx, rx) = channel();
 
@@ -34,13 +34,12 @@ impl FileWatcher {
 
         for p in watch_paths {
             if p.exists() {
-                watcher.watch(p, RecursiveMode::Recursive)
-                    .with_context(|| format!("监听目录失败: {:?}", p))?;
+                watch_dir_pruned(&mut watcher, p)?;
             }
         }
 
         Ok(Self {
-            _watcher: watcher,
+            watcher: std::sync::Mutex::new(watcher),
             rx,
         })
     }
@@ -63,6 +62,12 @@ impl FileWatcher {
                     if should_ignore_path(&path) {
                         continue;
                     }
+                    // 若新创建了非黑名单子目录，动态补挂非递归监听
+                    if kind == FileChangeKind::Created && path.is_dir() {
+                        if let Ok(mut w) = self.watcher.lock() {
+                            let _ = watch_dir_pruned(&mut w, &path);
+                        }
+                    }
                     events.push(FileChangeEvent { path, kind: kind.clone() });
                 }
             }
@@ -71,6 +76,38 @@ impl FileWatcher {
         // 简易防抖: 同一路径保留最新事件
         dedup_events(events)
     }
+}
+
+fn is_ignored_dir_name(name: &str) -> bool {
+    matches!(
+        name,
+        "target" | ".git" | ".steward" | ".state" | "__pycache__" | ".codegraph" | ".venv" | "node_modules" | ".cache"
+    )
+}
+
+fn watch_dir_pruned(watcher: &mut RecommendedWatcher, root: &Path) -> Result<()> {
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+            if is_ignored_dir_name(name) {
+                continue;
+            }
+        }
+        let _ = watcher.watch(&dir, RecursiveMode::NonRecursive);
+        if let Ok(rd) = std::fs::read_dir(&dir) {
+            for entry in rd.flatten() {
+                let p = entry.path();
+                if p.is_dir() && !p.is_symlink() {
+                    if let Some(name) = p.file_name().and_then(|s| s.to_str()) {
+                        if !is_ignored_dir_name(name) {
+                            stack.push(p);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn should_ignore_path(path: &Path) -> bool {

@@ -1235,7 +1235,7 @@ pub fn handle_audit_summary(req: &HttpRequest, storage: Arc<dyn StorageProvider>
     let st = Storage::new(storage.clone());
     match st.audit_domain_summary(window) {
         Ok(summary) => {
-            let olap = DuckDbAnalyticsEngine::from_synced_storage(storage)
+            let olap = DuckDbAnalyticsEngine::from_synced_audit_events(storage)
                 .and_then(|eng| eng.audit_analytics_summary(days))
                 .ok();
             WebResponse::success(serde_json::json!({
@@ -1290,7 +1290,7 @@ pub fn handle_audit_export(req: &HttpRequest, storage: Arc<dyn StorageProvider>)
     let out_path = body
         .output_path
         .unwrap_or_else(|| "/root/new/tmp/audit_events_export.csv".to_string());
-    match DuckDbAnalyticsEngine::from_synced_storage(storage)
+    match DuckDbAnalyticsEngine::from_synced_audit_events(storage)
         .and_then(|eng| eng.export_to_parquet("audit_events", &out_path))
     {
         Ok(exp) => WebResponse::success(exp),

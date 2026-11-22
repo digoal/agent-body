@@ -2291,7 +2291,7 @@ fn main() -> Result<()> {
                 }
                 AuditCommands::Summary { window, days, json } => {
                     let summary = storage.audit_domain_summary(&window)?;
-                    let olap = DuckDbAnalyticsEngine::from_synced_storage(storage.provider().clone())
+                    let olap = DuckDbAnalyticsEngine::from_synced_audit_events(storage.provider().clone())
                         .and_then(|eng| eng.audit_analytics_summary(days))
                         .ok();
                     if json {
@@ -2367,7 +2367,7 @@ fn main() -> Result<()> {
                     }
                 }
                 AuditCommands::Export { output_path, json } => {
-                    let eng = DuckDbAnalyticsEngine::from_synced_storage(storage.provider().clone())?;
+                    let eng = DuckDbAnalyticsEngine::from_synced_audit_events(storage.provider().clone())?;
                     let exp = eng.export_to_parquet("audit_events", &output_path)?;
                     if json {
                         println!("{}", serde_json::to_string_pretty(&exp)?);

@@ -103,11 +103,65 @@ impl DuckDbAnalyticsEngine {
         Self { conn }
     }
 
-    /// 创建内存 DuckDB 实例并从主存储同步最新数据后返回分析引擎
+    /// 创建或复用短 TTL (15s) 内存 DuckDB 分析快照（单飞串行防并发雪崩）
     pub fn from_synced_storage(source: Arc<dyn crate::storage::StorageProvider>) -> Result<Self> {
+        use std::sync::OnceLock;
+        use std::time::{Duration, Instant};
+
+        struct CachedDuckDb {
+            source_ptr: usize,
+            latest_asset: String,
+            latest_change: Option<i64>,
+            created_at: Instant,
+            conn: Arc<Mutex<Connection>>,
+        }
+
+        static CACHE: OnceLock<Mutex<Option<CachedDuckDb>>> = OnceLock::new();
+        let cache_mutex = CACHE.get_or_init(|| Mutex::new(None));
+        let mut guard = cache_mutex
+            .lock()
+            .map_err(|e| anyhow::anyhow!("DuckDB 缓存锁异常: {}", e))?;
+
+        let source_ptr = Arc::as_ptr(&source) as *const () as usize;
+        let latest_asset = source
+            .list_assets(1)
+            .ok()
+            .and_then(|v| v.into_iter().next().map(|a| a.path))
+            .unwrap_or_default();
+        let latest_change = source
+            .list_changes(1)
+            .ok()
+            .and_then(|v| v.into_iter().next().map(|c| c.id))
+            .unwrap_or_default();
+        if let Some(ref cached) = *guard {
+            if cached.source_ptr == source_ptr
+                && cached.latest_asset == latest_asset
+                && cached.latest_change == latest_change
+                && cached.created_at.elapsed() < Duration::from_secs(15)
+            {
+                return Ok(Self::new(cached.conn.clone()));
+            }
+        }
+
         let duckdb_prov = crate::storage::DuckDbStorageProvider::open_in_memory()?;
         let pipeline = crate::storage::SyncPipeline::new(source, Arc::new(duckdb_prov.clone()));
         let _ = pipeline.sync_all()?;
+        let conn = duckdb_prov.conn();
+        *guard = Some(CachedDuckDb {
+            source_ptr,
+            latest_asset,
+            latest_change,
+            created_at: Instant::now(),
+            conn: conn.clone(),
+        });
+        Ok(Self::new(conn))
+    }
+
+    /// 轻量仅同步 audit_events 表（毫秒级，避免 audit 接口全表拷贝 2 万+ 资产）
+    pub fn from_synced_audit_events(source: Arc<dyn crate::storage::StorageProvider>) -> Result<Self> {
+        let duckdb_prov = crate::storage::DuckDbStorageProvider::open_in_memory()?;
+        let pipeline = crate::storage::SyncPipeline::new(source, Arc::new(duckdb_prov.clone()));
+        let _ = pipeline.sync_audit_events_only()?;
         Ok(Self::new(duckdb_prov.conn()))
     }
 

@@ -1722,7 +1722,7 @@ impl McpToolRegistry {
                         let window = args.get("window").and_then(|v| v.as_str()).unwrap_or("7d");
                         let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(7) as usize;
                         let summary = self.storage.audit_domain_summary(window)?;
-                        let olap = DuckDbAnalyticsEngine::from_synced_storage(self.storage.provider().clone())
+                        let olap = DuckDbAnalyticsEngine::from_synced_audit_events(self.storage.provider().clone())
                             .and_then(|eng| eng.audit_analytics_summary(days))
                             .ok();
                         Ok(serde_json::to_string_pretty(&serde_json::json!({
@@ -1762,7 +1762,7 @@ impl McpToolRegistry {
                             .get("output_path")
                             .and_then(|v| v.as_str())
                             .unwrap_or("/root/new/tmp/audit_events_export.csv");
-                        let engine = DuckDbAnalyticsEngine::from_synced_storage(self.storage.provider().clone())?;
+                        let engine = DuckDbAnalyticsEngine::from_synced_audit_events(self.storage.provider().clone())?;
                         let exp = engine.export_to_parquet("audit_events", out_path)?;
                         Ok(serde_json::to_string_pretty(&exp)?)
                     }
