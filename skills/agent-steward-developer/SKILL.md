@@ -11,8 +11,8 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 
 ## 零、零重扫三步开工协议（Zero-Rescan Protocol，必先执行）
 
-任何新会话接手迭代任务时，**严禁全仓 `grep` 或扫描历史 `src_doc/roadmap-phase2..33.md` / `progress-phase*.md`**，必须先执行以下 3 步（2 轮内精准锁定改点）：
-1. **读 `Tier-0` 入口（仅 2 文件）**：[EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md)（8 大演进场景 O(1) 变更触点矩阵）+ 当前活跃 `src_doc/roadmap-phase*.md`；
+任何新会话接手迭代任务时，**严禁全仓 `grep` 或扫描历史 `docs/src_doc/roadmap-phase2..33.md` / `progress-phase*.md`**，必须先执行以下 3 步（2 轮内精准锁定改点）：
+1. **读 `Tier-0` 入口（仅 2 文件）**：[EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md)（8 大演进场景 O(1) 变更触点矩阵）+ 当前活跃 `docs/src_doc/roadmap-phase*.md`；
 2. **跑确定性架构快照**：`make evolution-check`（`<200ms` 获取最新模块/MCP/SPI/表/Benchmark 计数与零漂移校验）；
 3. **查符号用 CodeGraph**：`codegraph explore "<SymbolName>"` 穿透源码定义与调用链。
 
@@ -36,7 +36,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
    - 大管家负责**宏观宿主拓扑**（文件、服务、端口、定时任务间的依赖网络）；
    - 微观符号调用（函数、类、AST）下钻交给 **CodeGraph**，大管家通过 `CodeGraphBridge` 无缝桥接，绝不重复造轮子。
 6. **零破坏与断点续传（No Breaking & Resumable）**:
-   - 严禁一次性大范围盲改；必须使用串行原子化分步执行，在 `src_doc/roadmap-phase*.md` 中建立检查点追踪。
+   - 严禁一次性大范围盲改；必须使用串行原子化分步执行，在 `docs/src_doc/roadmap-phase*.md` 中建立检查点追踪。
 7. **纵深安全防御、全链路脱敏与抗投毒（Defense-in-Depth，对齐规约 #8 & #19）**:
    - 任何写入资产库、`/proc` 进程记录、长期记忆、变更审计流水与本地大模型输入的内容，必须经过 `SecretRedactor` 脱敏；
    - `HookDispatcher` 命令插值强制安全转义防 Shell 注入，导出操作严格限定目录白名单与 SQL 转义；
@@ -91,11 +91,11 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | `INSTALL.md` | 生产安装、依赖矩阵、Docker 与 Systemd 部署指南 | 与 `preflight` 保持事实对齐 |
 | `ISSUE.md` | 未来演进与待探讨 ISSUE 总账 | 与 Roadmap 及反馈总账协同 |
 | `user_feedback.md` | 主理人与 Agent 实际使用体验与探针自上报总账 | `steward_feedback` 双向读写目标 |
-| `manual/` | 面向使用者与架构师的分卷深度技术手册 (01~10) | 保持与代码演进实时同步 |
-| `src_doc/` | 开发者手册、产品手册与各阶段研发断点状态表 | 任务流转枢纽，统一 kebab-case |
-| `design_doc/` | 架构设计文档闭环交付件 (01~08, init.sql) | 顶层架构事实依据，统一 kebab-case |
-| `idea_doc/` | 初始思考、方案推导与设计全过程长文 | 原始产品哲学思考沉淀 |
-| `markdown/` | 面向公众传播的技术长文与高保真 SVG 架构图 | 宣传与技术分享沉淀 |
+| `docs/manual/` | 面向使用者与架构师的分卷深度技术手册 (01~10) | 保持与代码演进实时同步 |
+| `docs/src_doc/` | 开发者手册、产品手册与各阶段研发断点状态表 | 任务流转枢纽，统一 kebab-case |
+| `docs/design_doc/` | 架构设计文档闭环交付件 (01~08, init.sql) | 顶层架构事实依据，统一 kebab-case |
+| `docs/idea_doc/` | 初始思考、方案推导与设计全过程长文 | 原始产品哲学思考沉淀 |
+| `docs/markdown/` | 面向公众传播的技术长文与高保真 SVG 架构图 | 宣传与技术分享沉淀 |
 | `skills/` | 本项目内置技能库 (`developer`, `doc-writer`, `guide`) | 指导 Agent 认知与自闭环自进化 |
 
 ---
@@ -106,7 +106,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 
 ```mermaid
 flowchart TD
-    A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 src_doc/roadmap-phase*.md)"]
+    A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 docs/src_doc/roadmap-phase*.md)"]
     B --> C["步骤 3: 串行编码与单元测试驱动<br/>(TDD + cargo test 局部验证)"]
     C --> D["步骤 4: 编译检查与全量回归<br/>(cargo test 252+ 项全绿 + release 构建)"]
     D --> E["步骤 5: 文档同步与交付三段式小结<br/>(更新手册/README + 状态标记)"]
@@ -114,12 +114,12 @@ flowchart TD
 
 ### 步骤 1: 需求对齐与设计查验
 1. 检查用户的需求是否符合第一节的“核心信条与设计红线”。
-2. 查阅 `design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../design_doc/08-graph-intelligence.md) 与 [14-graph-intelligence-and-mesh-protocol-spec.md](../../design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)，AOPCC 并发策略查 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](../../design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)，双域审计与自进化查 [16-dual-domain-audit-and-self-evolution-spec.md](../../design_doc/16-dual-domain-audit-and-self-evolution-spec.md)，Agent 本体与跨大脑连续性查 [17-agent-embodiment-and-continuity-spec.md](../../design_doc/17-agent-embodiment-and-continuity-spec.md)）。
+2. 查阅 `docs/design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../design_doc/08-graph-intelligence.md) 与 [14-graph-intelligence-and-mesh-protocol-spec.md](../../design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)，AOPCC 并发策略查 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](../../design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)，双域审计与自进化查 [16-dual-domain-audit-and-self-evolution-spec.md](../../design_doc/16-dual-domain-audit-and-self-evolution-spec.md)，Agent 本体与跨大脑连续性查 [17-agent-embodiment-and-continuity-spec.md](../../design_doc/17-agent-embodiment-and-continuity-spec.md)）。
 3. 如涉及新增数据表或字段，先在 `src/storage/schema.sql`、`src/storage/models.rs`、`src/storage/mod.rs` 设计对齐。
 
 ### 步骤 2: 任务拆解与断点登记（严禁大步跨越）
 1. 将大任务拆解为粒度在 30 分钟以内的原子任务（如：数据模型扩展 -> 核心算法实现 -> MCP 工具注册 -> CLI 命令暴露 -> 单元测试）。
-2. 在 `src_doc/roadmap-phase*.md` 中追加或认领任务，标记当前正在进行的任务为 `⏳ 进行中`。
+2. 在 `docs/src_doc/roadmap-phase*.md` 中追加或认领任务，标记当前正在进行的任务为 `⏳ 进行中`。
 3. 确保任何环节遭遇会话重置或中断，后续 Agent 只需读取该状态表即可瞬间无缝续传。
 
 ### 步骤 3: 串行编码与测试驱动
@@ -152,11 +152,11 @@ flowchart TD
 
 ### 步骤 5: 文档同步与交付小结
 1. 若新增或调整了 CLI 子命令，必须同步更新：
-   - [src_doc/product-manual.md](../../src_doc/product-manual.md)
-   - [manual/03-cli-reference.md](../../manual/03-cli-reference.md)
+   - [docs/src_doc/product-manual.md](../../src_doc/product-manual.md)
+   - [docs/manual/03-cli-reference.md](../../manual/03-cli-reference.md)
 2. 若新增或调整了 MCP 工具，必须同步更新：
-   - [src_doc/hooks-and-integration.md](../../src_doc/hooks-and-integration.md)
-   - [manual/04-mcp-integration.md](../../manual/04-mcp-integration.md)
+   - [docs/src_doc/hooks-and-integration.md](../../src_doc/hooks-and-integration.md)
+   - [docs/manual/04-mcp-integration.md](../../manual/04-mcp-integration.md)
 3. 更新 Roadmap 中的任务状态为 `✅ 已完成`，并记录完成时间。
 4. 按照“digoal德哥”三段式交付格式向用户汇报：
    - **文件路径**: 改动和新建的文件列表。

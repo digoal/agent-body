@@ -199,7 +199,7 @@ def build_talk_04() -> None:
                         ],
                     },
                 ],
-                ("接力棒不需要装下整场马拉松，只需要装下「跑到哪、避什么坑、下一棒往哪跑」。", "design_doc/17 §三.2", "green"),
+                ("接力棒不需要装下整场马拉松，只需要装下「跑到哪、避什么坑、下一棒往哪跑」。", "docs/design_doc/17 §三.2", "green"),
             ),
             "next": "让我们直接看第 27 张表 `body_checkpoints` 与 `ContinuityManager` 的硬核实现。",
             "script": (
@@ -613,7 +613,7 @@ def build_talk_05() -> None:
             "lead": "每一条审计记录在落库前都经过<b>四步确定性清洗与哈希封签</b>，现网 DQ7 抽检 500/500 = 100.0%。",
             "svg": svg_code_and_flow(
                 "src/audit/mod.rs",
-                "src/audit/mod.rs · design_doc/16",
+                "src/audit/mod.rs · docs/design_doc/16",
                 [
                     "pub enum AuditDomain { InAgent, OutOfAgent }",
                     "pub struct AuditEvent {",
@@ -1015,7 +1015,7 @@ def build_talk_06() -> None:
             "lead": "把输出砍成空字符串也能省 100% Token。<b>真正有价值的优化，是 Token 暴降的同时，质量评分 Q 显著上升</b>。",
             "svg": svg_code_and_flow(
                 "src/benchmark/workloads.rs (Pareto Gate)",
-                "design_doc/10-benchmark-spec.md",
+                "docs/design_doc/10-benchmark-spec.md",
                 [
                     "// 确定性四维上下文质量模型 (0 ~ 100 分)",
                     "Q = 0.40 * R_fact    // 必含物理真值事实断言命中率",
@@ -1348,7 +1348,7 @@ def build_talk_06() -> None:
                     ["存储层", "27 张表 · 82 SPI 方法 · 3 存储引擎无损互迁", "duckdb + pg + migration 测试", "PASS"],
                     ["协议层", "43 原生 MCP 工具 · 1:1 CLI · Web 2.0 9 大工作台", "test_web_parity_matrix_100%", "PASS"],
                     ["基准层", "Bench v3.7：17 负载 + 5 微基准 + 8 DQ + 4 竞品 + 13 PR", "run-6a0a4995 SLA 全绿", "PASS"],
-                    ["文档与技能", "EVOLUTION_GUIDE + manual/ + 3 套 SKILL + 9 份 HTML 演讲", "evolution-check 0 drift + Playwright", "PASS"],
+                    ["文档与技能", "EVOLUTION_GUIDE + docs/manual/ + 3 套 SKILL + 9 份 HTML 演讲", "evolution-check 0 drift + Playwright", "PASS"],
                 ],
                 [18, 220, 820, 1290],
                 footnote="基线版本：agent-steward v0.4.0 (Phase 1 ~ Phase 46) · Apache-2.0",

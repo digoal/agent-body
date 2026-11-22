@@ -57,7 +57,7 @@ def build_talk_01() -> None:
                     ("记忆工具 (Memory)", "类似 Mem0 / Zep 的聊天摘要向量库", "记忆只占 1/6，其余五项都是宿主机物理现实与反射"),
                     ("Agent 本体 (Body)", "大模型在宿主机上的永驻具身底座（脑体分离）", "管家与秘书退居本体器官，定位无歧义且上限彻底打开"),
                 ],
-                ("旧名字让人以为你在造第 51 个框架，新定位一句话讲清你是 Agent 的身体。", "来源：idea_doc/04-from-steward-to-agent-body.md"),
+                ("旧名字让人以为你在造第 51 个框架，新定位一句话讲清你是 Agent 的身体。", "来源：docs/idea_doc/04-from-steward-to-agent-body.md"),
             ),
             "next": "既然命名偏差这么致命，那我们回到第一性原理：大脑和身体到底该怎么分工？",
             "script": (
@@ -335,7 +335,7 @@ def build_talk_01() -> None:
                         "foot_val": "零 Breaking Change",
                     },
                 ],
-                ("向上重塑认知，向下零迁移成本——这是成熟基础软件演进的标配纪律。", "design_doc/17 §二", "green"),
+                ("向上重塑认知，向下零迁移成本——这是成熟基础软件演进的标配纪律。", "docs/design_doc/17 §二", "green"),
             ),
             "next": "理念讲透了，现在我们直接钻进代码，看 Phase 44 新建的第 27 模块 src/body/ 到底长什么样。",
             "script": (

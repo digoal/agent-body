@@ -138,16 +138,16 @@ def check_drift(manifest: dict) -> list[str]:
         ROOT / "skills/agent-steward-developer/SKILL.md",
         ROOT / "skills/agent-steward-doc-writer/SKILL.md",
         ROOT / "skills/agent-steward-guide/SKILL.md",
-        ROOT / "arch/01-for-architects.md",
-        ROOT / "arch/02-for-developers.md",
-        ROOT / "arch/03-for-users.md",
-        ROOT / "src_doc/development.md",
-        ROOT / "manual/README.md",
-        ROOT / "manual/03-cli-reference.md",
-        ROOT / "manual/04-mcp-integration.md",
-        ROOT / "manual/08-web-dashboard.md",
-        ROOT / "manual/10-benchmark-and-roi.md",
-        ROOT / "design_doc/06-api-spec.md",
+        ROOT / "docs/arch/01-for-architects.md",
+        ROOT / "docs/arch/02-for-developers.md",
+        ROOT / "docs/arch/03-for-users.md",
+        ROOT / "docs/src_doc/development.md",
+        ROOT / "docs/manual/README.md",
+        ROOT / "docs/manual/03-cli-reference.md",
+        ROOT / "docs/manual/04-mcp-integration.md",
+        ROOT / "docs/manual/08-web-dashboard.md",
+        ROOT / "docs/manual/10-benchmark-and-roi.md",
+        ROOT / "docs/design_doc/06-api-spec.md",
     ]
     stale_checks = [
         (
@@ -183,8 +183,8 @@ def check_drift(manifest: dict) -> list[str]:
 
     for doc_rel in (
         "README.md",
-        "arch/01-for-architects.md",
-        "arch/03-for-users.md",
+        "docs/arch/01-for-architects.md",
+        "docs/arch/03-for-users.md",
         "skills/agent-steward-guide/SKILL.md",
     ):
         p = ROOT / doc_rel

@@ -1,11 +1,11 @@
 ---
 name: agent-steward-doc-writer
-description: 专门用于协助 Agent 编写、维护、同步与迭代本项目（Agent Host Steward）使用手册（存放在 manual/ 目录）、根目录 README.md 以及面向公众的技术传播长文（存放在 markdown/ 目录）的专业文档工程师技能。强制执行“代码事实第一”、“命令实跑验证”、“面向小白通俗友好同时兼顾专家深度”、“Mermaid 图表无错渲染”与“断点式分章节渐进编写”规范。适用于：当项目新增特性、API/CLI 调整、架构重构后，系统性更新或新建 manual/ 使用手册、根目录 README.md 与公众号技术长文。
+description: 专门用于协助 Agent 编写、维护、同步与迭代本项目（Agent Host Steward）使用手册（存放在 docs/manual/ 目录）、根目录 README.md 以及面向公众的技术传播长文（存放在 docs/markdown/ 目录）的专业文档工程师技能。强制执行“代码事实第一”、“命令实跑验证”、“面向小白通俗友好同时兼顾专家深度”、“Mermaid 图表无错渲染”与“断点式分章节渐进编写”规范。适用于：当项目新增特性、API/CLI 调整、架构重构后，系统性更新或新建 docs/manual/ 使用手册、根目录 README.md 与公众号技术长文。
 ---
 
 # Agent Host Steward 文档编写与手册迭代技能 (agent-steward-doc-writer)
 
-> **定位**: 本技能驻留在 `agent-steward` 项目内部（`skills/agent-steward-doc-writer/SKILL.md`），是指导任何接手该项目的 AI Agent（无论是主 Agent 还是文档 Subagent）高保真、可复现、接地气地编写与迭代项目根目录 `README.md`、`manual/` 分卷技术手册与 `markdown/` 对外深度长文的操作指南。
+> **定位**: 本技能驻留在 `agent-steward` 项目内部（`skills/agent-steward-doc-writer/SKILL.md`），是指导任何接手该项目的 AI Agent（无论是主 Agent 还是文档 Subagent）高保真、可复现、接地气地编写与迭代项目根目录 `README.md`、`docs/manual/` 分卷技术手册与 `docs/markdown/` 对外深度长文的操作指南。
 
 ---
 
@@ -25,30 +25,30 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 4. **全套结构化排版与防渲染踩坑**：
    - 代码块标注具体语言（`bash`, `json`, `toml`, `sql`）；
    - 所有 Mermaid 图必须使用标准语法（节点文字含特殊符号或括号必须用双引号包裹，如 `node["描述 (详情)"]`），布局美观，避免文字重叠或溢出；
-   - 矢量图解必须先落盘为独立 SVG 文件（统一置于 `markdown/svg/`），在 Markdown 中使用标准图片语法引用对应 SVG 路径；
+   - 矢量图解必须先落盘为独立 SVG 文件（统一置于 `docs/markdown/svg/`），在 Markdown 中使用标准图片语法引用对应 SVG 路径；
    - 全局相对链接与文件引用必须 100% 真实有效，严禁出现断链或死链。
 5. **双轮驱动同步机制**：
    - 任何核心特性的发布或调整，必须同步检查：
      - **根目录 `README.md`**：保持项目门面最新（架构全景、核心定位、快速上手、MCP 配置简明指南、分阶段路线索引）；
-     - **`manual/` 目录**：保持深度分卷手册完备（01~10 章节化深度展开、排障常见问题、参数字典与实证 Benchmark）；
-     - **`markdown/` 目录**：提炼适合对外技术传播的长文与高保真图解。
+     - **`docs/manual/` 目录**：保持深度分卷手册完备（01~10 章节化深度展开、排障常见问题、参数字典与实证 Benchmark）；
+     - **`docs/markdown/` 目录**：提炼适合对外技术传播的长文与高保真图解。
 6. **断点式增量推进**：
-   - 当需要重构或批量撰写 `manual/` 多章节长手册时，必须在 [manual/README.md](../../manual/README.md) 中维护章节目录进度清单，按章节串行步进。
+   - 当需要重构或批量撰写 `docs/manual/` 多章节长手册时，必须在 [docs/manual/README.md](../../manual/README.md) 中维护章节目录进度清单，按章节串行步进。
 
 ---
 
 ## 二、文档目标受众与手册目录体系架构
 
 ### 2.1 读者画像
-1. **AI Agent 本身**：通过阅读 `README.md` 和 `manual/04-mcp-integration.md`，知道如何通过 stdio MCP 挂载大管家，在开工时主动调用 `steward_brief`。
+1. **AI Agent 本身**：通过阅读 `README.md` 和 `docs/manual/04-mcp-integration.md`，知道如何通过 stdio MCP 挂载大管家，在开工时主动调用 `steward_brief`。
 2. **普通开发者与工程师**：希望能一条命令安装并作为后台守护进程跑起来，规范本地文件和记忆。
 3. **系统架构师与平台运维**：关心安全隐私（数据是否全部本地 SQLite）、资源消耗（守护进程常驻仅 2.1MB 内存）、分级扫描黑名单阻断、端口防撞以及宏微代码拓扑穿透机制。
 
-### 2.2 `manual/` 目录落地的标准分卷体系
-`manual/` 目录下已建立规范的 10 卷技术手册体系：
+### 2.2 `docs/manual/` 目录落地的标准分卷体系
+`docs/manual/` 目录下已建立规范的 10 卷技术手册体系：
 
 ```
-manual/
+docs/manual/
 ├── README.md                      # 手册全景导航、章节说明与阅读路线
 ├── 01-getting-started.md          # 快速上手与编译部署
 ├── 02-core-concepts.md            # 核心理念与设计哲学（三位一体与分级扫描）
@@ -69,7 +69,7 @@ manual/
 ```mermaid
 flowchart TD
     A["步骤 1: 提取代码事实<br/>(核对 src/ 源码中的 CLI、MCP 与存储结构)"] --> B["步骤 2: 实操命令获取真实输出<br/>(运行 target/release/agent-steward)"]
-    B --> C["步骤 3: 拟定或更新章节草稿<br/>(落盘至 manual/、README.md 或 markdown/)"]
+    B --> C["步骤 3: 拟定或更新章节草稿<br/>(落盘至 docs/manual/、README.md 或 docs/markdown/)"]
     C --> D["步骤 4: 渲染合规性与死链自检<br/>(运行 Python 链接检查器 + Mermaid 校验)"]
     D --> E["步骤 5: 提交前三段式小结<br/>(同步 shared_git 镜像，提供 Commit 建议)"]
 ```
@@ -111,11 +111,11 @@ flowchart TD
 - **Mermaid 括号转义**：
   - 错误写法: `A[客户端(Agent)]`
   - 正确写法: `A["客户端 (Agent)"]`
-- **SVG 图表规范**：矢量图保存为独立 `.svg` 文件置于 `markdown/svg/`，保证自适应与文字高对比度无遮挡；
+- **SVG 图表规范**：矢量图保存为独立 `.svg` 文件置于 `docs/markdown/svg/`，保证自适应与文字高对比度无遮挡；
 - **死链检查与防漂移门禁**：运行 `make evolution-check` 校验 27 模块 / 43 工具 / 82 SPI / 27 表 / Benchmark v3.7 计数零漂移，并用 Python 脚本全盘扫描 `.md` 相对链接，保证 0 死链。
 
 ### 步骤 5: 交付检查与 Commit
-- 检查 `README.md`、`manual/` 与 `src_doc/` 是否无缝互引；
+- 检查 `README.md`、`docs/manual/` 与 `docs/src_doc/` 是否无缝互引；
 - 交付三段式小结给用户，并附上规范的 Git Commit Message；
 - 同步更新 `/root/new/shared_git/agent-steward` 开源镜像。
 
@@ -135,7 +135,7 @@ flowchart TD
 - [ ] 文档中的 MCP 工具名是否与 `src/api/mcp_tools.rs`（共 43 个）100% 吻合？
 - [ ] 文档中贴出的 JSON 输出是否经过实际命令运行捕获，而非凭空假想？
 - [ ] Mermaid 节点文字中的括号是否全部加了双引号（防渲染崩溃）？
-- [ ] 矢量 SVG 资源是否已独立落盘于 `markdown/svg/` 并在 Markdown 中以标准语法正确引用？
+- [ ] 矢量 SVG 资源是否已独立落盘于 `docs/markdown/svg/` 并在 Markdown 中以标准语法正确引用？
 - [ ] `README.md` 是否已同步最新「Agent 本体」架构、全量 43 个 MCP 工具与演进路线？
-- [ ] `manual/` 目录下的 10 卷分卷手册超链接是否全部有效无死链？
+- [ ] `docs/manual/` 目录下的 10 卷分卷手册超链接是否全部有效无死链？
 - [ ] 是否已通过 `make evolution-check` 零漂移校验与全局死链审计脚本（0 断链）？

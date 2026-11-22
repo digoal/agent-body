@@ -2,7 +2,7 @@
 
 <!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=82 tables=27 workloads=17 micro=5 dq=8 pr_rules=13 -->
 
-> **核心定位（解决 ISSUE #17）**：让任何新接手的 AI Agent 或开发者在 **不重复扫描 3.8 万行源码与 48 份历史 `src_doc/` 文档** 的前提下，**2 轮以内**完成需求定位、触点锁定与规范演进。
+> **核心定位（解决 ISSUE #17）**：让任何新接手的 AI Agent 或开发者在 **不重复扫描 3.8 万行源码与 48 份历史 `docs/src_doc/` 文档** 的前提下，**2 轮以内**完成需求定位、触点锁定与规范演进。
 
 ---
 
@@ -10,7 +10,7 @@
 
 1. **只读 Tier-0 文档（仅 2 份）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构地图 + 变更触点矩阵）；
-   - 当前活跃路线图 [src_doc/roadmap-phase46.md](src_doc/roadmap-phase46.md)（断点续传状态表；已完成的前序阶段见 [src_doc/roadmap-phase44-45.md](src_doc/roadmap-phase44-45.md)、[src_doc/roadmap-phase43.md](src_doc/roadmap-phase43.md)、[src_doc/roadmap-phase42.md](src_doc/roadmap-phase42.md)、[src_doc/roadmap-phase40-41.md](src_doc/roadmap-phase40-41.md)、[src_doc/roadmap-phase38-39.md](src_doc/roadmap-phase38-39.md) 与 [src_doc/roadmap-phase37.md](src_doc/roadmap-phase37.md)）。
+   - 当前活跃路线图 [docs/src_doc/roadmap-phase46.md](docs/src_doc/roadmap-phase46.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase44-45.md](docs/src_doc/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/roadmap-phase43.md)、[docs/src_doc/roadmap-phase42.md](docs/src_doc/roadmap-phase42.md)、[docs/src_doc/roadmap-phase40-41.md](docs/src_doc/roadmap-phase40-41.md)、[docs/src_doc/roadmap-phase38-39.md](docs/src_doc/roadmap-phase38-39.md) 与 [docs/src_doc/roadmap-phase37.md](docs/src_doc/roadmap-phase37.md)）。
 2. **运行 O(1) 实时架构快照（`<100ms`，禁止手动数模块/工具数）**：
    ```bash
    make evolution-check
@@ -23,9 +23,9 @@
    # 源码改动后刷新符号地图：make codegraph
    ```
 4. **文档三级分层与禁扫令 (Document Tiering)**：
-   - **`Tier-0`（开工必读）**：`EVOLUTION_GUIDE.md` + 当前最新活跃 `src_doc/roadmap-phase*.md`；
-   - **`Tier-1`（按改点跳读）**：`design_doc/05~17`、`manual/01~10`、`user_feedback.md`；
-   - **`Tier-2`（历史冻结归档，严禁常规迭代全量扫描）**：`src_doc/roadmap-phase2..33.md`、`src_doc/progress-phase*.md`、`design_doc/review*.md`。
+   - **`Tier-0`（开工必读）**：`EVOLUTION_GUIDE.md` + 当前最新活跃 `docs/src_doc/roadmap-phase*.md`；
+   - **`Tier-1`（按改点跳读）**：`docs/design_doc/05~17`、`docs/manual/01~10`、`user_feedback.md`；
+   - **`Tier-2`（历史冻结归档，严禁常规迭代全量扫描）**：`docs/src_doc/roadmap-phase2..33.md`、`docs/src_doc/progress-phase*.md`、`docs/design_doc/review*.md`。
 
 ---
 
@@ -35,10 +35,10 @@
 
 | 演进场景 | 必改代码触点（按串行修改顺序） | 必改测试 / 门禁 / 文档触点 |
 |---|---|---|
-| **1. 新增 / 修改原生 MCP 工具** | 1. `src/api/mcp_tools.rs` (`list_tools` + `call_tool_inner`)<br/>2. `src/main.rs` (1:1 CLI 子命令)<br/>3. `src/web/server.rs` & `src/web/parity_api.rs` (REST API + `parity/matrix`)<br/>4. `src/web/assets/mod.rs` (前端工作台交互) | `src/api/mcp.rs` 单测 + `tests/test_web_dashboard.rs` + `manual/03,04` + `make evolution-check` |
+| **1. 新增 / 修改原生 MCP 工具** | 1. `src/api/mcp_tools.rs` (`list_tools` + `call_tool_inner`)<br/>2. `src/main.rs` (1:1 CLI 子命令)<br/>3. `src/web/server.rs` & `src/web/parity_api.rs` (REST API + `parity/matrix`)<br/>4. `src/web/assets/mod.rs` (前端工作台交互) | `src/api/mcp.rs` 单测 + `tests/test_web_dashboard.rs` + `docs/manual/03,04` + `make evolution-check` |
 | **2. 新增 / 修改数据库表或列** | 1. `src/storage/{schema,pg_schema,duckdb_schema}.sql`<br/>2. `src/storage/models.rs`<br/>3. `src/storage/spi.rs` (`StorageProvider` Trait)<br/>4. `src/storage/{sqlite,pg,duckdb}_provider.rs`<br/>5. `src/storage/migration.rs` (按需迁移) | `src/storage/mod.rs` 单测 + `tests/duckdb_integration.rs` + `make evolution-check` |
-| **3. 新增 / 修改 Benchmark 负载或 DQ** | 1. `src/benchmark/{workloads,micro,dq,competitors}.rs`<br/>2. `src/benchmark/mod.rs` (`run_suite` / 汇总)<br/>3. `src/benchmark/report.rs` (`BENCHMARK_SPEC_VERSION` / 渲染) | `tests/benchmarks.rs` + `design_doc/10-benchmark-spec.md` + `manual/10-benchmark-and-roi.md` |
-| **4. 新增 / 修改安全脱敏与 Pre-Hook 门禁** | 1. `src/scanner/metadata.rs` (`SecretRedactor` / `PromptInjectionScanner`)<br/>2. `src/api/hooks.rs` (`pre_tool_call` 高危拦截)<br/>3. `src/hooks/dispatcher.rs` / `src/web/server.rs` | `src/benchmark/workloads.rs` (`W11`) + `src/benchmark/dq.rs` (`DQ4`) + `design_doc/11-security-spec.md` |
+| **3. 新增 / 修改 Benchmark 负载或 DQ** | 1. `src/benchmark/{workloads,micro,dq,competitors}.rs`<br/>2. `src/benchmark/mod.rs` (`run_suite` / 汇总)<br/>3. `src/benchmark/report.rs` (`BENCHMARK_SPEC_VERSION` / 渲染) | `tests/benchmarks.rs` + `docs/design_doc/10-benchmark-spec.md` + `docs/manual/10-benchmark-and-roi.md` |
+| **4. 新增 / 修改安全脱敏与 Pre-Hook 门禁** | 1. `src/scanner/metadata.rs` (`SecretRedactor` / `PromptInjectionScanner`)<br/>2. `src/api/hooks.rs` (`pre_tool_call` 高危拦截)<br/>3. `src/hooks/dispatcher.rs` / `src/web/server.rs` | `src/benchmark/workloads.rs` (`W11`) + `src/benchmark/dq.rs` (`DQ4`) + `docs/design_doc/11-security-spec.md` |
 | **5. 新增 / 修改资产放置规约** | 1. `src/storage/schema.sql` (`placement_rules` 预置)<br/>2. `src/placement/{engine_v2,conventions,learner}.rs` | `src/placement/` 单测 + `README.md` 放置规范 |
 | **6. 新增 / 修改宿主机物理事实探针** | 1. `src/fact/` (`capability`/`process_net`/`automation`/`assets_catalog`)<br/>2. `src/platform/` (Linux/macOS/Windows 抽象)<br/>3. `src/brief/assembler.rs` (必须走索引优先 `Index-First`) | `src/fact/` 单测 + `W1`/`W2`/`W8` Benchmark 回归 |
 | **7. 新增 / 修改效能存证规则 `PR-XX`** | 1. `src/benchmark/provenance.rs` (`ProvenanceRule` 枚举与推导公式)<br/>2. `src/benchmark/ledger.rs` (`record_channel_call`)<br/>3. 对应 CLI/MCP/Web 入口埋点 | `src/benchmark/ledger.rs` 单测 + `make evolution-check` |

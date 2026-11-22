@@ -80,66 +80,68 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 
 15. **Benchmark 标准持续迭代机制 (`Benchmark Spec v1.0 → v2.0+ Six-Dimension Matrix`)** `✅ Phase 31 已落地`:
     - 引入 `spec_version` 基准协议版本化，从算术总耗时比演进为**几何平均加速比（Geometric Mean Speedup）+ 分组加速比**，新增 **D6 认知质量与准确率维度 (`Recall@K / Precision / 覆盖率`)**；
-    - 完成 `W2/W3/W4/W7` 物理等价基线校准，并上线 `W9`（向量+属性混合检索召回）、`W10`（模板抗假阳性回归）与 `DQ1~DQ3`（现网宿主机数据健康度）基准负载（详见 [roadmap-phase30.md](src_doc/roadmap-phase30.md)）。
+    - 完成 `W2/W3/W4/W7` 物理等价基线校准，并上线 `W9`（向量+属性混合检索召回）、`W10`（模板抗假阳性回归）与 `DQ1~DQ3`（现网宿主机数据健康度）基准负载（详见 [roadmap-phase30.md](docs/src_doc/roadmap-phase30.md)）。
 
-16. **宿主大管家安全纵深防御、全链路脱敏与抗投毒体系演进 (`design_doc/11-security-spec.md` & Phase 32~33)** `✅ Phase 32~33 已落地`:
-    - 补齐安全架构规格（[11-security-spec.md](design_doc/11-security-spec.md)）与顶层安全规约 #19，围绕代码审计暴露的 `SEC-GAP-01~05` 完成全链路 `SecretRedactor`、Hook/DuckDB 防注入、Web 全量写鉴权、`PromptInjectionScanner` 抗投毒、`0600/0700` 权限收敛与 `W11`/`DQ4` 安全回归基准落地（详见 [roadmap-phase32.md](src_doc/roadmap-phase32.md)）。
+16. **宿主大管家安全纵深防御、全链路脱敏与抗投毒体系演进 (`docs/design_doc/11-security-spec.md` & Phase 32~33)** `✅ Phase 32~33 已落地`:
+    - 补齐安全架构规格（[11-security-spec.md](docs/design_doc/11-security-spec.md)）与顶层安全规约 #19，围绕代码审计暴露的 `SEC-GAP-01~05` 完成全链路 `SecretRedactor`、Hook/DuckDB 防注入、Web 全量写鉴权、`PromptInjectionScanner` 抗投毒、`0600/0700` 权限收敛与 `W11`/`DQ4` 安全回归基准落地（详见 [roadmap-phase32.md](docs/src_doc/roadmap-phase32.md)）。
   
 17. **零重扫项目演进指南与架构防漂移门禁 (`EVOLUTION_GUIDE.md` + 自建 CodeGraph + 清单自检)** `✅ Phase 34 已落地`:
-    - 建立方便后续项目演进的零重扫导航体系，避免新会话每次重复扫描 25 个模块（3.8 万行源码）和 48 份历史 `src_doc/` 文档；
-    - Phase 34 已落地四位一体防重扫体系：根目录 O(1) 演进活地图 [EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md)（8 大演进场景变更触点矩阵 + `Tier-0/1/2` 文档分级禁扫令）、本仓 `.codegraph/` 符号地图、确定性架构检查脚本 `scripts/evolution_manifest.py`（`make evolution-check`）及 `SKILL` 零重扫开工协议（详见 [roadmap-phase34-35.md](src_doc/roadmap-phase34-35.md)）。
+    - 建立方便后续项目演进的零重扫导航体系，避免新会话每次重复扫描 25 个模块（3.8 万行源码）和 48 份历史 `docs/src_doc/` 文档；
+    - Phase 34 已落地四位一体防重扫体系：根目录 O(1) 演进活地图 [EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md)（8 大演进场景变更触点矩阵 + `Tier-0/1/2` 文档分级禁扫令）、本仓 `.codegraph/` 符号地图、确定性架构检查脚本 `scripts/evolution_manifest.py`（`make evolution-check`）及 `SKILL` 零重扫开工协议（详见 [roadmap-phase34-35.md](docs/src_doc/roadmap-phase34-35.md)）。
   
 18. **热门开源竞品横向对标与 Benchmark `v3.0` 轨道 C (`Horizontal Competitor Benchmark`)** `✅ Phase 35 已落地`:
     - Benchmark 不仅和裸奔自己比，也与外部主流产品同场实测比对；
-    - Phase 35 已构建四大赛道竞品对标体系：**C1 长期记忆**（Mem0 / Letta / PowerContext / Shodh-Memory）、**C2 上下文数据库与路由**（OpenViking / 全量静态注入）、**C3 Agent 文件与协同治理**（AgentFS / OpenEnv）、**C4 宿主探针与代码依赖**（`rg`+`psutil`+`ss`+`git` / CodeGraph），在 Benchmark `v3.0` 上线 `COMP-C1~C4` 同机同数据集真跑负载与 12 维源码能力矩阵（严格区分 `LIVE_BENCHMARKED` 与 `ARCH_VERIFIED`，详见 [12-competitor-benchmark-spec.md](design_doc/12-competitor-benchmark-spec.md)）。
+    - Phase 35 已构建四大赛道竞品对标体系：**C1 长期记忆**（Mem0 / Letta / PowerContext / Shodh-Memory）、**C2 上下文数据库与路由**（OpenViking / 全量静态注入）、**C3 Agent 文件与协同治理**（AgentFS / OpenEnv）、**C4 宿主探针与代码依赖**（`rg`+`psutil`+`ss`+`git` / CodeGraph），在 Benchmark `v3.0` 上线 `COMP-C1~C4` 同机同数据集真跑负载与 12 维源码能力矩阵（严格区分 `LIVE_BENCHMARKED` 与 `ARCH_VERIFIED`，详见 [12-competitor-benchmark-spec.md](docs/design_doc/12-competitor-benchmark-spec.md)）。
 
 19. **Benchmark `v3.1`「既省 Token × 上下文质量不降反升」帕累托双门禁演进 (`Token-Quality Pareto Dual-Gate`)** `✅ Phase 36 已落地`:
     - 关于 Benchmark 的核心修正准则：不能只体现省 Token，**既要省 Token，同时上下文质量不能下降甚至应该有显著提升**；
-    - Phase 36 已消除 `W1~W8` 质量评分缺口（`BENCH-06`），落地确定性四维上下文质量模型 $Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$ 与**有效信息密度倍数（`Facts / 1k Tokens`）**，为 `W1~W11` 与 `COMP-C1~C4` 全量实装真值事实断言、`Baseline Q vs Steward Q (+ΔQ)` 成对比较及防截断帕累托 SLA 硬门禁（详见 [roadmap-phase36.md](src_doc/roadmap-phase36.md)）。
+    - Phase 36 已消除 `W1~W8` 质量评分缺口（`BENCH-06`），落地确定性四维上下文质量模型 $Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$ 与**有效信息密度倍数（`Facts / 1k Tokens`）**，为 `W1~W11` 与 `COMP-C1~C4` 全量实装真值事实断言、`Baseline Q vs Steward Q (+ΔQ)` 成对比较及防截断帕累托 SLA 硬门禁（详见 [roadmap-phase36.md](docs/src_doc/roadmap-phase36.md)）。
 
 20. **生产运行态深度对齐、拓扑零误报硬化与 Benchmark `v3.2` 等价校准 (`Production Polish & Topology Hygiene`)** `✅ Phase 37 已落地`:
     - **CLI `brief` 与 `BriefAssembler` 统一 & 进程命令去噪**：消除 `SessionStart` 钩子仅输出旧版浅表进程列表的分裂问题（规约 #16），并规范化/折叠超长多行内联脚本进程（`node -e` / `python3 -c`），同时重置 Unix `SIGPIPE` 彻底消灭管道截断 Panic（规约 #12）；
     - **`LinksEngine` 测试/注释/文档示例免疫**：排除 `.rs` 测试夹具/`#[cfg(test)]`/`placeholder` 与 `.md` 示例代码路径导致的假断链自污染，使现网 `links audit` 恢复 `100/100` 健康分；
-    - **Systemd 守护工具链探测 & Benchmark `v3.2`**：让 `PreflightChecker` 自动识别 NVM/Cargo 路径下的 `codegraph`；对齐 `DQ3` 物理健康度口径并校准 `COMP-C4` 等价采集基线（详见 [roadmap-phase37.md](src_doc/roadmap-phase37.md)）。
+    - **Systemd 守护工具链探测 & Benchmark `v3.2`**：让 `PreflightChecker` 自动识别 NVM/Cargo 路径下的 `codegraph`；对齐 `DQ3` 物理健康度口径并校准 `COMP-C4` 等价采集基线（详见 [roadmap-phase37.md](docs/src_doc/roadmap-phase37.md)）。
   
 21. **全生命周期信息新鲜度治理与现实对账体系 (`Information Freshness & Reality Reconciliation`)** `✅ Phase 38 已落地`:
-    - 彻底治理七大陈旧漏斗（`STALE-01~07`）：文件修改后写穿重置旧向量 (`embedding = '[]'`, `embedding_status = "stale"`) 与旧 L2 标注 (`needs_re_enrich`)；文件删除后 FTS 强制 `status = 'active'` 零僵尸召回并级联清理 `fact_nodes` / `links` / `auto_sync` 记忆；`AutoSyncEngine` 对同路径摘要记忆幂等去重归档；`PropertyGraphOrganizer` 与 `FreshnessReconciler` 自动剪除已关闭的幽灵端口节点、核销 `scripts/backfill_embeddings.py` 回填态 (`"ready"`) 并核验 `.codegraph/codegraph.db` 滞后度；现网 `DQ5` 抽检 `598` 项达成 **`100.0%` ✅**（详见 [roadmap-phase38-39.md](src_doc/roadmap-phase38-39.md)）。
+    - 彻底治理七大陈旧漏斗（`STALE-01~07`）：文件修改后写穿重置旧向量 (`embedding = '[]'`, `embedding_status = "stale"`) 与旧 L2 标注 (`needs_re_enrich`)；文件删除后 FTS 强制 `status = 'active'` 零僵尸召回并级联清理 `fact_nodes` / `links` / `auto_sync` 记忆；`AutoSyncEngine` 对同路径摘要记忆幂等去重归档；`PropertyGraphOrganizer` 与 `FreshnessReconciler` 自动剪除已关闭的幽灵端口节点、核销 `scripts/backfill_embeddings.py` 回填态 (`"ready"`) 并核验 `.codegraph/codegraph.db` 滞后度；现网 `DQ5` 抽检 `598` 项达成 **`100.0%` ✅**（详见 [roadmap-phase38-39.md](docs/src_doc/roadmap-phase38-39.md)）。
   
 22. **内生对比探针驱动的闭环自进化引擎 (`Probe-Driven Closed-Loop Self-Evolution`)** `✅ Phase 39 已落地`:
-    - 在 Agent 执行回路的 5 个关键切面（`P1 开工 Brief` / `P2 事前 Pre-Hook` / `P3 检索效用` / `P4 事后漂移` / `P5 周期回归与图谱`）部署微秒级对比探针，以物理真值、SLA 基线与历史 Benchmark 批次为参照系量化输出数字差值（Before/After/Delta），并集成去重幂等的 `FeedbackEngine::add_item_deduped` 自动驱动 `user_feedback.md`、自愈对账与 Benchmark `v3.3` (`W12` + `DQ5`) 闭环自进化；首轮部署即由 `P3` 探针真实捕获 `stale_vec=3` 缺口并自愈至 **`5/5 ✅`**，现网 `v3.3` 全量评测 `D1 -99.65%`、`D6 37.6 → 99.8 (+62.1)` 全面通过（详见 [13-freshness-and-self-evolution-spec.md](design_doc/13-freshness-and-self-evolution-spec.md)）。
+    - 在 Agent 执行回路的 5 个关键切面（`P1 开工 Brief` / `P2 事前 Pre-Hook` / `P3 检索效用` / `P4 事后漂移` / `P5 周期回归与图谱`）部署微秒级对比探针，以物理真值、SLA 基线与历史 Benchmark 批次为参照系量化输出数字差值（Before/After/Delta），并集成去重幂等的 `FeedbackEngine::add_item_deduped` 自动驱动 `user_feedback.md`、自愈对账与 Benchmark `v3.3` (`W12` + `DQ5`) 闭环自进化；首轮部署即由 `P3` 探针真实捕获 `stale_vec=3` 缺口并自愈至 **`5/5 ✅`**，现网 `v3.3` 全量评测 `D1 -99.65%`、`D6 37.6 → 99.8 (+62.1)` 全面通过（详见 [13-freshness-and-self-evolution-spec.md](docs/design_doc/13-freshness-and-self-evolution-spec.md)）。
   
 23. **图谱增强：多维证据分层、有向加权与隐式语义关系挖掘** `✅ Phase 40 已落地（对应规约 #5, #15, #23）`:
     > 原始探讨：图谱增强，也就是说事实、服务等之间存在的关系，关系的强弱，关系的方向等。这个似乎除了明面上的联系，实则还存在看似断连确存在语义上的联系，例如两个项目，一个服务和一个项目，两个服务之间都可能存在关系。
     - **现网实证动机**：实测 `/root/.steward/steward.db` 中 `fact_nodes` 已达 `355` 节点（`354` 个拥有向量），但 `fact_edges` 仅 `49` 条边，`project` 节点 `214/215` 孤立（**99.5%**），`links` 表 `5,116` 条文件引用未上卷，服务单元与运行进程同体分裂；
-    - **演进方案**：已落地 **`L1_EXPLICIT`（物理硬依赖, `0.85~1.00`） / `L2_STRUCTURAL`（文件引用上卷 + 服务桥接 + 工具依赖, `0.55~0.84`） / `L3_SEMANTIC`（向量余弦 $\ge 0.78$ + 标签混合发现, `0.35~0.65`, `Top-K=3` 剪枝）** 三层有向加权关系引擎与跳数衰减爆炸半径推演（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 与 [roadmap-phase40-41.md](src_doc/roadmap-phase40-41.md)）。
+    - **演进方案**：已落地 **`L1_EXPLICIT`（物理硬依赖, `0.85~1.00`） / `L2_STRUCTURAL`（文件引用上卷 + 服务桥接 + 工具依赖, `0.55~0.84`） / `L3_SEMANTIC`（向量余弦 $\ge 0.78$ + 标签混合发现, `0.35~0.65`, `Top-K=3` 剪枝）** 三层有向加权关系引擎与跳数衰减爆炸半径推演（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 与 [roadmap-phase40-41.md](docs/src_doc/roadmap-phase40-41.md)）。
 
 24. **Mesh 协同协议：基于签名信封、防重放认证的跨机对话、沙盒文件投递与图谱联邦** `✅ Phase 41 已落地（对应规约 #2, #16, #19, #24）`:
     > 原始探讨：mesh, 除了能通信，是否还要设计通信协议，基于通信的功能点，例如传送文件，交换对话，对话间的身份认证安全措施等。
-    - **演进方案**：遵循递弱代偿原则（不造 Raft/Rsync/聊天软件 IM），已落地 **`MeshEnvelope v1.0`** 线协议（`HMAC-SHA256` 规范签名 + `+-300s` 时间窗与 `NonceCache` 防重放 + `Peer Scopes` 最小权限），在此之上交付 **跨机图谱联邦探查 (`mesh/graph`)**、**双向脱敏抗投毒结构化对话 (`mesh/dialogue`)** 与 **限额 `<=10MB` + SHA-256 校验 + `~/.steward/mesh_inbox/` 隔离沙盒投递 (`mesh/transfer`)**，同步补齐 `W13`/`W14`/`DQ6` Benchmark `v3.4`（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 与 [roadmap-phase40-41.md](src_doc/roadmap-phase40-41.md)）。
+    - **演进方案**：遵循递弱代偿原则（不造 Raft/Rsync/聊天软件 IM），已落地 **`MeshEnvelope v1.0`** 线协议（`HMAC-SHA256` 规范签名 + `+-300s` 时间窗与 `NonceCache` 防重放 + `Peer Scopes` 最小权限），在此之上交付 **跨机图谱联邦探查 (`mesh/graph`)**、**双向脱敏抗投毒结构化对话 (`mesh/dialogue`)** 与 **限额 `<=10MB` + SHA-256 校验 + `~/.steward/mesh_inbox/` 隔离沙盒投递 (`mesh/transfer`)**，同步补齐 `W13`/`W14`/`DQ6` Benchmark `v3.4`（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 与 [roadmap-phase40-41.md](docs/src_doc/roadmap-phase40-41.md)）。
 
 25. **Agent 并发控制：乐观直通 + 悲观门禁自适应控制 (AOPCC)** `✅ Phase 42 已落地（对应规约 #8, #18, #22, #25）`:
    > 原始探讨：我从数据库悲观锁和乐观锁想到一个问题，如果你没次都从agent-steward获取（执行回路中强制）这不就悲观锁么，但这一定好吗？有时乐观锁可能更合适，例如我要做个postgresql验证，我可以假设本机5432已经默认有一个可用的实例，且无需密码，直接就连了。不需要从agent-steward先获取一次事实信息啊。你觉得呢？这个想法对接下来的agent-steward产品优化有什么作用么？
 
    - **核心收敛判断**：在 Agent 执行回路中强制事前查 `steward` 本质是**悲观并发控制（PCC）**——即便 `steward` 响应仅 `~1 ms`，也会迫使 Agent 多走一整轮 LLM 对话（重发 `5k~30k` 上下文 + `1.5s~4s` 推理延迟，即**整轮对话税 $C_{\text{turn}}$**）。面向本机 PostgreSQL `:5432` 等高置信、可逆、低回滚代价的只读/试探动作，应采用**乐观直通（`OPTIMISTIC`）**；而涉及破坏性写操作、端口绑定冲突、多 Agent 写锁与生产路径变更时，仍强制**悲观门禁（`PESSIMISTIC_LOCK`）**；介于两者之间的依赖写入采用**轻量条件校验（`CAUTIOUS_CAS`）**。
-   - **已落地三层引擎**：(1) `OptimisticLeaseEngine` 在 `SessionStart (steward_brief)` 签发 `<=120 tok` 的 **MVCC 短时乐观直通契约 (`Optimistic Leases`)**；(2) `ConcurrencyPolicyClassifier` 精确区分客户端连接（如 `psql -p 5432`）与服务端端口绑定（如 `uvicorn --port`）；(3) `OptimisticFailureDiagnoser` 在 `PostToolUse(success=false)` 与 `steward_bridge.py` 中捕获 `ECONNREFUSED`、`password authentication failed`、`command not found`、`EADDRINUSE` 并在毫秒级内反查宿主机注入替代处方且自动降级失效租约，同步交付 Benchmark `v3.5`（`W15` + `PR-11`，详见 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md) 与 [roadmap-phase42.md](src_doc/roadmap-phase42.md)）。
+   - **已落地三层引擎**：(1) `OptimisticLeaseEngine` 在 `SessionStart (steward_brief)` 签发 `<=120 tok` 的 **MVCC 短时乐观直通契约 (`Optimistic Leases`)**；(2) `ConcurrencyPolicyClassifier` 精确区分客户端连接（如 `psql -p 5432`）与服务端端口绑定（如 `uvicorn --port`）；(3) `OptimisticFailureDiagnoser` 在 `PostToolUse(success=false)` 与 `steward_bridge.py` 中捕获 `ECONNREFUSED`、`password authentication failed`、`command not found`、`EADDRINUSE` 并在毫秒级内反查宿主机注入替代处方且自动降级失效租约，同步交付 Benchmark `v3.5`（`W15` + `PR-11`，详见 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md) 与 [roadmap-phase42.md](docs/src_doc/roadmap-phase42.md)）。
 
 26. **双域全链路行为审计、因果溯源与数据驱动自进化 (`IN_AGENT` + `OUT_OF_AGENT`)** `✅ Phase 43 已全量落地（对应规约 #4, #8, #18, #22, #26）`:
    > 原始探讨：agent-steward 在接入agent后，行为的审计和有据可查，还要可供产品的自进化和数据分析。 agent-steward 在 agent 之外的行为，例如主动或被动维护宿主机的对象或其他行为的审计和有据可查。
 
    - **现网实证动机**：实测 `/root/.steward/steward.db` 中 `changes` 表共 `10,727` 条，其中 `watcher:file_modified` 占 `10,159` 条（`94.7%` 未折叠 I/O 洪泛），而 `agent_hook` 仅捕获含 `path` 的工具调用、`pre_tool_call` 与 19 个无 ROI 规则的 MCP 工具静默无审计；更关键的是 `BackgroundScheduler` 巡检、`FreshnessReconciler` 剪枝、`HostGarbageCollector` 删除、`LinkRepairer --apply` 改写文件、`PlacementLearner` 规则自学习与过期锁 GC 等 **Agent 之外的宿主机变更行为 0 审计记录**。
-   - **演进方案**：建立 **`IN_AGENT`（Brief/Hook/MCP/CLI/Web/Mesh）+ `OUT_OF_AGENT`（`PROACTIVE_DAEMON` / `REACTIVE_WATCHER` 60s 折叠防洪 / `GOVERNANCE_MAINTENANCE`）** 双域统一行为审计引擎（`audit_events` 表 + `SecretRedactor` 脱敏 + `before_after_delta` + `evidence_sha256` 存证），并打通 **Audit → AOPCC 租约动态升降级 / Placement 聚类 / 反馈自动闭环** 与 **DuckDB 多维 OLAP 导出**，同步交付 Benchmark `v3.6`（`W16` + `DQ7` + `PR-12`，详见 [16-dual-domain-audit-and-self-evolution-spec.md](design_doc/16-dual-domain-audit-and-self-evolution-spec.md) 与 [roadmap-phase43.md](src_doc/roadmap-phase43.md)）。
+   - **演进方案**：建立 **`IN_AGENT`（Brief/Hook/MCP/CLI/Web/Mesh）+ `OUT_OF_AGENT`（`PROACTIVE_DAEMON` / `REACTIVE_WATCHER` 60s 折叠防洪 / `GOVERNANCE_MAINTENANCE`）** 双域统一行为审计引擎（`audit_events` 表 + `SecretRedactor` 脱敏 + `before_after_delta` + `evidence_sha256` 存证），并打通 **Audit → AOPCC 租约动态升降级 / Placement 聚类 / 反馈自动闭环** 与 **DuckDB 多维 OLAP 导出**，同步交付 Benchmark `v3.6`（`W16` + `DQ7` + `PR-12`，详见 [16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md) 与 [roadmap-phase43.md](docs/src_doc/roadmap-phase43.md)）。
   
 27. **产品定位升维：从「大管家 / 小秘书」到「脑体分离 · Agent 本体」及其功能/物料重塑** `✅ Phase 44~45 已全量落地（对应规约 #1, #2, #3, #8, #11, #13, #17, #27）`:
     > 原始探讨：我有个新想法，Agent 大管家或小秘书似乎很容易误导未接触这个项目的用户，大管家容易被误以为是管理、驱动多个Agent干活的产品，而小秘书则容易误以为是给人类用户设计的Agent秘书。而不是我的初衷：为Agent而设计的秘书、管家。另一方面，容易把路走窄。所以我想突破一下，把项目升华为“Agent本体”。管家、秘书其实是对本体的一部分功能的侧面体现。以此为新的奠基，是不是要改进一下相关的文档、代码里的注释、HTML 演示等物料？是不是也要重新思考一下产品的功能点？
 
     - **核心收敛判断（方案 B）**：确立 **「脑体分离（Brain-Body Separation）」** 第一性原理——LLM/客户端是可热切换的瞬态大脑，本系统是永驻宿主机的 **Agent 本体（感官图谱 × 小脑反射 × 海马体记忆与接力 × 规约脊柱 × 代谢稳态 × 多体联邦）**；严守递弱代偿不内置主战规划循环，同时执行 **三层命名零破坏兼容**（品牌与文案升维为 Agent 本体，底层 `agent-steward` / `steward_*` / `~/.steward/` 100% 向后兼容）。
-    - **规划演进路线**：**Phase 44** 新增第 27 模块 `src/body/` 与第 27 张表 `body_checkpoints`，落地五大本体原语（`BodyManifest`、`ContinuityCapsule <=300 tok`、`HomeostasisVitals`、`AutonomyEnvelope L0~L3`、多体联邦名片发现）、第 43 原生工具 `steward_body_state` 与 Benchmark `v3.7` (`W17` + `DQ8` + `PR-13`)；**Phase 45** 全面刷新注释/文档/`SKILL`/Web 路演剧场第 7 幕，并为 `#28` → `#29` 铺平零返工衔接序（详见 [04-from-steward-to-agent-body.md](idea_doc/04-from-steward-to-agent-body.md)、[17-agent-embodiment-and-continuity-spec.md](design_doc/17-agent-embodiment-and-continuity-spec.md) 与 [roadmap-phase44-45.md](src_doc/roadmap-phase44-45.md)）。
+    - **规划演进路线**：**Phase 44** 新增第 27 模块 `src/body/` 与第 27 张表 `body_checkpoints`，落地五大本体原语（`BodyManifest`、`ContinuityCapsule <=300 tok`、`HomeostasisVitals`、`AutonomyEnvelope L0~L3`、多体联邦名片发现）、第 43 原生工具 `steward_body_state` 与 Benchmark `v3.7` (`W17` + `DQ8` + `PR-13`)；**Phase 45** 全面刷新注释/文档/`SKILL`/Web 路演剧场第 7 幕，并为 `#28` → `#29` 铺平零返工衔接序（详见 [04-from-steward-to-agent-body.md](docs/idea_doc/04-from-steward-to-agent-body.md)、[17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md) 与 [roadmap-phase44-45.md](docs/src_doc/roadmap-phase44-45.md)）。
   
 28. **体系化演讲 HTML 矩阵与既有双 Deck 归拢终刷新 (`presentation/`)** `✅ Phase 46 已全量落地`:
     > 原始需求：新建 presentation 目录，把steward-deck.html presentation.html git mv 进去，同时规划新的演讲 HTML，风格与它们保持一致，内容则可以从当前项目中提取整理成体系化的 HTML，每一个HTML讲30分钟左右，但要细、展开，所以每个HTML不要太多的点进去，最好一个点说透，所以需要体系化。另外steward-deck.html presentation.html最后再刷新一下，把当前项目状态放进去，现在似乎有点老了。
-    - **已落地交付**：新建 `presentation/` 并 `git mv` 迁入 `steward-deck.html` 与 `presentation.html`（同步更新 `src/web/assets/mod.rs`、`README.md`、`manual/08-web-dashboard.md`）；按完全一致的「浅色纸基 · 地层剖面 · 工程蓝图」视觉规范构建 `scripts/deck_engine.py` + `scripts/build_decks_part{1,2}.py`，交付 **`01~06` 共 6 讲 × 30 分钟单点说透专题 HTML** + **`presentation/index.html`**，并将旧版双 Deck 刷新至 `v0.4.0` / Agent 本体 / 43 工具 / 82 SPI / 268 测试 / 7 大剧目 / Bench `v3.7` 全绿现状，全部 9 份 HTML 通过 `scripts/verify_presentations.py` Playwright 无头验真（详见 [roadmap-phase46.md](src_doc/roadmap-phase46.md)）。
+    - **已落地交付**：新建 `presentation/` 并 `git mv` 迁入 `steward-deck.html` 与 `presentation.html`（同步更新 `src/web/assets/mod.rs`、`README.md`、`docs/manual/08-web-dashboard.md`）；按完全一致的「浅色纸基 · 地层剖面 · 工程蓝图」视觉规范构建 `scripts/deck_engine.py` + `scripts/build_decks_part{1,2}.py`，交付 **`01~06` 共 6 讲 × 30 分钟单点说透专题 HTML** + **`presentation/index.html`**，并将旧版双 Deck 刷新至 `v0.4.0` / Agent 本体 / 43 工具 / 82 SPI / 268 测试 / 7 大剧目 / Bench `v3.7` 全绿现状，全部 9 份 HTML 通过 `scripts/verify_presentations.py` Playwright 无头验真（详见 [roadmap-phase46.md](docs/src_doc/roadmap-phase46.md)）。
   
-29. 当前的目录结构有点乱，主要是文档目录，都在一级目录里，感觉上有点乱，如果要改的话用 git mv 改名或改层级。并且移动完后，需要把项目中的文件(除了target )都扫一遍，涉及到旧路径的都要刷新为新路径。 最后还要刷新 codegraph.
+29. **根目录文档结构规整（收拢至 `docs/`）、全仓路径刷新与 CodeGraph 重建** `✅ Phase 47 已全量落地`:
+    > 原始需求：当前的目录结构有点乱，主要是文档目录，都在一级目录里，感觉上有点乱，如果要改的话用 git mv 改名或改层级。并且移动完后，需要把项目中的文件(除了target )都扫一遍，涉及到旧路径的都要刷新为新路径。 最后还要刷新 codegraph.
+    - **已落地交付**：使用 `git mv` 将 7 个分散一级文档目录（`arch/`、`design_doc/`、`idea_doc/`、`manual/`、`markdown/`、`releases/`、`src_doc/`）统一收拢至 `docs/` 并新增 [docs/README.md](docs/README.md) 索引，根目录精简为 `docs/`、`presentation/`、`scripts/`、`skills/`、`src/`、`tests/` 6 大一级目录；全仓扫描（排除 `target/.git/.codegraph`）更新 90 个文件的旧路径与相对层级链接（27 份核心活跃文档 0 断链），同步刷新 3 套全局 `SKILL`、9 份 `presentation/*.html`、`make evolution-check`（0 drift）与 `.codegraph/` 符号地图。
 
 30. **排查并根治 `agent-steward daemon` CPU 飙升至 600% 与 1.3G 内存峰值问题** `✅ 已根治验证`:
     > 原始反馈：agent-steward daemon 进程 CPU 居高不下（最高 600%），需要排查解决。

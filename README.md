@@ -63,7 +63,7 @@
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
   
-> 💡 **脑体分离与三层命名兼容说明**：本项目核心定位为 **为 Agent 服务的「Agent 本体（宿主机具身底座）」**——“小秘书”是其感官盘点侧面，“大管家”是其稳态防撞侧面，绝非多 Agent 编排调度器或人类个人助理；同时为保障现有 `hooks.json`、Systemd 服务与 43 个原生 MCP 协议的 100% 向后兼容，工程标识（`agent-steward` / `steward_*` / `~/.steward/`）严格保持稳定不破坏（详见 [04-from-steward-to-agent-body.md](idea_doc/04-from-steward-to-agent-body.md) 与 [17-agent-embodiment-and-continuity-spec.md](design_doc/17-agent-embodiment-and-continuity-spec.md)）。
+> 💡 **脑体分离与三层命名兼容说明**：本项目核心定位为 **为 Agent 服务的「Agent 本体（宿主机具身底座）」**——“小秘书”是其感官盘点侧面，“大管家”是其稳态防撞侧面，绝非多 Agent 编排调度器或人类个人助理；同时为保障现有 `hooks.json`、Systemd 服务与 43 个原生 MCP 协议的 100% 向后兼容，工程标识（`agent-steward` / `steward_*` / `~/.steward/`）严格保持稳定不破坏（详见 [04-from-steward-to-agent-body.md](docs/idea_doc/04-from-steward-to-agent-body.md) 与 [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)）。
 
 ---
 
@@ -88,37 +88,37 @@
 
 ## 顶层思想与全新演进路线
 
-- 🌱 **[00-comparative-advantage-origin.md](idea_doc/00-comparative-advantage-origin.md)**：项目缘起：从硅谷园区物业、高管秘书到 AI Agent 的「比较优势」协同
-- 🧬 **[04-from-steward-to-agent-body.md](idea_doc/04-from-steward-to-agent-body.md)**：范式升维：从「大管家 / 小秘书」到「脑体分离 · Agent 本体」的第一性原理思考
-- 💡 **[03-modular-steward-architecture.md](idea_doc/03-modular-steward-architecture.md)**：三位一体架构设计深度思考（事实感官、规约脊柱与记忆海马体的分野与统一）
-- 🗺️ **[09-modular-roadmap.md](design_doc/09-modular-roadmap.md)**：最新模块化演进路线图（Phase 1 事实图谱护城河 → Phase 2 偏好自演化 → Phase 3 记忆生态插拔 → Phase 4 终极智能中枢）
-- 📐 **[05-architecture.md](design_doc/05-architecture.md)**：三模块分层架构与系统规格说明书
-- 📖 **[03-feature-spec.md](design_doc/03-feature-spec.md)**：三模块功能规格详细定义
-- 📊 **[10-benchmark-spec.md](design_doc/10-benchmark-spec.md)**：实证 Benchmark 对照评测与生产效能存证账本设计规格说明书（双轨闭环确保使用效果 100% 有据可查）
-- 🛡️ **[11-security-spec.md](design_doc/11-security-spec.md)**：宿主大管家安全架构、威胁建模与纵深防御规格说明书（全链路脱敏、高危拦截、写鉴权与抗投毒防线）
-- 🔄 **[13-freshness-and-self-evolution-spec.md](design_doc/13-freshness-and-self-evolution-spec.md)**：全生命周期信息新鲜度对账与五点对比探针闭环自进化规格说明书（写穿失效、僵尸清理、`FreshnessReconciler` 与 `P1~P5` 探针反馈闭环）
-- 🕸️ **[14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)**：多维证据分层有向加权图谱与联邦网格信封协同协议规格说明书（`L1/L2/L3` 三层关系本体、结构上卷与向量语义发现、`MeshEnvelope v1.0` HMAC 防重放认证、跨机对话与沙盒文件投递）
-- ⚡ **[15-adaptive-optimistic-pessimistic-concurrency-spec.md](design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)**：乐观-悲观自适应并发控制（AOPCC）与失败早回退规格说明书（期望代价数学边界、开工乐观直通租约、三态动作分级器与 `PostToolUse` 碰壁秒级自愈）
-- 📜 **[16-dual-domain-audit-and-self-evolution-spec.md](design_doc/16-dual-domain-audit-and-self-evolution-spec.md)**：双域全链路行为审计、因果溯源与数据驱动自进化规格说明书（`IN_AGENT` + `OUT_OF_AGENT` 双域审计、`Watcher` 60s 折叠防洪、`before_after_delta` + `evidence_sha256`、DuckDB OLAP 分析与 AOPCC 租约/规则自进化飞轮）
-- 🧬 **[17-agent-embodiment-and-continuity-spec.md](design_doc/17-agent-embodiment-and-continuity-spec.md)**：Agent 本体（宿主机具身底座）、跨大脑连续性接力、五维稳态生命体征与四级自治包络规格说明书（`BodyManifest`、`ContinuityCapsule` `<=300 tok`、`HomeostasisVitals`、`L0~L3` 权限边界与三层命名兼容契约）
+- 🌱 **[00-comparative-advantage-origin.md](docs/idea_doc/00-comparative-advantage-origin.md)**：项目缘起：从硅谷园区物业、高管秘书到 AI Agent 的「比较优势」协同
+- 🧬 **[04-from-steward-to-agent-body.md](docs/idea_doc/04-from-steward-to-agent-body.md)**：范式升维：从「大管家 / 小秘书」到「脑体分离 · Agent 本体」的第一性原理思考
+- 💡 **[03-modular-steward-architecture.md](docs/idea_doc/03-modular-steward-architecture.md)**：三位一体架构设计深度思考（事实感官、规约脊柱与记忆海马体的分野与统一）
+- 🗺️ **[09-modular-roadmap.md](docs/design_doc/09-modular-roadmap.md)**：最新模块化演进路线图（Phase 1 事实图谱护城河 → Phase 2 偏好自演化 → Phase 3 记忆生态插拔 → Phase 4 终极智能中枢）
+- 📐 **[05-architecture.md](docs/design_doc/05-architecture.md)**：三模块分层架构与系统规格说明书
+- 📖 **[03-feature-spec.md](docs/design_doc/03-feature-spec.md)**：三模块功能规格详细定义
+- 📊 **[10-benchmark-spec.md](docs/design_doc/10-benchmark-spec.md)**：实证 Benchmark 对照评测与生产效能存证账本设计规格说明书（双轨闭环确保使用效果 100% 有据可查）
+- 🛡️ **[11-security-spec.md](docs/design_doc/11-security-spec.md)**：宿主大管家安全架构、威胁建模与纵深防御规格说明书（全链路脱敏、高危拦截、写鉴权与抗投毒防线）
+- 🔄 **[13-freshness-and-self-evolution-spec.md](docs/design_doc/13-freshness-and-self-evolution-spec.md)**：全生命周期信息新鲜度对账与五点对比探针闭环自进化规格说明书（写穿失效、僵尸清理、`FreshnessReconciler` 与 `P1~P5` 探针反馈闭环）
+- 🕸️ **[14-graph-intelligence-and-mesh-protocol-spec.md](docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)**：多维证据分层有向加权图谱与联邦网格信封协同协议规格说明书（`L1/L2/L3` 三层关系本体、结构上卷与向量语义发现、`MeshEnvelope v1.0` HMAC 防重放认证、跨机对话与沙盒文件投递）
+- ⚡ **[15-adaptive-optimistic-pessimistic-concurrency-spec.md](docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)**：乐观-悲观自适应并发控制（AOPCC）与失败早回退规格说明书（期望代价数学边界、开工乐观直通租约、三态动作分级器与 `PostToolUse` 碰壁秒级自愈）
+- 📜 **[16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md)**：双域全链路行为审计、因果溯源与数据驱动自进化规格说明书（`IN_AGENT` + `OUT_OF_AGENT` 双域审计、`Watcher` 60s 折叠防洪、`before_after_delta` + `evidence_sha256`、DuckDB OLAP 分析与 AOPCC 租约/规则自进化飞轮）
+- 🧬 **[17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)**：Agent 本体（宿主机具身底座）、跨大脑连续性接力、五维稳态生命体征与四级自治包络规格说明书（`BodyManifest`、`ContinuityCapsule` `<=300 tok`、`HomeostasisVitals`、`L0~L3` 权限边界与三层命名兼容契约）
 
 ---
 
 ## 三维角色全景解读 (Architecture & Guides)
 
-针对不同技术角色的深层设计、二次开发与生产实操，发布于 **[`arch/`](arch/)** 目录：
+针对不同技术角色的深层设计、二次开发与生产实操，发布于 **[`docs/arch/`](docs/arch/)** 目录：
 
-- 🏛️ **[01-for-architects.md](arch/01-for-architects.md)**（面向架构师与技术决策者）：
+- 🏛️ **[01-for-architects.md](docs/arch/01-for-architects.md)**（面向架构师与技术决策者）：
   - 三位一体系统认知模型深度拆解；
   - 存储中枢 Facade + 统一 SPI 抽象（SQLite / PG / DuckDB 双向热迁移与增量同步）；
   - 多 Agent 协作锁与层级互斥传播算法（Advisory Lock + 祖先后代路径检测）；
   - 工业级 NFR 指标（单二进制交付、冷启动 `<50ms`、空闲内存 `<25MB`）与递弱代偿边界。
-- 🛠️ **[02-for-developers.md](arch/02-for-developers.md)**（面向研发工程师与贡献者）：
+- 🛠️ **[02-for-developers.md](docs/arch/02-for-developers.md)**（面向研发工程师与贡献者）：
   - 源码 27 大模块全景职责与依赖拓扑速查；
   - 核心扩展三大 How-To（添加原生 MCP 工具、实现新存储后端 SPI、新增环境预检项）；
   - 252+ 项自动化测试套件与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
-- 🧭 **[03-for-users.md](arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
+- 🧭 **[03-for-users.md](docs/arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
   - 大管家核心心智模型与物理世界哨兵定位；
   - 典型作业六部曲闭环 SOP（开工简报 → 放置问询 → 端口防撞 → 爆炸半径推演 → 协作锁防踩踏 → 完工结清）；
   - 三大接入方式（CLI 终端交互、MCP 智能体挂载、Web 可视化大屏）；
@@ -128,18 +128,18 @@
 
 ## 官方使用手册 (User Manual)
 
-完整的手册发布于 **[`manual/`](manual/)** 目录：
+完整的手册发布于 **[`docs/manual/`](docs/manual/)** 目录：
 
-- 🚀 **[01-getting-started.md](manual/01-getting-started.md)**：快速上手、环境依赖准备与首次编译运行
-- 🧠 **[02-core-concepts.md](manual/02-core-concepts.md)**：核心理念：大管家定位、黑白名单浅层阻断、放置建议哲学
-- 📖 **[03-cli-reference.md](manual/03-cli-reference.md)**：全量 CLI 命令行实操字典（全子命令 + 真实输出）
-- 🔌 **[04-mcp-integration.md](manual/04-mcp-integration.md)**：Agent 接入指南：43 个原生 MCP 工具与 Claude/Cursor 配置
-- 🔄 **[05-daemon-and-watcher.md](manual/05-daemon-and-watcher.md)**：后台常驻守护服务、inotify 300ms 防抖与 systemd 自启
-- ⚡ **[06-advanced-features.md](manual/06-advanced-features.md)**：进阶特性：端口防撞、断链智能修复、放置规则自演化、三层元数据、WFG 死锁检测、宿主资源 GC、记忆生命周期与 TUI 看板
-- 🛠️ **[07-troubleshooting.md](manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
-- 🌐 **[08-web-dashboard.md](manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级大管家拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
-- 🪝 **[09-hooks-integration.md](manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
-- 📊 **[10-benchmark-and-roi.md](manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.6 与生产效能存证账本（W1~W16 A/B 负载 + M1~M5 微基准 + DQ1~DQ7 + COMP-C1~C4 竞品对标 + PR-01~12 溯源流水）
+- 🚀 **[01-getting-started.md](docs/manual/01-getting-started.md)**：快速上手、环境依赖准备与首次编译运行
+- 🧠 **[02-core-concepts.md](docs/manual/02-core-concepts.md)**：核心理念：大管家定位、黑白名单浅层阻断、放置建议哲学
+- 📖 **[03-cli-reference.md](docs/manual/03-cli-reference.md)**：全量 CLI 命令行实操字典（全子命令 + 真实输出）
+- 🔌 **[04-mcp-integration.md](docs/manual/04-mcp-integration.md)**：Agent 接入指南：43 个原生 MCP 工具与 Claude/Cursor 配置
+- 🔄 **[05-daemon-and-watcher.md](docs/manual/05-daemon-and-watcher.md)**：后台常驻守护服务、inotify 300ms 防抖与 systemd 自启
+- ⚡ **[06-advanced-features.md](docs/manual/06-advanced-features.md)**：进阶特性：端口防撞、断链智能修复、放置规则自演化、三层元数据、WFG 死锁检测、宿主资源 GC、记忆生命周期与 TUI 看板
+- 🛠️ **[07-troubleshooting.md](docs/manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
+- 🌐 **[08-web-dashboard.md](docs/manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级大管家拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
+- 🪝 **[09-hooks-integration.md](docs/manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
+- 📊 **[10-benchmark-and-roi.md](docs/manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.6 与生产效能存证账本（W1~W16 A/B 负载 + M1~M5 微基准 + DQ1~DQ7 + COMP-C1~C4 竞品对标 + PR-01~12 溯源流水）
 
 ---
 
@@ -199,33 +199,20 @@ cargo build --release
 ```
 
 ## 项目结构
-- `arch/` : 面向架构师、开发者、用户的三维角色全景解读文档
-- `design_doc/` : 产品功能设计文档与技术规格说明书
-- `idea_doc/` : 产品起初的想法与架构演进思考
-- `manual/` : 官方使用手册（快速上手、CLI/MCP 参考、Web 大屏、Hooks、Benchmark 等）
-- `markdown/` : 对外发布的文章、博客与配套 SVG 图表
-- `releases/` : 发版说明文档
-- `scripts/` : 辅助运维与演进脚本（架构清单防漂移检查、Ollama 向量补齐等）
+- `docs/` : 统一文档中心（详见 [docs/README.md](docs/README.md)）
+  - `docs/arch/` : 面向架构师、开发者、用户的三维角色全景解读文档
+  - `docs/design_doc/` : 产品功能设计文档与技术规格说明书
+  - `docs/idea_doc/` : 产品起初的想法与架构演进思考
+  - `docs/manual/` : 官方使用手册（快速上手、CLI/MCP 参考、Web 大屏、Hooks、Benchmark 等）
+  - `docs/markdown/` : 对外发布的文章、博客与配套 SVG 图表
+  - `docs/releases/` : 发版说明文档
+  - `docs/src_doc/` : 本项目的阶段开发路线图、进度追踪与演进文档
+- `presentation/` : 离线 HTML 演讲体系（含 `index.html` 总览、`presentation.html` 路演版、`steward-deck.html` 深度交流版及 `01~06` 6 讲 × 30 分钟单点说透专题）
+- `scripts/` : 辅助运维与演进脚本（架构清单防漂移检查、演讲生成与 Playwright 门禁、Ollama 向量补齐等）
 - `skills/` : 与本产品相关的对接 AI Agent 的 SKILL 包
 - `src/` : Rust 核心源代码
-- `src_doc/` : 本项目的阶段开发路线图与演进文档
 - `tests/` : 自动化集成测试与 Benchmark 评测套件
-- `.dockerignore` : Docker 构建忽略配置
-- `.gitignore` : Git 版本控制忽略配置
-- `Cargo.lock` : Rust 依赖版本锁定文件
-- `Cargo.toml` : Rust 项目清单与依赖配置
-- `Dockerfile` : 容器化构建镜像配置
-- `EVOLUTION_GUIDE.md` : 零重扫项目演进指南（架构地图、变更触点矩阵与开发 SOP）
-- `INSTALL.md` : 详细安装部署指南（依赖矩阵、Docker、Systemd 与故障排查）
-- `ISSUE.md` : 未来演进与待探讨 ISSUE (Roadmap & Open Issues)
-- `LICENSE` : Apache-2.0 开源许可证
-- `Makefile` : 构建、测试、门禁检查与部署任务编排
-- `README.md` : 本文件
-- `build.rs` : Cargo 构建脚本
-- `config.example.toml` : 运行时配置文件示例
-- `docker-compose.yml` : Docker Compose 编排配置
-- `presentation/` : 离线 HTML 演讲体系（含 `index.html` 总览、`presentation.html` 路演版、`steward-deck.html` 深度交流版及 `01~06` 6 讲 × 30 分钟单点说透专题）
-- `user_feedback.md` : 实际使用反馈总账（优点、缺点痛点、新需求与 Benchmark 迭代记录）
+- 根目录核心文件：`README.md` · `INSTALL.md` · `EVOLUTION_GUIDE.md` · `ISSUE.md` · `user_feedback.md` · `Cargo.toml` · `Cargo.lock` · `build.rs` · `Makefile` · `Dockerfile` · `docker-compose.yml` · `config.example.toml` · `LICENSE`
   
 ## 核心设计原则与约束 (Design Principles & Constraints)
 
@@ -292,7 +279,7 @@ cargo build --release
     - MCP 工具与 CLI 子命令必须保持一一映射（Phase 44 已实现 43/43 同步）。
 
 14. **断点续传检查点机制**：
-    - 开发任何跨步骤大型特性时，必须在当前活跃的 `src_doc/roadmap-phase*.md` 内建立原子检查点追踪表，并在总表 [src_doc/progress.md](src_doc/progress.md) 登记阶段状态（与规约 #20 零重扫配合，不再为每个 Phase 额外生成碎片化的 `progress-phase*.md`）。
+    - 开发任何跨步骤大型特性时，必须在当前活跃的 `docs/src_doc/roadmap-phase*.md` 内建立原子检查点追踪表，并在总表 [docs/src_doc/progress.md](docs/src_doc/progress.md) 登记阶段状态（与规约 #20 零重扫配合，不再为每个 Phase 额外生成碎片化的 `progress-phase*.md`）。
     - 确保中断后任何新会话均能通过读取 `EVOLUTION_GUIDE.md` + 当前活跃 `roadmap-phase*.md` 恢复上下文无缝继续。
 
 15. **宏微联邦、不重复造轮子**：
@@ -319,7 +306,7 @@ cargo build --release
     - **全链路凭据零落盘**：在文件扫描、`/proc` `cmdline` 采集、MCP 配置解析、外部服务登记、长期记忆写入、变更审计流水、跨机 Mesh 对话与本地模型推理前，统一强制经过 `SecretRedactor` 脱敏与敏感文件阻断（`.env*`、`.ssh/`、`*.pem`/`*.key`、URI 口令与高危令牌前缀），严禁明文凭据入库或经由 Brief / Mesh 泄露。
     - **执行门禁与防注入沙盒**：`HookDispatcher` 禁止裸拼接未转义路径交由 `sh -c` 执行；DuckDB 导出在引擎底层强制校验目录白名单与 SQL 转义；`steward_hook_pre` 对高危系统路径（`/etc/shadow`、`/etc/sudoers`、`~/.ssh/` 等）与破坏性操作给出 `CRITICAL` 预警。
     - **接口最小暴露、写鉴权与 Mesh 信封签名**：Web/Mesh 默认绑定 `127.0.0.1` 回环地址；全量 Web 写端点及 GC 端点统一受 `auth_token` Bearer 保护，非回环暴露未配置 `auth_token` 时拒绝写操作；跨节点 Mesh 协同写操作、对话与文件投递强制采用 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + 时间窗/Nonce 防重放 + `~/.steward/mesh_inbox/` 隔离收件箱），严禁跨机直写覆盖系统与业务文件。
-    - **存储最小权限与抗上下文投毒**：`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限收敛并通过 `preflight` 巡检；对外部仓库/文档语料及跨机 Mesh 对话内容识别并清洗间接提示词注入（Indirect Prompt Injection），同时纳入 `W11`、`W14` 与 `DQ4` 安全回归基准（详见 [11-security-spec.md](design_doc/11-security-spec.md)）。
+    - **存储最小权限与抗上下文投毒**：`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限收敛并通过 `preflight` 巡检；对外部仓库/文档语料及跨机 Mesh 对话内容识别并清洗间接提示词注入（Indirect Prompt Injection），同时纳入 `W11`、`W14` 与 `DQ4` 安全回归基准（详见 [11-security-spec.md](docs/design_doc/11-security-spec.md)）。
 
 20. **零重扫演进导航与横向竞品实证对标规约 (Zero-Rescan Evolution & Competitor Benchmarking)**：
     - **零重扫演进活地图**：新会话演进优先查阅根目录演进指南（[EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md)）、运行架构清单门禁（`make evolution-check`）并使用本项目 `.codegraph/` 符号地图定位触点，严禁把历史冻结 `roadmap-phase*.md` 全盘扫描一遍。
@@ -333,7 +320,7 @@ cargo build --release
 22. **内生对比探针与行为审计驱动的闭环自进化规约 (Probe & Audit-Driven Closed-Loop Self-Evolution & Auto-Feedback Flywheel)**：
     - **五点回路对比探针**：在 `SessionStart(Brief)`、`PreToolUse(Guard)`、`InFlight(Search)`、`PostToolUse(Drift)` 与 `Periodic(Regression)` 五个执行切面部署确定性对比探针（`P1~P5`），以实测物理态 vs 历史快照/SLA/上一版本 Benchmark 为参照系，量化记录每一项偏差与改善幅度；并在 `P1/P2/P4` 中闭环跟踪乐观租约有效率 ($P_{\text{valid}}$) 与碰壁自愈率，当某项服务频发失效时自动降级其乐观直通权限。
     - **动态行为流经验收敛**：自进化引擎必须消费历史 `audit_events` 滑动窗口统计——依据近 24 小时真实碰壁率 $\hat{p}_{\text{valid}}$ 自动升降级 AOPCC 乐观租约置信度、聚类高频错放目录输入 `PlacementLearner`、识别摩擦热点调用幂等去重的 `FeedbackEngine::add_item_deduped` 写入 [user_feedback.md](user_feedback.md)。
-    - **数字佐证与防拍脑袋底线**：严禁拍脑袋优化。任何自愈修复与能力演进必须提供探针实测或审计聚合数字差值（Before/After/Delta）佐证，形成“双域留痕 → OLAP/探针发现 → 自动降级/纠偏自愈 → Benchmark 固化”的自进化飞轮（详见 [13-freshness-and-self-evolution-spec.md](design_doc/13-freshness-and-self-evolution-spec.md) 与 [16-dual-domain-audit-and-self-evolution-spec.md](design_doc/16-dual-domain-audit-and-self-evolution-spec.md)）。
+    - **数字佐证与防拍脑袋底线**：严禁拍脑袋优化。任何自愈修复与能力演进必须提供探针实测或审计聚合数字差值（Before/After/Delta）佐证，形成“双域留痕 → OLAP/探针发现 → 自动降级/纠偏自愈 → Benchmark 固化”的自进化飞轮（详见 [13-freshness-and-self-evolution-spec.md](docs/design_doc/13-freshness-and-self-evolution-spec.md) 与 [16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md)）。
 
 23. **多维证据分层、有向加权与隐式语义图谱规约 (Multi-Tier Evidence, Directed Weighted & Semantic Graph Intelligence)**：
     - **三层证据契约**：图谱连边强制划分 `L1_EXPLICIT`（物理硬依赖，权重 `0.85~1.00`）、`L2_STRUCTURAL`（文件上卷/同体服务桥接/工具链提取，权重 `0.55~0.84`）与 `L3_SEMANTIC`（向量余弦 `>= 0.78` + 标签混合发现的隐式关联，权重 `0.35~0.65`），每条边须显式携带 `evidence_tier`、`weight` 与方向语义（前向依赖 / 逆向调度 / 衍生流 / 对称亲和）。
@@ -341,21 +328,21 @@ cargo build --release
 
 24. **联邦网格信封协议、零信任签名认证与受控沙盒协同规约 (Federated Mesh Wire Protocol, Zero-Trust Auth & Sandboxed Collaboration)**：
     - **信封协议与双向防重放**：跨主机 Mesh 协同统一采用 `MeshEnvelope v1.0` 线协议，写与协同请求强制携带 `timestamp_ms`、`nonce`、`scopes`、`payload_sha256` 及 `HMAC-SHA256` 规范签名；服务端校验 `+-300s` 时间窗、`NonceCache` 防重放与 Peer Scope 最小授权（支持 `read:facts` / `write:locks` / `exchange:dialogue` / `transfer:artifact`）。
-    - **受控协同原语**：跨机对话仅限结构化意图（`ASK_CONTEXT` / `HANDOFF_TASK` / `SHARE_MEMORY` / `REPLY`），入出双向经由 `SecretRedactor` 与 `PromptInjectionScanner` 过滤；跨机文件传输严格限额 `<= 10MB`、校验 SHA-256 与阻断敏感文件，隔离落盘至 `~/.steward/mesh_inbox/`（`0600`）待本机显式 `accept`/`reject` 后方可使用（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)）。
+    - **受控协同原语**：跨机对话仅限结构化意图（`ASK_CONTEXT` / `HANDOFF_TASK` / `SHARE_MEMORY` / `REPLY`），入出双向经由 `SecretRedactor` 与 `PromptInjectionScanner` 过滤；跨机文件传输严格限额 `<= 10MB`、校验 SHA-256 与阻断敏感文件，隔离落盘至 `~/.steward/mesh_inbox/`（`0600`）待本机显式 `accept`/`reject` 后方可使用（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)）。
 
 25. **乐观-悲观自适应并发控制与失败早回退规约 (Adaptive Optimistic-Pessimistic Concurrency Control & Fail-Fast Fallback, AOPCC)**：
     - **三态动作并发分级**：依据可逆性、失败代价 ($C_{\text{fail}}$) 与冲突概率，将 Agent 动作划分为 `OPTIMISTIC`（只读、服务客户端直连如本机 `:5432`、已授权工具、`/root/new/tmp/` 沙盒验证——0 前置查询直接执行）、`CAUTIOUS_CAS`（常规新建文件的静默本地规则校验）与 `PESSIMISTIC_LOCK`（端口 bind、高爆炸半径文件修改、系统高危路径、跨 Agent 排他锁——强制前置拦截）。
-    - **开工乐观租约与碰壁秒级自愈**：`steward_brief` 在 `SessionStart` 签发高置信度（$P_{\text{valid}} \ge 0.90$）且带纪元指纹（`epoch_hash`）的乐观直通契约；若乐观直行报错（如 `Connection refused` / `command not found` / `Address already in use`），必须由 `steward_hook_post(success=false)` 在 `< 2ms` 内反查宿主机真实状态并注入替代处方，消除整轮对话税（详见 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)）。
+    - **开工乐观租约与碰壁秒级自愈**：`steward_brief` 在 `SessionStart` 签发高置信度（$P_{\text{valid}} \ge 0.90$）且带纪元指纹（`epoch_hash`）的乐观直通契约；若乐观直行报错（如 `Connection refused` / `command not found` / `Address already in use`），必须由 `steward_hook_post(success=false)` 在 `< 2ms` 内反查宿主机真实状态并注入替代处方，消除整轮对话税（详见 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)）。
 
 26. **双域全链路行为审计、因果溯源与数据驱动自进化规约 (Dual-Domain Behavioral Audit, Causal Provenance & Data-Driven Self-Evolution)**：
     - **双域正交审计全覆盖**：将系统可观测行为严格划分为 **`IN_AGENT` 接入域**（`Brief` 租约签发、`Pre/Post Hook` 裁决与自愈、全部原生 MCP 工具、CLI、Web 写端点及 Mesh 请求）与 **`OUT_OF_AGENT` 自治及被动维护域**（`PROACTIVE_DAEMON` 30 分钟后台巡检、`REACTIVE_WATCHER` 60 秒折叠防洪监听、`GOVERNANCE_MAINTENANCE` 包括 `HostGC` 清理、`LinkRepair --apply` 改写源码、`FreshnessReconciler` 写穿与幽灵剪枝、`PlacementLearner` 规则演化及过期锁 GC），严禁仅记录含路径的文件写操作而丢弃命令、锁与后台修改。
     - **因果溯源、不可篡改存证与脱敏底线**：每条 `audit_events` 记录必须携带 `trace_id`、`session_id`、`domain`、`actor_kind`、`concurrency_mode`、`outcome`、`before_after_delta`（`<= 4KB` 经 `SecretRedactor` 强制脱敏）及 `evidence_sha256` 完整性指纹，写入耗时 `< 80 μs` 且零阻塞降级容错。
-    - **OLAP 分析与自进化闭环**：审计账本统一同步至 DuckDB 列存引擎支持多维聚合洞察与安全 Parquet/CSV 导出，并通过 `W16` 与 `DQ7` 门禁持续守护双域留痕完整性、零明文凭据残留与自进化有效率（详见 [16-dual-domain-audit-and-self-evolution-spec.md](design_doc/16-dual-domain-audit-and-self-evolution-spec.md)）。
+    - **OLAP 分析与自进化闭环**：审计账本统一同步至 DuckDB 列存引擎支持多维聚合洞察与安全 Parquet/CSV 导出，并通过 `W16` 与 `DQ7` 门禁持续守护双域留痕完整性、零明文凭据残留与自进化有效率（详见 [16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md)）。
 
 27. **Agent 本体具身底座、跨大脑连续性、五维稳态自治与三层命名兼容规约 (Agent Embodiment Substrate, Cross-Brain Continuity, Homeostasis & Three-Tier Naming Compatibility)**：
     - **脑体分离与具身着陆 (`BodyManifest` & `ContinuityCapsule`)**：确立 LLM/客户端为瞬态大脑、本项目为永驻宿主机的 Agent 本体；任何新接入大脑均可在 `< 10 ms` 内获取确定性 `body_id`、六器官健康自省及 `<= 300 tok` 跨大脑工作态接力胶囊（全量经 `SecretRedactor` 脱敏与 `PromptInjectionScanner` 抗投毒清洗，支持换脑不失忆、多本体只读名片发现）。
     - **五维生命体征与 `L1` 自主稳态反射 (`HomeostasisVitals`)**：聚合感官清晰度、反射灵敏度、海马体纯净度、代谢健康度与免疫可溯度为 0~100 综合稳态分，低于阈值时仅在 `L1_AUTONOMIC` 包络内触发可逆自愈，严禁越界执行 `L2/L3` 动作，并通过 `W17` 与 `DQ8` 基准门禁持续验证。
-    - **三层命名兼容底线**：对外品牌、架构文档、代码注释、WebUI 与演说物料全面围绕「Agent 本体」叙事升级，同时底层 Crate/二进制（`agent-steward`）、配置目录（`~/.steward/`）与既有 `steward_*` MCP/CLI 契约严格保持 100% 向后兼容（详见 [17-agent-embodiment-and-continuity-spec.md](design_doc/17-agent-embodiment-and-continuity-spec.md)）。
+    - **三层命名兼容底线**：对外品牌、架构文档、代码注释、WebUI 与演说物料全面围绕「Agent 本体」叙事升级，同时底层 Crate/二进制（`agent-steward`）、配置目录（`~/.steward/`）与既有 `steward_*` MCP/CLI 契约严格保持 100% 向后兼容（详见 [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)）。
 
 ---
 
