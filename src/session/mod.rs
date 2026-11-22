@@ -77,7 +77,9 @@ impl SessionManager {
                                 cleaned_files_count += 1;
                                 cleaned_paths.push(path.to_string_lossy().to_string());
                                 if !dry_run {
-                                    let _ = fs::remove_file(&path);
+                                    if let Err(e) = fs::remove_file(&path) {
+                                        eprintln!("[Session][WARN] 清理临时文件失败 ({:?}): {}", path, e);
+                                    }
                                 }
                             }
                         }
@@ -111,7 +113,7 @@ impl SessionManager {
             embedding: vec![],
         };
 
-        let _ = self.storage.insert_memory(&memory_rec);
+        self.storage.insert_memory(&memory_rec)?;
 
         let saved_checkpoint_id = if let Some(goal) = handoff_goal.filter(|s| !s.trim().is_empty()) {
             crate::body::ContinuityManager::save_capsule(

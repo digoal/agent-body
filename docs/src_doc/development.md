@@ -1,8 +1,8 @@
 # Agent Body (Rust 版) — 本地编译、开发与测试指南
 
-> **版本**: v0.4.0 (Rust Edition)  
-> **更新时间**: 2026-11-22  
-> **架构基线**: 脑体分离 Agent 本体（三位一体感官/脊柱/海马体 + `src/body/` 本体中枢）+ 多存储引擎 (82 SPI / 27 表) + 协作锁 + 分层加权图谱 + MeshEnvelope v1.0 + AOPCC 并发自适应 + 双域审计自进化 + Benchmark v3.7
+> **版本**: v1.0.0 (Rust Edition)  
+> **更新时间**: 2026-11-23  
+> **架构基线**: 脑体分离 Agent 本体（三位一体感官/脊柱/海马体 + `src/body/` 本体中枢）+ 多存储引擎 (88 SPI / 27 表) + 协作锁 + 分层加权图谱 + MeshEnvelope v1.0 + AOPCC 并发自适应 + 双域审计自进化 + Benchmark v3.8 (W18/M6/DQ9/PR-14) + `>1500L` 文件清零
 
 ---
 
@@ -50,24 +50,31 @@ agent-body/
 ├── INSTALL.md               # 生产部署与依赖全景排障手册
 ├── docs/releases/                # 历史各版本详细 Release Notes
 │   ├── README.md            # 滚动版本索引与打 Tag 规范
-│   ├── v0.1.0.md ~ v0.4.0.md
+│   ├── v0.1.0.md ~ v1.0.0.md
 ├── docs/src_doc/                 # 研发规划与架构文档
 │   ├── progress.md          # 串行任务断点续传总进度表
 │   ├── development.md       # 本开发指南
-│   └── roadmap-phase*.md    # 分阶段详细设计文档
-├── tests/                   # 独立集成与性能基准测试套件 (23 项)
-│   ├── coordination_integration.rs  # 多 Agent 协作锁并发集成测试 (8 项)
-│   ├── deadlock_wait_integration.rs # WFG 死锁与唤醒集成测试 (2 项)
-│   ├── duckdb_integration.rs        # DuckDB 分析与增量管道测试 (5 项)
-│   ├── ecosystem_integration.rs     # 生态目录与防爆路由集成测试 (1 项)
-│   ├── test_web_dashboard.rs        # Web UI 2.0 端到端全生命周期测试 (1 项)
-│   └── benchmarks.rs                # 亚毫秒 OLAP 与实证基准测试 (6 项)
+│   ├── archive/             # Phase 2~51 历史规划与进度归档
+│   └── roadmap-phase52~57.md# 近期演进路线图
+├── tests/                   # 独立集成与性能基准测试套件 (11 个测试文件 / 38+ 项集成与基准测试)
+│   ├── coordination_integration.rs  # 多 Agent 协作锁并发集成测试
+│   ├── deadlock_wait_integration.rs # WFG 死锁与唤醒集成测试
+│   ├── duckdb_integration.rs        # DuckDB 分析与增量管道测试
+│   ├── ecosystem_integration.rs     # 生态目录与防爆路由集成测试
+│   ├── mesh_integration.rs          # 多机 Mesh 安全握手与 Body 名片测试
+│   ├── audit_integration.rs         # 双域审计脱敏与统计集成测试
+│   ├── body_awr_integration.rs      # AWR 快照持久化、黄金基线与包络集成测试
+│   ├── hooks_integration.rs         # Hook 自动同步与故障处方集成测试
+│   ├── cli_e2e.rs                   # CLI 端到端集成测试
+│   ├── test_web_dashboard.rs        # Web UI 2.0 端到端全生命周期测试
+│   └── benchmarks.rs                # 亚毫秒 OLAP 与实证基准测试
 └── src/                     # Rust 核心源码目录 (27 个顶层模块)
     ├── main.rs              # CLI 入口与顶层子命令解析 (Clap 30 Commands)
+    ├── cli_handlers/        # CLI 子命令处理器分模块实现 (core / ops / governance)
     ├── lib.rs               # 核心库导出与版本元信息
     ├── config/              # 配置文件与环境变量管理、参数校验
     ├── preflight/           # 运行时环境与依赖完整性预检引擎
-    ├── storage/             # 存储层 SPI (82 方法) + SQLite/PG/DuckDB 三引擎 (27 表) + 热迁移与增量同步
+    ├── storage/             # 存储层 SPI (88 方法) + SQLite/PG/DuckDB 三引擎分领域子模块 (27 表) + 热迁移与增量同步
     ├── audit/               # 双域全链路行为审计 (IN_AGENT/OUT_OF_AGENT) + 脱敏防洪 + AOPCC 自进化 + DuckDB OLAP
     ├── body/                # Agent 本体中枢 (BodyManifest / ContinuityCapsule / HomeostasisVitals / L0~L3 Envelope)
     ├── coordination/        # 多 Agent 协作锁中枢 (Port/Dir/File 互斥、TTL、WFG 死锁、Advisory Lock)
@@ -89,7 +96,7 @@ agent-body/
     ├── platform/            # 跨平台原生探针 (Linux/macOS/Windows)
     ├── mesh/                # 轻量多机联邦 HTTP Peer Mesh & MeshEnvelope v1.0 (含 body_manifest 名片交换)
     ├── demo/                # 路演沙盒引擎（7 大剧目、ROI 核算）
-    ├── benchmark/           # 三轨实证 Benchmark v3.7（W1~W17 + M1~M5 + DQ1~DQ8 + COMP-C1~C4 + PR-01~13）
+    ├── benchmark/           # 三轨实证 Benchmark v3.8（W1~W18 + M1~M6 + DQ1~DQ9 + COMP-C1~C4 + PR-01~14）
     ├── feedback/            # 使用反馈总账 (user_feedback.md)、新鲜度对账与 P1~P5 对比自进化探针
     └── api/                 # 43 个原生 MCP 工具端点与 AOPCC Hook 门禁
 ```

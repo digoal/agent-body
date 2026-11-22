@@ -2,7 +2,7 @@
 
 > **文档定位**: 主理人（Human）与智能体（AI Agent）在真实生产环境中高频使用 `agent-steward` 后沉淀的一手反馈权威总账。  
 > **首次建立**: 2026-11-19 (基于现网 `v0.4.0` + Phase 29 状态实测盘点)  
-> **关联路线图**: [roadmap-phase30.md](docs/src_doc/roadmap-phase30.md) · [progress-phase30.md](docs/src_doc/progress-phase30.md) · [10-benchmark-spec.md](docs/design_doc/10-benchmark-spec.md)
+> **关联路线图**: [roadmap-phase30.md](docs/src_doc/archive/roadmap-phase30.md) · [progress-phase30.md](docs/src_doc/archive/progress-phase30.md) · [10-benchmark-spec.md](docs/design_doc/10-benchmark-spec.md)
 
 ---
 
@@ -158,12 +158,12 @@ flowchart LR
 - **状态**: `✅ Verified (Phase 32~33)` · **首次记录**: 2026-11-20 · **发现渠道**: 全量源码安全基线审计 · **验证实测**: `W11` 4/4 安全拦截 (脱敏/Hook转义/抗投毒/零误杀, `68 μs`)、`DQ4` 现网库 76/76 卫生度 `100.0%` & 全量 `cargo test` 223 passed (0 failed, 1 ignored)
 - **现象与复现证据**:
   1. **`SEC-GAP-01` 采集与记忆未全链路脱敏**：[src/fact/process_net.rs](src/fact/process_net.rs#L268-L280) 与 [src/env/mod.rs](src/env/mod.rs#L120-L149) 原样采集 `/proc/<pid>/cmdline` 入库，[src/memory/mod.rs](src/memory/mod.rs#L29-L94) `MemoryManager::add` 与 `record_change` 未调用 `SecretRedactor::redact()`，且 `SecretRedactor` 尚缺 URI 口令、JWT 与私钥头规则；
-  2. **`SEC-GAP-02` Hook 命令拼接注入与导出底层校验缺失**：[src/hooks/dispatcher.rs](src/hooks/dispatcher.rs#L147-L185) 将 `{path}` 裸替换后交由 `sh -c` 执行，恶意文件名可触发 Shell 注入；[src/storage/duckdb_analytics.rs](src/storage/duckdb_analytics.rs#L238-L274) 直接拼接 `output_path` 进 DuckDB `COPY ... TO` SQL（目前仅 Web 层 [src/web/parity_api.rs](src/web/parity_api.rs#L515) 校验 `/root/new/tmp/`）；
+  2. **`SEC-GAP-02` Hook 命令拼接注入与导出底层校验缺失**：[src/hooks/dispatcher.rs](src/hooks/dispatcher.rs#L147-L185) 将 `{path}` 裸替换后交由 `sh -c` 执行，恶意文件名可触发 Shell 注入；[src/storage/duckdb_analytics.rs](src/storage/duckdb_analytics.rs#L238-L274) 直接拼接 `output_path` 进 DuckDB `COPY ... TO` SQL（目前仅 Web 层 [src/web/parity_api/ops_endpoints.rs](src/web/parity_api/ops_endpoints.rs) 校验临时目录导出白名单）；
   3. **`SEC-GAP-03` Web REST API 写操作鉴权覆盖不全**：[src/web/server.rs](src/web/server.rs#L182-L231) 仅对锁释放/申请与 Mesh 加锁校验了 `auth_token`，`POST /api/v1/assets/scan`、`assets/register`、`memories/add`、`session/close`、`analytics/export`、`feedback`、`demo/run|reset`、`benchmark/run|reset` 及 `GET /api/v1/env/gc` 均未调用 `check_auth`；
   4. **`SEC-GAP-04` 高危路径门禁与外部语料抗投毒缺位**：[src/api/hooks.rs](src/api/hooks.rs#L68-L159) `pre_tool_call` 未拦截 `/etc/shadow`、`/etc/sudoers`、`~/.ssh/` 等高危路径；扫描 `/root/new/src/` 外部源码或第三方 `SKILL.md` 提取摘要注入 `steward_brief` 前缺少 `PromptInjectionScanner` 清洗；
   5. **`SEC-GAP-05` 最小文件权限预检与安全基准缺失**：[src/preflight/mod.rs](src/preflight/mod.rs#L123-L152) 未检查 `~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限；Benchmark `v2.0` 尚无安全维度负载。
 - **修复目标与 Benchmark 联动**:
-  - 先期已补齐顶层安全规约 #19、[11-security-spec.md](docs/design_doc/11-security-spec.md) 与 [roadmap-phase32.md](docs/src_doc/roadmap-phase32.md)；
+  - 先期已补齐顶层安全规约 #19、[11-security-spec.md](docs/design_doc/11-security-spec.md) 与 [roadmap-phase32.md](docs/src_doc/archive/roadmap-phase32.md)；
   - 按 Phase 32~33 闭环修复 `SEC-GAP-01~05`，并纳入 Benchmark `v2.1` 新增的 `W11 (security_redaction_and_guardrail)` 与 `DQ4 (secret_hygiene_and_perm_gate)` 门禁（要求明文凭据残留率 `0%`、注入逃逸 `0`）。
 
 ### `CON-08` `[P0 · 黑白屏与 Hook 简报分裂]` CLI `agent-steward brief` 未接入 `BriefAssembler` 且多行内联脚本进程刷屏截断 `SessionStart` 简报
@@ -224,7 +224,7 @@ flowchart LR
 - **现象与复现证据**:
   - `fact_nodes = 355`（其中 `354` 个已有 Ollama Embedding 向量，`project = 215`），但 `fact_edges` 仅 `49` 条边（`25 depends_on`, `17 listens_on`, `7 scheduled_by`）；
   - `project` 节点 `214/215` 度数为 `0`（**99.5% 孤立**）、`tool` 节点 `16/16` 度数为 `0`（**100% 孤立**）、`service` 节点 `associated_project` 全为 `None`；`links` 表已有 `5,116` 条文件引用却未上卷至项目级；同时 `service:agent-steward.service` 与运行时 `service:agent-steward` 同体分裂，且残留测试节点 `service:test_web_dashbo`。
-- **修复目标**: 按 [14-graph-intelligence-and-mesh-protocol-spec.md](docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 与 [roadmap-phase40-41.md](docs/src_doc/roadmap-phase40-41.md) 落地 `L1/L2/L3` 三层有向加权边、`links` 上卷聚合、向量+标签隐式语义发现与加权衰减爆炸半径。
+- **修复目标**: 按 [14-graph-intelligence-and-mesh-protocol-spec.md](docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 与 [roadmap-phase40-41.md](docs/src_doc/archive/roadmap-phase40-41.md) 落地 `L1/L2/L3` 三层有向加权边、`links` 上卷聚合、向量+标签隐式语义发现与加权衰减爆炸半径。
 
 ### `CON-17` `[P0 · Mesh 协议与协同功能缺失]` Peer Mesh 仅支持裸 HTTP 查询锁，缺签名信封、防重放及跨机对话/文件沙盒协同
 - **状态**: `✅ Verified (Phase 41)` · **首次记录**: 2026-11-22 · **验证实测**: `mesh::` 7 项测试 & `W14` 全绿（合法 HMAC 放行、重放 `409`/篡改 `401`/越权 `403`/敏感文件拦截、对话双向脱敏抗投毒、沙盒 `mesh_inbox` 隔离）
@@ -238,7 +238,7 @@ flowchart LR
 - **现象与复现证据**:
   - 在 Agent 回路中强迫每步事前查询 `agent-steward` 虽本地仅耗时 `~1 ms`，但引发额外 1 整轮大模型推理（重发上下文 `5k~30k tok` 与 `1.5~4s` 等待延迟），对于可逆/高稳定验证（如直连本机 `:5432` PostgreSQL、调用已装 CLI 工具）数学期望代价劣于乐观直行；
   - [src/api/hooks.rs](src/api/hooks.rs#L248-L254) 与 `steward_bridge.py:298` 在工具失败（`success=false` / `error`）时直接跳过返回，导致乐观假设碰壁后缺少毫秒级事实自愈处方注入。
-- **修复目标**: 按 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md) 与 [roadmap-phase42.md](docs/src_doc/roadmap-phase42.md) 落地开工乐观直通契约、三态并发分类器与 `PostToolUse` 碰壁自愈引擎。
+- **修复目标**: 按 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md) 与 [roadmap-phase42.md](docs/src_doc/archive/roadmap-phase42.md) 落地开工乐观直通契约、三态并发分类器与 `PostToolUse` 碰壁自愈引擎。
 
 ### `CON-19` `[P0 · 双域行为审计盲区与自治动作黑盒]` `IN_AGENT` 审计丢失命令/锁/PreHook 裁决且 `OUT_OF_AGENT` 宿主修改/清理动作 0 审计留痕
 - **状态**: `✅ Verified (Phase 43)` · **首次记录**: 2026-11-22 · **提出依据**: [ISSUE.md #26](ISSUE.md#L126) · **发现渠道**: 现网 `steward.db` 实测盘点与源码审计
@@ -246,7 +246,7 @@ flowchart LR
   - 现网 `/root/.steward/steward.db` 中 `changes` 表共 `10,727` 条，其中 `watcher:file_modified` 占 `10,159` 条（**94.7%** 未折叠底层 I/O 洪泛），而 `agent_hook` 仅 `427` 条（`edit_file=409`、`write_file=18`），`hook_post:optimistic_miss` 仅 `1` 条；
   - [src/api/hooks.rs](src/api/hooks.rs#L43-L191) `pre_tool_call` 零审计留痕，[src/api/hooks.rs](src/api/hooks.rs#L310) `post_tool_call_with_error` 仅在含 `path` 参数时记 `changes`，丢弃 `run_command`/服务/锁/非路径动作；[src/benchmark/ledger.rs](src/benchmark/ledger.rs#L298) 中 19 个工具命中 `_ => return` 静默无账；
   - 大管家在 Agent 之外对宿主对象的维护动作——[src/daemon/scheduler.rs](src/daemon/scheduler.rs) 30 分钟后台巡检、[src/feedback/probes.rs](src/feedback/probes.rs) `FreshnessReconciler` 写穿失效/幽灵节点剪枝、[src/env/gc.rs](src/env/gc.rs) `HostGarbageCollector` 物理删文件、[src/links/repair.rs](src/links/repair.rs) `LinkRepairer --apply` 直接改写源码、[src/placement/learner.rs](src/placement/learner.rs) 写入规则及锁 GC——**当前全部 0 审计落盘**，且历史行为未能自动驱动 AOPCC 租约置信度升降级与 DuckDB OLAP 分析。
-- **修复目标**: 按 [16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md) 与 [roadmap-phase43.md](docs/src_doc/roadmap-phase43.md) 落地 `audit_events` 双域脱敏审计底座、`Watcher` 60s 折叠防洪、DuckDB OLAP 分析导出及 Audit 驱动自进化飞轮。
+- **修复目标**: 按 [16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md) 与 [roadmap-phase43.md](docs/src_doc/archive/roadmap-phase43.md) 落地 `audit_events` 双域脱敏审计底座、`Watcher` 60s 折叠防洪、DuckDB OLAP 分析导出及 Audit 驱动自进化飞轮。
 
 ### `CON-20` `[P0 · 容器编译阻断]` `Dockerfile` 基础镜像版本过低 (`1.82` < MSRV `1.88`)、缺 `presentation/` 且端口/健康检查漂移
 - **状态**: `✅ Verified (Phase 52)` · **首次记录**: 2026-11-22 · **发现渠道**: 全仓源码与容器配置交叉审计
@@ -329,7 +329,7 @@ flowchart LR
   1. `src/benchmark/workloads.rs:292` (`make_result`) 中 `W1~W8` 的 `quality_score` 全部为 `None`，仅 `W9/W10/W11` 计算了单侧质量分；
   2. `WorkloadResult`、`CompetitorComparisonResult` 与 `report.rs` 缺少 `baseline_quality_score`、`quality_delta` 与 `info_density_gain`（每千 Token 有效事实密度倍数），导致报告汇总表中基线质量栏为 `-`；
   3. `sla_passed` 未强制校验「必含真值事实 100% 命中且 $Q_{\text{steward}} \ge Q_{\text{baseline}}$」，理论上存在“删减关键上下文换取高省 Token 率”的盲区。
-- **标准迭代方向**: 在 Phase 36 升级至 Benchmark `v3.1`，引入四维确定性上下文质量公式 $Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$，为 `W1~W11` 与 `COMP-C1~C4` 全量实装真值事实断言、成对质量对照与帕累托双门禁（详见 [roadmap-phase36.md](docs/src_doc/roadmap-phase36.md)）。
+- **标准迭代方向**: 在 Phase 36 升级至 Benchmark `v3.1`，引入四维确定性上下文质量公式 $Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$，为 `W1~W11` 与 `COMP-C1~C4` 全量实装真值事实断言、成对质量对照与帕累托双门禁（详见 [roadmap-phase36.md](docs/src_doc/archive/roadmap-phase36.md)）。
 
 ### `BENCH-07` `[P0 · DQ3 口径失真]` `DQ3 (links_topology_health)` 仅校验静态模板特征而未核验物理断链，与 `links audit = 0/100` 严重背离
 - **状态**: `✅ Verified (Phase 37.4)` · **首次记录**: 2026-11-21 · **发现渠道**: 现网 `bench report` 与 `links audit` 交叉比对 · **验证实测**: `DQ3` 联合物理核验与 `links audit` 双双达成 `100.0%` (`2000/2000`)
@@ -395,8 +395,8 @@ flowchart LR
 | **`REQ-20`** | **方案 A·Stage 2：存储三后端真一致性（SQLite/PG/DuckDB）、迁移与 OLAP 管道修复** | 修复 SQLite/PG/DuckDB 冲突与时间戳语义分裂、`awr:%` 泄漏、`StorageMigrator` 漏表与 `SyncPipeline` 时间戳抹平（ISSUE #37） | P0 | Phase 53 | `✅ Verified (Phase 53)` |
 | **`REQ-21`** | **方案 A·Stage 3：Phase 50 18/18 WaitEvent 闭环、黑白屏真 Parity、TUI 升级与 Benchmark `v3.8`** | 补齐 14/18 WaitEvent 埋点、周期 AWR 快照、AWR 报告库全端对齐、Web DQ 渲染、扩展 `codex`/`hermes`、升级 TUI 与 `v3.8`（ISSUE #38） | P1 | Phase 54 | `✅ Verified (Phase 54)` |
 | **`REQ-22`** | **方案 A·Stage 4：开源可移植性解耦（去 `/root/new/` 硬编码）、配置真相化与跨平台/网络硬化** | 抽象 `Config::{workspace_roots, temp_dir, default_owner}`，接通 `[memory]`/`[[hooks]]`/`[[pipelines]]`/`AGENT_BODY_CONFIG`，完善 musl/macOS/Windows 与 HTTP 头解析（ISSUE #39） | P1 | Phase 55 | `✅ Verified (Phase 55)` |
-| **`REQ-23`** | **方案 A·Stage 5：God File 拆分、关键路径吞错清零、集成测试补盲与五重门禁升级** | 拆解 6 个 `>1500L` 生产文件、收紧 `let _ =` 预算、补全 `mesh`/`audit`/`body`/`hooks`/`cli_e2e` 集成测试并升级门禁检测断链/硬编码（ISSUE #40） | P2 | Phase 56 | `🗓️ Planned` |
-| **`REQ-24`** | **方案 A·Stage 6：全文档/手册/SKILL/演说大一统、历史归档与 `v1.0.0 GA` 正式发布** | 统一刷新 `docs/manual/01~10`、`arch/01~03`、`markdown/` 与 `01~06` 演说，去重归档历史文档，升级 `1.0.0` 正式发版（ISSUE #41） | P1 | Phase 57 | `🗓️ Planned` |
+| **`REQ-23`** | **方案 A·Stage 5：God File 拆分、关键路径吞错清零、集成测试补盲与五重门禁升级** | 拆解 7 个 `>1500L` 生产文件（`0` 剩余）、收紧 `let _ =` 至 `43 <= 50`、补全 `mesh`/`audit`/`body`/`hooks`/`cli_e2e` 集成测试并升级门禁（ISSUE #40） | P2 | Phase 56 | `✅ Verified (Phase 56)` |
+| **`REQ-24`** | **方案 A·Stage 6：全文档/手册/SKILL/演说大一统、历史归档与 `v1.0.0 GA` 正式发布** | 统一刷新 `docs/manual/01~10`、`arch/01~03`、`markdown/` 与 `01~06` 演说，去重归档历史文档，升级 `1.0.0` 正式发版（ISSUE #41） | P1 | Phase 57 | `✅ Verified (v1.0.0 GA)` |
 
 ---
 

@@ -77,9 +77,13 @@ impl LinkAuditor {
             if is_false_positive {
                 if fix_dangling && link.auto_discovered {
                     if let Some(id) = link.id {
-                        let _ = self.storage.delete_link(id);
+                        if let Err(e) = self.storage.delete_link(id) {
+                            eprintln!("[LinkAudit][WARN] 删除误报依赖边失败 (id={}): {}", id, e);
+                        }
                     } else if link.target_type == "asset" {
-                        let _ = self.storage.delete_links_for_target(&link.target_id);
+                        if let Err(e) = self.storage.delete_links_for_target(&link.target_id) {
+                            eprintln!("[LinkAudit][WARN] 清理目标依赖边失败 ({}): {}", link.target_id, e);
+                        }
                     }
                     fixed_count += 1;
                 }
@@ -107,7 +111,9 @@ impl LinkAuditor {
                     });
 
                     if fix_dangling {
-                        let _ = self.storage.delete_links_for_target(&link.target_id);
+                        if let Err(e) = self.storage.delete_links_for_target(&link.target_id) {
+                            eprintln!("[LinkAudit][WARN] 清理缺失资产依赖边失败 ({}): {}", link.target_id, e);
+                        }
                         fixed_count += 1;
                     }
                 }

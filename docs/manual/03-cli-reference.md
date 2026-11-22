@@ -38,10 +38,10 @@ agent-body [OPTIONS] <COMMAND>
 | `mesh` | 轻量多机联邦 `MeshEnvelope v1.0`：跨机图谱、HMAC 签名对话与沙盒文件投递 | 多机集群联动 |
 | `platform` | 跨平台原生探针查看本机硬件、端口与自动化任务 | Linux/macOS/Windows 探测 |
 | `demo` | 真引擎路演场景演示、ROI 核算与 43 工具黑白屏对齐自检 | 产品路演与一致性验证 |
-| `bench` | 运行 `v3.7` 实证 Benchmark（`W1~W17` / `M1~M5` / `DQ1~DQ8` / `COMP-C1~C4`）与 `PR-01~13` 账本 | 实证效能评测与回归对比 |
+| `bench` | 运行 `v3.8` 实证 Benchmark（`W1~W18` / `M1~M6` / `DQ1~DQ9` / `COMP-C1~C4`）与 `PR-01~14` 账本 | 实证效能评测与回归对比 |
 | `feedback` | `user_feedback.md` 双向管理、`reconcile` 新鲜度对账与 `P1~P5` 五点自进化探针 | 反馈闭环与自进化体检 |
 | `audit` | 双域全链路行为审计 (`IN_AGENT` + `OUT_OF_AGENT`)、DuckDB OLAP 与自进化 | 行为溯源与数据驱动进化 |
-| `body` | Agent 本体中枢：`manifest` / `vitals` / `envelope` / `handoff` / `resume` / `heal` / `peers` | 跨大脑连续性与稳态治理 |
+| `body` | Agent 本体中枢：`manifest` / `vitals` / `envelope` / `handoff` / `resume` / `heal` / `peers` / `perf-*` | 跨大脑连续性、稳态治理与 AWR 诊断 |
 
 ---
 
@@ -58,9 +58,9 @@ agent-body [OPTIONS] <COMMAND>
   ╔═══════════════════════════════════════════════════════╗
   ║      Agent Body (Rust 版) — 系统状态          ║
   ╚═══════════════════════════════════════════════════════╝
-  版本:           v0.4.0 (9ba7bca, linux/x86_64, built at 2026-11-19T07:53:18Z)
-  数据目录:       "/root/.agent-body"
-  数据库文件:     "/root/.agent-body/body.db"
+  版本:           v1.0.0 (<git-commit>, linux/x86_64)
+  数据目录:       "<user_home>/.agent-body"
+  数据库文件:     "<user_home>/.agent-body/body.db"
   已纳管资产数:   26091
   依赖关系边数:   6407 条
   放置规范规则:   8 条
@@ -440,7 +440,7 @@ agent-body [OPTIONS] <COMMAND>
 ---
 
 ### 2.17 `analytics` — DuckDB 列存分析与 Parquet/CSV 导出
-- **说明**: 基于内嵌 DuckDB 引擎统计文件变更热力图、资产/记忆趋势及导出 Parquet/CSV 数据集（与 `steward_analytics_*` 1:1 映射）。
+- **说明**: 基于内嵌 DuckDB 引擎统计文件变更热力图、资产/记忆趋势及导出 Parquet/CSV 数据集（与 `body_analytics_*` 1:1 映射）。
 - **子命令**:
   - `heatmap [--days 30]`: 按目录与小时分桶统计变更热力图
   - `trend [--metric assets] [--days 30]`: 统计资产增长、记忆衰减与图谱统计
@@ -486,28 +486,28 @@ agent-body [OPTIONS] <COMMAND>
 - **为什么需要**: 单机起步用零依赖 SQLite 最省心，但团队多机协同或海量审计时序分析需要迁移至 PostgreSQL + pgvector 或同步至 DuckDB 列存。
 - **子命令与参数**:
   - `storage info`: 查看当前生效的存储提供者与数据库路径/连接信息。
-  - `storage migrate [--from sqlite|postgres|duckdb] [--from-url <URL>] [--to sqlite|postgres|duckdb] [--to-url <URL>]`: 在不同存储后端间执行全量数据热迁移。
-  - `storage sync [--to duckdb] [--to-path <PATH>]`: 将主存储的资产与变更审计同步到 DuckDB 列存副本（默认 `~/.agent-body/steward.duckdb`）。
+  - `storage migrate [--from sqlite|postgres|duckdb] [--from-url <URL>] [--to sqlite|postgres|duckdb] [--to-url <URL>]`: 在不同存储后端间执行全量 20 实体幂等热迁移。
+  - `storage sync [--to duckdb] [--to-path <PATH>]`: 将主存储的资产与变更审计同步到 DuckDB 列存副本（默认 `~/.agent-body/analytics.duckdb`）。
 - **调用示例**:
   ```bash
   agent-body storage info
   agent-body storage sync --to duckdb
-  agent-body storage migrate --from sqlite --to postgres --to-url "host=127.0.0.1 dbname=steward user=postgres"
+  agent-body storage migrate --from sqlite --to postgres --to-url "host=127.0.0.1 dbname=agent_body user=postgres"
   ```
 - **真实输出解读**:
   ```text
   当前活跃存储提供者: sqlite
-  配置数据库文件路径: "/root/.agent-body/body.db"
+  配置数据库文件路径: "<user_home>/.agent-body/body.db"
   ```
 
 ---
 
-### 2.23 `bench` — 实证 Benchmark v3.7 对照评测与生产效能存证账本 (Phase 27~44)
-- **这是什么**: 在真实宿主机上运行「Without Steward 裸奔基线 vs With Steward Agent 本体」A/B 对照测试套件，运行竞品横向对标，并审计日常每次 MCP/CLI/Web/Hook 调用自动记录的生产效能存证流水（对应 `body_benchmark`）。
+### 2.23 `bench` — 实证 Benchmark v3.8 对照评测与生产效能存证账本 (Phase 27~56)
+- **这是什么**: 在真实宿主机上运行「Without Agent Body 裸奔基线 vs With Agent Body 本体引擎」A/B 对照测试套件，运行竞品横向对标，并审计日常每次 MCP/CLI/Web/Hook 调用自动记录的生产效能存证流水（对应 `body_benchmark`）。
 - **为什么需要**: 用同机实跑数据与 SHA-256 防篡改指纹证明 Token 节省率、上下文质量净胜（$\Delta Q$）、延迟加速比与冲突拦截率，杜绝“拍脑袋宣传数字”（规约 #18）。
 - **子命令与参数**:
-  - `workloads`: 列出 17 大标准 A/B 负载（`W1`~`W17`）、`M1`~`M5`、`DQ1`~`DQ8` 与 `PR-01`~`PR-13` 归因推导规则字典。
-  - `run [--suite full|macro|micro|dq|competitors|W1~W17|COMP-C1~C4] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
+  - `workloads`: 列出 18 大标准 A/B 负载（`W1`~`W18`）、`M1`~`M6`、`DQ1`~`DQ9` 与 `PR-01`~`PR-14` 归因推导规则字典。
+  - `run [--suite full|macro|micro|dq|competitors|W1~W18|COMP-C1~C4] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
   - `competitors [--track all|C1|C2|C3|C4] [--format markdown|json]`: 运行四大赛道热门开源竞品横向实证对标。
   - `report [--run-id <ID>] [--format table|json|csv]`: 查看指定批次或最近一次跑批报告。
   - `ledger [--window 24h|7d|30d|all] [--tool <NAME>] [--limit 20]`: 审计生产运行态按 PR 规则聚合的效能存证账本。
@@ -525,18 +525,18 @@ agent-body [OPTIONS] <COMMAND>
   ```markdown
   # Agent Body 实证基准评测报告 (run-ef911f10-cb74-4733-8908-7744f190e75a)
 
-  - **版本 / Commit**: `v0.4.0` (`9ba7bca`)
-  - **评测套件**: `full` · **总耗时**: `1924 ms`
+  - **版本 / Commit**: `v1.0.0`
+  - **评测套件**: `full` · **总耗时**: `~2s`
   - **报告 SHA-256 存证指纹**: `19e4777aefde296b80bb36e2b1099905442c4f7d3bf797dd3630411113b8bbea`
   - **SLA 总检门禁**: ✅ PASS
 
-  | 指标维度 | 基线 (Without Steward) | 管家赋能 (With Steward) | 净收益 |
+  | 指标维度 | 基线 (Without Agent Body) | 本体赋能 (With Agent Body) | 净收益 |
   |---|---:|---:|---:|
   | **Prompt Token 消耗** | 76690 tok | 1381 tok | **-98.20%** (75309 tok saved) |
   | **事前拦截风险数** | - | - | **16 次** |
   | **阻断垃圾噪音文件** | - | - | **379 个** |
   ```
-  > 💡 **指标解读**: 当前 Benchmark 已演进至 **`v3.7`**，覆盖 `W1~W17`（含分层图谱 `W13`、Mesh 防重放 `W14`、AOPCC 自适应并发 `W15`、双域审计 `W16`、跨大脑连续性 `W17`）、5 项微基准（`M1~M5`）、8 项质量与稳态门禁（`DQ1~DQ8`）及 `COMP-C1~C4` 竞品同机对标，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁。
+  > 💡 **指标解读**: 当前 Benchmark 已演进至 **`v3.8`**，覆盖 `W1~W18`（含分层图谱 `W13`、Mesh 防重放 `W14`、AOPCC 自适应并发 `W15`、双域审计 `W16`、跨大脑连续性 `W17`、AWR/ADDM 诊断 `W18`）、6 项微基准（`M1~M6`）、9 项质量与稳态门禁（`DQ1~DQ9`）及 `COMP-C1~C4` 竞品同机对标，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁。
 
 ---
 
@@ -559,12 +559,17 @@ agent-body [OPTIONS] <COMMAND>
 
 ### 2.25 `audit` — 双域全链路行为审计与自进化 (Phase 43)
 - **这是什么**: 查询 `IN_AGENT`（接入调用）与 `OUT_OF_AGENT`（守护巡检/Watcher 60s 折叠/GC/修复/对账）双域审计流水，触发 DuckDB OLAP 聚合与基于审计流的 AOPCC 租约自进化（对应第 42 个 MCP 工具 `body_audit_query`）。
+- **子命令与参数**:
+  - `summary [--window 24h|7d|30d|all] [--days <N>]`: 查看双域审计事件与拒绝分布统计。
+  - `query [--domain IN_AGENT|OUT_OF_AGENT] [--limit <N>]`: 查询脱敏审计事件明细。
+  - `evolve`: 基于历史审计流运行 AOPCC 租约自适应阈值自进化。
+  - `export --output-path <PATH>`: 导出审计流水 CSV/Parquet 数据集。
 - **调用示例**:
   ```bash
   agent-body audit summary --window 7d --days 7
   agent-body audit query --domain OUT_OF_AGENT --limit 20
   agent-body audit evolve
-  agent-body audit export --output-path /root/new/tmp/audit_events_export.csv
+  agent-body audit export --output-path <temp_dir>/audit_events_export.csv
   ```
 
 ---
@@ -582,6 +587,7 @@ agent-body [OPTIONS] <COMMAND>
   - `perf-snapshot [--label <NAME>] [--set-baseline] [--json]`: 抓取本体内生 6 类 18 种等待事件与 `/proc/self` 内核性能快照（可选设为 `Golden Baseline` 黄金性能基准）。
   - `perf-awr [--snap-a <ID>] [--snap-b <ID>] [--vs-baseline true|false] [--json]`: 生成 AWR 快照/黄金基线差分性能报告与 ADDM 瓶颈诊断处方。
   - `perf-tune [--json]`: 在 `L1_AUTONOMIC` 包络内执行一键性能与内存自优化（`PRAGMA optimize` + `wal_checkpoint` + `shrink_memory` + `malloc_trim(0)`）。
+  - `perf-delete --kind snapshot|report --id <ID>`: 从 `system_meta` 安全删除指定 AWR 快照或诊断报告（对齐 `body_state` 的 `delete_snapshot`/`delete_awr_report`）。
 - **调用示例**:
   ```bash
   agent-body body manifest

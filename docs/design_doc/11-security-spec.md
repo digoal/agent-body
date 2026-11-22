@@ -2,7 +2,7 @@
 
 > **Agent Host Steward 产品设计 · 交付件 11**  
 > **版本**: v0.4.0 → Phase 32~33 安全设计基线 · **日期**: 2026-11-20  
-> **对齐约束**: [README.md 规约 #2、#5、#6、#8、#12、#18、#19](../../README.md) · [product-boundaries-and-governance.md](../src_doc/product-boundaries-and-governance.md) · [roadmap-phase32.md](../src_doc/roadmap-phase32.md)
+> **对齐约束**: [README.md 规约 #2、#5、#6、#8、#12、#18、#19](../../README.md) · [product-boundaries-and-governance.md](../src_doc/product-boundaries-and-governance.md) · [roadmap-phase32.md](../src_doc/archive/roadmap-phase32.md)
 
 ---
 
@@ -162,5 +162,5 @@ flowchart TD
 ## 六、关联规约与实施入口
 - **顶层规约**：[README.md 规约 #8 & #19](../../README.md) · [product-boundaries-and-governance.md](../src_doc/product-boundaries-and-governance.md)
 - **代码规约引擎**：[src/placement/conventions.rs](../../src/placement/conventions.rs)（`"security"` 分类 3 大强制红线）
-- **专项演进路线图**：[docs/src_doc/roadmap-phase32.md](../src_doc/roadmap-phase32.md)（Phase 32 ~ Phase 33 串行原子任务清单）
+- **专项演进路线图**：[docs/src_doc/roadmap-phase32.md](../src_doc/archive/roadmap-phase32.md)（Phase 32 ~ Phase 33 串行原子任务清单）
 - **反馈总账跟踪**：[user_feedback.md](../../user_feedback.md)（`CON-07`, `REQ-06`, `REQ-07`）

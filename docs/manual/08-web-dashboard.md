@@ -1,7 +1,7 @@
 # Agent Body — 官方使用手册：第 8 章 Web UI 2.0 全景交互指挥舱
 
-> 版本: v0.4.0 (Web UI 2.0 · Agent 本体中枢版)  
-> 技术架构: Tokio 异步内嵌 HTTP 引擎 · 原生 Canvas 力导向交互拓扑 · 9 大工作台 · 白天工程蓝图 / 夜间深空双主题 · 单二进制 100% 离线自包含 · 零外部 CDN
+> 版本: v1.0.0 GA (Web UI 2.0 · Agent 本体中枢版)  
+> 技术架构: Tokio 异步内嵌 HTTP 引擎 (`parity_api/*` + `assets/{index.html,style.css,js/*.js}`) · 原生 Canvas 力导向交互拓扑 · 9 大工作台 · 白天工程蓝图 / 夜间深空双主题 · 单二进制 100% 离线自包含 · 零外部 CDN
 
 ---
 
@@ -26,14 +26,14 @@
    - 采用 **三层渐进式故事舞台**：第 1 层展示每幕「💡 一句话生活比喻 (`analogy`)」「🎯 核心用意 (`intent_summary`)」、3 张核心收益数字卡 (`hero_metrics`) 与演讲者 30 秒提词卡；第 2 层左右分屏对比「盲人 Agent 三步翻车故事线」vs「7 套真引擎驱动的专属可视化组件」（含第 7 幕「换脑不失忆 · 跨大脑 1ms 本体接力」）；第 3 层提供默认收起的 `<details>` 技术专家原始 JSON 核验抽屉；
    - 支持 8 秒/幕自动巡航（`Space` 暂停 / `←→` 切幕）、演讲者大屏模式与一键无痕重置 `demo:*` 沙盒；
    - 左侧内置 `/deck`（[presentation/agent-body-deck.html](../../presentation/agent-body-deck.html)，24 页深度技术交流版）与 `/presentation`（[presentation/presentation.html](../../presentation/presentation.html)，16 页对外路演版）离线 PPT 直达入口（Decks-as-Code 生成，全套 6 讲 30 分钟专题见 [presentation/index.html](../../presentation/index.html)），页脚内置全局「⌨️ 黑屏命令镜像器」实时回显等价 CLI 与 MCP JSON-RPC。
-7. **📊 实证基准、竞品对标与自进化探针 (Empirical Benchmark v3.7 & Feedback · Phase 27~44)**：
-   - **轨道 A — A/B 对照基准跑批**：支持一键运行 `full` / `competitors` / `macro` / `micro` / `dq` / 单项负载（`W1`~`W17`），同机实时比对 Without Steward 裸奔基线 vs With Steward 真引擎的 Token 节省率、延迟加速比、四维上下文质量净胜（$\Delta Q$）、有效信息密度倍数、5 大微基准 SLA（`M1`~`M5`）与 8 项质量与稳态门禁（`DQ1`~`DQ8`），每批生成 **SHA-256 防篡改指纹**；
-   - **轨道 B — 生产效能存证账本**：按 `24h` / `7d` / `30d` / `all` 时间窗展示日常每一次 MCP/CLI/Web/Hook 调用自动记账的 `PR-01`~`PR-13` 归因收益与溯源流水；
+7. **📊 实证基准、竞品对标与自进化探针 (Empirical Benchmark v3.8 & Feedback · Phase 27~56)**：
+   - **轨道 A — A/B 对照基准跑批**：支持一键运行 `full` / `competitors` / `macro` / `micro` / `dq` / 单项负载（`W1`~`W18`），同机实时比对 Without Agent Body 裸奔基线 vs With Agent Body 真引擎的 Token 节省率、延迟加速比、四维上下文质量净胜（$\Delta Q$）、有效信息密度倍数、6 大微基准 SLA（`M1`~`M6`）与 9 项质量与 AWR 稳态门禁（`DQ1`~`DQ9`），每批生成 **SHA-256 防篡改指纹**；
+   - **轨道 B — 生产效能存证账本**：按 `24h` / `7d` / `30d` / `all` 时间窗展示日常每一次 MCP/CLI/Web/Hook 调用自动记账的 `PR-01`~`PR-14` 归因收益与溯源流水；
    - **轨道 C — 热门竞品对标 & 使用反馈/自进化面板 (`body_feedback`)**：同屏展示 `COMP-C1~C4` 竞品对比与 12 维源码能力矩阵，并直接驱动 `user_feedback.md` 列表、五点对比探针（`P1~P5`）、信息新鲜度对账（`reconcile`）与已验证反馈沉淀入记忆（`sync`），与 43 个原生 MCP 工具及 CLI 保持 **43/43 (100%)** 双向同步。
 8. **📜 双域行为审计与自进化工作台 (Dual-Domain Audit & Self-Evolution · Phase 43)**：
    - 支持按 `IN_AGENT` / `OUT_OF_AGENT` 双域过滤审计流水、`trace_id` 因果链路钻取、DuckDB OLAP 聚合视图、一键触发审计自进化（AOPCC 租约滑窗升降级 + Placement/Feedback 反哺）与 Parquet/CSV 导出，同步回显等价 `agent-body audit` CLI 与 `body_audit_query` MCP 请求体。
-9. **🧬 本体中枢与稳态工作台 (Agent Embodiment Center · Phase 44)**：
-   - 展示确定性 `body_id`、六大生理器官实时自省、五维生命体征雷达与一键 `L1_AUTONOMIC` 稳态自愈、`L0~L3` 四级自治权限包络表、跨大脑 `ContinuityCapsule (<=300 tok)` 接力保存/恢复表单及多本体 `/api/v1/mesh/body_manifest` 联邦名片视图。
+9. **🧬 本体中枢与稳态工作台 (Agent Embodiment Center · Phase 44~56)**：
+   - 展示确定性 `body_id`、六大生理器官实时自省、五维生命体征雷达与一键 `L1_AUTONOMIC` 稳态自愈、`L0~L3` 四级自治权限包络表、跨大脑 `ContinuityCapsule (<=300 tok)` 接力保存/恢复表单、内生 Wait Events (18/18) + `/proc/self` + AWR 快照黄金基线差分/报告库（含 `delete_snapshot` / `delete_awr_report`）、`ADDM` `L1` 自调优及多本体 `/api/v1/mesh/body_manifest` 联邦名片视图。
 
 ### 1.1 ☀️ 白天工程蓝图 / 🌙 夜间深空双色调切换 (Phase 25)
 - 顶栏右侧提供 `#btn-theme-toggle` 一键昼夜主题切换（非输入焦点时可按快捷键 **`T`** 瞬间切换，状态自动持久化至 `localStorage`）；
@@ -87,12 +87,12 @@ port = 8756
 | `GET` | `/api/v1/parity/matrix` | 黑白屏 43 工具 100% 映射对齐自检矩阵 | 开放 |
 | `GET` | `/api/v1/audit/events` / `summary` / `trace/:id` / `olap` | 双域审计流水查询、时间窗统计、因果链钻取与 DuckDB OLAP 聚合 | 开放 |
 | `POST` | `/api/v1/audit/evolve` / `export` | 手动触发审计驱动自进化飞轮与 Parquet/CSV 安全导出 | Bearer Token |
-| `GET` | `/api/v1/body/manifest` / `vitals` / `envelope` / `checkpoints` / `peers` | 本体六器官自省、五维稳态分、L0~L3 权限矩阵、胶囊历史与对等节点名片 | 开放 |
-| `POST` | `/api/v1/body/handoff` / `resume` / `heal` | 保存/恢复跨大脑接力胶囊与触发 L1 可逆稳态自愈 | Bearer Token |
+| `GET` | `/api/v1/body/manifest` / `vitals` / `envelope` / `checkpoints` / `peers` / `perf/awr` | 本体六器官自省、五维稳态分、L0~L3 权限矩阵、胶囊历史、对等节点名片与 AWR 报告 | 开放 |
+| `POST` | `/api/v1/body/handoff` / `resume` / `heal` / `perf/snapshot` / `perf/awr` / `perf/tune` / `perf/delete` | 保存/恢复接力胶囊、`L1` 自愈、抓取/对比 AWR 快照、ADDM 调优与删除报告/快照 | Bearer Token |
 | `GET` | `/api/v1/demo/scenarios` / `/api/v1/demo/roi` | 7 大路演剧目列表与实时 ROI 商业价值核算 | 开放 |
 | `POST` | `/api/v1/demo/run` / `/api/v1/demo/reset` | 真引擎实跑指定路演剧目与一键重置 `demo:*` 沙盒 | Bearer Token |
-| `GET` | `/api/v1/benchmark/workloads` | 获取 17 大标准 A/B 负载 (`W1~W17`) 与 `PR-01~13` 规则字典 | 开放 |
-| `POST` | `/api/v1/benchmark/run` | 真机运行 `full` / `competitors` / `macro` / `micro` / `dq` / `W1~W17` 基准 | Bearer Token |
+| `GET` | `/api/v1/benchmark/workloads` | 获取 18 大标准 A/B 负载 (`W1~W18`) 与 `PR-01~14` 规则字典 | 开放 |
+| `POST` | `/api/v1/benchmark/run` | 真机运行 `full` / `competitors` / `macro` / `micro` / `dq` / `W1~W18` 基准 | Bearer Token |
 | `GET` | `/api/v1/benchmark/report` | 查询指定或最近批次报告及历史列表（含 SHA-256 指纹） | 开放 |
 | `GET` | `/api/v1/benchmark/ledger` | 审计指定时间窗内的生产效能存证账本流水 | 开放 |
 | `GET` | `/api/v1/benchmark/compare` | 对比两个批次（`run_a` vs `run_b`）的回归差异 | 开放 |

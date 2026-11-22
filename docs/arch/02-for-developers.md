@@ -1,7 +1,7 @@
 # Agent Body — Agent 本体开发者全景开发指南 (面向开发者)
 
 > **目标受众**：Rust 研发工程师、开源贡献者、智能体插件与 MCP 工具生态开发者  
-> **定位准则**：**脑体分离架构下的 Agent 本体（宿主机具身底座，27 模块 / 43 MCP / 82 SPI / 27 表）**，严守三层命名兼容纪律（对外叙事为 Agent 本体，底层 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容）  
+> **定位准则**：**脑体分离架构下的 Agent 本体（宿主机具身底座，27 模块 / 43 MCP / 88 SPI / 27 表 · 0 `>1500L` 文件）**，严守三层命名兼容纪律（对外叙事为 Agent 本体，底层 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容）  
 > **工程要求**：严格类型安全 · 零内存泄漏 · 100% 测试全绿门禁 · 工业级可调试性
 
 ---
@@ -26,13 +26,13 @@ graph TD
             LINKS["src/links/ (分层加权依赖拓扑/断链修复/CodeGraph联动)"]
             SCAN["src/scanner/ (分级扫描/全链路脱敏/抗投毒/三层元数据)"]
             ENV["src/env/ (内核proc采集/端口防撞/安全GC)"]
-            BENCH["src/benchmark/ (三轨 Benchmark v3.7 / PR-01~13 账本)"]
+            BENCH["src/benchmark/ (三轨 Benchmark v3.8 / PR-01~14 账本)"]
             FB["src/feedback/ (使用反馈总账 / 新鲜度对账 / P1~P5 探针)"]
-            BODY["src/body/ (Agent 本体中枢: 身份证/接力胶囊/五维稳态/L0~L3)"]
+            BODY["src/body/ (Agent 本体中枢: 身份证/接力胶囊/五维稳态/L0~L3/18 AWR)"]
         end
 
     subgraph Infrastructure["系统基础设施"]
-        STORAGE["src/storage/ (统一存储门面/82 SPI/SQLite/PG/DuckDB)"]
+        STORAGE["src/storage/ (统一存储门面/88 SPI/SQLite/PG/DuckDB)"]
         PRE["src/preflight/ (环境依赖三级预检引擎)"]
         WEB["src/web/ (内嵌HTTP/REST API/SSE推流/9大工作台)"]
         MCP["src/api/ (MCP stdio 服务端 43 Tools / AOPCC Hook门面)"]
@@ -49,8 +49,8 @@ graph TD
 
 | 目录/模块 | 核心职责 | 关键数据类型 / 入口结构 |
 |:---|:---|:---|
-| `src/storage/` | 存储中枢与多后端 SPI 抽象 (82 方法，27 张表) | `StorageProvider`, `SqliteStorageProvider`, `PgStorageProvider`, `DuckDbStorageProvider` |
-| `src/body/` | Agent 本体中枢（身份证、跨大脑接力胶囊、五维稳态、`L0~L3` 包络） | `BodyManifestEngine`, `ContinuityManager`, `HomeostasisVitalsEngine`, `AutonomyEnvelope` |
+| `src/storage/` | 存储中枢与多后端分域 SPI 抽象 (88 方法，27 张表，`{assets,facts,memory,locks,audit}.rs`) | `StorageProvider`, `SqliteStorageProvider`, `PgStorageProvider`, `DuckDbStorageProvider` |
+| `src/body/` | Agent 本体中枢（身份证、跨大脑接力胶囊、五维稳态、`L0~L3` 包络、18/18 Wait Events AWR/ADDM） | `BodyManifestEngine`, `ContinuityManager`, `HomeostasisVitalsEngine`, `AutonomyEnvelope`, `BodyPerfEngine` |
 | `src/audit/` | 双域全链路行为审计（`IN_AGENT`/`OUT_OF_AGENT`）、60s 折叠与自进化 | `AuditLogger`, `AuditEvolutionAnalyzer` |
 | `src/fact/` | 宿主机只读物理事实采集与 L1~L3 属性图 | `FactFacade`, `CapabilityAnnotation`, `AutomationScanner`, `PropertyGraphOrganizer` |
 | `src/coordination/`| 多 Agent 协作锁、排队唤醒与 WFG 死锁检测 | `CoordinationEngine`, `CoordinationLock`, `DeadlockDetector` |
@@ -59,7 +59,7 @@ graph TD
 | `src/links/` | 分层加权依赖关系网与爆炸半径推演 | `LinksEngine`, `CodeGraphBridge`, `LinkRepairer` |
 | `src/scanner/` | 资产扫描、全链路脱敏、抗投毒与三层元数据 | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `OllamaAnnotator` |
 | `src/api/` | 43 个原生 MCP 工具服务端 | `McpServer`, `AgentHookEngine`, `StewardResponse` |
-| `src/benchmark/` | 三轨实证 Benchmark v3.7 (`W1~W17`/`DQ1~DQ8`/`PR-01~13`) | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
+| `src/benchmark/` | 三轨实证 Benchmark v3.8 (`W1~W18`/`M1~M6`/`DQ1~DQ9`/`PR-01~14`) | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
 | `src/feedback/` | 使用反馈总账、新鲜度对账与五点对比自进化探针 | `FeedbackEngine`, `FreshnessReconciler`, `SelfEvolutionProbeEngine` |
 | `src/demo/` | 路演沙盒引擎与 ROI 核算 | `DemoEngine`, `DemoExecutionResult`, `RoiReport` |
 | `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` |
@@ -121,9 +121,9 @@ cargo build --release
 
 ### How-To 1: 如何添加一个新的原生 MCP 工具？
 
-系统原生注册了 43 个 MCP 工具。若需新增一个例如 `steward_system_clean` 工具：
+系统原生注册了 43 个 MCP 工具。若需新增一个例如 `body_system_clean` 工具：
 
-1. **在 `src/api/mcp_tools.rs` 中声明工具元数据**：
+1. **在 `src/api/mcp_schemas.rs` & `src/api/mcp_tools.rs` 中声明与分发工具**：
    ```rust
    // 定义入参结构
    #[derive(Debug, Deserialize)]
@@ -131,9 +131,9 @@ cargo build --release
        pub dry_run: Option<bool>,
    }
 
-   // 在 list_tools() 注册 Tool 定义
+   // 在 all_tool_schemas() 注册 Tool 定义
    Tool {
-       name: "steward_system_clean".to_string(),
+       name: "body_system_clean".to_string(),
        description: "扫描并清理系统过期的临时构建残留".to_string(),
        input_schema: serde_json::json!({
            "type": "object",
@@ -144,9 +144,9 @@ cargo build --release
    }
    ```
 
-2. **在 `call_tool()` 分发匹配执行**：
+2. **在 `call_tool_inner()` 分发匹配执行**（并同步 `cli_args.rs` + `cli_handlers/*` + `parity_api/*`）：
    ```rust
-   "steward_system_clean" => {
+   "body_system_clean" => {
        let params: SystemCleanParams = serde_json::from_value(args)?;
        let result = my_engine.clean(params.dry_run.unwrap_or(true))?;
        Ok(CallToolResult::text(serde_json::to_string_pretty(&result)?))
@@ -168,7 +168,7 @@ sequenceDiagram
 
     Dev->>Impl: 创建 MyStorageProvider 结构体
     Dev->>Impl: 实现 impl StorageProvider for MyStorageProvider
-    Note over Impl: 实现 82 个接口方法 (init, upsert_asset, locks, ecosystem, benchmark, mesh, body...)
+    Note over Impl: 实现 88 个接口方法 (init, upsert_asset, locks, ecosystem, benchmark, mesh, body...)
     Dev->>Facade: 在 Storage::from_config 中注册分支匹配
     Dev->>Dev: 编写单元测试验证 CRUD 与 FTS 行为
 ```

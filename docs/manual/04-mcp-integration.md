@@ -11,7 +11,7 @@ Agent Body 原生内置了轻量级、无依赖的 JSON-RPC 2.0 stdio 服务端�
 ```mermaid
 sequenceDiagram
     participant Agent as "瞬态大脑 (Claude / Cursor / AGY)"
-    participant Steward as "steward mcp (Agent 本体 stdio 进程)"
+    participant Steward as "agent-body mcp (Agent 本体 stdio 进程)"
     participant SQLite as "body.db"
 
     Agent->>Steward: JSON-RPC "initialize"
@@ -98,10 +98,10 @@ Agent 本体向瞬态大脑暴露 43 个原子级感官、反射、海马体与�
 | `body_lock_deadlock_check` | 运行 Wait-For Graph (WFG) 环路检测，诊断多 Agent 死锁 | 无 |
 | `body_mesh_query` | `MeshEnvelope v1.0` HMAC 防重放联邦协同：ping/facts/locks/port/acquire/跨机图谱/脱敏对话/<=10MB 沙盒投递 | `action`, `port`, `peer`, `query`, `thread_id`, `intent`, `content`, `file_path`, `transfer_id` |
 | `body_demo_scenario` | Web 路演与黑屏同源场景演示引擎（7 大剧目、ROI、43/43 Parity、沙盒重置） | `action`, `scenario_id` |
-| `body_benchmark` | 实证 Benchmark v3.7 对照评测（`W1~W17` + `M1~M5` + `DQ1~DQ8` + `COMP-C1~C4`）与生产效能账本（`PR-01~13`） | `action`, `suite`, `track`, `save`, `run_id`, `run_a`, `run_b`, `window`, `tool_filter`, `format`, `limit` |
+| `body_benchmark` | 实证 Benchmark v3.8 对照评测（`W1~W18` + `M1~M6` + `DQ1~DQ9` + `COMP-C1~C4`）与生产效能账本（`PR-01~14`） | `action`, `suite`, `track`, `save`, `run_id`, `run_a`, `run_b`, `window`, `tool_filter`, `format`, `limit` |
 | `body_feedback` | 使用反馈总账 (`user_feedback.md`) 读写沉淀、`reconcile` 信息新鲜度对账与 `P1~P5` 自进化对比探针 | `action`, `category`, `priority`, `title`, `evidence`, `target`, `auto_heal`, `auto_feedback` |
 | `body_audit_query` | 双域全链路行为审计 (`IN_AGENT` + `OUT_OF_AGENT`)、因果钻取、DuckDB OLAP 导出与租约滑窗自进化 | `action`, `domain`, `actor_kind`, `category`, `outcome`, `trace_id`, `window`, `auto_feedback`, `output_path` |
-| `body_state` | Agent 本体中枢：六器官自省 (`manifest`)、五维稳态 (`vitals`)、四级包络 (`envelope`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`)、多本体名片发现 (`peers`) 以及内生等待事件与 AWR 性能快照/差分诊断/L1 自调优 (`perf_snapshot`/`perf_awr`/`perf_tune`) | `action`, `from_brain`, `session_id`, `goal_summary`, `active_files`, `verified_facts`, `open_blockers`, `next_step_hint`, `checkpoint_id`, `check_action`, `target`, `dry_run`, `label`, `set_baseline`, `snap_a`, `snap_b`, `vs_baseline` |
+| `body_state` | Agent 本体中枢：六器官自省 (`manifest`)、五维稳态 (`vitals`)、四级包络 (`envelope`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`)、多本体名片发现 (`peers`) 以及 AWR 性能快照/差分/调优/删除 (`perf_snapshot`/`perf_awr`/`perf_tune`/`delete_snapshot`/`delete_awr_report`) | `action`, `from_brain`, `session_id`, `goal_summary`, `active_files`, `verified_facts`, `open_blockers`, `next_step_hint`, `checkpoint_id`, `check_action`, `target`, `dry_run`, `label`, `set_baseline`, `snap_a`, `snap_b`, `vs_baseline`, `target_id` |
 
 ---
 
@@ -114,7 +114,7 @@ Agent 本体向瞬态大脑暴露 43 个原子级感官、反射、海马体与�
 ```
 **响应**:
 ```json
-{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"agent-body","version":"0.4.0"}}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"agent-body","version":"1.0.0"}}}
 ```
 
 ### (2) 工具调用 (`tools/call`) — 放置建议
@@ -153,7 +153,7 @@ Agent 本体向瞬态大脑暴露 43 个原子级感官、反射、海马体与�
 ### (3) 工具调用 (`tools/call`) — 运行实证 Benchmark 与审计账本 (`body_benchmark`)
 支持 `action`: `"workloads" | "run" | "report" | "ledger" | "compare" | "export" | "reset" | "competitors"`（默认为 `"report"`）。
 
-**请求（真机跑批全量套件 v3.5）**:
+**请求（真机跑批全量套件 v3.8）**:
 ```json
 {
   "jsonrpc": "2.0",

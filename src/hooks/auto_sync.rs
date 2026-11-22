@@ -144,7 +144,9 @@ impl AutoSyncEngine {
         // 同步刷新脚本/文档静态依赖边（保持拓扑实时新鲜）
         if matches!(ext, "rs" | "py" | "sh" | "bash" | "js" | "ts" | "toml" | "yaml" | "yml" | "md") {
             let links_engine = crate::links::LinksEngine::new(std::sync::Arc::new(self.storage.clone()));
-            let _ = links_engine.refresh_links_for_asset(path);
+            if let Err(e) = links_engine.refresh_links_for_asset(path) {
+                eprintln!("[AutoSync][WARN] 刷新静态依赖边失败 ({}): {}", path_str, e);
+            }
         }
 
         // 3. 自动记忆沉淀门禁 (规约 #4 摄入门禁、#2 禁止外部 LLM、#21 同文件记忆幂等去重归档)
@@ -158,7 +160,9 @@ impl AutoSyncEngine {
                     if let Ok(active_mems) = self.storage.list_all_active_memories(500) {
                         for old_mem in active_mems {
                             if old_mem.content.contains(&prefix_marker) {
-                                let _ = self.storage.update_memory_status(&old_mem.id, "archived");
+                                if let Err(e) = self.storage.update_memory_status(&old_mem.id, "archived") {
+                                    eprintln!("[AutoSync][WARN] 归档旧摘要记忆失败 ({}): {}", old_mem.id, e);
+                                }
                             }
                         }
                     }
@@ -213,7 +217,9 @@ impl AutoSyncEngine {
             }),
             updated_at: Some(chrono::Local::now().to_rfc3339()),
         };
-        let _ = self.storage.upsert_fact_node(&fact_node);
+        if let Err(e) = self.storage.upsert_fact_node(&fact_node) {
+            eprintln!("[AutoSync][WARN] 刷新属性图节点失败 ({}): {}", node_id, e);
+        }
         res.topology_updated = true;
         res.reason = "产出文件自动完成资产入库、记忆沉淀与属性图关联".to_string();
 

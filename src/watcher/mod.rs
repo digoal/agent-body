@@ -106,7 +106,9 @@ fn watch_dir_pruned(watcher: &mut RecommendedWatcher, root: &Path, ignore_patter
                 continue;
             }
         }
-        let _ = watcher.watch(&dir, RecursiveMode::NonRecursive);
+        if let Err(e) = watcher.watch(&dir, RecursiveMode::NonRecursive) {
+            eprintln!("[Watcher][WARN] 监听目录失败 ({:?}): {}", dir, e);
+        }
         if let Ok(rd) = std::fs::read_dir(&dir) {
             for entry in rd.flatten() {
                 let p = entry.path();

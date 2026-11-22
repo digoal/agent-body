@@ -1,8 +1,9 @@
 -- ============================================================
--- Agent Host Steward — init.sql
--- 初始化脚本 · 生成自 07-data-model.md
--- 目标: SQLite 3.35+ with FTS5 + sqlite-vec 扩展
--- 用法: sqlite3 ~/.steward/steward.db < init.sql
+-- Agent Body — 历史初版 DDL 设计原型 (Phase 1 Design Prototype Archive)
+-- ⚠️ 本文件仅保留 Phase 1 初版 12 表建表原型；v1.0.0 生产 DDL 真相源请见：
+--   - SQLite (27 表/虚表): ../../src/storage/schema.sql
+--   - PostgreSQL (21 表):   ../../src/storage/pg_schema.sql
+--   - DuckDB (22 表):       ../../src/storage/duckdb_schema.sql
 -- ============================================================
 
 -- ────────────────────────────────────────────────────

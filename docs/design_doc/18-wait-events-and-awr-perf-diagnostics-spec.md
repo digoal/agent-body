@@ -1,8 +1,8 @@
 # 18 — 本体等待事件 (Wait Events)、`/proc/self` 内核遥测、AWR 快照差分与 ADDM 自优化设计规格说明书
 
-> **版本**: v1.0 (Phase 50 · ISSUE #32)  
+> **版本**: v1.0.0 (Phase 50~56 · ISSUE #32, #38, #40)  
 > **作者**: digoal 德哥 & Agent Body Architecture Team  
-> **状态**: 已批准并实装 (`src/body/perf_awr.rs`)  
+> **状态**: 已批准并实装 (`src/body/perf_awr/{mod,wait_events,awr_engine}.rs`，`18/18` WaitEventId 全埋点强制门禁守护)  
 > **对齐规约**: 规约 #2 (递弱代偿), #8 (四级自治包络), #9 (极速与轻量化), #16 (黑白屏 1:1:1 子动作同步), #18 (实证基准), #26 (双域审计), #27 (Agent 本体稳态), #28 (位置无关与错误可观测性)
 
 ---
@@ -119,5 +119,6 @@ $$T_{\text{body}} = T_{\text{cpu}} + T_{\text{wait}} = \underbrace{T_{\text{cpu\
 | 子动作 (`action`) | MCP 调用 (`body_state`) | CLI 子命令 (`agent-body body ...`) | Web REST API |
 |---|---|---|---|
 | **抓取快照 / 设定基准** | `body_state(action="perf_snapshot", label="...", set_baseline=true)` | `agent-body body perf-snapshot [--label ...] [--set-baseline]` | `POST /api/v1/body/perf/snapshot` |
-| **生成 AWR 诊断报告** | `body_state(action="perf_awr", snap_a="...", snap_b="...", vs_baseline=true)` | `agent-body body perf-awr [--snap-a ...] [--snap-b ...] [--vs-baseline]` | `GET /api/v1/body/perf/awr` |
+| **生成 AWR 诊断报告** | `body_state(action="perf_awr", snap_a="...", snap_b="...", vs_baseline=true)` | `agent-body body perf-awr [--snap-a ...] [--snap-b ...] [--vs-baseline]` | `GET/POST /api/v1/body/perf/awr` |
 | **执行 L1 自优化** | `body_state(action="perf_tune")` | `agent-body body perf-tune` | `POST /api/v1/body/perf/tune` |
+| **清理快照或 AWR 报告** | `body_state(action="delete_snapshot" \| "delete_awr_report", target_id="...")` | `agent-body body perf-delete --kind snapshot\|report --id <ID>` | `POST /api/v1/body/perf/delete` |

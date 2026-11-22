@@ -76,17 +76,17 @@ flowchart TD
 
 ### 步骤 1: 提取代码事实
 在动笔前，Agent 必须快速查阅：
-- `EVOLUTION_GUIDE.md` & `ISSUE.md`：27 模块 / 43 工具 / 82 SPI 方法 / 27 表计数锚点与演进议题总账；
-- `src/cli_args.rs` & `src/main.rs`：当前支持的所有 30 个顶级子命令与 flags 参数；
+- `EVOLUTION_GUIDE.md` & `ISSUE.md`：27 模块 / 43 工具 / 88 SPI 方法 / 27 表计数锚点与演进议题总账；
+- `src/cli_args.rs` & `src/cli_handlers/*`：当前支持的所有 30 个顶级子命令与 flags 参数；
 - `src/api/mcp_schemas.rs` & `src/api/mcp_tools.rs`：当前注册的全部 **43 个原生 MCP 工具** 名与 inputSchema；
-- `src/body/`：Agent 本体中枢（`BodyManifest`、`ContinuityCapsule`、`HomeostasisVitals`、`AutonomyEnvelope`）；
-- `src/config/mod.rs`：当前的 `config.toml` 配置项结构体；
+- `src/body/`：Agent 本体中枢（`BodyManifest`、`ContinuityCapsule`、`HomeostasisVitals`、`AutonomyEnvelope`、`perf_awr/*`）；
+- `src/config/mod.rs`：当前的 `config.toml` 配置项结构体（含 `AGENT_BODY_CONFIG` 与 `[workspace]`）；
 - `src/storage/schema.sql`：预置的 8 大放置规则与 10+ 分级扫描策略；
 - `src/links/` & `src/fact/`：`L1_EXPLICIT`/`L2_STRUCTURAL`/`L3_SEMANTIC` 分层加权图谱、断链体检规则与 CodeGraph 穿透接口；
 - `src/brief/optimistic.rs` & `src/hooks/diagnoser.rs`：AOPCC 开工乐观直通租约、三态并发分类器与 `<2ms` 碰壁处方自愈；
 - `src/mesh/`：`MeshEnvelope v1.0` HMAC-SHA256 签名防重放、跨机图谱、双向脱敏对话与沙盒收件箱投递；
 - `src/feedback/` & `src/audit/`：`user_feedback.md` 双向同步、`FreshnessReconciler`、`P1~P5` 自进化探针与双域审计流水；
-- `src/benchmark/`：`v3.7` 实证评测引擎（`W1~W17` + `M1~M5` + `DQ1~DQ8` + `COMP-C1~C4` + `PR-01~13`）。
+- `src/benchmark/`：`v3.8` 实证评测引擎（`W1~W18` + `M1~M6` + `DQ1~DQ9` + `COMP-C1~C4` + `PR-01~14`）。
 
 ### 步骤 2: 实操命令获取真实输出
 针对文档中需要出现的示例，在终端中以 release 二进制执行捕获：
@@ -112,7 +112,7 @@ flowchart TD
   - 错误写法: `A[客户端(Agent)]`
   - 正确写法: `A["客户端 (Agent)"]`
 - **SVG 图表规范**：矢量图保存为独立 `.svg` 文件置于 `docs/markdown/svg/`，保证自适应与文字高对比度无遮挡；
-- **死链检查与防漂移门禁**：运行 `make evolution-check` 校验 27 模块 / 43 工具 / 82 SPI / 27 表 / Benchmark v3.7 计数零漂移，并用 Python 脚本全盘扫描 `.md` 相对链接，保证 0 死链。
+- **死链检查与防漂移门禁**：运行 `make evolution-check` 校验 27 模块 / 43 工具 / 88 SPI / 27 表 / Benchmark v3.8 计数零漂移与全仓活跃 `.md` 0 死链，确保文档与代码事实 100% 同步。
 
 ### 步骤 5: 交付检查与 Commit
 - 检查 `README.md`、`docs/manual/` 与 `docs/src_doc/` 是否无缝互引；

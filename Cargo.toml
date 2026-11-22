@@ -1,6 +1,6 @@
 [package]
 name = "agent-body"
-version = "0.4.0"
+version = "1.0.0"
 edition = "2021"
 authors = ["digoal 德哥"]
 description = "Agent Body — 脑体分离架构的 Agent 本体（宿主机具身底座，Rust Edition）"

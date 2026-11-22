@@ -2,7 +2,7 @@
 
 > **记录人**: digoal 德哥 & Antigravity  
 > **日期**: 2026-11-22 (Asia/Shanghai)  
-> **关联立项**: [ISSUE.md #27](../../ISSUE.md#L132) · [17-agent-embodiment-and-continuity-spec.md](../design_doc/17-agent-embodiment-and-continuity-spec.md) · [roadmap-phase44-45.md](../src_doc/roadmap-phase44-45.md)  
+> **关联立项**: [ISSUE.md #27](../../ISSUE.md#L132) · [17-agent-embodiment-and-continuity-spec.md](../design_doc/17-agent-embodiment-and-continuity-spec.md) · [roadmap-phase44-45.md](../src_doc/archive/roadmap-phase44-45.md)  
 > **前序思想**: [00-comparative-advantage-origin.md](00-comparative-advantage-origin.md) · [03-modular-steward-architecture.md](03-modular-steward-architecture.md)
 
 ---
@@ -76,7 +76,7 @@ flowchart TB
 
 升华为 **Agent 本体**，并不否定在 [00-comparative-advantage-origin.md](00-comparative-advantage-origin.md) 中奠定的 **比较优势（Comparative Advantage）** 第一性原理，而是完成了一次概念收编：
 
-- **「小秘书」是 Agent 本体的「感官与海马体侧面」**：把硅谷园区物业、高管秘书帮你提前盘点家底（`/root/new/src/postgres`、`.codegraph`、历史决策）的能力，解释为本体醒来时自带的 **本体感觉（Proprioception）**，让瞬态大脑不必从零折腾琐事。
+- **「小秘书」是 Agent 本体的「感官与海马体侧面」**：把硅谷园区物业、高管秘书帮你提前盘点家底（源码目录、`.codegraph`、历史决策）的能力，解释为本体醒来时自带的 **本体感觉（Proprioception）**，让瞬态大脑不必从零折腾琐事。
 - **「大管家」是 Agent 本体的「脊柱、小脑与代谢侧面」**：把端口防撞、协作锁、规范放置、垃圾清理与后台巡检，解释为本体的 **防伤害痛觉反射与自稳态代谢机制**。
 - **对外科普与内化表达的黄金桥梁**：面向初学者时，依然可以用“硅谷园区物业/高管秘书”的比较优势故事零门槛引入；但一旦进入架构定义，立刻点破——**在数字世界里，最彻底的“比较优势”分工不是再雇一个外部助理，而是把环境感知、规约防线和记忆连续性直接做成 Agent 的“身体”。**
 

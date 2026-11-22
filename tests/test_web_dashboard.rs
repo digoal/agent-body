@@ -77,7 +77,7 @@ async fn test_web_dashboard_e2e_lifecycle() {
     assert!(resp_index.contains("view-governance"));
     assert!(resp_index.contains("data-theme"));
     assert!(resp_index.contains("btn-theme-toggle"));
-    assert!(resp_index.contains("v0.4.0"));
+    assert!(resp_index.contains(concat!("v", env!("CARGO_PKG_VERSION"))));
     assert!(resp_index.contains("43/43 对齐"));
     assert!(resp_index.contains("view-audit"));
     assert!(resp_index.contains("view-body"));

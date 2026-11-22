@@ -10,7 +10,7 @@
 
 ```mermaid
 flowchart LR
-    Daemon["Steward Daemon 主循环"] --> Pre["启动门禁: PreflightChecker 运行预检"]
+    Daemon["Agent Body Daemon 主循环"] --> Pre["启动门禁: PreflightChecker 运行预检"]
     Daemon --> TaskA["任务 A: inotify 实时监听器<br/>(notify crate / 300ms 智能防抖)"]
     Daemon --> TaskB["任务 B: 60s 定时巡检轮询<br/>(BackgroundScheduler)"]
     Daemon --> WebSSE["任务 C: 内嵌 Web 大屏 + SSE 事件流<br/>(当 web.enabled = true)"]

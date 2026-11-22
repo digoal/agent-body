@@ -1,174 +1,127 @@
-# 为什么你的 AI Agent 总在搞垮开发机？从 30GB 扫爆磁盘到端口防撞，我们用 Rust 写了一个“宿主环境大管家”
+# 为什么你的 AI Agent 总是“换脑失忆”还搞垮开发机？我们用 Rust 打造了「脑体分离」的 Agent 本体底座
 
 > **作者**: digoal德哥  
-> **项目开源地址**: `https://github.com/digoal/agent-steward`  
-> **核心定位**: 驻留在 Agent 宿主机中的轻量级、系统级全栈认知与规约底座 (Rust Edition)
+> **项目开源地址**: `https://github.com/digoal/agent-body`  
+> **发布版本**: `v1.0.0 GA` · **核心定位**: 脑体分离 · Agent 本体（驻留在宿主机上的轻量级具身底座）
 
 ---
 
-## 引言：越聪明、越主动的 Agent，破坏力为什么越大？
+## 引言：越聪明、越自主的 Agent，为什么越容易“翻车”？
 
-最近半年，AI Agent 领域的发展速度令人目不暇接。从端到端自主编码、多 Agent 蜂群协作，到各大 IDE 深度集成的终端执行能力，Agent 正在从“单纯的代码补全工具”，演进为“拥有宿主机 Shell 执行权限的数字员工”。
+随着 Claude Code、Codex、Cursor、Antigravity 等终端与编码助手走向普及，大模型正在从“对话窗口”演进为“拥有宿主机 Shell 权限的数字员工”。然而，在开发机与生产服务器上放开权限后，一线工程师最常遇到五大结构性尴尬：
 
-然而，当我们在开发机、云服务器上真正放开权限让 Agent 7x24 小时自主干活时，接踵而来的往往不是生产力解放，而是令人啼笑皆非的“系统惨案”：
+- **痛点一：暴力盲扫，磁盘吞入 30 万个小文件卡死**  
+  Agent 起手就是一个无边界全局遍历，一头扎进 `node_modules`、`.cache` 和 `.git/objects`，瞬间拉满磁盘 I/O 与 inotify 句柄，把向量库打爆几十 GB，甚至顺手将 `~/.ssh/id_rsa` 编入嵌入检索；
+- **痛点二：随手占端口，击沉后台核心服务**  
+  临时脚本起个测试 Web 服务顺手监听 `8080`，恰好撞翻已在后台跑了数周的生产监控看板；
+- **痛点三：误改公共库，半夜 5 个定时任务全线雪崩**  
+  以为重构一个 `utils.py` 只是局部调整，却不知宿主机上多个脚本与凌晨 Cron 正通过路径或同体服务依赖它；
+- **痛点四：跨会话 / 跨大脑“换脑失忆”**  
+  同一个任务，上午在 Claude 里分析了一半，下午切到 Codex 或新开窗口立刻从零摸索；或者因为口语问“防雪崩预案”而搜不到标题为“PostgreSQL 熔断降级方案”的历史记忆；
+- **痛点五：黑盒运行与“过度悲观”对话税**  
+  要么事无巨细每条命令都先查询造成额外的整轮大模型思考延迟（“过度悲观”），要么出错后盲目重试；守护进程本身若出现 CPU 飙高或 SQLite 锁争用也无从自省诊断。
 
-- **惨案一：暴力盲扫，磁盘吞入 30 万个小文件卡死**  
-  你让 Agent “整理并索引一下机器上的项目”，它起手就是一个无边界的全局递归遍历。一头扎进 `node_modules`、`.cache` 和 `.git/objects`，一口气吞入 30 多万个碎片文件。磁盘 I/O 瞬间拉满卡死，SQLite 数据库膨胀到 30GB，甚至顺手把 `~/.ssh/id_rsa` 私钥也编入全局嵌入向量库；
-- **惨案二：随手占端口，击沉主理人生产看板**  
-  Agent 临时写了个数据分析 Demo，随手一行 `app.run(port=8080)`。而 8080 端口恰好是主理人已经在后台稳定运行了数周的核心监控服务。端口强占冲突，线上看板瞬间熔断报错；
-- **惨案三：重构公共库，半夜 5 个定时任务全线瘫痪**  
-  Agent 为了优化某个入参，顺手重构了公共工具库 `shared_proj/sec_fetcher/utils.py`。它以为这只是个局部改动，殊不知宿主机上 2 个爬虫、1 个每天凌晨 22:00 运行的财报扫描定时任务正强依赖它。半夜全部报 `ImportError` 崩溃；
-- **惨案四：跨会话失忆，死板字面匹配阻断知识复用**  
-  你口语化问它：“以前讨论过什么防雪崩预案没有？”库里存的标题是“PostgreSQL 连接池溢出与熔断降级方案”。因为字面不包含“防雪崩”，字面全文搜索返回 0 条，Agent 误以为“从没做过”，又开始重复造低质轮子。
+**根因只有一个**：大语言模型只是可热切换的**瞬态大脑**，它天生缺乏在宿主机上长期驻留的**物理身体（Agent 本体）**——既没有感觉神经，也没有痛觉反射弧和跨大脑延续的海马体。
 
-**核心根因是什么？**  
-大模型很聪明，上下文窗口也很长，但它**对所处的物理宿主机毫无感知与敬畏**。它不知道机器上已经跑了哪些进程、哪个端口被谁霸占着、哪些文件属于绝不能深入递归的黑名单、动了某个公共脚本会引发多大范围的连锁雪崩。
-
-面对这一普遍恶疾，我们用 Rust 纯原生写了一个**宿主环境大管家（Agent Host Steward）**。
-
----
-
-## 第一性原理：Agent 真正需要的系统底座
-
-不是更大参数的模型，也不是花哨的 Prompt，而是让 Agent 在动手敲命令前，能一目了然看清宿主机全貌的**确定性系统底座**。
-
-![Agent Host Steward 分层架构全景图](svg/architecture.svg)
-
-大管家采用高内聚的四层工业级解耦架构：
-1. **接入与交互通道 (Interface Layer)**：内置免额外端口的标准 MCP Stdio 服务（提供 **41 个原生治理工具**，与 CLI、Web UI 2.0 保持 1:1:1 双向同步）、CLI 终端与内嵌 Tokio Web 监控大屏（支持昼夜双主题蓝图、6 幕路演剧场与实证基准工作台）；
-2. **核心治理与认知引擎 (Core Engines)**：遵循「**宿主机事实图谱 × 用户偏好规约 × 可插拔记忆**」三位一体架构，涵盖放置建议、分级扫描（含黑名单浅层阻断与 `restricted` 入口过滤）、端口防撞、多 Agent 协作锁与 WFG 死锁检测、Ollama 小模型双轨元数据标注、混合检索、爆炸半径推演与会话自洁；
-3. **存储持久化层 (Storage Layer)**：支持 SQLite（WAL + Bundled FTS5）、PostgreSQL（pgvector + Advisory Lock）与 DuckDB（OLAP 列存与增量同步）三后端 SPI 抽象；
-4. **Linux 内核与物理文件系统**：直连 `/proc/net/tcp` 内存虚拟文件系统与 Linux inotify 事件。
+面对这一本质问题，我们以第一性原理（比较优势 × 递弱代偿）用 Rust 纯原生打造了 **Agent Body（Agent 本体）**。
 
 ---
 
-## 核心绝杀特性一：分级颗粒度扫描（Granularity Tiering）——敲门绝不进屋
+## 第一性原理：脑体分离与六大生理器官
 
-传统扫描工具面对文件系统往往是“一刀切”：要么全扫，要么配复杂的 `.ignore`。
+Agent Body 不造重型 Agent Runtime、不接管大模型 ReAct 规划，而是严格锚定「宿主机物理具身底座」，用高内聚的 **27 个 Rust 模块** 构筑起六大生理器官：
 
-大管家首创了**分级颗粒度扫描（Granularity Tiering）**：
+![Agent Body 分层架构与六大生理器官全景图](svg/architecture.svg)
+
+1. **接入与协同层（黑白屏 1:1:1 同源）**：内置标准 MCP Stdio（**43 个原生 `body_*` 工具**）、**30 组顶层 CLI 命令**、自动化 Hook 引擎（Antigravity / Claude / Cursor / Codex / Hermes），以及单二进制内嵌的昼夜双主题 Web 控制台（**9 大工作台** + **7 幕真引擎路演剧场**）；
+2. **六大核心本体器官**：覆盖 **宿主机感官图谱**（`/proc` 探测、白黑灰分级扫描、L1~L3 有向图）、**小脑反射**（AOPCC 乐观-悲观并发控制 + 多 Agent 协作锁与 WFG 死锁检测）、**海马体**（FTS5+Ollama 混合 RRF、改删写穿失效与 `<=300 tok` 跨脑接力胶囊）、**规约脊柱**（放置规则自学习与 Context 防爆路由）、**内生性能与免疫**（6 类 18 种等待事件 `<100ns` 埋点、AWR 黄金基线差分、ADDM 一键自调优、全链路脱敏/抗投毒、双域审计与 P1~P5 探针）以及 **多体联邦 Mesh v1.0**（HMAC-SHA256 防重放与沙盒收件箱）；
+3. **三后端存储 SPI（88 方法）**：一套强类型语义接口无缝切换并热迁移 SQLite（默认 `~/.agent-body/body.db` 27 表 WAL+FTS5）、PostgreSQL（21 表 `tsvector` + Advisory Lock）与 DuckDB（22 表 OLAP 列存与 Parquet 导出）。
+
+---
+
+## 核心特性一：分级颗粒度扫描（白黑灰三层）——敲门绝不进屋
 
 ![分级颗粒度治理机制](svg/granularity-tiering.svg)
 
-- **白名单目录（Deep Tier）**：针对 `/root/new/work/`（工程区）、`/root/new/shared_proj/`（公共工具库），深度递归到底，提取结构化元数据、标签与全文索引；
-- **黑名单目录（Shallow Tier）**：针对 `node_modules/`、`.cache/`、`.git/`、`/root/.ssh/`，底层遍历通过 Rust `WalkDir` 命中策略时，**严格将深度设为 0（调用 `skip_current_dir`）**。
-- **“敲门但不进屋”**：仅记录该目录实体本身的存在标量（路径、所有者、类型为 directory），**绝不下钻、绝不遍历其内部数十万子文件、绝不建立子项 FTS 索引**。
+- **白名单目录（Deep Tier）**：针对活跃工程与公共工具库，递归解析到底，提取结构化元数据、L1/L2 语义标注（本地 Ollama 脱敏精炼）、代码依赖与 FTS5 全文索引；
+- **灰名单目录（Restricted Tier）**：针对海量三方开源浅克隆目录，仅采集顶层目录与入口 README，不做盲目深挖；
+- **黑名单目录（Shallow Tier）**：针对 `node_modules/`、`.cache/`、`.git/`、`target/`、`~/.ssh/`，在 `WalkDir` 与 `FileWatcher` 双重层面仅记录目录节点本身并直接执行 `skip_current_dir()` 与 watch 剪枝——**“敲门绝不进屋”**。
 
-**实战战报**：在包含数十个开发项目的真实宿主机上，分级扫描在 **0.4 毫秒** 内完成拦截，阻断了 `target/release`、`.git/objects` 等目录，吞吐 1000+ 核心资产，数据库体积仅增加不到 100KB，彻底消灭了 I/O 卡死与私钥越权。
-
----
-
-## 核心绝杀特性二：内核级端口防撞预警（Port Conflict Guard）
-
-在单机部署场景中，端口冲突是高危故障源。
-
-传统排查依赖外部安装的 `lsof -i` 或 `netstat`，不仅输出格式脆弱易变，而且属于事后报错。
-
-大管家直接深入 Linux 内核态：
-
-![内核级端口防撞流水线](svg/port-guard-pipeline.svg)
-
-1. **直接流式读取 `/proc/net/tcp`**：解析十六进制端口与 `0A`（TCP_LISTEN）状态，耗时仅 0.2ms；
-2. **反查 `/proc/[pid]/fd` 描述符**：根据 Socket Inode 秒级锁定占用进程的真实 PID、可执行程序名、启动命令行与运行 UID；
-3. **冲突阻断与自动避让**：侦测到占用立即报警，并顺延扫描推荐空闲可用端口（如 `[8081, 8082, 8083]`），实现智能避让。
-
-Agent 无论是通过 CLI `agent-steward env port 8080` 还是 MCP `steward_port_check`，都能在写代码起服务前完成**事前防撞**。
+在 Benchmark `v3.8` `W3` 负载实测中，分级扫盘拦截大量噪音目录并节省 **95.8% Prompt Token**，同时守住敏感私钥零入库。
 
 ---
 
-## 核心绝杀特性三：逆向 BFS 爆炸半径推演 & CodeGraph 宏微双层联邦
+## 核心特性二：内核级端口防撞 & AOPCC 自适应并发控制
 
-在重构公共库时，如何杜绝“蝴蝶效应”导致的夜间生产故障？
+![内核级端口防撞流水线与 AOPCC 控制](svg/port-guard-pipeline.svg)
 
-大管家在 `links` 表中构建了全局实体依赖图谱，并在底层完成了三维图智能跃迁：
+传统排查依赖外部 `lsof` 或 `netstat` 且属于事后灭火；而一刀切要求 Agent 每条命令都前置查询又会白白支付“整轮大模型思考税”。Agent Body 用 **AOPCC（自适应乐观-悲观并发控制）** 解开这个死结：
 
-![逆向 BFS 爆炸半径推演与 CodeGraph 宏微联邦](svg/blast-radius-codegraph.svg)
-
-### 1. 语法级多语言依赖出处（Provenance & Snippet）
-不仅记录“A 依赖 B”，更通过多语言语法抽取（Python `import/from`、Shell `source/.`、Node.js `require/import`），精准捕获**依赖所在的行号（`line_number`）与具体代码切片（`snippet`）**。
-
-### 2. 逆向多跳 BFS 爆炸半径计算
-输入目标路径，系统逆向推演多跳依赖拓扑：
-- 计算哪些上游文件直接 import 了它；
-- 计算哪些定时任务（Cron）在间接调度它；
-- 输出评级：如果波及关键定时任务或核心工具库，自动给出 `🚨 CRITICAL` 极高危预警，强制阻断破坏性接口修改！
-
-### 3. CodeGraph 宏微双层联邦联动
-如果目标工程已经通过 `codegraph init` 建立了代码图，大管家不会重复造轮子，而是自动向上探测并直连 `.codegraph/codegraph.db`：
-- **宏观层（Steward）**：掌控全机工程、文件、服务、端口与 Cron 的全局拓扑；
-- **微观层（CodeGraph）**：当下钻到特定文件时，直查函数/类（如 `parse_10k()`）在项目内部的代码级调用方（Callers）。
-
-宏观与微观无缝咬合，形成了目前 AI 开发机治理领域最优雅的图智能组合拳。
+1. **客户端直连乐观放行**：开工时由 `SessionStart (body_brief)` 签发 `<=120 tok` 短时乐观租约，像直连已知本地数据库或安全沙盒临时文件直接执行，免除冗余问询轮次；
+2. **高风险写操作悲观锁守门**：一旦涉及绑定监听端口、重构公共代码库或竞争共享目录，直接读取宿主机 `/proc/net/tcp`、`/proc/[pid]/fd` 与 `coordination_locks`（含多机/跨目录递归锁与 Wait-For Graph 死锁检测），在 **`0.2ms`** 内识别占用者 PID 并推荐安全空闲端口；
+3. **碰壁 `<2ms` 毫秒级自愈**：万一乐观直连撞上 `ECONNREFUSED` / `command not found` / 端口冲突，Post-Hook 在 2 毫秒内反查宿主机真实环境注入替代处方并降级失效租约（`W15` 实测节省 **83.9% Token**、加速 **4.25x**）。
 
 ---
 
-## 核心绝杀特性四：双路 RRF 混合记忆检索与会话自洁
+## 核心特性三：L1~L3 分层图谱、爆炸半径与 CodeGraph 宏微联邦
 
-### 1. RRF 倒数排名融合（Reciprocal Rank Fusion）
-针对跨会话认知断裂问题，大管家融合了 SQLite FTS5 与本地 Ollama `bge-m3`（1024 维）模型：
+![L1~L3 分层有向加权图谱与 CodeGraph 宏微联邦](svg/blast-radius-codegraph.svg)
 
-![双路混合检索与 RRF 融合机制](svg/rrf-hybrid-search.svg)
+基于**递弱代偿**原则，Agent Body 不重复造 AST 解析轮子，而是构建了多维证据图谱并向下联邦接力：
 
-$$RRF\_score(d) = \frac{1}{60 + rank_{fts}} + \frac{1}{60 + rank_{vec}}$$
-
-- 用户用口语提问“防雪崩预案”；
-- FTS5 虽未命中字面关键词，但 Ollama 向量通道凭借概念余弦相似度（0.892）高分召回“PostgreSQL 熔断降级方案”；
-- 倒数排名平滑融合，成功将历史方案置顶在 Rank #1！
-- 更加稳健的是：**若 Ollama 离线或超时，系统 100% 自动无感回退至 FTS 全文，服务永远不死。**
-
-### 2. 会话生命周期自洁（Session Close）
-Agent 每次任务结束后调用 `agent-steward close <SESSION_ID>`：
-- 自动扫描清理 `/root/new/tmp/` 下的测试废弃脚本与临时文件，释放磁盘空间；
-- 提取任务期间产生的 `changes` 审计流水线，自动汇总沉淀为一条结构化长期记忆。
+- **三层有向加权边（`L1 / L2 / L3`）**：不仅抽取多语言源码显式 `import / source` 语法依赖与精确行号切片（`L1`），还将服务/Cron/端口同体关系上卷（`L2`），结合标签与向量相似度发现跨仓隐式关联（`L3`）；
+- **加权衰减爆炸半径**：修改关键脚本前自动评估上游调用文件与生产定时任务波及面（`W5` 节省 **96.2% Token**）；
+- **CodeGraph 宏微双层联邦**：当仓库存在 `.codegraph/` 时，通过 `body_codegraph_bridge` 检查索引新鲜度并无缝下钻至函数级 AST 调用链。
 
 ---
 
-## 极客级 Rust 工程落地与双轨实证（有据可查）
+## 核心特性四：海马体 RRF 检索、写穿保鲜与跨大脑 `1ms` 无损接力
 
-为了不给开发机和服务器增加额外负担，大管家坚决摒弃了臃肿的 Python 运行时与重型中间件：
+![海马体 RRF 混合检索与跨大脑接力胶囊](svg/rrf-hybrid-search.svg)
 
-- **单二进制交付**：静态内嵌 SQLite FTS5、DuckDB 列存引擎与 Web UI 2.0 全套前端，零外部运行时依赖（release 单二进制约 79MB，无 Python/Node.js 环境依赖）；
-- **轻量常驻开销**：Systemd 常驻后台守护进程（Daemon）现网匿名内存（RssAnon）实测仅 **~20.8MB**，空闲 CPU 低于 0.1%；
-- **亚毫秒级内核微基准实测**（`agent-steward bench run --suite full` 同机真机跑批，总耗时 1.9 秒）：
-  - 放置推导 `M3` P95 **27 μs**（SLA `< 400 μs`）；
-  - 3 跳依赖图查询 `M1` P95 **144 μs**（SLA `< 1500 μs`）；
-  - FTS5 全文检索 `M2` P95 **269 μs**（SLA `< 1500 μs`）；
-- **A/B 实证基线（以 v1.0 8 大标准业务负载 `W1~W8` 首测为锚，现已演进至 v3.5 15 大负载 + 4 赛道竞品对标）**：Without Steward 裸奔基线累计消耗 `76,690 tok`，启用大管家后降至 `1,381 tok`（**Prompt Token 节省 98.20%**），事前拦截 **16 次** 端口/锁/乱放/断链风险，阻断 **379 个** 垃圾噪音文件，评测报告自带 **SHA-256 防篡改存证指纹**；日常每次 MCP 调用自动写入生产效能存证账本（`PR-01`~`PR-11`），收益 100% 可复现、可审计；
-- **开箱即用**：自带 SQLite / PostgreSQL / DuckDB Schema 自动建表与增量迁移。
+面对“旧记忆陈旧误导”与“换模型/换窗口就失忆”两大痛点：
+
+1. **全生命周期写穿保鲜**：文件一经修改或删除，`Watcher`（300ms 智能防抖）同步执行写穿失效——重置旧向量、`status='missing'` 隔离僵尸召回、级联清理图边与自动记忆，彻底消除陈旧幻觉（`W12` 实测省 **91.2% Token**）；
+2. **FTS + 向量双路 RRF 融合**：支持 SQLite FTS5 / PG `tsvector` 与本地 Ollama `nomic-embed-text`（768 维）向量倒数排名融合，语义联想准确召回历史决策，模型离线时 100% 无损降级为 FTS 全文；
+3. **跨大脑 `<=300 tok` 接力胶囊（`body_checkpoints`）**：切换大模型或新开窗口时，脱敏抗投毒的接力胶囊瞬间注入目标、关键事实、阻塞项与下一步行动（`W17` 省 **92.7% Token**，质量 **100.0**）。
 
 ---
 
-## 真实环境验证与实操体验
+## `v1.0.0 GA` 内生性能工程 & Benchmark `v3.8` 三轨实证
 
-大管家已正式编译并部署至 `/usr/local/bin/agent-steward`，并通过 Systemd 服务常驻守护：
+借鉴 PostgreSQL 与 Oracle 数据库内核经验，Agent Body 将可观测性直接内建到单二进制中：
+
+- **18/18 无锁等待事件与 AWR/ADDM 自调优**：覆盖 Lock / IO / Net / CPU / IPC / Idle 6 大类 18 种子事件（单次埋点实测仅 **7 μs**，零堆分配零 eBPF 依赖），直读 `/proc/self` 与 32 份快照黄金基线比对；5 条 ADDM 规则可在 `L1` 安全边界内一键触发 `PRAGMA optimize`、`wal_checkpoint`、`shrink_memory` 与 `malloc_trim(0)`；
+- **Benchmark `v3.8` 帕累托双门禁实机战报**（同机运行 `agent-body bench run --suite full`）：
+  - **18 项标准负载 (`W1~W18`)**：Prompt Token 总消耗从 `662,502 tok` 压降至 `5,114 tok`（**总体节省 -99.23%**），上下文质量分 `D6` 从 `35.6` 跃升至 **`98.0 / 100`（+64.2 分）**，有效信息密度提升 **94.5 倍**，事前拦截风险 **61 次**，阻断噪音文件 **538 个**；
+  - **6 项内核微基准 (`M1~M6`)**：放置推导 `33 μs`、3 跳图 `139 μs`、FTS5 `259 μs`、无锁等待探针 `7 μs`；
+  - **9 项质量门禁与 4 赛道竞品同机对标 (`DQ1~DQ9`, `COMP-C1~C4`)**：涵盖脱敏 (`DQ4=100%`)、新鲜度对账 (`DQ5>=98%`)、双域审计 (`DQ7=100%`)、五维稳态 (`DQ8=100%`) 与 18/18 遥测闭环 (`DQ9=100%`)，输出带 **SHA-256 防篡改存证指纹**；
+- **五重确定性工程门禁**：>1500 行单文件清零（`0` 个）、核心自治链路零静默吞错、全仓库零编译期路径硬编码、320+ 自动化测试全绿。
+
+---
+
+## 极速上手与现网体验
+
+通过单二进制与 Systemd 常驻部署，只需几条命令即可接管你的宿主机认知与并发防线：
 
 ```bash
-# 1. 查看系统健康状态
-agent-steward status
+# 1. 环境预检与本体体检（六大器官 + 五维稳态）
+agent-body preflight && agent-body body manifest && agent-body body vitals
 
-# 2. 全盘分级扫描核心目录（毫秒级纳管 1000+ 资产，黑名单自动跳过）
-agent-steward asset scan /root/new/shared_proj
+# 2. 分级扫描核心工作区（黑名单毫秒级 Depth=0 跳过）
+agent-body asset scan ./your-workspace
 
-# 3. 事前端口防撞测试（秒级定位 PID 957，推荐安全空闲端口）
-agent-steward env port 8080
+# 3. 端口防撞与 AWR 性能诊断
+agent-body env port 8080
+agent-body body perf-snapshot --label baseline --set-baseline
+agent-body body perf-awr --vs-baseline true
 
-# 4. 全局依赖断链主动体检
-agent-steward links audit
+# 4. 打开单二进制内嵌 Web 指挥舱（9 大工作台 · 昼夜双主题 · 7 幕沙盒路演）
+agent-body web --port 8756
 
-# 5. 跨层穿透查询 CodeGraph 微观调用方
-agent-steward links codegraph /root/new/src/hk2 interactive
+# 5. 一键安装 Antigravity / Claude / Codex / Hermes Hook 自动协同
+agent-body hooks generate --client agy --out-dir ~
 ```
 
-同时，我们通过标准 Stdio 注册了 **41 个原生 MCP 工具**，无缝兼容 Claude Desktop、Cursor IDE 与 Antigravity CLI。Agent 每次开工前，输入首帧即自动收到宿主全貌简报与 AOPCC 乐观直通租约（`steward_brief`），彻底告别盲人摸象。
-
----
-
-## 结语：让每一个 Agent 都有条不紊
-
-大模型赋予了 Agent 思考与编写代码的能力；  
-而 **Agent Host Steward** 赋予了 Agent **敬畏系统、有条不紊的执行准则**。
-
-未来每一台开发机与生产集群上都将常驻数十个甚至上百个自主协同的 Agent。在狂奔的 AI 浪潮中，我们不仅需要仰望大模型的星空，更需要为这些常驻数字员工打牢坚不可摧的宿主物理底座。
-
-欢迎体验、共建与 Star：  
-👉 GitHub 开源地址: [https://github.com/digoal/agent-steward](https://github.com/digoal/agent-steward)
+欢迎试用、贡献代码与 Star：  
+👉 GitHub 开源地址：[https://github.com/digoal/agent-body](https://github.com/digoal/agent-body)

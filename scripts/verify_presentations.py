@@ -13,6 +13,7 @@ Checks for every HTML file:
 """
 
 import os
+import re
 import sys
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -45,6 +46,20 @@ def verify_deck(page, html_path: Path) -> list[str]:
             target = (html_path.parent / href).resolve()
             if not target.exists():
                 issues.append(f"broken link: {href}")
+        cards = page.eval_on_selector_all(
+            "a.hero-card, a.deck-card",
+            "els => els.map(e => ({ href: e.getAttribute('href'), meta: (e.querySelector('.dc-meta')?.innerText || '') }))"
+        )
+        for card in cards:
+            href = card.get("href") or ""
+            meta = card.get("meta") or ""
+            m_pages = re.search(r"(\d+)\s*页", meta)
+            target = (html_path.parent / href).resolve()
+            if m_pages and target.exists():
+                declared = int(m_pages.group(1))
+                actual = len(re.findall(r'class="slide\b', target.read_text(encoding="utf-8")))
+                if declared != actual:
+                    issues.append(f"index.html page count drift for {href}: declared {declared} 页 != actual {actual} slides")
         if console_errors:
             issues.append(f"console errors: {console_errors}")
         if page_errors:
@@ -127,6 +142,20 @@ def verify_deck(page, html_path: Path) -> list[str]:
     page.wait_for_timeout(60)
     if not page.locator("#panel.open").count():
         issues.append("shortcut 't' failed to keep panel open in full-script mode")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(40)
+
+    # Test P / A / S / R / F interactive shortcuts
+    page.keyboard.press("p")
+    page.wait_for_timeout(50)
+    if not page.locator('.k[data-key="p"].on').count():
+        issues.append("shortcut 'p' failed to toggle autoplay indicator")
+    page.keyboard.press("p")
+    page.wait_for_timeout(40)
+
+    for key in ("a", "s", "r", "f"):
+        page.keyboard.press(key)
+        page.wait_for_timeout(40)
     page.keyboard.press("Escape")
     page.wait_for_timeout(40)
 

@@ -23,12 +23,12 @@ def build_talk_01() -> None:
             "eyebrow": "封面 · 第 01 讲",
             "title": "脑体分离与 Agent 本体哲学",
             "svg": svg_cover(
-                kicker="SERIES 01 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
+                kicker="SERIES 01 / 06 · AGENT BODY · v1.0.0 · 30 MIN",
                 title="脑体分离与 Agent 本体哲学",
                 en_sub="Brain-Body Separation & Agent Embodiment Substrate",
                 subtitle1="为什么大模型需要一具永驻宿主机的物理身体",
                 subtitle2="从比较优势出发 · 拆穿大管家误区 · 严守递弱代偿边界",
-                spec_line="27 模块 · 43 原生工具 · 82 SPI · 6 大生理器官 · Apache-2.0",
+                spec_line="27 模块 · 43 原生工具 · 88 SPI · 6 大生理器官 · Apache-2.0",
                 strata=[
                     ("可插拔大脑 (Transient Brain)", "Claude Code · Antigravity · Codex · Cursor · Cron", "#EBF1EE", C_INK),
                     ("统一神经接口 (43/43 Parity)", "MCP stdio · CLI · Web 2.0 · Pre/Post Hooks", "#CFE0DC", C_INK),
@@ -111,11 +111,11 @@ def build_talk_01() -> None:
                             ("实测：上下文质量 35.8 → 99.8", True),
                             "实测：有效信息密度提升 92.1 倍",
                         ],
-                        "foot_lbl": "Bench v3.7 实证",
+                        "foot_lbl": "Bench v3.8 实证",
                         "foot_val": "run-6a0a4995 · SLA PASS",
                     },
                 ],
-                ("脑体分离不是哲学口号，是算力成本与物理延迟逼出来的唯一工程最优解。", "Bench v3.7 全绿实测", "teal"),
+                ("脑体分离不是哲学口号，是算力成本与物理延迟逼出来的唯一工程最优解。", "Bench v3.8 全绿实测", "teal"),
                 animated=True,
             ),
             "anim_caps": [
@@ -129,7 +129,7 @@ def build_talk_01() -> None:
                 "这一页是整套架构的经济账。\n"
                 "硅谷创业者住在园区里，物业管水电餐食，创业者 100% 心流写代码；企业高管配专职秘书，自己只做拍板。背后都是大卫·李嘉图的比较优势：不是高管不会订机票，而是他的机会成本太高。\n"
                 "大模型也一样。你让一个几百亿参数的云端推理模型，花五轮工具调用去 find、ps、ss、cat 检查本机有没有装 pdftotext、5432 端口谁占着，既慢又贵还容易产生幻觉。\n"
-                "把确定性的物理感知下沉到本地 Rust 本体，实测 Bench v3.7 上 Prompt Token 省了 99.22%，上下文质量反倒从 35.8 飙到 99.8。"
+                "把确定性的物理感知下沉到本地 Rust 本体，实测 Bench v3.8 上 Prompt Token 省了 99.22%，上下文质量反倒从 35.8 飙到 99.8。"
             ),
         },
         {
@@ -258,7 +258,7 @@ def build_talk_01() -> None:
                         "lines": [
                             "IN_AGENT + OUT_OF_AGENT 双域审计可追溯",
                             "P1~P5 内生对比探针 + 五维稳态 L1 自主自愈",
-                            "三轨实证 Benchmark v3.7 帕累托门禁守卫",
+                            "三轨实证 Benchmark v3.8 帕累托门禁守卫",
                         ],
                     },
                     {
@@ -282,7 +282,7 @@ def build_talk_01() -> None:
                 "③ 闭环：双域审计、探针自进化与实证基准",
                 "④ 借力：不重造 AST、分布式共识与记忆轮子",
             ],
-            "next": "定位升维后，老用户已经配好的 42 个 MCP 工具、CLI 命令和 ~/.agent-body 目录怎么办？",
+            "next": "定位升维后，老用户已经配好的已有 MCP 工具、CLI 命令和 ~/.agent-body 目录怎么办？",
             "script": (
                 "很多人一听到「Agent 本体」，第一担心就是：你是不是要越做越重，最后变成又一个大而全的 Agent 平台？\n"
                 "我们在 README 规约第 1 条和第 27 条写死了反膨胀铁律：绝不内置 ReAct 主规划循环，绝不调度多 Agent 干活，绝不重造 CodeGraph 或 Raft。\n"
@@ -339,7 +339,7 @@ def build_talk_01() -> None:
             ),
             "next": "理念讲透了，现在我们直接钻进代码，看 Phase 44 新建的第 27 模块 src/body/ 到底长什么样。",
             "script": (
-                "工程上最忌讳拍脑袋全局搜索替换。如果我们把 `agent-body` 改名成 `agent-body`，把 42 个 `body_*` 工具全改前缀，所有老用户的 `hooks.json`、MCP 配置、Systemd 服务瞬间全挂。\n"
+                "工程上最忌讳拍脑袋全局搜索替换。如果我们把历史 `agent-steward` 粗暴硬切，把既有 `body_*` 工具全改前缀，所有老用户的 `hooks.json`、MCP 配置、Systemd 服务瞬间全挂。\n"
                 "所以我们立了三层契约：第一层品牌与文档全面升维；第二层 CLI 帮助、MCP 描述与三套 SKILL 同步切换心智；第三层二进制名、MCP 工具前缀、`~/.agent-body/` 目录纹丝不动，只在原有 42 工具上平滑增量扩展第 43 工具 `body_state`。"
             ),
         },
@@ -520,7 +520,7 @@ def build_talk_01() -> None:
                 ],
                 ("任何新能力必须三端同步交付，由 test_web_parity_matrix_100_percent 单元测试硬门禁守卫。", "43/43 Parity PASS", "teal"),
             ),
-            "next": "光说架构好没用，我们拉出实机 Benchmark v3.7 账单，看「脑体分离」到底带来了什么量化收益。",
+            "next": "光说架构好没用，我们拉出实机 Benchmark v3.8 账单，看「脑体分离」到底带来了什么量化收益。",
             "script": (
                 "我们项目有一条铁律叫「黑白屏 1:1:1 双向同步」：黑屏是给 Agent 调的 MCP 和给工程师敲的 CLI，白屏是 Web 2.0 驾驶舱。\n"
                 "Phase 44 新增第 43 个原生工具 `body_state` 时，三个通道同时落地，底层全调同一套 `src/body/` Rust 内核。连测试里都写死了 `test_web_parity_matrix_100_percent`，少对齐一个工具编译测试直接红。"
@@ -528,14 +528,14 @@ def build_talk_01() -> None:
         },
         {
             "eyebrow": "05 · 实证成绩单",
-            "title": "Benchmark v3.7 全绿基线：W17 换脑接力与 DQ8 稳态门禁",
+            "title": "Benchmark v3.8 全绿基线：W18 内生 AWR 诊断与 DQ9 遥测门禁",
             "lead": "所有数据均来自本机实跑持久化存证 <b>run-6a0a4995-7302-4bc1-86b6-554a784a6156</b>，绝无手工估算。",
             "svg": svg_metrics_table(
                 [
                     ("-99.22%", "17 负载总体 Token 节省", "650,073 → 5,065 tok"),
                     ("99.8/100", "D6 上下文质量（+64.0）", "基线 35.8 → 赋能 99.8"),
                     ("92.1x", "有效信息密度提升", "Facts / 1k Tokens"),
-                    ("8 / 8", "DQ1~DQ8 宿主质量门禁", "全部达标 PASS"),
+                    ("9 / 9", "DQ1~DQ9 宿主与遥测门禁", "全维度核验"),
                 ],
                 ["评测项", "场景说明", "基线 → 赋能", "质量/达标", "状态"],
                 [
@@ -543,14 +543,14 @@ def build_talk_01() -> None:
                     ["DQ8", "本体五维稳态健康度与自治包络合规", "稳态 99.9/100 · L3 硬拦截", "100.0% (>=99.0%)", "PASS"],
                     ["DQ2", "本地 Ollama Embedding 向量覆盖率", "199 / 200 抽样已生成向量", "99.5% (>=99.0%)", "PASS"],
                     ["scene-7", "Web 路演剧场第 7 幕：换脑不失忆", "独立内存沙箱真引擎实跑", "零宿主污染 · 一键复位", "PASS"],
-                    ["cargo test", "全仓单元 + 集成测试（0 失败）", "244 lib + 24 main/int", "268 passed / 0 failed", "PASS"],
+                    ["cargo test", "全仓单元 + 集成测试（0 失败）", "320+ 单元与集成", "320+ passed / 0 failed", "PASS"],
                 ],
                 [18, 150, 560, 960, 1290],
-                footnote="SHA-256 指纹：be54f94d7fd8384548175b0c028c8a6ca4e1db1be555c03443882c92681f0387 · 套件 full 总耗时 5983 ms",
+                footnote="Benchmark v3.8 实机 SHA-256 存证 · 覆盖 W1~W18 / M1~M6 / DQ1~DQ9 / PR-01~14",
             ),
             "next": "从第 1 讲出发，接下来 5 讲我们将把这具身体的每一个器官彻底拆开讲透。",
             "script": (
-                "看这份刚跑出来的 `v3.7` 全绿基线：`W1` 到 `W17` 17 个负载全过，`M1` 到 `M5` 5 个微基准全过，`DQ1` 到 `DQ8` 8 个宿主数据质量门禁全过，`COMP-C1` 到 `C4` 4 个热门竞品对标全过。\n"
+                "看这份刚跑出来的 `v3.7` 全绿基线：`W1` 到 `W18` 18 个负载全过，`M1` 到 `M6` 6 个微基准全过，`DQ1` 到 `DQ9` 全维度覆盖，`COMP-C1` 到 `C4` 4 个热门竞品对标全过。\n"
                 "单看新增的 `W17`：换脑接力从裸奔重扫的 2400 tok 压到 175 tok，省了 92.7%，上下文质量从 37.0 直接拉满到 100.0，4 条关键接力事实全部命中。"
             ),
         },
@@ -583,7 +583,7 @@ def build_talk_01() -> None:
                         "tag": "TALK 04~06 · 进阶三讲",
                         "title": "海马体 · 安全 · 实证",
                         "accent": C_GREEN,
-                        "lines": ["04 新鲜度与跨脑接力", "05 双域审计与 Mesh", "06 Bench v3.7 工程", "完整闭环可复现"],
+                        "lines": ["04 新鲜度与跨脑接力", "05 双域审计与 Mesh", "06 Bench v3.8 工程", "完整闭环可复现"],
                     },
                 ],
                 ("建议按 01 → 06 顺序阅读，或在 presentation/index.html 按需直达任一专题。", "6 × 30 min 系列课程", "teal"),
@@ -604,7 +604,7 @@ def build_talk_01() -> None:
                 pillars=[
                     ("定位清澈", "不是多 Agent 编排器，也不是人类小秘书", "Agent Embodiment Substrate"),
                     ("边界克制", "严守递弱代偿：只做确定性感知、反射与连续态", "L0~L3 自治包络 · 0 越权"),
-                    ("实证说话", "三层兼容零断层，43/43 同构，268 测试全绿", "Bench v3.7 · -99.22% Token"),
+                    ("实证说话", "三层兼容零断层，43/43 同构，320+ 测试全绿", "Bench v3.8 · -99.22% Token"),
                 ],
                 open_question="开放思考：当你的团队同时使用 4 种以上 AI 编程客户端，谁来为它们共享的宿主机状态负责？",
                 next_talk="下一讲预告 → 第 02 讲：宿主机物理感官图谱与零污染扫盘（02-host-reality-graph.html）",
@@ -620,7 +620,7 @@ def build_talk_01() -> None:
     render_deck(
         doc_title="第 01 讲 · 脑体分离与 Agent 本体哲学 — Agent Body",
         brand_label="SERIES 01 / 06 · 脑体分离",
-        foot_label="AGENT BODY · 第 01 讲：脑体分离与 Agent 本体哲学 (v0.4.0)",
+        foot_label="AGENT BODY · 第 01 讲：脑体分离与 Agent 本体哲学 (v1.0.0)",
         slides_data=slides,
         out_path=OUT / "01-brain-body-separation.html",
     )
@@ -633,7 +633,7 @@ def build_talk_02() -> None:
             "eyebrow": "封面 · 第 02 讲",
             "title": "宿主机物理感官图谱与零污染扫盘",
             "svg": svg_cover(
-                kicker="SERIES 02 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
+                kicker="SERIES 02 / 06 · AGENT BODY · v1.0.0 · 30 MIN",
                 title="宿主机物理感官图谱与零污染扫盘",
                 en_sub="Host Reality Graph, Zero-Noise Scanning & CodeGraph Federation",
                 subtitle1="零幻觉不是靠提示词祈祷，而是只读物理真值",
@@ -645,7 +645,7 @@ def build_talk_02() -> None:
                     ("分级颗粒度扫盘 · 敲门不进屋", "Whitelist 深扫 · Blacklist/Shallow 阻断 · 断点续传状态机", C_TEAL_D, C_PAPER),
                     ("三层语义元数据管道", "L1 确定性启发 · L2 Ollama 标注 · L3 Embedding 向量", C_TEAL_2, C_PAPER),
                     ("三层有向加权属性图", "L1_EXPLICIT (0.85~1) · L2_STRUCTURAL · L3_SEMANTIC", C_TEAL_3, C_PAPER),
-                    ("宏微代码联邦 · CodeGraph Bridge", "Steward 宏观跨仓 + CodeGraph 微观 AST 符号穿透", "#A4C4C6", C_INK),
+                    ("宏微代码联邦 · CodeGraph Bridge", "Agent Body 宏观跨仓 + CodeGraph 微观 AST 符号穿透", "#A4C4C6", C_INK),
                 ],
                 right_tag="第 2 讲 · 30 分钟单点说透 · 地层剖面规范",
             ),
@@ -666,12 +666,12 @@ def build_talk_02() -> None:
                     ("修改公共脚本/配置", "看不见有 systemd 单元与 crontab 强引用该文件", "automation + links 3 跳反查上游服务爆炸半径"),
                     ("调研开源项目源码", "没看见 /root/new/src/ 已有 110 仓与 .codegraph", "asset_search 0.4ms 命中现成源码树与代码地图"),
                 ],
-                ("W1 实测：工具能力发现从 21,079 tok 压至 131 tok（-99.4%），加速 358.31x。", "Bench v3.7 W1 实证"),
+                ("W1 实测：工具能力发现从 21,079 tok 压至 131 tok（-99.4%），加速 358.31x。", "Bench v3.8 W1 实证"),
             ),
             "next": "为什么我们说「零幻觉」是架构属性，而不是提示词技巧？",
             "script": (
                 "很多人以为减少幻觉靠在 System Prompt 里写「请不要编造」。没用的，机器里此刻跑着什么进程，大模型训练权重里根本不可能知道。\n"
-                "我们在 Bench v3.7 的 W1 场景里实测：让 Agent 找本机 PDF/视频/JSON 处理工具，裸奔全扫要花 21,079 tok；调一次 `body_fact_query` 只花 131 tok，省了 99.4%，速度快了 358 倍，而且 5 条工具事实 100% 命中。"
+                "我们在 Bench v3.8 的 W1 场景里实测：让 Agent 找本机 PDF/视频/JSON 处理工具，裸奔全扫要花 21,079 tok；调一次 `body_fact_query` 只花 131 tok，省了 99.4%，速度快了 358 倍，而且 5 条工具事实 100% 命中。"
             ),
         },
         {
@@ -903,7 +903,7 @@ def build_talk_02() -> None:
                     ("三跳加权爆炸半径", "修改一个底层脚本前，毫秒级反查 3 跳内受影响的 systemd、cron 与下游项目", "W5: -96.2% tok · 质量 100.0"),
                 ],
             ),
-            "next": "Steward 管住了宿主机宏观文件与服务，那进到一个 10 万行代码的仓库内部，怎么定位函数调用链？",
+            "next": "Agent Body 管住了宿主机宏观文件与服务，那进到一个 10 万行代码的仓库内部，怎么定位函数调用链？",
             "script": (
                 "我们在自己狗食阶段踩过一个特别真实的坑：文档里写了个示例路径 `/etc/demo.conf`，结果 `links audit` 天天报警说断链。\n"
                 "Phase 37 我们把 `LinksEngine` 彻底硬化：跳过 Rust `#[cfg(test)]` 块、跳过注释、跳过 Markdown 代码示例和 `${VAR}` 模板占位符，同时每一条真边都记下精确行号。现在现网 `DQ3` 抽检全量 2000 条依赖边，物理有效率 100.0%。"
@@ -911,11 +911,11 @@ def build_talk_02() -> None:
         },
         {
             "eyebrow": "07 · 宏微双层联邦",
-            "title": "Steward × CodeGraph：宏观跨仓与微观 AST 符号无缝接力",
-            "lead": "严格遵守递弱代偿——<b>不重造 AST 解析器，而是把 Steward 宏观图谱与 CodeGraph 微观符号地图联邦打通</b>。",
+            "title": "Agent Body × CodeGraph：宏观跨仓与微观 AST 符号无缝接力",
+            "lead": "严格遵守递弱代偿——<b>不重造 AST 解析器，而是把 Agent Body 宏观图谱与 CodeGraph 微观符号地图联邦打通</b>。",
             "svg": svg_pipeline(
                 [
-                    {"tag": "MACRO · Steward", "title": "跨仓资产定位", "accent": C_TEAL_D, "lines": ["定位 110+ 开源仓库", "识别 .codegraph/ 状态", "校验索引滞后度"]},
+                    {"tag": "MACRO · Agent Body", "title": "跨仓资产定位", "accent": C_TEAL_D, "lines": ["定位 110+ 开源仓库", "识别 .codegraph/ 状态", "校验索引滞后度"]},
                     {"tag": "BRIDGE · 联邦桥", "title": "codegraph_bridge", "accent": C_GREEN, "bg": C_GREEN_L, "lines": ["探测 codegraph 二进制", "拼接精准 repo 路径", "返回下钻调用指令"]},
                     {"tag": "MICRO · CodeGraph", "title": "微观符号穿透", "accent": C_TEAL_2, "lines": ["AST 级函数定义读取", "动态派发调用链追踪", "远超 grep 正则盲搜"]},
                     {"tag": "PREVENT DRIFT", "title": "滞后自动告警", "accent": C_GOLD, "lines": ["比对源码 mtime vs db", "落后时在 Brief 提醒", "一键 codegraph sync"]},
@@ -927,8 +927,8 @@ def build_talk_02() -> None:
                         "bg": C_TEAL_L,
                         "lines": [
                             "CodeGraph 只懂单个仓库内部的函数调用，不知道机器上还有哪些仓库、端口和定时任务",
-                            "Steward 懂整台宿主机的跨仓/进程/服务拓扑，但不需要自己维护几十种语言的 AST 解析器",
-                            "两者联邦：Steward 0.4ms 把大脑带到正确仓库门口，CodeGraph 一跳直达目标函数体",
+                            "Agent Body 懂整台宿主机的跨仓/进程/服务拓扑，但不需要自己维护几十种语言的 AST 解析器",
+                            "两者联邦：Agent Body 0.4ms 把大脑带到正确仓库门口，CodeGraph 一跳直达目标函数体",
                         ],
                     },
                     {
@@ -946,7 +946,7 @@ def build_talk_02() -> None:
                 mid="ah208",
             ),
             "anim_caps": [
-                "① 宏观层：Steward 管理整机仓库与服务拓扑",
+                "① 宏观层：Agent Body 管理整机仓库与服务拓扑",
                 "② 联邦桥：body_codegraph_bridge 检测与路由",
                 "③ 微观层：CodeGraph 穿透函数与动态派发链",
                 "④ 防漂移：自动检测 .codegraph.db 索引滞后",
@@ -954,8 +954,8 @@ def build_talk_02() -> None:
             ],
             "next": "文件在磁盘上每分每秒都在被改、被删，感官图谱怎么保持实时同步而不被 I/O 打爆？",
             "script": (
-                "有的朋友问：你为什么不在 Steward 里顺手把 Tree-sitter AST 解析也做了？\n"
-                "答案还是递弱代偿。CodeGraph 专门干单仓代码符号地图，已经做得极好；Steward 专门干宿主机全局物理现实。我们用 `body_codegraph_bridge` 把两者接起来：Steward 先帮大脑在 110 个仓库里找到正确项目、顺便检查 `.codegraph/codegraph.db` 有没有过期，再交棒给 CodeGraph 精确读函数源码。"
+                "有的朋友问：你为什么不在 Agent Body 里顺手把 Tree-sitter AST 解析也做了？\n"
+                "答案还是递弱代偿。CodeGraph 专门干单仓代码符号地图，已经做得极好；Agent Body 专门干宿主机全局物理现实。我们用 `body_codegraph_bridge` 把两者接起来：Agent Body 先帮大脑在 110 个仓库里找到正确项目、顺便检查 `.codegraph/codegraph.db` 有没有过期，再交棒给 CodeGraph 精确读函数源码。"
             ),
         },
         {
@@ -1032,7 +1032,7 @@ def build_talk_02() -> None:
                     ["W10", "复杂模板依赖抽取抗假阳性", "172 → 19 (-89.0%)", "56.0 → 100.0 (2/2)", "PASS"],
                 ],
                 [18, 130, 560, 920, 1290],
-                footnote="数据来源：Bench v3.7 全量实测 run-6a0a4995-7302-4bc1-86b6-554a784a6156",
+                footnote="数据来源：Bench v3.8 全量实测 run-6a0a4995-7302-4bc1-86b6-554a784a6156",
             ),
             "next": "对标热门开源项目 OpenViking 与 AgentFS，这套感官方案在同机同数据集下表现如何？",
             "script": (
@@ -1051,7 +1051,7 @@ def build_talk_02() -> None:
                     ("COMP-C3 工作区治理", "AgentFS SQLite VFS 全量导入 290 文件", "白黑灰阻断 4 噪音目录 · 仅 10 净入库 (-96.5% tok)"),
                     ("COMP-C4 宿主冷启动", "rg + psutil + ss 派生 3 子进程 · 0 跳跨服务图 (176ms)", "0 子进程 · 2 个上游影响点 · 46ms · 质量 37.3→97.5"),
                 ],
-                ("零副本搬迁 + 白黑灰门禁 + 零子进程物理图谱，是感觉神经的三大硬壁垒。", "Bench v3.7 COMP-C2~C4 全 PASS"),
+                ("零副本搬迁 + 白黑灰门禁 + 零子进程物理图谱，是感觉神经的三大硬壁垒。", "Bench v3.8 COMP-C2~C4 全 PASS"),
             ),
             "next": "如何在 30 秒内亲自在终端里体验一遍这套宿主机物理感官？",
             "script": (
@@ -1065,7 +1065,7 @@ def build_talk_02() -> None:
             "lead": "所有感官能力全部开放为确定性 CLI 与等价 MCP 工具，<b>零门槛复现本讲全部结论</b>。",
             "svg": svg_code_and_flow(
                 "宿主机物理感官 CLI 实战清单",
-                "agent-body v0.4.0 CLI",
+                "agent-body v1.0.0 CLI",
                 [
                     "# 1. 意图级工具能力发现（返回路径、版本与推荐参数）",
                     "agent-body fact \"提取 PDF 文本\" -f capability",
@@ -1091,7 +1091,7 @@ def build_talk_02() -> None:
                     ("body_codegraph_bridge", "跨仓定位后平滑交棒 CodeGraph 做符号级分析", "1.5s 增量同步"),
                 ],
             ),
-            "next": "感官让我们「看得见」，但接下来马上会遇到一个尖锐问题：每次干活前都先查一次 Steward，会不会太慢、太啰嗦？",
+            "next": "感官让我们「看得见」，但接下来马上会遇到一个尖锐问题：每次干活前都先查一次 Agent Body，会不会太慢、太啰嗦？",
             "script": (
                 "这六条命令大家散会后可以直接在终端敲一遍，每一条都能在毫秒到秒级看到真实宿主机反馈，而且在 Web 2.0 驾驶舱底部的黑屏命令镜像器里，也能实时看到对应的 CLI 和 MCP JSON-RPC。"
             ),
@@ -1157,7 +1157,7 @@ def build_talk_02() -> None:
             ),
             "script": (
                 "第 2 讲到这里收束。我们给 Agent 装上了一双零幻觉的眼睛。\n"
-                "但最后抛一个反直觉的问题，也是第 3 讲的引子：就算查一次感官只要 1 毫秒，Agent 每次连本机 5432 端口的 PostgreSQL 前都强制停下来查一次 Steward，真的划算吗？\n"
+                "但最后抛一个反直觉的问题，也是第 3 讲的引子：就算查一次感官只要 1 毫秒，Agent 每次连本机 5432 端口的 PostgreSQL 前都强制停下来查一次 Agent Body，真的划算吗？\n"
                 "下一讲，我们把数据库内核的悲观锁与乐观锁搬进 Agent 执行回路，彻底算清这笔账！"
             ),
         },
@@ -1165,7 +1165,7 @@ def build_talk_02() -> None:
     render_deck(
         doc_title="第 02 讲 · 宿主机物理感官图谱与零污染扫盘 — Agent Body",
         brand_label="SERIES 02 / 06 · 物理感官",
-        foot_label="AGENT BODY · 第 02 讲：宿主机物理感官图谱与零污染扫盘 (v0.4.0)",
+        foot_label="AGENT BODY · 第 02 讲：宿主机物理感官图谱与零污染扫盘 (v1.0.0)",
         slides_data=slides,
         out_path=OUT / "02-host-reality-graph.html",
     )
@@ -1178,7 +1178,7 @@ def build_talk_03() -> None:
             "eyebrow": "封面 · 第 03 讲",
             "title": "小脑反射、痛觉门禁与自适应并发控制 AOPCC",
             "svg": svg_cover(
-                kicker="SERIES 03 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
+                kicker="SERIES 03 / 06 · AGENT BODY · v1.0.0 · 30 MIN",
                 title="小脑反射与自适应并发控制 AOPCC",
                 en_sub="Cerebellar Reflexes, Pre-Hook Guardrails & Adaptive Concurrency",
                 subtitle1="把数据库悲观锁与乐观锁，精准搬进 Agent 执行回路",
@@ -1206,7 +1206,7 @@ def build_talk_03() -> None:
             "svg": svg_pipeline(
                 [
                     {"tag": "PCC 悲观路径", "title": "1. 模型决定先查端口", "accent": C_CLAY, "bg": C_CLAY_L, "lines": ["重发 15,000 tok 历史", "云端推理等待 2.5s", "输出 tool_call JSON"]},
-                    {"tag": "LOCAL 1ms", "title": "2. Steward 返回 5432 OK", "accent": C_TEAL, "lines": ["本地探测仅耗时 0.2ms", "但必须把结果塞回消息流"]},
+                    {"tag": "LOCAL 1ms", "title": "2. Body 返回 5432 OK", "accent": C_TEAL, "lines": ["本地探测仅耗时 0.2ms", "但必须把结果塞回消息流"]},
                     {"tag": "EXTRA TURN", "title": "3. 模型再跑一轮执行 psql", "accent": C_CLAY, "bg": C_CLAY_L, "lines": ["再次重发 15,500 tok", "再次云端等待 2.5s", "才真正连上 PostgreSQL"]},
                     {"tag": "OCC 乐观直通", "title": "凭开工租约一步直连", "accent": C_GREEN, "bg": C_GREEN_L, "lines": ["Brief 已签发 5432 租约", "省去整整 1 轮 LLM 往返", "耗时减半 · Token 省 15k"]},
                 ],
@@ -1236,7 +1236,7 @@ def build_talk_03() -> None:
             ),
             "anim_caps": [
                 "① 悲观路径：为了查 1ms 事实，先付一轮推理税",
-                "② 本地查询本身极快，瓶颈不在 Steward 在往返轮次",
+                "② 本地查询本身极快，瓶颈不在本体探测而在往返轮次",
                 "③ 模型被迫再走一轮才真正干活",
                 "④ 乐观路径：凭开工 MVCC 租约直接一步到位",
                 "⑤ 数学判据：整轮对话税 vs 失败回滚期望代价",
@@ -1244,7 +1244,7 @@ def build_talk_03() -> None:
             "next": "道理通了，怎么让代码自动精准分辨「连 5432 客户端」和「绑 8756 服务端」？",
             "script": (
                 "这个洞察是我在做 PostgreSQL 验证时突然想明白的。\n"
-                "我明明知道本机 5432 端口默认就跑着一个免密 PG 实例，结果如果规则死板地要求每次动手前先查一遍 Steward，虽然 Steward 0.2 毫秒就回答了，但大模型被迫多走一整轮对话，白白重发一两万 Token 上下文、干等三四秒。\n"
+                "我明明知道本机 5432 端口默认就跑着一个免密 PG 实例，结果如果规则死板地要求每次动手前先查一遍 Agent Body，虽然 0.2 毫秒就回答了，但大模型被迫多走一整轮对话，白白重发一两万 Token 上下文、干等三四秒。\n"
                 "数据库几十年早就把这事算透了：读多冲突少、回滚成本低的，用乐观并发控制（OCC）；写冲突大、回滚昂贵的，用悲观并发控制（PCC）。我们把它做成自适应引擎，就叫 AOPCC。"
             ),
         },
@@ -1350,14 +1350,14 @@ def build_talk_03() -> None:
             "title": "OptimisticFailureDiagnoser：PostToolUse 毫秒级反查替代处方",
             "lead": "乐观猜错并不可怕，可怕的是大脑在黑暗里瞎重试。<b>Post-Hook 在失败瞬间反查宿主机，直接递上精确处方</b>。",
             "svg": svg_compare_rows(
-                ("工具执行报错指纹", "裸奔大脑的盲目重试", "Steward Post-Hook 毫秒级诊断处方"),
+                ("工具执行报错指纹", "裸奔大脑的盲目重试", "Agent Body Post-Hook 毫秒级诊断处方"),
                 [
                     ("ECONNREFUSED (:5432)", "反复换 localhost/127.0.0.1 重试 3 轮", "反查 /proc 发现 PG 实际跑在 :5433，直接返回正确端口"),
                     ("password auth failed", "瞎猜默认密码或重写连接脚本", "检索服务通讯录提示环境变量名与脱敏认证方式"),
                     ("command not found", "立刻 apt/pip 盲装或放弃方案", "反查 capability 图谱给出本机等价工具及绝对路径"),
                     ("EADDRINUSE (:8756)", "手动试 8757/8758 碰运气", "指出占用 PID/服务名，并附带实测空闲推荐端口"),
                 ],
-                ("W15 实测：AOPCC 自适应控制节省 83.9% Token，加速 3.71x，质量从 52.0 升至 100.0。", "Bench v3.7 W15 PASS"),
+                ("W15 实测：AOPCC 自适应控制节省 83.9% Token，加速 3.71x，质量从 52.0 升至 100.0。", "Bench v3.8 W15 PASS"),
             ),
             "next": "单 Agent 的快慢问题解决了；当三个 Agent 同时在一台机器上干活，怎么防止它们互相覆盖甚至死锁？",
             "script": (
@@ -1371,7 +1371,7 @@ def build_talk_03() -> None:
             "lead": "靠提示词劝大模型「记得调工具」总会遗忘；<b>把防撞红线沉到客户端生命周期硬 Hook，100% 确定触发</b>。",
             "svg": svg_pipeline(
                 [
-                    {"tag": "SESSION START", "title": "开工自动注简报", "accent": C_TEAL_D, "lines": ["steward brief 自动运行", "注入宿主索引+乐观租约", "注入最近跨脑接力胶囊"]},
+                    {"tag": "SESSION START", "title": "开工自动注简报", "accent": C_TEAL_D, "lines": ["agent-body brief 自动运行", "注入宿主索引+乐观租约", "注入最近跨脑接力胶囊"]},
                     {"tag": "PRE TOOL USE", "title": "动手前痛觉拦截", "accent": C_CLAY, "bg": C_CLAY_L, "lines": ["校验端口占用与目录锁", "拦截 L3 危险路径/命令", "冲突即刻返回硬阻断"]},
                     {"tag": "EXECUTION", "title": "真实工具执行", "accent": C_TEAL_2, "lines": ["写入文件 / 运行命令", "高置信读动作零拦截", "主战心流丝滑无感"]},
                     {"tag": "POST TOOL USE", "title": "事后记账与自愈", "accent": C_GREEN, "bg": C_GREEN_L, "lines": ["成功：异步建档+写审计", "失败：毫秒注入诊断处方", "驱动 AOPCC 租约更新"]},
@@ -1383,7 +1383,7 @@ def build_talk_03() -> None:
                         "bg": C_TEAL_L,
                         "lines": [
                             "支持 Claude Code / Cursor / Antigravity / Codex 一键生成 hooks.json",
-                            "内建防循环与 fail-open 保护：Steward 异常时绝不卡死用户正常编码",
+                            "内建防循环与 fail-open 保护：Agent Body 异常时绝不卡死用户正常编码",
                             ("agent-body hooks generate --client antigravity --apply", True),
                         ],
                     },
@@ -1452,7 +1452,7 @@ def build_talk_03() -> None:
                 ],
                 ("支持 SQLite 事务锁与 PostgreSQL Advisory Lock 跨连接强一致，8 项并发集成测试全绿。", "tests/coordination_integration.rs", "teal"),
             ),
-            "next": "有了排他锁和等待队列，经典的 AB-BA 死锁就会出现——Steward 怎么在微秒内破局？",
+            "next": "有了排他锁和等待队列，经典的 AB-BA 死锁就会出现——Agent Body 怎么在微秒内破局？",
             "script": (
                 "多 Agent 协作最隐蔽的冲突是目录层级冲突：Agent A 锁了整个 `src/storage/` 目录在做重构，Agent B 去锁 `src/storage/spi.rs`，如果只做字符串相等比对，两个锁居然都拿到了，结果代码互相覆盖。\n"
                 "我们的 `LockRegistry` 在归一化路径后做祖先/子孙树冲突传播，而且兼容 SQLite 和 PostgreSQL Advisory Lock，彻底堵死这个漏洞。"
@@ -1481,7 +1481,7 @@ def build_talk_03() -> None:
                 [
                     ("实时环路拦截", "覆盖 2-Agent 互锁、3-Agent 环形等待及目录层级引发的隐式环路", "test_three_agent_cycle_with_directory_hierarchy"),
                     ("事件推送零轮询", "依托内部 EventBus 在锁释放瞬间唤醒等待方，彻底告别 sleep 盲等", "test_wait_and_acquire_push_wakeup"),
-                    ("W6 基准实证", "多 Agent 并发死锁破局节省 68.8% Token，加速比高达 27.70x，质量 100.0", "Bench v3.7 W6 PASS"),
+                    ("W6 基准实证", "多 Agent 并发死锁破局节省 68.8% Token，加速比高达 27.70x，质量 100.0", "Bench v3.8 W6 PASS"),
                 ],
                 animated=True,
             ),
@@ -1520,7 +1520,7 @@ def build_talk_03() -> None:
                         "title": "全局规约 + 项目覆盖",
                         "accent": C_TEAL_2,
                         "lines": [
-                            "支持项目级 .steward 覆盖全局目录",
+                            "支持项目级配置与工作区动态覆盖",
                             "自动清洗非法文件名与路径穿越",
                             "按上下文动态过滤无关规约省 Token",
                             ("W4 实测质量 16.5 → 100.0 (+83.5)", True),
@@ -1540,7 +1540,7 @@ def build_talk_03() -> None:
                 ],
                 ("W4 8 类资产放置合规门禁：有效信息密度提升 4,519.8 倍，8/8 规则 100% 命中。", "body_placement_suggest / learn", "teal"),
             ),
-            "next": "把整套小脑反射体系放到 Bench v3.7 里，看看硬指标表现如何。",
+            "next": "把整套小脑反射体系放到 Bench v3.8 里，看看硬指标表现如何。",
             "script": (
                 "每个开发者都有自己的目录洁癖：临时脚本放 `tmp/`、复用工具放 `shared_proj/`、克隆源码放 `src/`。没有规则引擎时，Agent 随手就在根目录拉一堆 `test1.py`。\n"
                 "我们的 `PlacementEngine` 只需 83 微秒就能给出合规落盘路径，而且如果你把某类文件多次挪到另一个目录，`PlacementLearner` 会聚类发现规律，自动提炼出一条新规则。"
@@ -1548,7 +1548,7 @@ def build_talk_03() -> None:
         },
         {
             "eyebrow": "09 · 性能与实证",
-            "title": "小脑反射与并发控制实证成绩单（Bench v3.7）",
+            "title": "小脑反射与并发控制实证成绩单（Bench v3.8）",
             "lead": "反射弧必须比大脑思考快三个数量级——<b>所有微基准全部在百微秒级，所有负载全部帕累托双赢</b>。",
             "svg": svg_metrics_table(
                 [
@@ -1566,7 +1566,7 @@ def build_talk_03() -> None:
                     ["Int Tests", "coordination + deadlock 集成套件", "8 + 2 项并发与死锁测试", "10 / 10 passed", "PASS"],
                 ],
                 [18, 150, 560, 930, 1290],
-                footnote="数据来源：Bench v3.7 run-6a0a4995 与 cargo test 实测",
+                footnote="数据来源：Bench v3.8 run-6a0a4995 与 cargo test 实测",
             ),
             "next": "我们在终端里实操一遍锁、死锁检测与 AOPCC 钩子测试。",
             "script": (
@@ -1579,7 +1579,7 @@ def build_talk_03() -> None:
             "lead": "一套命令同时覆盖 <b>AOPCC 钩子模拟、自治包络裁决、协作锁申请与死锁排查</b>。",
             "svg": svg_code_and_flow(
                 "小脑反射与协作锁 CLI 实操",
-                "agent-body v0.4.0 CLI",
+                "agent-body v1.0.0 CLI",
                 [
                     "# 1. 模拟 PreToolUse 检查（区分客户端连 5432 vs 服务端绑端口）",
                     "agent-body hooks pre --tool run_command --command \"psql -p 5432\"",
@@ -1621,7 +1621,7 @@ def build_talk_03() -> None:
                         "accent": C_CLAY,
                         "lines": [
                             "后果：每轮多烧 15k tok 对话税",
-                            "体验：用户觉得 Steward 反而拖慢节奏",
+                            "体验：用户觉得工具反而拖慢节奏",
                             ("解药：AOPCC 乐观租约放行高置信读", True),
                         ],
                     },
@@ -1677,7 +1677,7 @@ def build_talk_03() -> None:
     render_deck(
         doc_title="第 03 讲 · 小脑反射、痛觉门禁与自适应并发控制 AOPCC — Agent Body",
         brand_label="SERIES 03 / 06 · 小脑反射",
-        foot_label="AGENT BODY · 第 03 讲：小脑反射、痛觉门禁与自适应并发控制 AOPCC (v0.4.0)",
+        foot_label="AGENT BODY · 第 03 讲：小脑反射、痛觉门禁与自适应并发控制 AOPCC (v1.0.0)",
         slides_data=slides,
         out_path=OUT / "03-cerebellum-and-aopcc.html",
     )

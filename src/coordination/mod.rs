@@ -126,7 +126,7 @@ impl CoordinationEngine {
                     expires_at: new_expires.clone(),
                     metadata: req.metadata.clone(),
                 };
-                let _ = self.storage.insert_coordination_lock(&updated_lock)?;
+                let _renewed = self.storage.insert_coordination_lock(&updated_lock)?;
                 return Ok(LockResult::Granted {
                     lock_id: existing.lock_id,
                     resource_type: rt_str.to_string(),
@@ -170,13 +170,15 @@ impl CoordinationEngine {
         let granted = self.storage.insert_coordination_lock(&lock)?;
         if granted {
             if let Some(ref bus) = self.event_bus {
-                let _ = bus.emit(crate::hooks::StewardEvent::LockAcquired {
+                if let Err(e) = bus.emit(crate::hooks::StewardEvent::LockAcquired {
                     resource_type: rt_str.to_string(),
                     resource_id: norm_id.clone(),
                     holder_agent: req.holder_agent.clone(),
                     ttl_seconds: ttl,
                     timestamp: now.to_rfc3339(),
-                });
+                }) {
+                    eprintln!("[Coordination][WARN] 广播 LockAcquired 事件失败: {}", e);
+                }
             }
             Ok(LockResult::Granted {
                 lock_id,
@@ -216,12 +218,14 @@ impl CoordinationEngine {
         if res {
             if let Some(l) = target_lock {
                 if let Some(ref bus) = self.event_bus {
-                    let _ = bus.emit(crate::hooks::StewardEvent::LockReleased {
+                    if let Err(e) = bus.emit(crate::hooks::StewardEvent::LockReleased {
                         resource_type: l.resource_type.clone(),
                         resource_id: l.resource_id.clone(),
                         holder_agent: l.holder_agent,
                         timestamp: Utc::now().to_rfc3339(),
-                    });
+                    }) {
+                        eprintln!("[Coordination][WARN] 广播 LockReleased 事件失败: {}", e);
+                    }
                 }
                 self.notify_next_waiter(&l.resource_type, &l.resource_id);
             }
@@ -238,12 +242,14 @@ impl CoordinationEngine {
         if res {
             if let Some(l) = target_lock {
                 if let Some(ref bus) = self.event_bus {
-                    let _ = bus.emit(crate::hooks::StewardEvent::LockReleased {
+                    if let Err(e) = bus.emit(crate::hooks::StewardEvent::LockReleased {
                         resource_type: l.resource_type.clone(),
                         resource_id: l.resource_id.clone(),
                         holder_agent: l.holder_agent,
                         timestamp: Utc::now().to_rfc3339(),
-                    });
+                    }) {
+                        eprintln!("[Coordination][WARN] 广播 LockReleased 事件失败: {}", e);
+                    }
                 }
                 self.notify_next_waiter(&l.resource_type, &l.resource_id);
             }
@@ -321,7 +327,9 @@ impl CoordinationEngine {
 
     /// 清理所有过期锁并唤醒排队等待者
     pub fn gc_expired_locks(&self) -> Result<usize> {
-        let _ = self.storage.gc_expired_lock_waits();
+        if let Err(e) = self.storage.gc_expired_lock_waits() {
+            eprintln!("[Coordination][WARN] 清理过期等待队列失败: {}", e);
+        }
         let cleaned = self.storage.gc_expired_coordination_locks()?;
         if cleaned > 0 {
             if let Ok(waits) = self.storage.list_lock_wait_queue(None, None) {
@@ -356,13 +364,15 @@ impl CoordinationEngine {
     fn notify_next_waiter(&self, resource_type: &str, resource_id: &str) {
         if let Ok(Some(waiter)) = self.storage.pop_next_lock_waiter(resource_type, resource_id) {
             if let Some(ref bus) = self.event_bus {
-                let _ = bus.emit(crate::hooks::StewardEvent::LockWaiterNotified {
+                if let Err(e) = bus.emit(crate::hooks::StewardEvent::LockWaiterNotified {
                     wait_id: waiter.wait_id,
                     resource_type: waiter.resource_type,
                     resource_id: waiter.resource_id,
                     notified_agent: waiter.waiting_agent,
                     timestamp: Utc::now().to_rfc3339(),
-                });
+                }) {
+                    eprintln!("[Coordination][WARN] 广播 LockWaiterNotified 事件失败: {}", e);
+                }
             }
         }
     }
@@ -438,13 +448,17 @@ impl CoordinationEngine {
 
         loop {
             if let LockResult::Granted { lock_id, resource_type, resource_id, expires_at } = self.try_acquire(req)? {
-                let _ = self.storage.update_lock_wait_status(&wait_id, "acquired");
+                if let Err(e) = self.storage.update_lock_wait_status(&wait_id, "acquired") {
+                    eprintln!("[Coordination][WARN] 更新等待状态为 acquired 失败 ({}): {}", wait_id, e);
+                }
                 return Ok(LockResult::Granted { lock_id, resource_type, resource_id, expires_at });
             }
 
             let now_inst = std::time::Instant::now();
             if now_inst >= deadline {
-                let _ = self.storage.update_lock_wait_status(&wait_id, "expired");
+                if let Err(e) = self.storage.update_lock_wait_status(&wait_id, "expired") {
+                    eprintln!("[Coordination][WARN] 更新等待状态为 expired 失败 ({}): {}", wait_id, e);
+                }
                 return Ok(LockResult::Timeout {
                     wait_id,
                     suggestion: format!("等待资源 '{}:{}' 超时 ({}ms)，请稍后重试或协调持锁方。", rt_str, norm_id, timeout_ms),

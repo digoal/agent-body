@@ -2,7 +2,7 @@
 
 > **Agent Embodiment Substrate (Agent Body) 产品设计 · 交付件 17**  
 > **版本**: v1.0 · **编制**: Antigravity · **日期**: 2026-11-22 (Asia/Shanghai)  
-> **对齐约束**: [README.md 规约 #1, #2, #3, #8, #11, #13, #17, #27](../../README.md) · [ISSUE #27](../../ISSUE.md#L132) · [04-from-steward-to-agent-body.md](../idea_doc/04-from-steward-to-agent-body.md) · [roadmap-phase44-45.md](../src_doc/roadmap-phase44-45.md)
+> **对齐约束**: [README.md 规约 #1, #2, #3, #8, #11, #13, #17, #27](../../README.md) · [ISSUE #27](../../ISSUE.md#L132) · [04-from-steward-to-agent-body.md](../idea_doc/04-from-steward-to-agent-body.md) · [roadmap-phase44-45.md](../src_doc/archive/roadmap-phase44-45.md)
 
 ---
 
@@ -24,7 +24,7 @@
 
 ## 二、五大本体原生新能力详细技术规格
 
-Phase 44 在 `src/` 下新增第 27 个顶层模块 **`src/body/`**，下设 `manifest.rs`、`continuity.rs`、`vitals.rs`、`envelope.rs`，并于 Phase 50 增补第 5 个子模块 `perf_awr.rs`（内生 Wait Events / `/proc/self` / AWR / ADDM），把本体能力收敛为清晰的「Agent 本体中枢」。
+Phase 44 在 `src/` 下新增第 27 个顶层模块 **`src/body/`**，下设 `manifest.rs`、`continuity.rs`、`vitals.rs`、`envelope.rs`，并于 Phase 50/56 演进为 `perf_awr/{mod,wait_events,awr_engine}.rs`（内生 18/18 Wait Events / `/proc/self` / AWR / ADDM），把本体能力收敛为清晰的「Agent 本体中枢」。
 
 ```mermaid
 flowchart LR
@@ -111,7 +111,7 @@ flowchart LR
 | **1. 感官清晰度 (`sensory_clarity`)** | 25% | `DQ1`（描述完整率）、`DQ2`（向量回填率）、`DQ6`（项目图谱连通率） | `< 75` → 建议/调度增量向量回填与结构上卷 |
 | **2. 反射灵敏度 (`reflex_accuracy`)** | 20% | `audit_events` 近 24h AOPCC 租约命中率 $\hat{p}_{\text{valid}}$、`P2` 探针命中率 | `< 75` → 自动收紧低置信度乐观租约（降级为 `CAUTIOUS_CAS`） |
 | **3. 海马体纯净度 (`memory_purity`)** | 20% | `DQ4`（零明文凭据残留）、`DQ5`（信息新鲜度/无僵尸记忆）、矛盾记忆比率 | `< 80` → 触发 `FreshnessReconciler::reconcile()` 与记忆生命周期审计 |
-| **4. 代谢健康度 (`metabolic_health`)** | 20% | 磁盘空闲率、`DQ3` 断链健康分、过期锁数量、`/root/new/tmp/` 滞留体积 | `< 75` → 触发过期锁 GC、写穿失效与 `HostGC` `dry-run` 预检告警 |
+| **4. 代谢健康度 (`metabolic_health`)** | 20% | 磁盘空闲率、`DQ3` 断链健康分、过期锁数量、`<temp_dir>` 滞留体积 | `< 75` → 触发过期锁 GC、写穿失效与 `HostGC` `dry-run` 预检告警 |
 | **5. 免疫可溯度 (`immune_traceability`)** | 15% | `DQ7`（双域审计完整率 + Watcher 折叠效率）、`~/.agent-body/` `0600/0700` 权限合规 | `< 85` → 写入 `user_feedback.md` 自告警并提醒修正权限/漏埋点 |
 
 - 综合稳态分：`overall_score = 0.25*S + 0.20*R + 0.20*M_p + 0.20*M_h + 0.15*I`（`0..=100`）；
@@ -142,16 +142,16 @@ flowchart LR
 
 | 端侧 | 接口签名 / 入口 | 覆盖动作（1:1:1 Action Parity） |
 |---|---|---|
-| **MCP 工具 (`src/api/mcp_tools.rs`)** | `body_state` | `action`: `manifest` \| `vitals` \| `envelope` \| `handoff_save` \| `handoff_resume` \| `heal` \| `peers` \| `perf_snapshot` \| `perf_awr` \| `perf_tune` |
-| **CLI (`src/cli_args.rs` / `src/main.rs`)** | `agent-body body <subcmd>` | `manifest` \| `vitals` \| `envelope` \| `handoff` \| `resume` \| `heal` \| `peers` \| `perf-snapshot` \| `perf-awr` \| `perf-tune` |
-| **Web REST (`src/web/server.rs` & `parity_api.rs`)** | `GET /api/v1/body/{manifest,vitals,envelope,checkpoints,peers,perf/awr}`<br/>`POST /api/v1/body/{handoff,resume,heal,perf/snapshot,perf/awr,perf/tune}` | 写端点强制校验 `check_auth`；`parity/matrix` 升级为 `43/43 (100%)` |
-| **Web UI (`src/web/assets/mod.rs`)** | 顶栏品牌升维 + 第 9 工作台「🧬 本体中枢与生命体征」 | 展示脑体分离拓扑、六器官卡片、五维稳态雷达、跨大脑接力胶囊时间线、L0~L3 权限包络表 + CLI/MCP 镜像器 |
+| **MCP 工具 (`src/api/mcp_tools.rs`)** | `body_state` | `action`: `manifest` \| `vitals` \| `envelope` \| `handoff_save` \| `handoff_resume` \| `heal` \| `peers` \| `perf_snapshot` \| `perf_awr` \| `perf_tune` \| `delete_snapshot` \| `delete_awr_report` |
+| **CLI (`src/cli_args.rs` / `src/cli_handlers/*`)** | `agent-body body <subcmd>` | `manifest` \| `vitals` \| `envelope` \| `handoff` \| `resume` \| `heal` \| `peers` \| `perf-snapshot` \| `perf-awr` \| `perf-tune` \| `perf-delete` |
+| **Web REST (`src/web/server.rs` & `parity_api/*`)** | `GET /api/v1/body/{manifest,vitals,envelope,checkpoints,peers,perf/awr}`<br/>`POST /api/v1/body/{handoff,resume,heal,perf/snapshot,perf/awr,perf/tune,perf/delete}` | 写端点强制校验 `check_auth`；`parity/matrix` 升级为 `43/43 (100%)` |
+| **Web UI (`src/web/assets/{index.html,style.css,js/*.js}`)** | 顶栏品牌升维 + 第 9 工作台「🧬 本体中枢与生命体征」 | 展示脑体分离拓扑、六器官卡片、五维稳态雷达、跨大脑接力胶囊时间线、L0~L3 权限包络表 + AWR 报告库删除 + CLI/MCP 镜像器 |
 
 ---
 
-## 四、Benchmark `v3.7` 实证门禁设计
+## 四、Benchmark `v3.8` 实证门禁设计
 
-沿用 `10-benchmark-spec.md` 的「既省 Token × 质量不降反升」帕累托双门禁，在 Phase 44.6 升级至 `BENCHMARK_SPEC_VERSION = "3.7"`：
+沿用 `10-benchmark-spec.md` 的「既省 Token × 质量不降反升」帕累托双门禁，在 Phase 44.6~54 演进至 `BENCHMARK_SPEC_VERSION = "3.8"`（涵盖 `W1~W18` / `M1~M6` / `DQ1~DQ9` / `PR-01~14`）：
 
 1. **`W17 (cross_brain_continuity_and_body_proprioception)`**：
    - **对照场景**：模拟「大脑 A 完成 PostgreSQL 源码定位与故障排查后挂起 → 新大脑 B 接手继续任务」；

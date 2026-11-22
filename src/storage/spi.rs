@@ -148,23 +148,19 @@ pub trait StorageProvider: Send + Sync {
     fn delete_bench_sandbox_records(&self) -> Result<usize>;
 
     // ─── Mesh Protocol v1.0 Dialogues & Sandboxed Transfers (Phase 41) ──
-    fn insert_mesh_dialogue(&self, rec: &MeshDialogueRecord) -> Result<()> {
-        let _ = rec;
+    fn insert_mesh_dialogue(&self, _rec: &MeshDialogueRecord) -> Result<()> {
         Ok(())
     }
-    fn list_mesh_dialogues(&self, limit: usize) -> Result<Vec<MeshDialogueRecord>> {
-        let _ = limit;
+    fn list_mesh_dialogues(&self, _limit: usize) -> Result<Vec<MeshDialogueRecord>> {
         Ok(Vec::new())
     }
     fn update_mesh_dialogue_status(&self, _dialogue_id: &str, _status: &str) -> Result<bool> {
         Ok(false)
     }
-    fn insert_mesh_transfer(&self, rec: &MeshTransferRecord) -> Result<()> {
-        let _ = rec;
+    fn insert_mesh_transfer(&self, _rec: &MeshTransferRecord) -> Result<()> {
         Ok(())
     }
-    fn list_mesh_transfers(&self, limit: usize) -> Result<Vec<MeshTransferRecord>> {
-        let _ = limit;
+    fn list_mesh_transfers(&self, _limit: usize) -> Result<Vec<MeshTransferRecord>> {
         Ok(Vec::new())
     }
     fn update_mesh_transfer_status(
@@ -177,38 +173,30 @@ pub trait StorageProvider: Send + Sync {
     }
 
     // ─── Dual-Domain Behavioral Audit Events (Phase 43) ───────────────
-    fn insert_audit_event(&self, rec: &AuditEventRecord) -> Result<()> {
-        let _ = rec;
+    fn insert_audit_event(&self, _rec: &AuditEventRecord) -> Result<()> {
         Ok(())
     }
-    fn query_audit_events(&self, filter: &AuditQueryFilter) -> Result<Vec<AuditEventRecord>> {
-        let _ = filter;
+    fn query_audit_events(&self, _filter: &AuditQueryFilter) -> Result<Vec<AuditEventRecord>> {
         Ok(Vec::new())
     }
-    fn audit_domain_summary(&self, window: &str) -> Result<AuditDomainSummary> {
-        let _ = window;
+    fn audit_domain_summary(&self, _window: &str) -> Result<AuditDomainSummary> {
         Ok(AuditDomainSummary::default())
     }
-    fn prune_old_audit_events(&self, before_iso: &str) -> Result<usize> {
-        let _ = before_iso;
+    fn prune_old_audit_events(&self, _before_iso: &str) -> Result<usize> {
         Ok(0)
     }
 
     // ─── Agent Embodiment Cross-Brain Continuity Capsules (Phase 44) ─────
-    fn insert_body_checkpoint(&self, rec: &BodyCheckpointRecord) -> Result<()> {
-        let _ = rec;
+    fn insert_body_checkpoint(&self, _rec: &BodyCheckpointRecord) -> Result<()> {
         Ok(())
     }
-    fn get_latest_active_body_checkpoint(&self, body_id: &str) -> Result<Option<BodyCheckpointRecord>> {
-        let _ = body_id;
+    fn get_latest_active_body_checkpoint(&self, _body_id: &str) -> Result<Option<BodyCheckpointRecord>> {
         Ok(None)
     }
-    fn list_body_checkpoints(&self, status_filter: Option<&str>, limit: usize) -> Result<Vec<BodyCheckpointRecord>> {
-        let _ = (status_filter, limit);
+    fn list_body_checkpoints(&self, _status_filter: Option<&str>, _limit: usize) -> Result<Vec<BodyCheckpointRecord>> {
         Ok(Vec::new())
     }
-    fn mark_body_checkpoint_resumed(&self, checkpoint_id: &str, by_brain: &str, resumed_at: &str) -> Result<bool> {
-        let _ = (checkpoint_id, by_brain, resumed_at);
+    fn mark_body_checkpoint_resumed(&self, _checkpoint_id: &str, _by_brain: &str, _resumed_at: &str) -> Result<bool> {
         Ok(false)
     }
 }

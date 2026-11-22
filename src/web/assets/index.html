@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Body 2.0 — 宿主环境全景指挥舱</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23245A6B'/%3E%3Ctext x='16' y='21' font-size='16' text-anchor='middle' fill='white'%3ES%3C/text%3E%3C/svg%3E">
+  <script>
+    try {
+      var savedTheme = localStorage.getItem("steward_ui_theme") || "dark";
+      document.documentElement.setAttribute("data-theme", savedTheme === "light" ? "light" : "dark");
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="pulse-dot"></span>
+        <div>
+          <h1>Agent Body <span class="ver-badge">v1.0.0 · Agent 本体</span></h1>
+          <p class="subtitle">脑体分离具身底座 · 宿主机感官 × 小脑反射 × 海马体接力 × 五维稳态</p>
+        </div>
+      </div>
+
+      <div class="kpi-strip">
+        <div class="kpi-pill"><span class="k-label">主机</span><strong id="k-host">-</strong></div>
+        <div class="kpi-pill"><span class="k-label">硬件</span><strong id="k-hw">-</strong></div>
+        <div class="kpi-pill"><span class="k-label">图谱</span><strong id="k-facts" class="c-cyan">-</strong></div>
+        <div class="kpi-pill"><span class="k-label">协作锁</span><strong id="k-locks" class="c-orange">-</strong></div>
+        <div class="kpi-pill"><span class="k-label">生态</span><strong id="k-eco" class="c-green">-</strong></div>
+        <div class="kpi-pill"><span class="k-label">平台</span><strong id="k-os" class="c-purple">-</strong></div>
+      </div>
+
+      <div class="topbar-actions">
+        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 43/43 能力对齐矩阵">✅ 43/43</span>
+        <span id="sse-badge" class="sse-pill connecting">SSE</span>
+        <button id="btn-auth-token" class="btn btn-ghost btn-sm" title="配置 [web].auth_token 用于写操作与 GC 鉴权">🔑 Token</button>
+        <button id="btn-theme-toggle" class="btn btn-theme btn-sm" title="切换白天工程蓝图 / 夜间深空指挥舱 (快捷键 T)">☀️ 蓝图</button>
+        <button id="btn-toggle-mirror" class="btn btn-ghost btn-sm" title="展开/收起黑屏命令镜像器">⌨️ 镜像</button>
+        <button id="btn-toggle-sse" class="btn btn-ghost btn-sm" title="展开/收起实时事件流">⚡ 事件 <span id="sse-unread-badge" class="badge hidden">0</span></button>
+        <button id="btn-global-refresh" class="btn btn-primary btn-sm">↻ 刷新</button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <nav class="sidenav">
+        <button class="nav-btn active" data-view="topology">
+          <span class="nav-ico">🕸️</span>
+          <span>事实拓扑图谱</span>
+        </button>
+        <button class="nav-btn" data-view="facts">
+          <span class="nav-ico">📡</span>
+          <span>运行时事实雷达</span>
+        </button>
+        <button class="nav-btn" data-view="locks">
+          <span class="nav-ico">🔒</span>
+          <span>协作锁与死锁</span>
+        </button>
+        <button class="nav-btn" data-view="ecosystem">
+          <span class="nav-ico">🧭</span>
+          <span>生态防爆路由</span>
+        </button>
+        <button class="nav-btn" data-view="governance">
+          <span class="nav-ico">📐</span>
+          <span>规约 · 记忆 · Mesh</span>
+        </button>
+        <button class="nav-btn nav-btn-demo" data-view="demo">
+          <span class="nav-ico">🎬</span>
+          <span>路演演示剧场</span>
+        </button>
+        <button class="nav-btn" data-view="benchmark">
+          <span class="nav-ico">📊</span>
+          <span>实证基准与账本</span>
+        </button>
+        <button class="nav-btn" data-view="audit">
+          <span class="nav-ico">📜</span>
+          <span>双域审计与进化</span>
+        </button>
+        <button class="nav-btn" data-view="body">
+          <span class="nav-ico">🧬</span>
+          <span>本体中枢与稳态</span>
+        </button>
+        <div class="sidenav-footer">
+          <a href="/deck" target="_blank" class="btn btn-ghost btn-xs sidenav-link">📽️ 路演 PPT (/deck)</a>
+          <a href="/presentation" target="_blank" class="btn btn-ghost btn-xs sidenav-link">🎨 架构 PPT</a>
+        </div>
+      </nav>
+
+      <main class="stage">
+        <!-- 视图 1: 宿主机事实拓扑图谱 -->
+        <section id="view-topology" class="view active">
+          <div class="view-toolbar topo-toolbar">
+            <div class="toolbar-left">
+              <input id="topo-search" class="input input-search" type="text" placeholder="搜索节点并转至中心 (Enter)..." />
+              <div class="mode-switch" id="topo-mode-switch" title="切换 3D 全息球面 / 2D 平面视图">
+                <button type="button" class="mode-btn active" data-mode="sphere">🌐 3D 球面</button>
+                <button type="button" class="mode-btn" data-mode="flat">🗺️ 2D 平面</button>
+              </div>
+              <label class="depth-ctrl" title="限制文件夹与文件路径展示深度，超出层级的子文件自动聚合到父目录">
+                <span>📂 层级</span>
+                <select id="topo-max-depth" class="input input-xs">
+                  <option value="2">2 层 (极简)</option>
+                  <option value="3" selected>3 层 (默认)</option>
+                  <option value="4">4 层</option>
+                  <option value="5">5 层</option>
+                  <option value="99">全部展开</option>
+                </select>
+              </label>
+              <label class="depth-ctrl" title="选中节点时高亮的关联跳数层级">
+                <span>🎯 跳数</span>
+                <select id="topo-hop-limit" class="input input-xs">
+                  <option value="1">1 跳</option>
+                  <option value="2">2 跳</option>
+                  <option value="3" selected>3 跳</option>
+                  <option value="99">全图</option>
+                </select>
+              </label>
+              <div class="filter-chips" id="topo-filters">
+                <label class="chip"><input type="checkbox" value="process" checked><span class="dot d-process"></span>进程</label>
+                <label class="chip"><input type="checkbox" value="port" checked><span class="dot d-port"></span>端口</label>
+                <label class="chip"><input type="checkbox" value="service" checked><span class="dot d-service"></span>服务</label>
+                <label class="chip"><input type="checkbox" value="cron" checked><span class="dot d-cron"></span>Cron</label>
+                <label class="chip"><input type="checkbox" value="git" checked><span class="dot d-git"></span>工程</label>
+                <label class="chip"><input type="checkbox" value="file" checked><span class="dot d-file"></span>文件</label>
+              </div>
+            </div>
+            <div class="toolbar-right">
+              <span id="topo-stats" class="muted-text mono">加载中...</span>
+              <button id="btn-links-audit" class="btn btn-ghost btn-xs">🩺 断链审计</button>
+              <button id="btn-links-mermaid" class="btn btn-ghost btn-xs">📐 Mermaid</button>
+            </div>
+          </div>
+          <div class="topology-stage" id="topology-stage">
+            <canvas id="topology-canvas"></canvas>
+            <div id="topo-focus-banner" class="topo-focus-banner hidden">
+              <span id="topo-focus-label">🎯 当前中心: -</span>
+              <button id="btn-topo-clear-focus" class="btn btn-ghost btn-xs">✕ 取消聚焦</button>
+            </div>
+            <div class="topo-hud-controls">
+              <button id="btn-zoom-out" class="hud-btn" title="缩小球体">➖</button>
+              <input id="topo-zoom-slider" type="range" min="35" max="350" value="100" class="hud-slider" title="缩放比例" />
+              <button id="btn-zoom-in" class="hud-btn" title="放大球体">➕</button>
+              <span id="topo-zoom-label" class="hud-zoom-val mono">100%</span>
+              <span class="hud-sep">|</span>
+              <button id="btn-topo-orbit" class="hud-btn" title="开启/暂停球体怠速微旋">🔄 微旋</button>
+              <button id="btn-topo-fit" class="hud-btn" title="重置视角与缩放">🎯 归位</button>
+              <button id="btn-topo-reset" class="hud-btn" title="恢复全景图">🌐 全景</button>
+            </div>
+            <div class="canvas-hint">拖拽旋转球体 · 滚轮缩放 · 点击节点自动转至正面中心并下钻 · 按 T 切换主题</div>
+            <aside id="node-drawer" class="drawer hidden">
+              <div class="drawer-header">
+                <h3 id="drawer-title">节点详情</h3>
+                <button id="btn-close-drawer" class="btn-icon">✕</button>
+              </div>
+              <div id="drawer-body" class="drawer-body"></div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- 视图 2: 运行时事实雷达 -->
+        <section id="view-facts" class="view">
+          <div class="inline-bar">
+            <input id="fq-input" class="input flex-1" type="text" placeholder="统一事实语义问答 (如: 处理 PDF / 8080 / systemd / postgres)..." />
+            <select id="fq-type" class="input input-sm">
+              <option value="auto">类型: auto</option>
+              <option value="capability">capability (工具能力)</option>
+              <option value="port">port (端口)</option>
+              <option value="automation">automation (Systemd/Cron)</option>
+              <option value="repo">repo (源码工程)</option>
+              <option value="doc">doc (权威资料)</option>
+            </select>
+            <button id="btn-fq-run" class="btn btn-primary">🔍 事实问答</button>
+            <input id="pc-port" class="input input-sm" style="width:95px;" type="number" value="8756" min="1" max="65535" />
+            <button id="btn-pc-run" class="btn btn-ghost">🛡️ 端口防撞诊断</button>
+          </div>
+          <div id="facts-qa-result" class="qa-box hidden"></div>
+          <div class="view-toolbar">
+            <div class="subtabs" id="facts-subtabs">
+              <button class="subtab active" data-sub="ports">监听端口 (<span id="cnt-ports">0</span>)</button>
+              <button class="subtab" data-sub="procs">活跃进程 (<span id="cnt-procs">0</span>)</button>
+              <button class="subtab" data-sub="automation">Systemd &amp; Cron (<span id="cnt-auto">0</span>)</button>
+              <button class="subtab" data-sub="repos">Git 工程 (<span id="cnt-repos">0</span>)</button>
+              <button class="subtab" data-sub="tools">CLI 工具能力 (<span id="cnt-tools">0</span>)</button>
+              <button class="subtab" data-sub="assets">📦 纳管资产与分级扫描</button>
+            </div>
+            <input id="facts-filter" class="input" type="text" placeholder="过滤端口、进程名、路径或工具..." />
+          </div>
+          <div id="facts-content" class="scroll-panel"></div>
+        </section>
+
+        <!-- 视图 3: 多 Agent 协作锁与死锁雷达 -->
+        <section id="view-locks" class="view">
+          <div class="inline-bar">
+            <select id="lock-acq-type" class="input input-sm" style="width:110px;">
+              <option value="port">port</option>
+              <option value="dir">dir</option>
+              <option value="file">file</option>
+              <option value="service">service</option>
+              <option value="custom">custom</option>
+            </select>
+            <input id="lock-acq-id" class="input" style="width:180px;" type="text" placeholder="资源ID (如 9090 或 /tmp/a)" />
+            <input id="lock-acq-agent" class="input input-sm" type="text" value="web-console" placeholder="Agent ID" />
+            <select id="lock-acq-scope" class="input input-sm" style="width:110px;">
+              <option value="exclusive">exclusive</option>
+              <option value="shared">shared</option>
+            </select>
+            <button id="btn-lock-acquire" class="btn btn-primary">🔒 申请协作锁</button>
+            <button id="btn-lock-wait" class="btn btn-ghost">⏳ 排队等待 (WFG)</button>
+            <span id="lock-acq-msg" class="muted-text"></span>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header">
+                <h3>🔒 活跃协作锁</h3>
+                <div class="card-actions">
+                  <input id="lock-auth-token" class="input input-sm" type="password" placeholder="可选 Bearer Token (用于解锁)" />
+                </div>
+              </div>
+              <div id="locks-active-list" class="card-body"></div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h3>⏳ 等待队列 &amp; WFG 死锁检测</h3>
+                <span id="deadlock-badge" class="badge badge-ok">未检测到死锁</span>
+              </div>
+              <div id="locks-wait-deadlock" class="card-body"></div>
+            </div>
+          </div>
+          <div class="card mt-12">
+            <div class="card-header">
+              <h3>📜 锁生命周期审计历史</h3>
+            </div>
+            <div id="locks-history-list" class="card-body"></div>
+          </div>
+        </section>
+
+        <!-- 视图 4: 生态防爆路由器与 HOOK 门禁 -->
+        <section id="view-ecosystem" class="view">
+          <div class="scroll-panel">
+            <div class="card router-sandbox">
+              <div class="card-header">
+                <h3>🧭 Context Budget Router 防爆演练沙盒</h3>
+                <span id="eco-savings-badge" class="badge badge-ok">等待路由</span>
+              </div>
+              <div class="sandbox-controls">
+                <input id="route-intent" class="input flex-1" type="text" value="PostgreSQL 数据库调优与源码分析" placeholder="输入 Agent 任务意图 (如: 美股财报分析 / postgres / svg检查)..." />
+                <label class="budget-label">Token 预算:
+                  <input id="route-budget" class="input input-sm" type="number" value="600" min="150" max="4000" step="50" />
+                </label>
+                <button id="btn-run-route" class="btn btn-primary">⚡ 模拟路由</button>
+              </div>
+              <div id="route-result" class="route-result"></div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="card-header">
+                <h3>🪝 HOOK 门禁演练场 &amp; 客户端配置生成器</h3>
+                <div class="toolbar-right">
+                  <select id="hook-client-select" class="input input-sm" style="width:110px;">
+                    <option value="agy">agy</option>
+                    <option value="cursor">cursor</option>
+                    <option value="claude">claude</option>
+                    <option value="git">git</option>
+                  </select>
+                  <button id="btn-hook-gen" class="btn btn-ghost btn-xs">⚙️ 生成客户端 Hook</button>
+                </div>
+              </div>
+              <div class="sandbox-controls">
+                <input id="hook-tool-name" class="input" style="width:150px;" type="text" value="run_command" placeholder="工具名 (run_command / write_file)" />
+                <input id="hook-tool-args" class="input flex-1 mono" type="text" value='{"command": "psql -h 127.0.0.1 -p 5432"}' placeholder='入参 JSON (如 {"port": 8756})' />
+                <input id="hook-error-output" class="input flex-1 mono" type="text" value="" placeholder="可选 Post-Hook 报错文本 (如 Connection refused)" />
+                <button id="btn-hook-pre" class="btn btn-primary">🛡️ Pre-Hook 预检</button>
+                <button id="btn-hook-post" class="btn btn-ghost">📝 Post-Hook 通知/自愈</button>
+              </div>
+              <div id="hook-result" class="card-body" style="max-height:240px;"></div>
+            </div>
+
+            <div class="grid-3 mt-12">
+              <div class="card">
+                <div class="card-header"><h3>🔌 已纳管 MCP (<span id="cnt-mcps">0</span>)</h3></div>
+                <div id="eco-mcps" class="card-body scroll-sm"></div>
+              </div>
+              <div class="card">
+                <div class="card-header">
+                  <h3>📚 SKILL 目录 (<span id="cnt-skills">0</span>)</h3>
+                  <input id="eco-skill-filter" class="input input-sm" type="text" placeholder="搜索 SKILL..." />
+                </div>
+                <div id="eco-skills" class="card-body scroll-sm"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h3>🌐 外部服务通讯录 (<span id="cnt-svcs">0</span>)</h3></div>
+                <div id="eco-services" class="card-body scroll-sm"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 视图 5: 规约、简报、记忆、DuckDB 分析、自洁与 Mesh -->
+        <section id="view-governance" class="view">
+          <div class="view-toolbar">
+            <div class="subtabs" id="gov-subtabs">
+              <button class="subtab active" data-sub="brief">📋 简报与放置规约</button>
+              <button class="subtab" data-sub="memory">🧠 长期记忆与审计</button>
+              <button class="subtab" data-sub="analytics">🔥 DuckDB 分析与导出</button>
+              <button class="subtab" data-sub="gc">🧹 宿主自洁 &amp; 变更流</button>
+              <button class="subtab" data-sub="mesh">🌐 Mesh · 预检 · 43/43 对齐矩阵</button>
+            </div>
+          </div>
+          <div id="gov-panel-brief" class="scroll-panel">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header">
+                  <h3>📋 自适应开工简报组装器 (body_brief)</h3>
+                  <button id="btn-brief-run" class="btn btn-primary btn-xs">⚡ 生成简报</button>
+                </div>
+                <div class="sandbox-controls">
+                  <input id="brief-intent" class="input flex-1" type="text" value="宿主机运行状态与近期变更" placeholder="任务意图..." />
+                  <input id="brief-budget" class="input input-sm" style="width:90px;" type="number" value="1500" />
+                </div>
+                <div id="brief-result" class="card-body"></div>
+              </div>
+              <div class="card">
+                <div class="card-header">
+                  <h3>🧭 交互式放置推导 &amp; 自演化 (place suggest/learn)</h3>
+                  <button id="btn-place-learn" class="btn btn-ghost btn-xs">🧠 规则自演化</button>
+                </div>
+                <div class="sandbox-controls">
+                  <select id="place-type" class="input input-sm" style="width:95px;">
+                    <option value="script">script</option>
+                    <option value="project">project</option>
+                    <option value="note">note</option>
+                    <option value="skill">skill</option>
+                    <option value="temp">temp</option>
+                  </select>
+                  <input id="place-name" class="input input-sm" type="text" value="sec_crawler" placeholder="对象名称" />
+                  <input id="place-intent" class="input flex-1" type="text" value="美股财报抓取脚本" placeholder="用途说明" />
+                  <button id="btn-place-suggest" class="btn btn-primary btn-xs">推导路径</button>
+                </div>
+                <div id="place-result" class="card-body"></div>
+              </div>
+            </div>
+            <div class="card mt-12">
+              <div class="card-header"><h3>📐 8 大资产放置规则 &amp; 扫描策略</h3></div>
+              <div id="gov-rules" class="card-body scroll-sm"></div>
+            </div>
+          </div>
+
+          <div id="gov-panel-memory" class="scroll-panel hidden">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header">
+                  <h3>✍️ 写入记忆 &amp; 混合检索</h3>
+                  <button id="btn-mem-audit" class="btn btn-ghost btn-xs">🩺 衰减/矛盾审计</button>
+                </div>
+                <div class="sandbox-controls">
+                  <select id="mem-add-type" class="input input-sm" style="width:105px;">
+                    <option value="decision">decision</option>
+                    <option value="troubleshooting">troubleshooting</option>
+                    <option value="preference">preference</option>
+                    <option value="fact">fact</option>
+                  </select>
+                  <input id="mem-add-content" class="input flex-1" type="text" placeholder="记录新的长期决策或排障经验..." />
+                  <button id="btn-mem-add" class="btn btn-primary btn-xs">写入记忆</button>
+                </div>
+                <div class="sandbox-controls" style="padding-top:0;">
+                  <input id="gov-mem-search" class="input flex-1" type="text" placeholder="输入关键词检索记忆..." />
+                  <label class="chip"><input id="mem-hybrid-chk" type="checkbox" checked /> RRF 混合</label>
+                  <button id="btn-mem-search" class="btn btn-ghost btn-xs">🔍 检索</button>
+                </div>
+                <div id="gov-memories" class="card-body scroll-sm"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h3>🩺 记忆健康审计结果 (Half-Life &amp; Conflicts)</h3></div>
+                <div id="mem-audit-result" class="card-body scroll-sm"><div class="empty">点击「衰减/矛盾审计」执行体检</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="gov-panel-analytics" class="scroll-panel hidden">
+            <div class="inline-bar">
+              <button id="btn-ana-refresh" class="btn btn-primary">🔥 刷新 DuckDB 热力图与趋势</button>
+              <select id="ana-export-table" class="input input-sm" style="width:130px;">
+                <option value="assets">assets</option>
+                <option value="changes">changes</option>
+                <option value="memories">memories</option>
+                <option value="fact_nodes">fact_nodes</option>
+              </select>
+              <button id="btn-ana-export" class="btn btn-ghost">📦 导出 Parquet 至临时沙盒</button>
+              <span id="ana-export-msg" class="muted-text"></span>
+            </div>
+            <div class="grid-2 mt-12">
+              <div class="card">
+                <div class="card-header"><h3>🔥 DuckDB 目录变更热力图</h3></div>
+                <div id="ana-heatmap" class="card-body"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h3>📈 资产增长趋势与图谱统计</h3></div>
+                <div id="ana-trend" class="card-body"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="gov-panel-gc" class="scroll-panel hidden">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header">
+                  <h3>🧹 宿主 GC 与会话完工结清预览 (Dry-Run)</h3>
+                  <div class="toolbar-right">
+                    <button id="btn-gc-preview" class="btn btn-primary btn-xs">🧹 扫描受管临时目录</button>
+                    <button id="btn-session-close" class="btn btn-ghost btn-xs">📋 结清预览</button>
+                  </div>
+                </div>
+                <div id="gc-result" class="card-body"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h3>🕒 最近宿主变更审计流</h3></div>
+                <div id="gov-changes" class="card-body scroll-sm"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="gov-panel-mesh" class="scroll-panel hidden">
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-header">
+                  <h3>🌍 跨平台探针 · Preflight · Peer Mesh</h3>
+                  <div class="toolbar-right">
+                    <button id="btn-mesh-ping" class="btn btn-primary btn-xs">📡 Ping Peers</button>
+                    <input id="mesh-port-input" class="input input-sm" style="width:80px;" type="number" value="8080" />
+                    <button id="btn-mesh-port" class="btn btn-ghost btn-xs">🌐 联邦查端口</button>
+                    <button id="btn-mesh-graph" class="btn btn-ghost btn-xs">🕸️ 联邦图谱</button>
+                    <button id="btn-mesh-dialogue-inbox" class="btn btn-ghost btn-xs">💬 对话收件箱</button>
+                    <button id="btn-mesh-transfer-inbox" class="btn btn-ghost btn-xs">📦 沙盒收件箱</button>
+                  </div>
+                </div>
+                <div id="gov-mesh-preflight" class="card-body scroll-sm"></div>
+                <div id="mesh-query-result" class="card-body" style="padding-top:0;"></div>
+              </div>
+              <div class="card">
+                <div class="card-header">
+                  <h3>✅ 黑白屏 100% 能力对齐矩阵</h3>
+                  <span id="parity-summary-badge" class="badge badge-ok">加载中</span>
+                </div>
+                <div id="parity-matrix-box" class="card-body scroll-sm"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 视图 6: 路演演示剧场 (Phase 25 故事化直观舞台) -->
+        <section id="view-demo" class="view">
+          <div class="scroll-panel">
+            <div class="demo-origin-banner">
+              <div class="demo-origin-ico">🏛️</div>
+              <div class="demo-origin-body">
+                <strong>脑体分离 · Agent 本体 —— 比较优势的终极工程形态</strong>
+                <p>LLM 客户端只是随时可换班的「瞬态大脑」，而驻留本机的 Agent 本体才是永驻宿主机的数字躯干（“小秘书”是其感官盘点侧面，“大管家”是其稳态防撞侧面）。新大脑接入即可继承六大器官体征、L0~L3 红线与跨大脑接力胶囊，把 100% 智商留给主业。</p>
+              </div>
+            </div>
+
+            <div id="demo-roi-strip" class="demo-roi-strip mt-12">
+              <div class="roi-card"><span class="k-label">Context Token 节省率</span><strong id="roi-save" class="c-green">-</strong></div>
+              <div class="roi-card"><span class="k-label">全量 SKILL / MCP / 服务</span><strong id="roi-eco" class="c-cyan">-</strong></div>
+              <div class="roi-card"><span class="k-label">宿主机 CLI 工具 / 资产</span><strong id="roi-tools">-</strong></div>
+              <div class="roi-card"><span class="k-label">事实图谱 (节点 / 边)</span><strong id="roi-graph" class="c-purple">-</strong></div>
+              <div class="roi-card"><span class="k-label">黑白屏同步认证</span><strong id="roi-parity" class="c-orange">43/43 (100%)</strong></div>
+            </div>
+
+            <div class="demo-control-bar mt-12">
+              <div id="demo-scene-buttons" class="demo-scene-grid"></div>
+              <div class="demo-actions-col">
+                <button id="btn-demo-cruise" class="btn btn-primary btn-xs">▶ 自动巡航路演</button>
+                <button id="btn-demo-presenter" class="btn btn-ghost btn-xs">📽️ 演讲者大屏模式</button>
+                <button id="btn-demo-reset" class="btn btn-danger btn-xs">🧹 一键重置沙盒</button>
+              </div>
+            </div>
+
+            <div id="demo-stage" class="demo-stage mt-12">
+              <div class="empty">点击上方任意路演剧目，或点击「▶ 自动巡航路演」实时驱动真实 Rust 引擎对比演示</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 视图 7: 实证 Benchmark 对照评测与生产效能存证账本 (Phase 28) -->
+        <section id="view-benchmark" class="view">
+          <div class="scroll-panel">
+            <div class="demo-roi-strip">
+              <div class="roi-card"><span class="k-label">生产累计节省 Token</span><strong id="bench-kpi-tokens" class="c-green">-</strong></div>
+              <div class="roi-card"><span class="k-label">累计缩减探索轮次</span><strong id="bench-kpi-rounds" class="c-cyan">-</strong></div>
+              <div class="roi-card"><span class="k-label">事前拦截风险/冲突</span><strong id="bench-kpi-hazards" class="c-orange">-</strong></div>
+              <div class="roi-card"><span class="k-label">阻断垃圾噪音文件</span><strong id="bench-kpi-noise" class="c-purple">-</strong></div>
+              <div class="roi-card"><span class="k-label">最新 A/B 综合加速</span><strong id="bench-kpi-speedup" class="c-green">-</strong></div>
+            </div>
+
+            <div class="view-toolbar mt-12" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);">
+              <div class="toolbar-left">
+                <select id="bench-suite-select" class="input" style="width:260px;">
+                  <option value="full">全量套件 v3.8 (省Token×提质量帕累托 + 竞品 + 图谱/Mesh + AOPCC + AWR)</option>
+                  <option value="competitors">🏆 热门竞品横向对标 (COMP-C1~C4)</option>
+                  <option value="macro">宏观业务 A/B (W1~W18)</option>
+                  <option value="micro">内核微基准 SLA (M1~M6)</option>
+                  <option value="dq">宿主机数据与遥测/图谱质量 (DQ1~DQ9)</option>
+                  <option value="W1">W1 · 宿主工具发现</option>
+                  <option value="W2">W2 · 端口防撞选址</option>
+                  <option value="W3">W3 · 分级扫描阻断</option>
+                  <option value="W4">W4 · 放置合规门禁</option>
+                  <option value="W5">W5 · 爆炸半径与断链</option>
+                  <option value="W6">W6 · 多 Agent 死锁破局</option>
+                  <option value="W7">W7 · 百级 SKILL 路由</option>
+                  <option value="W8">W8 · 冷启动态势简报</option>
+                  <option value="W9">W9 · 混合语义检索 Recall@5</option>
+                  <option value="W10">W10 · 依赖抽取抗假阳性</option>
+                  <option value="W11">W11 · 全链路脱敏与抗投毒安全防线</option>
+                  <option value="W12">W12 · 资产改删写穿失效与一致性自愈</option>
+                  <option value="W13">W13 · 分层加权图谱与隐式语义发现</option>
+                  <option value="W14">W14 · Mesh 签名防重放与沙盒协同</option>
+                  <option value="W15">W15 · AOPCC 乐观直通与碰壁自愈回路</option>
+                  <option value="W16">W16 · 双域行为审计脱敏防洪与租约自进化</option>
+                  <option value="W17">W17 · 跨大脑连续性接力与本体器官自省</option>
+                  <option value="W18">W18 · 内生等待事件与 AWR/ADDM 自诊断闭环</option>
+                </select>
+                <button id="btn-bench-run" class="btn btn-primary btn-xs">▶ 真机运行 A/B 基准</button>
+                <select id="bench-window-select" class="input" style="width:120px;">
+                  <option value="24h">近 24 小时</option>
+                  <option value="7d" selected>近 7 天</option>
+                  <option value="30d">近 30 天</option>
+                  <option value="all">全部历史</option>
+                </select>
+                <button id="btn-bench-refresh" class="btn btn-ghost btn-xs">🔄 刷新账本</button>
+              </div>
+              <div class="toolbar-right">
+                <span id="bench-sha-badge" class="badge">SHA-256: 待运行</span>
+              </div>
+            </div>
+
+            <div class="panel-grid-2 mt-12">
+              <div class="card">
+                <div class="item-top"><strong>🧪 实验室 A/B 对照实测 (Without vs With Agent Body)</strong><span id="bench-sla-badge" class="badge">-</span></div>
+                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 18 大负载对照实测</div></div>
+              </div>
+              <div class="card">
+                <div class="item-top"><strong>⚡ 6 大内核微基准 SLA & 跨版本回归比对</strong></div>
+                <div id="bench-micro-box" class="mt-8"><div class="empty">暂无微基准数据</div></div>
+                <div class="mt-12" style="border-top:1px solid var(--border);padding-top:10px;">
+                  <div class="toolbar-left">
+                    <select id="bench-cmp-a" class="input" style="width:140px;"></select>
+                    <span class="muted-text">vs</span>
+                    <select id="bench-cmp-b" class="input" style="width:140px;"></select>
+                    <button id="btn-bench-compare" class="btn btn-ghost btn-xs">🔁 回归对比</button>
+                  </div>
+                  <div id="bench-compare-box" class="mt-8"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top"><strong>🛡️ 宿主机数据质量与 D6 准确率门禁 (DQ1~DQ9)</strong><span id="bench-dq-badge" class="badge">-</span></div>
+              <div id="bench-dq-box" class="mt-8"><div class="empty">运行「全量套件 v3.8」或「宿主机数据与遥测/图谱质量 (DQ1~DQ9)」查看 9 项质量门禁实测</div></div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top"><strong>🏆 热门开源竞品横向对标 (轨道 C · LIVE_BENCHMARKED + ARCH_VERIFIED)</strong><span class="badge">Mem0 / OpenViking / AgentFS / rg+psutil</span></div>
+              <div id="bench-competitors-box" class="mt-8"><div class="empty">运行「全量套件 v3.8」或「🏆 热门竞品横向对标」查看同机实测结果与 12 维能力矩阵</div></div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top"><strong>📒 生产运行态效能存证账本（带 PR-01~PR-14 确定性溯源依据）</strong></div>
+              <div id="bench-rules-strip" class="mt-8"></div>
+              <div id="bench-ledger-list" class="mt-8"><div class="empty">暂无生产流水记录</div></div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top">
+                <strong>🔄 使用反馈总账 · 信息新鲜度对账 &amp; 五点自进化探针 (body_feedback)</strong>
+                <div class="toolbar-left">
+                  <button id="btn-fb-list" class="btn btn-ghost btn-xs">📋 刷新反馈</button>
+                  <button id="btn-fb-probes" class="btn btn-primary btn-xs">🔬 运行 P1~P5 探针</button>
+                  <button id="btn-fb-reconcile" class="btn btn-ghost btn-xs">🧹 新鲜度对账</button>
+                  <button id="btn-fb-sync" class="btn btn-ghost btn-xs">🧠 同步入记忆</button>
+                </div>
+              </div>
+              <div id="feedback-workbench-box" class="mt-8"><div class="empty">点击按钮查看 user_feedback.md 反馈总账、运行五点对比自进化探针或执行全生命周期新鲜度对账</div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 视图 8: 双域行为审计与自进化中心 (Phase 43) -->
+        <section id="view-audit" class="view">
+          <div class="workbench-wrap">
+            <div class="view-toolbar">
+              <div class="toolbar-left">
+                <select id="audit-domain-filter" class="input" style="width:150px;">
+                  <option value="">全部域 (IN + OUT)</option>
+                  <option value="IN_AGENT">IN_AGENT (接入域)</option>
+                  <option value="OUT_OF_AGENT">OUT_OF_AGENT (自治域)</option>
+                </select>
+                <select id="audit-outcome-filter" class="input" style="width:130px;">
+                  <option value="">全部结果</option>
+                  <option value="success">success</option>
+                  <option value="recovered">recovered (自愈)</option>
+                  <option value="warn">warn</option>
+                  <option value="blocked">blocked</option>
+                  <option value="failed">failed</option>
+                  <option value="dry_run">dry_run</option>
+                </select>
+                <select id="audit-window-select" class="input" style="width:110px;">
+                  <option value="24h">近 24 小时</option>
+                  <option value="7d" selected>近 7 天</option>
+                  <option value="30d">近 30 天</option>
+                  <option value="all">全部历史</option>
+                </select>
+                <input id="audit-trace-filter" class="input" type="text" placeholder="按 trace_id 过滤因果链路..." style="width:210px;" />
+                <button id="btn-audit-refresh" class="btn btn-ghost btn-xs">🔄 查询审计</button>
+              </div>
+              <div class="toolbar-right">
+                <button id="btn-audit-evolve" class="btn btn-primary btn-xs">🧬 触发审计自进化</button>
+                <button id="btn-audit-export" class="btn btn-ghost btn-xs">📦 导出 CSV</button>
+              </div>
+            </div>
+
+            <div class="roi-banner mt-12">
+              <div class="roi-card"><span class="k-label">双域审计总量</span><strong id="aud-kpi-total">-</strong></div>
+              <div class="roi-card"><span class="k-label">IN_AGENT 接入域</span><strong id="aud-kpi-in" class="c-blue">-</strong></div>
+              <div class="roi-card"><span class="k-label">OUT_OF_AGENT 自治域</span><strong id="aud-kpi-out" class="c-green">-</strong></div>
+              <div class="roi-card"><span class="k-label">拦截 / 碰壁自愈</span><strong id="aud-kpi-rec" class="c-orange">-</strong></div>
+            </div>
+
+            <div class="panel-grid-2 mt-12">
+              <div class="card">
+                <div class="item-top"><strong>📊 DuckDB OLAP 双域高频动作热榜</strong><span class="badge">DuckDB 列存聚合</span></div>
+                <div id="audit-olap-box" class="mt-8"><div class="empty">点击「🔄 查询审计」加载 DuckDB OLAP 聚合视图</div></div>
+              </div>
+              <div class="card">
+                <div class="item-top"><strong>🧬 审计驱动自进化引擎 (AOPCC 租约校准 + 热点沉淀)</strong><span class="badge">Phase 43.4</span></div>
+                <div id="audit-evolve-box" class="mt-8"><div class="empty">点击「🧬 触发审计自进化」评估近 24h 租约有效率与摩擦热点</div></div>
+              </div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top"><strong>📜 双域行为审计流水（脱敏 `before_after_delta` + SHA-256 存证 · 点击 `trace_id` 钻取）</strong></div>
+              <div id="audit-events-box" class="mt-8"><div class="empty">暂无审计流水</div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 视图 9: Agent 本体中枢与生命体征 (Phase 44) -->
+        <section id="view-body" class="view">
+          <div class="workbench-wrap">
+            <div class="view-toolbar">
+              <div class="toolbar-left">
+                <strong id="body-id-badge" class="badge">body-...</strong>
+                <span class="muted-text">脑体分离具身底座：瞬态大脑热切换 · 本体躯干永驻宿主机</span>
+              </div>
+              <div class="toolbar-right">
+                <button id="btn-body-refresh" class="btn btn-ghost btn-xs">🔄 刷新体征</button>
+                <button id="btn-body-heal" class="btn btn-primary btn-xs">🩺 L1 稳态反射自愈</button>
+              </div>
+            </div>
+
+            <div class="roi-banner mt-12">
+              <div class="roi-card"><span class="k-label">本体综合稳态分</span><strong id="body-kpi-score" class="c-green">-</strong></div>
+              <div class="roi-card"><span class="k-label">稳态健康状态</span><strong id="body-kpi-status" class="c-cyan">-</strong></div>
+              <div class="roi-card"><span class="k-label">活跃接力胶囊</span><strong id="body-kpi-caps" class="c-orange">-</strong></div>
+              <div class="roi-card"><span class="k-label">对等本体节点</span><strong id="body-kpi-peers" class="c-purple">-</strong></div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top" style="flex-wrap:wrap;gap:8px;">
+                <strong>📈 内生等待事件 (Wait Events)、<code>/proc/self</code> 内核遥测与 AWR 差分诊断工作台 (Phase 50)</strong>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                  <input id="body-perf-snap-label" class="input input-xs" type="text" placeholder="快照标签 (如 压测前/调优后)" style="width:165px;" value="manual-snap" />
+                  <button id="btn-body-perf-snap" class="btn btn-ghost btn-xs">📸 抓取性能快照</button>
+                  <button id="btn-body-perf-base" class="btn btn-ghost btn-xs">⭐ 抓取并设为黄金基准</button>
+                  <button id="btn-body-perf-tune" class="btn btn-primary btn-xs">⚡ L1 一键性能自调优</button>
+                </div>
+              </div>
+
+              <!-- 第一栏：AWR 双快照差分对比选择器 (Begin Snapshot A vs End Snapshot B) -->
+              <div class="mt-8" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;">
+                <span class="badge">1. 选择对比快照</span>
+                <label class="muted-text" style="font-size:12px;">起始快照 (Begin A):</label>
+                <select id="body-perf-snap-a" class="input input-xs" style="min-width:240px;flex:1;">
+                  <option value="baseline">⭐ 黄金基准 (Golden Baseline)</option>
+                </select>
+                <strong style="color:var(--orange);">→</strong>
+                <label class="muted-text" style="font-size:12px;">结束快照 (End B):</label>
+                <select id="body-perf-snap-b" class="input input-xs" style="min-width:240px;flex:1;">
+                  <option value="live">⚡ 实时当前态 (Live Current)</option>
+                </select>
+                <button id="btn-body-perf-awr" class="btn btn-primary btn-xs">📈 生成 AWR 差分报告</button>
+              </div>
+
+              <!-- 第二栏：已生成 AWR 历史报告选择器与复制工具栏 -->
+              <div class="mt-8" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;">
+                <span class="badge">2. 选择已存报告展示</span>
+                <select id="body-perf-report-select" class="input input-xs" style="min-width:320px;flex:1;">
+                  <option value="">-- 暂无历史 AWR 报告，点击上方「📈 生成 AWR 差分报告」创建 --</option>
+                </select>
+                <button id="btn-body-perf-copy-md" class="btn btn-ghost btn-xs">📋 复制完整 Markdown 报告</button>
+                <button id="btn-body-perf-del-report" class="btn btn-ghost btn-xs">🗑️ 删除所选报告</button>
+              </div>
+
+              <div id="body-perf-action-banner" class="mt-8" style="display:none;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:600;"></div>
+              <div id="body-perf-awr-box" class="mt-8"><div class="empty">正在加载快照库与历史 AWR 诊断报告...</div></div>
+            </div>
+
+            <div class="panel-grid-2 mt-12">
+              <div class="card">
+                <div class="item-top"><strong>🫀 六大生理器官自省 (BodyManifest)</strong><span class="badge">零子进程索引</span></div>
+                <div id="body-organs-box" class="mt-8"><div class="empty">加载中...</div></div>
+              </div>
+              <div class="card">
+                <div class="item-top"><strong>🩺 五维生命体征雷达 (HomeostasisVitals)</strong><span class="badge">L1_AUTONOMIC</span></div>
+                <div id="body-vitals-box" class="mt-8"><div class="empty">加载中...</div></div>
+              </div>
+            </div>
+
+            <div class="panel-grid-2 mt-12">
+              <div class="card">
+                <div class="item-top"><strong>🧬 跨大脑连续性接力胶囊 (ContinuityCapsule &lt;=300 tok)</strong></div>
+                <div class="form-row mt-8" style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <input id="body-cp-brain" class="input" type="text" placeholder="来源大脑 (如 antigravity)" style="width:145px;" value="web-brain" />
+                  <input id="body-cp-goal" class="input" type="text" placeholder="输入核心目标摘要，保存供下一任大脑接力..." style="flex:1;min-width:200px;" />
+                  <button id="btn-body-handoff" class="btn btn-primary btn-xs">💾 保存胶囊</button>
+                  <button id="btn-body-resume" class="btn btn-ghost btn-xs">🔁 模拟换脑接力</button>
+                </div>
+                <div id="body-checkpoints-box" class="mt-8"><div class="empty">暂无接力胶囊</div></div>
+              </div>
+              <div class="card">
+                <div class="item-top"><strong>🛡️ 四级本体自治权限包络 (L0~L3) &amp; 联邦名片</strong></div>
+                <div id="body-envelope-box" class="mt-8"><div class="empty">加载中...</div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- 右侧可折叠 SSE 实时事件流 (默认收起为悬浮抽屉) -->
+      <aside id="sse-sidebar" class="sse-sidebar collapsed">
+        <div class="drawer-header">
+          <h3>⚡ 实时事件流 (SSE)</h3>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button id="btn-clear-sse" class="btn btn-ghost btn-xs">清空</button>
+            <button id="btn-close-sse" class="btn-icon" title="收起">✕</button>
+          </div>
+        </div>
+        <div id="event-stream" class="event-stream">
+          <div class="event-item info"><div class="ev-head"><span class="badge">SYSTEM</span><span class="ev-time">就绪</span></div><div class="ev-body">2.0 驾驶舱已就绪</div></div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- 全局黑屏命令镜像底栏 -->
+    <footer id="mirror-bar" class="mirror-bar">
+      <div class="mirror-title">⌨️ 黑屏命令镜像器</div>
+      <div class="mirror-slots">
+        <div class="mirror-slot">
+          <span class="badge">CLI</span>
+          <code id="mirror-cli" class="mono">agent-body brief</code>
+          <button id="btn-copy-cli" class="btn btn-ghost btn-xs">复制</button>
+        </div>
+        <div class="mirror-slot">
+          <span class="badge badge-ok">MCP JSON-RPC</span>
+          <code id="mirror-mcp" class="mono">{"name":"body_brief","arguments":{}}</code>
+          <button id="btn-copy-mcp" class="btn btn-ghost btn-xs">复制</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

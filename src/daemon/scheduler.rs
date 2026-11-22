@@ -66,7 +66,9 @@ impl BackgroundScheduler {
             if active_job.status == "paused" || active_job.status == "pending" {
                 let sm = ScanStateMachine::new(self.storage.clone())?;
                 // 每次后台推进 200 个条目，平滑消耗资源防高负载
-                let _ = sm.run_or_resume(&active_job.id, Some(200));
+                if let Err(e) = sm.run_or_resume(&active_job.id, Some(200)) {
+                    eprintln!("[Scheduler][WARN] 恢复扫描任务 {} 失败: {}", active_job.id, e);
+                }
                 scan_job_resumed = true;
             }
         }
@@ -77,9 +79,13 @@ impl BackgroundScheduler {
 
         // 6. 自动刷新宿主机 MCP 与 SKILL 生态目录 (Phase 16)
         let mcp_scanner = crate::ecosystem::McpConfigScanner::new(self.storage.clone());
-        let _ = mcp_scanner.scan_default_clients();
+        if let Err(e) = mcp_scanner.scan_default_clients() {
+            eprintln!("[Scheduler][WARN] MCP 生态目录扫描失败: {}", e);
+        }
         let skill_scanner = crate::ecosystem::SkillCatalogScanner::new(self.storage.clone());
-        let _ = skill_scanner.scan_default_roots();
+        if let Err(e) = skill_scanner.scan_default_roots() {
+            eprintln!("[Scheduler][WARN] SKILL 生态目录扫描失败: {}", e);
+        }
 
         // 7. 全生命周期信息新鲜度与现实对账 (规约 #21：清理漂移/失踪资产、幽灵端口节点与重复摘要记忆)
         match crate::feedback::probes::FreshnessReconciler::reconcile(&self.storage) {
@@ -114,7 +120,9 @@ impl BackgroundScheduler {
                 .enrich_pending_assets(batch_size, None)
                 .map(|r| r.enriched_count)
                 .unwrap_or(0);
-            let _ = annotator.embed_pending_assets(batch_size * 2, None);
+            if let Err(e) = annotator.embed_pending_assets(batch_size * 2, None) {
+                eprintln!("[Scheduler][WARN] 资产向量补全失败: {}", e);
+            }
             enriched
         } else {
             0
@@ -193,7 +201,7 @@ impl BackgroundScheduler {
                 fn malloc_trim(pad: usize) -> i32;
             }
             unsafe {
-                let _ = malloc_trim(0);
+                let _trimmed = malloc_trim(0);
             }
         }
 

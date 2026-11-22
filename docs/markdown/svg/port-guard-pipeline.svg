@@ -6,43 +6,43 @@
     </linearGradient>
   </defs>
   <rect width="800" height="220" rx="8" fill="url(#bgGrad3)" stroke="#1e293b"/>
-  <text x="400" y="30" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">⚡ 内核级端口解析流水线与防撞避让机制 (Port Guard)</text>
+  <text x="400" y="30" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">⚡ 内核级端口防撞流水线与 AOPCC 自适应控制 (Port Guard)</text>
 
   <!-- Step 1 -->
   <rect x="25" y="55" width="165" height="80" rx="5" fill="#0f2647" stroke="#38bdf8" stroke-width="1.2"/>
-  <text x="107" y="78" fill="#bae6fd" font-size="9" font-weight="bold" text-anchor="middle">1. 内核表解析</text>
-  <text x="107" y="96" fill="#7dd3fc" font-size="8" text-anchor="middle">/proc/net/tcp 纯内存流</text>
-  <text x="107" y="112" fill="#94a3b8" font-size="7.5" text-anchor="middle">解析 Hex 地址与 0A 状态</text>
-  <text x="107" y="125" fill="#34d399" font-size="7.5" font-weight="bold" text-anchor="middle">0.2ms 零系统命令开销</text>
+  <text x="107" y="78" fill="#bae6fd" font-size="9" font-weight="bold" text-anchor="middle">1. 内核态表直读</text>
+  <text x="107" y="96" fill="#7dd3fc" font-size="8" text-anchor="middle">/proc/net/tcp + Platform</text>
+  <text x="107" y="112" fill="#94a3b8" font-size="7.5" text-anchor="middle">解析 Hex 端口与 0A 监听态</text>
+  <text x="107" y="125" fill="#34d399" font-size="7.5" font-weight="bold" text-anchor="middle">0.2ms 零子进程开销</text>
 
   <path d="M 190 95 L 225 95" stroke="#38bdf8" stroke-width="2"/>
 
   <!-- Step 2 -->
   <rect x="225" y="55" width="165" height="80" rx="5" fill="#1e1b4b" stroke="#818cf8" stroke-width="1.2"/>
-  <text x="307" y="78" fill="#c7d2fe" font-size="9" font-weight="bold" text-anchor="middle">2. Socket 描述符映射</text>
-  <text x="307" y="96" fill="#a78bfa" font-size="8" text-anchor="middle">扫描 /proc/[pid]/fd</text>
-  <text x="307" y="112" fill="#94a3b8" font-size="7.5" text-anchor="middle">根据 Inode 匹配真实属主</text>
-  <text x="307" y="125" fill="#38bdf8" font-size="7.5" font-weight="bold" text-anchor="middle">锁定持有着 PID: 957</text>
+  <text x="307" y="78" fill="#c7d2fe" font-size="9" font-weight="bold" text-anchor="middle">2. 属主与并发锁定</text>
+  <text x="307" y="96" fill="#a78bfa" font-size="8" text-anchor="middle">反查 /proc/[pid]/fd</text>
+  <text x="307" y="112" fill="#94a3b8" font-size="7.5" text-anchor="middle">校验多 Agent 协作锁表</text>
+  <text x="307" y="125" fill="#38bdf8" font-size="7.5" font-weight="bold" text-anchor="middle">区分 Client 连 vs Server 绑</text>
 
   <path d="M 390 95 L 425 95" stroke="#818cf8" stroke-width="2"/>
 
   <!-- Step 3 -->
   <rect x="425" y="55" width="165" height="80" rx="5" fill="#311019" stroke="#f43f5e" stroke-width="1.2"/>
-  <text x="507" y="78" fill="#fecaca" font-size="9" font-weight="bold" text-anchor="middle">3. 冲突侦测与拦截</text>
-  <text x="507" y="96" fill="#fca5a5" font-size="8" text-anchor="middle">占用进程: sshd / monitor</text>
-  <text x="507" y="112" fill="#94a3b8" font-size="7.5" text-anchor="middle">所属用户: root / 守护进程</text>
-  <text x="507" y="125" fill="#ef4444" font-size="7.5" font-weight="bold" text-anchor="middle">🚨 阻断起动，防止雪崩</text>
+  <text x="507" y="78" fill="#fecaca" font-size="9" font-weight="bold" text-anchor="middle">3. Pre-Hook 痛觉拦截</text>
+  <text x="507" y="96" fill="#fca5a5" font-size="8" text-anchor="middle">侦测端口冲突 / 死锁环路</text>
+  <text x="507" y="112" fill="#94a3b8" font-size="7.5" text-anchor="middle">高风险写动作严控拦截</text>
+  <text x="507" y="125" fill="#ef4444" font-size="7.5" font-weight="bold" text-anchor="middle">🚨 事前阻断，防止翻车</text>
 
   <path d="M 590 95 L 625 95" stroke="#f43f5e" stroke-width="2"/>
 
   <!-- Step 4 -->
   <rect x="625" y="55" width="150" height="80" rx="5" fill="#062e24" stroke="#10b981" stroke-width="1.2"/>
-  <text x="700" y="78" fill="#d1fae5" font-size="9" font-weight="bold" text-anchor="middle">4. 连续空闲推荐</text>
-  <text x="700" y="96" fill="#6ee7b7" font-size="8" text-anchor="middle">顺延探测后继端口</text>
+  <text x="700" y="78" fill="#d1fae5" font-size="9" font-weight="bold" text-anchor="middle">4. 智能推荐与自愈</text>
+  <text x="700" y="96" fill="#6ee7b7" font-size="8" text-anchor="middle">返回安全空闲端口建议</text>
   <text x="700" y="112" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">[8081, 8082, 8083]</text>
-  <text x="700" y="125" fill="#34d399" font-size="7.5" font-weight="bold" text-anchor="middle">Agent 自动重定向成功</text>
+  <text x="700" y="125" fill="#34d399" font-size="7.5" font-weight="bold" text-anchor="middle">Post-Hook &lt;2ms 注入处方</text>
 
   <rect x="25" y="155" width="750" height="45" rx="5" fill="#0f172a" stroke="#334155"/>
-  <text x="400" y="175" fill="#e2e8f0" font-size="8.5" text-anchor="middle">🎯 核心价值：完全脱离 lsof / netstat 等外部命令依赖；在 Agent 启动 Web 服务或测试用例前，完成事前预防而非事后灭火。</text>
-  <text x="400" y="190" fill="#38bdf8" font-size="8" text-anchor="middle">命令: `agent-steward env port 8080` | MCP 工具: `steward_port_check(port=8080)`</text>
+  <text x="400" y="175" fill="#e2e8f0" font-size="8.5" text-anchor="middle">🎯 AOPCC 核心平衡：客户端直连免轮次税，服务端绑定与锁争用零失误事前防撞。</text>
+  <text x="400" y="190" fill="#38bdf8" font-size="8" text-anchor="middle">CLI: `agent-body env port 8080` | MCP: `body_port_check(port=8080)` | Hook: `body_hook_pre/post`</text>
 </svg>

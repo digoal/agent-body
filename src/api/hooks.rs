@@ -372,7 +372,9 @@ impl AgentHookEngine {
                 source: "agent_hook".to_string(),
                 created_at: None,
             };
-            let _ = self.storage.record_change(&change);
+            if let Err(e) = self.storage.record_change(&change) {
+                eprintln!("[Hooks][WARN] 记录 Post-Hook 变更流水失败 ({}): {}", path_str, e);
+            }
 
             // 2. 检查受影响服务
             if let Ok(report) = AutomationTopology::find_impact_on_file(path_str) {
@@ -383,7 +385,9 @@ impl AgentHookEngine {
 
             // 3. Post-Hook 自动资产建档与记忆沉淀 (AutoSyncEngine)
             let auto_syncer = crate::hooks::AutoSyncEngine::new(self.storage.clone());
-            let _ = auto_syncer.sync_file_output(path_str, tool_name);
+            if let Err(e) = auto_syncer.sync_file_output(path_str, tool_name) {
+                eprintln!("[Hooks][WARN] Post-Hook 自动资产同步失败 ({}): {}", path_str, e);
+            }
         }
 
         let target_id = path_opt

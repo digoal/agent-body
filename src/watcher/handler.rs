@@ -182,7 +182,7 @@ impl ChangeHandler {
                                 timestamp: now,
                             },
                         };
-                        let _ = bus.emit(steward_ev);
+                        let _delivered = bus.emit(steward_ev);
                     }
                     crate::audit::AuditLogger::record_best_effort(
                         &self.storage,
@@ -236,7 +236,7 @@ impl ChangeHandler {
                     })?;
 
                     if let Some(ref bus) = self.event_bus {
-                        let _ = bus.emit(crate::hooks::StewardEvent::FileDeleted {
+                        let _delivered = bus.emit(crate::hooks::StewardEvent::FileDeleted {
                             path: path_str.clone(),
                             source: "watcher".to_string(),
                             timestamp: chrono::Local::now().to_rfc3339(),

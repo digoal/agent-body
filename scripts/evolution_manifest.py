@@ -158,17 +158,18 @@ def check_drift(manifest: dict) -> list[str]:
         ROOT / "docs/manual/README.md",
         ROOT / "docs/manual/03-cli-reference.md",
         ROOT / "docs/manual/04-mcp-integration.md",
+        ROOT / "docs/manual/06-advanced-features.md",
         ROOT / "docs/manual/08-web-dashboard.md",
         ROOT / "docs/manual/10-benchmark-and-roi.md",
         ROOT / "docs/design_doc/06-api-spec.md",
-    ]
+    ] + sorted((ROOT / "presentation").glob("0*.html"))
     stale_checks = [
         (
             re.compile(r"(?<!第\s)(?<!第)\b(39|40|41|42)\s*(?:个)?\s*(?:原生)?\s*(?:MCP\s*)?(?:工具|Tools?)"),
             f"MCP 工具数 (源码实测 {mcp_cnt})",
         ),
         (
-            re.compile(r"\b(55|61|65|74|78)\s*(?:个)?\s*(?:核心)?(?:语义)?(?:统一)?\s*(?:SPI|方法|接口)"),
+            re.compile(r"\b(55|61|65|74|78|82|87)\s*(?:个)?\s*(?:核心)?(?:语义)?(?:统一)?\s*(?:SPI|方法|接口)"),
             f"SPI 方法数 (源码实测 {spi_cnt})",
         ),
         (
@@ -264,6 +265,32 @@ def check_drift(manifest: dict) -> list[str]:
                     errors.append(
                         f"README.md 项目结构缺少根目录核心文件 `{rf}` 的逐项职责描述（规约 #20）"
                     )
+
+    # 校验全仓活跃 Markdown 相对链接不断链（排除归档与早期 Phase 日志）
+    md_candidates = sorted(
+        set(list(ROOT.glob("*.md")) + list((ROOT / "docs").rglob("*.md")) + list((ROOT / "skills").rglob("*.md")))
+    )
+    for md in md_candidates:
+        rel_s = md.relative_to(ROOT).as_posix()
+        if (
+            "docs/src_doc/archive" in rel_s
+            or "docs/src_doc/progress-phase" in rel_s
+            or "docs/design_doc/review" in rel_s
+            or re.search(r"roadmap-phase([0-9]|[1-4][0-9]|5[01])\b", rel_s)
+        ):
+            continue
+        md_text = md.read_text(encoding="utf-8", errors="ignore")
+        md_no_code = re.sub(r"```.*?```", "", md_text, flags=re.S)
+        for m in re.finditer(r"\[[^\]]+\]\(([^)]+)\)", md_no_code):
+            target = m.group(1).strip()
+            if not target or target.startswith(("http://", "https://", "mailto:", "#", "conversation://", "file://")):
+                continue
+            path_part = target.split("#", 1)[0].split("?", 1)[0].strip()
+            if not path_part:
+                continue
+            resolved = Path(path_part) if path_part.startswith("/") else (md.parent / path_part).resolve()
+            if not resolved.exists():
+                errors.append(f"{rel_s} 存在断链: ({target})")
 
     return errors
 

@@ -1,39 +1,34 @@
-# 07 — 数据模型（Data Model）
+# 07 — 数据模型（Data Model · 演进总览与设计基线）
 
-> Agent Host Steward 产品设计 · 交付件 7/7
-> 版本: v1.0 · 更新: 2026-11-15
-
----
-
-## 一、总览
-
-steward 的全部持久化数据存放在单个 SQLite 数据库文件中（`~/.steward/steward.db`），配合 FTS5 全文索引和 sqlite-vec 向量索引。
-
-核心表共 12 张，分属 5 个域：
-
-```
-┌────────── Memory 域 ──────────┐   ┌────────── Asset 域 ───────────┐
-│  memories                     │   │  assets                       │
-│  memories_fts  (FTS5 虚拟表)  │   │  assets_fts   (FTS5 虚拟表)   │
-│  memories_vec  (vec 虚拟表)   │   │  assets_vec   (vec 虚拟表)    │
-└───────────────────────────────┘   │  asset_tags                   │
-                                    └───────────────────────────────┘
-
-┌────────── Env 域 ─────────────┐   ┌────────── Change 域 (P1) ────┐
-│  services                     │   │  changes                      │
-│  env_snapshots                │   └───────────────────────────────┘
-│  env_snapshot_items           │
-└───────────────────────────────┘   ┌────────── Link 域 (P2) ──────┐
-                                    │  links                        │
-┌────────── System 域 ──────────┐   └───────────────────────────────┘
-│  config                       │
-│  migrations                   │
-└───────────────────────────────┘
-```
+> **生产实时 DDL 真相源（v1.0.0 GA）**：
+> - SQLite 嵌入式主库（**27 张实体与 FTS5 虚表**）：[src/storage/schema.sql](../../src/storage/schema.sql)
+> - PostgreSQL 协同集群版（**21 张核心表**）：[src/storage/pg_schema.sql](../../src/storage/pg_schema.sql)
+> - DuckDB OLAP 分析与增量副本（**22 张列存表**）：[src/storage/duckdb_schema.sql](../../src/storage/duckdb_schema.sql)
+> - SPI 接口定义（**88 个存储方法**）：[src/storage/spi.rs](../../src/storage/spi.rs)
+>
+> *说明：下文“二、DDL 定义”起保留了 Phase 1 初版 12 表设计原稿供架构溯源；`v1.0.0` 已扩充至覆盖事实图谱、协作锁/等待队列、MCP/SKILL/外部服务生态目录、Benchmark 存证、Mesh 信封、双域审计与本体检查点等全量表群。*
 
 ---
 
-## 二、DDL 定义
+## 一、v1.0.0 生产总览
+
+Agent Body 的默认持久化数据存放在单机 SQLite 数据库（`~/.agent-body/body.db`），同时通过 88 方法 `StorageProvider` SPI 支持热迁移与同步至 PostgreSQL 和 DuckDB：
+
+- **SQLite (`schema.sql`, 27 张表/虚表)**：
+  - 系统配置与状态：`config`, `migrations`（注：AWR 快照/报告与优化状态以 `awr:*` 键存入 `system_meta`/KV 迁移表，与用户记忆严格隔离）
+  - 资产与扫描：`assets`, `assets_fts` (FTS5), `placement_rules`, `scan_policies`, `scan_jobs`, `links`, `changes`
+  - 记忆与检索：`memories`, `memories_fts` (FTS5)
+  - 宿主环境与事实图谱：`active_processes`, `fact_nodes`, `fact_edges`
+  - 多 Agent 协作：`coordination_locks`, `lock_wait_queue`
+  - 生态目录：`mcp_catalog`, `skills_catalog`, `skills_catalog_fts`, `external_services`, `external_services_fts`
+  - 实证基准与反馈：`benchmark_runs`, `effectiveness_ledger`
+  - 多机联邦、审计与本体：`mesh_dialogues`, `mesh_transfers`, `audit_events`, `body_checkpoints`
+- **PostgreSQL (`pg_schema.sql`, 21 张表)**：去除非必要系统元数据表，支持 `tsvector` + 多连接 `Advisory Lock`（`pgvector` 为可选加速扩展）。
+- **DuckDB (`duckdb_schema.sql`, 22 张表)**：在 21 张核心实体表基础上新增 `sync_watermarks`，驱动亚毫秒变更热力图、记忆衰退趋势与 Parquet/CSV 原生导出。
+
+---
+
+## 二、Phase 1 初版 DDL 原稿（历史架构参考）
 
 ### 2.1 memories — 记忆表
 

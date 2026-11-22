@@ -2,7 +2,7 @@
 """Build presentation/agent-body-deck.html (24-slide Deep Technical Exchange Deck).
 
 Decks-as-Code generator following the '地层剖面 · 工程蓝图' visual system.
-Grounded 100% in Agent Body v0.4.0 (Phase 50) source code, live Benchmark v3.7,
+Grounded 100% in Agent Body v1.0.0 GA source code, live Benchmark v3.8,
 and live AWR telemetry.
 """
 
@@ -55,26 +55,26 @@ def build_tech_deck() -> None:
             "eyebrow": "封面 · 深度技术架构全景",
             "title": "Agent Body · 深度技术架构与内核工程全景",
             "svg": svg_cover(
-                kicker="AGENT BODY · DEEP TECHNICAL EXCHANGE · v0.4.0",
+                kicker="AGENT BODY · DEEP TECHNICAL EXCHANGE · v1.0.0",
                 title="Agent 本体技术全景",
-                en_sub="27 Modules · 43 MCP · 82 SPI · 27 Tables · Bench v3.7 · Built-in AWR",
+                en_sub="27 Modules · 43 MCP · 88 SPI · 27 Tables · Bench v3.8 · 18 Wait Events",
                 subtitle1="从「比较优势」到「脑体分离」：面向数据库与 AI Infra 工程师的深度拆解",
                 subtitle2="物理感官 × 分层图谱 × AOPCC 并发 × 写穿保鲜 × 纵深安全 × 双域审计 × 内生 AWR",
-                spec_line="Rust 1.99 单二进制 · SQLite / PG / DuckDB 三引擎 · 270+ 测试 · 五重质量门禁",
+                spec_line="Rust 1.99 单二进制 · SQLite / PG / DuckDB 三引擎 · 320+ 测试 · 五重质量门禁",
                 strata=[
-                    ("接入与协议层 · Interface", "43 原生 MCP · 30 CLI · Session/Pre/Post Hooks · Web 8 工作台", "#EBF1EE", C_INK),
+                    ("接入与协议层 · Interface", "43 原生 MCP · 30 CLI · Session/Pre/Post Hooks · Web 9 工作台", "#EBF1EE", C_INK),
                     ("宿主机感官与图谱 · Fact/Links", "/proc · Socket · L1/L2/L3 有向加权图 · CodeGraph 联邦", "#CFE0DC", C_INK),
                     ("小脑并发与锁 · AOPCC/Locks", "MVCC 乐观租约 · 三态分级 · <2ms 自愈 · WFG 死锁检测", "#A4C4C6", C_INK),
                     ("海马体与接力 · Memory/Body", "FTS5+向量 RRF · 7 大新鲜度漏斗治理 · <=300 tok 接力胶囊", "#74A5AD", C_PAPER),
                     ("安全审计与自进化 · Audit/Probe", "SecretRedactor · 抗投毒 · IN/OUT 双域审计 · P1~P5 探针", "#47808D", C_PAPER),
                     ("内生性能工程 · Wait/AWR/ADDM", "6 类 18 事件 (<100ns) · /proc/self · 32 快照黄金基线 · L1 调优", "#2E6373", C_PAPER),
-                    ("存储 SPI 与联邦 · Storage/Mesh", "82 SPI 三后端热迁移 · DuckDB OLAP · MeshEnvelope v1.0", "#1E4B5A", C_PAPER),
+                    ("存储 SPI 与联邦 · Storage/Mesh", "88 SPI 三后端热迁移 · DuckDB OLAP · MeshEnvelope v1.0", "#1E4B5A", C_PAPER),
                 ],
                 right_tag="地层剖面 · 工程蓝图 · 深度技术交流版 (24 页)",
             ),
             "script": (
                 "各位技术同行好，这份 24 页的 Deck 是 Agent Body 的完整架构深度交流版，大约 45 到 60 分钟。\n"
-                "与面向路演的 16 页版本不同，今天我们不讲空泛的概念，而是直接下钻到 27 个 Rust 模块、82 个存储 SPI、27 张数据表、AOPCC 期望代价数学边界、MeshEnvelope 签名防重放协议，以及借鉴 PostgreSQL/Oracle 内核落地的等待事件与 AWR 性能工程。\n"
+                "与面向路演的 16 页版本不同，今天我们不讲空泛的概念，而是直接下钻到 27 个 Rust 模块、88 个存储 SPI、27 张数据表、AOPCC 期望代价数学边界、MeshEnvelope 签名防重放协议，以及借鉴 PostgreSQL/Oracle 内核落地的等待事件与 AWR 性能工程。\n"
                 "所有架构指标和实测数据全部直接取自当前代码库和现网宿主机，欢迎随时打断就任何设计取舍展开硬核讨论。"
             ),
         },
@@ -90,7 +90,7 @@ def build_tech_deck() -> None:
                     ("执行回路控制", "无执行前门禁，写崩端口与上游服务才报错", "AOPCC 三态并发：悲观拦截高危 + 乐观直通免对话税"),
                     ("数据新鲜度", "文件改删后旧向量长期残留形成僵尸召回", "content_hash 写穿失效 + 删除级联净化 + 现实对账"),
                     ("多客户端切换", "记忆与会话绑定在单一 IDE/CLI 厂商壳内", "Brain-Agnostic：<=300 tok 脱敏胶囊 10ms 跨大脑接力"),
-                    ("可观测与自演进", "黑盒运行，无性能归因与客观 ROI 存证", "双域审计 + P1~P5 探针 + 内生 AWR + Bench v3.7 存证"),
+                    ("可观测与自演进", "黑盒运行，无性能归因与客观 ROI 存证", "双域审计 + P1~P5 探针 + 内生 AWR + Bench v3.8 存证"),
                 ],
                 takeaway=(
                     "核心判据：LLM 是无状态算力大脑，宿主机需要一层永驻的、确定性的具身操作系统抽象。",
@@ -104,11 +104,11 @@ def build_tech_deck() -> None:
                 "因此我们把抽象层下沉一级：LLM 是瞬态大脑，Agent Body 是永驻宿主机的具身底座。下面看全景分层架构。"
             ),
         },
-        # 03 系统全景分层架构与 82 方法 Storage SPI
+        # 03 系统全景分层架构与 88 方法 Storage SPI
         {
-            "eyebrow": "02 · SYSTEM ARCHITECTURE · 27 MODULES & 82-METHOD SPI",
-            "title": "系统全景：四层拓扑与 82 方法三后端 Storage SPI",
-            "lead": "严格分层解耦：接入层零业务逻辑，引擎层按六大器官内聚，存储层通过 <b>StorageProvider Trait (82 方法)</b> 无损热切换三引擎。",
+            "eyebrow": "02 · SYSTEM ARCHITECTURE · 27 MODULES & 88-METHOD SPI",
+            "title": "系统全景：四层拓扑与 88 方法三后端 Storage SPI",
+            "lead": "严格分层解耦：接入层零业务逻辑，引擎层按六大器官内聚，存储层通过 <b>StorageProvider Trait (88 方法)</b> 无损热切换三引擎。",
             "svg": svg_pipeline(
                 steps=[
                     {
@@ -136,7 +136,7 @@ def build_tech_deck() -> None:
                         "title": "StorageProvider SPI",
                         "accent": C_GOLD,
                         "lines": [
-                            "82 个强类型语义方法",
+                            "88 个强类型语义方法",
                             "27 张规范化业务表",
                             "SyncPipeline 增量同步",
                         ],
@@ -168,7 +168,7 @@ def build_tech_deck() -> None:
                         "lines": [
                             "src/api/ 严禁堆砌业务逻辑，仅做协议编解码、鉴权路由与审计埋点",
                             "Schema 变更强制 schema.sql / pg_schema.sql / duckdb_schema.sql 三端同步",
-                            ("make evolution-check 实时校验 27模块 / 43MCP / 82SPI / 27表 0 drift", True),
+                            ("make evolution-check 实时校验 27模块 / 43MCP / 88SPI / 27表 0 drift", True),
                         ],
                     },
                 ],
@@ -176,7 +176,7 @@ def build_tech_deck() -> None:
             "next": "看清了骨架，我们从第一器官「宿主机感官」开始，逐层解剖核心实现。",
             "script": (
                 "这是 Agent Body 的四层全景骨架。最外层是接入层，43 个原生 MCP 工具、30 个顶层 CLI 命令、Hook 桥接脚本和内嵌 Web 服务全部复用同一套内核引擎。\n"
-                "存储层采用 Facade 加 82 方法 StorageProvider SPI 设计，底层支持三套引擎无缝热迁移：默认是内嵌 SQLite WAL + FTS5，单二进制零配置即跑；多节点重度并发可切 PostgreSQL 利用原生 Advisory Lock 和 pgvector；分析报表和审计导出则由受限内存的 DuckDB 承担，并通过 SyncPipeline 单事务增量同步。"
+                "存储层采用 Facade 加 88 方法 StorageProvider SPI 设计，底层支持三套引擎无缝热迁移：默认是内嵌 SQLite WAL + FTS5，单二进制零配置即跑；多节点重度并发可切 PostgreSQL 利用原生 Advisory Lock 和 pgvector；分析报表和审计导出则由受限内存的 DuckDB 承担，并通过 SyncPipeline 单事务增量同步。"
             ),
         },
         # 04 感官层① · 零幻觉物理事实采集
@@ -370,7 +370,7 @@ def build_tech_deck() -> None:
                         ],
                     },
                     {
-                        "title": "W15 & PR-11 实证结果（Benchmark v3.7）",
+                        "title": "W15 & PR-11 实证结果（Benchmark v3.8）",
                         "accent": C_GREEN,
                         "lines": [
                             "Token 消耗：174 → 28 tok (-83.9%) · 上下文质量：52.0 → 100.0 (+48.0)",
@@ -920,7 +920,7 @@ def build_tech_deck() -> None:
             "title": "内生性能工程①：6 类 18 等待事件 (<100ns) 与 /proc/self 探针",
             "lead": "借鉴 PostgreSQL <code>pg_stat_activity</code> / Oracle Wait Events：无锁原子直方图 + 零特权内核探针，<b>单二进制零 eBPF 依赖</b>。",
             "svg": svg_code_and_flow(
-                left_title="无锁等待事件直方图与 RAII 埋点 (src/body/perf_awr.rs)",
+                left_title="无锁等待事件直方图与 RAII 埋点 (src/body/perf_awr/)",
                 file_ref="ISSUE #32 · Phase 50",
                 code_lines=[
                     "// 6 大类 18 种子事件: Lock / IO / Net / CPU / IPC / Idle",
@@ -1010,40 +1010,40 @@ def build_tech_deck() -> None:
                     "teal",
                 ),
             ),
-            "next": "看完了六大器官与内核性能工程，下面我们用 Benchmark v3.7 完整数据审视整套系统的实证表现。",
+            "next": "看完了六大器官与内核性能工程，下面我们用 Benchmark v3.8 完整数据审视整套系统的实证表现。",
             "script": (
                 "这里分享一个非常真实的生产排障复盘：在 Phase 48 前后，我们观测到守护进程 CPU 一度飙到 600%、内存冲到 1.3G。一开始大家怀疑是本地 Ollama，实测排查发现 Ollama 跑在独立 cgroup，真正元凶是 Web 治理页并发触发 DuckDB 同步时开了 8 线程无内存上限，还对三万五千行跑了三万五千次独立自动提交事务。\n"
                 "我们用三层根治直接把 DuckDB 收敛到 2 线程、256MB 上限、单事务批量提交加 15 秒单飞缓存，并把这次经验沉淀成了 Phase 50 的 AWR 黄金基线和 ADDM 自调优：现在任何内存或锁争用苗头，一条 body perf-awr 立马现形，一条 perf-tune 直接在 L1 权限内回收 SQLite 缓存和 glibc 堆页。"
             ),
         },
-        # 20 实证评测① · Benchmark v3.7 帕累托双门禁
+        # 20 实证评测① · Benchmark v3.8 帕累托双门禁
         {
-            "eyebrow": "19 · BENCHMARK v3.7 · TOKEN-QUALITY PARETO DUAL-GATE",
-            "title": "实证评测①：Benchmark v3.7 帕累托双门禁与全量真机明细",
+            "eyebrow": "19 · BENCHMARK v3.8 · TOKEN-QUALITY PARETO DUAL-GATE",
+            "title": "实证评测①：Benchmark v3.8 帕累托双门禁与全量真机明细",
             "lead": "确定性四维质量函数 <b>Q = 40% R_fact + 30% P_signal + 20% A_action + 10% S_safety</b>，杜绝靠截断信息骗取高压缩率。",
             "svg": svg_metrics_table(
                 kpis=[
-                    ("-99.24%", "D1 Token 总节省", "661,848 → 5,051 tok"),
-                    ("+64.0 分", "D6 质量净提升", "35.8 → 99.8 / 100"),
-                    ("95.2x", "有效信息密度倍数", "Facts / 1k Tokens"),
-                    ("0.04~5.4ms", "5 大微基准全绿", "M1 148μs · M3 41μs"),
+                    ("-99.23%", "D1 Token 总节省", "662,502 → 5,114 tok"),
+                    ("+64.2 分", "D6 质量净提升", "35.6 → 98.0 / 100"),
+                    ("94.5x", "有效信息密度倍数", "Facts / 1k Tokens"),
+                    ("7μs~26.9ms", "6 大微基准全绿", "M6 7μs · M3 33μs · M1 139μs"),
                 ],
                 headers=["评测维度 / ID", "考核核心目标", "基线 → 本体实测", "质量分 / 达标率", "SLA"],
                 rows=[
-                    ["W1~W8 (基础)", "工具/端口/扫描/放置/图/锁/技能/简报", "643,801 → 2,309 tok (-99.6%)", "平均 36.2 → 99.6", "PASS"],
-                    ["W9~W12 (质量)", "RRF召回 / 抗误报 / 安全脱敏 / 新鲜度", "767 → 101 tok (-86.8%)", "平均 35.3 → 100.0", "PASS"],
-                    ["W13~W17 (高阶)", "分层图 / Mesh / AOPCC / 审计 / 接力", "17,290 → 2,650 tok (-84.7%)", "平均 31.4 → 100.0", "PASS"],
-                    ["M1~M5 (微基准)", "3跳图 / FTS5 / 放置 / 热力图 / Parquet", "148μs / 335μs / 41μs / 4.5ms / 5.4ms", "100% 远低于 SLA", "PASS"],
-                    ["DQ1~DQ8 (现网)", "元数据/向量/拓扑/脱敏/新鲜/图/审计/稳态", "DQ1/4/5/6/7 均 100.0%", "DQ2/3 99.5% · DQ8 93.9", "PASS"],
-                    ["PR-01~13 (账本)", "生产运行态全渠道效能实时存证", "<100 μs 记账 + SHA-256 指纹", "每笔收益可反算溯源", "PASS"],
+                    ["W1~W8 (基础)", "工具/端口/扫描/放置/图/锁/技能/简报", "642,245 → 2,297 tok (-99.6%)", "平均 36.2 → 99.6", "PASS"],
+                    ["W9~W12 (质量)", "RRF召回 / 抗误报 / 安全脱敏 / 新鲜度", "767 → 107 tok (-86.0%)", "平均 35.3 → 100.0", "PASS"],
+                    ["W13~W18 (高阶)", "分层图 / Mesh / AOPCC / 审计 / 接力 / AWR", "19,490 → 2,710 tok (-86.1%)", "平均 31.7 → 100.0", "PASS"],
+                    ["M1~M6 (微基准)", "3跳图 / FTS5 / 放置 / 热力 / Parquet / Wait", "139μs / 259μs / 33μs / 4.8ms / 26.9ms / 7μs", "100% 远低于 SLA", "PASS"],
+                    ["DQ1~DQ9 (现网)", "元数据/拓扑/脱敏/新鲜/图/审计/稳态/遥测", "DQ1/4/6/7/8/9 100%·DQ5 98.5%", "18/18 WaitEvent 全覆盖", "PASS"],
+                    ["PR-01~14 (账本)", "生产运行态全渠道效能实时存证", "<100 μs 记账 + SHA-256 指纹", "含 BodyPerfAwrAnalyzed", "PASS"],
                 ],
                 col_xs=[16, 220, 620, 1020, 1320],
-                footnote="实测批次：run-f44b2e26 (v0.4.0 / 7f73bd1) · 总耗时 3,550 ms · 阻断噪音 534 个 · 事前拦截风险 57 次",
+                footnote="实机 Benchmark v3.8 (v1.0.0 GA) · 总耗时 ~3.7s · 阻断噪音 538 个 · 事前拦截风险 61 次",
             ),
             "next": "看完自对照和生产存证账本，再看轨道 C：四大赛道热门开源竞品的同机实测对比与定位差异。",
             "script": (
                 "我们在 Benchmark v3.1 到 v3.7 迭代中最核心的一条修正，就是把「帕累托双门禁」写成了铁律：每个负载必须同时考核事实召回、信噪比、可行动性和安全性，必须保证本体质量分严格大于等于基线且必含事实 100% 命中。\n"
-                "从真机明细表可以看到：17 个业务负载无一例外全部实现「省 Token + 质量大幅跃升」，总体 Token 降了 99.24%，质量分从 35.8 升到 99.8；5 大内核微基准全部跑在微秒到几毫秒级别；现网 8 项数据健康度全部 99.5% 到 100% 达标。"
+                "从真机明细表可以看到：18 个业务负载无一例外全部实现「省 Token + 质量大幅跃升」，总体 Token 降了 99.23%，质量分从 35.6 升到 98.0；6 大内核微基准全部达标 SLA；9 项现网数据健康与遥测门禁全维体检。"
             ),
         },
         # 21 实证评测② · 四赛道竞品同机对标与生态边界
@@ -1099,7 +1099,7 @@ def build_tech_deck() -> None:
                             "lint-panic: 0 处生产 unwrap/expect",
                             "lint-hygiene: 0 处硬编码路径/控吞错",
                             "lint-strict: -D warnings + clippy",
-                            ("cargo test: 270+ 自动化测试全绿", True),
+                            ("cargo test: 320+ 自动化测试全绿", True),
                         ],
                         "foot_lbl": "一键联检",
                         "foot_val": "make quality-gate && make test",
@@ -1196,28 +1196,28 @@ def build_tech_deck() -> None:
             "title": "终局：从宿主机单二进制走向 OS 原生具身底座",
             "lead": "今天已跑通生产闭环；如果想把某个子系统再拆透 30 分钟，欢迎直接进入配套的 <b>6 讲体系化专题演说</b>。",
             "svg": svg_closing(
-                kicker="AGENT BODY · ARCHITECTURE COMPLETE · v0.4.0",
+                kicker="AGENT BODY · ARCHITECTURE COMPLETE · v1.0.0 GA",
                 headline="瞬态大脑千变万化，永驻本体稳如磐石",
                 pillars=[
                     ("专题 01~02 · 认知与感官", "脑体分离第一性原理 · L1~L3 分层图谱与宏微联邦", "01-brain-body · 02-host-reality-graph"),
                     ("专题 03~04 · 反射与记忆", "AOPCC 并发控制与锁 · 新鲜度治理与换脑不失忆", "03-cerebellum-aopcc · 04-hippocampus"),
-                    ("专题 05~06 · 免疫与实证", "纵深安全/双域审计/Mesh · Bench v3.7 与工程门禁", "05-security-audit-mesh · 06-benchmark"),
+                    ("专题 05~06 · 免疫与实证", "纵深安全/双域审计/Mesh · Bench v3.8 与工程门禁", "05-security-audit-mesh · 06-benchmark"),
                 ],
                 open_question="欢迎围绕「OS 原生具身原语」「数据库性能工程迁移至 AI Infra」「多本体联邦协议」展开深度 Q&A",
                 next_talk="返回总览导航：presentation/index.html · 路演精简版：presentation/presentation.html",
             ),
             "script": (
-                "以上就是 Agent Body v0.4.0 的全部 24 页深度技术架构。\n"
+                "以上就是 Agent Body v1.0.0 GA 的全部 24 页深度技术架构。\n"
                 "回过头看，这个项目其实只回答了一个本质问题：当大模型本身越来越强、切换越来越频繁时，宿主机侧需要沉淀一层怎样的确定性基础设施，才能让每个瞬态大脑一着陆就耳聪目明、不踩坑、不失忆、省 Token 且可审计？\n"
-                "我们用 Rust 单二进制、27 个模块、43 个原生工具、82 个存储 SPI、Benchmark v3.7 和内生 AWR 给出了第一份可复现的工程答卷。如果大家对其中某一个子系统——比如 AOPCC、分层图谱、或者 AWR 实现——想再深挖半小时，可以直接点开配套的 6 讲专题系列，或者直接拉代码跑一遍 make quality-gate 和 bench full。下面进入 Q&A，欢迎拍砖！"
+                "我们用 Rust 单二进制、27 个模块、43 个原生工具、88 个存储 SPI、Benchmark v3.8 和内生 AWR 给出了第一份可复现的工程答卷。如果大家对其中某一个子系统——比如 AOPCC、分层图谱、或者 AWR 实现——想再深挖半小时，可以直接点开配套的 6 讲专题系列，或者直接拉代码跑一遍 make quality-gate 和 bench full。下面进入 Q&A，欢迎拍砖！"
             ),
         },
     ]
 
     render_deck(
-        doc_title="Agent Body · Agent 本体深度技术交流版 (v0.4.0)",
+        doc_title="Agent Body · Agent 本体深度技术交流版 (v1.0.0 GA)",
         brand_label="AGENT BODY · 深度技术交流版",
-        foot_label="AGENT BODY · DEEP TECHNICAL ARCHITECTURE · v0.4.0",
+        foot_label="AGENT BODY · DEEP TECHNICAL ARCHITECTURE · v1.0.0 GA",
         slides_data=slides,
         out_path=PRES_DIR / "agent-body-deck.html",
     )

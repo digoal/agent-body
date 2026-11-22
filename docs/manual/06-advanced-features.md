@@ -1,6 +1,6 @@
 # 06 — 进阶特性指南（Advanced Features）
 
-> **章节目标**: 详细介绍大管家 v0.4.0 的核心进阶能力：端口防撞预警、变更爆炸半径推演、混合 RRF 检索、会话自洁、CodeGraph 联邦、三层语义元数据、WFG 死锁检测与跨机联邦 Mesh。
+> **章节目标**: 详细介绍 Agent Body (`v1.0.0`) 的核心进阶能力：端口防撞预警、变更爆炸半径推演、混合 RRF 检索、会话自洁、CodeGraph 联邦、三层语义元数据、WFG 死锁检测、跨机联邦 Mesh、内生 Wait Events/AWR 与可移植配置（`AGENT_BODY_CONFIG` / `[workspace]`）。
 
 ---
 
@@ -98,7 +98,7 @@ flowchart TD
 大管家吸收 CodeGraph 的图谱模型设计：
 1. **出处强化（Provenance & Snippet）**:
    - `links` 表扩展记录行号 `line_number`、截取代码 `snippet` 以及发现来源 `provenance`（`ast_import` / `path_regex` / `port_detect`）。
-2. **断链体检与自愈 (`steward links audit`)**:
+2. **断链体检与自愈 (`agent-body links audit`)**:
    - 定期或手动扫描全局拓扑，排查“目标文件已被物理删除”或“依赖的端口未监听”等坏死依赖，计算健康分，并支持 `--fix` 自动剔除死链。
 3. **CodeGraph 宏微双层联邦 (`CodeGraphBridge`)**:
    - 自动向上溯源探测目标路径所在工程是否包含 `.codegraph/codegraph.db`；
@@ -145,5 +145,6 @@ flowchart TD
 ## 10. 全生命周期信息新鲜度、五点对比探针与 AOPCC 自适应并发 (Phase 38~39 & 42)
 - **写穿失效与现实对账 (`FreshnessReconciler`)**：内容变化立即重置旧向量为 `stale`，文件删除级联净化 FTS/图谱/记忆，并通过 `agent-body feedback reconcile`（及守护进程 30 分钟周期）核销幽灵端口节点、归档同路径重复 `auto_sync` 记忆与检测 `.codegraph` 滞后；
 - **五点对比探针 (`agent-body feedback probes`)**：在 `P1 开工 Brief` / `P2 事前 Pre-Hook` / `P3 检索效用` / `P4 事后漂移` / `P5 周期回归` 以物理真值量化 Before/After/Delta 差值并自动自愈或去重写入 `user_feedback.md`；
-- **AOPCC 悲观-乐观自适应并发控制**：`body_brief` 在开工时签发 `<= 120 tok` 乐观直通租约（如本机 `:5432` PostgreSQL、已装 CLI、`/root/new/tmp/`）；高危端口绑定与共享资源写维持悲观前置拦截；若乐观直连碰壁失败，`body_hook_post(success=false)` 在 `< 2ms` 内注入宿主机替代处方并自适应降级租约；
-- **实证 Benchmark 与存证账本**：关于 A/B 对照负载（`W1`~`W15`）、内核微基准 SLA（`M1`~`M5`）、质量门禁（`DQ1`~`DQ6`）、竞品对标（`COMP-C1`~`C4`）及 `PR-01`~`PR-11` 生产效能存证流水，请直接阅读专题章节 [10-benchmark-and-roi.md](10-benchmark-and-roi.md)。
+- **AOPCC 悲观-乐观自适应并发控制**：`body_brief` 在开工时签发 `<= 120 tok` 乐观直通租约（如本机 `:5432` PostgreSQL、已装 CLI、`<temp_dir>`）；高危端口绑定与共享资源写维持悲观前置拦截；若乐观直连碰壁失败，`body_hook_post(success=false)` 在 `< 2ms` 内注入宿主机替代处方并自适应降级租约；
+- **内生 Wait Events、`/proc/self` 与 AWR/ADDM 自调优**：覆盖 6 大类 `18/18` 标准等待事件、AWR 快照黄金基线差分与 `L1_AUTONOMIC` 一键自调优（`perf-snapshot`/`perf-awr`/`perf-tune`/`perf-delete`）；
+- **实证 Benchmark 与存证账本**：关于 A/B 对照负载（`W1`~`W18`）、内核微基准 SLA（`M1`~`M6`）、质量门禁（`DQ1`~`DQ9`）、竞品对标（`COMP-C1`~`C4`）及 `PR-01`~`PR-14` 生产效能存证流水，请直接阅读专题章节 [10-benchmark-and-roi.md](10-benchmark-and-roi.md)。

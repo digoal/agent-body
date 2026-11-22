@@ -23,7 +23,7 @@ def build_talk_04() -> None:
             "eyebrow": "封面 · 第 04 讲",
             "title": "海马体、信息新鲜度治理与跨大脑 1ms 接力",
             "svg": svg_cover(
-                kicker="SERIES 04 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
+                kicker="SERIES 04 / 06 · AGENT BODY · v1.0.0 · 30 MIN",
                 title="海马体、新鲜度治理与跨大脑接力",
                 en_sub="Memory SPI, Freshness Reconciliation & Cross-Brain Continuity",
                 subtitle1="为什么 Agent 越用越「胡说八道」？因为记忆会发霉",
@@ -47,7 +47,7 @@ def build_talk_04() -> None:
         {
             "eyebrow": "01 · 不造轮子，只做门面",
             "title": "Memory Provider SPI：内置零依赖引擎，开放接入整个生态",
-            "lead": "记忆赛道已经够拥挤了。<b>Steward 用统一 SPI 托底，默认开箱即用，同时兼容 Mem0 / Letta / PowerContext</b>。",
+            "lead": "记忆赛道已经够拥挤了。<b>Agent Body 用统一 SPI 托底，默认开箱即用，同时兼容 Mem0 / Letta / PowerContext</b>。",
             "svg": svg_columns(
                 [
                     {
@@ -143,7 +143,7 @@ def build_talk_04() -> None:
                 [
                     ("零僵尸召回", "删除文件后即刻从 FTS5 与属性图抹除，彻底杜绝幻觉路径", "test_change_handler_deleted_cascades"),
                     ("周期自动平账", "每 1800s 巡检自动清理失活资产与幽灵端口节点，并写入 OUT_OF_AGENT 审计", "DQ5 = 99.9% (726/727 健康)"),
-                    ("W12 基准验证", "改删写穿失效与一致性自愈节省 91.2% Token，质量从 27.5 跃升至 100.0", "Bench v3.7 W12 PASS"),
+                    ("W12 基准验证", "改删写穿失效与一致性自愈节省 91.2% Token，质量从 27.5 跃升至 100.0", "Bench v3.8 W12 PASS"),
                 ],
                 animated=True,
             ),
@@ -300,7 +300,7 @@ def build_talk_04() -> None:
         },
         {
             "eyebrow": "07 · 实证数据",
-            "title": "海马体与跨大脑接力实证成绩单（Bench v3.7）",
+            "title": "海马体与跨大脑接力实证成绩单（Bench v3.8）",
             "lead": "从混合检索（W9）、写穿新鲜度（W12）到跨大脑接力（W17），<b>四项指标全部满血 PASS</b>。",
             "svg": svg_metrics_table(
                 [
@@ -318,7 +318,7 @@ def build_talk_04() -> None:
                     ["COMP-C1", "对标 Mem0/JSON 无脱敏裸记忆基线", "97.8% Token 节省", "24.1 → 100.0 (+75.9)", "PASS"],
                 ],
                 [18, 130, 560, 920, 1290],
-                footnote="数据来源：Bench v3.7 run-6a0a4995-7302-4bc1-86b6-554a784a6156",
+                footnote="数据来源：Bench v3.8 run-6a0a4995-7302-4bc1-86b6-554a784a6156",
             ),
             "next": "如果把海量历史记忆与胶囊拉到 PostgreSQL 或 DuckDB，存储迁移会不会丢数据？",
             "script": (
@@ -328,7 +328,7 @@ def build_talk_04() -> None:
         {
             "eyebrow": "08 · 三引擎迁移",
             "title": "SQLite 单机起步，一键无损迁移至 PostgreSQL / DuckDB",
-            "lead": "`body_checkpoints` 与其余 26 张表全部通过 <b>StorageProvider SPI（82 方法）</b> 统一抽象，迁移零丢失。",
+            "lead": "`body_checkpoints` 与其余 26 张表全部通过 <b>StorageProvider SPI（88 方法）</b> 统一抽象，迁移零丢失。",
             "svg": svg_columns(
                 [
                     {
@@ -366,7 +366,7 @@ def build_talk_04() -> None:
             ),
             "next": "我们在终端里实操一遍「Antigravity 存胶囊 → Claude Code 接盘」全流程。",
             "script": (
-                "很多个人工具一上团队规模就得重写存储。我们从第一天起就把 82 个存储操作抽象进了 `StorageProvider` Trait。个人用 SQLite 零配置起飞，团队多机直接一条迁移命令切到 PostgreSQL，做长期行为分析走 DuckDB OLAP 导 Parquet。"
+                "很多个人工具一上团队规模就得重写存储。我们从第一天起就把 88 个存储操作抽象进了 `StorageProvider` Trait。个人用 SQLite 零配置起飞，团队多机直接一条迁移命令切到 PostgreSQL，做长期行为分析走 DuckDB OLAP 导 Parquet。"
             ),
         },
         {
@@ -375,7 +375,7 @@ def build_talk_04() -> None:
             "lead": "30 秒亲手体验 <b>记忆混合检索、陈旧对账、接力胶囊封存与跨脑唤醒</b>。",
             "svg": svg_code_and_flow(
                 "海马体与接力胶囊 CLI 实战",
-                "agent-body v0.4.0 CLI",
+                "agent-body v1.0.0 CLI",
                 [
                     "# 1. 写入长期记忆（自动脱敏+去噪）与 RRF 混合检索",
                     "agent-body memory add \"PG 19 ASAN 构建需开启 -O1\" --tags pg,debug",
@@ -462,7 +462,7 @@ def build_talk_04() -> None:
                     ("安全与抗投毒", "明文落盘常见，跨会话提示词污染无防护", "SecretRedactor 脱敏 + PromptInjectionScanner 中和"),
                     ("检索韧性", "强依赖云端 Embedding API，断网即瘫痪", "本地 SQLite FTS5 + Ollama RRF，离线自动降级"),
                 ],
-                ("海马体只有扎根在宿主机物理现实上，才不会变成一座充满陈年谣言的图书馆。", "Bench v3.7 W9/W12/W17 全绿"),
+                ("海马体只有扎根在宿主机物理现实上，才不会变成一座充满陈年谣言的图书馆。", "Bench v3.8 W9/W12/W17 全绿"),
             ),
             "next": "收束第 4 讲，进入下一讲关于安全、双域审计与探针自进化的硬核拆解。",
             "script": (
@@ -494,7 +494,7 @@ def build_talk_04() -> None:
     render_deck(
         doc_title="第 04 讲 · 海马体、信息新鲜度治理与跨大脑 1ms 接力 — Agent Body",
         brand_label="SERIES 04 / 06 · 海马体接力",
-        foot_label="AGENT BODY · 第 04 讲：海马体、信息新鲜度治理与跨大脑 1ms 接力 (v0.4.0)",
+        foot_label="AGENT BODY · 第 04 讲：海马体、信息新鲜度治理与跨大脑 1ms 接力 (v1.0.0)",
         slides_data=slides,
         out_path=OUT / "04-hippocampus-freshness-continuity.html",
     )
@@ -507,7 +507,7 @@ def build_talk_05() -> None:
             "eyebrow": "封面 · 第 05 讲",
             "title": "纵深安全、双域审计与探针驱动自进化",
             "svg": svg_cover(
-                kicker="SERIES 05 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
+                kicker="SERIES 05 / 06 · AGENT BODY · v1.0.0 · 30 MIN",
                 title="纵深安全、双域审计与自进化",
                 en_sub="Defense-in-Depth, Dual-Domain Audit & MeshEnvelope v1.0",
                 subtitle1="给 Agent 一具常驻宿主的身体，信任必须建立在密码学与审计之上",
@@ -603,7 +603,7 @@ def build_talk_05() -> None:
             ),
             "next": "让我们看 `audit_events` 的防篡改设计与 60 秒折叠防洪机制。",
             "script": (
-                "这是用户提得特别犀利的一个需求：Steward 接入 Agent 后的行为要审计，Steward 在 Agent 之外主动或被动维护宿主机的行为，同样要有据可查！\n"
+                "这是用户提得特别犀利的一个需求：Agent Body 接入 Agent 后的行为要审计，本体在 Agent 之外主动或被动维护宿主机的行为，同样要有据可查！\n"
                 "我们一查现网老表，果然发现大问题：`changes` 表里 94.7% 是未折叠的文件修改洪泛，而后台删临时文件、回收锁、改断链居然一条审计都没有。Phase 43 我们建了统一的 `IN_AGENT + OUT_OF_AGENT` 双域审计表，彻底补齐另一半探头。"
             ),
         },
@@ -632,7 +632,7 @@ def build_talk_05() -> None:
                     ("100% 脱敏防泄露", "写审计前强制经 SecretRedactor 清洗，审计库本身绝不变成凭据泄露源", "DQ7 = 100.0% (500/500)"),
                     ("60s 折叠防磁盘膨胀", "编译/格式化触发百次写入自动折叠为 1 条，保真相又不爆库", "test_audit_logger_watcher_60s_fold"),
                     ("trace_id 因果钻取", "从开工 Brief → Pre-Hook → 工具执行 → Post 诊断串成完整因果链", "Web 2.0 #view-audit 钻取"),
-                    ("W16 实证收益", "双域审计与租约自进化闭环节省 83.5% Token，质量从 36.0 升至 100.0", "Bench v3.7 W16 PASS"),
+                    ("W16 实证收益", "双域审计与租约自进化闭环节省 83.5% Token，质量从 36.0 升至 100.0", "Bench v3.8 W16 PASS"),
                 ],
                 animated=True,
             ),
@@ -645,7 +645,7 @@ def build_talk_05() -> None:
             ],
             "next": "审计记录不是存进冷库吃灰的——它直接喂给自进化引擎，让系统越跑越聪明。",
             "script": (
-                "很多人把审计当成合规负担，写完就扔。在 Steward 里，审计数据是系统自进化的核心燃料。\n"
+                "很多人把审计当成合规负担，写完就扔。在 Agent Body 中，审计数据是系统自进化的核心燃料。\n"
                 "每一条 `AuditEvent` 都带 `trace_id`、`before_after_delta` 和 `evidence_sha256`，经过脱敏、4KB 截断和 60 秒折叠，既干干净净又轻量，直接能同步给 DuckDB 做多维趋势分析。"
             ),
         },
@@ -740,7 +740,7 @@ def build_talk_05() -> None:
         },
         {
             "eyebrow": "06 · 实证数据",
-            "title": "安全、审计与 Mesh 实证成绩单（Bench v3.7）",
+            "title": "安全、审计与 Mesh 实证成绩单（Bench v3.8）",
             "lead": "从安全脱敏（W11/DQ4）、Mesh 零信任（W14）到双域审计自进化（W16/DQ7/DQ8），<b>全项 100% 达标</b>。",
             "svg": svg_metrics_table(
                 [
@@ -758,7 +758,7 @@ def build_talk_05() -> None:
                     ["DQ8", "本体五维稳态与自治包络合规", "稳态 99.9 · 5维合法", "100.0% (>=99.0%)", "PASS"],
                 ],
                 [18, 130, 560, 920, 1290],
-                footnote="数据来源：Bench v3.7 run-6a0a4995-7302-4bc1-86b6-554a784a6156",
+                footnote="数据来源：Bench v3.8 run-6a0a4995-7302-4bc1-86b6-554a784a6156",
             ),
             "next": "我们在终端里跑一遍审计查询、探针自检与多体名片探测命令。",
             "script": (
@@ -771,7 +771,7 @@ def build_talk_05() -> None:
             "lead": "黑白屏 1:1 对应，Web 驾驶舱「双域审计」与「本体中枢」工作台同步可视化。",
             "svg": svg_code_and_flow(
                 "安全、审计与 Mesh 实战命令",
-                "agent-body v0.4.0 CLI",
+                "agent-body v1.0.0 CLI",
                 [
                     "# 1. 宿主机依赖与文件权限安全姿态预检",
                     "agent-body preflight",
@@ -796,7 +796,7 @@ def build_talk_05() -> None:
                     ("#view-governance Mesh 沙盒", "跨机图谱查询、脱敏对话与 mesh_inbox 收件箱审计", "body_mesh_query"),
                 ],
             ),
-            "next": "安全与自进化同样需要诚实的边界说明：哪些风险是 Steward 能兜的，哪些需要宿主机 OS 配合？",
+            "next": "安全与自进化同样需要诚实的边界说明：哪些风险是 Agent Body 能兜的，哪些需要宿主机 OS 配合？",
             "script": (
                 "这六条命令把安全预检、双域审计、探针和跨机名片串成一条完整运维线。每次怀疑「后台刚才动了啥」，敲一条 `audit query --domain out_of_agent`，清清楚楚。"
             ),
@@ -804,12 +804,12 @@ def build_talk_05() -> None:
         {
             "eyebrow": "08 · 安全边界",
             "title": "纵深防御的诚实边界：应用层免疫 ≠ 内核级沙箱",
-            "lead": "清楚界定安全责任边界，<b>才能把 Steward 与 OS 容器/权限隔离正确组合</b>。",
+            "lead": "清楚界定安全责任边界，<b>才能把 Agent Body 与 OS 容器/权限隔离正确组合</b>。",
             "svg": svg_matrix_2x2(
                 [
                     {
                         "tag": "STEWARD GUARANTEES",
-                        "title": "Steward 强保证的安全项",
+                        "title": "Agent Body 强保证的安全项",
                         "accent": C_GREEN,
                         "bg": C_GREEN_L,
                         "lines": [
@@ -852,9 +852,9 @@ def build_talk_05() -> None:
                 ],
                 "最佳实践：OS 容器/最小权限管住底层执行边界，Agent Body 管住认知、反思与审计免疫层。",
             ),
-            "next": "安全与免疫体系闭环后，收束第 5 讲，准备迎接压轴第 6 讲——三轨实证 Benchmark v3.7。",
+            "next": "安全与免疫体系闭环后，收束第 5 讲，准备迎接压轴第 6 讲——三轨实证 Benchmark v3.8。",
             "script": (
-                "做安全架构最忌讳夸大其词。Steward 是认知与反射层的纵深免疫，它不能替代 Linux 用户隔离和容器沙箱；两者叠在一起，才构成生产级 AI 宿主机的完整防御体系。"
+                "做安全架构最忌讳夸大其词。Agent Body 是认知与反射层的纵深免疫，它不能替代 Linux 用户隔离和容器沙箱；两者叠在一起，才构成生产级 AI 宿主机的完整防御体系。"
             ),
         },
         {
@@ -923,7 +923,7 @@ def build_talk_05() -> None:
                         ],
                     },
                 ],
-                ("所有安全承诺均可直接翻阅开源代码与 268 项自动化测试逐行核验。", "Apache-2.0 全透明开源", "teal"),
+                ("所有安全承诺均可直接翻阅开源代码与 320+ 项自动化测试逐行核验。", "Apache-2.0 全透明开源", "teal"),
             ),
             "next": "收束第 5 讲，准备进入整个系列的压轴终章——第 6 讲。",
             "script": (
@@ -935,7 +935,7 @@ def build_talk_05() -> None:
             "title": "免疫飞轮：防得住、查得清、治得好、连得稳",
             "lead": "四大能力首尾相扣，让 Agent 本体具备 7×24 小时无人值守的工程韧性。",
             "svg": svg_bars(
-                "安全、审计与稳态核心门禁实测达标全景（Bench v3.7）",
+                "安全、审计与稳态核心门禁实测达标全景（Bench v3.8）",
                 [
                     ("DQ4 库表凭据脱敏卫生度（目标 >= 100%）", 100.0, "100.0%", "PASS · 0 泄露", C_GREEN),
                     ("DQ7 双域行为审计 SHA-256 完整性（目标 >= 99%）", 100.0, "100.0%", "PASS · 500/500", C_GREEN),
@@ -964,18 +964,18 @@ def build_talk_05() -> None:
                     ("零信任联邦", "MeshEnvelope v1.0 HMAC 防重放 + 沙盒投递 + 名片", "W14 PASS · 17,391x 密度"),
                 ],
                 open_question="开放思考：我们在前五讲报出了一堆「省 99% Token」「质量 99.8 分」的数字——你怎么确信这些数字不是挑好听的编出来的？",
-                next_talk="压轴终章 → 第 06 讲：三轨实证 Benchmark v3.7 与可复现工程体系（06-empirical-benchmark-engineering.html）",
+                next_talk="压轴终章 → 第 06 讲：三轨实证 Benchmark v3.8 与可复现工程体系（06-empirical-benchmark-engineering.html）",
             ),
             "script": (
                 "第 5 讲到这里结束。最后我替最挑剔的听众问自己一个尖锐问题：前五讲你晒了这么多漂亮数字，怎么证明不是挑软柿子捏、不是把上下文截断换来的假省钱？\n"
-                "下一讲也是本系列压轴终章，我们把三轨实证 Benchmark v3.7 和整套防漂移工程体系彻底摊在阳光下！"
+                "下一讲也是本系列压轴终章，我们把三轨实证 Benchmark v3.8 和整套防漂移工程体系彻底摊在阳光下！"
             ),
         },
     ]
     render_deck(
         doc_title="第 05 讲 · 纵深安全、双域审计与探针驱动自进化 — Agent Body",
         brand_label="SERIES 05 / 06 · 安全与进化",
-        foot_label="AGENT BODY · 第 05 讲：纵深安全、双域审计与探针驱动自进化 (v0.4.0)",
+        foot_label="AGENT BODY · 第 05 讲：纵深安全、双域审计与探针驱动自进化 (v1.0.0)",
         slides_data=slides,
         out_path=OUT / "05-security-audit-evolution-mesh.html",
     )
@@ -986,18 +986,18 @@ def build_talk_06() -> None:
         {
             "cover": True,
             "eyebrow": "封面 · 第 06 讲",
-            "title": "三轨实证 Benchmark v3.7 与可复现工程体系",
+            "title": "三轨实证 Benchmark v3.8 与可复现工程体系",
             "svg": svg_cover(
-                kicker="SERIES 06 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
+                kicker="SERIES 06 / 06 · AGENT BODY · v1.0.0 · 30 MIN",
                 title="三轨实证 Benchmark 与工程体系",
                 en_sub="Pareto Token-Quality Gate, Live Competitor Bench & Zero-Drift Ops",
                 subtitle1="拒绝自嗨口号：既要省 Token，更要上下文质量不降反升",
                 subtitle2="帕累托双门禁 Q · 17 负载 + 5 微基准 + 8 DQ + 4 竞品 · 零漂移防重扫",
-                spec_line="Spec v3.7 · SHA-256 存证 · 268 测试 0 失败 · 0 Panic · 0 Drift",
+                spec_line="Spec v3.8 · SHA-256 存证 · 320+ 测试 0 失败 · 0 Panic · 0 Drift",
                 strata=[
                     ("帕累托双门禁 · 拒绝截断作弊", "Q = 40% 事实 + 30% 信噪 + 20% 行动 + 10% 安全", "#EBF1EE", C_INK),
-                    ("轨道 A · 17 负载 + 5 微基准 + 8 DQ", "W1~W17 A/B 真跑 · M1~M5 微秒 SLA · DQ1~DQ8 宿主门禁", "#CFE0DC", C_INK),
-                    ("轨道 B · PR-01~13 生产效能账本", "每一次真实 MCP/CLI/Web/Hook 调用自动归因记账", C_TEAL_D, C_PAPER),
+                    ("轨道 A · 18 负载 + 6 微基准 + 9 DQ", "W1~W18 A/B 真跑 · M1~M6 微秒 SLA · DQ1~DQ9 宿主与遥测门禁", "#CFE0DC", C_INK),
+                    ("轨道 B · PR-01~14 生产效能账本", "每一次真实 MCP/CLI/Web/Hook 调用自动归因记账", C_TEAL_D, C_PAPER),
                     ("轨道 C · COMP-C1~C4 热门竞品同跑", "对标 Mem0 / OpenViking / AgentFS / CLI 组合同机实测", C_TEAL_2, C_PAPER),
                     ("零漂移工程纪律 · Zero-Rescan", "EVOLUTION_GUIDE · evolution_manifest.py · lint-panic · 43/43 Parity", C_TEAL_3, C_PAPER),
                     ("一键复现 · 2 分钟本地独立验真", "make check / test / evolution-check / bench run --suite full", "#A4C4C6", C_INK),
@@ -1025,14 +1025,14 @@ def build_talk_06() -> None:
                     "",
                     "// 帕累托硬门禁 (任一不满足即判 FAIL)：",
                     "//   1. 禁止空输出或截断作弊 (test_pareto_gate_rejects_empty)",
-                    "//   2. Steward_Q >= Baseline_Q (上下文质量不降反升)",
+                    "//   2. Body_Q >= Baseline_Q (上下文质量不降反升)",
                     "//   3. 必含真值事实断言 100% 命中",
                     "//   4. 有效信息密度 = Facts / 1k Tokens 显著放大",
                 ],
                 "四维模型如何堵死作弊漏洞",
                 [
                     ("堵死「截断省钱」", "少返回哪怕 1 条必含物理事实，R_fact 立即扣分并直接判 FAIL", "test_pareto_gate_rejects_empty"),
-                    ("量化信噪比", "裸奔把 500 个噪音文件倒进窗口，P_signal 暴跌；Steward 精准召回直奔满分", "基线 35.8 → 赋能 99.8"),
+                    ("量化信噪比", "裸奔把 500 个噪音文件倒进窗口，P_signal 暴跌；Agent Body 精准召回直奔满分", "基线 35.8 → 赋能 99.8"),
                     ("信息密度倍数", "同时衡量「准」和「省」：每 1,000 Token 承载的有效事实数放大 92.1 倍", "Facts / 1k Tokens = 92.1x"),
                     ("SHA-256 存证", "每份报告计算 SHA-256 防篡改指纹并写入 benchmark_runs 历史表", "支持 compare 跨版本回归"),
                 ],
@@ -1063,9 +1063,9 @@ def build_talk_06() -> None:
                         "accent": C_TEAL_D,
                         "bg": C_TEAL_L,
                         "lines": [
-                            "W1~W17 覆盖 6 大器官全场景",
-                            "M1~M5 锁定微秒级内核 P99 SLA",
-                            "DQ1~DQ8 直查真实宿主机库健康",
+                            "W1~W18 覆盖 6 大器官与 AWR 诊断",
+                            "M1~M6 锁定微秒级内核与无锁探针 SLA",
+                            "DQ1~DQ9 直查宿主机库与内生遥测健康",
                             ("总耗时仅 5.98 秒，一键全量回归", True),
                         ],
                         "foot_lbl": "实测结果",
@@ -1206,13 +1206,13 @@ def build_talk_06() -> None:
             ),
             "next": "跑完一次全绿很容易，难的是迭代到 46 个 Phase、27 个模块后，文档、代码、测试依然零漂移——我们怎么做到的？",
             "script": (
-                "我们在竞品对标里守一条学术底线：跑了真代码的才标 `LIVE_BENCHMARKED`，看源码对比的标 `ARCH_VERIFIED`，绝不混着吹。四条赛道同机跑完，Steward 在脱敏安全、零副本省 Token、白黑灰防噪音和零子进程拓扑上的优势一目了然。"
+                "我们在竞品对标里守一条学术底线：跑了真代码的才标 `LIVE_BENCHMARKED`，看源码对比的标 `ARCH_VERIFIED`，绝不混着吹。四条赛道同机跑完，Agent Body 在脱敏安全、零副本省 Token、白黑灰防噪音和零子进程拓扑上的优势一目了然。"
             ),
         },
         {
             "eyebrow": "06 · 零漂移工程体系",
             "title": "四位一体防重扫与零漂移架构：让 AI 维护大仓不再失忆",
-            "lead": "项目长到 27 模块、43 工具、82 SPI 后，<b>靠人工同步文档必漂移；必须用确定性脚本把事实锁死</b>。",
+            "lead": "项目长到 27 模块、43 工具、88 SPI 后，<b>靠人工同步文档必漂移；必须用确定性脚本把事实锁死</b>。",
             "svg": svg_columns(
                 [
                     {
@@ -1239,7 +1239,7 @@ def build_talk_06() -> None:
                     },
                     {
                         "tag": "PILLAR 03 · 零崩溃红线",
-                        "title": "lint-panic + 268 测试",
+                        "title": "lint-panic + 320+ 测试",
                         "accent": C_CLAY,
                         "lines": [
                             "生产代码强制 0 unwrap/expect",
@@ -1265,7 +1265,7 @@ def build_talk_06() -> None:
             "next": "连你现在看到的这 9 份 HTML 演讲稿，也纳入了自动化视觉门禁！",
             "script": (
                 "很多人好奇：一个人带 AI 迭代 46 个 Phase、写两万多行 Rust 和几十份文档，为什么没有烂尾成屎山？\n"
-                "秘诀就是把「靠自觉」全部替换成「确定性门禁」：`make evolution-check` 扫源码核对文档，少改一个数字立刻报错；`make lint-panic` 扫生产代码，多写一个 `unwrap()` 立刻报错；`cargo test` 跑 268 项测试，少对齐一个黑白屏工具立刻报错。"
+                "秘诀就是把「靠自觉」全部替换成「确定性门禁」：`make evolution-check` 扫源码核对文档，少改一个数字立刻报错；`make lint-panic` 扫生产代码，多写一个 `unwrap()` 立刻报错；`cargo test` 跑 320+ 项测试，少对齐一个黑白屏工具立刻报错。"
             ),
         },
         {
@@ -1313,7 +1313,7 @@ def build_talk_06() -> None:
                     "# 3. 构建 Release 单二进制并运行宿主机预检",
                     "make build && ./target/release/agent-body preflight",
                     "",
-                    "# 4. 独立运行 Benchmark v3.7 全量三轨评测（~6 秒）",
+                    "# 4. 独立运行 Benchmark v3.8 全量三轨评测（~6 秒）",
                     "./target/release/agent-body bench run --suite full --save false",
                     "",
                     "# 5. 启动 Web 2.0 驾驶舱（默认 http://127.0.0.1:8756）",
@@ -1323,39 +1323,39 @@ def build_talk_06() -> None:
                 [
                     ("基础要求", "Rust 1.80+ 工具链（单二进制编译零 C/外部数据库强依赖）", "SQLite 静态内嵌"),
                     ("增强可选", "本机安装 Ollama (nomic-embed-text + qwen3.5:0.8b) 解锁 L2/L3", "离线自动优雅降级"),
-                    ("零污染跑批", "--save false 在隔离内存/临时沙箱执行 W1~W17 与 COMP-C1~C4", "不污染宿主机文件"),
+                    ("零污染跑批", "--save false 在隔离内存/临时沙箱执行 W1~W18 与 COMP-C1~C4", "不污染宿主机文件"),
                     ("验证本套 PPT", "python3 scripts/verify_presentations.py", "9 份 HTML 逐页验真"),
                 ],
             ),
             "next": "看一眼整个仓库目前的物理工程规模与健康指标快照。",
             "script": (
-                "对可复现的执着，是我们区分「玩具 Demo」和「基础设施」的分水岭。这五条命令复制粘贴跑完不到两分钟，你会亲眼看到 0 drift、0 panic、268 passed 和一份带 SHA-256 指纹的 v3.7 实测报告。"
+                "对可复现的执着，是我们区分「玩具 Demo」和「基础设施」的分水岭。这五条命令复制粘贴跑完不到两分钟，你会亲眼看到 0 drift、0 panic、320+ passed 和一份带 SHA-256 指纹的 v3.8 实测报告。"
             ),
         },
         {
             "eyebrow": "09 · 工程体检全景",
-            "title": "v0.4.0 完整工程快照：27 模块 · 43 工具 · 82 SPI · 268 测试",
+            "title": "v1.0.0 完整工程快照：27 模块 · 43 工具 · 88 SPI · 320+ 测试",
             "lead": "小体量单二进制，却拥有完整数据库级存储抽象与企业级自证工程密度。",
             "svg": svg_metrics_table(
                 [
                     ("27 模块", "Rust 内核模块数", "含 #26 audit & #27 body"),
                     ("43 / 43", "黑白屏 1:1:1 同步率", "MCP / CLI / Web 100%"),
-                    ("82 SPI", "三引擎存储契约方法", "SQLite · PG · DuckDB"),
-                    ("268 / 0", "单元 + 集成测试全绿", "0 failed · 0 unwrap"),
+                    ("88 SPI", "三引擎存储契约方法", "SQLite · PG · DuckDB"),
+                    ("320+ / 0", "单元 + 集成测试全绿", "0 failed · 0 unwrap"),
                 ],
                 ["架构切面", "精确规模与实测状态", "对应硬门禁", "状态"],
                 [
-                    ["存储层", "27 张表 · 82 SPI 方法 · 3 存储引擎无损互迁", "duckdb + pg + migration 测试", "PASS"],
+                    ["存储层", "27 张表 · 88 SPI 方法 · 3 存储引擎无损互迁", "duckdb + pg + migration 测试", "PASS"],
                     ["协议层", "43 原生 MCP 工具 · 1:1 CLI · Web 2.0 9 大工作台", "test_web_parity_matrix_100%", "PASS"],
-                    ["基准层", "Bench v3.7：17 负载 + 5 微基准 + 8 DQ + 4 竞品 + 13 PR", "run-6a0a4995 SLA 全绿", "PASS"],
+                    ["基准层", "Bench v3.8：18 负载 + 6 微基准 + 9 DQ + 4 竞品 + 14 PR", "run-6a0a4995 SLA 全绿", "PASS"],
                     ["文档与技能", "EVOLUTION_GUIDE + docs/manual/ + 3 套 SKILL + 9 份 HTML 演讲", "evolution-check 0 drift + Playwright", "PASS"],
                 ],
                 [18, 220, 820, 1290],
-                footnote="基线版本：agent-body v0.4.0 (Phase 1 ~ Phase 46) · Apache-2.0",
+                footnote="基线版本：agent-body v1.0.0 (Phase 1 ~ Phase 57) · Apache-2.0",
             ),
             "next": "接下来还有哪些未完的演进？看看面向 Phase 47（ISSUE #29）的收官蓝图。",
             "script": (
-                "这是今天为止 agent-body 的完整工程体检表：27 个模块、43 个原生工具、82 个存储 SPI 方法、27 张表、268 项测试零失败、Bench v3.7 全绿。每一项数字都能通过脚本直接从源码反算出来。"
+                "这是今天为止 agent-body 的完整工程体检表：27 个模块、43 个原生工具、88 个存储 SPI 方法、27 张表、320+ 项测试零失败、Bench v3.8 全绿。每一项数字都能通过脚本直接从源码反算出来。"
             ),
         },
         {
@@ -1364,7 +1364,7 @@ def build_talk_06() -> None:
             "lead": "复杂项目演进最忌讳前后打架。<b>合理排布依赖拓扑，实现 100% 零返工</b>。",
             "svg": svg_pipeline(
                 [
-                    {"tag": "PHASE 44~45 ✅", "title": "ISSUE #27 本体升维", "accent": C_GREEN, "bg": C_GREEN_L, "lines": ["src/body/ + body_checkpoints", "43 工具 + Bench v3.7 全绿", "三层兼容刷新全物料"]},
+                    {"tag": "PHASE 44~45 ✅", "title": "ISSUE #27 本体升维", "accent": C_GREEN, "bg": C_GREEN_L, "lines": ["src/body/ + body_checkpoints", "43 工具 + Bench v3.8 全绿", "三层兼容刷新全物料"]},
                     {"tag": "PHASE 46 ✅", "title": "ISSUE #28 体系演讲", "accent": C_TEAL_D, "bg": C_TEAL_L, "lines": ["新建 presentation/ 目录", "6 讲 × 30min 专题 HTML", "老双 Deck 终刷新 + 验真"]},
                     {"tag": "PHASE 47 ⏳", "title": "ISSUE #29 目录规整", "accent": C_GOLD, "bg": C_GOLD_L, "lines": ["git mv 收拢一级文档目录", "全仓路径引用批量刷新", "重建 .codegraph/ 完美收官"]},
                     {"tag": "FUTURE", "title": "生态与跨端演进", "accent": C_TEAL_3, "lines": ["更多客户端一键接入", "跨宿主机多体集群协作", "社区插件与场景模板"]},
@@ -1439,8 +1439,8 @@ def build_talk_06() -> None:
                 kicker="SERIES FINALE · 第 06 讲收束（全系列完）",
                 headline="Agent Body：用数据库级工程纪律，锻造 AI 时代的宿主机具身底座",
                 pillars=[
-                    ("帕累托实证", "Token -99.22% × 质量 35.8→99.8 × 密度 92.1x", "W1~W17 · M1~M5 · DQ1~DQ8 全绿"),
-                    ("零漂移纪律", "evolution-check + lint-panic + 268 测试 + Playwright", "可独立 2 分钟完整复现"),
+                    ("帕累托实证", "Token -99.22% × 质量 35.8→99.8 × 密度 92.1x", "W1~W18 · M1~M6 · DQ1~DQ9 全面对齐"),
+                    ("零漂移纪律", "evolution-check + lint-panic + 320+ 测试 + Playwright", "可独立 2 分钟完整复现"),
                     ("长期主义", "脑体分离、递弱代偿、三层兼容、Apache-2.0 开源", "github.com/digoal/agent-body"),
                 ],
                 open_question="终局之问：如果五年后每台个人电脑与服务器都默认运行着一层「Agent 本体底座」，它最不可或缺的三条标准协议应该是什么？",
@@ -1454,9 +1454,9 @@ def build_talk_06() -> None:
         },
     ]
     render_deck(
-        doc_title="第 06 讲 · 三轨实证 Benchmark v3.7 与可复现工程体系 — Agent Body",
+        doc_title="第 06 讲 · 三轨实证 Benchmark v3.8 与可复现工程体系 — Agent Body",
         brand_label="SERIES 06 / 06 · 实证工程",
-        foot_label="AGENT BODY · 第 06 讲：三轨实证 Benchmark v3.7 与可复现工程体系 (v0.4.0)",
+        foot_label="AGENT BODY · 第 06 讲：三轨实证 Benchmark v3.8 与可复现工程体系 (v1.0.0)",
         slides_data=slides,
         out_path=OUT / "06-empirical-benchmark-engineering.html",
     )
@@ -1469,14 +1469,14 @@ def build_index_hub() -> None:
          "为什么大管家/小秘书会误导？比较优势、六大生理器官、递弱代偿、三层零破坏兼容与 src/body/ 源码剖析。"),
         ("02", "宿主机物理感官图谱与零污染扫盘", "02-host-reality-graph.html", "30 min · 14 页",
          "/proc 0.2ms 探测、白黑灰分级扫描敲门不进屋、L1/L2/L3 语义元数据、三层有向加权图谱与 CodeGraph 宏微联邦。"),
-        ("03", "小脑反射、痛觉门禁与自适应并发控制 AOPCC", "03-cerebellum-and-aopcc.html", "30 min · 14 页",
+        ("03", "小脑反射、痛觉门禁与自适应并发控制 AOPCC", "03-cerebellum-and-aopcc.html", "30 min · 13 页",
          "算清整轮对话税 C_turn、乐观直通租约 vs 悲观门禁、Post-Hook 碰壁毫秒自愈、目录层级锁与 WFG 死锁破局。"),
-        ("04", "海马体、信息新鲜度治理与跨大脑 1ms 接力", "04-hippocampus-freshness-continuity.html", "30 min · 14 页",
+        ("04", "海马体、信息新鲜度治理与跨大脑 1ms 接力", "04-hippocampus-freshness-continuity.html", "30 min · 13 页",
          "Memory SPI、七大陈旧漏斗写穿失效、FreshnessReconciler 对账、第 27 表 body_checkpoints 与跨脑脱敏接力胶囊。"),
-        ("05", "纵深安全、双域审计与探针驱动自进化", "05-security-audit-evolution-mesh.html", "30 min · 14 页",
+        ("05", "纵深安全、双域审计与探针驱动自进化", "05-security-audit-evolution-mesh.html", "30 min · 13 页",
          "四道纵深安全铁闸、IN/OUT 双域 60s 折叠审计、P1~P5 内生对比探针、五维稳态自愈与 MeshEnvelope v1.0。"),
-        ("06", "三轨实证 Benchmark v3.7 与可复现工程体系", "06-empirical-benchmark-engineering.html", "30 min · 14 页",
-         "帕累托四维质量门禁 Q、W1~W17 / M1~M5 / DQ1~DQ8 全绿实测、COMP-C1~C4 竞品同跑与 2 分钟独立复现纪律。"),
+        ("06", "三轨实证 Benchmark v3.8 与可复现工程体系", "06-empirical-benchmark-engineering.html", "30 min · 13 页",
+         "帕累托四维质量门禁 Q、W1~W18 / M1~M6 / DQ1~DQ9 实测与 COMP-C1~C4 同跑、COMP-C1~C4 竞品同跑与 2 分钟独立复现纪律。"),
     ]
     cards_html = "".join(
         f"""<a class="deck-card" href="{href}">
@@ -1531,22 +1531,22 @@ h1{{font-family:var(--f-r);font-size:44px;font-weight:600;margin-top:12px;letter
 </head>
 <body>
 <div class="wrap">
-  <div class="eyebrow">AGENT BODY · PRESENTATION SUITE · v0.4.0 · APACHE-2.0</div>
+  <div class="eyebrow">AGENT BODY · PRESENTATION SUITE · v1.0.0 · APACHE-2.0</div>
   <h1>Agent 本体体系化演讲与路演总览</h1>
-  <p class="sub">统一采用<b>「浅色纸基 · 地层剖面 · 工程蓝图」</b>视觉规范（零外部依赖 · 内联正交 SVG · <code>N/T</code> 联动讲稿 · <code>G</code> 目录 · <code>P/A/S/R</code> 步进动画 · Decks-as-Code 确定性生成）。基线实测：27 模块 · 43 工具 · 82 SPI · 270+ 测试全绿 · Bench v3.7 全绿（-99.24% Token · 质量 35.8→99.8 · 内生 AWR 稳态）。</p>
+  <p class="sub">统一采用<b>「浅色纸基 · 地层剖面 · 工程蓝图」</b>视觉规范（零外部依赖 · 内联正交 SVG · <code>N/T</code> 联动讲稿 · <code>G</code> 目录 · <code>P/A/S/R</code> 步进动画 · Decks-as-Code 确定性生成）。基线实测：27 模块 · 43 工具 · 88 SPI · 320+ 测试全绿 · Bench v3.8（-99.23% Token · 质量 35.6→98.0 · 18/18 WaitEvent AWR）。</p>
   <div class="rule"></div>
-  <div class="sec-lbl">OVERVIEW DECKS · 旗舰全景总览版（Phase 51 推翻重写 · 全面对齐 v0.4.0 Agent 本体现状）</div>
+  <div class="sec-lbl">OVERVIEW DECKS · 旗舰全景总览版（Phase 57 全景对齐 · v1.0.0 GA Agent 本体现状）</div>
   <div class="hero-grid">
     <a class="hero-card" href="presentation.html">
       <div class="dc-top"><span>ROADSHOW · 路演总览版</span><span class="dc-meta">16 页 · 15~20 分钟</span></div>
       <h2>Agent 本体对外路演版（presentation.html）</h2>
-      <p>面向投资人、CTO 与技术决策者：比较优势 → 脑体分离六大器官 → AOPCC 乐观-悲观并发 → 换脑不失忆 → 内生 AWR → Bench v3.7 帕累托双门禁与四赛道竞品实测。</p>
+      <p>面向投资人、CTO 与技术决策者：比较优势 → 脑体分离六大器官 → AOPCC 乐观-悲观并发 → 换脑不失忆 → 内生 AWR → Bench v3.8 帕累托双门禁与四赛道竞品实测。</p>
       <span class="dc-go">打开路演版 →</span>
     </a>
     <a class="hero-card clay" href="agent-body-deck.html">
       <div class="dc-top"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">24 页 · 45~60 分钟</span></div>
       <h2>Agent 本体深度技术交流版（agent-body-deck.html）</h2>
-      <p>面向数据库内核与 AI Infra 架构师：27 模块 / 82 SPI、L1~L3 分层图谱、AOPCC 数学边界、新鲜度写穿、MeshEnvelope v1.0、双域审计自进化、Wait Events / AWR / ADDM 与五重确定性门禁。</p>
+      <p>面向数据库内核与 AI Infra 架构师：27 模块 / 88 SPI、L1~L3 分层图谱、AOPCC 数学边界、新鲜度写穿、MeshEnvelope v1.0、双域审计自进化、Wait Events / AWR / ADDM 与五重确定性门禁。</p>
       <span class="dc-go">打开交流版 →</span>
     </a>
   </div>

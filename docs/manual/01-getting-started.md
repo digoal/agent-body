@@ -72,9 +72,9 @@ chmod +x /usr/local/bin/agent-body
 ╔═══════════════════════════════════════════════════════╗
 ║      Agent Body (Rust 版) — 系统状态          ║
 ╚═══════════════════════════════════════════════════════╝
-版本:           v0.4.0 (9ba7bca, linux/x86_64, built at 2026-11-19T07:53:18Z)
-数据目录:       "/root/.agent-body"
-数据库文件:     "/root/.agent-body/body.db"
+版本:           v1.0.0 (<git-commit>, linux/x86_64)
+数据目录:       "<user_home>/.agent-body"
+数据库文件:     "<user_home>/.agent-body/body.db"
 已纳管资产数:   26091
 依赖关系边数:   6407 条
 放置规范规则:   8 条
@@ -110,7 +110,7 @@ chmod +x /usr/local/bin/agent-body
   - [PID 420979] llama-server (CPU 0.0%, 内存 877.7MB) -> /usr/lib/ollama/llama-server ...
   - [PID 2112] gateway-control (CPU 0.0%, 内存 703.4MB) -> python3 ...
 最近更新资产:
-  *(暂无已纳管资产，可通过 steward asset scan 扫描录入)*
+  *(暂无已纳管资产，可通过 agent-body asset scan 扫描录入)*
 最近长期记忆:
   - [decision] 决定选用 Rust 1.99 与 SQLite 编写 Agent Body 核心进程 (ID: mem-82ecbb7b...)
 ```

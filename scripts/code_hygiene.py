@@ -2,10 +2,11 @@
 """Agent Body 确定性代码质量与卫生门禁 (make lint-hygiene, 对应规约 #13 & #28)。
 
 检查项:
-  1. 位置无关性红线: 生产代码 (#[cfg(test)] 之前) 严禁硬编码 env!("CARGO_MANIFEST_DIR")
+  1. 位置无关性红线: 生产代码 (#[cfg(test)] 之前) 严禁硬编码 env!("CARGO_MANIFEST_DIR")，且非 Benchmark 生产代码严禁新增 /root/new/ 与 user:digoal 硬编码
   2. 活跃部署与配置红线: Dockerfile / docker-compose.yml / config.example.toml 严禁残留 /.steward
-  3. 关键自治路径错误可观测性: 统计生产代码 let _ = 静默吞错数量并守卫上限不回弹
-  4. 模块化复杂度雷达: 报告超过 1500 行的生产文件与超长函数，辅助防 God File 膨胀
+  3. 关键自治路径错误可观测性: 统计生产代码 let _ = 静默吞错数量 (<= 50) 且核心自治/SQLite路径必须为 0
+  4. 模块化复杂度红线: 严格禁止任何生产 Rust 文件超过 1500 行 (>1500L 清零)
+  5. WaitEventId 全埋点红线: 所有 WaitEventId 枚举变体必须在生产路径中具备 WaitEventGuard::enter / WaitEventRegistry::record_us 埋点
 """
 
 from __future__ import annotations
@@ -18,13 +19,22 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# 随着 Phase 49 治理逐步收紧的静默吞错预算上限（治理前 142 -> 已收紧至 <= 130）
-MAX_SILENT_LET_UNDERSCORE = 130
+# 随着 Phase 49 -> Phase 56 治理逐步收紧的静默吞错预算上限（142 -> 130 -> 50）
+MAX_SILENT_LET_UNDERSCORE = 50
+CORE_ZERO_SILENT_PREFIXES = (
+    "src/daemon/",
+    "src/session/",
+    "src/watcher/",
+    "src/coordination/",
+    "src/storage/sqlite_provider/",
+    "src/hooks/auto_sync.rs",
+    "src/links/audit.rs",
+)
 
 
 def prod_slice(path: Path) -> str:
     text = path.read_text(encoding="utf-8")
-    m = re.search(r"\n#\[cfg\(test\)\]\s*\n\s*mod\s+tests\b", text)
+    m = re.search(r"\n#\[cfg\(test\)\]\s*\n\s*(?:pub\s+)?mod\s+tests\b", text)
     return text[: m.start()] if m else text
 
 
@@ -34,18 +44,30 @@ def run_checks() -> tuple[list[str], list[str]]:
 
     rs_files = sorted(Path(p) for p in glob.glob(str(ROOT / "src/**/*.rs"), recursive=True))
 
-    # 1. 生产代码禁止 env!("CARGO_MANIFEST_DIR")
+    # 1. 生产代码禁止 env!("CARGO_MANIFEST_DIR") 与非基准硬编码 /root/new/ & user:digoal
     manifest_dir_hits: list[str] = []
+    hardcoded_host_hits: list[str] = []
+    core_silent_hits: list[str] = []
     silent_let_total = 0
     oversized_files: list[tuple[int, str]] = []
+    all_prod_texts: list[tuple[str, str]] = []
 
     for p in rs_files:
         rel = p.relative_to(ROOT).as_posix()
         prod = prod_slice(p)
+        all_prod_texts.append((rel, prod))
+        is_benchmark = rel.startswith("src/benchmark/")
         for lineno, line in enumerate(prod.splitlines(), 1):
+            stripped = line.strip()
             if "CARGO_MANIFEST_DIR" in line:
-                manifest_dir_hits.append(f"{rel}:{lineno}: {line.strip()}")
-        silent_let_total += len(re.findall(r"\blet\s+_\s*=", prod))
+                manifest_dir_hits.append(f"{rel}:{lineno}: {stripped}")
+            if not is_benchmark and not stripped.startswith("//"):
+                if "/root/new" in line or "user:digoal" in line:
+                    hardcoded_host_hits.append(f"{rel}:{lineno}: {stripped}")
+        file_silent = len(re.findall(r"\blet\s+_\s*=", prod))
+        silent_let_total += file_silent
+        if file_silent > 0 and rel.startswith(CORE_ZERO_SILENT_PREFIXES):
+            core_silent_hits.append(f"{rel} ({file_silent}处)")
         loc = len(prod.splitlines())
         if loc > 1500:
             oversized_files.append((loc, rel))
@@ -54,6 +76,15 @@ def run_checks() -> tuple[list[str], list[str]]:
         errors.append(
             "生产代码禁止硬编码 env!(\"CARGO_MANIFEST_DIR\")（违反规约 #28 位置无关性）:\n    "
             + "\n    ".join(manifest_dir_hits)
+        )
+    if hardcoded_host_hits:
+        errors.append(
+            "非 Benchmark 生产代码禁止新增 `/root/new` 或 `user:digoal` 硬编码:\n    "
+            + "\n    ".join(hardcoded_host_hits)
+        )
+    if core_silent_hits:
+        errors.append(
+            "核心自治与 SQLite 主路径禁止 `let _ =` 静默吞错: " + ", ".join(core_silent_hits)
         )
 
     # 2. 活跃部署与配置禁止残留 /.steward
@@ -69,13 +100,30 @@ def run_checks() -> tuple[list[str], list[str]]:
         )
     notes.append(f"静默 `let _ =` 计数: {silent_let_total} / {MAX_SILENT_LET_UNDERSCORE}")
 
-    # 4. 模块化复杂度雷达（信息提示，推动持续拆解）
+    # 4. 模块化复杂度红线 (>1500L 清零)
     oversized_files.sort(reverse=True)
     if oversized_files:
         top_str = ", ".join(f"{rel}({loc}L)" for loc, rel in oversized_files[:6])
+        errors.append(f"存在 >1500L 生产 God File ({len(oversized_files)} 个): {top_str}")
         notes.append(f">1500L 生产文件 ({len(oversized_files)} 个): {top_str}")
     else:
         notes.append(">1500L 生产文件: 0 个")
+
+    # 5. WaitEventId 全枚举埋点覆盖率检查
+    we_file = ROOT / "src/body/perf_awr/wait_events.rs"
+    if we_file.exists():
+        we_src = we_file.read_text(encoding="utf-8")
+        enum_m = re.search(r"pub enum WaitEventId\s*\{(.*?)\}", we_src, flags=re.S)
+        if enum_m:
+            variants = re.findall(r"^\s*([A-Z][A-Za-z0-9]+)\s*(?:=\s*\d+)?,", enum_m.group(1), flags=re.M)
+            non_we_prod = "\n".join(prod for rel, prod in all_prod_texts if rel != "src/body/perf_awr/wait_events.rs")
+            missing_we = [
+                v for v in variants
+                if not re.search(rf"WaitEvent(?:Guard::enter|Registry::record_us)\([^)]*WaitEventId::{v}\b", non_we_prod)
+            ]
+            if missing_we:
+                errors.append(f"存在未埋点 WaitEventId 变体: {', '.join(missing_we)}")
+            notes.append(f"WaitEventId 埋点覆盖: {len(variants) - len(missing_we)} / {len(variants)}")
 
     return errors, notes
 

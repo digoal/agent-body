@@ -336,7 +336,7 @@ impl Storage {
     pub fn upsert_asset(&self, asset: &AssetRecord) -> Result<()> {
         let res = self.provider.upsert_asset(asset)?;
         if let Some(ref bus) = self.event_bus {
-            let _ = bus.emit(crate::hooks::StewardEvent::AssetRegistered {
+            let _delivered = bus.emit(crate::hooks::StewardEvent::AssetRegistered {
                 path: asset.path.clone(),
                 object_type: asset.asset_type.clone(),
                 owner: asset.owner.clone(),
@@ -374,7 +374,7 @@ impl Storage {
     pub fn insert_memory(&self, mem: &MemoryRecord) -> Result<()> {
         let res = self.provider.insert_memory(mem)?;
         if let Some(ref bus) = self.event_bus {
-            let _ = bus.emit(crate::hooks::StewardEvent::MemoryAdded {
+            let _delivered = bus.emit(crate::hooks::StewardEvent::MemoryAdded {
                 memory_id: mem.id.clone(),
                 memory_type: mem.memory_type.clone(),
                 summary: mem.summary.clone(),

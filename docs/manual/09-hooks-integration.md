@@ -1,6 +1,6 @@
 # docs/manual/09-hooks-integration.md — Agent Body HOOK 机制与自动化接入指南
 
-> **版本**: v0.4.0 (Phase 14)  
+> **版本**: v1.0.0 GA (Phase 14 ~ 56 · 支持 Antigravity / Claude Code `.claude/settings.json` / Cursor / Codex / Hermes / Git)  
 > **适用对象**: 所有接入 Agent Body 的智能体框架、定时脚本与宿主运维体系
 
 ---

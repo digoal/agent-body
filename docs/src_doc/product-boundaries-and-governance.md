@@ -10,15 +10,15 @@
 
 ---
 
-## 2. 什么是 Steward，什么不是 Steward (What We Are vs What We Are Not)
+## 2. 什么是 Agent Body，什么不是 Agent Body (What We Are vs What We Are Not)
 
-| 领域 / 职责 | Agent Body 必须做 (In Scope) | Steward 明确不做 (Out of Scope / Non-Goals) |
+| 领域 / 职责 | Agent Body 必须做 (In Scope) | Agent Body 明确不做 (Out of Scope / Non-Goals) |
 | :--- | :--- | :--- |
-| **任务编排** | 提供标准 Hook 接口与开工简报，告知 Agent 宿主约束 | **不替代** 上层 Agent 框架（如 LangGraph, AutoGen, CrewAI, Swarm）。Steward 不编排多 Agent 对话拓扑。 |
-| **大模型推理** | 仅使用轻量 Embedding 模型或本地规则做向量化与文本匹配 | **不承担** 业务 LLM 思考与代码编写，绝不在管家内塞入庞大 Prompt 链。 |
-| **代码执行与沙箱** | 提供真实环境状态审计与危险路径阻断 | **不替代** Docker / gVisor / Firecracker。Steward 面向拥有真实宿主操作权限的特权 Agent 进行辅助，而非做强制沙箱隔离。 |
-| **存储中枢** | 通过 SPI 抽象提供 SQLite (单机嵌入) 与 PostgreSQL (分布式/企业级) 双引擎 | **不充当** 通用关系数据库或高并发 OLTP 业务数据库；仅管理 Steward 内部元数据、图谱与长期记忆。 |
-| **机密凭据保管** | 识别敏感路径（如 .env, id_rsa）并标记安全保密级别 | **不替代** HashiCorp Vault 或 1Password。Steward 不负责密钥轮转与加解密托管。 |
+| **任务编排** | 提供标准 Hook 接口与开工简报，告知 Agent 宿主约束 | **不替代** 上层 Agent 框架（如 LangGraph, AutoGen, CrewAI, Swarm）。Agent Body 不编排多 Agent 对话拓扑。 |
+| **大模型推理** | 仅使用轻量 Embedding 模型或本地规则做向量化与文本匹配 | **不承担** 业务 LLM 思考与代码编写，绝不在本体内塞入庞大 Prompt 链。 |
+| **代码执行与沙箱** | 提供真实环境状态审计与危险路径阻断 | **不替代** Docker / gVisor / Firecracker。Agent Body 面向拥有真实宿主操作权限的 Agent 提供防撞协同，而非做强制沙箱隔离。 |
+| **存储中枢** | 通过 SPI 抽象提供 SQLite (单机嵌入)、PostgreSQL (企业共享) 与 DuckDB (OLAP 列存) 三后端引擎 | **不充当** 通用关系数据库或高并发 OLTP 业务数据库；仅管理本体内部元数据、图谱、审计、AWR 快照与长期记忆。 |
+| **机密凭据保管** | 识别敏感路径（如 .env, id_rsa）并标记安全保密级别 | **不替代** HashiCorp Vault 或 1Password。Agent Body 不负责密钥轮转与加解密托管。 |
 | **宿主事实图谱** | 维护显式物理(`L1`)、结构聚合(`L2`)与稀疏语义(`L3`)三层有向加权拓扑并桥接 CodeGraph | **不伪造** 物理硬依赖；严禁将高维语义近邻混作确定性上游/下游故障依赖。 |
 | **跨主机 Mesh** | 提供基于 `MeshEnvelope v1.0` 签名防重放认证的联邦查询、跨机锁、结构化对话与受控小产物(`<=10MB`)收件箱投递 | **不替代** Raft/Paxos 共识引擎、S3/Rsync 全量文件系统同步或人类聊天 IM；严禁跨机直写覆盖系统与业务路径。 |
 | **双域审计与自进化** | 对 `IN_AGENT`（Brief/Hook/MCP/CLI/Web/Mesh）与 `OUT_OF_AGENT`（后台巡检/Watcher 60s 折叠/GC/断链修复/规则演化）全行为记录脱敏前后增量与 SHA-256 存证，用于 DuckDB OLAP 分析与驱动 AOPCC 租约/规则自进化 | **不替代** 企业级通用 SIEM/ELK 日志中心或应用层 APM 全量链路追踪系统（如 Datadog/Jaeger），仅审计宿主机管家双域关键治理与认知动作。 |
@@ -61,7 +61,7 @@ Host Steward 是每位 Agent 高频调用的基石底座，核心 API（端口�
 
 ## 4. 安全威胁边界与五层纵深防御规约 (Security Governance Matrix)
 
-完整威胁建模（`SEC-GAP-01` ~ `SEC-GAP-05`）、`S1` ~ `S5` 安全规格与演进路线详见 [11-security-spec.md](../design_doc/11-security-spec.md) 与 [roadmap-phase32.md](roadmap-phase32.md)。
+完整威胁建模（`SEC-GAP-01` ~ `SEC-GAP-05`）、`S1` ~ `S5` 安全规格与演进路线详见 [11-security-spec.md](../design_doc/11-security-spec.md) 与 [roadmap-phase32.md](archive/roadmap-phase32.md)。
 
 | 防御层级 | 核心机制 | 强制基线与对应阶段 |
 |---|---|---|

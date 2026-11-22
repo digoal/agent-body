@@ -10,7 +10,7 @@
 
 1. **只读 Tier-0 文档（仅 2 份）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构地图 + 变更触点矩阵）；
-   - 当前活跃路线图 [docs/src_doc/roadmap-phase55.md](docs/src_doc/roadmap-phase55.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase54.md](docs/src_doc/roadmap-phase54.md)、[docs/src_doc/roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)、[docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)、[docs/src_doc/roadmap-phase51.md](docs/src_doc/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/roadmap-phase42.md)）。
+   - 当前活跃路线图 [docs/src_doc/roadmap-phase57.md](docs/src_doc/roadmap-phase57.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase56.md](docs/src_doc/roadmap-phase56.md)、[docs/src_doc/roadmap-phase55.md](docs/src_doc/roadmap-phase55.md)、[docs/src_doc/roadmap-phase54.md](docs/src_doc/roadmap-phase54.md)、[docs/src_doc/roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)、[docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)、[docs/src_doc/roadmap-phase51.md](docs/src_doc/archive/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/archive/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/archive/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/archive/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/archive/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/archive/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/archive/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/archive/roadmap-phase42.md)）。
 2. **运行 O(1) 实时架构快照（`<100ms`，禁止手动数模块/工具数）**：
    ```bash
    make evolution-check
@@ -35,8 +35,8 @@
 
 | 演进场景 | 必改代码触点（按串行修改顺序） | 必改测试 / 门禁 / 文档触点 |
 |---|---|---|
-| **1. 新增 / 修改原生 MCP 工具** | 1. `src/api/mcp_tools.rs` (`list_tools` + `call_tool_inner`)<br/>2. `src/main.rs` (1:1 CLI 子命令)<br/>3. `src/web/server.rs` & `src/web/parity_api.rs` (REST API + `parity/matrix`)<br/>4. `src/web/assets/mod.rs` (前端工作台交互) | `src/api/mcp.rs` 单测 + `tests/test_web_dashboard.rs` + `docs/manual/03,04` + `make evolution-check` |
-| **2. 新增 / 修改数据库表或列** | 1. `src/storage/{schema,pg_schema,duckdb_schema}.sql`<br/>2. `src/storage/models.rs`<br/>3. `src/storage/spi.rs` (`StorageProvider` Trait)<br/>4. `src/storage/{sqlite,pg,duckdb}_provider.rs`<br/>5. `src/storage/migration.rs` (按需迁移) | `src/storage/mod.rs` 单测 + `tests/duckdb_integration.rs` + `make evolution-check` |
+| **1. 新增 / 修改原生 MCP 工具** | 1. `src/api/mcp_tools.rs` (`list_tools` + `call_tool_inner`)<br/>2. `src/cli_args.rs` + `src/cli_handlers/*` (1:1 CLI 子命令)<br/>3. `src/web/server.rs` & `src/web/parity_api/*` (REST API + `parity/matrix`)<br/>4. `src/web/assets/{index.html,style.css,js/*.js}` (前端工作台交互) | `src/api/mcp.rs` 单测 + `tests/test_web_dashboard.rs` + `docs/manual/03,04` + `make evolution-check` |
+| **2. 新增 / 修改数据库表或列** | 1. `src/storage/{schema,pg_schema,duckdb_schema}.sql`<br/>2. `src/storage/models.rs`<br/>3. `src/storage/spi.rs` (`StorageProvider` Trait)<br/>4. `src/storage/{sqlite,pg,duckdb}_provider/{mod,assets,facts,memory,locks,audit}.rs`<br/>5. `src/storage/migration.rs` (按需迁移) | `src/storage/mod.rs` 单测 + `tests/duckdb_integration.rs` + `make evolution-check` |
 | **3. 新增 / 修改 Benchmark 负载或 DQ** | 1. `src/benchmark/{workloads,micro,dq,competitors}.rs`<br/>2. `src/benchmark/mod.rs` (`run_suite` / 汇总)<br/>3. `src/benchmark/report.rs` (`BENCHMARK_SPEC_VERSION` / 渲染) | `tests/benchmarks.rs` + `docs/design_doc/10-benchmark-spec.md` + `docs/manual/10-benchmark-and-roi.md` |
 | **4. 新增 / 修改安全脱敏与 Pre-Hook 门禁** | 1. `src/scanner/metadata.rs` (`SecretRedactor` / `PromptInjectionScanner`)<br/>2. `src/api/hooks.rs` (`pre_tool_call` 高危拦截)<br/>3. `src/hooks/dispatcher.rs` / `src/web/server.rs` | `src/benchmark/workloads.rs` (`W11`) + `src/benchmark/dq.rs` (`DQ4`) + `docs/design_doc/11-security-spec.md` |
 | **5. 新增 / 修改资产放置规约** | 1. `src/storage/schema.sql` (`placement_rules` 预置)<br/>2. `src/placement/{engine_v2,conventions,learner}.rs` | `src/placement/` 单测 + `README.md` 放置规范 |
@@ -73,10 +73,10 @@
 | `src/preflight/` | `PreflightChecker`, `PreflightReport` | 依赖预检、磁盘水位预警与 `0600/0700` 安全基线检查 |
 | `src/scanner/` | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `OllamaAnnotator` | 白黑灰分级扫描、全链路脱敏、抗投毒清洗与三层元数据标注 |
 | `src/session/` | `SessionManager`, `SessionLifecycleManager` | 会话绑定、完工结清与临时垃圾回收 |
-| `src/storage/` | `Storage`, `StorageProvider`, `Sqlite/Pg/DuckDbStorageProvider`, `DuckDbAnalyticsEngine` | 87 方法 SPI 门面、三后端实现、跨库热迁移与 Parquet/CSV 导出 |
+| `src/storage/` | `Storage`, `StorageProvider`, `Sqlite/Pg/DuckDbStorageProvider`, `DuckDbAnalyticsEngine` | 88 方法 SPI 门面、三后端分域实现、跨库热迁移与 Parquet/CSV 导出 |
 | `src/tui/` | `TuiDashboard` | 终端单屏实时看板 |
 | `src/watcher/` | `FileWatcher`, `ChangeHandler` | `inotify` 300ms 防抖监听与增量变更同步 |
-| `src/web/` | `WebServer`, `TopologyGraph`, `parity_api`, `assets/mod.rs` | 单二进制 HTTP/SSE、昼夜双主题 8 大工作台、`check_auth` 与 Parity 校验 |
+| `src/web/` | `WebServer`, `TopologyGraph`, `parity_api/*`, `assets/*` | 单二进制 HTTP/SSE、昼夜双主题工作台、`check_auth` 与 Parity 校验 |
 
 ---
 

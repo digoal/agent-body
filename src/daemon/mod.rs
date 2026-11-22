@@ -12,6 +12,14 @@ use crate::watcher::handler::ChangeHandler;
 pub mod scheduler;
 pub use scheduler::{BackgroundScheduler, SchedulerCycleReport};
 
+struct RunningFlagGuard(Arc<AtomicBool>);
+
+impl Drop for RunningFlagGuard {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
+}
+
 pub struct StewardDaemon {
     config: Config,
     storage: Storage,
@@ -37,7 +45,9 @@ impl StewardDaemon {
         let (pf_tx, pf_rx) = tokio::sync::oneshot::channel();
         std::thread::spawn(move || {
             let res = crate::preflight::PreflightChecker::run_all(&preflight_data_dir, Some(&preflight_cfg));
-            let _ = pf_tx.send(res);
+            if pf_tx.send(res).is_err() {
+                eprintln!("[Daemon][WARN] Preflight 结果发送失败：接收端已关闭");
+            }
         });
         let preflight = pf_rx
             .await
@@ -94,7 +104,6 @@ impl StewardDaemon {
             self.config.effective_default_owner(),
         )?;
         let env_collector = EnvCollector::new(self.storage.clone());
-        let bg_scheduler = BackgroundScheduler::new(self.storage.clone());
 
         // 1b. 挂载配置驱动的 [[hooks]] 分发器与 [[pipelines]] 编排引擎至 EventBus
         {
@@ -166,7 +175,7 @@ impl StewardDaemon {
             Duration::from_secs(1800),
         );
         let inspection_running = Arc::new(AtomicBool::new(false));
-        let _ = bg_scheduler; // 保留构造校验，实际每次巡检在独立 OS 线程执行以隔离 reqwest::blocking
+        let _scheduler_ready = std::any::type_name::<BackgroundScheduler>(); // 每次巡检在独立 OS 线程构造调度器以隔离 reqwest::blocking
 
         println!("✅ 动态任务进程定时采集就绪 (每 60 秒轮询 /proc)");
         println!("✅ 后台自主深度巡查与属性图增量同步就绪 (每 1800 秒自动巡查)");
@@ -208,7 +217,9 @@ impl StewardDaemon {
                                     "timestamp": chrono::Local::now().to_rfc3339(),
                                 }
                             });
-                            let _ = tx.send(msg.to_string());
+                            if tx.receiver_count() > 0 && tx.send(msg.to_string()).is_err() {
+                                eprintln!("[Daemon][WARN] SSE ProcessSync 广播失败");
+                            }
                         }
                     }
                 }
@@ -228,30 +239,37 @@ impl StewardDaemon {
                         let sse_for_cycle = sse_broadcaster.clone();
                         let running_flag = Arc::clone(&inspection_running);
                         std::thread::spawn(move || {
+                            let _running_guard = RunningFlagGuard(running_flag);
                             let scheduler = BackgroundScheduler::new(storage_for_cycle);
-                            if let Ok(report) = scheduler.run_inspection_cycle() {
-                                println!(
-                                    "[Scheduler] 深度巡检完成: 同步进程 {}, 属性图节点更新 {}, 边更新 {}",
-                                    report.synced_processes,
-                                    report.graph_nodes_updated,
-                                    report.graph_edges_updated
-                                );
-                                if let Some(ref tx) = sse_for_cycle {
-                                    let msg = serde_json::json!({
-                                        "type": "SchedulerCycle",
-                                        "payload": {
-                                            "synced_processes": report.synced_processes,
-                                            "graph_nodes": report.graph_nodes_updated,
-                                            "graph_edges": report.graph_edges_updated,
-                                            "expired_locks_cleaned": report.expired_locks_cleaned,
-                                            "awr_snapshot_captured": report.awr_snapshot_captured,
-                                            "timestamp": chrono::Local::now().to_rfc3339(),
+                            match scheduler.run_inspection_cycle() {
+                                Ok(report) => {
+                                    println!(
+                                        "[Scheduler] 深度巡检完成: 同步进程 {}, 属性图节点更新 {}, 边更新 {}",
+                                        report.synced_processes,
+                                        report.graph_nodes_updated,
+                                        report.graph_edges_updated
+                                    );
+                                    if let Some(ref tx) = sse_for_cycle {
+                                        let msg = serde_json::json!({
+                                            "type": "SchedulerCycle",
+                                            "payload": {
+                                                "synced_processes": report.synced_processes,
+                                                "graph_nodes": report.graph_nodes_updated,
+                                                "graph_edges": report.graph_edges_updated,
+                                                "expired_locks_cleaned": report.expired_locks_cleaned,
+                                                "awr_snapshot_captured": report.awr_snapshot_captured,
+                                                "timestamp": chrono::Local::now().to_rfc3339(),
+                                            }
+                                        });
+                                        if tx.receiver_count() > 0 && tx.send(msg.to_string()).is_err() {
+                                            eprintln!("[Daemon][WARN] SSE SchedulerCycle 广播失败");
                                         }
-                                    });
-                                    let _ = tx.send(msg.to_string());
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("[Daemon][WARN] 后台深度巡检失败: {}", e);
                                 }
                             }
-                            running_flag.store(false, Ordering::SeqCst);
                         });
                     }
                 }

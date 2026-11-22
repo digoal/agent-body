@@ -1,7 +1,7 @@
 # Agent Body — 生产安装与可移植部署指南 (INSTALL.md)
 
-> **适用版本**: v0.4.0+  
-> **更新时间**: 2026-11-19  
+> **适用版本**: v1.0.0 GA  
+> **更新时间**: 2026-11-23  
 > **文档目标**: 本文档全面说明 Agent Body 在不同操作系统与容器环境下的**编译依赖**、**运行时依赖**、**可选增强服务**与**一键部署流程**，防止因环境差异导致部署或运行失败。
 
 ---
@@ -18,9 +18,10 @@
 | **Rust 工具链** | *编译期* | >= 1.75.0 (推荐 1.82+) | 从源码编译 Rust 二进制 | 若使用预编译发布二进制包，则**无需安装** |
 | **C/C++ 编译器** | *编译期* | gcc / g++ >= 9 或 clang | 编译 `rusqlite` 与 `duckdb` 内置 C/C++ 引擎 | 源码编译失败 |
 | **CMake & Make** | *编译期* | CMake >= 3.15, GNU Make | DuckDB Bundled 静态构建支持 | 源码编译构建阶段报错退出 |
-| **Ollama 向量服务** | OPTIONAL | >= 0.1.20 (`nomic-embed-text` / `bge-m3`) | 长期记忆双路向量混合检索 (RRF) | **自动降级**为内置 SQLite FTS5 纯全文检索，绝不崩溃 |
+| **Agent Body 软件包版本** | **INFO** | — | 以 `agent-body --version` 实测为准（`v1.0.0` GA 支持 `AGENT_BODY_CONFIG` 与可移植 `[workspace]` 配置） | 仅信息提示 |
+| **Ollama 向量服务** | OPTIONAL | >= 0.1.20 (`nomic-embed-text` / `bge-m3`) | 长期记忆双路向量混合检索 (RRF) | **自动降级**为内置 SQLite FTS5 纯全文检索（或 `[embedding].fallback_fts_only=false` 显式报错） |
 | **Ollama 元数据标注模型** | OPTIONAL | >= 0.1.20 (`qwen3.5:0.8b`) | 资产 L2 本地异步脱敏语义标注精炼 | **自动降级**为纯 L1 Rust 确定性语法提取，零云端 Token |
-| **PostgreSQL** | OPTIONAL | >= 14 (需 pgvector) | 跨机多 Agent 高并发共享存储后端 | 默认采用内置嵌入式 SQLite，无需安装外部数据库 |
+| **PostgreSQL** | OPTIONAL | >= 14 (`pgvector` 可选) | 跨机多 Agent 高并发共享存储后端（向量余弦默认应用层计算，无须强制安装 pgvector） | 默认采用内置嵌入式 SQLite，无需安装外部数据库 |
 | **Systemd** | OPTIONAL | >= 245 | 系统自动化拓扑扫描、常驻后台守护服务托管 | 容器或 OpenRC 环境下跳过拓扑，可使用 Docker/nohup 运行 |
 | **CodeGraph CLI** | OPTIONAL | >= 0.1.0 | 宏微双层联邦微观代码函数符号穿透 | **自动降级**为文件与目录级宏观拓扑分析 |
 
@@ -239,16 +240,14 @@ docker run -d \
    auto_enrich_batch_size = 10
    ```
 
-### 2. 配置 PostgreSQL + pgvector 高并发后端
-1. 在 PostgreSQL 中创建数据库并安装向量扩展：
+### 2. 配置 PostgreSQL 高并发共享后端
+1. 在 PostgreSQL 中创建数据库（`vector` 扩展可选，向量检索可在应用层原生完成）：
    ```sql
-   CREATE DATABASE steward;
-   \c steward
-   CREATE EXTENSION IF NOT EXISTS vector;
+   CREATE DATABASE agent_body;
    ```
-2. 执行跨引擎一键数据迁移：
+2. 执行跨引擎全量 20 实体幂等热迁移：
    ```bash
-   agent-body storage migrate --to postgres --to-url "host=127.0.0.1 dbname=steward user=postgres password=secret"
+   agent-body storage migrate --to postgres --to-url "host=127.0.0.1 dbname=agent_body user=postgres password=secret"
    ```
 
 ---
@@ -259,7 +258,7 @@ docker run -d \
 |:---|:---|:---|
 | `cmake: command not found` | 编译期缺少 CMake 工具链 | 执行 `apt-get install -y cmake` 或 `dnf install cmake` |
 | `cannot open regular file ... Text file busy` | 二进制正在被 running 状态的 Systemd 服务占用 | 使用 `install -m 755` 替换旧二进制，或先 `systemctl stop agent-body.service` |
-| `/proc/net/tcp 不存在` | 运行在非 Linux 环境或极端受限容器内 | 在 Linux 物理机/虚拟机运行，或 Docker 启动加 `--pid host` |
+| `/proc/net/tcp 不存在` | 运行在非 Linux 环境或极端受限容器内 | 在 Linux 物理机/虚拟机运行（非 Linux 自动使用跨平台 `sysinfo`/本地探测回退） |
 | `max_user_watches 耗尽` | 监控目录下的文件树极大，超出了内核 inotify 上限 | 执行 `sudo sysctl -w fs.inotify.max_user_watches=524288` |
-| `Ollama 连接失败警告` | 本地未安装 Ollama 或服务未启动 | 系统已自动安全降级为纯 FTS5 检索，不影响基本功能；若需向量请启动 Ollama |
-| `api_port 不能小于 1024` | 配置文件填写的端口为系统特权端口 | 修改 `~/.agent-body/config.toml` 中的 `api_port` 为 1024~65535 之间（默认 9527） |
+| `Ollama 连接失败警告` | 本地未安装 Ollama 或服务未启动 | 系统默认 `fallback_fts_only=true` 自动安全降级为纯 FTS5；若需严格校验请设 `false` |
+| `web.port 不能小于 1024` | 非 root 用户无权监听特权端口或非回环绑定缺少 `auth_token` | 修改 `~/.agent-body/config.toml` 中的 `[web].port` 为 `1024~65535`（默认 `8756`），非 `127.0.0.1` 绑定须配置 `auth_token` |

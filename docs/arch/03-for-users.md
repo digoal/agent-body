@@ -30,37 +30,37 @@ graph LR
 
 ```mermaid
 flowchart TD
-    S1["第 1 步: 开工对齐 (steward brief)<br>获取硬件规格、活跃任务、长期经验简报"] --> S2["第 2 步: 问询放置 (place suggest)<br>写脚本/建项目前，先问大管家放哪个规范目录"]
+    S1["第 1 步: 开工对齐 (agent-body brief)<br>获取硬件规格、活跃任务、长期经验简报"] --> S2["第 2 步: 问询放置 (place suggest)<br>写脚本/建项目前，先问大管家放哪个规范目录"]
     S2 --> S3["第 3 步: 端口防撞 (env port)<br>启动 Web/API 服务前，探测端口是否已被占用"]
     S3 --> S4["第 4 步: 依赖推演 (links impact)<br>修改公共代码或配置前，推演多跳爆炸半径"]
     S4 --> S5["第 5 步: 协作加锁 (coordination lock)<br>独占端口或写入共享目录前，申请协作互斥锁"]
     S5 --> S6["第 6 步: 完工结清 (close & gc)<br>会话结束，清理 /tmp 垃圾并沉淀总结至长期记忆"]
 ```
 
-### 1. 开工对齐与领取乐观租约：`steward brief`
-一键获取宿主机当前客观规格、最近修改过的资产、活跃服务、历史排障经验，以及 **⚡ AOPCC 乐观直通契约 (`Optimistic Leases`)**（如本机 `:5432` PostgreSQL、已就绪 CLI 与 `/root/new/tmp/` 沙盒），允许低风险可逆操作免前置查询直接执行（失败时由 `PostToolUse` `<2ms` 注入替代处方）：
+### 1. 开工对齐与领取乐观租约：`agent-body brief`
+一键获取宿主机当前客观规格、最近修改过的资产、活跃服务、历史排障经验，以及 **⚡ AOPCC 乐观直通契约 (`Optimistic Leases`)**（如本机 `:5432` PostgreSQL、已就绪 CLI 与 `<temp_dir>` 沙盒），允许低风险可逆操作免前置查询直接执行（失败时由 `PostToolUse` `<2ms` 注入替代处方）：
 ```bash
 agent-body brief
 ```
 
-### 2. 问询放置：`steward place suggest`
+### 2. 问询放置：`agent-body place suggest`
 准备写一个美股财报抓取脚本？绝不随手乱丢在当前工作区：
 ```bash
 agent-body place suggest --type script --name sec_crawler --intent "抓取美股财报"
 ```
-> **大管家返回**：建议放置在 `/root/new/shared_proj/sec_crawler/`，临时数据丢 `/root/new/tmp/`。
+> **本体返回**：建议放置在 `<workspace_base>/shared_proj/sec_crawler/`，临时数据丢 `<temp_dir>`。
 
-### 3. 端口防撞：`steward env port`
+### 3. 端口防撞：`agent-body env port`
 准备启动一个测试 API 服务？先看 8080 是否被已有生产进程占用：
 ```bash
 agent-body env port 8080
 ```
 > **大管家返回**：8080 已被 PID `18493` (`uvicorn`) 占用！推荐改用空闲端口 `8081` 或 `8082`。
 
-### 4. 依赖推演：`steward links impact`
+### 4. 依赖推演：`agent-body links impact`
 准备重构或改动公共模块？先看谁在依赖它：
 ```bash
-agent-body links impact /root/new/shared_proj/test.py
+agent-body links impact <workspace_base>/shared_proj/test.py
 ```
 > **大管家返回**：发现 2 个 systemd 服务与 3 个定时任务依赖该文件，盲目修改将引发次生灾害！
 
@@ -74,7 +74,7 @@ agent-body coordination list
 agent-body coordination release --lock-id "lock-port-8080"
 ```
 
-### 6. 会话完工结清：`steward close`
+### 6. 会话完工结清：`agent-body close`
 任务完成，一键清理垃圾并归档沉淀：
 ```bash
 agent-body close session-20261118-01 --clean-temp
@@ -113,16 +113,16 @@ agent-body web --port 8765
 打开浏览器访问 `http://127.0.0.1:8765`，全景观测（支持 `T` 键实时切换「☀️ 白天工程蓝图 / 🌙 夜间深空」双主题）：
 - 🌐 宿主机物理拓扑（进程、端口、服务连线图）；
 - 🔒 活跃协作锁矩阵、等待队列与 WFG 死锁雷达；
-- 🎬 6 幕真引擎路演演示剧场与 📊 实证基准存证账本（等价黑屏 CLI：`agent-body bench`）；
+- 🎬 7 幕真引擎路演演示剧场与 📊 实证基准存证账本（等价黑屏 CLI：`agent-body bench`）；
 - ⚡ 全链路 SSE 实时事件滚动推流与全局黑屏命令镜像。
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│  🌐 Agent Body 监控大屏控制台 (http://127.0.0.1:8765)           │
+│  🌐 Agent Body 监控大屏控制台 (http://127.0.0.1:8756)           │
 ├───────────────────────────────────┬────────────────────────────────────┤
 │ 事实图谱拓扑视图 (Canvas 力导向图)│ 活跃多 Agent 协作锁矩阵            │
 │  [进程] -> :8080 [端口]           │  • port:8080 (Exclusive, 45s TTL)  │
-│  [服务] -> steward.service        │  • dir:/work (Shared, 120s TTL)    │
+│  [服务] -> agent-body.service     │  • dir:/work (Shared, 120s TTL)    │
 │  [资产] -> shared_proj/           │                                    │
 │                                   │ ⚡ 实时 SSE 事件推流                │
 │                                   │  [18:20] Agent-A 申请加锁成功      │
@@ -135,8 +135,8 @@ agent-body web --port 8765
 
 | 疑问 / 现象 | 根因解释 | 快速解决指引 |
 |:---|:---|:---|
-| **执行命令报 `steward: command not found`** | 编译产物在 `target/release/`，未加入系统 PATH | 执行 `export PATH="/root/new/work/agent-body/target/release:$PATH"` |
-| **端口已被占用，大管家如何处理？** | 内核 `/proc/net/tcp` 扫描到绑定记录 | `steward env port <PORT>` 会直接列出占用者的 PID、进程名及推荐的备选端口 |
+| **执行命令报 `agent-body: command not found`** | 编译产物在 `target/release/`，未加入系统 PATH | 执行 `export PATH="<workspace>/target/release:$PATH"` 或运行 `make restart` 安装至 `/usr/local/bin` |
+| **端口已被占用，本体如何处理？** | 内核 `/proc/net/tcp` 扫描到绑定记录 | `agent-body env port <PORT>` 会直接列出占用者的 PID、进程名及推荐的备选端口 |
 | **多 Agent 并发操作报 `CONFLICT` 锁冲突** | 另一 Agent 持有该资源排他锁或祖先目录排他锁 | 等待持锁 Agent 释放或租约到期；紧急情况下可用 `coordination release` 强制释放 |
 | **Web 监控大屏在外部机器打不开** | 默认仅监听本地安全地址 `127.0.0.1` | 启动时添加 `--host 0.0.0.0` 允许跨网络访问：`agent-body web --host 0.0.0.0` |
 | **数据存放在哪里？如何备份？** | 默认全部持久化在 `~/.agent-body/` 目录下 | 备份 `~/.agent-body/body.db` 文件或通过 `agent-body storage migrate` 导出 |

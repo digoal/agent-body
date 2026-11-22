@@ -49,7 +49,7 @@ description: 专门帮助新接手、外部接入或初次接触本项目的 Age
 | **Rust 工具链 (编译期)** | Rust >= 1.88 (推荐 1.99+) + Cargo | 源码编译构建工具（`Cargo.lock` 依赖 `edition = "2024"` crate），安装于 `/root/.cargo/bin` |
 | **SQLite3 运行环境** | 内置 Bundled FTS5 (无需外装系统级动态库) | `rusqlite` 以 bundled 特性编译，单二进制自包含 |
 | **本地 Ollama (可选)** | `http://127.0.0.1:11434` (模型推荐 `nomic-embed-text` 或 `bge-m3`) | 提供语义向量混合检索（RRF）。若未安装自动降级为 FTS5 |
-| **PostgreSQL (可选)** | PostgreSQL >= 14 (需 pgvector 扩展) | 跨机多 Agent 高并发共享存储后端 |
+| **PostgreSQL (可选)** | PostgreSQL >= 14 (`pgvector` 可选) | 跨机多 Agent 高并发共享存储后端（默认应用层余弦运算，无需强装扩展） |
 | **CodeGraph (可选)** | 本机安装有 `codegraph` CLI 并在目标项目建立索引 | 提供微观函数与符号级调用链穿透 |
 
 ### 2.2 一键编译与系统安装
@@ -64,7 +64,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 make build
 # 或: cargo build --release
 
-# 3. 运行全量测试验证环境 (目前 270+ 项测试全部通过，1 项文档示例忽略)
+# 3. 运行全量测试验证环境 (320+ 项单元/集成测试全部通过，1 项文档示例忽略)
 make test
 # 或: cargo test
 
@@ -76,24 +76,32 @@ sudo make install
 # 或: sudo install -m 755 target/release/agent-body /usr/local/bin/agent-body
 
 agent-body --version
-# 输出: agent-body 0.4.0 (git-hash, linux/x86_64)
+# 输出: agent-body 1.0.0 (git-hash, linux/x86_64)
 ```
 
 ### 2.3 配置文件与初始化存储
 
 大管家首次启动时会自动在用户家目录创建持久化存储空间：
 - **数据存储**: `~/.agent-body/body.db`（SQLite WAL 模式，集成 FTS5 全文虚拟表与触发器）；
-- **主配置文件**: `~/.agent-body/config.toml`（自动从默认模板引导生成，参数详解见 `config.example.toml`）。
+- **主配置文件**: `~/.agent-body/config.toml`（支持通过 `AGENT_BODY_CONFIG` 指定自定义路径；参数详解见 [config.example.toml](../../config.example.toml)）。
 
 核心配置参数示例：
 ```toml
 db_path = "~/.agent-body/body.db"
 
+[workspace]
+# 留空自动探测 $AGENT_BODY_WORKSPACE / $HOME；可显式配置工作区根目录
+# base_dir = "~/workspace"
+
 [storage]
 provider = "sqlite"
 
+[memory]
+# 支持 builtin / powercontext / mem0 / letta
+provider = "builtin"
+
 [assets]
-auto_scan_dirs = ["/root/new/work", "/root/new/shared_proj"]
+auto_scan_dirs = ["~/workspace/work", "~/workspace/shared_proj"]
 
 [embedding]
 ollama_url = "http://localhost:11434"
@@ -113,17 +121,17 @@ model = "qwen3.5:0.8b"
 配置文件路径：`/etc/systemd/system/agent-body.service`
 ```ini
 [Unit]
-Description=Agent Body Daemon
+Description=Agent Body Daemon (脑体分离架构 · Agent 本体宿主机具身底座)
 After=network.target
 
 [Service]
 Type=simple
-User=root
 ExecStart=/usr/local/bin/agent-body daemon
 Restart=always
-RestartSec=5
-MemoryMax=256M
-CPUQuota=20%
+RestartSec=5s
+User=root
+WorkingDirectory=/root
+Environment="RUST_LOG=info"
 
 [Install]
 WantedBy=multi-user.target
@@ -211,12 +219,12 @@ agent-body feedback probes
 agent-body feedback reconcile
 ```
 
-#### 场景 9: 实证 Benchmark 与竞品横向对标（v3.7）
+#### 场景 9: 实证 Benchmark 与竞品横向对标（v3.8）
 ```bash
-# 真机运行全量套件 (W1~W17 + M1~M5 + DQ1~DQ8 + COMP-C1~C4)
+# 真机运行全量套件 (W1~W18 + M1~M6 + DQ1~DQ9 + COMP-C1~C4)
 agent-body bench run --suite full --save false
 
-# 查看生产运行态效能存证账本 (PR-01~PR-13)
+# 查看生产运行态效能存证账本 (PR-01~PR-14)
 agent-body bench ledger --window 7d --limit 20
 ```
 
@@ -260,7 +268,7 @@ agent-body close session-20261115-01 --clean-temp
 | **客观事实图谱**| `body_fact_query` | 宿主机事实图谱语义只读查询 (工具能力/端口/Systemd/Cron/资料) |
 | **生命周期门禁**| `body_hook_pre` | AOPCC 三态并发路由与防撞门禁 (端口绑定/高爆炸半径/敏路径/锁冲突校验) |
 | | `body_hook_post` | 操作后状态同步；当 `success=false` 且含 `error_output` 时 `<2ms` 注入碰壁自愈处方 |
-| | `body_hook_generate` | 自动生成 Antigravity / Cursor / Claude / Git 的 Hook 配置 |
+| | `body_hook_generate` | 自动生成 Antigravity / Cursor / Claude / Codex / Hermes / Git 的 Hook 配置 |
 | **环境与防撞** | `body_env_processes` | 抓取活跃非系统动态任务脚本进程（过滤底噪与脱敏 cmdline） |
 | | `body_env_show` | 查看宿主机 CPU、内存、磁盘与系统规格 |
 | | `body_env_gc` | 宿主垃圾回收：安全清理超期临时文件与孤儿进程 (默认 dry-run) |
@@ -289,10 +297,10 @@ agent-body close session-20261115-01 --clean-temp
 | | `body_service_contact` | 管理外部可用服务通讯录与轻量健康探活（严禁存明文密钥） |
 | **多机联邦 Mesh** | `body_mesh_query` | `MeshEnvelope v1.0` HMAC 防重放联邦协同：ping/facts/locks/port/acquire/跨机图谱/脱敏对话/<=10MB 沙盒投递 |
 | **路演与对齐** | `body_demo_scenario` | Web/黑屏同源 7 大路演剧目真引擎实跑、ROI 核算、43/43 Parity 对齐与沙盒复位 |
-| **实证基准与账本** | `body_benchmark` | `v3.7` 基准评测：`W1~W17` A/B 负载 + `M1~M5` 微基准 + `DQ1~DQ8` + `COMP-C1~C4` 竞品对标与 `PR-01~13` 账本 |
+| **实证基准与账本** | `body_benchmark` | `v3.8` 基准评测：`W1~W18` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ9` + `COMP-C1~C4` 竞品对标与 `PR-01~14` 账本 |
 | **反馈与自进化** | `body_feedback` | `user_feedback.md` 双向总账读写、已验证反馈沉淀记忆、`reconcile` 新鲜度对账与 `P1~P5` 自进化探针 |
 | **双域行为审计** | `body_audit_query` | `IN_AGENT` + `OUT_OF_AGENT` 双域审计查询、因果钻取、DuckDB OLAP 导出与租约滑窗自进化 |
-| **Agent 本体中枢** | `body_state` | 六器官自省 (`manifest`)、五维稳态 (`vitals`)、`L0~L3` 自治包络 (`envelope`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`)、多本体名片 (`peers`) 与内生 AWR 诊断 (`perf_snapshot`/`perf_awr`/`perf_tune`) |
+| **Agent 本体中枢** | `body_state` | 六器官自省 (`manifest`)、五维稳态 (`vitals`)、`L0~L3` 自治包络 (`envelope`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`)、多本体名片 (`peers`) 与内生 AWR 诊断 (`perf_snapshot`/`perf_awr`/`perf_tune`/`delete_snapshot`/`delete_awr_report`) |
 
 ---
 
