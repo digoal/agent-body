@@ -20,15 +20,37 @@ pub struct HybridSearchEngine {
 }
 
 impl HybridSearchEngine {
+    /// 从全局配置文件 `[embedding]` 段加载 Ollama 端点与模型（配置缺失时回退为 `EmbeddingConfig::default()`）
     pub fn new(storage: Arc<Storage>) -> Self {
+        let cfg = crate::config::Config::load_or_default(None)
+            .map(|c| c.embedding)
+            .unwrap_or_default();
+        Self::from_config(storage, &cfg)
+    }
+
+    /// 使用指定的 `EmbeddingConfig` 构造混合检索引擎
+    pub fn from_config(storage: Arc<Storage>, cfg: &crate::config::EmbeddingConfig) -> Self {
+        Self::with_endpoint(storage, &cfg.ollama_url, &cfg.model)
+    }
+
+    /// 使用显式指定的 Ollama 端点与模型名称构造混合检索引擎
+    pub fn with_endpoint(storage: Arc<Storage>, ollama_endpoint: &str, model_name: &str) -> Self {
         Self {
             storage,
-            ollama_endpoint: "http://127.0.0.1:11434".to_string(),
-            model_name: "bge-m3:latest".to_string(),
+            ollama_endpoint: ollama_endpoint.trim_end_matches('/').to_string(),
+            model_name: model_name.to_string(),
         }
     }
 
-    /// 尝试调用本地 Ollama 获取文本的 1024 维 embedding 向量
+    pub fn ollama_endpoint(&self) -> &str {
+        &self.ollama_endpoint
+    }
+
+    pub fn model_name(&self) -> &str {
+        &self.model_name
+    }
+
+    /// 尝试调用本地 Ollama 获取文本的 embedding 向量（端点与模型由 `[embedding]` 配置决定）
     pub async fn fetch_embedding(&self, text: &str) -> Option<Vec<f32>> {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_millis(1500))
@@ -189,5 +211,19 @@ mod tests {
         assert!(!results.is_empty());
         assert_eq!(results[0].memory.id, "mem-test-1");
         assert!(results[0].fts_rank.is_some());
+    }
+
+    #[test]
+    fn test_hybrid_search_engine_respects_embedding_config() {
+        let storage = Arc::new(Storage::open_in_memory().expect("open_in_memory"));
+        let cfg = crate::config::EmbeddingConfig {
+            ollama_url: "http://192.168.1.100:11434/".to_string(),
+            model: "qwen3-embedding:0.6b".to_string(),
+            dimensions: 1024,
+            fallback_fts_only: true,
+        };
+        let engine = HybridSearchEngine::from_config(storage, &cfg);
+        assert_eq!(engine.ollama_endpoint(), "http://192.168.1.100:11434");
+        assert_eq!(engine.model_name(), "qwen3-embedding:0.6b");
     }
 }

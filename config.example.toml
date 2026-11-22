@@ -54,29 +54,45 @@ provider = "sqlite"
 # duckdb_path = "/root/.steward/steward.duckdb"
 
 # ==============================================================================
-# [embedding] 长期记忆语义向量嵌入服务配置 (可选)
+# [embedding] 语义向量嵌入服务配置 (可选，与下方 [annotation] 职责严格分离)
 # ==============================================================================
+# 作用范围: 统一控制长期记忆写入与混合检索 (HybridSearchEngine)、核心资产向量化、
+#           以及 Fact 节点向量化的 Ollama 端点、模型名称与维度。
+#
+# ⚠️ 更改 Embedding 模型必读注意事项:
+#   1. 模型与维度必须严格一致: `dimensions` 必须等于所选模型的实际输出维度，
+#      否则校验或向量检索将无法匹配。
+#   2. 更换模型后必须重建存量向量: 不同 Embedding 模型的向量空间与维度互不兼容。
+#      若从 768 维模型 (如 nomic-embed-text) 切换为 1024 维模型 (如 bge-m3:latest)
+#      或同维度的其他模型，数据库内已有的 `memories.embedding`、`assets.embedding`
+#      和 `fact_nodes.embedding` 必须清空并重新生成，否则新旧向量混用会导致检索失效或
+#      余弦相似度失真！(若使用 PostgreSQL + pgvector，还需同步确认列维度与索引)
+#   3. 职责边界: 本段仅用于文本向量化 (/api/embeddings)，切勿填入对话/生成模型；
+#      提炼注释与结构化描述元数据请配置下方的 [annotation] 段。
 [embedding]
 # 本地或内网 Ollama 嵌入服务地址
 # 依赖要求: 本机或内网需安装 Ollama (https://ollama.com) 并已启动服务
 # 默认: "http://localhost:11434"
 ollama_url = "http://localhost:11434"
 
-# 文本向量化嵌入模型名称
-# 推荐模型:
-#   - "nomic-embed-text": 768 维，极速且显存开销小 (pull: `ollama pull nomic-embed-text`)
-#   - "bge-m3:latest": 1024 维，高质量中文与代码双语混合嵌入 (pull: `ollama pull bge-m3`)
+# 文本向量化嵌入模型名称 (使用前需先执行 `ollama pull <model>`)
+# 常见模型与对应维度参考:
+#   - "nomic-embed-text": 768 维，极速且显存/内存开销小 (默认)
+#   - "bge-m3:latest": 1024 维，高质量中文与代码双语混合嵌入
+#   - "qwen3-embedding:0.6b": 1024 维，轻量多语言嵌入
+#   - "all-minilm": 384 维，超轻量英文嵌入
 # 默认: "nomic-embed-text"
 model = "nomic-embed-text"
 
-# 向量维度 (必须与所选模型的实际输出维度完全一致)
+# 向量维度 (必须与上方 model 的实际输出维度完全一致)
 #   - nomic-embed-text 为 768
-#   - bge-m3 为 1024
+#   - bge-m3:latest / qwen3-embedding:0.6b 为 1024
+#   - all-minilm 为 384
 # 默认: 768
 dimensions = 768
 
-# 当 Ollama 服务离线或连接失败时，是否自动降级为 SQLite FTS5 纯全文检索
-# 建议: true (确保系统在断网或 Ollama 挂掉时依然能检索记忆，绝不崩溃)
+# 当 Ollama 服务离线、模型未拉取或请求超时时，是否自动降级为 SQLite FTS5 纯全文检索
+# 建议: true (确保系统在断网或 Ollama 异常时依然能检索记忆，绝不崩溃)
 # 默认: true
 fallback_fts_only = true
 
@@ -238,18 +254,39 @@ max_transfer_bytes = 10485760
 # ==============================================================================
 # 11. 资产语义元数据 Ollama 自动标注配置 (Phase 23 - ISSUE #8)
 # ==============================================================================
+# 作用范围: 从核心资产文件头部摘录中提炼结构化元数据 (domain / purpose / capabilities /
+#           entry_point)，用于 L2 语义标注精炼。
+#
+# ⚠️ 更改元数据提炼模型必读注意事项:
+#   1. 职责边界: 本段调用 Ollama `/api/generate`，必须选择具备文本生成与指令遵循
+#      能力的对话/推理模型 (如 qwen3.5:0.8b、qwen3.5:4b、llama3.1:8b 等)，
+#      切勿填入 nomic-embed-text / bge-m3 等纯 Embedding 模型！
+#   2. 存量资产处理: 更换 [annotation].model 不会影响向量维度 (无需重建 Embedding)，
+#      但已标注过的资产不会自动重跑；如需用新模型重新提炼，可触发扫描精炼或重置状态。
+#   3. 性能与超时匹配: 若切换为更大参数的模型 (如 4B/8B) 或纯 CPU 推理，单文件耗时
+#      会显著增加，请同步调大 `timeout_ms` (如 30000~60000) 并适当调小
+#      `auto_enrich_batch_size`，避免守护进程巡检超时降级为 L1 确定性提取。
+#   4. 隐私与开关: 送入模型的片段已强制经 SecretRedactor 脱敏且自动跳过敏感文件；
+#      若希望完全禁用本地生成模型推理，设置 `enabled = false` 即可。
 [annotation]
 # 是否启用本地 Ollama 小模型语义标注精炼（关闭或离线时自动降级为 L1 确定性提取）
+# 默认: true
 enabled = true
 # 本地 Ollama 服务地址
+# 默认: "http://localhost:11434"
 ollama_url = "http://localhost:11434"
+# 用于提炼注释与元数据的轻量生成模型 (使用前需先执行 `ollama pull <model>`)
 # 推荐轻量模型: qwen3.5:0.8b (CPU 单核/多核实测 ~3s/文件, 零云端 Token)
+# 默认: "qwen3.5:0.8b"
 model = "qwen3.5:0.8b"
-# 单文件推理超时（毫秒）
+# 单文件推理超时（毫秒，更换更大模型时请同步调大）
+# 默认: 15000
 timeout_ms = 15000
 # 送入小模型的文件头部摘录字符上限（自动经过 SecretRedactor 脱敏）
+# 默认: 1200
 max_snippet_chars = 1200
 # 守护进程每次巡检自动异步精炼的资产批量上限
+# 默认: 10
 auto_enrich_batch_size = 10
 
 

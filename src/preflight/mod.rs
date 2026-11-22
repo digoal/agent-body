@@ -142,7 +142,13 @@ impl PreflightChecker {
             Self::check_annotation_model(&mut report, &cfg.annotation);
             Self::check_storage_backend(&mut report, cfg);
         } else {
-            Self::check_ollama(&mut report, "http://localhost:11434", "nomic-embed-text", true);
+            let default_emb = crate::config::EmbeddingConfig::default();
+            Self::check_ollama(
+                &mut report,
+                &default_emb.ollama_url,
+                &default_emb.model,
+                default_emb.fallback_fts_only,
+            );
             Self::check_annotation_model(&mut report, &crate::config::AnnotationConfig::default());
         }
 
@@ -646,7 +652,7 @@ impl PreflightChecker {
                         category: CheckCategory::Optional,
                         status: CheckStatus::Warn,
                         message: format!("无法连接 Ollama ({})，已自动降级为 L1 确定性元数据提取", cfg.ollama_url),
-                        remedy: Some("如需小模型语义标注，请启动 Ollama 并拉取 qwen3.5:0.8b".to_string()),
+                        remedy: Some(format!("如需小模型语义标注，请启动 Ollama 并拉取 {}", cfg.model)),
                     });
                 }
             },
