@@ -185,9 +185,13 @@ impl MemoryProvider for PowerContextAdapter {
 
     fn store(&self, item: &MemoryItem) -> Result<String> {
         let url = format!("{}/v1/memory/remember", self.base_url);
-        // description 最多 200 字符，单行
-        let desc_raw = item.summary.as_deref().unwrap_or(&item.content[..item.content.len().min(197)]);
-        let desc_single: String = desc_raw.chars().take(200).filter(|c| *c != '\n' && *c != '\r').collect();
+        // description 最多 200 字符，单行（基于字符切片，防止多字节 UTF-8 越界 Panic）
+        let desc_raw = item.summary.as_deref().unwrap_or(item.content.as_str());
+        let desc_single: String = desc_raw
+            .chars()
+            .filter(|c| *c != '\n' && *c != '\r')
+            .take(197)
+            .collect();
 
         let req_body = PcRememberRequest {
             scope_id: &self.scope_id,
@@ -287,6 +291,31 @@ mod tests {
         assert_eq!(item.score, Some(0.95));
         assert_eq!(item.source_agent.as_deref(), Some("powercontext"));
         assert_eq!(item.extra.get("pc_state").map(|s| s.as_str()), Some("active"));
+    }
+
+    #[test]
+    fn test_powercontext_utf8_chinese_truncation_no_panic() {
+        // 构造多字节中文超长文本，确保按字符截断不因字节索引落入中文字符内部而 Panic
+        let long_cn = "中文记忆内容测试".repeat(40);
+        let item = MemoryItem {
+            id: "mem-cn-1".to_string(),
+            memory_type: "experience".to_string(),
+            content: long_cn.clone(),
+            summary: None,
+            tags: vec![],
+            source_agent: None,
+            source_session: None,
+            created_at: "2026-11-22T00:00:00Z".to_string(),
+            score: None,
+            extra: Default::default(),
+        };
+        let desc_raw = item.summary.as_deref().unwrap_or(item.content.as_str());
+        let desc_single: String = desc_raw
+            .chars()
+            .filter(|c| *c != '\n' && *c != '\r')
+            .take(197)
+            .collect();
+        assert_eq!(desc_single.chars().count(), 197);
     }
 
     /// 集成测试：若宿主机 8000 端口活跃，对真实服务发起一次搜索

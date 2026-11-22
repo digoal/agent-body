@@ -85,13 +85,13 @@ pub fn build_local_facts() -> MeshNodeFacts {
 
 // ─────────────────────────── 服务端 Handler ───────────────────────────
 
-/// 校验 Bearer Token；`require_token=true` 时服务端未配置 Token 也直接拒绝
+/// 校验 Bearer Token（常量时间比对）；`require_token=true` 时服务端未配置 Token 也直接拒绝
 fn check_mesh_auth(req: &HttpRequest, auth_token: &Option<String>, require_token: bool) -> Option<HttpResponse> {
-    match auth_token {
+    match auth_token.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         Some(expected) => {
             let header = req.headers.get("authorization").cloned().unwrap_or_default();
             let token = header.strip_prefix("Bearer ").unwrap_or(&header);
-            if token != expected {
+            if !crate::mesh::auth::constant_time_eq(token, expected) {
                 return Some(WebResponse::error(StatusCode::UNAUTHORIZED, "Unauthorized: invalid mesh token"));
             }
             None
@@ -102,6 +102,45 @@ fn check_mesh_auth(req: &HttpRequest, auth_token: &Option<String>, require_token
         )),
         None => None,
     }
+}
+
+/// 校验对等节点只读接口的 Scope 白名单（当在 `[mesh].peer_scopes` 为来源节点配置白名单时生效）
+pub fn check_peer_read_scope_with_cfg(
+    req: &HttpRequest,
+    required_scope: &str,
+    mesh_cfg: &MeshConfig,
+) -> Option<HttpResponse> {
+    let from_node = req
+        .headers
+        .get("x-body-node")
+        .or_else(|| req.headers.get("x-steward-node"))
+        .map(String::as_str)
+        .or_else(|| req.query_params.get("from_node").map(String::as_str))
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    if let Some(peer) = from_node {
+        if let Some(allowed) = mesh_cfg.peer_scopes.get(peer) {
+            if !allowed.iter().any(|s| s == required_scope || s == "*") {
+                return Some(WebResponse::error(
+                    StatusCode::FORBIDDEN,
+                    &format!("Forbidden: peer `{}` lacks required scope `{}`", peer, required_scope),
+                ));
+            }
+        }
+    }
+    None
+}
+
+fn check_peer_read_scope(req: &HttpRequest, required_scope: &str) -> Option<HttpResponse> {
+    if req.headers.contains_key("x-body-node")
+        || req.headers.contains_key("x-steward-node")
+        || req.query_params.contains_key("from_node")
+    {
+        let cfg = crate::config::Config::load_or_default(None).unwrap_or_default();
+        return check_peer_read_scope_with_cfg(req, required_scope, &cfg.mesh);
+    }
+    None
 }
 
 /// GET /api/v1/mesh/ping
@@ -132,6 +171,9 @@ pub fn handle_mesh_body_manifest(
     auth_token: &Option<String>,
 ) -> HttpResponse {
     if let Some(deny) = check_mesh_auth(req, auth_token, false) {
+        return deny;
+    }
+    if let Some(deny) = check_peer_read_scope(req, "read:facts") {
         return deny;
     }
     let body_id = crate::body::manifest::compute_body_id();
@@ -202,7 +244,19 @@ pub fn handle_mesh_graph(
     if let Some(deny) = check_mesh_auth(req, auth_token, false) {
         return deny;
     }
-    let q = req.query_params.get("q").map(|s| s.trim()).unwrap_or("");
+    if let Some(deny) = check_peer_read_scope(req, "read:facts") {
+        return deny;
+    }
+    let decoded_q = req
+        .query_params
+        .get("q")
+        .map(|raw| {
+            urlencoding::decode(raw)
+                .map(|d| d.into_owned())
+                .unwrap_or_else(|_| raw.clone())
+        })
+        .unwrap_or_default();
+    let q = decoded_q.trim();
     let hops = req
         .query_params
         .get("hops")
@@ -704,5 +758,43 @@ mod tests {
         assert_eq!(acc.status, "accepted");
         assert!(dest.join("query.sql").is_file());
         assert!(!reject_transfer(&storage, "non-existent").expect("reject missing"));
+    }
+
+    #[test]
+    fn test_mesh_graph_url_decoding_and_read_scope_guard() {
+        use crate::storage::models::FactNodeRecord;
+        use crate::storage::sqlite_provider::SqliteStorageProvider;
+
+        let storage = SqliteStorageProvider::open_in_memory().expect("mem");
+        storage
+            .upsert_fact_node(&FactNodeRecord {
+                id: "project:/root/new/work/测试项目".to_string(),
+                node_type: "project".to_string(),
+                name: "/root/new/work/测试项目".to_string(),
+                label: "/root/new/work/测试项目".to_string(),
+                properties: serde_json::json!({}),
+                updated_at: Some("2026-11-22T00:00:00Z".into()),
+            })
+            .expect("upsert");
+
+        let mut req = make_req(Method::Get, "/api/v1/mesh/graph", None, vec![]);
+        req.query_params.insert(
+            "q".to_string(),
+            urlencoding::encode("project:/root/new/work/测试项目").into_owned(),
+        );
+        let resp = handle_mesh_graph(&req, &storage, &None);
+        assert_eq!(resp.status, StatusCode::OK);
+        let body = String::from_utf8_lossy(&resp.body);
+        assert!(body.contains("/root/new/work/测试项目"), "URL 解码后的节点必须命中: {}", body);
+
+        let mut mesh_cfg = MeshConfig::default();
+        mesh_cfg
+            .peer_scopes
+            .insert("node-x".to_string(), vec!["exchange:dialogue".to_string()]);
+        let mut denied_req = make_req(Method::Get, "/api/v1/mesh/graph", None, vec![]);
+        denied_req.headers.insert("x-body-node".to_string(), "node-x".to_string());
+        let deny = check_peer_read_scope_with_cfg(&denied_req, "read:facts", &mesh_cfg);
+        assert!(deny.is_some());
+        assert_eq!(deny.unwrap().status, StatusCode::FORBIDDEN);
     }
 }

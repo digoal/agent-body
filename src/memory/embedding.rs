@@ -3,6 +3,18 @@ use chrono::Local;
 use serde_json::{json, Map, Value};
 use crate::config::{Config, EmbeddingConfig};
 
+fn run_blocking_safe<F, T>(f: F) -> Option<T>
+where
+    F: FnOnce() -> T + Send,
+    T: Send,
+{
+    if tokio::runtime::Handle::try_current().is_ok() {
+        std::thread::scope(|s| s.spawn(f).join().ok())
+    } else {
+        Some(f())
+    }
+}
+
 /// 统一本地 Ollama Embedding 客户端与标准化向量摘要生成器 (Phase 29)
 #[derive(Debug, Clone)]
 pub struct EmbeddingClient {
@@ -52,16 +64,19 @@ impl EmbeddingClient {
     /// 快速探活本地 Ollama 服务与模型列表
     pub fn is_available(&self) -> bool {
         let tags_url = format!("{}/api/tags", self.ollama_url);
-        let Ok(client) = reqwest::blocking::Client::builder()
-            .timeout(Duration::from_millis(800))
-            .build()
-        else {
-            return false;
-        };
-        match client.get(&tags_url).send() {
-            Ok(resp) => resp.status().is_success(),
-            Err(_) => false,
-        }
+        run_blocking_safe(|| {
+            let Ok(client) = reqwest::blocking::Client::builder()
+                .timeout(Duration::from_millis(800))
+                .build()
+            else {
+                return false;
+            };
+            match client.get(&tags_url).send() {
+                Ok(resp) => resp.status().is_success(),
+                Err(_) => false,
+            }
+        })
+        .unwrap_or(false)
     }
 
     /// 同步调用本地 Ollama `/api/embeddings` 生成文本向量
@@ -71,38 +86,38 @@ impl EmbeddingClient {
             return None;
         }
         let truncated: String = trimmed.chars().take(2000).collect();
+        let endpoint = format!("{}/api/embeddings", self.ollama_url);
+        let model = self.model.clone();
 
-        let client = reqwest::blocking::Client::builder()
-            .timeout(Duration::from_millis(5000))
-            .build()
-            .ok()?;
+        run_blocking_safe(move || {
+            let client = reqwest::blocking::Client::builder()
+                .timeout(Duration::from_millis(5000))
+                .build()
+                .ok()?;
 
-        let body = json!({
-            "model": self.model,
-            "prompt": truncated,
-        });
+            let body = json!({
+                "model": model,
+                "prompt": truncated,
+            });
 
-        let resp = client
-            .post(format!("{}/api/embeddings", self.ollama_url))
-            .json(&body)
-            .send()
-            .ok()?;
+            let resp = client.post(endpoint).json(&body).send().ok()?;
+            if !resp.status().is_success() {
+                return None;
+            }
 
-        if !resp.status().is_success() {
-            return None;
-        }
-
-        let res_json: Value = resp.json().ok()?;
-        let arr = res_json.get("embedding")?.as_array()?;
-        let vec: Vec<f32> = arr
-            .iter()
-            .filter_map(|x| x.as_f64().map(|f| f as f32))
-            .collect();
-        if vec.is_empty() {
-            None
-        } else {
-            Some(vec)
-        }
+            let res_json: Value = resp.json().ok()?;
+            let arr = res_json.get("embedding")?.as_array()?;
+            let vec: Vec<f32> = arr
+                .iter()
+                .filter_map(|x| x.as_f64().map(|f| f as f32))
+                .collect();
+            if vec.is_empty() {
+                None
+            } else {
+                Some(vec)
+            }
+        })
+        .flatten()
     }
 }
 
@@ -163,5 +178,12 @@ mod tests {
         let client = EmbeddingClient::with_endpoint("http://127.0.0.1:59998", "nomic-embed-text", 768);
         assert!(!client.is_available());
         assert!(client.embed_text("hello world").is_none());
+    }
+
+    #[tokio::test]
+    async fn test_embedding_client_inside_tokio_runtime_does_not_panic() {
+        let client = EmbeddingClient::with_endpoint("http://127.0.0.1:59998", "nomic-embed-text", 768);
+        assert!(!client.is_available());
+        assert!(client.embed_text("tokio safety check").is_none());
     }
 }

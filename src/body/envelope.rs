@@ -65,14 +65,24 @@ impl AutonomyEnvelope {
             (".ssh/", "SSH 私钥目录属于 L3 绝对禁区"),
             ("id_rsa", "SSH 私钥文件属于 L3 绝对禁区"),
             ("id_ed25519", "SSH 私钥文件属于 L3 绝对禁区"),
-            (".pem", "PEM 证书私钥属于 L3 绝对禁区"),
-            (".key", "密钥文件属于 L3 绝对禁区"),
-            (".env", "环境凭据文件受敏感路径保护，禁止明文入库或直写"),
         ];
+        let normalized = target_lower.replace('\\', "/");
         for (pat, reason) in forbidden_patterns {
-            if target_lower.contains(pat) {
+            if normalized.contains(pat) {
                 return Some(reason);
             }
+        }
+        let file_name = normalized.rsplit('/').next().unwrap_or(&normalized);
+        if (file_name == ".env"
+            || (file_name.starts_with(".env.")
+                && !matches!(
+                    file_name,
+                    ".env.example" | ".env.sample" | ".env.template" | ".env.dist"
+                )))
+            || file_name.ends_with(".pem")
+            || file_name.ends_with(".key")
+        {
+            return Some("敏感凭据或密钥文件属于 L3 保护范围，禁止直接读写或明文入库");
         }
         None
     }
@@ -86,8 +96,38 @@ impl AutonomyEnvelope {
         // 1. L3_FORBIDDEN 检查：敏感路径写入/删除/跨机覆盖、明文密钥、黑名单递归扫盘
         let is_read_only_probe = matches!(
             act.as_str(),
-            "brief" | "fact_query" | "asset_search" | "links_impact" | "links_audit"
-                | "vitals" | "manifest" | "envelope" | "mesh_body_manifest" | "status"
+            "brief"
+                | "fact_query"
+                | "asset_search"
+                | "links_impact"
+                | "links_audit"
+                | "links_query"
+                | "links_visualize"
+                | "vitals"
+                | "manifest"
+                | "envelope"
+                | "mesh_body_manifest"
+                | "status"
+                | "perf_awr"
+                | "perf_snapshot"
+                | "audit_query"
+                | "memory_search"
+                | "port_check"
+                | "env_show"
+                | "env_processes"
+                | "placement_rules"
+                | "placement_suggest"
+                | "changes_since"
+                | "lock_list"
+                | "deadlock_check"
+                | "mcp_catalog"
+                | "skill_route"
+                | "service_contact"
+                | "demo_scenario"
+                | "benchmark"
+                | "feedback_list"
+                | "peers"
+                | "checkpoints"
         );
         if act == "plaintext_secret_persist"
             || act == "blacklist_deep_scan"
@@ -147,6 +187,7 @@ impl AutonomyEnvelope {
                 | "homeostasis_heal"
                 | "handoff_save"
                 | "handoff_resume"
+                | "perf_tune"
         ) {
             return EnvelopeDecision {
                 action: action.to_string(),
@@ -159,15 +200,32 @@ impl AutonomyEnvelope {
             };
         }
 
-        // 4. 默认归入 L0_OBSERVE 只读感知
+        // 4. L0_OBSERVE 白名单只读放行
+        if is_read_only_probe {
+            return EnvelopeDecision {
+                action: action.to_string(),
+                target: tgt_raw.to_string(),
+                level: AutonomyLevel::L0Observe,
+                level_code: AutonomyLevel::L0Observe.as_str().to_string(),
+                allowed: true,
+                requires_confirmation: false,
+                reason: "L0 只读感知动作（零副作用），默认放行".to_string(),
+            };
+        }
+
+        // 5. Fail-Closed 兜底：未在 L0/L1 白名单登记的未知动作默认降级至 L2_SUPERVISED 受控监督模式
         EnvelopeDecision {
             action: action.to_string(),
             target: tgt_raw.to_string(),
-            level: AutonomyLevel::L0Observe,
-            level_code: AutonomyLevel::L0Observe.as_str().to_string(),
-            allowed: true,
-            requires_confirmation: false,
-            reason: "L0 只读感知动作（零副作用），默认放行".to_string(),
+            level: AutonomyLevel::L2Supervised,
+            level_code: AutonomyLevel::L2Supervised.as_str().to_string(),
+            allowed: dry_run,
+            requires_confirmation: !dry_run,
+            reason: if dry_run {
+                "未知动作默认按 L2 受控模式处理，dry_run 预览允许执行".to_string()
+            } else {
+                "未知动作默认按 L2 受控监督模式 fail-closed 拦截，需显式确认或加入只读白名单".to_string()
+            },
         }
     }
 
@@ -261,5 +319,19 @@ mod tests {
         let l3 = AutonomyEnvelope::evaluate("write_file", Some("/etc/shadow"), false);
         assert_eq!(l3.level, AutonomyLevel::L3Forbidden);
         assert!(!l3.allowed);
+
+        // 未知动作 fail-closed 降级为 L2_SUPERVISED，且不影响 .env.example / hotkey.rs
+        let unknown = AutonomyEnvelope::evaluate("mystery_write_action", Some("/tmp/a.txt"), false);
+        assert_eq!(unknown.level, AutonomyLevel::L2Supervised);
+        assert!(!unknown.allowed);
+        assert!(unknown.requires_confirmation);
+
+        let safe_ex = AutonomyEnvelope::evaluate("brief", Some(".env.example"), false);
+        assert_eq!(safe_ex.level, AutonomyLevel::L0Observe);
+        assert!(safe_ex.allowed);
+
+        let safe_rs = AutonomyEnvelope::evaluate("manifest", Some("src/hotkey.rs"), false);
+        assert_eq!(safe_rs.level, AutonomyLevel::L0Observe);
+        assert!(safe_rs.allowed);
     }
 }

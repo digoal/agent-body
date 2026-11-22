@@ -136,18 +136,29 @@ impl ExternalContactsManager {
         let start = std::time::Instant::now();
         let probe_target = rec.health_endpoint.as_deref().unwrap_or(&rec.endpoint);
         let (status, detail) = if probe_target.starts_with("http://") || probe_target.starts_with("https://") {
-            let client = reqwest::blocking::Client::builder()
-                .timeout(Duration::from_millis(1500))
-                .build()?;
-            match client.get(probe_target).send() {
-                Ok(resp) if resp.status().is_success() => {
-                    ("healthy".to_string(), format!("HTTP {}", resp.status().as_u16()))
+            let target_url = probe_target.to_string();
+            let http_probe = move || -> Result<(String, String)> {
+                let client = reqwest::blocking::Client::builder()
+                    .timeout(Duration::from_millis(1500))
+                    .build()?;
+                match client.get(&target_url).send() {
+                    Ok(resp) if resp.status().is_success() => {
+                        Ok(("healthy".to_string(), format!("HTTP {}", resp.status().as_u16())))
+                    }
+                    Ok(resp) => Ok((
+                        "degraded".to_string(),
+                        format!("HTTP {} 非 2xx 响应", resp.status().as_u16()),
+                    )),
+                    Err(e) => Ok(("offline".to_string(), format!("HTTP 探测不可达: {}", e))),
                 }
-                Ok(resp) => (
-                    "degraded".to_string(),
-                    format!("HTTP {} 非 2xx 响应", resp.status().as_u16()),
-                ),
-                Err(e) => ("offline".to_string(), format!("HTTP 探测不可达: {}", e)),
+            };
+            if tokio::runtime::Handle::try_current().is_ok() {
+                std::thread::scope(|s| match s.spawn(http_probe).join() {
+                    Ok(res) => res,
+                    Err(_) => Ok(("offline".to_string(), "HTTP 探测线程异常终止".to_string())),
+                })?
+            } else {
+                http_probe()?
             }
         } else {
             // 尝试解析 host:port 进行 TCP 探活
@@ -219,6 +230,29 @@ mod tests {
             last_checked_at: None,
         };
         assert!(mgr.register_service(&bad).is_err(), "包含 sk- 明文密钥必须被拦截");
+    }
+
+    #[tokio::test]
+    async fn test_check_health_http_inside_tokio_runtime_no_panic() {
+        let storage = Storage::open_in_memory().expect("open");
+        let mgr = ExternalContactsManager::new(storage);
+        let svc = ExternalServiceRecord {
+            id: "svc-tokio".to_string(),
+            service_name: "tokio-http-svc".to_string(),
+            category: "api".to_string(),
+            endpoint: "http://127.0.0.1:59996/health".to_string(),
+            protocol: "http".to_string(),
+            capabilities: "health".to_string(),
+            auth_type: "none".to_string(),
+            auth_env_var: None,
+            health_endpoint: None,
+            usage_example: None,
+            status: "unknown".to_string(),
+            last_checked_at: None,
+        };
+        mgr.register_service(&svc).expect("register");
+        let rep = mgr.check_health("tokio-http-svc").expect("check_health inside tokio");
+        assert_eq!(rep.status, "offline");
     }
 
     #[test]

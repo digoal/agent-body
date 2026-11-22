@@ -12,6 +12,7 @@ use crate::changes::ChangesEngine;
 use crate::brief::{BriefAssembler, BriefRequest};
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct McpToolRegistry {
     storage: Storage,
 }

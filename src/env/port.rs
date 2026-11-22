@@ -49,7 +49,7 @@ impl PortChecker {
         if let Some((pid, inode)) = occupied_ports.get(&port) {
             // 端口被占用，解析 pid 信息
             let conflict_info = Self::resolve_process_info(*pid);
-            let free_ports = Self::find_next_free_ports(port + 1, suggest_count, &occupied_ports);
+            let free_ports = Self::find_next_free_ports(port.saturating_add(1), suggest_count, &occupied_ports);
 
             let advice = if let Some(ref p) = conflict_info {
                 format!(
@@ -82,7 +82,7 @@ impl PortChecker {
                     advice: format!("✅ 端口 {} 处于空闲可用状态，可以安全绑定启动服务。", port),
                 })
             } else {
-                let free_ports = Self::find_next_free_ports(port + 1, suggest_count, &occupied_ports);
+                let free_ports = Self::find_next_free_ports(port.saturating_add(1), suggest_count, &occupied_ports);
                 Ok(PortCheckResult {
                     port,
                     status: "OCCUPIED".to_string(),
@@ -94,19 +94,28 @@ impl PortChecker {
         }
     }
 
-    /// 从起始端口开始，寻找接下来的 n 个连续可用空闲端口
+    /// 从起始端口开始，寻找接下来的 n 个连续可用空闲端口（65535 时安全回绕至 10000 起）
     pub fn find_next_free_ports(start_port: u16, count: usize, occupied: &HashMap<u16, (u32, u64)>) -> Vec<u16> {
         let mut result = Vec::new();
-        let mut curr = start_port;
+        let mut curr = if start_port == u16::MAX && occupied.contains_key(&u16::MAX) {
+            10000
+        } else {
+            start_port.max(1)
+        };
 
-        while result.len() < count && curr < 65535 {
-            if !occupied.contains_key(&curr) {
-                // 尝试绑定测试
-                if TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), curr)).is_ok() {
-                    result.push(curr);
-                }
+        let mut steps = 0usize;
+        while result.len() < count && steps < 65535 {
+            if !occupied.contains_key(&curr)
+                && TcpListener::bind(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), curr)).is_ok()
+            {
+                result.push(curr);
             }
-            curr += 1;
+            if curr == u16::MAX {
+                curr = 10000;
+            } else {
+                curr += 1;
+            }
+            steps += 1;
         }
 
         result
@@ -187,7 +196,10 @@ impl PortChecker {
             .unwrap_or_else(|_| "unknown".to_string());
 
         let command = fs::read_to_string(cmdline_path)
-            .map(|s| s.replace('\0', " ").trim().to_string())
+            .map(|s| {
+                let raw = s.replace('\0', " ").trim().to_string();
+                crate::scanner::metadata::SecretRedactor::redact(&raw)
+            })
             .unwrap_or_else(|_| name.clone());
 
         // 从 /proc/[pid]/status 解析 UID
@@ -239,5 +251,14 @@ mod tests {
         // 再次探测，应该为 FREE
         let res_free = PortChecker::check_port(local_port, 3).expect("check_port free");
         assert_eq!(res_free.status, "FREE");
+    }
+
+    #[test]
+    fn test_find_next_free_ports_wraps_safely_at_65535() {
+        let mut occupied = HashMap::new();
+        occupied.insert(u16::MAX, (1234, 9999));
+        let free = PortChecker::find_next_free_ports(u16::MAX, 2, &occupied);
+        assert_eq!(free.len(), 2);
+        assert!(free.iter().all(|&p| p >= 10000));
     }
 }

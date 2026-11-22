@@ -8,23 +8,23 @@
 
 ## 一、定位升维与三层命名兼容契约（Three-Tier Naming Contract）
 
-### 1.1 为什么必须分层命名，而不能粗暴重命名二进制？
+### 1.1 为什么必须分层命名，而不能随意破坏工程契约？
 
 基于 **脑体分离（Brain-Body Separation）** 架构，本项目的本质定位是：**驻留在宿主机上的 Agent 本体（Agent Embodiment Substrate）**——大语言模型与各类客户端（Antigravity / Claude Code / Cursor / Codex / Cron Worker）是可随时切换的**瞬态大脑皮层（Ephemeral Cortex）**，而本系统是永驻物理主机、零云端推理税的**数字躯干与具身底座**；过去的“大管家 / 小秘书”则是本体对外的两大功能侧面。
 
-然而，本仓库已在宿主机运行了 43 个阶段，存在大量现网部署契约（`~/.agent-body/`、`agent-body.service`、全局 `hooks.json`、42 个 `body_*` MCP 工具、外部分享脚本与 `docs/manual/` 文档）。因此本规格书强制确立 **三层命名兼容契约（严禁违背）**：
+本仓库在 Phase 44~45 先行采用平滑兼容过渡，并于 Phase 48 完成全仓工程硬切，将现网部署契约统一稳定为 `~/.agent-body/`、`agent-body.service`、全局 `hooks.json` 与 `43` 个 `body_*` MCP 工具。因此本规格书确立 **三层命名兼容契约（严禁违背）**：
 
 | 命名层级 | 覆盖范围 | 命名策略 | 约束红线 |
 |---|---|---|---|
 | **Tier-1：品牌与产品心智层** | README 标题、项目愿景、架构文档、`docs/idea_doc/`、对外演讲/路演 PPT、公众号文章 | 统一升维为 **「Agent 本体（宿主机具身底座）」 / Agent Embodiment Substrate (`agent-body`)** | 明确点破「脑体分离」，将“大管家/小秘书”定位为本体侧面与比较优势类比，**严禁再写容易让人误解为“多 Agent 编排器”或“人类私人助理”的表述**。 |
 | **Tier-2：交互文案、代码注释、WebUI 与 SKILL 层** | Web 控制台文案、路演剧场、CLI `--about`/Help 文本、`src/` 模块注释、`skills/*.md`、`docs/manual/*.md`、`docs/arch/*.md` | 以「Agent 本体 · 六大器官」为主体语义刷新 | 保持清晰术语映射（例如：*Agent 本体事实感官 / 本体记忆海马体 / 本体反射门禁*），不破坏任何代码标识符与既有行为语义。 |
-| **Tier-3：工程与协议稳定层（零破坏红线）** | Cargo package (`agent-body`)、二进制名、配置目录 (`~/.agent-body/`)、42 个既有 MCP 工具名 (`body_*`)、CLI 子命令 (`steward ...`)、SQLite/PG/DuckDB 既有表名与 REST 路由 | **100% 保持原样，向后完全兼容** | **严禁改名破坏既有客户端 MCP 配置、Hooks 集成、Systemd 服务脚本或外部自动化调用**。新本体能力统一在 `src/body/` 与第 43 工具 `body_state` 内聚扩展。 |
+| **Tier-3：工程与协议稳定层（零破坏红线）** | Cargo package (`agent-body`)、二进制名、配置目录 (`~/.agent-body/`)、全部 `43` 个 MCP 工具名 (`body_*`)、CLI 命令 (`agent-body ...`)、SQLite/PG/DuckDB 既有表名与 REST 路由 | **100% 冻结稳定，向后完全兼容** | **严禁再随意改名破坏既有客户端 MCP 配置、Hooks 集成、Systemd 服务脚本或外部自动化调用**。新本体能力统一在 `src/body/` 与第 43 工具 `body_state` 内聚扩展。 |
 
 ---
 
 ## 二、五大本体原生新能力详细技术规格
 
-Phase 44 将在 `src/` 下新增第 27 个顶层模块 **`src/body/`**，下设 4 个子模块（`manifest.rs`、`continuity.rs`、`vitals.rs`、`envelope.rs`），把原本分散在 26 个模块中的能力收敛为清晰的「Agent 本体中枢」。
+Phase 44 在 `src/` 下新增第 27 个顶层模块 **`src/body/`**，下设 `manifest.rs`、`continuity.rs`、`vitals.rs`、`envelope.rs`，并于 Phase 50 增补第 5 个子模块 `perf_awr.rs`（内生 Wait Events / `/proc/self` / AWR / ADDM），把本体能力收敛为清晰的「Agent 本体中枢」。
 
 ```mermaid
 flowchart LR
@@ -142,9 +142,9 @@ flowchart LR
 
 | 端侧 | 接口签名 / 入口 | 覆盖动作（1:1:1 Action Parity） |
 |---|---|---|
-| **MCP 工具 (`src/api/mcp_tools.rs`)** | `body_state` | `action`: `manifest` \| `vitals` \| `envelope` \| `handoff_save` \| `handoff_resume` \| `peers` |
-| **CLI (`src/main.rs`)** | `agent-body body <subcmd>` | `manifest` \| `vitals` \| `envelope` \| `handoff` \| `resume` \| `peers` |
-| **Web REST (`src/web/server.rs` & `parity_api.rs`)** | `GET /api/v1/body/{manifest,vitals,envelope,checkpoints,peers}`<br/>`POST /api/v1/body/{handoff,resume,heal}` | 写端点强制校验 `check_auth`；`parity/matrix` 升级为 `43/43 (100%)` |
+| **MCP 工具 (`src/api/mcp_tools.rs`)** | `body_state` | `action`: `manifest` \| `vitals` \| `envelope` \| `handoff_save` \| `handoff_resume` \| `heal` \| `peers` \| `perf_snapshot` \| `perf_awr` \| `perf_tune` |
+| **CLI (`src/cli_args.rs` / `src/main.rs`)** | `agent-body body <subcmd>` | `manifest` \| `vitals` \| `envelope` \| `handoff` \| `resume` \| `heal` \| `peers` \| `perf-snapshot` \| `perf-awr` \| `perf-tune` |
+| **Web REST (`src/web/server.rs` & `parity_api.rs`)** | `GET /api/v1/body/{manifest,vitals,envelope,checkpoints,peers,perf/awr}`<br/>`POST /api/v1/body/{handoff,resume,heal,perf/snapshot,perf/awr,perf/tune}` | 写端点强制校验 `check_auth`；`parity/matrix` 升级为 `43/43 (100%)` |
 | **Web UI (`src/web/assets/mod.rs`)** | 顶栏品牌升维 + 第 9 工作台「🧬 本体中枢与生命体征」 | 展示脑体分离拓扑、六器官卡片、五维稳态雷达、跨大脑接力胶囊时间线、L0~L3 权限包络表 + CLI/MCP 镜像器 |
 
 ---

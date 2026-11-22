@@ -43,9 +43,12 @@ impl PlacementEngine {
     /// 获取目录建议
     pub fn suggest(&self, req: &PlacementRequest) -> Result<PlacementSuggestion> {
         let rules = self.storage.get_placement_rules()?;
-        
+        if rules.is_empty() {
+            anyhow::bail!("placement_rules 表为空，请先初始化宿主机放置规则");
+        }
+
         // 1. 规则匹配
-        let matched_rule = self.match_rule(&rules, req);
+        let matched_rule = self.match_rule(&rules, req)?;
 
         // 2. 格式化名称为 snake_case 风格
         let clean_name = sanitize_name(&req.name);
@@ -103,41 +106,43 @@ impl PlacementEngine {
         }
     }
 
-    fn match_rule<'a>(&self, rules: &'a [PlacementRule], req: &PlacementRequest) -> &'a PlacementRule {
+    fn match_rule<'a>(&self, rules: &'a [PlacementRule], req: &PlacementRequest) -> Result<&'a PlacementRule> {
         let req_type = req.object_type.to_lowercase();
         let intent = req.intent.to_lowercase();
 
         // 意图关键词优先
         if intent.contains("临时") || intent.contains("debug") || intent.contains("测试日志") {
             if let Some(r) = rules.iter().find(|r| r.pattern_type == "tmp") {
-                return r;
+                return Ok(r);
             }
         }
         if intent.contains("技能") || intent.contains("skill") {
             if let Some(r) = rules.iter().find(|r| r.pattern_type == "skill") {
-                return r;
+                return Ok(r);
             }
         }
         if intent.contains("开源") || intent.contains("clone") || intent.contains("github") {
             if let Some(r) = rules.iter().find(|r| r.pattern_type == "src") {
-                return r;
+                return Ok(r);
             }
         }
         if intent.contains("笔记") || intent.contains("清单") || intent.contains("备忘") {
             if let Some(r) = rules.iter().find(|r| r.pattern_type == "note") {
-                return r;
+                return Ok(r);
             }
         }
 
         // 类型匹配
         for rule in rules {
             if rule.pattern_type.eq_ignore_ascii_case(&req_type) {
-                return rule;
+                return Ok(rule);
             }
         }
 
         // 兜底返回默认第一条规则 (shared_tools 或其他)
-        &rules[0]
+        rules
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("placement_rules 表为空，无法匹配放置规则"))
     }
 }
 
@@ -202,5 +207,19 @@ mod tests {
 
         let suggestion = engine.suggest(&req).expect("suggest");
         assert!(suggestion.guidelines.iter().any(|g| g.contains("安全隔离要求")));
+    }
+
+    #[test]
+    fn test_placement_empty_rules_returns_err_instead_of_panic() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let engine = PlacementEngine::new(storage);
+        let req = PlacementRequest {
+            object_type: "script".to_string(),
+            name: "demo".to_string(),
+            intent: "test".to_string(),
+            tags: vec![],
+            security_level: "internal".to_string(),
+        };
+        assert!(engine.match_rule(&[], &req).is_err(), "空规则切片应返回 Err 而非 Panic");
     }
 }

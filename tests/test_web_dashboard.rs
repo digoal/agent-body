@@ -277,6 +277,37 @@ Content-Length: 75\r\n\r\n\
     .await;
     assert!(resp_awr.contains("HTTP/1.1 200 OK"));
     assert!(resp_awr.contains("\"addm_findings\""));
+    assert!(resp_awr.contains("\"reports_meta\":[]"), "只读 GET 不应持久化 AWR 报告");
+
+    let awr_post_unauth = "POST /api/v1/body/perf/awr HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}";
+    let resp_awr_post_unauth = send_http_request("127.0.0.1", bound_port, awr_post_unauth).await;
+    assert!(resp_awr_post_unauth.contains("HTTP/1.1 401 Unauthorized"));
+
+    let awr_post_body = "{\"vs_baseline\":true}";
+    let awr_post_auth = format!(
+        "POST /api/v1/body/perf/awr HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+        awr_post_body.len(),
+        awr_post_body
+    );
+    let resp_awr_post = send_http_request("127.0.0.1", bound_port, &awr_post_auth).await;
+    assert!(resp_awr_post.contains("HTTP/1.1 200 OK"));
+    assert!(resp_awr_post.contains("\"reports_meta\":[{"));
+
+    let mermaid_write_unauth = send_http_request(
+        "127.0.0.1",
+        bound_port,
+        "GET /api/v1/links/mermaid?discover_semantic=true HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
+    )
+    .await;
+    assert!(mermaid_write_unauth.contains("HTTP/1.1 401 Unauthorized"));
+
+    let mermaid_write_auth = send_http_request(
+        "127.0.0.1",
+        bound_port,
+        "GET /api/v1/links/mermaid?discover_semantic=true HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\n\r\n",
+    )
+    .await;
+    assert!(mermaid_write_auth.contains("HTTP/1.1 200 OK"));
 
     let tune_req = "POST /api/v1/body/perf/tune HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Length: 2\r\n\r\n{}";
     let resp_tune = send_http_request("127.0.0.1", bound_port, tune_req).await;

@@ -168,3 +168,30 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 35. **旗舰双演说 HTML (`presentation.html` & `agent-body-deck.html`) Decks-as-Code 推翻重写与 Playwright 门禁 (`Phase 51`)** `✅ Phase 51 已全量落地（对应规约 #13, #17）`:
     > 原始需求：presentation/presentation.html, agent-body-deck.html 已经不能完全传达现在的项目了，请先吸收内容，然后基于当前项目的代码和其他文档，推翻重写。
     - **已落地交付**：彻底告别 Phase 24 手工打补丁旧骨架，构建确定性代码生成器 `scripts/build_flagship_roadshow.py` 与 `scripts/build_flagship_techdeck.py`（复用 `scripts/deck_engine.py`「地层剖面 / 工程蓝图」视觉体系与 `G/N/T/F/P/A/S/R` 交互），推翻重写 **16 页对外路演版 (`presentation/presentation.html`)** 与 **24 页深度技术交流版 (`presentation/agent-body-deck.html`)**，完整传达脑体分离六大器官、L1~L3 分层图谱、AOPCC 乐观-悲观并发控制、写穿新鲜度与换脑不失忆、`MeshEnvelope v1.0`、双域审计与 `P1~P5` 自进化、内生 Wait Events/AWR/ADDM、Benchmark `v3.7` 帕累托双门禁与四赛道竞品实测；同步刷新 `presentation/index.html`、新增 `make verify-decks` Playwright 无头验真 9/9 全绿并重编重启服务同步 Web UI 内嵌演说（详见 [roadmap-phase51.md](docs/src_doc/roadmap-phase51.md)）。
+
+---
+
+### 方案 A · `v1.0.0 GA` 工业级收口演进总账（Phase 52 ~ Phase 57 · 2026-11-22 立项）
+
+36. **`[P0 · Phase 52]` 安全止血、Dockerfile 编译阻断修复、Tokio/边界 Panic 排雷与 P0 损毁文档/SKILL 急救** `⏳ In Progress (Phase 52)`:
+    - 修复 `Dockerfile` (`rust:1.88-bookworm`、补 `presentation/`、`EXPOSE 8765`、`HEALTHCHECK`)、`docker-compose.yml`、`.dockerignore`、`build.rs`；
+    - 消除 MCP `run_stdio` 阻塞 Panic、`contacts`/`embedding` Tokio drop panic 及 `placement`/`port`/`powercontext`/`state_machine` 边界缺陷；
+    - 修复 `body_bridge.py` 无端口破坏性命令绕过、Web `GET` 写库免鉴权、Mesh `read:facts` scope、`SKILL.md` 抗注入、`gc`/`port` 脱敏与 `AutonomyEnvelope` fail-closed；
+    - 纠错 `ledger.rs` 死锁误报/漏记、`handle_mesh_graph` URL 解码、`cli_args.rs` `bool` 与错误模板 CLI，并急救修复 `04`/`17` 损毁文档与 3 套 `SKILL.md` 断链/镜像（详见 [roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)）。
+
+37. **`[P0 · Phase 53]` 存储三后端（SQLite/PG/DuckDB）语义对齐、全量迁移与 OLAP 管道真修复** `🗓️ Planned (Phase 53)`:
+    - 对齐 SQLite/PG/DuckDB `insert_memory` 冲突语义、`search_memories_fts` 状态过滤、PG 锁时间戳比较、`awr:%` 过滤、DuckDB `init()`/`add_link`/事务原子性与 AWR 孤儿行清理，修通 `StorageMigrator`、`SyncPipeline` 与 `DuckDbAnalyticsEngine`。
+
+38. **`[P1 · Phase 54]` Phase 50 18/18 WaitEvent 全埋点、黑白屏动作级真 Parity、TUI 升级与 Benchmark `v3.8`** `🗓️ Planned (Phase 54)`:
+    - 补齐 14/18 未埋点 WaitEvent 与定期 AWR 快照，补齐 `9418c51` AWR 报告库 CLI/MCP 对等、Web DQ 渲染与 `body_lock_release` 三端一致，扩展 `codex`/`hermes` Hook、升级 TUI 并上线 Benchmark `v3.8` (`W18`/`M6`/`DQ9`/`PR-14`)。
+
+39. **`[P1 · Phase 55]` 开源可移植性解耦（去 `/root/new/` 硬编码）、死配置真相化与跨平台/网络硬化** `🗓️ Planned (Phase 55)`:
+    - 抽象 `Config::{workspace_roots, temp_dir, default_owner}`，接通 `AGENT_BODY_CONFIG`/`[memory]`/`[[hooks]]`/`[[pipelines]]`/`assets.ignore_patterns` 清理废弃 `api_port`，完善 musl/macOS/Windows 与 HTTP 头循环解析。
+
+40. **`[P2 · Phase 56]` God File 模块化拆分（`>1500L` 清零）、吞错清零、集成测试补盲与五重门禁升级** `🗓️ Planned (Phase 56)`:
+    - 拆分 `web/assets/mod.rs`、三存储 Provider、`main.rs`、`parity_api.rs`；收紧 `let _ =` 预算；补全 `mesh`/`audit`/`body`/`hooks`/`cli_e2e` 集成测试，门禁新增断链、硬编码路径与 WaitEvent 埋点检测。
+
+41. **`[P1 · Phase 57]` 全文档/手册/SKILL/演说矩阵大一统、历史归档与 `v1.0.0 GA` 正式发布** `🗓️ Planned (Phase 57)`:
+    - 全量更新 `docs/manual/01~10`、`docs/arch/01~03`、`docs/design_doc/18`、`INSTALL.md`、`README.md`、`docs/markdown/` 与 `presentation/01~06`；去重并归档历史手册/Phase 日志；升级 `Cargo.toml` 至 `1.0.0` 并发布 [docs/releases/README.md](docs/releases/README.md)。
+
+42. 多模态对象的理解和元数据KV对的增强。

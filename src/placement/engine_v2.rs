@@ -82,7 +82,10 @@ impl PlacementEngineV2 {
 
         // 3. 全局宿主机规则库打分匹配
         let global_rules = self.storage.get_placement_rules()?;
-        let (best_rule, score) = self.score_and_match_rule(&global_rules, req);
+        if global_rules.is_empty() {
+            anyhow::bail!("placement_rules 表为空，请先初始化宿主机放置规则");
+        }
+        let (best_rule, score) = self.score_and_match_rule(&global_rules, req)?;
 
         // 4. 计算建议绝对路径
         let base_dir = PathBuf::from(&best_rule.target_base_dir);
@@ -163,12 +166,14 @@ impl PlacementEngineV2 {
         &self,
         rules: &'a [PlacementRule],
         req: &PlacementRequestV2,
-    ) -> (&'a PlacementRule, f64) {
+    ) -> Result<(&'a PlacementRule, f64)> {
         let req_type = req.object_type.to_lowercase();
         let intent = req.intent.to_lowercase();
         let name_lower = req.name.to_lowercase();
 
-        let mut best_rule = &rules[0];
+        let mut best_rule = rules
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("placement_rules 表为空，无法评分匹配"))?;
         let mut highest_score = 0.0;
 
         for rule in rules {
@@ -238,7 +243,7 @@ impl PlacementEngineV2 {
             highest_score = 0.5;
         }
 
-        (best_rule, highest_score)
+        Ok((best_rule, highest_score))
     }
 
     /// 注入工程与安全规范指引
@@ -347,5 +352,20 @@ guideline = "公众号文章统一保存到 markdown/ 目录并使用 SVG 图解
         assert!(res.rule_matched.contains("project_override"));
         assert!(res.suggested_path.to_string_lossy().ends_with("markdown/duckdb_tuning_guide.md"));
         assert!(res.guidelines.iter().any(|g| g.contains("SVG 图解")));
+    }
+
+    #[test]
+    fn test_v2_empty_rules_returns_err_instead_of_panic() {
+        let storage = Storage::open_in_memory().expect("open memory");
+        let engine = PlacementEngineV2::new(storage);
+        let req = PlacementRequestV2 {
+            object_type: "script".to_string(),
+            name: "demo".to_string(),
+            intent: "test".to_string(),
+            tags: vec![],
+            security_level: "internal".to_string(),
+            current_workspace: None,
+        };
+        assert!(engine.score_and_match_rule(&[], &req).is_err(), "V2 空规则切片应返回 Err 而非 Panic");
     }
 }

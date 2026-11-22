@@ -120,16 +120,20 @@ impl ScanStateMachine {
             let is_dir = entry.file_type().is_dir();
             let tier = self.determine_tier(path);
 
-            // 断点恢复阶段：跳过已经处理过的路径
+            // 断点恢复阶段：跳过已经处理过的路径（含 last_path 已被物理删除时的目录序越过恢复）
             if skipping {
                 if let Some(ref target) = target_last {
-                    if path_str == *target {
+                    let target_path = Path::new(target);
+                    if path == target_path {
                         // 命中上次完成的最后一条路径，从下一个条目开始扫描
                         skipping = false;
                         if is_dir && tier == "shallow" {
                             it.skip_current_dir();
                         }
                         continue;
+                    } else if path > target_path {
+                        // 上次断点文件已被删除，按字典序已越过目标位置，立即恢复扫描当前条目
+                        skipping = false;
                     } else {
                         // 依然处于已处理前缀中
                         if is_dir && tier == "shallow" {
@@ -380,5 +384,33 @@ mod tests {
         // 6. 再次调用 run_or_resume 应该幂等直接返回 completed
         let re_check = sm.run_or_resume(&job_id, None).expect("idempotent check");
         assert_eq!(re_check.status, "completed");
+    }
+
+    #[test]
+    fn test_scan_state_machine_resumes_when_last_path_deleted() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let sm = ScanStateMachine::with_batch_size(storage.clone(), 1).expect("new sm");
+
+        let tmp = tempdir().expect("tempdir");
+        let root = tmp.path();
+        File::create(root.join("a.py")).unwrap().write_all(b"a=1").unwrap();
+        File::create(root.join("b.py")).unwrap().write_all(b"b=2").unwrap();
+        File::create(root.join("c.py")).unwrap().write_all(b"c=3").unwrap();
+
+        let job = sm.create_job(root).expect("create_job");
+        // step 1 = root, step 2 = a.py, step 3 = b.py
+        let paused = sm.run_or_resume(&job.id, Some(3)).expect("pause");
+        assert_eq!(paused.status, "paused");
+        let last_path = paused.last_path.expect("last_path");
+        assert!(last_path.ends_with("b.py"));
+
+        // 删除断点文件 b.py 后恢复扫描，必须继续扫到 c.py 而非跳过整棵子树
+        std::fs::remove_file(&last_path).expect("remove b.py");
+        let done = sm.run_or_resume(&job.id, None).expect("resume");
+        assert_eq!(done.status, "completed");
+        let c_asset = storage
+            .get_asset_by_path(&root.join("c.py").to_string_lossy())
+            .expect("query c.py");
+        assert!(c_asset.is_some(), "断点文件删除后 c.py 必须被正常扫描入库");
     }
 }

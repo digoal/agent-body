@@ -111,11 +111,11 @@ pub fn handle_lock_release(
     storage: &dyn StorageProvider,
     auth_token: &Option<String>,
 ) -> HttpResponse {
-    // 若配置了 auth_token，则校验请求头 Authorization
-    if let Some(expected_token) = auth_token {
+    // 若配置了 auth_token，则使用常量时间比较校验请求头 Authorization
+    if let Some(expected_token) = auth_token.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
         let auth_header = req.headers.get("authorization").cloned().unwrap_or_default();
         let token = auth_header.strip_prefix("Bearer ").unwrap_or(&auth_header);
-        if token != expected_token {
+        if !crate::mesh::auth::constant_time_eq(token, expected_token) {
             return WebResponse::error(StatusCode::UNAUTHORIZED, "Unauthorized: invalid auth token");
         }
     }

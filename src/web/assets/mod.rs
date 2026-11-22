@@ -4845,8 +4845,11 @@ async function generateSelectedBodyPerfAwr() {
     { action: "perf_awr", snap_a: snapA, snap_b: snapB, vs_baseline: snapA === "baseline" }
   );
   try {
-    const qs = `snap_a=${encodeURIComponent(snapA)}&snap_b=${encodeURIComponent(snapB)}&vs_baseline=${snapA === "baseline"}`;
-    const data = await apiGet(`/api/v1/body/perf/awr?${qs}`);
+    const data = await apiPost("/api/v1/body/perf/awr", {
+      snap_a: snapA,
+      snap_b: snapB,
+      vs_baseline: snapA === "baseline",
+    });
     const rep = data.report || {};
     populateBodyPerfSelectors(data, snapA, snapB, rep.report_id);
     renderBodyPerfAwrReport(rep, (data.snapshots_meta || []).length);

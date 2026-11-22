@@ -1,5 +1,9 @@
 target/
 .git/
-.steward/
+.codegraph/
+.agent-body/
+__pycache__/
+scripts/__pycache__/
+*.pyc
 *.log
 *.tmp

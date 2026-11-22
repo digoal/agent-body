@@ -1746,5 +1746,15 @@ mod tests {
         assert!(Cli::try_parse_from(["agent-body", "body", "perf-snapshot", "--label", "gold", "--set-baseline"]).is_ok());
         assert!(Cli::try_parse_from(["agent-body", "body", "perf-awr", "--vs-baseline", "true"]).is_ok());
         assert!(Cli::try_parse_from(["agent-body", "body", "perf-tune"]).is_ok());
+
+        // 验证 Clap 4 布尔标志支持显式 false 与隐式 true 写法
+        let c1 = Cli::try_parse_from(["agent-body", "memory", "search", "pg", "--hybrid=false"]).expect("hybrid=false");
+        assert!(matches!(c1.command, Commands::Memory { action: MemoryCommands::Search { hybrid: false, .. } }));
+        let c2 = Cli::try_parse_from(["agent-body", "memory", "search", "pg", "--hybrid", "false"]).expect("hybrid false");
+        assert!(matches!(c2.command, Commands::Memory { action: MemoryCommands::Search { hybrid: false, .. } }));
+        let c3 = Cli::try_parse_from(["agent-body", "memory", "search", "pg", "--hybrid"]).expect("hybrid implicit true");
+        assert!(matches!(c3.command, Commands::Memory { action: MemoryCommands::Search { hybrid: true, .. } }));
+        let c4 = Cli::try_parse_from(["agent-body", "close", "s1", "--clean-temp=false"]).expect("clean-temp=false");
+        assert!(matches!(c4.command, Commands::Close { clean_temp: false, .. }));
     }
 }

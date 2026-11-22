@@ -140,6 +140,35 @@ NOISE_PATH_PREFIXES = (
     "/root/.agent-body/",
 )
 
+DESTRUCTIVE_CMD_PATTERNS = (
+    "rm -rf / ",
+    "rm -rf /*",
+    "rm -fr / ",
+    "rm -fr /*",
+    "mkfs.",
+    "dd if=",
+    "chmod -r 777 /",
+    ":(){ :|:& };:",
+)
+
+CRITICAL_PATH_PATTERNS = (
+    "/etc/shadow",
+    "/etc/gshadow",
+    "/etc/sudoers",
+    "/etc/passwd",
+    "/.ssh/",
+    "~/.ssh/",
+    "/.gnupg/",
+    "/.agent-body/body.db",
+)
+
+
+def is_destructive_or_sensitive_command(cmd: str) -> bool:
+    norm = " ".join(cmd.split()).lower() + " "
+    if any(pat in norm for pat in DESTRUCTIVE_CMD_PATTERNS):
+        return True
+    return any(pat in norm for pat in CRITICAL_PATH_PATTERNS)
+
 
 def read_stdin_json() -> Dict[str, Any]:
     try:
@@ -237,11 +266,12 @@ def handle_pre_tool() -> None:
             emit({"decision": "allow"})
             return
         port = extract_listen_port(cmd)
-        if port is None:
+        if port is None and not is_destructive_or_sensitive_command(cmd):
             emit({"decision": "allow"})
             return
         steward_args["command"] = cmd
-        steward_args["port"] = port
+        if port is not None:
+            steward_args["port"] = port
     else:
         emit({"decision": "allow"})
         return
@@ -477,14 +507,14 @@ impl ClientHookGenerator {
 
 # 1. Host Awareness & Safety
 - Before starting services or tests, verify ports using agent-body:
-  Command: `agent-body fact query "<port>"` or check MCP `body_port_check`.
+  Command: `agent-body env port <port>` (or `agent-body fact "<port>"`) or check MCP `body_port_check`.
 - Always respect the directory hierarchy:
   - Code/Projects: `/root/new/work/` or `/root/new/src/`
   - Shared Tools: `/root/new/shared_proj/`
   - Temporary files: `/root/new/tmp/` (auto-cleaned)
 
 # 2. Automated Hook Integration
-- When writing significant architecture/design files, ensure you invoke steward's hook:
+- When writing significant architecture/design files, ensure you invoke agent-body's hook:
   MCP tool: `body_hook_post` with the target file path.
 - Avoid committing or tracking noisy directories: `node_modules`, `target`, `.git`, `.venv`.
 "#,
@@ -494,8 +524,8 @@ impl ClientHookGenerator {
                 r#"# CLAUDE.md - Agent Body Integration Guidelines
 
 ## System Rules & Constraints
-- **Host Steward Integration**: This host runs `agent-body` to manage environment facts, locks, and assets.
-- **Port & Concurrency Safety**: Before binding any network port or launching background services, check for conflicts using `body_port_check` or run `agent-body env ports`.
+- **Agent Body Integration**: This host runs `agent-body` to manage environment facts, locks, and assets.
+- **Port & Concurrency Safety**: Before binding any network port or launching background services, check for conflicts using `body_port_check` or run `agent-body env port <port>` / `agent-body platform ports`.
 - **Pre-Hook & Post-Hook Discipline**:
   - Run `body_hook_pre` before major workspace modifications to verify locks.
   - Run `body_hook_post` after creating key artifacts to automatically index assets and register long-term memory.
@@ -510,12 +540,12 @@ impl ClientHookGenerator {
 
 set -e
 
-STEWARD_BIN=$(which agent-body 2>/dev/null || echo "/root/.cargo/bin/agent-body")
+BODY_BIN=$(which agent-body 2>/dev/null || echo "/root/.cargo/bin/agent-body")
 
-if [ -x "$STEWARD_BIN" ]; then
+if [ -x "$BODY_BIN" ]; then
     # Trigger lightweight scan on current repo root without blocking commit flow
     REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-    "$STEWARD_BIN" asset scan "$REPO_ROOT" --depth 2 >/dev/null 2>&1 &
+    "$BODY_BIN" asset scan "$REPO_ROOT" >/dev/null 2>&1 &
 fi
 
 exit 0
@@ -633,6 +663,7 @@ mod tests {
         );
         assert!(res.companion_files[0].content.contains("extract_failure_text"));
         assert!(res.companion_files[0].content.contains("--error-output"));
+        assert!(res.companion_files[0].content.contains("is_destructive_or_sensitive_command"));
         assert!(res.companion_files[0].executable);
         assert!(res.written_path.is_none());
         assert!(res.is_dry_run);
@@ -676,7 +707,8 @@ mod tests {
         assert!(target_file.exists());
         let read_back = fs::read_to_string(&target_file).unwrap();
         assert!(read_back.contains("asset scan"));
-        assert!(read_back.contains("STEWARD_BIN"));
+        assert!(read_back.contains("BODY_BIN"));
+        assert!(!read_back.contains("--depth"));
 
         #[cfg(unix)]
         {

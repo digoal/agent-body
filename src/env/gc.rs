@@ -54,10 +54,29 @@ impl HostGarbageCollector {
         max_age_hours: u64,
         dry_run: bool,
     ) -> Result<HostGcReport> {
-        // 安全红线校验: 严禁将非临时目录作为 GC 目标
+        // 安全红线校验: 严禁将非临时目录作为 GC 目标（按路径组件严格匹配并拒绝 '..'）
         let tmp_str = tmp_dir.to_string_lossy().to_string();
-        if !tmp_str.contains("/tmp") && !tmp_str.contains("temp") {
-            bail!("安全红线阻断: GC 目标路径必须包含 '/tmp' 或 'temp'，严禁扫描生产工作目录: {}", tmp_str);
+        let has_unsafe_parent = tmp_dir
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir));
+        let is_valid_tmp_component = tmp_dir.components().any(|c| {
+            if let std::path::Component::Normal(os) = c {
+                let low = os.to_string_lossy().to_lowercase();
+                low == "tmp"
+                    || low == "temp"
+                    || low == "tmp_test"
+                    || low.starts_with("tmp-")
+                    || low.starts_with("tmp_")
+                    || low.starts_with(".tmp")
+            } else {
+                false
+            }
+        });
+        if has_unsafe_parent || !is_valid_tmp_component {
+            bail!(
+                "安全红线阻断: GC 目标路径必须包含独立 'tmp'/'temp' 目录组件且禁止 '..'，严禁扫描生产工作目录: {}",
+                tmp_str
+            );
         }
 
         let now = SystemTime::now();
@@ -240,10 +259,11 @@ impl HostGarbageCollector {
             let run_time_secs = proc_.run_time();
             if is_orphan && run_time_secs > 10800 {
                 let memory_mb = proc_.memory() / (1024 * 1024);
+                let redacted_cmd = crate::scanner::metadata::SecretRedactor::redact(&cmd_line);
                 orphans.push(OrphanProcessCandidate {
                     pid: pid.as_u32(),
                     name: proc_.name().to_string(),
-                    command: cmd_line,
+                    command: redacted_cmd,
                     memory_mb,
                     running_secs: run_time_secs,
                     reason: "父进程已退出(PPID=1)且长周期挂起无应答".to_string(),
@@ -264,6 +284,10 @@ pub mod tests {
     fn test_gc_safety_check_blocks_dangerous_path() {
         let res = HostGarbageCollector::run_gc(Path::new("/root/new/work"), 24, true);
         assert!(res.is_err());
+        let templates_res = HostGarbageCollector::run_gc(Path::new("/etc/templates"), 24, true);
+        assert!(templates_res.is_err(), "/etc/templates 绝不能被 contains('temp') 放行");
+        let traversal_res = HostGarbageCollector::run_gc(Path::new("/tmp/../etc"), 24, true);
+        assert!(traversal_res.is_err(), "包含 '..' 的路径必须被安全红线拦截");
     }
 
     #[test]

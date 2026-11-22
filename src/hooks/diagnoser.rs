@@ -240,7 +240,7 @@ impl OptimisticFailureDiagnoser {
                     format!("端口 `{}` 发生绑定冲突 (EADDRINUSE)", port)
                 }
                 Err(_) => {
-                    actions.push("请使用 `--port <空闲端口>` 重试或执行 `agent-body env ports`".to_string());
+                    actions.push("请使用 `--port <空闲端口>` 重试或执行 `agent-body platform ports`".to_string());
                     format!("端口 `{}` 发生绑定冲突 (EADDRINUSE)", port)
                 }
             };
@@ -382,7 +382,7 @@ impl OptimisticFailureDiagnoser {
                         (port == 5432 && nl.contains("postgres"))
                             || (port == 11434 && nl.contains("ollama"))
                             || (port == 6379 && nl.contains("redis"))
-                            || (port == 8765 && nl.contains("steward"))
+                            || (port == 8765 && (nl.contains("agent-body") || nl.contains("steward")))
                     })
                     .take(2)
                     .map(|u| u.service_name)
@@ -462,7 +462,7 @@ impl OptimisticFailureDiagnoser {
             }
             if actions.is_empty() {
                 actions.push(format!(
-                    "可运行 `agent-body fact query --fact-type capability {}` 检索宿主已安装同能力工具",
+                    "可运行 `agent-body fact --fact-type capability {}` 检索宿主已安装同能力工具",
                     search_intent
                 ));
             }

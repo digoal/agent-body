@@ -46,7 +46,7 @@ description: 专门帮助新接手、外部接入或初次接触本项目的 Age
 | **操作系统** | Linux (Ubuntu / Debian / CentOS / 统信 / 麒麟) | 深度利用 Linux `/proc` 文件系统与 `inotify` 机制 |
 | **C/C++ 工具链 (必选)** | GCC/G++ >= 9, CMake >= 3.15, make | SQLite 与 DuckDB bundled C/C++ 静态构建必须 |
 | **C++ 运行时 (必选)** | `libstdc++.so.6` | 极简 Alpine/Busybox 容器若无将报找不到动态库 |
-| **Rust 工具链 (编译期)** | Rust >= 1.75 (推荐 1.82+) + Cargo | 源码编译构建工具，安装于 `/root/.cargo/bin` |
+| **Rust 工具链 (编译期)** | Rust >= 1.88 (推荐 1.99+) + Cargo | 源码编译构建工具（`Cargo.lock` 依赖 `edition = "2024"` crate），安装于 `/root/.cargo/bin` |
 | **SQLite3 运行环境** | 内置 Bundled FTS5 (无需外装系统级动态库) | `rusqlite` 以 bundled 特性编译，单二进制自包含 |
 | **本地 Ollama (可选)** | `http://127.0.0.1:11434` (模型推荐 `nomic-embed-text` 或 `bge-m3`) | 提供语义向量混合检索（RRF）。若未安装自动降级为 FTS5 |
 | **PostgreSQL (可选)** | PostgreSQL >= 14 (需 pgvector 扩展) | 跨机多 Agent 高并发共享存储后端 |
@@ -64,7 +64,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 make build
 # 或: cargo build --release
 
-# 3. 运行全量测试验证环境 (目前 252+ 项测试全部通过，1 项文档示例忽略)
+# 3. 运行全量测试验证环境 (目前 270+ 项测试全部通过，1 项文档示例忽略)
 make test
 # 或: cargo test
 
@@ -76,7 +76,7 @@ sudo make install
 # 或: sudo install -m 755 target/release/agent-body /usr/local/bin/agent-body
 
 agent-body --version
-# 输出: steward 0.4.0 (git-hash, linux/x86_64)
+# 输出: agent-body 0.4.0 (git-hash, linux/x86_64)
 ```
 
 ### 2.3 配置文件与初始化存储
@@ -108,7 +108,7 @@ model = "qwen3.5:0.8b"
 
 ### 2.4 Systemd 后台常驻守护服务（生产托管）
 
-大管家已实装 Systemd 服务单元（内存常驻仅 **2.1MB**，inotify 300ms 防抖监听）：
+本体守护服务已实装 Systemd 服务单元（全功能常驻含 Web/DuckDB 内存 `< 90 MB`，inotify 300ms 防抖监听）：
 
 配置文件路径：`/etc/systemd/system/agent-body.service`
 ```ini
@@ -122,8 +122,8 @@ User=root
 ExecStart=/usr/local/bin/agent-body daemon
 Restart=always
 RestartSec=5
-MemoryMax=64M
-CPUQuota=10%
+MemoryMax=256M
+CPUQuota=20%
 
 [Install]
 WantedBy=multi-user.target
@@ -211,12 +211,12 @@ agent-body feedback probes
 agent-body feedback reconcile
 ```
 
-#### 场景 9: 实证 Benchmark 与竞品横向对标（v3.5）
+#### 场景 9: 实证 Benchmark 与竞品横向对标（v3.7）
 ```bash
-# 真机运行全量套件 (W1~W15 + M1~M5 + DQ1~DQ6 + COMP-C1~C4)
+# 真机运行全量套件 (W1~W17 + M1~M5 + DQ1~DQ8 + COMP-C1~C4)
 agent-body bench run --suite full --save false
 
-# 查看生产运行态效能存证账本 (PR-01~PR-11)
+# 查看生产运行态效能存证账本 (PR-01~PR-13)
 agent-body bench ledger --window 7d --limit 20
 ```
 
@@ -292,7 +292,7 @@ agent-body close session-20261115-01 --clean-temp
 | **实证基准与账本** | `body_benchmark` | `v3.7` 基准评测：`W1~W17` A/B 负载 + `M1~M5` 微基准 + `DQ1~DQ8` + `COMP-C1~C4` 竞品对标与 `PR-01~13` 账本 |
 | **反馈与自进化** | `body_feedback` | `user_feedback.md` 双向总账读写、已验证反馈沉淀记忆、`reconcile` 新鲜度对账与 `P1~P5` 自进化探针 |
 | **双域行为审计** | `body_audit_query` | `IN_AGENT` + `OUT_OF_AGENT` 双域审计查询、因果钻取、DuckDB OLAP 导出与租约滑窗自进化 |
-| **Agent 本体中枢** | `body_state` | 六器官自省 (`manifest`)、五维稳态 (`vitals`)、`L0~L3` 自治包络 (`envelope`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`) 与多本体名片发现 (`peers`) |
+| **Agent 本体中枢** | `body_state` | 六器官自省 (`manifest`)、五维稳态 (`vitals`)、`L0~L3` 自治包络 (`envelope`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`)、多本体名片 (`peers`) 与内生 AWR 诊断 (`perf_snapshot`/`perf_awr`/`perf_tune`) |
 
 ---
 
@@ -313,7 +313,7 @@ sequenceDiagram
     S-->>Agent: 硬件规格、活跃任务、最近变动、长期记忆
 
     Note over Agent, S: 2. 规范放置
-    Agent->>S: body_placement_suggest(type="script", name="spider")
+    Agent->>S: body_placement_suggest(object_type="script", name="spider")
     S-->>Agent: 建议目录: /root/new/shared_proj/spider/
 
     Note over Agent, S: 3. 依赖体检与端口防撞
@@ -323,13 +323,13 @@ sequenceDiagram
     S-->>Agent: 全系统拓扑健康，无断链
 
     Note over Agent, CG: 4. 执行任务与宏微联邦
-    Agent->>S: body_codegraph_bridge(query="explore Storage")
+    Agent->>S: body_codegraph_bridge(path="/root/new/work/agent-body", symbol="StorageProvider")
     S->>CG: 穿透检索底层符号
     CG-->>S: 返回符号定义与调用树
     S-->>Agent: 宏微联动结果反馈
 
     Note over Agent, S: 5. 经验沉淀
-    Agent->>S: body_memory_add(type="lesson", content="排障经验")
+    Agent->>S: body_memory_add(type="experience", content="排障经验")
     S-->>Agent: 记忆已持久化至 SQLite FTS5
 
     Note over Agent, Host: 6. 完工自洁
@@ -342,5 +342,5 @@ sequenceDiagram
 2. **乐观直通省轮次，碰壁交由后置自愈**：拥有高置信乐观租约的客户端直连（如本机 `:5432` PostgreSQL、已就绪 CLI 与 `/root/new/tmp/` 沙盒）可直接执行，省去整轮对话税；一旦执行报错，由 `body_hook_post(success=false)` `<2ms` 注入宿主机替代处方；
 3. **动刀先请教（placement_suggest）**：产生任何新脚本、新工程、新技能先问放置建议，禁止散落；
 4. **写前与起网守悲观红线（hook_pre / port_check / links_impact）**：绑定服务端监听端口、修改高爆炸半径或系统高危路径前坚守悲观前置门禁，防止端口打架与破坏依赖；
-5. **遇码穿宏微（links_query & codegraph_bridge）**：宏观分层拓扑（`L1/L2/L3`）看 steward，微观代码符号穿透调用 CodeGraph；
+5. **遇码穿宏微（links_query & codegraph_bridge）**：宏观分层拓扑（`L1/L2/L3`）看 `agent-body`，微观代码符号穿透调用 CodeGraph；
 6. **经验随时存，出门随手关（memory_add & session_close）**：攻克棘手 bug 或做出架构决策立刻记一条长期记忆，任务结束清理垃圾并沉淀工单总结，保持宿主机自洁。

@@ -211,9 +211,31 @@ impl EffectivenessLedger {
                 }
             }
             "body_lock_acquire" | "body_lock_wait" | "body_lock_deadlock_check" => {
-                let intercepted = output_text.contains("Denied")
-                    || output_text.contains("deadlock")
-                    || output_text.contains("true");
+                let intercepted = if tool_or_action == "body_lock_deadlock_check" {
+                    if let Ok(v) = serde_json::from_str::<serde_json::Value>(output_text) {
+                        v.get("has_deadlock")
+                            .and_then(|x| x.as_bool())
+                            .unwrap_or(false)
+                            || v.get("cycles")
+                                .and_then(|x| x.as_array())
+                                .map(|a| !a.is_empty())
+                                .unwrap_or(false)
+                    } else {
+                        let lower = output_text.to_lowercase();
+                        lower.contains("\"has_deadlock\":true")
+                            || lower.contains("\"has_deadlock\": true")
+                    }
+                } else {
+                    let lower = output_text.to_lowercase();
+                    lower.contains("\"status\":\"denied\"")
+                        || lower.contains("\"status\": \"denied\"")
+                        || lower.contains("\"status\":\"deadlock\"")
+                        || lower.contains("\"status\": \"deadlock\"")
+                        || lower.contains("\"deadlock_detected\":true")
+                        || lower.contains("\"deadlock_detected\": true")
+                        || lower.contains("conflict")
+                        || output_text.contains("Denied")
+                };
                 if !intercepted {
                     return;
                 }
@@ -434,5 +456,36 @@ mod tests {
         assert_eq!(summary.total_events, 2);
         assert!(summary.by_rule.iter().any(|r| r.provenance_rule == "PR-09"));
         assert!(summary.by_rule.iter().any(|r| r.provenance_rule == "PR-10"));
+    }
+
+    #[test]
+    fn test_lock_deadlock_check_no_false_positive_and_denied_counted() {
+        let provider = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        // 1. 无死锁 JSON 含字段名 has_deadlock / cycles，绝不能误记 hazard_intercepted
+        EffectivenessLedger::record_channel_call(
+            &provider,
+            "mcp",
+            "body_lock_deadlock_check",
+            r#"{"has_deadlock":false,"cycles":[],"message":"未检测到死锁环"}"#,
+            40,
+        );
+        let s0 = provider
+            .query_effectiveness_ledger("7d", None, 10)
+            .expect("query 0");
+        assert_eq!(s0.total_events, 0, "无死锁报告不能误记为风险拦截");
+
+        // 2. LockResult::Denied 序列化为小写 "status":"denied"，必须精确计数
+        EffectivenessLedger::record_channel_call(
+            &provider,
+            "mcp",
+            "body_lock_acquire",
+            r#"{"status":"denied","holder_agent":"agent-a"}"#,
+            55,
+        );
+        let s1 = provider
+            .query_effectiveness_ledger("7d", None, 10)
+            .expect("query 1");
+        assert_eq!(s1.total_events, 1);
+        assert_eq!(s1.total_hazards_intercepted, 1);
     }
 }

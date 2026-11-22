@@ -6,12 +6,18 @@ services:
     image: agent-body:latest
     container_name: agent-body
     restart: unless-stopped
-    pid: "host"                  # 必须透传宿主 PID 命名空间，以便大管家采集非系统动态进程
-    network_mode: "host"         # 推荐 host 网络模式，以便精准采集网络端口占用
+    pid: "host"                  # 透传宿主 PID 命名空间（自带宿主 /proc 视图，严禁再额外挂载覆盖 /proc）
+    network_mode: "host"         # 推荐 host 网络模式，以便精准采集宿主机监听端口占用（Web/Mesh 默认 :8765）
     volumes:
-      - /proc:/proc:ro           # 透传只读 procfs，保障端口与进程拓扑分析
-      - ~/.agent-body:/root/.agent-body # 持久化 SQLite 元数据库与配置文件
-      - ~/new:/root/new          # 挂载待纳管的工作目录
+      - ${AGENT_BODY_DATA_DIR:-~/.agent-body}:/root/.agent-body # 持久化 SQLite 元数据库与配置文件
+      - ${AGENT_BODY_WORKSPACE:-./workspace}:/workspace         # 按需挂载待纳管工作目录（本机可设 AGENT_BODY_WORKSPACE=~/new）
     environment:
       - RUST_LOG=info
+      - AGENT_BODY_CONFIG=/root/.agent-body/config.toml
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8765/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     command: ["daemon"]

@@ -910,6 +910,17 @@ impl BodyPerfEngine {
         snap_b_opt: Option<&str>,
         vs_baseline: bool,
     ) -> Result<AwrDiffReport> {
+        Self::generate_awr_report_with_options(storage, snap_a_opt, snap_b_opt, vs_baseline, true)
+    }
+
+    /// 生成 AWR 快照差分报告（`persist=false` 用于只读 GET 实时预览，不落库污染报告库）
+    pub fn generate_awr_report_with_options(
+        storage: &Storage,
+        snap_a_opt: Option<&str>,
+        snap_b_opt: Option<&str>,
+        vs_baseline: bool,
+        persist: bool,
+    ) -> Result<AwrDiffReport> {
         let provider = storage.provider();
         let current_live = Self::sample_transient_snapshot(storage, "实时当前态");
 
@@ -1148,8 +1159,10 @@ impl BodyPerfEngine {
             target_kernel: target_snap.kernel_telemetry,
             markdown_summary: md,
         };
-        if let Err(e) = Self::save_awr_report(provider.as_ref(), &report) {
-            eprintln!("[AWR][WARN] 保存历史 AWR 报告失败: {}", e);
+        if persist {
+            if let Err(e) = Self::save_awr_report(provider.as_ref(), &report) {
+                eprintln!("[AWR][WARN] 保存历史 AWR 报告失败: {}", e);
+            }
         }
 
         Ok(report)

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "steward", version = agent_body::VERSION, about = "Agent Body — 脑体分离 Agent 本体（宿主机具身底座 · Rust 版）")]
+#[command(name = "agent-body", version = agent_body::VERSION, about = "Agent Body — 脑体分离 Agent 本体（宿主机具身底座 · Rust 版）")]
 pub(crate) struct Cli {
     #[arg(short, long, help = "自定义配置文件路径")]
     pub(crate) config: Option<PathBuf>,
@@ -87,7 +87,7 @@ pub(crate) enum Commands {
         #[arg(help = "当前会话的唯一标识 (Session ID)")]
         session_id: String,
 
-        #[arg(long, default_value_t = true, help = "是否清理 /root/new/tmp/ 下属于本会话的临时文件")]
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set, num_args = 0..=1, default_missing_value = "true", help = "是否清理 /root/new/tmp/ 下属于本会话的临时文件")]
         clean_temp: bool,
 
         #[arg(long, default_value_t = false, help = "仅预览待清理临时文件与归档摘要，不物理删除")]
@@ -236,7 +236,7 @@ pub(crate) enum BodyCommands {
         action: Option<String>,
         #[arg(long)]
         target: Option<String>,
-        #[arg(long, default_value_t = true)]
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set, num_args = 0..=1, default_missing_value = "true")]
         dry_run: bool,
         #[arg(long, default_value_t = false)]
         json: bool,
@@ -737,7 +737,7 @@ pub(crate) enum CoordinationCommands {
         #[arg(long, help = "锁的唯一标识 lock_id")]
         lock_id: String,
 
-        #[arg(long, help = "是否强制释放", default_value_t = true)]
+        #[arg(long, help = "是否强制释放", default_value_t = true, action = clap::ArgAction::Set, num_args = 0..=1, default_missing_value = "true")]
         force: bool,
     },
     #[command(about = "手动回收所有已过期的死锁")]
@@ -993,7 +993,7 @@ pub(crate) enum MemoryCommands {
         #[arg(short, long, default_value_t = 10)]
         limit: usize,
 
-        #[arg(long, default_value_t = true, help = "是否启用 Ollama 向量混合 RRF 检索")]
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set, num_args = 0..=1, default_missing_value = "true", help = "是否启用 Ollama 向量混合 RRF 检索")]
         hybrid: bool,
     },
 

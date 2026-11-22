@@ -32,6 +32,7 @@ pub struct JsonRpcError {
     pub data: Option<Value>,
 }
 
+#[derive(Clone)]
 pub struct McpServer {
     #[allow(dead_code)]
     storage: Storage,
@@ -184,7 +185,11 @@ impl McpServer {
         let mut lines = reader.lines();
 
         while let Some(line) = lines.next_line().await? {
-            if let Some(resp_str) = self.handle_message(&line) {
+            let srv = self.clone();
+            let resp_opt = tokio::task::spawn_blocking(move || srv.handle_message(&line))
+                .await
+                .map_err(|e| anyhow::anyhow!("MCP worker task failed: {}", e))?;
+            if let Some(resp_str) = resp_opt {
                 stdout.write_all(resp_str.as_bytes()).await?;
                 stdout.write_all(b"\n").await?;
                 stdout.flush().await?;
@@ -575,5 +580,72 @@ mod tests {
         let resp_release = server.handle_message(&req_release).expect("handle_message");
         let v_rel: Value = serde_json::from_str(&resp_release).expect("parse response");
         assert_eq!(v_rel["id"], 203);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_spawn_blocking_isolation_for_blocking_tools() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let server = McpServer::new(storage);
+
+        // 验证在 Tokio async 上下文内通过 spawn_blocking 执行会触发阻塞 HTTP 探活的工具不 Panic
+        let reg_req = r#"{
+            "jsonrpc": "2.0",
+            "id": 301,
+            "method": "tools/call",
+            "params": {
+                "name": "body_service_contact",
+                "arguments": {
+                    "action": "register",
+                    "service_name": "mock-http-svc",
+                    "endpoint": "http://127.0.0.1:59997/health",
+                    "protocol": "http",
+                    "capabilities": "health check"
+                }
+            }
+        }"#;
+        let srv1 = server.clone();
+        let r1 = tokio::task::spawn_blocking(move || srv1.handle_message(reg_req))
+            .await
+            .expect("spawn_blocking register");
+        assert!(r1.is_some());
+
+        let chk_req = r#"{
+            "jsonrpc": "2.0",
+            "id": 302,
+            "method": "tools/call",
+            "params": {
+                "name": "body_service_contact",
+                "arguments": {
+                    "action": "check",
+                    "service_name": "mock-http-svc"
+                }
+            }
+        }"#;
+        let srv2 = server.clone();
+        let r2 = tokio::task::spawn_blocking(move || srv2.handle_message(chk_req))
+            .await
+            .expect("spawn_blocking check");
+        let v2: Value = serde_json::from_str(&r2.expect("resp")).expect("json");
+        assert_eq!(v2["result"]["isError"], false);
+
+        // 也验证直接调用 memory_add 不 Panic
+        let mem_req = r#"{
+            "jsonrpc": "2.0",
+            "id": 303,
+            "method": "tools/call",
+            "params": {
+                "name": "body_memory_add",
+                "arguments": {
+                    "type": "experience",
+                    "content": "spawn_blocking isolation test memory"
+                }
+            }
+        }"#;
+        let srv3 = server.clone();
+        let r3 = tokio::task::spawn_blocking(move || srv3.handle_message(mem_req))
+            .await
+            .expect("spawn_blocking memory_add");
+        let v3: Value = serde_json::from_str(&r3.expect("resp")).expect("json");
+        assert_eq!(v3["result"]["isError"], false);
     }
 }

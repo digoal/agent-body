@@ -248,6 +248,43 @@ flowchart LR
   - 大管家在 Agent 之外对宿主对象的维护动作——[src/daemon/scheduler.rs](src/daemon/scheduler.rs) 30 分钟后台巡检、[src/feedback/probes.rs](src/feedback/probes.rs) `FreshnessReconciler` 写穿失效/幽灵节点剪枝、[src/env/gc.rs](src/env/gc.rs) `HostGarbageCollector` 物理删文件、[src/links/repair.rs](src/links/repair.rs) `LinkRepairer --apply` 直接改写源码、[src/placement/learner.rs](src/placement/learner.rs) 写入规则及锁 GC——**当前全部 0 审计落盘**，且历史行为未能自动驱动 AOPCC 租约置信度升降级与 DuckDB OLAP 分析。
 - **修复目标**: 按 [16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md) 与 [roadmap-phase43.md](docs/src_doc/roadmap-phase43.md) 落地 `audit_events` 双域脱敏审计底座、`Watcher` 60s 折叠防洪、DuckDB OLAP 分析导出及 Audit 驱动自进化飞轮。
 
+### `CON-20` `[P0 · 容器编译阻断]` `Dockerfile` 基础镜像版本过低 (`1.82` < MSRV `1.88`)、缺 `presentation/` 且端口/健康检查漂移
+- **状态**: `✅ Verified (Phase 52)` · **首次记录**: 2026-11-22 · **发现渠道**: 全仓源码与容器配置交叉审计
+- **现象与复现证据**:
+  - [Dockerfile](Dockerfile#L8-L51) 使用 `FROM rust:1.82-bookworm AS builder`，无法编译 `Cargo.lock` 中依赖 `edition = "2024"` / `rust-version = "1.88"` 的 `sha2 0.11.1` 与 `duckdb 1.20000.2`；且漏 `COPY presentation ./presentation` 导致 [src/web/assets/mod.rs](src/web/assets/mod.rs#L4933-L4934) 编译期 `include_str!` 必败；`EXPOSE 9527` 与真实 Web 端口 `8765` 漂移、缺 `HEALTHCHECK`；
+  - [docker-compose.yml](docker-compose.yml#L12) 同时设置 `pid: "host"` 与 `- /proc:/proc:ro` 冲突；[.dockerignore](.dockerignore#L3) 仍写 `.steward/`；[build.rs](build.rs#L19-L24) 在无 `.git/` 构建时输出空 `BUILD_GIT_HASH=""`。
+- **修复目标**: Phase 52 (`P52-02`) 升级 `rust:1.88-bookworm`、补齐演说资产复制与 `8765` 健康检查、修复 `build.rs` 降级 `"unknown"`。
+
+### `CON-21` `[P0 · 运行时 Panic 隐患]` MCP 异步任务内阻塞 HTTP Drop Panic 与 `placement`/`port`/`powercontext`/`state_machine` 边界缺陷
+- **状态**: `✅ Verified (Phase 52)` · **首次记录**: 2026-11-22 · **发现渠道**: 全仓源码深度审计
+- **现象与复现证据**:
+  - [src/api/mcp.rs](src/api/mcp.rs#L180-L195) 在 Tokio async worker 直接同步执行 `call_tool`，导致 `body_memory_add` / `body_service_contact(check)` 内部 `reqwest::blocking::Client` 触发 Tokio blocking drop panic；
+  - [src/placement/mod.rs](src/placement/mod.rs#L140) 与 [engine_v2.rs](src/placement/engine_v2.rs#L171) 空表 `&rules[0]` 越界；[src/env/port.rs](src/env/port.rs#L52) 端口 `65535` 加一溢出；[src/memory/adapters/powercontext.rs](src/memory/adapters/powercontext.rs#L189) 中文按字节切片 Panic；[src/scanner/state_machine.rs](src/scanner/state_machine.rs#L124-L144) 断点文件被删时跳过整棵剩余目录树。
+- **修复目标**: Phase 52 (`P52-03`) 全部隔离/加固并新增边界回归单测。
+
+### `CON-22` `[P0 · 安全防线绕过]` `body_bridge.py` 放行无端口破坏性命令、Web `GET` 写库免鉴权与未脱敏 `cmdline` 泄漏
+- **状态**: `✅ Verified (Phase 52)` · **首次记录**: 2026-11-22 · **发现渠道**: 安全纵深链路交叉审计
+- **现象与复现证据**:
+  - [src/hooks/client_gen.rs](src/hooks/client_gen.rs#L239-L244) `body_bridge.py` 仅在命令含监听端口时调 `hooks pre`，`rm -rf /`/`dd if=` 等无端口破坏命令直接 `allow`；
+  - [src/web/server.rs](src/web/server.rs#L58) 未覆盖 `GET /api/v1/body/perf/awr`（默认写 `benchmark_runs`）、`GET /api/v1/links/mermaid?discover_semantic=true` 与 `PUT/DELETE`，`POST /api/v1/mesh/locks/acquire` 前置短路漏审计；
+  - [src/ecosystem/scanner.rs](src/ecosystem/scanner.rs#L277) 未对 `SKILL.md` 执行 `PromptInjectionScanner`；[src/env/port.rs](src/env/port.rs#L189) & [src/env/gc.rs](src/env/gc.rs#L59-L246) 暴露未脱敏 `cmdline` 且 `contains("temp")` 过于宽松；[src/body/envelope.rs](src/body/envelope.rs#L162) 未知动作 fail-open 为 `L0_OBSERVE`。
+- **修复目标**: Phase 52 (`P52-04`) 全链路补洞并回归验证。
+
+### `CON-23` `[P0 · 逻辑与契约纠错]` `ledger.rs` 死锁 100% 误报/拒绝漏记、Mesh Graph URL 未解码与 Clap `bool` 无法置 `false`
+- **状态**: `✅ Verified (Phase 52)` · **首次记录**: 2026-11-22 · **发现渠道**: 源码静态与动作契约审计
+- **现象与复现证据**:
+  - [src/benchmark/ledger.rs](src/benchmark/ledger.rs#L213-L216) 用 `contains("deadlock")` 导致无死锁 JSON 必误记 `hazard_intercepted=1`，用 `"Denied"` 漏判小写 `"denied"`；
+  - [src/mesh/mod.rs](src/mesh/mod.rs#L205-L427) 客户端编码 `q` 但服务端未解码；[src/cli_args.rs](src/cli_args.rs#L5-L996) 名称仍为 `"steward"` 且 4 个 `default_value_t = true` 缺少 `ArgAction::Set`；[src/hooks/client_gen.rs](src/hooks/client_gen.rs#L480-L518) 与 [diagnoser.rs](src/hooks/diagnoser.rs#L243-L465) 生成 3 条无效 CLI 命令；另有 `04`/`17` 改名损毁与 `SKILL.md` 12 处断链。
+- **修复目标**: Phase 52 (`P52-05` & `P52-06`) 全部修正并同步全局 SKILL 镜像。
+
+### `CON-24` `[P1 · 多后端/遥测/可移植性/文档系统性技术债]` PG/DuckDB 语义分裂、14/18 WaitEvent 未埋点、`/root/new/` 耦合与三套手册冲突
+- **状态**: `🗓️ Planned (Phase 53 ~ Phase 57)` · **首次记录**: 2026-11-22 · **发现渠道**: 全仓深度审计（方案 A）
+- **现象与复现证据**:
+  - 存储：SQLite `insert_memory` 缺 `ON CONFLICT` 阻断 `backfill_missing_embeddings`、PG 锁时间戳 RFC3339 vs `NOW()::text` 当日永不过期、PG/DuckDB `list_benchmark_runs` 泄漏 `awr:%`、迁移与同步管道漏表/抹平时间戳；
+  - 遥测与 Parity：14/18 `WaitEventId` 未埋点（`ADDM-05` 不可达）、AWR 报告库缺 CLI/Schema 对齐、Web Benchmark 停在 v3.5 且漏渲染 `data_quality`、TUI 停在 `v0.3.0`；
+  - 可移植性与文档：30+ 文件硬编码 `/root/new/`、多处死配置未接通、6 个 `>1500L` God File、10 卷手册/架构/01~06 演说/发版日志滞后及三套手册重叠。
+- **修复目标**: 按方案 A（Phase 53 ~ Phase 57）分 5 个阶段系统清零并收口至 `v1.0.0 GA`。
+
 ---
 
 ## 五、第三部分：Benchmark 标准失真诊断与持续迭代诉求 (`BENCH-01` ~ `BENCH-12`)
@@ -262,11 +299,11 @@ flowchart LR
 
 ### `BENCH-02` `[P0 · 对照组物理不等价]` `W2` / `W3` / `W4` / `W7` 的 Without vs With 对照存在严重 Apples-to-Oranges 偏差
 - **状态**: `✅ Verified (Phase 31.2)` · **首次记录**: 2026-11-19 · **验证实测**: `W3` 提速 `5.39x`、`W4` 由 `-48.7%` 修正为 `+73.1%`、`W7` 由 `1.00x` 修正为 `8.18x`
-- **逐项审计（依据 [src/benchmark/workloads.rs](src/benchmark/workloads.rs) 源码）**:
+- **源码审计（依据 [src/benchmark/workloads/mod.rs](src/benchmark/workloads/mod.rs) 与 `advanced.rs`）**:
   1. **`W2 (port_collision_avoidance)`**: Baseline 仅在同进程用 `TcpListener::bind` 撞端口（`39 μs`），而 Steward 侧连续调用 `hook_pre` + `PortChecker::check_port` 扫描了两次 `/proc`（`26,769 μs`，`0.00x`）。真实裸奔 Agent 查端口需要派生 `ss -tlnp` / `lsof` 外部命令并试错重连，同时 Steward 也应合并 `/proc` 探针消除二次扫描。
   2. **`W3 (granularity_scan_noise_gate)`**: Baseline 仅运行 `WalkDir` 拼接路径字符串（`182 μs`，**未读取任何文件内容，也未写入 SQLite/FTS**），Steward 却执行了完整的元数据解析 + SQLite 事务落盘 + FTS5 建索引（`9,580 μs`，`0.02x`）。等价 Baseline 必须是“未开分级策略将 290 个文件全部读取并写入 SQLite + FTS5”，才能真正衡量分层门禁对建库耗时与索引膨胀的削减。
   3. **`W4 (placement_governance)`**: Baseline 仅用 `format!` 拼了 8 行短字符串（`119 tok`, `3 μs`），Steward 返回完整 JSON（`177 tok`, `15,783 μs`），结果产生 **`-48.7%` 负 Token 节省率** 的荒诞数字！真实裸奔 Agent 放错 8 个文件后，需经历“定位错放位置 + 规范审查打回 + `mv` 搬移 + 修正引用”的多轮上下文，基线应真实测量发现与搬移修正的等价上下文/文件操作开销。
-  4. **`W7 (context_budget_routing)`**: [src/benchmark/workloads.rs](src/benchmark/workloads.rs#L889) 直接写了 `base_us.max(stew_us)`，Baseline 仅从 SQLite 读取缓存整型列 `est_tokens` 求和，没有真实读取宿主机 `SKILL.md` 文件，导致加速比恒死锁在 `1.00x`。
+  4. **`W7 (context_budget_routing)`**: [src/benchmark/workloads/mod.rs](src/benchmark/workloads/mod.rs) 早期实现曾写了 `base_us.max(stew_us)`，Baseline 仅从 SQLite 读取缓存整型列 `est_tokens` 求和，没有真实读取宿主机 `SKILL.md` 文件，导致加速比恒死锁在 `1.00x`。
 
 ### `BENCH-03` `[P1 · 评估维度缺失]` 五维矩阵缺少“D6 认知质量与准确率 (Quality & Precision)”门禁
 - **状态**: `✅ Verified (Phase 31.1 & 31.3)` · **首次记录**: 2026-11-19 · **验证实测**: 六维矩阵 D6 (`85.0/100`) 上线，`DQ2` 真实捕获现网旧库向量 `'[]'` 覆盖率仅 `27.5%` 缺陷
@@ -354,6 +391,12 @@ flowchart LR
 | **`REQ-16`** | **乐观-悲观自适应并发控制 AOPCC 与失败早回退机制（规约 #8, #18, #22, #25）** | 消除回路中对高置信可逆动作的强制 PCC 事前查询整轮对话税 $C_{\text{turn}}$，落地 MVCC 乐观假设租约、三态分级路由与 `PostToolUse` `<2 ms` 自愈诊断（ISSUE #25） | P0 | Phase 42.1 ~ 42.6 | `✅ Verified` |
 | **`REQ-17`** | **双域全链路行为审计 (`IN_AGENT` + `OUT_OF_AGENT`)、DuckDB OLAP 分析与数据驱动自进化飞轮（规约 #4, #8, #18, #22, #26）** | 解决 Agent 接入后命令/锁/19工具审计缺失及 Agent 之外守护巡检/GC/断链修复/写穿剪枝零留痕黑盒问题，构建 `audit_events` + `Watcher` 60s 折叠防洪 + AOPCC 租约滑窗自进化与 DuckDB 导出（ISSUE #26） | P0 | Phase 43.1 ~ 43.6 | `✅ Verified` |
 | **`REQ-18`** | **Agent 本体范式升维、五大本体原语（`BodyManifest`/`ContinuityCapsule`/`HomeostasisVitals`/`AutonomyEnvelope`/多体名片）与全物料同步刷新（规约 #1, #2, #3, #8, #11, #13, #17, #27）** | 消除“大管家/小秘书”对产品核心定位的误导，按脑体分离第一性原理落地 `src/body/` 与 `body_checkpoints`、第 43 工具与 `v3.7` 基准，并遵循三层命名兼容刷新代码注释/文档/SKILL/路演剧场（ISSUE #27） | P0 | Phase 44.1 ~ 45.3 | `✅ Verified` |
+| **`REQ-19`** | **方案 A·Stage 1：P0 安全止血、容器构建修复、Tokio/边界 Panic 排雷与 P0 文档/SKILL 急救** | 消除全仓审计发现的 Dockerfile 编不过、MCP async blocking panic、无端口破坏命令绕过、GET 写库免鉴权、ledger 误报、04/17 损毁与 SKILL 12 处断链（ISSUE #36） | P0 | Phase 52 | `✅ Verified` |
+| **`REQ-20`** | **方案 A·Stage 2：存储三后端真一致性（SQLite/PG/DuckDB）、迁移与 OLAP 管道修复** | 修复 SQLite/PG/DuckDB 冲突与时间戳语义分裂、`awr:%` 泄漏、`StorageMigrator` 漏表与 `SyncPipeline` 时间戳抹平（ISSUE #37） | P0 | Phase 53 | `🗓️ Planned` |
+| **`REQ-21`** | **方案 A·Stage 3：Phase 50 18/18 WaitEvent 闭环、黑白屏真 Parity、TUI 升级与 Benchmark `v3.8`** | 补齐 14/18 WaitEvent 埋点、周期 AWR 快照、AWR 报告库全端对齐、Web DQ 渲染、扩展 `codex`/`hermes`、升级 TUI 与 `v3.8`（ISSUE #38） | P1 | Phase 54 | `🗓️ Planned` |
+| **`REQ-22`** | **方案 A·Stage 4：开源可移植性解耦（去 `/root/new/` 硬编码）、配置真相化与跨平台/网络硬化** | 抽象 `Config::{workspace_roots, temp_dir, default_owner}`，接通 `[memory]`/`[[hooks]]`/`[[pipelines]]`/`AGENT_BODY_CONFIG`，完善 musl/macOS/Windows 与 HTTP 头解析（ISSUE #39） | P1 | Phase 55 | `🗓️ Planned` |
+| **`REQ-23`** | **方案 A·Stage 5：God File 拆分、关键路径吞错清零、集成测试补盲与五重门禁升级** | 拆解 6 个 `>1500L` 生产文件、收紧 `let _ =` 预算、补全 `mesh`/`audit`/`body`/`hooks`/`cli_e2e` 集成测试并升级门禁检测断链/硬编码（ISSUE #40） | P2 | Phase 56 | `🗓️ Planned` |
+| **`REQ-24`** | **方案 A·Stage 6：全文档/手册/SKILL/演说大一统、历史归档与 `v1.0.0 GA` 正式发布** | 统一刷新 `docs/manual/01~10`、`arch/01~03`、`markdown/` 与 `01~06` 演说，去重归档历史文档，升级 `1.0.0` 正式发版（ISSUE #41） | P1 | Phase 57 | `🗓️ Planned` |
 
 ---
 

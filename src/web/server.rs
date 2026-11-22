@@ -55,7 +55,15 @@ fn check_write_or_sensitive_auth(
     auth_token: &Option<String>,
     require_token_if_empty: bool,
 ) -> Option<HttpResponse> {
-    let is_protected = req.method == Method::Post || req.path == "/api/v1/env/gc";
+    let is_mermaid_write = req.path == "/api/v1/links/mermaid"
+        && req
+            .query_params
+            .get("discover_semantic")
+            .map(|s| s == "true" || s == "1")
+            .unwrap_or(false);
+    let is_protected = matches!(req.method, Method::Post | Method::Put | Method::Delete)
+        || req.path == "/api/v1/env/gc"
+        || is_mermaid_write;
     if !is_protected {
         return None;
     }
@@ -226,14 +234,6 @@ impl WebServer {
             return Self::handle_sse_stream(stream, event_tx).await;
         }
 
-        // Mesh 跨节点协作锁申请需要持有 Arc 存储句柄以构造 CoordinationEngine
-        if req.method == Method::Post && req.path == "/api/v1/mesh/locks/acquire" {
-            let resp = crate::mesh::handle_mesh_lock_acquire(&req, storage.clone(), &auth_token);
-            stream.write_all(&resp.to_bytes()).await?;
-            stream.flush().await?;
-            return Ok(());
-        }
-
         // 统一路由分发 (在 spawn_blocking 中执行，避免阻塞 Tokio worker 并兼容同步预检/DB调用)
         let is_demo_run = req.method == Method::Post && req.path == "/api/v1/demo/run";
         let is_bench_run = req.method == Method::Post && req.path == "/api/v1/benchmark/run";
@@ -282,7 +282,7 @@ impl WebServer {
         enforce_token_for_writes: bool,
     ) -> HttpResponse {
         let t0 = Instant::now();
-        let should_audit = req.method == Method::Post
+        let should_audit = matches!(req.method, Method::Post | Method::Put | Method::Delete)
             || req.path == "/api/v1/env/gc"
             || req.path == "/api/v1/links/repair"
             || req.path.starts_with("/api/v1/mesh/");
@@ -372,7 +372,9 @@ impl WebServer {
             (Method::Post, "/api/v1/body/heal") => parity_api::handle_body_heal(storage.clone()),
             (Method::Post, "/api/v1/body/perf/snapshot") => parity_api::handle_body_perf_snapshot(req, storage.clone()),
             (Method::Get, "/api/v1/body/perf/awr") => parity_api::handle_body_perf_awr(req, storage.clone()),
+            (Method::Post, "/api/v1/body/perf/awr") => parity_api::handle_body_perf_awr_post(req, storage.clone()),
             (Method::Post, "/api/v1/body/perf/tune") => parity_api::handle_body_perf_tune(storage.clone()),
+            (Method::Post, "/api/v1/mesh/locks/acquire") => crate::mesh::handle_mesh_lock_acquire(req, storage, auth_token),
             _ => Self::route_request(req, storage.as_ref(), start_time, auth_token),
         };
         if let Some(st_arc) = audit_storage {
