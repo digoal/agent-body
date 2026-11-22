@@ -1,11 +1,11 @@
 ---
-name: agent-steward-doc-writer
-description: 专门用于协助 Agent 编写、维护、同步与迭代本项目（Agent Host Steward）使用手册（存放在 docs/manual/ 目录）、根目录 README.md 以及面向公众的技术传播长文（存放在 docs/markdown/ 目录）的专业文档工程师技能。强制执行“代码事实第一”、“命令实跑验证”、“面向小白通俗友好同时兼顾专家深度”、“Mermaid 图表无错渲染”与“断点式分章节渐进编写”规范。适用于：当项目新增特性、API/CLI 调整、架构重构后，系统性更新或新建 docs/manual/ 使用手册、根目录 README.md 与公众号技术长文。
+name: agent-body-doc-writer
+description: 专门用于协助 Agent 编写、维护、同步与迭代本项目（Agent Body）使用手册（存放在 docs/manual/ 目录）、根目录 README.md 以及面向公众的技术传播长文（存放在 docs/markdown/ 目录）的专业文档工程师技能。强制执行“代码事实第一”、“命令实跑验证”、“面向小白通俗友好同时兼顾专家深度”、“Mermaid 图表无错渲染”与“断点式分章节渐进编写”规范。适用于：当项目新增特性、API/CLI 调整、架构重构后，系统性更新或新建 docs/manual/ 使用手册、根目录 README.md 与公众号技术长文。
 ---
 
-# Agent Host Steward 文档编写与手册迭代技能 (agent-steward-doc-writer)
+# Agent Body 文档编写与手册迭代技能 (agent-body-doc-writer)
 
-> **定位**: 本技能驻留在 `agent-steward` 项目内部（`skills/agent-steward-doc-writer/SKILL.md`），是指导任何接手该项目的 AI Agent（无论是主 Agent 还是文档 Subagent）高保真、可复现、接地气地编写与迭代项目根目录 `README.md`、`docs/manual/` 分卷技术手册与 `docs/markdown/` 对外深度长文的操作指南。
+> **定位**: 本技能驻留在 `agent-body` 项目内部（`skills/agent-body-doc-writer/SKILL.md`），是指导任何接手该项目的 AI Agent（无论是主 Agent 还是文档 Subagent）高保真、可复现、接地气地编写与迭代项目根目录 `README.md`、`docs/manual/` 分卷技术手册与 `docs/markdown/` 对外深度长文的操作指南。
 
 ---
 
@@ -15,10 +15,10 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 
 1. **代码真实性第一（Zero Hallucination）**：
    - 所有的命令参数、子命令名称、配置项键名、MCP 工具名称（共 43 个）、JSON 返回结构，必须直接源自 `src/` 源码（如 `src/main.rs`, `src/api/mcp_tools.rs`, `src/config/mod.rs`, `src/body/`），绝不允许擅自发明不存在的命令或参数。
-   - 遵循 **三层命名兼容纪律**：对外文档叙事统一围绕 **「脑体分离 · Agent 本体（宿主机具身底座）」**（说明大管家/小秘书为两大侧面），同时工程标识（`agent-steward`、`steward_*`、`~/.steward/`）100% 保持原样不误导改动。
+   - 遵循 **三层命名兼容纪律**：对外文档叙事统一围绕 **「脑体分离 · Agent 本体（宿主机具身底座）」**（说明大管家/小秘书为两大侧面），同时工程标识（`agent-body`、`body_*`、`~/.agent-body/`）100% 保持原样不误导改动。
    - 凡涉及运行依赖、环境要求与部署配置，必须严格注明**“必选 (Required)”**与**“可选 (Optional)”**，并在 [INSTALL.md](../../INSTALL.md) 与 [config.example.toml](../../config.example.toml) 中保持事实对齐。
 2. **命令必须实跑验证（Execution-Verified）**：
-   - 文档中凡是贴出的 CLI 输出、curl 返回或 JSON 示例，**必须使用编译出来的实际二进制执行一次**（例如 `./target/release/agent-steward env port 22`、`./target/release/agent-steward links audit`），捕获真实输出后贴入，严禁“凭印象编造输出”。
+   - 文档中凡是贴出的 CLI 输出、curl 返回或 JSON 示例，**必须使用编译出来的实际二进制执行一次**（例如 `./target/release/agent-body env port 22`、`./target/release/agent-body links audit`），捕获真实输出后贴入，严禁“凭印象编造输出”。
 3. **通俗易懂与直击痛点（小白听得懂，架构师有共鸣）**：
    - 开篇不讲枯燥概念，先讲**场景痛点**（“为什么 Agent 换了个会话就乱放文件？”、“为什么启动测试服务会把宿主机端口打架打崩？”、“改动一个公共脚本怎么知道下游哪几个 cron 会挂？”）；
    - 用大白话类比解释核心机制（例如：黑名单浅层阻断 = “敲门但不进屋”，防止把 node_modules 万级无用碎片扫爆数据库；宏微双层联邦 = “大管家管城市交通网，CodeGraph 管大楼内部房间”）。
@@ -40,7 +40,7 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 ## 二、文档目标受众与手册目录体系架构
 
 ### 2.1 读者画像
-1. **AI Agent 本身**：通过阅读 `README.md` 和 `docs/manual/04-mcp-integration.md`，知道如何通过 stdio MCP 挂载大管家，在开工时主动调用 `steward_brief`。
+1. **AI Agent 本身**：通过阅读 `README.md` 和 `docs/manual/04-mcp-integration.md`，知道如何通过 stdio MCP 挂载大管家，在开工时主动调用 `body_brief`。
 2. **普通开发者与工程师**：希望能一条命令安装并作为后台守护进程跑起来，规范本地文件和记忆。
 3. **系统架构师与平台运维**：关心安全隐私（数据是否全部本地 SQLite）、资源消耗（守护进程常驻仅 2.1MB 内存）、分级扫描黑名单阻断、端口防撞以及宏微代码拓扑穿透机制。
 
@@ -68,7 +68,7 @@ docs/manual/
 
 ```mermaid
 flowchart TD
-    A["步骤 1: 提取代码事实<br/>(核对 src/ 源码中的 CLI、MCP 与存储结构)"] --> B["步骤 2: 实操命令获取真实输出<br/>(运行 target/release/agent-steward)"]
+    A["步骤 1: 提取代码事实<br/>(核对 src/ 源码中的 CLI、MCP 与存储结构)"] --> B["步骤 2: 实操命令获取真实输出<br/>(运行 target/release/agent-body)"]
     B --> C["步骤 3: 拟定或更新章节草稿<br/>(落盘至 docs/manual/、README.md 或 docs/markdown/)"]
     C --> D["步骤 4: 渲染合规性与死链自检<br/>(运行 Python 链接检查器 + Mermaid 校验)"]
     D --> E["步骤 5: 提交前三段式小结<br/>(同步 shared_git 镜像，提供 Commit 建议)"]
@@ -91,11 +91,11 @@ flowchart TD
 ### 步骤 2: 实操命令获取真实输出
 针对文档中需要出现的示例，在终端中以 release 二进制执行捕获：
 ```bash
-./target/release/agent-steward place suggest --type script --name demo_tool --intent "数据抓取"
-./target/release/agent-steward env port 22
-./target/release/agent-steward links audit
-./target/release/agent-steward links impact /root/new/shared_proj/demo.py
-./target/release/agent-steward codegraph bridge --query "init"
+./target/release/agent-body place suggest --type script --name demo_tool --intent "数据抓取"
+./target/release/agent-body env port 22
+./target/release/agent-body links audit
+./target/release/agent-body links impact /root/new/shared_proj/demo.py
+./target/release/agent-body codegraph bridge --query "init"
 ```
 将真实返回结果原汁原味地嵌入文档代码块中。
 
@@ -117,7 +117,7 @@ flowchart TD
 ### 步骤 5: 交付检查与 Commit
 - 检查 `README.md`、`docs/manual/` 与 `docs/src_doc/` 是否无缝互引；
 - 交付三段式小结给用户，并附上规范的 Git Commit Message；
-- 同步更新 `/root/new/shared_git/agent-steward` 开源镜像。
+- 同步更新 `/root/new/shared_git/agent-body` 开源镜像。
 
 ---
 

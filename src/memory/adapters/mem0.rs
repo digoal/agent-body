@@ -9,7 +9,7 @@
 //! provider = "mem0"
 //! mem0_url = "https://api.mem0.ai"       # 或私有化端点
 //! mem0_api_key = ""                       # 若私有化部署可留空
-//! mem0_user_id = "agent-steward"          # Mem0 用户标识
+//! mem0_user_id = "agent-body"          # Mem0 用户标识
 //! ```
 //!
 //! ## 参考文档
@@ -92,7 +92,7 @@ impl Mem0Adapter {
     ///
     /// - `base_url`: 如 "https://api.mem0.ai" 或私有化端点
     /// - `api_key`: Mem0 API Key（私有化部署可传空字符串）
-    /// - `user_id`: 在 Mem0 中标识当前使用者的 ID（如 "agent-steward"）
+    /// - `user_id`: 在 Mem0 中标识当前使用者的 ID（如 "agent-body"）
     pub fn new(base_url: &str, api_key: &str, user_id: &str) -> Result<Self> {
         let client = Client::builder()
             .timeout(Duration::from_secs(15))
@@ -263,10 +263,10 @@ mod tests {
 
     #[test]
     fn test_mem0_adapter_creation() {
-        let adapter = Mem0Adapter::new("https://api.mem0.ai", "test-key", "agent-steward")
+        let adapter = Mem0Adapter::new("https://api.mem0.ai", "test-key", "agent-body")
             .expect("适配器创建应成功");
         assert_eq!(adapter.provider_name(), "mem0");
-        assert_eq!(adapter.user_id, "agent-steward");
+        assert_eq!(adapter.user_id, "agent-body");
     }
 
     #[test]
@@ -276,7 +276,7 @@ mod tests {
             memory: "选择 Rust 编写高性能守护进程".to_string(),
             score: Some(0.88),
             categories: vec!["decision".to_string()],
-            metadata: serde_json::json!({"source": "agent-steward"}),
+            metadata: serde_json::json!({"source": "agent-body"}),
         };
         let item = Mem0Adapter::mem0_to_item(m);
         assert_eq!(item.id, "mem0-abc");
@@ -303,7 +303,7 @@ mod tests {
         }
         let api_key = std::env::var("MEM0_API_KEY").unwrap_or_default();
         let adapter =
-            Mem0Adapter::new("https://api.mem0.ai", &api_key, "agent-steward-test").unwrap();
+            Mem0Adapter::new("https://api.mem0.ai", &api_key, "agent-body-test").unwrap();
         let results = adapter.search("agent steward rust", 3, None);
         // 结果可能为空列表，但接口调用本身不应报错
         assert!(results.is_ok(), "search 应返回 Ok: {:?}", results.err());

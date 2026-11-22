@@ -107,8 +107,8 @@ impl DemoEngine {
                 analogy: "家里厨房明明有现成高压锅，新来的保姆却非要自己网购铁矿石炼铁造锅，还把储藏室翻了个底朝天。".to_string(),
                 intent_summary: "在 AI 干活前先摸清机器已装的现成工具与禁入垃圾目录，既不瞎装依赖浪费 20 分钟，也不把几十万缓存文件扫爆数据库。".to_string(),
                 without_steward_summary: "盲目全盘递归把 node_modules/.git/.cache 数十万垃圾文件扫爆索引；不知宿主机已装系统工具，反复 pip 编译报错。".to_string(),
-                mcp_tools: vec!["steward_fact_query".into(), "steward_asset_scan".into()],
-                cli_command: "agent-steward fact \"处理 PDF\" --fact-type capability".to_string(),
+                mcp_tools: vec!["body_fact_query".into(), "body_asset_scan".into()],
+                cli_command: "agent-body fact \"处理 PDF\" --fact-type capability".to_string(),
             },
             DemoScenarioMeta {
                 id: "scene-2".to_string(),
@@ -119,8 +119,8 @@ impl DemoEngine {
                 analogy: "不看车位有没有车就闭眼倒车撞上去，还把换下来的脏衣服随手扔在客厅茶几上。".to_string(),
                 intent_summary: "在 AI 执行危险命令前 1 毫秒踩下急刹车：拦截已被占用的端口、纠正随手乱丢的文件路径，直接指明空闲端口与规范存放位置。".to_string(),
                 without_steward_summary: "随手在工作区根目录生成 TmpCrawler.py，并直接 bind 宿主机已占用监听端口导致线上崩溃。".to_string(),
-                mcp_tools: vec!["steward_hook_pre".into(), "steward_port_check".into(), "steward_placement_suggest".into()],
-                cli_command: "agent-steward hooks pre --tool-name bind_port --args '{\"port\":8756}'".to_string(),
+                mcp_tools: vec!["body_hook_pre".into(), "body_port_check".into(), "body_placement_suggest".into()],
+                cli_command: "agent-body hooks pre --tool-name bind_port --args '{\"port\":8756}'".to_string(),
             },
             DemoScenarioMeta {
                 id: "scene-3".to_string(),
@@ -131,8 +131,8 @@ impl DemoEngine {
                 analogy: "装修时没看图纸就一锤子砸掉承重墙，结果楼上的水管和整栋楼的电闸全断了。".to_string(),
                 intent_summary: "修改或迁移任何代码与配置前，先像 X 光一样透视它会牵连哪些后台服务与定时任务，并自动推演断链修复补丁。".to_string(),
                 without_steward_summary: "贸然修改或移动公共脚本，不知道后台 systemd 服务或 crontab 依赖它，导致断链静默挂死。".to_string(),
-                mcp_tools: vec!["steward_links_impact".into(), "steward_codegraph_bridge".into(), "steward_links_audit".into()],
-                cli_command: "agent-steward links audit".to_string(),
+                mcp_tools: vec!["body_links_impact".into(), "body_codegraph_bridge".into(), "body_links_audit".into()],
+                cli_command: "agent-body links audit".to_string(),
             },
             DemoScenarioMeta {
                 id: "scene-4".to_string(),
@@ -143,8 +143,8 @@ impl DemoEngine {
                 analogy: "两辆车在独木桥头顶牛，甲占着北口要过南口，乙占着南口要过北口，谁也不让谁，整条路彻底堵死。".to_string(),
                 intent_summary: "当多个 AI Agent 同时干活抢端口、抢目录时，大管家充当交通警察，1 毫秒揪出死锁环路并指挥退让，防止并发踩踏。".to_string(),
                 without_steward_summary: "Alpha 锁端口等目录、Beta 锁目录等端口，无协调中心下无限死等或互相覆盖代码。".to_string(),
-                mcp_tools: vec!["steward_lock_acquire".into(), "steward_lock_wait".into(), "steward_lock_deadlock_check".into()],
-                cli_command: "agent-steward coordination deadlock".to_string(),
+                mcp_tools: vec!["body_lock_acquire".into(), "body_lock_wait".into(), "body_lock_deadlock_check".into()],
+                cli_command: "agent-body coordination deadlock".to_string(),
             },
             DemoScenarioMeta {
                 id: "scene-5".to_string(),
@@ -155,8 +155,8 @@ impl DemoEngine {
                 analogy: "员工只去修个水龙头，你却让他背着整座图书馆的 120 本百科全书上楼，还没动手人就累趴下了。".to_string(),
                 intent_summary: "机器上挂了 120+ 个技能，大管家按当前任务只挑最对口的 3~4 张名片喂给大模型，省下 99%+ Token 账单。".to_string(),
                 without_steward_summary: "120+ SKILL 与多套 MCP 全量注入上下文，Token 账单爆炸、大模型注意力严重退化。".to_string(),
-                mcp_tools: vec!["steward_skill_route".into(), "steward_mcp_catalog".into(), "steward_service_contact".into()],
-                cli_command: "agent-steward skill route \"PostgreSQL 调优\" --budget-tokens 600".to_string(),
+                mcp_tools: vec!["body_skill_route".into(), "body_mcp_catalog".into(), "body_service_contact".into()],
+                cli_command: "agent-body skill route \"PostgreSQL 调优\" --budget-tokens 600".to_string(),
             },
             DemoScenarioMeta {
                 id: "scene-6".to_string(),
@@ -167,8 +167,8 @@ impl DemoEngine {
                 analogy: "早班管家把家里情况整理成一页纸简报交给晚班管家；收工前把垃圾安全打包预览，绝不盲删文件。".to_string(),
                 intent_summary: "新 AI 接手 1 秒钟拿到高分态势简报直接开干不踩旧坑；旧会话结束安全体检临时垃圾与过期记忆，有始有终。".to_string(),
                 without_steward_summary: "旧会话留下满地 /root/new/tmp/ 孤儿文件与矛盾脏记忆，新会话两眼一抹黑重新踩坑。".to_string(),
-                mcp_tools: vec!["steward_brief".into(), "steward_memory_audit".into(), "steward_env_gc".into()],
-                cli_command: "agent-steward brief".to_string(),
+                mcp_tools: vec!["body_brief".into(), "body_memory_audit".into(), "body_env_gc".into()],
+                cli_command: "agent-body brief".to_string(),
             },
             DemoScenarioMeta {
                 id: "scene-7".to_string(),
@@ -179,8 +179,8 @@ impl DemoEngine {
                 analogy: "大脑（LLM）像随时可以换班的主治医生，而 Agent 本体是永驻宿主机、自带六大器官体征和病历接力胶囊的数字躯干——早班医生交棒，晚班医生 1 毫秒无缝接手不重新拍片。".to_string(),
                 intent_summary: "当任务从 Antigravity 切换到 Claude Code 或定时 Cron 时，由宿主机本体保管脱敏防投毒接力胶囊与五维生命体征，实现换脑不失忆、换壳不换魂。".to_string(),
                 without_steward_summary: "新接手的大脑对前任进度两眼一抹黑，重跑 ls/find/ps/git log 盘点现场，且无显式 L3 禁区防线。".to_string(),
-                mcp_tools: vec!["steward_body_state".into(), "steward_brief".into()],
-                cli_command: "agent-steward body manifest && agent-steward body vitals".to_string(),
+                mcp_tools: vec!["body_state".into(), "body_brief".into()],
+                cli_command: "agent-body body manifest && agent-body body vitals".to_string(),
             },
         ]
     }
@@ -326,8 +326,8 @@ impl DemoEngine {
                     }),
                     speaker_notes: "很多记忆项目只管对话历史，不管机器现状。大管家在物理层先看清本机装了什么工具、哪些目录只能敲门不准进屋，从源头杜绝盲人摸象。".into(),
                     black_screen_mirror: DemoBlackScreenMirror {
-                        cli_command: "agent-steward fact \"处理 PDF\" --fact-type capability".into(),
-                        mcp_tool: "steward_fact_query".into(),
+                        cli_command: "agent-body fact \"处理 PDF\" --fact-type capability".into(),
+                        mcp_tool: "body_fact_query".into(),
                         mcp_arguments: serde_json::json!({"fact_type": "capability", "query": "处理 PDF"}),
                     },
                 })
@@ -409,8 +409,8 @@ impl DemoEngine {
                     }),
                     speaker_notes: "与其等服务启动失败再看报错日志，不如在 Agent 调工具前 1 毫秒用 Pre-Hook 拦截：谁占着端口、空闲端口有哪些、脚本该放哪，一次给全。".into(),
                     black_screen_mirror: DemoBlackScreenMirror {
-                        cli_command: format!("agent-steward hooks pre --tool-name bind_port --args '{{\"port\":{}}}'", target_port),
-                        mcp_tool: "steward_hook_pre".into(),
+                        cli_command: format!("agent-body hooks pre --tool-name bind_port --args '{{\"port\":{}}}'", target_port),
+                        mcp_tool: "body_hook_pre".into(),
                         mcp_arguments: serde_json::json!({"tool_name": "bind_port", "args": {"port": target_port}}),
                     },
                 })
@@ -419,8 +419,8 @@ impl DemoEngine {
             "scene-3" => {
                 let arc_st = Arc::new(st);
                 let audit = LinkAuditor::new(arc_st.clone()).audit_links(false)?;
-                let impact = ImpactAnalyzer::new(arc_st).analyze_impact("agent-steward", 3)?;
-                let cg = CodeGraphBridge::inspect_project(Path::new("/root/new/work/agent-steward"))
+                let impact = ImpactAnalyzer::new(arc_st).analyze_impact("agent-body", 3)?;
+                let cg = CodeGraphBridge::inspect_project(Path::new("/root/new/work/agent-body"))
                     .ok()
                     .flatten()
                     .or_else(|| CodeGraphBridge::inspect_project(Path::new("/root/new/src/postgres")).ok().flatten());
@@ -431,20 +431,20 @@ impl DemoEngine {
 
                 let primary_svc = svcs
                     .iter()
-                    .find(|s| s.service_name.contains("agent-steward"))
+                    .find(|s| s.service_name.contains("agent-body"))
                     .or_else(|| svcs.iter().find(|s| !s.referenced_files.is_empty()));
                 let svc_name = primary_svc
                     .map(|s| s.service_name.clone())
-                    .unwrap_or_else(|| "agent-steward.service".to_string());
+                    .unwrap_or_else(|| "agent-body.service".to_string());
                 let target_bin = primary_svc
                     .and_then(|s| s.referenced_files.first().cloned())
-                    .unwrap_or_else(|| "/usr/local/bin/agent-steward".to_string());
+                    .unwrap_or_else(|| "/usr/local/bin/agent-body".to_string());
                 let bound_port = active_ports
                     .iter()
-                    .find(|p| p.port == 8756 || p.process_name.as_deref() == Some("agent-steward"))
+                    .find(|p| p.port == 8756 || p.process_name.as_deref() == Some("agent-body"))
                     .or_else(|| active_ports.iter().find(|p| p.port >= 1024))
                     .map(|p| format!(":{} ({})", p.port, p.process_name.as_deref().unwrap_or("app")))
-                    .unwrap_or_else(|| ":8756 (agent-steward)".to_string());
+                    .unwrap_or_else(|| ":8756 (agent-body)".to_string());
                 let cron_summary = crons
                     .first()
                     .map(|c| format!("{} ({})", c.schedule, c.target_script.as_deref().unwrap_or(&c.source_file)))
@@ -509,8 +509,8 @@ impl DemoEngine {
                     }),
                     speaker_notes: "大管家做宏观拓扑（文件-端口-服务-Cron），微观 AST 函数调用下钻交给 CodeGraph，绝不重复造轮子，改代码前先看清爆炸半径。".into(),
                     black_screen_mirror: DemoBlackScreenMirror {
-                        cli_command: "agent-steward links audit".into(),
-                        mcp_tool: "steward_links_audit".into(),
+                        cli_command: "agent-body links audit".into(),
+                        mcp_tool: "body_links_audit".into(),
                         mcp_arguments: serde_json::json!({"fix_dangling": false}),
                     },
                 })
@@ -604,8 +604,8 @@ impl DemoEngine {
                     }),
                     speaker_notes: "多 Agent 时代最大的隐患就是并发踩踏。这里我们在 demo 沙盒里真实制造了一个双向互等死锁，WFG 引擎在毫秒内直接揪出环路并给出退让建议。".into(),
                     black_screen_mirror: DemoBlackScreenMirror {
-                        cli_command: "agent-steward coordination deadlock".into(),
-                        mcp_tool: "steward_lock_deadlock_check".into(),
+                        cli_command: "agent-body coordination deadlock".into(),
+                        mcp_tool: "body_lock_deadlock_check".into(),
                         mcp_arguments: serde_json::json!({}),
                     },
                 })
@@ -653,8 +653,8 @@ impl DemoEngine {
                     }),
                     speaker_notes: "Agent 能力越多越容易被自己的工具描述撑爆上下文。按 Token 预算做渐进式按需路由，只喂最相关的 Top-K 名片，直接省下 95% 以上 Token。".into(),
                     black_screen_mirror: DemoBlackScreenMirror {
-                        cli_command: "agent-steward skill route \"PostgreSQL 数据库调优与源码分析\" --budget-tokens 600".into(),
-                        mcp_tool: "steward_skill_route".into(),
+                        cli_command: "agent-body skill route \"PostgreSQL 数据库调优与源码分析\" --budget-tokens 600".into(),
+                        mcp_tool: "body_skill_route".into(),
                         mcp_arguments: serde_json::json!({"intent": "PostgreSQL 数据库调优与源码分析", "budget_tokens": 600}),
                     },
                 })
@@ -703,8 +703,8 @@ impl DemoEngine {
                     }),
                     speaker_notes: "开局一秒拿到三位一体简报，收工自动对 /root/new/tmp/ 做安全 dry-run 自洁与记忆衰减仲裁，形成真正的工程闭环。".into(),
                     black_screen_mirror: DemoBlackScreenMirror {
-                        cli_command: "agent-steward brief && agent-steward gc --max-age-hours 72".into(),
-                        mcp_tool: "steward_brief".into(),
+                        cli_command: "agent-body brief && agent-body gc --max-age-hours 72".into(),
+                        mcp_tool: "body_brief".into(),
                         mcp_arguments: serde_json::json!({"query": "宿主机全局态势与近期变更", "budget_tokens": 1500}),
                     },
                 })
@@ -775,10 +775,10 @@ impl DemoEngine {
                         "overall_vitals_score": vitals.overall_score,
                         "l3_blocked": !l3_dec.allowed,
                     }),
-                    speaker_notes: "大模型客户端只是可热切换的瞬态大脑，Agent 本体（agent-steward）才是永驻宿主机的物理躯干：新大脑 1 毫秒即可接力未竟目标、活跃文件、五维健康体征与 L0~L3 自治边界。".into(),
+                    speaker_notes: "大模型客户端只是可热切换的瞬态大脑，Agent 本体（agent-body）才是永驻宿主机的物理躯干：新大脑 1 毫秒即可接力未竟目标、活跃文件、五维健康体征与 L0~L3 自治边界。".into(),
                     black_screen_mirror: DemoBlackScreenMirror {
-                        cli_command: "agent-steward body manifest && agent-steward body vitals".into(),
-                        mcp_tool: "steward_body_state".into(),
+                        cli_command: "agent-body body manifest && agent-body body vitals".into(),
+                        mcp_tool: "body_state".into(),
                         mcp_arguments: serde_json::json!({"action": "manifest"}),
                     },
                 })

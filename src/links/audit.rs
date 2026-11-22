@@ -221,7 +221,7 @@ mod tests {
         storage.add_link(&LinkRecord {
             id: None,
             source_type: "asset".to_string(),
-            source_id: "/root/new/work/agent-steward/user_feedback.md".to_string(),
+            source_id: "/root/new/work/agent-body/user_feedback.md".to_string(),
             target_type: "service".to_string(),
             target_id: "redis:6379".to_string(),
             relation: "depends_on".to_string(),

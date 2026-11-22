@@ -641,21 +641,22 @@ mod tests {
 }
 "##;
         let cnt_rs = engine
-            .discover_links_from_script("/root/new/work/agent-steward/src/demo_mod.rs", rs_code)
+            .discover_links_from_script("/root/new/work/agent-body/src/demo_mod.rs", rs_code)
             .unwrap();
         assert_eq!(cnt_rs, 0, "Rust 注释、placeholder 与 #[cfg(test)] 内假路径不应入图");
 
         let cnt_tests_dir = engine
             .discover_links_from_script(
-                "/root/new/work/agent-steward/tests/integration_fixture.rs",
+                "/root/new/work/agent-body/tests/integration_fixture.rs",
                 "let x = \"/root/new/work/fake_integ.rs\";",
             )
             .unwrap();
         assert_eq!(cnt_tests_dir, 0, "/tests/ 夹具不应纳入生产拓扑");
 
-        let md_example = "示例 CLI:\n`agent-steward links impact /root/new/shared_proj/nonexistent_demo.py`\n如 redis:6379 被误判";
+        let md_example = "示例 CLI:\n`agent-body links impact /root/new/shared_proj/nonexistent_demo.py`\n如 redis:6379 被误判";
+        let real_readme = concat!(env!("CARGO_MANIFEST_DIR"), "/README.md");
         let cnt_md = engine
-            .discover_links_from_script("/root/new/work/agent-steward/README.md", md_example)
+            .discover_links_from_script(real_readme, md_example)
             .unwrap();
         assert_eq!(cnt_md, 0, "真实 .md 中的 CLI 示例与端口文本不应产生假边");
     }

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Agent Host Steward 增量向量补齐脚本 (Ollama Embedding Backfill)。
+"""Agent Body 增量向量补齐脚本 (Ollama Embedding Backfill)。
 
 功能:
-  扫描 ~/.steward/steward.db 中缺失 embedding (NULL / '' / '[]') 的
+  扫描 ~/.agent-body/body.db 中缺失 embedding (NULL / '' / '[]') 的
   assets、fact_nodes、memories 记录，调用本地 Ollama /api/embeddings
   (默认 nomic-embed-text) 批量生成 768 维向量并幂等回写 SQLite。
 
 示例:
   python3 scripts/backfill_embeddings.py
-  python3 scripts/backfill_embeddings.py --db ~/.steward/steward.db --model nomic-embed-text --limit 500
+  python3 scripts/backfill_embeddings.py --db ~/.agent-body/body.db --model nomic-embed-text --limit 500
 """
 
 from __future__ import annotations
@@ -87,8 +87,8 @@ def backfill_table(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="增量补齐 steward.db 本地 Ollama Embedding 向量")
-    parser.add_argument("--db", default=str(Path.home() / ".steward/steward.db"), help="SQLite 数据库路径")
+    parser = argparse.ArgumentParser(description="增量补齐 body.db 本地 Ollama Embedding 向量")
+    parser.add_argument("--db", default=str(Path.home() / ".agent-body/body.db"), help="SQLite 数据库路径")
     parser.add_argument("--ollama-url", default="http://127.0.0.1:11434", help="Ollama 服务地址")
     parser.add_argument("--model", default="nomic-embed-text", help="Embedding 模型名")
     parser.add_argument("--limit", type=int, default=500, help="每张表单批最大补齐条数")

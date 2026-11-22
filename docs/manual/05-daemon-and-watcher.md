@@ -6,7 +6,7 @@
 
 ## 1. 守护进程主循环架构
 
-大管家支持常驻后台运行（`agent-steward daemon`）。守护进程采用 Tokio 异步运行时，驱动两大核心任务：
+大管家支持常驻后台运行（`agent-body daemon`）。守护进程采用 Tokio 异步运行时，驱动两大核心任务：
 
 ```mermaid
 flowchart LR
@@ -48,16 +48,16 @@ flowchart LR
 在终端前台运行守护进程（按 `Ctrl+C` 触发 SIGINT 优雅退出）：
 
 ```bash
-agent-steward daemon
+agent-body daemon
 ```
 
 **启动输出示例（对齐 `src/daemon/mod.rs`）**:
 ```text
 ╔═══════════════════════════════════════════════════════╗
-║      Agent Host Steward Daemon 已在后台启动运行       ║
+║      Agent Body Daemon 已在后台启动运行       ║
 ╚═══════════════════════════════════════════════════════╝
-数据目录:       "/root/.steward"
-数据库路径:     "/root/.steward/steward.db"
+数据目录:       "/root/.agent-body"
+数据库路径:     "/root/.agent-body/body.db"
 实时监听目录:   ["/root/new/work", "/root/new/shared_proj"]
 ✅ inotify 文件系统实时监听就绪 (300ms 防抖)
 ```
@@ -69,19 +69,19 @@ agent-steward daemon
 对于生产开发机，推荐将大管家配置为 systemd 用户服务或系统服务：
 
 ### 4.1 创建 service 单元文件
-创建 `/etc/systemd/system/agent-steward.service`：
+创建 `/etc/systemd/system/agent-body.service`：
 
 ```ini
 [Unit]
-Description=Agent Host Steward Daemon Service
-Documentation=https://github.com/digoal/agent-steward
+Description=Agent Body Daemon Service
+Documentation=https://github.com/digoal/agent-body
 After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/root/new/work/agent-steward
-ExecStart=/usr/local/bin/agent-steward daemon
+WorkingDirectory=/root/new/work/agent-body
+ExecStart=/usr/local/bin/agent-body daemon
 Restart=always
 RestartSec=5
 StandardOutput=journal
@@ -98,11 +98,11 @@ WantedBy=multi-user.target
 systemctl daemon-reload
 
 # 启动大管家守护服务
-systemctl start agent-steward
+systemctl start agent-body
 
 # 检查服务运行状态
-systemctl status agent-steward
+systemctl status agent-body
 
 # 设置开机自动启动
-systemctl enable agent-steward
+systemctl enable agent-body
 ```

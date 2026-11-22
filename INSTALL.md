@@ -1,8 +1,8 @@
-# Agent Host Steward — 生产安装与可移植部署指南 (INSTALL.md)
+# Agent Body — 生产安装与可移植部署指南 (INSTALL.md)
 
 > **适用版本**: v0.4.0+  
 > **更新时间**: 2026-11-19  
-> **文档目标**: 本文档全面说明 Agent Host Steward 在不同操作系统与容器环境下的**编译依赖**、**运行时依赖**、**可选增强服务**与**一键部署流程**，防止因环境差异导致部署或运行失败。
+> **文档目标**: 本文档全面说明 Agent Body 在不同操作系统与容器环境下的**编译依赖**、**运行时依赖**、**可选增强服务**与**一键部署流程**，防止因环境差异导致部署或运行失败。
 
 ---
 
@@ -81,18 +81,18 @@ apk update && apk add --no-cache \
 
 ```bash
 # 1. 克隆代码仓库
-git clone https://github.com/digoal/agent-steward.git
-cd agent-steward
+git clone https://github.com/digoal/agent-body.git
+cd agent-body
 
 # 2. 执行全量编译 (生成工业级优化 release 二进制)
 export PATH="$HOME/.cargo/bin:$PATH"
 cargo build --release
 
 # 3. 安装到全局 PATH 路径
-sudo install -m 755 target/release/agent-steward /usr/local/bin/agent-steward
+sudo install -m 755 target/release/agent-body /usr/local/bin/agent-body
 
 # 4. 执行一键运行环境依赖预检 (Preflight)
-agent-steward preflight
+agent-body preflight
 ```
 
 ### 方案 B：使用 Makefile 自动化构建
@@ -110,13 +110,13 @@ make preflight   # 预检依赖
 大管家内置了环境诊断引擎，在上线前可通过以下命令全面验证环境状态：
 
 ```bash
-agent-steward preflight
+agent-body preflight
 ```
 
 **预期输出示例**：
 ```
 ╔══════════════════════════════════════════════════════════════════════════════════════════╗
-║                   Agent Host Steward — 运行环境与依赖预检报告 (Preflight)                ║
+║                   Agent Body — 运行环境与依赖预检报告 (Preflight)                ║
 ╚══════════════════════════════════════════════════════════════════════════════════════════╝
 系统架构: linux-unix (x86_64)  |  检查时间: 2026-11-19T16:16:25.242977676+08:00
 --------------------------------------------------------------------------------------------
@@ -124,7 +124,7 @@ agent-steward preflight
 --------------------------------------------------------------------------------------------
 ✅ PASS   REQUIRED     Linux /proc 进程与网络接口      /proc/net/tcp 及进程空间可正常读取
 ✅ PASS   REQUIRED     inotify 实时文件系统监听         内核 inotify 事件机制就绪
-✅ PASS   REQUIRED     数据存储目录写入权限               数据目录 "/root/.steward" 可读写
+✅ PASS   REQUIRED     数据存储目录写入权限               数据目录 "/root/.agent-body" 可读写
 ✅ PASS   REQUIRED     SQLite3 + FTS5 存储引擎      嵌入式 SQLite 及 FTS5 全文检索模块运行正常
 ✅ PASS   OPTIONAL     DuckDB 列存分析引擎            嵌入式 DuckDB 内存引擎就绪
 ✅ PASS   OPTIONAL     Systemd 守护环境             系统由 Systemd 纳管，支持自动化拓扑采集与 service 后台运行
@@ -138,7 +138,7 @@ agent-steward preflight
 🚀 结论: 所有 REQUIRED 基础环境依赖全部满足，大管家可稳定上线运行。
 ```
 
-> **自动化集成提示**: CI/CD 或 Agent 脚本可执行 `agent-steward preflight --json`，退出码为 `0` 代表满足，非 `0` 代表缺少关键基础依赖。
+> **自动化集成提示**: CI/CD 或 Agent 脚本可执行 `agent-body preflight --json`，退出码为 `0` 代表满足，非 `0` 代表缺少关键基础依赖。
 
 ---
 
@@ -147,16 +147,16 @@ agent-steward preflight
 在生产 Linux 宿主机上，推荐将大管家配置为 Systemd 托管的开机自启常驻服务。
 
 ### 1. 创建 Unit 配置文件
-在 `/etc/systemd/system/agent-steward.service` 写入：
+在 `/etc/systemd/system/agent-body.service` 写入：
 
 ```ini
 [Unit]
-Description=Agent Host Steward Daemon (宿主环境大管家后台守护)
+Description=Agent Body Daemon (宿主环境大管家后台守护)
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/agent-steward daemon
+ExecStart=/usr/local/bin/agent-body daemon
 Restart=always
 RestartSec=5s
 User=root
@@ -172,14 +172,14 @@ WantedBy=multi-user.target
 ### 2. 启用与管理命令
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable agent-steward.service
-sudo systemctl start agent-steward.service
+sudo systemctl enable agent-body.service
+sudo systemctl start agent-body.service
 
 # 查看服务状态
-systemctl status agent-steward.service
+systemctl status agent-body.service
 
 # 查看实时日志
-journalctl -u agent-steward.service -f
+journalctl -u agent-body.service -f
 ```
 
 ---
@@ -191,19 +191,19 @@ journalctl -u agent-steward.service -f
 ### 1. 标准 Docker 启动命令
 ```bash
 docker run -d \
-  --name agent-steward \
+  --name agent-body \
   --restart unless-stopped \
   --pid host \
   -v /proc:/proc:ro \
-  -v /root/.steward:/root/.steward \
+  -v /root/.agent-body:/root/.agent-body \
   -v /root/new:/root/new \
-  agent-steward:latest daemon
+  agent-body:latest daemon
 ```
 
 > 💡 **参数关键点**:
 > - `--pid host`: 允许大管家感知宿主机所有非系统活跃进程；
 > - `-v /proc:/proc:ro`: 赋予 `/proc/net/tcp` 监听端口采集权限；
-> - `-v /root/.steward:/root/.steward`: 持久化元数据库。
+> - `-v /root/.agent-body:/root/.agent-body`: 持久化元数据库。
 
 ### 2. 使用 Docker Compose 一键启动 (含可选 Ollama)
 直接运行 `docker compose up -d` 即可。详见仓库附带的 [docker-compose.yml](docker-compose.yml)。
@@ -222,7 +222,7 @@ docker run -d \
    ollama pull nomic-embed-text
    ollama pull qwen3.5:0.8b
    ```
-3. 在 `~/.steward/config.toml` 中配置：
+3. 在 `~/.agent-body/config.toml` 中配置：
    ```toml
    [embedding]
    ollama_url = "http://localhost:11434"
@@ -248,7 +248,7 @@ docker run -d \
    ```
 2. 执行跨引擎一键数据迁移：
    ```bash
-   agent-steward storage migrate --to postgres --to-url "host=127.0.0.1 dbname=steward user=postgres password=secret"
+   agent-body storage migrate --to postgres --to-url "host=127.0.0.1 dbname=steward user=postgres password=secret"
    ```
 
 ---
@@ -258,8 +258,8 @@ docker run -d \
 | 现象 / 报错信息 | 根因分析 | 解决办法 |
 |:---|:---|:---|
 | `cmake: command not found` | 编译期缺少 CMake 工具链 | 执行 `apt-get install -y cmake` 或 `dnf install cmake` |
-| `cannot open regular file ... Text file busy` | 二进制正在被 running 状态的 Systemd 服务占用 | 使用 `install -m 755` 替换旧二进制，或先 `systemctl stop agent-steward.service` |
+| `cannot open regular file ... Text file busy` | 二进制正在被 running 状态的 Systemd 服务占用 | 使用 `install -m 755` 替换旧二进制，或先 `systemctl stop agent-body.service` |
 | `/proc/net/tcp 不存在` | 运行在非 Linux 环境或极端受限容器内 | 在 Linux 物理机/虚拟机运行，或 Docker 启动加 `--pid host` |
 | `max_user_watches 耗尽` | 监控目录下的文件树极大，超出了内核 inotify 上限 | 执行 `sudo sysctl -w fs.inotify.max_user_watches=524288` |
 | `Ollama 连接失败警告` | 本地未安装 Ollama 或服务未启动 | 系统已自动安全降级为纯 FTS5 检索，不影响基本功能；若需向量请启动 Ollama |
-| `api_port 不能小于 1024` | 配置文件填写的端口为系统特权端口 | 修改 `~/.steward/config.toml` 中的 `api_port` 为 1024~65535 之间（默认 9527） |
+| `api_port 不能小于 1024` | 配置文件填写的端口为系统特权端口 | 修改 `~/.agent-body/config.toml` 中的 `api_port` 为 1024~65535 之间（默认 9527） |

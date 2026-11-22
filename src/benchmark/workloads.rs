@@ -643,7 +643,7 @@ fn run_w2_port_collision(storage: Arc<dyn StorageProvider>) -> Result<WorkloadRe
         0,
         sla_passed,
         format!("bind(127.0.0.1:{}) -> EADDRINUSE retry loop", target_port),
-        format!("steward_hook_pre(port={}) -> {} & recommend :{}", target_port, pre_decision, recommended),
+        format!("body_hook_pre(port={}) -> {} & recommend :{}", target_port, pre_decision, recommended),
         format!(
             "靶标端口 :{} 实测碰撞 {} 次；Pre-Hook 判定 {}，推荐空闲端口 :{} 一次绑定={}",
             target_port, base_failures, pre_decision, recommended, bind_ok
@@ -1526,7 +1526,7 @@ mod tests {
     }
 }
 "#;
-    let adversarial_md = "示例命令: `agent-steward links impact /root/new/shared_proj/fake_doc_ref.py` | redis:6379";
+    let adversarial_md = "示例命令: `agent-body links impact /root/new/shared_proj/fake_doc_ref.py` | redis:6379";
 
     // Without Steward: 朴素正则统计 /root/new/ 与数字端口产生 13 个假阳性候选项
     let t_base = Instant::now();
@@ -1543,8 +1543,8 @@ mod tests {
     let t_stew = Instant::now();
     let cnt_py = engine.discover_links_from_script(&script_path.to_string_lossy(), &adversarial_code)?;
     let cnt_json = engine.discover_links_from_script(&json_path.to_string_lossy(), adversarial_json)?;
-    let cnt_rs = engine.discover_links_from_script("/root/new/work/agent-steward/src/sample_mod.rs", adversarial_rs)?;
-    let cnt_md = engine.discover_links_from_script("/root/new/work/agent-steward/README.md", adversarial_md)?;
+    let cnt_rs = engine.discover_links_from_script(concat!(env!("CARGO_MANIFEST_DIR"), "/src/sample_mod.rs"), adversarial_rs)?;
+    let cnt_md = engine.discover_links_from_script(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"), adversarial_md)?;
     let audit = LinkAuditor::new(mem).audit_links(false)?;
     let stew_us = t_stew.elapsed().as_micros();
 
@@ -2410,7 +2410,7 @@ fn run_w16_dual_domain_audit_and_lease_self_evolution() -> Result<WorkloadResult
     let mut hits = 0usize;
 
     // 1. IN_AGENT 脱敏与 SHA-256 证据哈希闭环
-    let mut ev1 = AuditEventInput::in_agent("mcp", "placement", "steward_placement_suggest");
+    let mut ev1 = AuditEventInput::in_agent("mcp", "placement", "body_placement_suggest");
     ev1.target_type = "file".into();
     ev1.target_id = "/root/new/work/w16_demo.rs".into();
     ev1.before_after_delta = serde_json::json!({"token":"sk-benchsecret1234567890"});

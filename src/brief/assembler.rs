@@ -171,7 +171,7 @@ impl BriefAssembler {
         };
 
         let markdown = format!(
-            "# 🧬 Agent 本体开工简报 (steward_brief)\n\n\
+            "# 🧬 Agent 本体开工简报 (body_brief)\n\n\
              **时间**: {now} | **本体**: {body_id} | **会话**: {session_disp} | **质量分**: {overall}/100\n\n\
              {capsule_section}\
              {fact_section}\n\
@@ -704,18 +704,18 @@ mod tests {
                 node_type: "port".to_string(),
                 name: "port:8765".to_string(),
                 label: "8765".to_string(),
-                properties: serde_json::json!({"port": 8765, "process_name": "agent-steward"}),
+                properties: serde_json::json!({"port": 8765, "process_name": "agent-body"}),
                 updated_at: None,
             })
             .expect("upsert port");
         storage
             .upsert_fact_node(&FactNodeRecord {
-                id: "project:agent-steward".to_string(),
+                id: "project:agent-body".to_string(),
                 node_type: "project".to_string(),
-                name: "agent-steward".to_string(),
-                label: "agent-steward".to_string(),
+                name: "agent-body".to_string(),
+                label: "agent-body".to_string(),
                 properties: serde_json::json!({
-                    "canonical_path": "/root/new/work/agent-steward",
+                    "canonical_path": "/root/new/work/agent-body",
                     "description": "宿主大管家"
                 }),
                 updated_at: None,
@@ -725,15 +725,15 @@ mod tests {
         let assembler = BriefAssembler::new(storage, None);
         let output = assembler
             .assemble(&BriefRequest {
-                query: "agent-steward".to_string(),
+                query: "agent-body".to_string(),
                 session_id: "sess-idx".to_string(),
                 budget_tokens: 1500,
             })
             .expect("assemble");
 
         assert!(output.markdown.contains("rg (极速代码检索工具)"));
-        assert!(output.markdown.contains(":8765 (agent-steward)"));
-        assert!(output.markdown.contains("/root/new/work/agent-steward"));
+        assert!(output.markdown.contains(":8765 (agent-body)"));
+        assert!(output.markdown.contains("/root/new/work/agent-body"));
     }
 
     #[test]

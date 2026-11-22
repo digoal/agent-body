@@ -78,7 +78,7 @@ impl PreflightReport {
     pub fn format_table(&self) -> String {
         let mut out = String::new();
         out.push_str("╔══════════════════════════════════════════════════════════════════════════════════════════╗\n");
-        out.push_str("║                   Agent Host Steward — 运行环境与依赖预检报告 (Preflight)                ║\n");
+        out.push_str("║                   Agent Body — 运行环境与依赖预检报告 (Preflight)                ║\n");
         out.push_str("╚══════════════════════════════════════════════════════════════════════════════════════════╝\n");
         out.push_str(&format!("系统架构: {} ({})  |  检查时间: {}\n", self.os_info, self.arch, self.timestamp));
         out.push_str("--------------------------------------------------------------------------------------------\n");
@@ -183,7 +183,7 @@ impl PreflightChecker {
             let config_file = data_dir.join("config.toml");
             let db_file = config
                 .map(|c| c.db_path.clone())
-                .unwrap_or_else(|| data_dir.join("steward.db"));
+                .unwrap_or_else(|| data_dir.join("body.db"));
             for path in [&config_file, &db_file] {
                 if path.exists() {
                     if let Ok(meta) = fs::metadata(path) {
@@ -595,7 +595,7 @@ impl PreflightChecker {
                 category: CheckCategory::Optional,
                 status: CheckStatus::Warn,
                 message: "未发现默认 SKILL 目录，Context 按需路由器将保持空闲".to_string(),
-                remedy: Some("可将常用技能放入 /root/new/skills/ 并执行 agent-steward skill scan".to_string()),
+                remedy: Some("可将常用技能放入 /root/new/skills/ 并执行 agent-body skill scan".to_string()),
             });
         } else {
             report.add(CheckItem {
@@ -773,7 +773,7 @@ impl PreflightChecker {
                         redundant.len(),
                         redundant_mb
                     ),
-                    remedy: Some("执行 agent-steward env gc --dry-run 查看清理建议，同步镜像请用 make sync-mirror (--exclude 'target/')".to_string()),
+                    remedy: Some("执行 agent-body env gc --dry-run 查看清理建议，同步镜像请用 make sync-mirror (--exclude 'target/')".to_string()),
                 });
             }
             Some(pct) => {
@@ -866,9 +866,9 @@ mod tests {
     fn test_preflight_security_posture_detects_wide_permissions_and_passes_strict() {
         use std::os::unix::fs::PermissionsExt;
         let dir = tempfile::tempdir().expect("tempdir");
-        let data_dir = dir.path().join(".steward");
+        let data_dir = dir.path().join(".agent-body");
         fs::create_dir_all(&data_dir).expect("mkdir");
-        let db_file = data_dir.join("steward.db");
+        let db_file = data_dir.join("body.db");
         fs::write(&db_file, b"").expect("write db");
 
         // 1. 故意放宽权限到 0755 / 0644 -> 应检测为 Warn

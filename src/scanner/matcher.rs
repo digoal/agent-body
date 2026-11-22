@@ -37,7 +37,7 @@ impl PolicyMatcher {
             "**/__pycache__/**", "**/__pycache__",
             "**/.codegraph/**", "**/.codegraph",
             "**/.venv/**", "**/.venv",
-            "**/.steward/**", "**/.steward",
+            "**/.agent-body/**", "**/.steward",
             "**/.state/**", "**/.state",
             "/proc/**", "/proc",
         ] {

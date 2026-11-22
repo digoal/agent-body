@@ -70,7 +70,7 @@ impl ImportanceScorer for RuleBasedImportanceScorer {
         let hard_noise_dir = path_str.contains("/.git/")
             || path_str.contains("/node_modules/")
             || path_str.contains("/__pycache__/")
-            || path_str.contains("/.steward/")
+            || path_str.contains("/.agent-body/")
             || path_str.contains("/.state/")
             || path_str.contains("/target/debug/")
             || path_str.contains("/target/release/")
@@ -229,7 +229,7 @@ mod tests {
         let filter = NoiseFilter::default();
 
         // 1. 核心目录下的 Rust 源码
-        let path1 = Path::new("/root/new/work/agent-steward/src/main.rs");
+        let path1 = Path::new("/root/new/work/agent-body/src/main.rs");
         let (record1, s1) = filter.should_record(path1, "script", Some(1024), None);
         assert!(record1, "核心 Rust 源码必须被记录");
         assert!(s1.score >= 0.7, "核心源码得分应高: {}", s1.score);

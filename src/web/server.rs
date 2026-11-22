@@ -115,7 +115,7 @@ impl WebServer {
         let listener = TcpListener::bind(&addr).await?;
 
         println!("╭────────────────────────────────────────────────────────────╮");
-        println!("│  🌐 Agent Host Steward Web Dashboard                       │");
+        println!("│  🌐 Agent Body Web Dashboard                       │");
         println!("│  URL: http://{:<45} │", addr);
         println!("╰────────────────────────────────────────────────────────────╯");
 

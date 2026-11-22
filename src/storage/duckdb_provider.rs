@@ -2324,9 +2324,9 @@ pub mod tests {
     fn test_duckdb_provider_property_graph() {
         let provider = DuckDbStorageProvider::open_in_memory().expect("open duckdb in memory");
         let node1 = FactNodeRecord {
-            id: "node:agent-steward".to_string(),
+            id: "node:agent-body".to_string(),
             node_type: "project".to_string(),
-            name: "agent-steward".to_string(),
+            name: "agent-body".to_string(),
             label: "宿主环境大管家".to_string(),
             properties: serde_json::json!({"lang": "rust"}),
             updated_at: Some("2026-11-18T12:00:00Z".to_string()),
@@ -2369,7 +2369,7 @@ pub mod tests {
             actor_id: "agent".to_string(),
             source_channel: "mcp".to_string(),
             category: "tool_call".to_string(),
-            action: "steward_port_check".to_string(),
+            action: "body_port_check".to_string(),
             target_type: "port".to_string(),
             target_id: "5432".to_string(),
             concurrency_mode: Some("OPTIMISTIC".to_string()),

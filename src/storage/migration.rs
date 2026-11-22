@@ -217,7 +217,7 @@ mod tests {
 
     #[test]
     fn test_storage_migration_sqlite_to_real_postgres() {
-        const PG_TEST_URL: &str = "postgresql://postgres@127.0.0.1:5432/agent_steward_test";
+        const PG_TEST_URL: &str = "postgresql://postgres@127.0.0.1:5432/agent_body_test";
         let pg_provider = match PgStorageProvider::connect(PG_TEST_URL) {
             Ok(p) => p,
             Err(_) => {

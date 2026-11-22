@@ -6,7 +6,7 @@
 
 ## 一、为什么需要三轨实证体系？
 
-AI 基础设施最容易陷入“自说自话”的宣传陷阱：写死几个漂亮的百分比，却拿不出同机对照数据和日常流水凭证。**Agent Host Steward（Agent 本体）** 通过 **三轨实证闭环** 确保每一项收益都 100% 有据可查：
+AI 基础设施最容易陷入“自说自话”的宣传陷阱：写死几个漂亮的百分比，却拿不出同机对照数据和日常流水凭证。**Agent Body（Agent 本体）** 通过 **三轨实证闭环** 确保每一项收益都 100% 有据可查：
 
 1. **轨道 A — 实验室可复现 A/B 对照基准 (`BenchmarkEngine`)**：
    - 在同一宿主机上真实运行 **Without Steward（裸奔等价命令/遍历/绑定碰撞）** 与 **With Steward（Agent 本体引擎）**；
@@ -20,41 +20,41 @@ AI 基础设施最容易陷入“自说自话”的宣传陷阱：写死几个�
 
 ---
 
-## 二、CLI 快速实操（`agent-steward bench`）
+## 二、CLI 快速实操（`agent-body bench`）
 
 ```bash
 # 1. 查看 17 大标准负载与 PR-01~13 推导规则字典
-agent-steward bench workloads
+agent-body bench workloads
 
 # 2. 在当前宿主机真机跑批（W1~W17 + M1~M5 + DQ1~DQ8 + COMP-C1~C4）并落库存证
-agent-steward bench run --suite full --save true
+agent-body bench run --suite full --save true
 
 # 3. 单独运行竞品横向对标
-agent-steward bench competitors --track all
+agent-body bench competitors --track all
 
 # 4. 查看最近一次实证报告（Markdown 表格 + SHA-256 存证指纹）
-agent-steward bench report
+agent-body bench report
 
 # 5. 审计过去 7 天的生产效能存证账本（按 PR 规则聚合 + 逐笔明细）
-agent-steward bench ledger --window 7d --limit 20
+agent-body bench ledger --window 7d --limit 20
 
 # 6. 跨版本 / 跨批次性能与 Token 节省回归对比
-agent-steward bench compare <run_a_id> <run_b_id>
+agent-body bench compare <run_a_id> <run_b_id>
 
 # 7. 导出可发表 Markdown / JSON / CSV 报告
-agent-steward bench export --format markdown --out /root/new/tmp/steward-bench.md
+agent-body bench export --format markdown --out /root/new/tmp/steward-bench.md
 
 # 8. 清理 bench:* 隔离测试沙盒记录
-agent-steward bench reset
+agent-body bench reset
 ```
 
 ---
 
-## 三、第 40 个原生 MCP 工具：`steward_benchmark`
+## 三、第 40 个原生 MCP 工具：`body_benchmark`
 
 ```json
 {
-  "name": "steward_benchmark",
+  "name": "body_benchmark",
   "arguments": {
     "action": "run",
     "suite": "full",

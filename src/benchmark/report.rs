@@ -189,7 +189,7 @@ impl BenchmarkReportPayload {
 
 pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String> {
     let mut md = String::new();
-    writeln!(md, "# Agent Host Steward 实证基准评测报告 ({})\n", report.run_id)?;
+    writeln!(md, "# Agent Body 实证基准评测报告 ({})\n", report.run_id)?;
     writeln!(md, "- **版本 / Commit**: `v{}` (`{}`) · **Benchmark 规格**: `v{}`", report.app_version, report.git_commit, report.spec_version)?;
     writeln!(md, "- **评测套件**: `{}` · **运行时间**: `{}` · **总耗时**: `{} ms`", report.suite_name, report.created_at, report.duration_ms)?;
     writeln!(md, "- **报告 SHA-256 存证指纹**: `{}`", report.report_sha256)?;

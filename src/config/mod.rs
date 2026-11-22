@@ -142,7 +142,7 @@ pub struct MeshConfig {
     #[serde(default = "default_mesh_max_transfer_bytes")]
     pub max_transfer_bytes: usize,
 
-    /// 跨机接收文件隔离沙盒收件箱路径（默认 ~/.steward/mesh_inbox）
+    /// 跨机接收文件隔离沙盒收件箱路径（默认 ~/.agent-body/mesh_inbox）
     #[serde(default)]
     pub inbox_dir: Option<String>,
 }
@@ -312,11 +312,11 @@ impl Default for PlacementConfig {
 
 fn default_data_dir() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
-    PathBuf::from(home).join(".steward")
+    PathBuf::from(home).join(".agent-body")
 }
 
 fn default_db_path() -> PathBuf {
-    default_data_dir().join("steward.db")
+    default_data_dir().join("body.db")
 }
 
 fn default_api_port() -> u16 {
@@ -356,7 +356,7 @@ fn default_ignore_patterns() -> Vec<String> {
         ".git".to_string(),
         "node_modules".to_string(),
         "__pycache__".to_string(),
-        ".steward".to_string(),
+        ".agent-body".to_string(),
         "target".to_string(),
         ".venv".to_string(),
     ]
@@ -456,7 +456,7 @@ impl Config {
     }
 }
 
-/// 在 Unix 平台将私密目录收敛为 0700、私密文件（config.toml / steward.db）收敛为 0600
+/// 在 Unix 平台将私密目录收敛为 0700、私密文件（config.toml / body.db）收敛为 0600
 pub fn restrict_private_permissions(path: &Path, is_dir: bool) {
     #[cfg(unix)]
     {

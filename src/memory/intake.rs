@@ -129,7 +129,7 @@ mod tests {
         // 3. 包含路径与命令的高密度运维经验
         let r4 = filter.evaluate(
             "experience",
-            "排查 /etc/systemd/system/agent-steward.service 失败：需要先执行 systemctl daemon-reload",
+            "排查 /etc/systemd/system/agent-body.service 失败：需要先执行 systemctl daemon-reload",
         );
         assert!(r4.accepted);
         assert!(r4.calculated_weight >= 0.85);

@@ -81,7 +81,7 @@ impl McpServer {
                         }
                     },
                     "serverInfo": {
-                        "name": "agent-steward",
+                        "name": "agent-body",
                         "version": env!("CARGO_PKG_VERSION")
                     }
                 });
@@ -210,7 +210,7 @@ mod tests {
         let v: Value = serde_json::from_str(&resp).expect("parse response");
 
         assert_eq!(v["id"], 1);
-        assert_eq!(v["result"]["serverInfo"]["name"], "agent-steward");
+        assert_eq!(v["result"]["serverInfo"]["name"], "agent-body");
     }
 
     #[test]
@@ -225,34 +225,34 @@ mod tests {
         assert_eq!(v["id"], "req-2");
         let tools = v["result"]["tools"].as_array().expect("tools array");
         assert_eq!(tools.len(), 43, "必须注册全部 43 个原生 MCP 工具");
-        assert!(tools.iter().any(|t| t["name"] == "steward_body_state"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_audit_query"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_feedback"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_benchmark"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_demo_scenario"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_mesh_query"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_lock_wait"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_lock_deadlock_check"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_mcp_catalog"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_skill_route"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_service_contact"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_brief"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_placement_suggest"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_asset_search"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_links_repair"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_placement_learn"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_env_gc"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_memory_audit"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_fact_query"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_hook_pre"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_hook_post"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_analytics_heatmap"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_analytics_trend"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_analytics_export"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_lock_acquire"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_lock_release"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_lock_list"));
-        assert!(tools.iter().any(|t| t["name"] == "steward_hook_generate"));
+        assert!(tools.iter().any(|t| t["name"] == "body_state"));
+        assert!(tools.iter().any(|t| t["name"] == "body_audit_query"));
+        assert!(tools.iter().any(|t| t["name"] == "body_feedback"));
+        assert!(tools.iter().any(|t| t["name"] == "body_benchmark"));
+        assert!(tools.iter().any(|t| t["name"] == "body_demo_scenario"));
+        assert!(tools.iter().any(|t| t["name"] == "body_mesh_query"));
+        assert!(tools.iter().any(|t| t["name"] == "body_lock_wait"));
+        assert!(tools.iter().any(|t| t["name"] == "body_lock_deadlock_check"));
+        assert!(tools.iter().any(|t| t["name"] == "body_mcp_catalog"));
+        assert!(tools.iter().any(|t| t["name"] == "body_skill_route"));
+        assert!(tools.iter().any(|t| t["name"] == "body_service_contact"));
+        assert!(tools.iter().any(|t| t["name"] == "body_brief"));
+        assert!(tools.iter().any(|t| t["name"] == "body_placement_suggest"));
+        assert!(tools.iter().any(|t| t["name"] == "body_asset_search"));
+        assert!(tools.iter().any(|t| t["name"] == "body_links_repair"));
+        assert!(tools.iter().any(|t| t["name"] == "body_placement_learn"));
+        assert!(tools.iter().any(|t| t["name"] == "body_env_gc"));
+        assert!(tools.iter().any(|t| t["name"] == "body_memory_audit"));
+        assert!(tools.iter().any(|t| t["name"] == "body_fact_query"));
+        assert!(tools.iter().any(|t| t["name"] == "body_hook_pre"));
+        assert!(tools.iter().any(|t| t["name"] == "body_hook_post"));
+        assert!(tools.iter().any(|t| t["name"] == "body_analytics_heatmap"));
+        assert!(tools.iter().any(|t| t["name"] == "body_analytics_trend"));
+        assert!(tools.iter().any(|t| t["name"] == "body_analytics_export"));
+        assert!(tools.iter().any(|t| t["name"] == "body_lock_acquire"));
+        assert!(tools.iter().any(|t| t["name"] == "body_lock_release"));
+        assert!(tools.iter().any(|t| t["name"] == "body_lock_list"));
+        assert!(tools.iter().any(|t| t["name"] == "body_hook_generate"));
     }
 
     #[test]
@@ -265,7 +265,7 @@ mod tests {
             "id": 105,
             "method": "tools/call",
             "params": {
-                "name": "steward_fact_query",
+                "name": "body_fact_query",
                 "arguments": {
                     "query": "这台机器上有没有能处理 PDF 的东西？",
                     "fact_type": "capability"
@@ -289,7 +289,7 @@ mod tests {
             "id": 100,
             "method": "tools/call",
             "params": {
-                "name": "steward_placement_suggest",
+                "name": "body_placement_suggest",
                 "arguments": {
                     "object_type": "script",
                     "name": "sec_crawler",
@@ -318,7 +318,7 @@ mod tests {
             "id": 101,
             "method": "tools/call",
             "params": {
-                "name": "steward_links_audit",
+                "name": "body_links_audit",
                 "arguments": {
                     "fix_dangling": false
                 }
@@ -343,7 +343,7 @@ mod tests {
             "id": 102,
             "method": "tools/call",
             "params": {
-                "name": "steward_codegraph_bridge",
+                "name": "body_codegraph_bridge",
                 "arguments": {
                     "path": "/root/new/src/hk2"
                 }
@@ -373,13 +373,13 @@ mod tests {
         let storage = Storage::open_in_memory().expect("open_in_memory");
         let server = McpServer::new(storage);
 
-        // 测试调用 steward_memory_audit
+        // 测试调用 body_memory_audit
         let req = r#"{
             "jsonrpc": "2.0",
             "id": 103,
             "method": "tools/call",
             "params": {
-                "name": "steward_memory_audit",
+                "name": "body_memory_audit",
                 "arguments": {}
             }
         }"#;
@@ -391,13 +391,13 @@ mod tests {
         let text = v["result"]["content"][0]["text"].as_str().expect("content text");
         assert!(text.contains("conflict_count"));
 
-        // 测试调用 steward_links_repair
+        // 测试调用 body_links_repair
         let req_repair = r#"{
             "jsonrpc": "2.0",
             "id": 104,
             "method": "tools/call",
             "params": {
-                "name": "steward_links_repair",
+                "name": "body_links_repair",
                 "arguments": { "apply": false }
             }
         }"#;
@@ -417,7 +417,7 @@ mod tests {
             "id": 105,
             "method": "tools/call",
             "params": {
-                "name": "steward_brief",
+                "name": "body_brief",
                 "arguments": {
                     "query": "rust 守护进程",
                     "session_id": "sess-mcp-test",
@@ -442,13 +442,13 @@ mod tests {
         let storage = Storage::open_in_memory().expect("open_in_memory");
         let server = McpServer::new(storage);
 
-        // 1. 调用 steward_hook_pre
+        // 1. 调用 body_hook_pre
         let req_pre = r#"{
             "jsonrpc": "2.0",
             "id": 106,
             "method": "tools/call",
             "params": {
-                "name": "steward_hook_pre",
+                "name": "body_hook_pre",
                 "arguments": {
                     "tool_name": "write_file",
                     "args": {
@@ -465,13 +465,13 @@ mod tests {
         let text_pre = v_pre["result"]["content"][0]["text"].as_str().expect("text");
         assert!(text_pre.contains("allowed"));
 
-        // 2. 调用 steward_hook_post
+        // 2. 调用 body_hook_post
         let req_post = r#"{
             "jsonrpc": "2.0",
             "id": 107,
             "method": "tools/call",
             "params": {
-                "name": "steward_hook_post",
+                "name": "body_hook_post",
                 "arguments": {
                     "tool_name": "write_file",
                     "args": {
@@ -487,13 +487,13 @@ mod tests {
         assert_eq!(v_post["id"], 107);
         assert_eq!(v_post["result"]["isError"], false);
 
-        // 3. 调用 steward_hook_generate
+        // 3. 调用 body_hook_generate
         let req_gen = r#"{
             "jsonrpc": "2.0",
             "id": 108,
             "method": "tools/call",
             "params": {
-                "name": "steward_hook_generate",
+                "name": "body_hook_generate",
                 "arguments": {
                     "client": "agy",
                     "dry_run": true
@@ -507,7 +507,7 @@ mod tests {
         assert_eq!(v_gen["result"]["isError"], false);
         let text_gen = v_gen["result"]["content"][0]["text"].as_str().expect("text");
         assert!(text_gen.contains(".gemini/config/hooks.json"));
-        assert!(text_gen.contains("steward_bridge.py"));
+        assert!(text_gen.contains("body_bridge.py"));
     }
 
     #[test]
@@ -521,7 +521,7 @@ mod tests {
             "id": 201,
             "method": "tools/call",
             "params": {
-                "name": "steward_lock_acquire",
+                "name": "body_lock_acquire",
                 "arguments": {
                     "resource_type": "port",
                     "resource_id": "8080",
@@ -546,7 +546,7 @@ mod tests {
             "id": 202,
             "method": "tools/call",
             "params": {
-                "name": "steward_lock_list",
+                "name": "body_lock_list",
                 "arguments": {
                     "resource_type": "port"
                 }
@@ -565,7 +565,7 @@ mod tests {
             "id": 203,
             "method": "tools/call",
             "params": {{
-                "name": "steward_lock_release",
+                "name": "body_lock_release",
                 "arguments": {{
                     "lock_id": "{}",
                     "holder_agent": "test-agent-mcp"

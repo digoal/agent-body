@@ -166,7 +166,7 @@ mod tests {
 
         let id = mm.add(
             "decision",
-            "选型决定使用 Rust 编写 Agent Host Steward 核心守护进程",
+            "选型决定使用 Rust 编写 Agent Body 核心守护进程",
             Some("选用 Rust 做核心"),
             Some("agent:main"),
             vec!["rust".to_string(), "decision".to_string()],

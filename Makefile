@@ -1,10 +1,10 @@
 # ==============================================================================
-# Agent Host Steward — 构建、测试与部署 Makefile
+# Agent Body — 构建、测试与部署 Makefile
 # ==============================================================================
 
 SHELL := /bin/bash
-TARGET := target/release/agent-steward
-INSTALL_PATH ?= /usr/local/bin/agent-steward
+TARGET := target/release/agent-body
+INSTALL_PATH ?= /usr/local/bin/agent-body
 
 .PHONY: all build check test preflight install restart clean docker-build lint-panic sync-mirror codegraph evolution-check
 
@@ -33,12 +33,12 @@ preflight:
 # 安装到全局 PATH
 install: build
 	install -m 755 $(TARGET) $(INSTALL_PATH)
-	@echo "✅ agent-steward 已成功安装至 $(INSTALL_PATH)"
+	@echo "✅ agent-body 已成功安装至 $(INSTALL_PATH)"
 
 # 重启本地 systemd 守护服务
 restart: install
-	systemctl restart agent-steward.service
-	@echo "✅ agent-steward.service 守护服务已平滑重启"
+	systemctl restart agent-body.service
+	@echo "✅ agent-body.service 守护服务已平滑重启"
 
 # 清理构建缓存产物
 clean:
@@ -46,12 +46,12 @@ clean:
 
 # 安全镜像同步至开源仓库（强制排除 target/ 避免占满根分区）
 sync-mirror:
-	rsync -a --delete --exclude 'target/' /root/new/work/agent-steward/ /root/new/shared_git/agent-steward/
-	@echo "✅ 已安全镜像同步至 /root/new/shared_git/agent-steward/"
+	rsync -a --delete --exclude 'target/' $(CURDIR)/ /root/new/shared_git/agent-body/
+	@echo "✅ 已安全镜像同步至 /root/new/shared_git/agent-body/"
 
 # 构建生产 Docker 容器镜像
 docker-build:
-	docker build -t agent-steward:latest .
+	docker build -t agent-body:latest .
 
 # 初始化/刷新本项目 CodeGraph 符号地图（供 Agent 零重扫定位代码）
 codegraph:

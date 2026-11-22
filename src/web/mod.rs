@@ -207,11 +207,11 @@ mod tests {
 
         // 插入真实事实节点与边
         storage.upsert_fact_node(&FactNodeRecord {
-            id: "service:agent-steward".to_string(),
+            id: "service:agent-body".to_string(),
             node_type: "service".to_string(),
-            name: "agent-steward".to_string(),
+            name: "agent-body".to_string(),
             label: "Agent Steward Service".to_string(),
-            properties: serde_json::json!({"unit": "agent-steward.service"}),
+            properties: serde_json::json!({"unit": "agent-body.service"}),
             updated_at: None,
         }).expect("upsert service");
 
@@ -225,7 +225,7 @@ mod tests {
         }).expect("upsert port");
 
         storage.upsert_fact_edge(&FactEdgeRecord::new_explicit(
-            "service:agent-steward",
+            "service:agent-body",
             "port:8756",
             "listens_on",
             serde_json::json!({}),
@@ -236,10 +236,10 @@ mod tests {
         storage.replace_active_processes(&[ActiveProcessRecord {
             id: "proc-999".to_string(),
             pid: 999,
-            name: "agent-steward".to_string(),
-            command: "/usr/local/bin/agent-steward daemon".to_string(),
+            name: "agent-body".to_string(),
+            command: "/usr/local/bin/agent-body daemon".to_string(),
             owner: "user:digoal".to_string(),
-            associated_path: Some("/root/new/work/agent-steward/src/main.rs".to_string()),
+            associated_path: Some("/root/new/work/agent-body/src/main.rs".to_string()),
             listening_ports: vec![8756],
             status: "running".to_string(),
             cpu_pct: 0.5,
@@ -255,7 +255,7 @@ mod tests {
         assert!(graph.summary.process_count >= 1);
 
         // 验证多跳爆炸半径子图查询
-        let impact = topology::build_impact_topology("service:agent-steward", &storage);
+        let impact = topology::build_impact_topology("service:agent-body", &storage);
         assert!(impact.summary.total_nodes >= 2);
         assert!(impact.summary.total_edges >= 1);
     }

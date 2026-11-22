@@ -64,12 +64,12 @@ pub struct GeneratedHookConfig {
 }
 
 const AGY_HOOKS_JSON_TEMPLATE: &str = r#"{
-  "agent-steward": {
+  "agent-body": {
     "enabled": true,
     "SessionStart": [
       {
         "type": "command",
-        "command": "python3 ./hooks/steward_bridge.py session_start",
+        "command": "python3 ./hooks/body_bridge.py session_start",
         "timeout": 5
       }
     ],
@@ -79,7 +79,7 @@ const AGY_HOOKS_JSON_TEMPLATE: &str = r#"{
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./hooks/steward_bridge.py pre_tool",
+            "command": "python3 ./hooks/body_bridge.py pre_tool",
             "timeout": 5
           }
         ]
@@ -91,7 +91,7 @@ const AGY_HOOKS_JSON_TEMPLATE: &str = r#"{
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./hooks/steward_bridge.py post_tool",
+            "command": "python3 ./hooks/body_bridge.py post_tool",
             "timeout": 5
           }
         ]
@@ -103,13 +103,13 @@ const AGY_HOOKS_JSON_TEMPLATE: &str = r#"{
 
 const AGY_BRIDGE_SCRIPT_TEMPLATE: &str = r##"#!/usr/bin/env python3
 """
-Antigravity (agy) <-> Agent Host Steward (CLI) 生命周期硬 Hook 桥接脚本
-由 `agent-steward hooks generate --client agy` 自动生成。
+Antigravity (agy) <-> Agent Body (CLI) 生命周期硬 Hook 桥接脚本
+由 `agent-body hooks generate --client agy` 自动生成。
 
 用法（由 ~/.gemini/config/hooks.json 调用）:
-  steward_bridge.py session_start
-  steward_bridge.py pre_tool
-  steward_bridge.py post_tool
+  body_bridge.py session_start
+  body_bridge.py pre_tool
+  body_bridge.py post_tool
 """
 
 import json
@@ -120,7 +120,7 @@ import subprocess
 import sys
 from typing import Any, Dict, Optional
 
-STEWARD_BIN = shutil.which("agent-steward") or "/usr/local/bin/agent-steward"
+STEWARD_BIN = shutil.which("agent-body") or "/usr/local/bin/agent-body"
 
 # 仅匹配明确“启动监听服务/端口绑定”的命令，避免误拦 psql -p 5432 / curl :8080 等客户端命令
 LISTEN_PORT_PATTERNS = [
@@ -137,7 +137,7 @@ NOISE_PATH_PREFIXES = (
     "/tmp/",
     "/var/tmp/",
     "/root/.gemini/",
-    "/root/.steward/",
+    "/root/.agent-body/",
 )
 
 
@@ -160,7 +160,7 @@ def is_noise_path(path: str) -> bool:
     if not path:
         return True
     home_gemini = os.path.expanduser("~/.gemini/")
-    home_steward = os.path.expanduser("~/.steward/")
+    home_steward = os.path.expanduser("~/.agent-body/")
     prefixes = NOISE_PATH_PREFIXES + (home_gemini, home_steward)
     return any(path.startswith(prefix) for prefix in prefixes)
 
@@ -199,7 +199,7 @@ def handle_session_start() -> None:
                     "injectSteps": [
                         {
                             "systemMessage": {
-                                "systemMessage": f"[Agent Host Steward 自动开工简报]\n{out}"
+                                "systemMessage": f"[Agent Body 自动开工简报]\n{out}"
                             }
                         }
                     ]
@@ -274,13 +274,13 @@ def handle_pre_tool() -> None:
 
         if not allowed:
             reason_parts = warnings + suggestions
-            reason = "[agent-steward 阻断] " + " ; ".join(reason_parts) if reason_parts else "[agent-steward 阻断] 命中安全/协作锁策略"
+            reason = "[agent-body 阻断] " + " ; ".join(reason_parts) if reason_parts else "[agent-body 阻断] 命中安全/协作锁策略"
             emit({"decision": "deny", "reason": reason})
             return
 
         if has_warnings:
             reason_parts = warnings + suggestions
-            reason = "[agent-steward 风险预警] " + " ; ".join(reason_parts)
+            reason = "[agent-body 风险预警] " + " ; ".join(reason_parts)
             emit({"decision": "ask", "reason": reason})
             return
     except Exception:
@@ -380,7 +380,7 @@ def handle_post_tool() -> None:
                 if isinstance(rx, dict):
                     actions = rx.get("recovery_actions") or []
                     hint = (
-                        f"[agent-steward AOPCC 自愈处方 | {rx.get('failure_kind', '')}] "
+                        f"[agent-body AOPCC 自愈处方 | {rx.get('failure_kind', '')}] "
                         f"{rx.get('root_cause', '')}"
                     )
                     if actions:
@@ -460,7 +460,7 @@ impl ClientHookGenerator {
     pub fn companion_templates(client: ClientType) -> Vec<(&'static str, &'static str, bool)> {
         match client {
             ClientType::Agy => vec![(
-                ".gemini/config/hooks/steward_bridge.py",
+                ".gemini/config/hooks/body_bridge.py",
                 AGY_BRIDGE_SCRIPT_TEMPLATE,
                 true,
             )],
@@ -473,11 +473,11 @@ impl ClientHookGenerator {
         match client {
             ClientType::Agy => (AGY_HOOKS_JSON_TEMPLATE, false),
             ClientType::Cursor => (
-                r#"# Cursor Rules for Agent Host Steward
+                r#"# Cursor Rules for Agent Body
 
 # 1. Host Awareness & Safety
-- Before starting services or tests, verify ports using agent-steward:
-  Command: `agent-steward fact query "<port>"` or check MCP `steward_port_check`.
+- Before starting services or tests, verify ports using agent-body:
+  Command: `agent-body fact query "<port>"` or check MCP `body_port_check`.
 - Always respect the directory hierarchy:
   - Code/Projects: `/root/new/work/` or `/root/new/src/`
   - Shared Tools: `/root/new/shared_proj/`
@@ -485,32 +485,32 @@ impl ClientHookGenerator {
 
 # 2. Automated Hook Integration
 - When writing significant architecture/design files, ensure you invoke steward's hook:
-  MCP tool: `steward_hook_post` with the target file path.
+  MCP tool: `body_hook_post` with the target file path.
 - Avoid committing or tracking noisy directories: `node_modules`, `target`, `.git`, `.venv`.
 "#,
                 false,
             ),
             ClientType::Claude => (
-                r#"# CLAUDE.md - Agent Host Steward Integration Guidelines
+                r#"# CLAUDE.md - Agent Body Integration Guidelines
 
 ## System Rules & Constraints
-- **Host Steward Integration**: This host runs `agent-steward` to manage environment facts, locks, and assets.
-- **Port & Concurrency Safety**: Before binding any network port or launching background services, check for conflicts using `steward_port_check` or run `agent-steward env ports`.
+- **Host Steward Integration**: This host runs `agent-body` to manage environment facts, locks, and assets.
+- **Port & Concurrency Safety**: Before binding any network port or launching background services, check for conflicts using `body_port_check` or run `agent-body env ports`.
 - **Pre-Hook & Post-Hook Discipline**:
-  - Run `steward_hook_pre` before major workspace modifications to verify locks.
-  - Run `steward_hook_post` after creating key artifacts to automatically index assets and register long-term memory.
+  - Run `body_hook_pre` before major workspace modifications to verify locks.
+  - Run `body_hook_post` after creating key artifacts to automatically index assets and register long-term memory.
 - **Temporary Files**: Put throwaway files in `/root/new/tmp/`. Never pollute root project directories with ad-hoc logs.
 "#,
                 false,
             ),
             ClientType::Git => (
                 r#"#!/usr/bin/env bash
-# Git post-commit hook generated by agent-steward
+# Git post-commit hook generated by agent-body
 # Automatically indexes newly committed assets and emits on_file_modified events.
 
 set -e
 
-STEWARD_BIN=$(which agent-steward 2>/dev/null || echo "/root/.cargo/bin/agent-steward")
+STEWARD_BIN=$(which agent-body 2>/dev/null || echo "/root/.cargo/bin/agent-body")
 
 if [ -x "$STEWARD_BIN" ]; then
     # Trigger lightweight scan on current repo root without blocking commit flow
@@ -619,17 +619,17 @@ mod tests {
         assert_eq!(res.relative_path, ".gemini/config/hooks.json");
         let parsed: serde_json::Value =
             serde_json::from_str(&res.content).expect("AGY hooks.json 必须是合法 JSON");
-        assert!(parsed["agent-steward"]["PreToolUse"].is_array());
-        assert!(parsed["agent-steward"]["PostToolUse"].is_array());
+        assert!(parsed["agent-body"]["PreToolUse"].is_array());
+        assert!(parsed["agent-body"]["PostToolUse"].is_array());
         assert_eq!(
-            parsed["agent-steward"]["PostToolUse"][0]["matcher"],
+            parsed["agent-body"]["PostToolUse"][0]["matcher"],
             "write_file|edit_file|run_command"
         );
-        assert!(parsed["agent-steward"]["SessionStart"].is_array());
+        assert!(parsed["agent-body"]["SessionStart"].is_array());
         assert_eq!(res.companion_files.len(), 1);
         assert_eq!(
             res.companion_files[0].relative_path,
-            ".gemini/config/hooks/steward_bridge.py"
+            ".gemini/config/hooks/body_bridge.py"
         );
         assert!(res.companion_files[0].content.contains("extract_failure_text"));
         assert!(res.companion_files[0].content.contains("--error-output"));
@@ -648,19 +648,19 @@ mod tests {
         assert!(res.companion_files[0].written_path.is_some());
 
         let hooks_file = dir.path().join(".gemini/config/hooks.json");
-        let bridge_file = dir.path().join(".gemini/config/hooks/steward_bridge.py");
+        let bridge_file = dir.path().join(".gemini/config/hooks/body_bridge.py");
         assert!(hooks_file.exists());
         assert!(bridge_file.exists());
 
         let parsed: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(&hooks_file).unwrap()).unwrap();
-        assert_eq!(parsed["agent-steward"]["enabled"], true);
+        assert_eq!(parsed["agent-body"]["enabled"], true);
 
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             let mode = fs::metadata(&bridge_file).unwrap().permissions().mode();
-            assert_eq!(mode & 0o111, 0o111, "steward_bridge.py 必须具有可执行权限");
+            assert_eq!(mode & 0o111, 0o111, "body_bridge.py 必须具有可执行权限");
         }
     }
 

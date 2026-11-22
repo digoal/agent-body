@@ -197,7 +197,7 @@ mod tests {
             content: "经测试验证，PostgreSQL 采用 shared_buffers=8GB 配合 huge_pages 获得最高 TPS".to_string(),
             summary: Some("PG 内存优化决策".to_string()),
             tags: vec!["postgresql".to_string(), "tuning".to_string()],
-            source_agent: Some("agent-steward".to_string()),
+            source_agent: Some("agent-body".to_string()),
             source_session: Some("sess-20261117".to_string()),
             created_at: "2026-11-17 18:00:00".to_string(),
             score: None,

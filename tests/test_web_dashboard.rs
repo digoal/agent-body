@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use std::time::Duration;
-use agent_steward::storage::sqlite_provider::SqliteStorageProvider;
-use agent_steward::storage::{StorageProvider, CoordinationLock};
-use agent_steward::web::{WebServer, WebConfig};
+use agent_body::storage::sqlite_provider::SqliteStorageProvider;
+use agent_body::storage::{StorageProvider, CoordinationLock};
+use agent_body::web::{WebServer, WebConfig};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
@@ -72,7 +72,7 @@ async fn test_web_dashboard_e2e_lifecycle() {
     let resp_index = send_http_request("127.0.0.1", bound_port, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
     assert!(resp_index.contains("HTTP/1.1 200 OK"));
     assert!(resp_index.contains("Content-Type: text/html"));
-    assert!(resp_index.contains("Agent Host Steward"));
+    assert!(resp_index.contains("Agent Body"));
     assert!(resp_index.contains("view-ecosystem"));
     assert!(resp_index.contains("view-governance"));
     assert!(resp_index.contains("data-theme"));

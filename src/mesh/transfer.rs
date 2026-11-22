@@ -4,7 +4,7 @@
 //! - 体积上限严格 `<= mesh_cfg.max_transfer_bytes`（默认 10MB），超限返回 `413 Payload Too Large`；
 //! - 校验文件名合法性（禁止路径穿越 `..`/`/`/`\`），阻断 `.env*`/`*.pem`/`*.key`/`id_rsa*` 敏感文件 (`403 Forbidden`)；
 //! - 校验解码后字节与 `sha256` 摘要一致；
-//! - 所有接收文件一律隔离落盘至 `~/.steward/mesh_inbox/<from_node>/<transfer_id>_<safe_name>` (`0600`)，绝不跨机直写宿主机路径。
+//! - 所有接收文件一律隔离落盘至 `~/.agent-body/mesh_inbox/<from_node>/<transfer_id>_<safe_name>` (`0600`)，绝不跨机直写宿主机路径。
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -26,7 +26,7 @@ pub struct TransferPayload {
     pub content_base64: String,
 }
 
-/// 解析合法收件箱根目录（默认 `~/.steward/mesh_inbox`）
+/// 解析合法收件箱根目录（默认 `~/.agent-body/mesh_inbox`）
 pub fn resolve_inbox_dir(mesh_cfg: &MeshConfig) -> PathBuf {
     if let Some(ref custom) = mesh_cfg.inbox_dir {
         if !custom.trim().is_empty() {
@@ -34,7 +34,7 @@ pub fn resolve_inbox_dir(mesh_cfg: &MeshConfig) -> PathBuf {
         }
     }
     let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
-    PathBuf::from(home).join(".steward").join("mesh_inbox")
+    PathBuf::from(home).join(".agent-body").join("mesh_inbox")
 }
 
 /// 校验并净化投递文件名，阻断路径穿越与敏感文件类型

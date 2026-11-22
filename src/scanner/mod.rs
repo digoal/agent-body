@@ -206,7 +206,7 @@ impl Scanner {
                 crate::benchmark::ledger::LedgerEventInput {
                     session_id: "scanner".into(),
                     source_channel: "scanner".into(),
-                    tool_or_action: "steward_asset_scan".into(),
+                    tool_or_action: "body_asset_scan".into(),
                     rule: crate::benchmark::provenance::ProvenanceRule::Pr06GranularityNoiseGate,
                     baseline_tokens: (blocked_total as i64) * 25,
                     steward_tokens: 0,

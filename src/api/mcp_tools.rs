@@ -25,7 +25,7 @@ impl McpToolRegistry {
     pub fn list_tools(&self) -> Vec<Value> {
         vec![
             serde_json::json!({
-                "name": "steward_brief",
+                "name": "body_brief",
                 "description": "一键获取 Agent 本体自适应开工简报（宿主机事实感官、规约脊柱、历史记忆海马体与跨大脑接力胶囊一体组装）。瞬态大脑（LLM）在新会话开始或切换任务时必调。",
                 "inputSchema": {
                     "type": "object",
@@ -47,7 +47,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_placement_suggest",
+                "name": "body_placement_suggest",
                 "description": "新对象放置建议。在准备新建项目、脚本、笔记、临时文件前必须调用，获取规范存放路径、命名约定与安全脱敏指引，严禁随手乱放。",
                 "inputSchema": {
                     "type": "object",
@@ -76,7 +76,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_placement_rules",
+                "name": "body_placement_rules",
                 "description": "查看当前生效的宿主机目录放置规范规则库（shared_proj, work, skills, src, note, tmp 等）。",
                 "inputSchema": {
                     "type": "object",
@@ -84,7 +84,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_asset_search",
+                "name": "body_asset_search",
                 "description": "全文检索与语义搜索宿主机已纳管的代码、工具、项目、文档及配置资产（支持 micro/standard/full 三级渐进式 Token 披露）。",
                 "inputSchema": {
                     "type": "object",
@@ -109,7 +109,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_asset_register",
+                "name": "body_asset_register",
                 "description": "手动向 Agent 本体登记一个文件或目录资产，附带结构化意图描述（desc_kv）、所有者与保密级别。",
                 "inputSchema": {
                     "type": "object",
@@ -133,7 +133,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_asset_scan",
+                "name": "body_asset_scan",
                 "description": "对指定目录触发分级颗粒度扫描（同步完成 L1 确定性元数据提取；可选开启本地 Ollama 小模型 L2 异步语义精炼）。",
                 "inputSchema": {
                     "type": "object",
@@ -154,7 +154,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_env_processes",
+                "name": "body_env_processes",
                 "description": "查询宿主机上除系统守护服务外活跃的动态任务与进程（过滤底噪，识别 Python 脚本、构建 Worker、CPU/内存/GPU 占用与命令）。",
                 "inputSchema": {
                     "type": "object",
@@ -162,7 +162,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_env_show",
+                "name": "body_env_show",
                 "description": "查看宿主机硬件规格（OS 版本、CPU 核心数、内存总量/使用率、磁盘挂载）。",
                 "inputSchema": {
                     "type": "object",
@@ -170,7 +170,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_memory_add",
+                "name": "body_memory_add",
                 "description": "向大管家写入一条长期记忆（决策依据、排障经验、技术偏好或事实），跨会话持久化。",
                 "inputSchema": {
                     "type": "object",
@@ -187,7 +187,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_memory_search",
+                "name": "body_memory_search",
                 "description": "语义与全文混合检索历史记忆与决策记录（支持 RRF 混合融合排序与近义词召回）。",
                 "inputSchema": {
                     "type": "object",
@@ -200,7 +200,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_links_query",
+                "name": "body_links_query",
                 "description": "查询指定实体（资产路径、服务名、项目或记忆 ID）的双向关联依赖与分层属性图谱关系（L1 物理/L2 结构/L3 语义）。",
                 "inputSchema": {
                     "type": "object",
@@ -215,7 +215,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_links_visualize",
+                "name": "body_links_visualize",
                 "description": "导出宿主机实体关系图拓扑结构为 Mermaid 格式，支持按需触发 L2/L3 关系挖掘。",
                 "inputSchema": {
                     "type": "object",
@@ -226,7 +226,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_changes_since",
+                "name": "body_changes_since",
                 "description": "查询自某个时间点以来宿主机的变更历史（新增/修改文件、环境扰动等），Agent 开工前感知上下文变动。",
                 "inputSchema": {
                     "type": "object",
@@ -237,7 +237,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_port_check",
+                "name": "body_port_check",
                 "description": "端口防撞预警与空闲推荐：启动服务或绑定端口前检测是否冲突，若冲突返回占用进程详情与推荐可用端口。",
                 "inputSchema": {
                     "type": "object",
@@ -249,7 +249,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_links_impact",
+                "name": "body_links_impact",
                 "description": "变更爆炸半径推演：融合文件 links 与属性图 fact_edges，按跳数衰减与权重计算影响范围，支持按证据层级与阈值过滤。",
                 "inputSchema": {
                     "type": "object",
@@ -263,7 +263,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_links_audit",
+                "name": "body_links_audit",
                 "description": "全局依赖拓扑审计：主动扫描全局依赖图中的断链与悬空引用（目标文件不存在、依赖服务离线），输出健康评分与修复建议。",
                 "inputSchema": {
                     "type": "object",
@@ -273,7 +273,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_codegraph_bridge",
+                "name": "body_codegraph_bridge",
                 "description": "CodeGraph 宏微联邦桥接：跨层联动局部工程内的 CodeGraph 代码图，查看代码级函数/类调用方或项目代码图统计。",
                 "inputSchema": {
                     "type": "object",
@@ -285,7 +285,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_session_close",
+                "name": "body_session_close",
                 "description": "会话完工结算与环境治理：在任务结束时清理临时测试文件、汇总环境变更、并将工单成果归档沉淀到长期记忆。",
                 "inputSchema": {
                     "type": "object",
@@ -297,7 +297,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_links_repair",
+                "name": "body_links_repair",
                 "description": "断链智能修复与重定向推演：基于文件名相似度、代码指纹与 Git 历史寻找已迁移/重命名文件，生成 diff 补丁并可自动修正依赖关系。",
                 "inputSchema": {
                     "type": "object",
@@ -307,7 +307,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_placement_learn",
+                "name": "body_placement_learn",
                 "description": "放置规范动态自演化：聚类分析历史资产分布与创建事件，自动推演发现潜在的新放置规则候选，并支持一键采纳持久化。",
                 "inputSchema": {
                     "type": "object",
@@ -318,7 +318,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_env_gc",
+                "name": "body_env_gc",
                 "description": "宿主资源垃圾回收与孤儿进程诊断：安全扫描 /root/new/tmp/ 超期孤儿临时文件与后台僵尸测试进程，支持预览与清理。",
                 "inputSchema": {
                     "type": "object",
@@ -330,7 +330,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_memory_audit",
+                "name": "body_memory_audit",
                 "description": "长期记忆健康体检与矛盾仲裁：检测对立冲突的认知记忆对，计算温和时间衰减淘汰候选，支持指定归档旧条目。",
                 "inputSchema": {
                     "type": "object",
@@ -340,14 +340,14 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_fact_query",
+                "name": "body_fact_query",
                 "description": "宿主机客观事实图谱只读查询（零幻觉真相底座）。查询：1. 机器已装CLI工具与能力推荐(如'有没有处理PDF的东西'、'如何转视频雪碧图')；2. 端口被谁占用与排障(如'8080')；3. 修改某配置会影响哪些systemd服务或cron调度；4. 本地已克隆哪些开源源码(CodeGraph状态)与权威资料清单等。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "自然语言意图或关键词（例如 '处理 PDF 提取文字', '8080', '/root/.steward/config.toml', '权威网站'）"
+                            "description": "自然语言意图或关键词（例如 '处理 PDF 提取文字', '8080', '/root/.agent-body/config.toml', '权威网站'）"
                         },
                         "fact_type": {
                             "type": "string",
@@ -360,7 +360,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_hook_pre",
+                "name": "body_hook_pre",
                 "description": "Agent 工作流前置检查钩子。在 Agent 执行工具调用前调用，排查即将执行的动作是否存在端口冲突、对核心系统服务的破坏性依赖变更、或文件乱放违规等风险，提供避坑指引。",
                 "inputSchema": {
                     "type": "object",
@@ -378,7 +378,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_hook_post",
+                "name": "body_hook_post",
                 "description": "Agent 工作流后置通知与 AOPCC 碰壁秒级自愈钩子。成功时记录事实变更并增量更新拓扑；当 success=false 且传入 error_output 时，在 <2ms 内反查宿主机真实端口/工具/服务状态并注入自愈处方。",
                 "inputSchema": {
                     "type": "object",
@@ -405,7 +405,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_hook_generate",
+                "name": "body_hook_generate",
                 "description": "Agent 客户端 Hook 自动生成器。为 Antigravity (agy)、Cursor、Claude Code 或 Git 生成自动化 Pre/Post Hook 集成配置与执行规则脚本（规约 #13 MCP 与 CLI 1:1 映射）。",
                 "inputSchema": {
                     "type": "object",
@@ -428,7 +428,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_analytics_heatmap",
+                "name": "body_analytics_heatmap",
                 "description": "基于 DuckDB 高性能列存分析引擎，按目录与时间分桶统计近期的变更热力图分布。",
                 "inputSchema": {
                     "type": "object",
@@ -442,7 +442,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_analytics_trend",
+                "name": "body_analytics_trend",
                 "description": "基于 DuckDB 分析引擎的资产增长与记忆演变趋势统计。",
                 "inputSchema": {
                     "type": "object",
@@ -462,7 +462,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_analytics_export",
+                "name": "body_analytics_export",
                 "description": "基于 DuckDB 原生列式引擎将指定的管家数据表秒级导出为 Parquet 格式，供离线深度分析或数据科学工具消费。",
                 "inputSchema": {
                     "type": "object",
@@ -481,7 +481,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_lock_acquire",
+                "name": "body_lock_acquire",
                 "description": "多 Agent 协作锁：原子申请资源锁（端口/目录/服务/文件/自定义），彻底杜绝端口冲突与文件覆盖竞态。",
                 "inputSchema": {
                     "type": "object",
@@ -523,7 +523,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_lock_release",
+                "name": "body_lock_release",
                 "description": "多 Agent 协作锁：主动释放已持有的资源锁。",
                 "inputSchema": {
                     "type": "object",
@@ -541,7 +541,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_lock_list",
+                "name": "body_lock_list",
                 "description": "多 Agent 协作锁：查看宿主机当前所有生效中的活跃资源锁（谁持有、何资源、何时到期）。",
                 "inputSchema": {
                     "type": "object",
@@ -555,7 +555,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_mcp_catalog",
+                "name": "body_mcp_catalog",
                 "description": "管理与路由宿主机客户端（Hermes/AGY/Claude/Cursor）已配置的 MCP Server 目录，支持扫描脱敏入库、列清单与按意图检索，防止上下文膨胀。",
                 "inputSchema": {
                     "type": "object",
@@ -567,7 +567,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_skill_route",
+                "name": "body_skill_route",
                 "description": "按任务意图与 Token 预算对宿主机百级 SKILL 目录进行渐进式按需路由，只返回最匹配的 Top-K SKILL 路径与摘要，避免全量注入打爆 Context。",
                 "inputSchema": {
                     "type": "object",
@@ -580,7 +580,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_service_contact",
+                "name": "body_service_contact",
                 "description": "管理宿主机外部可用服务通讯录（Endpoint、能力标签、鉴权环境变量名引用、调用示例与轻量探活），绝不存储明文密钥。",
                 "inputSchema": {
                     "type": "object",
@@ -600,7 +600,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_lock_wait",
+                "name": "body_lock_wait",
                 "description": "多 Agent 协作锁排队等待与唤醒获取（Phase 17）：若资源正被占用则入队等待释放通知，并在入队前自动执行 WFG 死锁环路检测，避免循环死等。",
                 "inputSchema": {
                     "type": "object",
@@ -617,7 +617,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_lock_deadlock_check",
+                "name": "body_lock_deadlock_check",
                 "description": "多 Agent 协作锁 Wait-For Graph (WFG) 死锁环路诊断：实时检测活跃锁与等待队列间是否存在循环依赖（含目录祖先后代传递），给出退让建议。",
                 "inputSchema": {
                     "type": "object",
@@ -625,7 +625,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_mesh_query",
+                "name": "body_mesh_query",
                 "description": "轻量多机联邦 Peer Mesh Wire Protocol v1.0（Phase 18 -> Phase 41）：支持 ping/facts/locks/port/acquire/local、跨机图谱联邦探查(graph)、HMAC签名双向脱敏结构化对话(dialogue_*)与 <=10MB 沙盒文件投递(transfer_*)。",
                 "inputSchema": {
                     "type": "object",
@@ -652,7 +652,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_demo_scenario",
+                "name": "body_demo_scenario",
                 "description": "Web 路演与黑屏同源场景演示引擎（Phase 22）：列出或实跑 6 大黄金路演剧目（防扫爆/Pre-Hook防撞/爆炸半径/WFG死锁/Context防爆/完工简报），核算商业价值 ROI，检查黑白屏同步矩阵，或一键重置 demo:* 沙盒。",
                 "inputSchema": {
                     "type": "object",
@@ -663,7 +663,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_benchmark",
+                "name": "body_benchmark",
                 "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v3.5）：运行 A/B 对照负载(W1~W15)、内核微基准(M1~M5)、数据质量与图谱健康(DQ1~DQ6)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-11)。",
                 "inputSchema": {
                     "type": "object",
@@ -683,7 +683,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_feedback",
+                "name": "body_feedback",
                 "description": "实际使用反馈总账 (user_feedback.md) 双向查阅、结构化追加、已验证反馈沉淀记忆，以及 Phase 38~39 信息新鲜度对账 (reconcile) 与五点执行回路对比探针 (probes)",
                 "inputSchema": {
                     "type": "object",
@@ -700,7 +700,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_audit_query",
+                "name": "body_audit_query",
                 "description": "双域全链路行为审计、因果链路回溯、DuckDB OLAP 聚合导出与审计驱动自进化引擎（Phase 43）：覆盖 IN_AGENT（Brief/Hook/MCP/CLI/Web/Mesh）与 OUT_OF_AGENT（Daemon巡检/Watcher 60s折叠/HostGC/LinkRepair/Reconcile/RuleLearn）全行为有据可查。",
                 "inputSchema": {
                     "type": "object",
@@ -722,7 +722,7 @@ impl McpToolRegistry {
                 }
             }),
             serde_json::json!({
-                "name": "steward_body_state",
+                "name": "body_state",
                 "description": "Agent 本体中枢（宿主机具身底座，第 43 原生工具）：提供本体身份证与六器官自省 (manifest)、五维稳态生命体征 (vitals)、四级自治权限包络评估 (envelope)、跨大脑工作态接力胶囊保存与恢复 (handoff_save/handoff_resume)、L1 稳态反射自愈 (heal) 及多本体联邦名片发现 (peers)。",
                 "inputSchema": {
                     "type": "object",
@@ -777,7 +777,7 @@ impl McpToolRegistry {
                 elapsed_us,
             );
         }
-        if name != "steward_benchmark" && name != "steward_demo_scenario" {
+        if name != "body_benchmark" && name != "body_demo_scenario" {
             let outcome = if res.is_ok() { "success" } else { "failed" };
             let target_id = args_preview
                 .get("path")
@@ -805,7 +805,7 @@ impl McpToolRegistry {
 
     fn call_tool_inner(&self, name: &str, args: Value) -> Result<String> {
         match name {
-            "steward_brief" => {
+            "body_brief" => {
                 let provider = Arc::new(crate::memory::builtin_provider::BuiltinMemoryProvider::new(self.storage.clone()));
                 let assembler = BriefAssembler::new(self.storage.clone(), Some(provider));
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -821,7 +821,7 @@ impl McpToolRegistry {
                 Ok(output.markdown)
             }
 
-            "steward_placement_suggest" => {
+            "body_placement_suggest" => {
                 let engine = PlacementEngine::new(self.storage.clone());
                 let object_type = args.get("object_type").and_then(|v| v.as_str()).unwrap_or("project").to_string();
                 let name_arg = args.get("name").and_then(|v| v.as_str()).unwrap_or("unnamed").to_string();
@@ -851,7 +851,7 @@ impl McpToolRegistry {
                 Ok(out)
             }
 
-            "steward_placement_rules" => {
+            "body_placement_rules" => {
                 let rules = self.storage.get_placement_rules()?;
                 let mut out = format!("当前生效的宿主机目录放置规范 (共 {} 条):\n", rules.len());
                 for r in rules {
@@ -863,7 +863,7 @@ impl McpToolRegistry {
                 Ok(out)
             }
 
-            "steward_asset_search" => {
+            "body_asset_search" => {
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
                 let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
                 let detail = crate::scanner::DetailLevel::from_str_opt(
@@ -879,7 +879,7 @@ impl McpToolRegistry {
                 Ok(out)
             }
 
-            "steward_asset_register" => {
+            "body_asset_register" => {
                 let path = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
                 let asset_type = args.get("type").and_then(|v| v.as_str()).unwrap_or("other");
                 let owner = args.get("owner").and_then(|v| v.as_str()).unwrap_or("user:digoal");
@@ -906,7 +906,7 @@ impl McpToolRegistry {
                 Ok(format!("✅ 资产登记成功: {} [{}]", path, asset_type))
             }
 
-            "steward_asset_scan" => {
+            "body_asset_scan" => {
                 let path_str = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
                 let enrich = args.get("enrich_with_ollama").and_then(|v| v.as_bool()).unwrap_or(false);
                 let enrich_limit = args.get("enrich_limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
@@ -935,7 +935,7 @@ impl McpToolRegistry {
                 Ok(out)
             }
 
-            "steward_env_processes" => {
+            "body_env_processes" => {
                 let collector = EnvCollector::new(self.storage.clone());
                 let procs = collector.collect_and_sync_processes()?;
                 let mut out = format!("当前活跃动态任务进程 (共 {} 个):\n", procs.len());
@@ -946,7 +946,7 @@ impl McpToolRegistry {
                 Ok(out)
             }
 
-            "steward_env_show" => {
+            "body_env_show" => {
                 let collector = EnvCollector::new(self.storage.clone());
                 let s = collector.collect_system_summary();
                 let mut out = String::new();
@@ -961,7 +961,7 @@ impl McpToolRegistry {
                 Ok(out)
             }
 
-            "steward_memory_add" => {
+            "body_memory_add" => {
                 let mm = MemoryManager::new(self.storage.clone());
                 let mem_type = args.get("type").and_then(|v| v.as_str()).unwrap_or("decision");
                 let content = args.get("content").and_then(|v| v.as_str()).unwrap_or("");
@@ -971,7 +971,7 @@ impl McpToolRegistry {
                 Ok(format!("✅ 长期记忆已录入, ID: {}", id))
             }
 
-            "steward_memory_search" => {
+            "body_memory_search" => {
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
                 let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
                 let use_hybrid = args.get("hybrid").and_then(|v| v.as_bool()).unwrap_or(true);
@@ -1002,7 +1002,7 @@ impl McpToolRegistry {
                 }
             }
 
-            "steward_links_query" => {
+            "body_links_query" => {
                 let arc_storage = Arc::new(self.storage.clone());
                 let engine = LinksEngine::new(arc_storage.clone());
                 let node_type = args.get("type").and_then(|v| v.as_str()).unwrap_or("asset");
@@ -1042,7 +1042,7 @@ impl McpToolRegistry {
                 Ok(out)
             }
 
-            "steward_links_visualize" => {
+            "body_links_visualize" => {
                 let arc_storage = Arc::new(self.storage.clone());
                 let discover = args.get("discover_semantic").and_then(|v| v.as_bool()).unwrap_or(false);
                 let mut header = String::new();
@@ -1060,7 +1060,7 @@ impl McpToolRegistry {
                 Ok(format!("{}{}", header, mermaid))
             }
 
-            "steward_changes_since" => {
+            "body_changes_since" => {
                 let arc_storage = Arc::new(self.storage.clone());
                 let engine = ChangesEngine::new(arc_storage);
                 let since = args.get("since").and_then(|v| v.as_str());
@@ -1068,14 +1068,14 @@ impl McpToolRegistry {
                 engine.generate_summary_markdown(since, limit)
             }
 
-            "steward_port_check" => {
+            "body_port_check" => {
                 let port = args.get("port").and_then(|v| v.as_u64()).unwrap_or(8080) as u16;
                 let suggest_count = args.get("suggest_count").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
                 let res = crate::env::port::PortChecker::check_port(port, suggest_count)?;
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
-            "steward_links_impact" => {
+            "body_links_impact" => {
                 let arc_storage = Arc::new(self.storage.clone());
                 let analyzer = crate::links::impact::ImpactAnalyzer::new(arc_storage);
                 let target = args.get("target").and_then(|v| v.as_str()).unwrap_or("");
@@ -1086,7 +1086,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
-            "steward_links_audit" => {
+            "body_links_audit" => {
                 let arc_storage = Arc::new(self.storage.clone());
                 let auditor = crate::links::audit::LinkAuditor::new(arc_storage);
                 let fix_dangling = args.get("fix_dangling").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -1094,7 +1094,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
-            "steward_codegraph_bridge" => {
+            "body_codegraph_bridge" => {
                 let path_str = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
                 let symbol_opt = args.get("symbol").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty());
                 let p = std::path::Path::new(path_str);
@@ -1117,7 +1117,7 @@ impl McpToolRegistry {
                 }
             }
 
-            "steward_session_close" => {
+            "body_session_close" => {
                 let arc_storage = Arc::new(self.storage.clone());
                 let sm = crate::session::SessionManager::new(arc_storage);
                 let session_id = args.get("session_id").and_then(|v| v.as_str()).unwrap_or("default");
@@ -1127,7 +1127,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
-            "steward_links_repair" => {
+            "body_links_repair" => {
                 let arc_storage = Arc::new(self.storage.clone());
                 let repairer = crate::links::repair::LinkRepairer::new(arc_storage);
                 let apply = args.get("apply").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -1135,7 +1135,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
-            "steward_placement_learn" => {
+            "body_placement_learn" => {
                 let learner = crate::placement::learner::PlacementLearner::new(&self.storage);
                 let min_samples = args.get("min_samples").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
                 let accept = args.get("accept").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -1154,7 +1154,7 @@ impl McpToolRegistry {
                 }))?)
             }
 
-            "steward_env_gc" => {
+            "body_env_gc" => {
                 let tmp_dir_str = args.get("tmp_dir").and_then(|v| v.as_str()).unwrap_or("/root/new/tmp");
                 let max_age_hours = args.get("max_age_hours").and_then(|v| v.as_u64()).unwrap_or(72);
                 let apply = args.get("apply").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -1163,7 +1163,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
-            "steward_memory_audit" => {
+            "body_memory_audit" => {
                 let mgr = crate::memory::lifecycle::MemoryLifecycleManager::new(&self.storage);
                 if let Some(aid) = args.get("archive_id").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty()) {
                     mgr.archive_memory(aid)?;
@@ -1172,13 +1172,13 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&rep)?)
             }
 
-            "steward_fact_query" => {
+            "body_fact_query" => {
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("all");
                 let fact_type = args.get("fact_type").and_then(|v| v.as_str()).unwrap_or("auto");
                 crate::fact::FactFacade::query_facts(fact_type, query)
             }
 
-            "steward_hook_pre" => {
+            "body_hook_pre" => {
                 let tool_name = args.get("tool_name").and_then(|v| v.as_str()).unwrap_or("");
                 let tool_args = args.get("args").cloned().unwrap_or(serde_json::json!({}));
                 let engine = crate::api::hooks::AgentHookEngine::new(self.storage.clone());
@@ -1186,7 +1186,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
-            "steward_hook_post" => {
+            "body_hook_post" => {
                 let tool_name = args.get("tool_name").and_then(|v| v.as_str()).unwrap_or("");
                 let tool_args = args.get("args").cloned().unwrap_or(serde_json::json!({}));
                 let success = args.get("success").and_then(|v| v.as_bool()).unwrap_or(true);
@@ -1196,7 +1196,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
-            "steward_hook_generate" => {
+            "body_hook_generate" => {
                 let client_str = args.get("client").and_then(|v| v.as_str()).unwrap_or("agy");
                 let client_type = client_str.parse::<crate::hooks::ClientType>()?;
                 let out_dir = args.get("out_dir").and_then(|v| v.as_str()).map(std::path::Path::new);
@@ -1206,7 +1206,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
-            "steward_analytics_heatmap" => {
+            "body_analytics_heatmap" => {
                 use crate::storage::AnalyticsProvider;
                 let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(30) as usize;
                 let engine = crate::storage::DuckDbAnalyticsEngine::from_synced_storage(self.storage.provider().clone())?;
@@ -1217,7 +1217,7 @@ impl McpToolRegistry {
                 }))?)
             }
 
-            "steward_analytics_trend" => {
+            "body_analytics_trend" => {
                 use crate::storage::AnalyticsProvider;
                 let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(30) as usize;
                 let engine = crate::storage::DuckDbAnalyticsEngine::from_synced_storage(self.storage.provider().clone())?;
@@ -1232,7 +1232,7 @@ impl McpToolRegistry {
                 }))?)
             }
 
-            "steward_analytics_export" => {
+            "body_analytics_export" => {
                 use crate::storage::AnalyticsProvider;
                 let table = args.get("table").and_then(|v| v.as_str()).unwrap_or("assets");
                 let output_path = args.get("output_path").and_then(|v| v.as_str()).unwrap_or("/root/new/tmp/export.parquet");
@@ -1241,7 +1241,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&summary)?)
             }
 
-            "steward_lock_acquire" => {
+            "body_lock_acquire" => {
                 use crate::coordination::{CoordinationEngine, LockRequest, ResourceType, LockScope};
                 let rt_str = args.get("resource_type").and_then(|v| v.as_str()).unwrap_or("custom");
                 let res_id = args.get("resource_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -1265,7 +1265,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
-            "steward_lock_release" => {
+            "body_lock_release" => {
                 use crate::coordination::CoordinationEngine;
                 let lock_id = args.get("lock_id").and_then(|v| v.as_str()).unwrap_or("");
                 let holder = args.get("holder_agent").and_then(|v| v.as_str()).unwrap_or("current-agent");
@@ -1277,7 +1277,7 @@ impl McpToolRegistry {
                 }))?)
             }
 
-            "steward_lock_list" => {
+            "body_lock_list" => {
                 use crate::coordination::{CoordinationEngine, ResourceType};
                 let rt_opt = args.get("resource_type").and_then(|v| v.as_str()).map(ResourceType::from_str_loose);
                 let engine = CoordinationEngine::new(self.storage.provider().clone());
@@ -1285,7 +1285,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&list)?)
             }
 
-            "steward_mcp_catalog" => {
+            "body_mcp_catalog" => {
                 use crate::ecosystem::McpConfigScanner;
                 let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("route");
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
@@ -1314,7 +1314,7 @@ impl McpToolRegistry {
                 }
             }
 
-            "steward_skill_route" => {
+            "body_skill_route" => {
                 use crate::ecosystem::{ContextBudgetRouter, ContextRouteRequest, SkillCatalogScanner};
                 let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("route");
                 let intent = args.get("intent").and_then(|v| v.as_str()).unwrap_or("");
@@ -1347,7 +1347,7 @@ impl McpToolRegistry {
                 }
             }
 
-            "steward_service_contact" => {
+            "body_service_contact" => {
                 use crate::ecosystem::ExternalContactsManager;
                 use crate::storage::models::ExternalServiceRecord;
                 let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("list");
@@ -1399,7 +1399,7 @@ impl McpToolRegistry {
                 }
             }
 
-            "steward_lock_wait" => {
+            "body_lock_wait" => {
                 use crate::coordination::{CoordinationEngine, LockRequest, LockScope, ResourceType};
                 let rt_str = args.get("resource_type").and_then(|v| v.as_str()).unwrap_or("custom");
                 let res_id = args.get("resource_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -1423,7 +1423,7 @@ impl McpToolRegistry {
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
-            "steward_lock_deadlock_check" => {
+            "body_lock_deadlock_check" => {
                 use crate::coordination::CoordinationEngine;
                 let engine = CoordinationEngine::new(self.storage.provider().clone());
                 let rep = engine.detect_deadlocks()?;
@@ -1435,7 +1435,7 @@ impl McpToolRegistry {
                 }))?)
             }
 
-            "steward_mesh_query" => {
+            "body_mesh_query" => {
                 use crate::coordination::{LockRequest, LockScope, ResourceType};
                 use crate::mesh::{build_local_facts, MeshClient};
                 let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("ping");
@@ -1532,7 +1532,7 @@ impl McpToolRegistry {
                 }
             }
 
-            "steward_demo_scenario" => {
+            "body_demo_scenario" => {
                 use crate::demo::DemoEngine;
                 let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("list");
                 match action {
@@ -1560,7 +1560,7 @@ impl McpToolRegistry {
                 }
             }
 
-            "steward_benchmark" => {
+            "body_benchmark" => {
                 use crate::benchmark::ledger::EffectivenessLedger;
                 use crate::benchmark::provenance::ProvenanceRule;
                 use crate::benchmark::report::{
@@ -1597,7 +1597,7 @@ impl McpToolRegistry {
                         let Some(rec) = rec_opt else {
                             return Ok(serde_json::to_string_pretty(&serde_json::json!({
                                 "status": "empty",
-                                "message": "尚无基准评测记录，请先执行 steward_benchmark(action='run')"
+                                "message": "尚无基准评测记录，请先执行 body_benchmark(action='run')"
                             }))?);
                         };
                         let payload = BenchmarkReportPayload::from_record(&rec);
@@ -1660,7 +1660,7 @@ impl McpToolRegistry {
                 }
             }
 
-            "steward_feedback" => {
+            "body_feedback" => {
                 let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("list");
                 let fb_path = crate::feedback::FeedbackEngine::default_feedback_path();
                 match action {
@@ -1712,7 +1712,7 @@ impl McpToolRegistry {
                 }
             }
 
-            "steward_audit_query" => {
+            "body_audit_query" => {
                 use crate::storage::duckdb_analytics::{AnalyticsProvider, DuckDbAnalyticsEngine};
                 use crate::storage::models::AuditQueryFilter;
 
@@ -1788,7 +1788,7 @@ impl McpToolRegistry {
                 }
             }
 
-            "steward_body_state" => {
+            "body_state" => {
                 use crate::body::{
                     AutonomyEnvelope, BodyManifestEngine, ContinuityInput, ContinuityManager,
                     HomeostasisVitalsEngine,
@@ -1891,7 +1891,7 @@ impl McpToolRegistry {
                             "results": peers,
                         }))?)
                     }
-                    _ => bail!("未知 steward_body_state action: {}", action),
+                    _ => bail!("未知 body_state action: {}", action),
                 }
             }
 

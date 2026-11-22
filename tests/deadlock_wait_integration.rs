@@ -1,11 +1,11 @@
 use std::sync::Arc;
 use std::time::Duration;
-use agent_steward::api::mcp_tools::McpToolRegistry;
-use agent_steward::coordination::{
+use agent_body::api::mcp_tools::McpToolRegistry;
+use agent_body::coordination::{
     CoordinationEngine, LockRequest, LockResult, LockScope, ResourceType,
 };
-use agent_steward::hooks::{EventBus, StewardEvent};
-use agent_steward::storage::Storage;
+use agent_body::hooks::{EventBus, StewardEvent};
+use agent_body::storage::Storage;
 use serde_json::json;
 
 #[test]
@@ -106,7 +106,7 @@ fn test_wait_and_acquire_deadlock_interception_and_37_mcp_tools() {
         .expect("b 9202");
 
     // 模拟 A 正在等 9202
-    let _ = storage.enqueue_lock_wait(&agent_steward::storage::models::LockWaitEntry {
+    let _ = storage.enqueue_lock_wait(&agent_body::storage::models::LockWaitEntry {
         wait_id: "w-a-9202".to_string(),
         resource_type: "port".to_string(),
         resource_id: "9202".to_string(),
@@ -143,9 +143,9 @@ fn test_wait_and_acquire_deadlock_interception_and_37_mcp_tools() {
         other => panic!("必须拦截并返回 LockResult::Deadlock，实际: {:?}", other),
     }
 
-    // 验证 MCP steward_lock_deadlock_check 返回环路报告
+    // 验证 MCP body_lock_deadlock_check 返回环路报告
     let out = registry
-        .call_tool("steward_lock_deadlock_check", json!({}))
+        .call_tool("body_lock_deadlock_check", json!({}))
         .expect("deadlock check");
     assert!(out.contains("wait_queue_count"));
 }

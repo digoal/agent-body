@@ -137,19 +137,19 @@ impl ProvenanceRule {
 
     pub fn list_all() -> Vec<ProvenanceRuleMeta> {
         let all = [
-            (Self::Pr01SkillMcpRouting, "steward_skill_route, steward_mcp_catalog, steward_service_contact"),
-            (Self::Pr02ProgressiveAssetSearch, "steward_asset_search, steward_asset_register"),
-            (Self::Pr03PreHookInterception, "steward_hook_pre"),
-            (Self::Pr04HostFactQuery, "steward_fact_query, steward_port_check, steward_env_processes, steward_env_show"),
-            (Self::Pr05GraphImpactAndAudit, "steward_links_impact, steward_links_audit, steward_links_repair, steward_codegraph_bridge"),
-            (Self::Pr06GranularityNoiseGate, "steward_asset_scan, Scanner"),
-            (Self::Pr07LockDeadlockGuard, "steward_lock_acquire, steward_lock_wait, steward_lock_deadlock_check"),
-            (Self::Pr08AdaptiveBriefColdStart, "steward_brief"),
-            (Self::Pr09HybridSemanticSearch, "steward_memory_search, memory search --hybrid"),
-            (Self::Pr10FeedbackAndMemoryLoop, "steward_feedback, steward_memory_add, steward_session_close"),
-            (Self::Pr11OptimisticLeaseAndRecovery, "steward_brief(leases), steward_hook_pre(mode), steward_hook_post(success=false)"),
-            (Self::Pr12AuditDrivenSelfEvolution, "steward_audit_query, AuditLogger, AuditEvolutionAnalyzer"),
-            (Self::Pr13CrossBrainContinuitySaved, "steward_body_state, BodyManifestEngine, ContinuityManager, HomeostasisVitalsEngine"),
+            (Self::Pr01SkillMcpRouting, "body_skill_route, body_mcp_catalog, body_service_contact"),
+            (Self::Pr02ProgressiveAssetSearch, "body_asset_search, body_asset_register"),
+            (Self::Pr03PreHookInterception, "body_hook_pre"),
+            (Self::Pr04HostFactQuery, "body_fact_query, body_port_check, body_env_processes, body_env_show"),
+            (Self::Pr05GraphImpactAndAudit, "body_links_impact, body_links_audit, body_links_repair, body_codegraph_bridge"),
+            (Self::Pr06GranularityNoiseGate, "body_asset_scan, Scanner"),
+            (Self::Pr07LockDeadlockGuard, "body_lock_acquire, body_lock_wait, body_lock_deadlock_check"),
+            (Self::Pr08AdaptiveBriefColdStart, "body_brief"),
+            (Self::Pr09HybridSemanticSearch, "body_memory_search, memory search --hybrid"),
+            (Self::Pr10FeedbackAndMemoryLoop, "body_feedback, body_memory_add, body_session_close"),
+            (Self::Pr11OptimisticLeaseAndRecovery, "body_brief(leases), body_hook_pre(mode), body_hook_post(success=false)"),
+            (Self::Pr12AuditDrivenSelfEvolution, "body_audit_query, AuditLogger, AuditEvolutionAnalyzer"),
+            (Self::Pr13CrossBrainContinuitySaved, "body_state, BodyManifestEngine, ContinuityManager, HomeostasisVitalsEngine"),
         ];
         all.iter()
             .map(|(r, tools)| ProvenanceRuleMeta {
@@ -173,8 +173,8 @@ mod tests {
         assert_eq!(estimate_tokens("abcdefgh"), 2);
         // 中文按 ceil(chars * 1.5)
         assert_eq!(estimate_tokens("你好世界"), 6);
-        let h1 = sha256_hex("agent-steward");
-        let h2 = sha256_hex("agent-steward");
+        let h1 = sha256_hex("agent-body");
+        let h2 = sha256_hex("agent-body");
         assert_eq!(h1.len(), 64);
         assert_eq!(h1, h2);
     }

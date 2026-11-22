@@ -1,6 +1,6 @@
 # 10 — 实证 Benchmark 对照评测与生产效能存证账本规格说明书 (Benchmark & Verifiable ROI Spec)
 
-> **Agent Host Steward 产品设计 · 交付件 10**  
+> **Agent Body 产品设计 · 交付件 10**  
 > **版本**: v0.4.0 → Phase 27~44 演进基线（当前 Spec **`v3.7`**） · **编制**: Antigravity · **日期**: 2026-11-22  
 > **对齐约束**: [README.md 规约 #1、#5、#9、#12、#13、#16、#17、#18](../../README.md#L234-L311) · [ISSUE.md #13](../../ISSUE.md#L73)
 
@@ -10,11 +10,11 @@
 
 ### 1.1 现网基线审计与评测盲区
 
-截至 `v0.4.0`（23 个 `src/lib.rs` 顶层模块、39 个黑白屏 1:1 同步 MCP 工具、55 个 `StorageProvider` SPI 方法、198 项通过测试），本机现网数据库 `/root/.steward/steward.db` 已真实沉淀 `26,081` 条纳管资产、`6,397` 条代码/服务依赖边、`336` 个属性图节点、`77` 条属性图边、`121` 个本地 SKILL 与 `5` 个 MCP Server。然而从“使用效果有据可查”的第一性原理审视，现有测评体系存在三个结构性盲区：
+截至 `v0.4.0`（23 个 `src/lib.rs` 顶层模块、39 个黑白屏 1:1 同步 MCP 工具、55 个 `StorageProvider` SPI 方法、198 项通过测试），本机现网数据库 `/root/.agent-body/body.db` 已真实沉淀 `26,081` 条纳管资产、`6,397` 条代码/服务依赖边、`336` 个属性图节点、`77` 条属性图边、`121` 个本地 SKILL 与 `5` 个 MCP Server。然而从“使用效果有据可查”的第一性原理审视，现有测评体系存在三个结构性盲区：
 
 1. **微基准与业务收益脱节**：[tests/benchmarks.rs](../../tests/benchmarks.rs) 仅包含 5 个底层函数微基准（属性图 3 跳遍历、FTS5 检索、放置决策、DuckDB 聚合与 Parquet 导出）。它们只回答了“Rust 函数跑得有多快”，**没有回答“AI Agent 用上大管家后，到底比不用少花了多少 Token、少走了多少弯路、少踩了多少坑”**。
 2. **静态估算缺乏物理基线对照**：[src/demo/mod.rs](../../src/demo/mod.rs) 的 `DemoEngine` 虽已呈现 6 大路演对比场景与 `compute_roi()` 快照，但缺少可独立复现的 **Without Steward 裸奔真实探针基线** 与 **With Steward 管家赋能实测** 成对跑批机制，无法输出跨版本可对比、带 SHA-256 校验摘要的基准评测报告。
-3. **缺少生产运行态持久记账（Telemetry Ledger）**：日常每一次 `steward_brief`、`steward_skill_route`、`steward_hook_pre`、`steward_asset_scan`、`steward_links_audit` 产生的实际收益，目前“用完即逝”。如果运行一周后主理人追问：*“大管家这 7 天到底帮我省了多少 Token、拦截了多少次端口冲突和黑名单扫爆？”*——系统拿不出一本带推导公式编号的原始流水账。
+3. **缺少生产运行态持久记账（Telemetry Ledger）**：日常每一次 `body_brief`、`body_skill_route`、`body_hook_pre`、`body_asset_scan`、`body_links_audit` 产生的实际收益，目前“用完即逝”。如果运行一周后主理人追问：*“大管家这 7 天到底帮我省了多少 Token、拦截了多少次端口冲突和黑名单扫爆？”*——系统拿不出一本带推导公式编号的原始流水账。
 
 ### 1.2 核心设计哲学：双轨实证闭环 (Dual-Track Empirical Loop)
 
@@ -46,8 +46,8 @@
 ```mermaid
 flowchart TD
     subgraph ClientSide["黑屏与白屏调用入口 (40/40 1:1 同步)"]
-        CLI["CLI: agent-steward bench"]
-        MCP["MCP: steward_benchmark"]
+        CLI["CLI: agent-body bench"]
+        MCP["MCP: body_benchmark"]
         Hooks["生产调用链路: mcp.rs / hooks.rs / scanner.rs"]
         WebUI["Web UI: 实证基准与效能账本工作台"]
     end
@@ -131,14 +131,14 @@ flowchart TD
 
 | 规则编号 | 触发工具 / 模块 | 基线规模 (`baseline_tokens` / `baseline_rounds`) 确定性公式 | 实际规模 (`steward_tokens` / `steward_rounds`) | 拦截 / 噪音字段记账规则 |
 |:---:|---|---|---|---|
-| **PR-01** | `steward_skill_route` / `steward_mcp_catalog` / `steward_service_contact` | `baseline_tokens = sum(skills_catalog.est_tokens) + sum(mcp_catalog.est_tokens)`（从当前库实时求和，不写死数字）；`baseline_rounds = 3` | `steward_tokens = estimate_tokens(routed_response)`；`steward_rounds = 1` | 附带记录 `catalog_total_count` 与 `routed_count` |
-| **PR-02** | `steward_asset_search` / `steward_asset_register` | `baseline_tokens = sum(matched_assets.size_bytes.min(65536) / 4)`（等价未索引时直接读取原始文件）；`baseline_rounds = 4` | `steward_tokens = estimate_tokens(json_response)`（按 `Micro/Standard/Full` 披露级别实际返回）；`steward_rounds = 1` | 记录 `disclosure_level` |
-| **PR-03** | `steward_hook_pre` (`AgentHookEngine::hook_pre`) | 当判定为 `BLOCK` 或 `WARN` 时：`baseline_rounds = 3`（避开崩溃+排障+重跑），`baseline_tokens = 600`（单次报错回溯平均栈/上下文，仅在发生真实拦截时入账） | `steward_tokens = estimate_tokens(hook_response)`；`steward_rounds = 1` | **`hazard_intercepted = 1`**，细节标明冲突类型（`port_occupied` / `lock_conflict` / `placement_violation`） |
-| **PR-04** | `steward_fact_query` / `steward_port_check` / `steward_env_processes` / `steward_env_show` | 优先取最近一次 `benchmark_runs` 中 `W1/W2` 同类真实探针的平均原始输出 Token；若尚无基线运行记录，则保守按 `baseline_tokens = estimate_tokens(response) * 2` 且注明 `uncalibrated_floor`；`baseline_rounds = 4` | `steward_tokens = estimate_tokens(response)`；`steward_rounds = 1` | 若 `port_check` 发现端口已被占用，记 **`hazard_intercepted = 1`** |
-| **PR-05** | `steward_links_impact` / `steward_links_audit` / `steward_links_repair` / `steward_codegraph_bridge` | `baseline_tokens = total_managed_code_assets_count.min(500) * 12`（或最近一次 `W5` 实测全扫描 Token）；`baseline_rounds = 4` | `steward_tokens = estimate_tokens(response)`；`steward_rounds = 1` | 每次 `links_audit` / `links_repair` 检出或生成修复方案的真实断链数 `N`，记 **`hazard_intercepted = N`** |
-| **PR-06** | `steward_asset_scan` / `Scanner` / `FileWatcher` | `raw_entries = kept_count + shallow_blocked_count + noise_filtered_count`；`baseline_tokens = noise_blocked_count * 25`（若未过滤将挤占 FTS/上下文的垃圾元数据开销） | `steward_tokens = 0`（不入上下文）；`steward_rounds = 1` | **`noise_blocked = shallow_blocked + noise_filtered`** |
-| **PR-07** | `steward_lock_acquire` / `steward_lock_wait` / `steward_lock_deadlock_check` | 仅当发生锁冲突拒批（`Denied`/`WaitQueued`）或检测到死锁环路时入账：`baseline_rounds = 3` | `steward_rounds = 1` | **`hazard_intercepted = 1`**（或检出的环路数） |
-| **PR-08** | `steward_brief` (`BriefAssembler`) | 引用最近一次 `W8` 实测 6 步冷启动基线 Token 与 `baseline_rounds = 6`（无 `W8` 记录时采用保守实测下界并标注） | `steward_tokens = estimate_tokens(brief_markdown)`；`steward_rounds = 1` | 附带 `brief_quality_score` |
+| **PR-01** | `body_skill_route` / `body_mcp_catalog` / `body_service_contact` | `baseline_tokens = sum(skills_catalog.est_tokens) + sum(mcp_catalog.est_tokens)`（从当前库实时求和，不写死数字）；`baseline_rounds = 3` | `steward_tokens = estimate_tokens(routed_response)`；`steward_rounds = 1` | 附带记录 `catalog_total_count` 与 `routed_count` |
+| **PR-02** | `body_asset_search` / `body_asset_register` | `baseline_tokens = sum(matched_assets.size_bytes.min(65536) / 4)`（等价未索引时直接读取原始文件）；`baseline_rounds = 4` | `steward_tokens = estimate_tokens(json_response)`（按 `Micro/Standard/Full` 披露级别实际返回）；`steward_rounds = 1` | 记录 `disclosure_level` |
+| **PR-03** | `body_hook_pre` (`AgentHookEngine::hook_pre`) | 当判定为 `BLOCK` 或 `WARN` 时：`baseline_rounds = 3`（避开崩溃+排障+重跑），`baseline_tokens = 600`（单次报错回溯平均栈/上下文，仅在发生真实拦截时入账） | `steward_tokens = estimate_tokens(hook_response)`；`steward_rounds = 1` | **`hazard_intercepted = 1`**，细节标明冲突类型（`port_occupied` / `lock_conflict` / `placement_violation`） |
+| **PR-04** | `body_fact_query` / `body_port_check` / `body_env_processes` / `body_env_show` | 优先取最近一次 `benchmark_runs` 中 `W1/W2` 同类真实探针的平均原始输出 Token；若尚无基线运行记录，则保守按 `baseline_tokens = estimate_tokens(response) * 2` 且注明 `uncalibrated_floor`；`baseline_rounds = 4` | `steward_tokens = estimate_tokens(response)`；`steward_rounds = 1` | 若 `port_check` 发现端口已被占用，记 **`hazard_intercepted = 1`** |
+| **PR-05** | `body_links_impact` / `body_links_audit` / `body_links_repair` / `body_codegraph_bridge` | `baseline_tokens = total_managed_code_assets_count.min(500) * 12`（或最近一次 `W5` 实测全扫描 Token）；`baseline_rounds = 4` | `steward_tokens = estimate_tokens(response)`；`steward_rounds = 1` | 每次 `links_audit` / `links_repair` 检出或生成修复方案的真实断链数 `N`，记 **`hazard_intercepted = N`** |
+| **PR-06** | `body_asset_scan` / `Scanner` / `FileWatcher` | `raw_entries = kept_count + shallow_blocked_count + noise_filtered_count`；`baseline_tokens = noise_blocked_count * 25`（若未过滤将挤占 FTS/上下文的垃圾元数据开销） | `steward_tokens = 0`（不入上下文）；`steward_rounds = 1` | **`noise_blocked = shallow_blocked + noise_filtered`** |
+| **PR-07** | `body_lock_acquire` / `body_lock_wait` / `body_lock_deadlock_check` | 仅当发生锁冲突拒批（`Denied`/`WaitQueued`）或检测到死锁环路时入账：`baseline_rounds = 3` | `steward_rounds = 1` | **`hazard_intercepted = 1`**（或检出的环路数） |
+| **PR-08** | `body_brief` (`BriefAssembler`) | 引用最近一次 `W8` 实测 6 步冷启动基线 Token 与 `baseline_rounds = 6`（无 `W8` 记录时采用保守实测下界并标注） | `steward_tokens = estimate_tokens(brief_markdown)`；`steward_rounds = 1` | 附带 `brief_quality_score` |
 
 ---
 
@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS effectiveness_ledger (
     event_id TEXT NOT NULL UNIQUE,
     session_id TEXT NOT NULL DEFAULT 'default',
     source_channel TEXT NOT NULL,       -- 'mcp' | 'cli' | 'hook' | 'scanner' | 'web'
-    tool_or_action TEXT NOT NULL,       -- 例如 'steward_skill_route', 'steward_hook_pre'
+    tool_or_action TEXT NOT NULL,       -- 例如 'body_skill_route', 'body_hook_pre'
     provenance_rule TEXT NOT NULL,      -- 'PR-01' ~ 'PR-08'
     baseline_tokens INTEGER NOT NULL DEFAULT 0,
     steward_tokens INTEGER NOT NULL DEFAULT 0,
@@ -213,20 +213,20 @@ CREATE INDEX IF NOT EXISTS idx_ledger_rule ON effectiveness_ledger(provenance_ru
 
 ### 7.1 黑屏侧：第 40 个原生 MCP 工具 & CLI `bench` 命令族
 
-- **MCP 工具名**：`steward_benchmark`（加入 `src/api/mcp_tools.rs`，原生工具数 `39 → 40`）
+- **MCP 工具名**：`body_benchmark`（加入 `src/api/mcp_tools.rs`，原生工具数 `39 → 40`）
   - `action`: `"run" | "report" | "ledger" | "compare" | "workloads" | "export" | "reset"`
   - `suite`（可选）：`"full" | "macro" | "micro"` 或指定单个负载如 `"W1"`, `"W7"`, `"M1"`
   - `window`（可选，默认 `"7d"`）：`"24h" | "7d" | "30d" | "all"`
   - `run_id` / `baseline_run_id` / `target_run_id`（可选，用于查询或跨版本回归对比）
   - `format`（可选）：`"json" | "markdown" | "csv"`
-- **CLI 1:1 映射**：`agent-steward bench <subcommand>`
-  - `agent-steward bench workloads`：列出 W1~W8、M1~M5 与 PR-01~PR-08 规则字典
-  - `agent-steward bench run [--suite full|macro|micro|W1..W8] [--save]`：宿主机真机跑批并打印 5 维对照表格
-  - `agent-steward bench report [--run-id <id>] [--format table|json|markdown]`：查看最近一次或指定批次实证报告及 SHA-256 签名
-  - `agent-steward bench ledger [--window 24h|7d|30d|all] [--tool <name>]`：核查生产运行态累计收益账单与逐笔溯源明细
-  - `agent-steward bench compare <run_a> <run_b>`：跨版本/跨配置性能与 Token 节省回归比对
-  - `agent-steward bench export --format markdown|json|csv|parquet --out <path>`：导出可发表存证报告（输出默认引导至 `/root/new/tmp/` 或受控路径）
-  - `agent-steward bench reset`：清理所有 `bench:*` 隔离测试产物
+- **CLI 1:1 映射**：`agent-body bench <subcommand>`
+  - `agent-body bench workloads`：列出 W1~W8、M1~M5 与 PR-01~PR-08 规则字典
+  - `agent-body bench run [--suite full|macro|micro|W1..W8] [--save]`：宿主机真机跑批并打印 5 维对照表格
+  - `agent-body bench report [--run-id <id>] [--format table|json|markdown]`：查看最近一次或指定批次实证报告及 SHA-256 签名
+  - `agent-body bench ledger [--window 24h|7d|30d|all] [--tool <name>]`：核查生产运行态累计收益账单与逐笔溯源明细
+  - `agent-body bench compare <run_a> <run_b>`：跨版本/跨配置性能与 Token 节省回归比对
+  - `agent-body bench export --format markdown|json|csv|parquet --out <path>`：导出可发表存证报告（输出默认引导至 `/root/new/tmp/` 或受控路径）
+  - `agent-body bench reset`：清理所有 `bench:*` 隔离测试产物
 
 ### 7.2 白屏侧：Web REST API &「📊 实证基准与效能账本」工作台
 
@@ -242,7 +242,7 @@ CREATE INDEX IF NOT EXISTS idx_ledger_rule ON effectiveness_ledger(provenance_ru
   - 顶部 KPI 呈现生产态累计真实战绩（累计节省 Token、累计缩减探索轮次、累计拦截高危冲突、累计阻断垃圾文件、最新 Benchmark 综合加速比与 SHA-256 存证徽章）；
   - 主体提供「🧪 一键运行 A/B 对照基准（W1~W8 + M1~M5 实测对比柱状条）」、「📒 生产效能溯源账本（按 PR-01~PR-08 规则过滤+查看推导依据）」与「🔁 跨版本回归对比器」；
   - **路演演示剧场联动**：在 `DemoEngine::compute_roi()` 与 `scene-1`~`scene-6` 底部补充“📎 关联最新实证 Benchmark 批次与生产账本实测锚点”。
-- **Parity 矩阵门禁**：`GET /api/v1/parity/matrix` 与契约测试自动校验原生工具 **100% 映射**（Phase 44 已随 `steward_body_state` 扩展至 **43/43**）。
+- **Parity 矩阵门禁**：`GET /api/v1/parity/matrix` 与契约测试自动校验原生工具 **100% 映射**（Phase 44 已随 `body_state` 扩展至 **43/43**）。
 
 ---
 
@@ -298,7 +298,7 @@ $$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\
 ## 十三、Benchmark `v3.5` AOPCC 自适应并发与整轮对话税门禁（Phase 42）
 
 1. **新增 `W15 (optimistic_vs_pessimistic_execution_loop)`**：面向 [ISSUE #25](../../ISSUE.md#L120) 同场对比“全悲观前置查询 vs 裸奔盲猜 vs AOPCC 自适应（开工乐观租约直通 + `PostToolUse` `<2ms` 碰壁秒级自愈）”，考核整轮对话税 (`rounds_saved`)、首击成功率与 `100%` 故障恢复事实完整度。
-2. **新增 `PR-11 (OptimisticLeaseAndRecovery)`**：记录 `steward_brief` 乐观租约直行命中节省的对话轮次及 `steward_hook_post(success=false)` 秒级自愈存证流水。
+2. **新增 `PR-11 (OptimisticLeaseAndRecovery)`**：记录 `body_brief` 乐观租约直行命中节省的对话轮次及 `body_hook_post(success=false)` 秒级自愈存证流水。
 
 ---
 
@@ -308,4 +308,4 @@ $$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\
 2. **Benchmark `v3.7` (`W17` + `DQ8` + `PR-13`)**：面向 [ISSUE #27](../../ISSUE.md#L132) 新增：
    - **`W17 (cross_brain_continuity_and_body_proprioception)`**：模拟大脑 A (`antigravity`) 写入含敏感凭据与间接注入文本的接力胶囊，大脑 B (`claude-code`) 接入本体恢复；考核 6 器官 `BodyManifest` 自省、`<300 tok` 零泄露接力、`L3_FORBIDDEN` 包络拦截及 `rounds_saved >= 2` / `+ΔQ > 0`；
    - **`DQ8 (body_homeostasis_and_envelope_hygiene)`**：校验五维本体生命体征分值合法性、`AutonomyEnvelope` 对 `/etc/shadow` 拦截率 100% 与 `body_checkpoints` 零泄露/预算合规；
-   - **`PR-13 (CrossBrainContinuitySaved)`**：记录 `steward_body_state` 在跨大脑连续性接力与器官自省中节省的冷重探 Token 与轮次。
+   - **`PR-13 (CrossBrainContinuitySaved)`**：记录 `body_state` 在跨大脑连续性接力与器官自省中节省的冷重探 Token 与轮次。

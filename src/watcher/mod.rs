@@ -81,7 +81,7 @@ impl FileWatcher {
 fn is_ignored_dir_name(name: &str) -> bool {
     matches!(
         name,
-        "target" | ".git" | ".steward" | ".state" | "__pycache__" | ".codegraph" | ".venv" | "node_modules" | ".cache"
+        "target" | ".git" | ".agent-body" | ".state" | "__pycache__" | ".codegraph" | ".venv" | "node_modules" | ".cache"
     )
 }
 
@@ -125,7 +125,7 @@ fn should_ignore_path(path: &Path) -> bool {
     }
     if s.contains("/target/")
         || s.contains("/.git/")
-        || s.contains("/.steward/")
+        || s.contains("/.agent-body/")
         || s.contains("/.state/")
         || s.contains("/__pycache__/")
         || s.contains("/.codegraph/")

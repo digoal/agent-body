@@ -222,7 +222,7 @@ impl OptimisticFailureDiagnoser {
                         res.recommended_free_ports
                     ));
                     actions.push(format!(
-                        "或运行 `agent-steward env port {}` 查看完整占用上下文",
+                        "或运行 `agent-body env port {}` 查看完整占用上下文",
                         port
                     ));
                     format!(
@@ -240,7 +240,7 @@ impl OptimisticFailureDiagnoser {
                     format!("端口 `{}` 发生绑定冲突 (EADDRINUSE)", port)
                 }
                 Err(_) => {
-                    actions.push("请使用 `--port <空闲端口>` 重试或执行 `agent-steward env ports`".to_string());
+                    actions.push("请使用 `--port <空闲端口>` 重试或执行 `agent-body env ports`".to_string());
                     format!("端口 `{}` 发生绑定冲突 (EADDRINUSE)", port)
                 }
             };
@@ -287,12 +287,12 @@ impl OptimisticFailureDiagnoser {
                         .to_string(),
                 );
                 actions.push(
-                    "如需 TCP 口令登录，可检查 `~/.pgpass` 或由 `agent-steward service list` 查询凭据环境变量名"
+                    "如需 TCP 口令登录，可检查 `~/.pgpass` 或由 `agent-body service list` 查询凭据环境变量名"
                         .to_string(),
                 );
             } else {
                 actions.push(
-                    "请通过 `agent-steward service list` 查看已登记外部服务对应的 `auth_env_var` 环境变量"
+                    "请通过 `agent-body service list` 查看已登记外部服务对应的 `auth_env_var` 环境变量"
                         .to_string(),
                 );
             }
@@ -462,7 +462,7 @@ impl OptimisticFailureDiagnoser {
             }
             if actions.is_empty() {
                 actions.push(format!(
-                    "可运行 `agent-steward fact query --fact-type capability {}` 检索宿主已安装同能力工具",
+                    "可运行 `agent-body fact query --fact-type capability {}` 检索宿主已安装同能力工具",
                     search_intent
                 ));
             }
@@ -541,7 +541,7 @@ fn is_critical_system_path(path_str: &str) -> bool {
         "/.ssh/",
         "/.gnupg/",
         "/boot/",
-        "/.steward/steward.db",
+        "/.agent-body/body.db",
     ]
     .iter()
     .any(|p| lower.contains(p))
@@ -586,7 +586,7 @@ fn is_server_listen_command(norm: &str) -> bool {
         "webpack-dev-server",
         "pg_ctl ",
         "redis-server",
-        "agent-steward web",
+        "agent-body web",
         "docker run",
     ];
     if listen_markers.iter().any(|m| norm.contains(m)) {

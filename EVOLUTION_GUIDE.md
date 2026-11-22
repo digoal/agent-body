@@ -1,4 +1,4 @@
-# Agent Host Steward — 零重扫项目演进指南 (`EVOLUTION_GUIDE.md`)
+# Agent Body — 零重扫项目演进指南 (`EVOLUTION_GUIDE.md`)
 
 <!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=82 tables=27 workloads=17 micro=5 dq=8 pr_rules=13 -->
 
@@ -42,7 +42,7 @@
 | **5. 新增 / 修改资产放置规约** | 1. `src/storage/schema.sql` (`placement_rules` 预置)<br/>2. `src/placement/{engine_v2,conventions,learner}.rs` | `src/placement/` 单测 + `README.md` 放置规范 |
 | **6. 新增 / 修改宿主机物理事实探针** | 1. `src/fact/` (`capability`/`process_net`/`automation`/`assets_catalog`)<br/>2. `src/platform/` (Linux/macOS/Windows 抽象)<br/>3. `src/brief/assembler.rs` (必须走索引优先 `Index-First`) | `src/fact/` 单测 + `W1`/`W2`/`W8` Benchmark 回归 |
 | **7. 新增 / 修改效能存证规则 `PR-XX`** | 1. `src/benchmark/provenance.rs` (`ProvenanceRule` 枚举与推导公式)<br/>2. `src/benchmark/ledger.rs` (`record_channel_call`)<br/>3. 对应 CLI/MCP/Web 入口埋点 | `src/benchmark/ledger.rs` 单测 + `make evolution-check` |
-| **8. 新增 / 修改配置项或外部依赖** | 1. `src/config/mod.rs` (`Config` + `validate()`)<br/>2. `config.example.toml`<br/>3. `src/preflight/mod.rs` (启动预检探针) | `INSTALL.md` + `agent-steward preflight` 冒烟 |
+| **8. 新增 / 修改配置项或外部依赖** | 1. `src/config/mod.rs` (`Config` + `validate()`)<br/>2. `config.example.toml`<br/>3. `src/preflight/mod.rs` (启动预检探针) | `INSTALL.md` + `agent-body preflight` 冒烟 |
 
 ---
 
@@ -56,7 +56,7 @@
 | `src/body/` | `BodyManifestEngine`, `ContinuityManager`, `HomeostasisVitalsEngine`, `AutonomyEnvelope` | Agent 本体身份证、`<300 tok` 跨大脑接力胶囊、五维稳态自愈与 `L0~L3` 自治权限包络 |
 | `src/brief/` | `BriefAssembler`, `BriefRequest`, `OptimisticLeaseEngine` | 索引优先自适应情境组装（`<10ms`，40% 记忆预算，AOPCC 乐观租约） |
 | `src/changes/` | `ChangesEngine` | 宿主变更审计流与开工回溯摘要（含脱敏） |
-| `src/config/` | `Config`, `WebConfig`, `StorageConfig` | TOML 配置加载、校验与 `~/.steward/` 权限收敛 |
+| `src/config/` | `Config`, `WebConfig`, `StorageConfig` | TOML 配置加载、校验与 `~/.agent-body/` 权限收敛 |
 | `src/coordination/` | `CoordinationEngine`, `DeadlockDetector`, `LockWaitQueue` | 多 Agent 协作锁、层级互斥传播与 WFG 死锁环路检测 |
 | `src/daemon/` | `StewardDaemon`, `BackgroundScheduler` | 常驻守护主循环、后台巡检与生命周期托管 |
 | `src/demo/` | `DemoEngine`, `RoiReport` | 6 大路演沙盒剧目（`demo:*` 隔离，真引擎实跑） |

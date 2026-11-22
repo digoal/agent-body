@@ -1,6 +1,6 @@
 # 17 — Agent 本体（宿主机具身底座）、跨大脑连续性与五维稳态规格说明书
 
-> **Agent Embodiment Substrate (Agent Host Steward) 产品设计 · 交付件 17**  
+> **Agent Embodiment Substrate (Agent Body) 产品设计 · 交付件 17**  
 > **版本**: v1.0 · **编制**: Antigravity · **日期**: 2026-11-22 (Asia/Shanghai)  
 > **对齐约束**: [README.md 规约 #1, #2, #3, #8, #11, #13, #17, #27](../../README.md) · [ISSUE #27](../../ISSUE.md#L132) · [04-from-steward-to-agent-body.md](../idea_doc/04-from-steward-to-agent-body.md) · [roadmap-phase44-45.md](../src_doc/roadmap-phase44-45.md)
 
@@ -12,13 +12,13 @@
 
 基于 **脑体分离（Brain-Body Separation）** 架构，本项目的本质定位是：**驻留在宿主机上的 Agent 本体（Agent Embodiment Substrate）**——大语言模型与各类客户端（Antigravity / Claude Code / Cursor / Codex / Cron Worker）是可随时切换的**瞬态大脑皮层（Ephemeral Cortex）**，而本系统是永驻物理主机、零云端推理税的**数字躯干与具身底座**；过去的“大管家 / 小秘书”则是本体对外的两大功能侧面。
 
-然而，本仓库已在宿主机运行了 43 个阶段，存在大量现网部署契约（`~/.steward/`、`agent-steward.service`、全局 `hooks.json`、42 个 `steward_*` MCP 工具、外部分享脚本与 `docs/manual/` 文档）。因此本规格书强制确立 **三层命名兼容契约（严禁违背）**：
+然而，本仓库已在宿主机运行了 43 个阶段，存在大量现网部署契约（`~/.agent-body/`、`agent-body.service`、全局 `hooks.json`、42 个 `body_*` MCP 工具、外部分享脚本与 `docs/manual/` 文档）。因此本规格书强制确立 **三层命名兼容契约（严禁违背）**：
 
 | 命名层级 | 覆盖范围 | 命名策略 | 约束红线 |
 |---|---|---|---|
-| **Tier-1：品牌与产品心智层** | README 标题、项目愿景、架构文档、`docs/idea_doc/`、对外演讲/路演 PPT、公众号文章 | 统一升维为 **「Agent 本体（宿主机具身底座）」 / Agent Embodiment Substrate (`agent-steward`)** | 明确点破「脑体分离」，将“大管家/小秘书”定位为本体侧面与比较优势类比，**严禁再写容易让人误解为“多 Agent 编排器”或“人类私人助理”的表述**。 |
+| **Tier-1：品牌与产品心智层** | README 标题、项目愿景、架构文档、`docs/idea_doc/`、对外演讲/路演 PPT、公众号文章 | 统一升维为 **「Agent 本体（宿主机具身底座）」 / Agent Embodiment Substrate (`agent-body`)** | 明确点破「脑体分离」，将“大管家/小秘书”定位为本体侧面与比较优势类比，**严禁再写容易让人误解为“多 Agent 编排器”或“人类私人助理”的表述**。 |
 | **Tier-2：交互文案、代码注释、WebUI 与 SKILL 层** | Web 控制台文案、路演剧场、CLI `--about`/Help 文本、`src/` 模块注释、`skills/*.md`、`docs/manual/*.md`、`docs/arch/*.md` | 以「Agent 本体 · 六大器官」为主体语义刷新 | 保持清晰术语映射（例如：*Agent 本体事实感官 / 本体记忆海马体 / 本体反射门禁*），不破坏任何代码标识符与既有行为语义。 |
-| **Tier-3：工程与协议稳定层（零破坏红线）** | Cargo package (`agent-steward`)、二进制名、配置目录 (`~/.steward/`)、42 个既有 MCP 工具名 (`steward_*`)、CLI 子命令 (`steward ...`)、SQLite/PG/DuckDB 既有表名与 REST 路由 | **100% 保持原样，向后完全兼容** | **严禁改名破坏既有客户端 MCP 配置、Hooks 集成、Systemd 服务脚本或外部自动化调用**。新本体能力统一在 `src/body/` 与第 43 工具 `steward_body_state` 内聚扩展。 |
+| **Tier-3：工程与协议稳定层（零破坏红线）** | Cargo package (`agent-body`)、二进制名、配置目录 (`~/.agent-body/`)、42 个既有 MCP 工具名 (`body_*`)、CLI 子命令 (`steward ...`)、SQLite/PG/DuckDB 既有表名与 REST 路由 | **100% 保持原样，向后完全兼容** | **严禁改名破坏既有客户端 MCP 配置、Hooks 集成、Systemd 服务脚本或外部自动化调用**。新本体能力统一在 `src/body/` 与第 43 工具 `body_state` 内聚扩展。 |
 
 ---
 
@@ -41,7 +41,7 @@ flowchart LR
         AE["AutonomyEnvelope<br/>L0~L3 四级自治权限裁决"]
     end
 
-    S0 -->|"BriefAssembler / steward_body_state(manifest/resume)"| BM
+    S0 -->|"BriefAssembler / body_state(manifest/resume)"| BM
     S0 -->|"自动注入上任大脑未竟接力"| CC
     S1 -->|"动作权限核验"| AE
     S1 -->|"周期体检 & 自愈"| HV
@@ -112,7 +112,7 @@ flowchart LR
 | **2. 反射灵敏度 (`reflex_accuracy`)** | 20% | `audit_events` 近 24h AOPCC 租约命中率 $\hat{p}_{\text{valid}}$、`P2` 探针命中率 | `< 75` → 自动收紧低置信度乐观租约（降级为 `CAUTIOUS_CAS`） |
 | **3. 海马体纯净度 (`memory_purity`)** | 20% | `DQ4`（零明文凭据残留）、`DQ5`（信息新鲜度/无僵尸记忆）、矛盾记忆比率 | `< 80` → 触发 `FreshnessReconciler::reconcile()` 与记忆生命周期审计 |
 | **4. 代谢健康度 (`metabolic_health`)** | 20% | 磁盘空闲率、`DQ3` 断链健康分、过期锁数量、`/root/new/tmp/` 滞留体积 | `< 75` → 触发过期锁 GC、写穿失效与 `HostGC` `dry-run` 预检告警 |
-| **5. 免疫可溯度 (`immune_traceability`)** | 15% | `DQ7`（双域审计完整率 + Watcher 折叠效率）、`~/.steward/` `0600/0700` 权限合规 | `< 85` → 写入 `user_feedback.md` 自告警并提醒修正权限/漏埋点 |
+| **5. 免疫可溯度 (`immune_traceability`)** | 15% | `DQ7`（双域审计完整率 + Watcher 折叠效率）、`~/.agent-body/` `0600/0700` 权限合规 | `< 85` → 写入 `user_feedback.md` 自告警并提醒修正权限/漏埋点 |
 
 - 综合稳态分：`overall_score = 0.25*S + 0.20*R + 0.20*M_p + 0.20*M_h + 0.15*I`（`0..=100`）；
 - 状态分档：`healthy (>= 85)`、`degraded (65..84)`、`critical (< 65)`；
@@ -138,12 +138,12 @@ flowchart LR
 
 ## 三、黑白屏 1:1:1 双向同步契约（第 43 原生工具）
 
-恪守规约 #16「高内聚防工具膨胀」，仅新增 **1 个**多动作聚合 MCP 工具 `steward_body_state`（工具总数由 `42 → 43`，CLI 顶层命令由 `29 → 30`）：
+恪守规约 #16「高内聚防工具膨胀」，仅新增 **1 个**多动作聚合 MCP 工具 `body_state`（工具总数由 `42 → 43`，CLI 顶层命令由 `29 → 30`）：
 
 | 端侧 | 接口签名 / 入口 | 覆盖动作（1:1:1 Action Parity） |
 |---|---|---|
-| **MCP 工具 (`src/api/mcp_tools.rs`)** | `steward_body_state` | `action`: `manifest` \| `vitals` \| `envelope` \| `handoff_save` \| `handoff_resume` \| `peers` |
-| **CLI (`src/main.rs`)** | `agent-steward body <subcmd>` | `manifest` \| `vitals` \| `envelope` \| `handoff` \| `resume` \| `peers` |
+| **MCP 工具 (`src/api/mcp_tools.rs`)** | `body_state` | `action`: `manifest` \| `vitals` \| `envelope` \| `handoff_save` \| `handoff_resume` \| `peers` |
+| **CLI (`src/main.rs`)** | `agent-body body <subcmd>` | `manifest` \| `vitals` \| `envelope` \| `handoff` \| `resume` \| `peers` |
 | **Web REST (`src/web/server.rs` & `parity_api.rs`)** | `GET /api/v1/body/{manifest,vitals,envelope,checkpoints,peers}`<br/>`POST /api/v1/body/{handoff,resume,heal}` | 写端点强制校验 `check_auth`；`parity/matrix` 升级为 `43/43 (100%)` |
 | **Web UI (`src/web/assets/mod.rs`)** | 顶栏品牌升维 + 第 9 工作台「🧬 本体中枢与生命体征」 | 展示脑体分离拓扑、六器官卡片、五维稳态雷达、跨大脑接力胶囊时间线、L0~L3 权限包络表 + CLI/MCP 镜像器 |
 
@@ -171,5 +171,5 @@ flowchart LR
 
 1. **Phase 44（本规格核心实现）**：落地 `src/body/`、`body_checkpoints`、五维稳态、四级包络、`43/43` 黑白屏同步与 Benchmark `v3.7`（`W17` + `DQ8` + `PR-13`）。
 2. **Phase 45（全仓本体化术语刷新，ISSUE #27 收口）**：按三层命名兼容契约刷新代码注释、CLI/MCP 描述、`README.md`、`docs/manual/`、`docs/arch/`、`skills/`（含全局镜像）与 Web 路演剧场（升级主叙事 + 新增第 7 幕「换脑不失忆」），产出体系化演说母版内容清单。
-3. **Phase 46（承接 ISSUE #28）**：新建 `presentation/` 目录，`git mv` 移入 `steward-deck.html` 与 `presentation.html` 并基于 Phase 44~45 最新实证数据终刷新；同时按“地层剖面 / 工程蓝图”视觉规范拆解生成多份体系化 **30 分钟单点讲透专题演讲 HTML**。
+3. **Phase 46（承接 ISSUE #28）**：新建 `presentation/` 目录，`git mv` 移入 `agent-body-deck.html` 与 `presentation.html` 并基于 Phase 44~45 最新实证数据终刷新；同时按“地层剖面 / 工程蓝图”视觉规范拆解生成多份体系化 **30 分钟单点讲透专题演讲 HTML**。
 4. **Phase 47（承接 ISSUE #29）**：统筹规划并执行 `git mv` 根目录文档层级规整（清理一级目录散乱文档），全仓扫描刷新（排除 `target/`）所有旧路径引用，同步刷新 `.codegraph/` 与 `scripts/evolution_manifest.py` 门禁。

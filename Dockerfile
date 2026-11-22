@@ -1,5 +1,5 @@
 # ==============================================================================
-# Agent Host Steward — 生产级多阶段容器镜像构建文件
+# Agent Body — 生产级多阶段容器镜像构建文件
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
  && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /usr/src/agent-steward
+WORKDIR /usr/src/agent-body
 
 # 复制源码树与构建脚本
 COPY Cargo.toml Cargo.lock build.rs ./
@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 # 从构建器阶段拷贝二进制产物
-COPY --from=builder /usr/src/agent-steward/target/release/agent-steward /usr/local/bin/agent-steward
+COPY --from=builder /usr/src/agent-body/target/release/agent-body /usr/local/bin/agent-body
 
 # 默认数据存储卷
 VOLUME ["/root/.steward"]
@@ -51,5 +51,5 @@ VOLUME ["/root/.steward"]
 EXPOSE 9527
 
 # 默认进入 preflight 检查后启动守护进程
-ENTRYPOINT ["agent-steward"]
+ENTRYPOINT ["agent-body"]
 CMD ["daemon"]

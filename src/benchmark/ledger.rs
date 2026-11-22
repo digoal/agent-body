@@ -103,8 +103,8 @@ impl EffectivenessLedger {
         output_text: &str,
         elapsed_us: i64,
     ) {
-        if tool_or_action == "steward_benchmark"
-            || tool_or_action == "steward_demo_scenario"
+        if tool_or_action == "body_benchmark"
+            || tool_or_action == "body_demo_scenario"
             || tool_or_action == "bench"
         {
             return;
@@ -112,7 +112,7 @@ impl EffectivenessLedger {
         let session_id = format!("{}-live", channel);
         let stew_tokens = estimate_tokens(output_text);
         let input = match tool_or_action {
-            "steward_skill_route" | "steward_mcp_catalog" | "steward_service_contact" => {
+            "body_skill_route" | "body_mcp_catalog" | "body_service_contact" => {
                 let skills_tok: i64 = storage
                     .list_skills_catalog()
                     .map(|v| v.iter().map(|s| s.est_tokens as i64).sum())
@@ -137,7 +137,7 @@ impl EffectivenessLedger {
                     evidence_summary: format!("PR-01: 库内全量技能+MCP {} tok -> 路由输出 {} tok", base, stew_tokens),
                 }
             }
-            "steward_asset_search" | "steward_asset_register" => LedgerEventInput {
+            "body_asset_search" | "body_asset_register" => LedgerEventInput {
                 session_id,
                 source_channel: channel.into(),
                 tool_or_action: tool_or_action.into(),
@@ -151,7 +151,7 @@ impl EffectivenessLedger {
                 elapsed_us,
                 evidence_summary: format!("PR-02: 渐进式元数据披露 {} tok（免全量读源码）", stew_tokens),
             },
-            "steward_hook_pre" => {
+            "body_hook_pre" => {
                 let blocked = output_text.contains("BLOCK")
                     || output_text.contains("WARN")
                     || output_text.contains("occupied")
@@ -175,9 +175,9 @@ impl EffectivenessLedger {
                     evidence_summary: "PR-03: Pre-Hook 执行前静态拦截冲突/违规".into(),
                 }
             }
-            "steward_fact_query" | "steward_port_check" | "steward_env_processes" | "steward_env_show"
-            | "steward_placement_suggest" | "steward_changes_since" => {
-                let occupied = tool_or_action == "steward_port_check"
+            "body_fact_query" | "body_port_check" | "body_env_processes" | "body_env_show"
+            | "body_placement_suggest" | "body_changes_since" => {
+                let occupied = tool_or_action == "body_port_check"
                     && (output_text.contains("occupied") || output_text.contains("已被占用"));
                 LedgerEventInput {
                     session_id,
@@ -194,7 +194,7 @@ impl EffectivenessLedger {
                     evidence_summary: format!("PR-04: 宿主机只读物理事实/放置查询 ({} tok, {} μs)", stew_tokens, elapsed_us),
                 }
             }
-            "steward_links_impact" | "steward_links_audit" | "steward_links_repair" | "steward_codegraph_bridge" => {
+            "body_links_impact" | "body_links_audit" | "body_links_repair" | "body_codegraph_bridge" => {
                 LedgerEventInput {
                     session_id,
                     source_channel: channel.into(),
@@ -210,7 +210,7 @@ impl EffectivenessLedger {
                     evidence_summary: format!("PR-05: 宏观拓扑/宏微联邦图分析 ({} tok)", stew_tokens),
                 }
             }
-            "steward_lock_acquire" | "steward_lock_wait" | "steward_lock_deadlock_check" => {
+            "body_lock_acquire" | "body_lock_wait" | "body_lock_deadlock_check" => {
                 let intercepted = output_text.contains("Denied")
                     || output_text.contains("deadlock")
                     || output_text.contains("true");
@@ -232,7 +232,7 @@ impl EffectivenessLedger {
                     evidence_summary: "PR-07: 多 Agent 协作锁冲突或死锁环路预警".into(),
                 }
             }
-            "steward_brief" => LedgerEventInput {
+            "body_brief" => LedgerEventInput {
                 session_id,
                 source_channel: channel.into(),
                 tool_or_action: tool_or_action.into(),
@@ -246,7 +246,7 @@ impl EffectivenessLedger {
                 elapsed_us,
                 evidence_summary: format!("PR-08: 冷启动自适应简报组装 ({} tok, 免 5 轮探查)", stew_tokens),
             },
-            "steward_memory_search" => LedgerEventInput {
+            "body_memory_search" => LedgerEventInput {
                 session_id,
                 source_channel: channel.into(),
                 tool_or_action: tool_or_action.into(),
@@ -260,7 +260,7 @@ impl EffectivenessLedger {
                 elapsed_us,
                 evidence_summary: format!("PR-09: 语义向量+FTS 混合检索 ({} tok)", stew_tokens),
             },
-            "steward_memory_add" | "steward_session_close" | "steward_feedback" => LedgerEventInput {
+            "body_memory_add" | "body_session_close" | "body_feedback" => LedgerEventInput {
                 session_id,
                 source_channel: channel.into(),
                 tool_or_action: tool_or_action.into(),
@@ -274,7 +274,7 @@ impl EffectivenessLedger {
                 elapsed_us,
                 evidence_summary: format!("PR-10: 实际反馈与长期记忆沉淀 ({} tok)", stew_tokens),
             },
-            "steward_hook_post" => {
+            "body_hook_post" => {
                 let recovered = output_text.contains("recovery_prescription")
                     || output_text.contains("AOPCC 碰壁秒级自愈");
                 if !recovered {
@@ -295,7 +295,7 @@ impl EffectivenessLedger {
                     evidence_summary: "PR-11: AOPCC 乐观直行碰壁 <2ms 自愈处方注入".into(),
                 }
             }
-            "steward_audit_query" => LedgerEventInput {
+            "body_audit_query" => LedgerEventInput {
                 session_id,
                 source_channel: channel.into(),
                 tool_or_action: tool_or_action.into(),
@@ -309,7 +309,7 @@ impl EffectivenessLedger {
                 elapsed_us,
                 evidence_summary: format!("PR-12: 双域行为审计溯源与自进化闭环 ({} tok)", stew_tokens),
             },
-            "steward_body_state" => LedgerEventInput {
+            "body_state" => LedgerEventInput {
                 session_id,
                 source_channel: channel.into(),
                 tool_or_action: tool_or_action.into(),
@@ -417,14 +417,14 @@ mod tests {
         EffectivenessLedger::record_channel_call(
             &provider,
             "cli",
-            "steward_memory_search",
+            "body_memory_search",
             "命中 3 条混合语义记忆",
             180,
         );
         EffectivenessLedger::record_channel_call(
             &provider,
             "web",
-            "steward_feedback",
+            "body_feedback",
             "已记录 CON-01 并沉淀记忆",
             95,
         );

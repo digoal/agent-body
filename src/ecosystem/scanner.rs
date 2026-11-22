@@ -385,8 +385,8 @@ mcp_servers:
     args: ["-y", "tavily-mcp"]
     env:
       TAVILY_API_KEY: "tvly-secret-do-not-store"
-  agent-steward:
-    command: /usr/local/bin/agent-steward
+  agent-body:
+    command: /usr/local/bin/agent-body
 "#;
         let (recs, sanitized) = McpConfigScanner::parse_hermes_yaml_mcp(yaml, "hermes");
         assert_eq!(recs.len(), 2);

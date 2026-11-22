@@ -23,7 +23,7 @@ def build_talk_04() -> None:
             "eyebrow": "封面 · 第 04 讲",
             "title": "海马体、信息新鲜度治理与跨大脑 1ms 接力",
             "svg": svg_cover(
-                kicker="SERIES 04 / 06 · AGENT HOST STEWARD · v0.4.0 · 30 MIN",
+                kicker="SERIES 04 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
                 title="海马体、新鲜度治理与跨大脑接力",
                 en_sub="Memory SPI, Freshness Reconciliation & Cross-Brain Continuity",
                 subtitle1="为什么 Agent 越用越「胡说八道」？因为记忆会发霉",
@@ -295,7 +295,7 @@ def build_talk_04() -> None:
             "next": "让我们用实机 W17 和 W9/W12 的 Benchmark 数据，检验海马体整套闭环的真实成色。",
             "script": (
                 "整个接力流程对人几乎是无感的。\n"
-                "Brain A 收尾时调一次 `steward_session_close` 或 `steward_body_state(action=handoff_save)`，把目标、关键文件和风险封进胶囊；半小时后你打开另一个客户端，SessionStart 钩子自动跑 `BriefAssembler`，只要预算大于等于 800 tok 且有活跃胶囊，立刻把不超过 150 tok 的接力摘要拼进开工简报里。"
+                "Brain A 收尾时调一次 `body_session_close` 或 `body_state(action=handoff_save)`，把目标、关键文件和风险封进胶囊；半小时后你打开另一个客户端，SessionStart 钩子自动跑 `BriefAssembler`，只要预算大于等于 800 tok 且有活跃胶囊，立刻把不超过 150 tok 的接力摘要拼进开工简报里。"
             ),
         },
         {
@@ -336,7 +336,7 @@ def build_talk_04() -> None:
                         "title": "个人单机零运维",
                         "accent": C_TEAL_D,
                         "lines": [
-                            "单文件 ~/.steward/steward.db",
+                            "单文件 ~/.agent-body/body.db",
                             "WAL 并发读 + FTS5 内置全文",
                             "27 张完整表结构即装即用",
                         ],
@@ -375,30 +375,30 @@ def build_talk_04() -> None:
             "lead": "30 秒亲手体验 <b>记忆混合检索、陈旧对账、接力胶囊封存与跨脑唤醒</b>。",
             "svg": svg_code_and_flow(
                 "海马体与接力胶囊 CLI 实战",
-                "agent-steward v0.4.0 CLI",
+                "agent-body v0.4.0 CLI",
                 [
                     "# 1. 写入长期记忆（自动脱敏+去噪）与 RRF 混合检索",
-                    "agent-steward memory add \"PG 19 ASAN 构建需开启 -O1\" --tags pg,debug",
-                    "agent-steward memory search \"postgres sanitizer 编译参数\"",
+                    "agent-body memory add \"PG 19 ASAN 构建需开启 -O1\" --tags pg,debug",
+                    "agent-body memory search \"postgres sanitizer 编译参数\"",
                     "",
                     "# 2. 主动执行记忆矛盾审计与全链路新鲜度对账",
-                    "agent-steward memory audit",
-                    "agent-steward feedback reconcile",
+                    "agent-body memory audit",
+                    "agent-body feedback reconcile",
                     "",
                     "# 3. Brain A 封存跨大脑接力胶囊（自动脱敏+限额 <=300 tok）",
-                    "agent-steward body handoff save --brain antigravity \\",
+                    "agent-body body handoff save --brain antigravity \\",
                     "  --goal \"完成 Phase 46 演讲体系\" --files \"presentation/index.html\"",
                     "",
                     "# 4. Brain B 查看并接盘最近活跃胶囊",
-                    "agent-steward body handoff list",
-                    "agent-steward body handoff resume --brain claude-code",
+                    "agent-body body handoff list",
+                    "agent-body body handoff resume --brain claude-code",
                 ],
                 "等价 MCP 闭环调用",
                 [
-                    ("steward_memory_add / search / audit", "跨会话经验沉淀、RRF 混合检索与冲突归档", "W9 质量 100.0"),
-                    ("steward_session_close(handoff_note=...)", "长任务收尾自动归档会话并生成接力胶囊", "src/session/mod.rs"),
-                    ("steward_body_state(action=handoff_*)", "显式保存、列举或接盘接力胶囊", "PR-13 自动记账"),
-                    ("steward_brief(query=...)", "新大脑开工自动拼入 <=150 tok 接力摘要", "W17 -92.7% tok"),
+                    ("body_memory_add / search / audit", "跨会话经验沉淀、RRF 混合检索与冲突归档", "W9 质量 100.0"),
+                    ("body_session_close(handoff_note=...)", "长任务收尾自动归档会话并生成接力胶囊", "src/session/mod.rs"),
+                    ("body_state(action=handoff_*)", "显式保存、列举或接盘接力胶囊", "PR-13 自动记账"),
+                    ("body_brief(query=...)", "新大脑开工自动拼入 <=150 tok 接力摘要", "W17 -92.7% tok"),
                 ],
             ),
             "next": "海马体与接力讲清了，但还有一个工程边界必须提前说明：什么东西「不该」塞进记忆和胶囊？",
@@ -455,7 +455,7 @@ def build_talk_04() -> None:
             "title": "传统 Agent Memory vs 本体海马体全景对比",
             "lead": "一页看清：为什么单纯加一个向量数据库，永远解不了真实研发场景的连续性问题。",
             "svg": svg_compare_rows(
-                ("核心维度", "传统 Agent Memory 项目", "Agent Host Steward 本体海马体"),
+                ("核心维度", "传统 Agent Memory 项目", "Agent Body 本体海马体"),
                 [
                     ("数据保鲜机制", "只管追加写入，文件改删后旧记忆长期发霉", "inotify 写穿失效 + 四表级联清理 + 定期现实对账"),
                     ("跨客户端接力", "绑定单一客户端云端会话，换工具即失忆", "宿主机本地 body_checkpoints <=300 tok 跨脑接力"),
@@ -492,9 +492,9 @@ def build_talk_04() -> None:
         },
     ]
     render_deck(
-        doc_title="第 04 讲 · 海马体、信息新鲜度治理与跨大脑 1ms 接力 — Agent Host Steward",
+        doc_title="第 04 讲 · 海马体、信息新鲜度治理与跨大脑 1ms 接力 — Agent Body",
         brand_label="SERIES 04 / 06 · 海马体接力",
-        foot_label="AGENT HOST STEWARD · 第 04 讲：海马体、信息新鲜度治理与跨大脑 1ms 接力 (v0.4.0)",
+        foot_label="AGENT BODY · 第 04 讲：海马体、信息新鲜度治理与跨大脑 1ms 接力 (v0.4.0)",
         slides_data=slides,
         out_path=OUT / "04-hippocampus-freshness-continuity.html",
     )
@@ -507,7 +507,7 @@ def build_talk_05() -> None:
             "eyebrow": "封面 · 第 05 讲",
             "title": "纵深安全、双域审计与探针驱动自进化",
             "svg": svg_cover(
-                kicker="SERIES 05 / 06 · AGENT HOST STEWARD · v0.4.0 · 30 MIN",
+                kicker="SERIES 05 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
                 title="纵深安全、双域审计与自进化",
                 en_sub="Defense-in-Depth, Dual-Domain Audit & MeshEnvelope v1.0",
                 subtitle1="给 Agent 一具常驻宿主的身体，信任必须建立在密码学与审计之上",
@@ -572,7 +572,7 @@ def build_talk_05() -> None:
                         "title": "0700/0600 + Bearer Auth",
                         "accent": C_GREEN,
                         "lines": [
-                            "~/.steward/ 收敛 0700，db 收敛 0600",
+                            "~/.agent-body/ 收敛 0700，db 收敛 0600",
                             "Web 所有写/敏感路由强制鉴权 401",
                             "Preflight 启动自检权限姿态",
                             ("tests/test_web_dashboard.rs 覆盖", True),
@@ -705,10 +705,10 @@ def build_talk_05() -> None:
                 "src/mesh/{auth,dialogue,transfer,mod}.rs",
                 [
                     "// MeshEnvelope v1.0 零信任线协议",
-                    "X-Steward-Peer:      peer-gpu-01",
-                    "X-Steward-Timestamp: 1795334400       // ±300s 时间窗防过期",
-                    "X-Steward-Nonce:     uuid-v4          // NonceCache 防重放",
-                    "X-Steward-Signature: HMAC-SHA256(secret, canonical_payload)",
+                    "X-Body-Peer:      peer-gpu-01",
+                    "X-Body-Timestamp: 1795334400       // ±300s 时间窗防过期",
+                    "X-Body-Nonce:     uuid-v4          // NonceCache 防重放",
+                    "X-Body-Signature: HMAC-SHA256(secret, canonical_payload)",
                     "",
                     "// 最小权限 Peer Scopes：",
                     "//   read:facts | read:graph | write:dialogue | write:transfer",
@@ -720,8 +720,8 @@ def build_talk_05() -> None:
                 [
                     ("1. 跨机图谱联邦 (mesh/graph)", "零拷贝远端查询对端端口、服务与项目拓扑，避免跨机盲操", "Scope: read:graph"),
                     ("2. 双向脱敏对话 (mesh/dialogue)", "跨机 Agent 结构化传话，进出双端强制脱敏 + 防提示词投毒", "test_dialogue_sanitizes"),
-                    ("3. 沙盒文件投递 (mesh/transfer)", "硬限额 <=10MB + SHA-256 校验 + 落盘 ~/.steward/mesh_inbox/ 防穿越", "W14 质量 100.0"),
-                    ("4. 多体名片发现 (body_manifest)", "自动发现对端 body_id、OS/架构、6 器官就绪态与稳态分", "agent-steward body peers"),
+                    ("3. 沙盒文件投递 (mesh/transfer)", "硬限额 <=10MB + SHA-256 校验 + 落盘 ~/.agent-body/mesh_inbox/ 防穿越", "W14 质量 100.0"),
+                    ("4. 多体名片发现 (body_manifest)", "自动发现对端 body_id、OS/架构、6 器官就绪态与稳态分", "agent-body body peers"),
                 ],
                 animated=True,
             ),
@@ -735,7 +735,7 @@ def build_talk_05() -> None:
             "next": "看实机实测数据：安全、审计、自进化与 Mesh 四条线跑出来的成绩单。",
             "script": (
                 "多机协同最怕做成臃肿的分布式共识集群。我们用极其克制的 `MeshEnvelope v1.0` 解决了 90% 的真实跨机诉求：HMAC-SHA256 规范签名、正负 300 秒时间窗加 NonceCache 防重放、按 Peer 分配最小权限 Scope。\n"
-                "所有跨机传过来的文件只允许进 `~/.steward/mesh_inbox/` 隔离沙盒，限额 10MB 且验 SHA-256；Phase 44 还新增了 `/api/v1/mesh/body_manifest`，让一台主机的大脑能瞬间看清集群里其他宿主机的本体名片和稳态分。"
+                "所有跨机传过来的文件只允许进 `~/.agent-body/mesh_inbox/` 隔离沙盒，限额 10MB 且验 SHA-256；Phase 44 还新增了 `/api/v1/mesh/body_manifest`，让一台主机的大脑能瞬间看清集群里其他宿主机的本体名片和稳态分。"
             ),
         },
         {
@@ -771,29 +771,29 @@ def build_talk_05() -> None:
             "lead": "黑白屏 1:1 对应，Web 驾驶舱「双域审计」与「本体中枢」工作台同步可视化。",
             "svg": svg_code_and_flow(
                 "安全、审计与 Mesh 实战命令",
-                "agent-steward v0.4.0 CLI",
+                "agent-body v0.4.0 CLI",
                 [
                     "# 1. 宿主机依赖与文件权限安全姿态预检",
-                    "agent-steward preflight",
+                    "agent-body preflight",
                     "",
                     "# 2. 按双域查询审计流水、聚合统计与自进化调优",
-                    "agent-steward audit query --domain out_of_agent --limit 20",
-                    "agent-steward audit summary --days 7",
-                    "agent-steward audit evolve --apply",
+                    "agent-body audit query --domain out_of_agent --limit 20",
+                    "agent-body audit summary --days 7",
+                    "agent-body audit evolve --apply",
                     "",
                     "# 3. 一键运行 P1~P5 五点对比探针",
-                    "agent-steward feedback probe",
+                    "agent-body feedback probe",
                     "",
                     "# 4. 查询本地五维稳态 & 跨宿主机 Mesh 本体名片",
-                    "agent-steward body vitals",
-                    "agent-steward body peers",
+                    "agent-body body vitals",
+                    "agent-body body peers",
                 ],
                 "Web 2.0 驾驶舱同步入口",
                 [
-                    ("#view-audit 双域审计台", "IN/OUT 双域过滤、trace_id 因果钻取、DuckDB OLAP 与一键导出", "steward_audit_query"),
-                    ("#view-body 本体中枢台", "五维稳态雷达、L0~L3 边界测试器与跨机名片列表", "steward_body_state"),
-                    ("#view-benchmark 探针与反馈", "一键跑 P1~P5 探针、查看 user_feedback.md 与记忆同步", "steward_feedback"),
-                    ("#view-governance Mesh 沙盒", "跨机图谱查询、脱敏对话与 mesh_inbox 收件箱审计", "steward_mesh_query"),
+                    ("#view-audit 双域审计台", "IN/OUT 双域过滤、trace_id 因果钻取、DuckDB OLAP 与一键导出", "body_audit_query"),
+                    ("#view-body 本体中枢台", "五维稳态雷达、L0~L3 边界测试器与跨机名片列表", "body_state"),
+                    ("#view-benchmark 探针与反馈", "一键跑 P1~P5 探针、查看 user_feedback.md 与记忆同步", "body_feedback"),
+                    ("#view-governance Mesh 沙盒", "跨机图谱查询、脱敏对话与 mesh_inbox 收件箱审计", "body_mesh_query"),
                 ],
             ),
             "next": "安全与自进化同样需要诚实的边界说明：哪些风险是 Steward 能兜的，哪些需要宿主机 OS 配合？",
@@ -850,7 +850,7 @@ def build_talk_05() -> None:
                         ],
                     },
                 ],
-                "最佳实践：OS 容器/最小权限管住底层执行边界，Agent Host Steward 管住认知、反思与审计免疫层。",
+                "最佳实践：OS 容器/最小权限管住底层执行边界，Agent Body 管住认知、反思与审计免疫层。",
             ),
             "next": "安全与免疫体系闭环后，收束第 5 讲，准备迎接压轴第 6 讲——三轨实证 Benchmark v3.7。",
             "script": (
@@ -973,9 +973,9 @@ def build_talk_05() -> None:
         },
     ]
     render_deck(
-        doc_title="第 05 讲 · 纵深安全、双域审计与探针驱动自进化 — Agent Host Steward",
+        doc_title="第 05 讲 · 纵深安全、双域审计与探针驱动自进化 — Agent Body",
         brand_label="SERIES 05 / 06 · 安全与进化",
-        foot_label="AGENT HOST STEWARD · 第 05 讲：纵深安全、双域审计与探针驱动自进化 (v0.4.0)",
+        foot_label="AGENT BODY · 第 05 讲：纵深安全、双域审计与探针驱动自进化 (v0.4.0)",
         slides_data=slides,
         out_path=OUT / "05-security-audit-evolution-mesh.html",
     )
@@ -988,7 +988,7 @@ def build_talk_06() -> None:
             "eyebrow": "封面 · 第 06 讲",
             "title": "三轨实证 Benchmark v3.7 与可复现工程体系",
             "svg": svg_cover(
-                kicker="SERIES 06 / 06 · AGENT HOST STEWARD · v0.4.0 · 30 MIN",
+                kicker="SERIES 06 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
                 title="三轨实证 Benchmark 与工程体系",
                 en_sub="Pareto Token-Quality Gate, Live Competitor Bench & Zero-Drift Ops",
                 subtitle1="拒绝自嗨口号：既要省 Token，更要上下文质量不降反升",
@@ -1163,7 +1163,7 @@ def build_talk_06() -> None:
                             "DQ2 Ollama 向量覆盖：99.5% (199/200)",
                             "DQ3 依赖拓扑物理有效：100.0% (2000/2000)",
                             "DQ4 库表凭据零明文：100.0% (144/144)",
-                            ("实机 ~/.steward/steward.db 直测", True),
+                            ("实机 ~/.agent-body/body.db 直测", True),
                         ],
                         "foot_lbl": "上半区结论",
                         "foot_val": "4 / 4 PASS",
@@ -1195,7 +1195,7 @@ def build_talk_06() -> None:
             "title": "COMP-C1 ~ C4：四大赛道同机真跑对比（LIVE_BENCHMARKED）",
             "lead": "严格区分 <b>LIVE_BENCHMARKED（同机真跑）</b> 与 <b>ARCH_VERIFIED（源码核验）</b>，绝不混淆口径。",
             "svg": svg_compare_rows(
-                ("竞品对标轨道", "主流竞品 / 传统基线实测", "Agent Host Steward 同机实测"),
+                ("竞品对标轨道", "主流竞品 / 传统基线实测", "Agent Body 同机实测"),
                 [
                     ("C1 长期记忆", "Mem0/JSON 无脱敏基线：5/5 明文落盘 · 质量 24.1", "0/5 泄露 · Top-5 FTS · 省 97.8% tok · 质量 100.0"),
                     ("C2 上下文路由", "OpenViking 摘要+静态全量技能：60 副本 · 144,730 tok", "0 副本搬迁 · 931 tok (-99.4%) · 密度 233.2x"),
@@ -1311,13 +1311,13 @@ def build_talk_06() -> None:
                     "make check && make test",
                     "",
                     "# 3. 构建 Release 单二进制并运行宿主机预检",
-                    "make build && ./target/release/agent-steward preflight",
+                    "make build && ./target/release/agent-body preflight",
                     "",
                     "# 4. 独立运行 Benchmark v3.7 全量三轨评测（~6 秒）",
-                    "./target/release/agent-steward bench run --suite full --save false",
+                    "./target/release/agent-body bench run --suite full --save false",
                     "",
                     "# 5. 启动 Web 2.0 驾驶舱（默认 http://127.0.0.1:8756）",
-                    "./target/release/agent-steward web",
+                    "./target/release/agent-body web",
                 ],
                 "复现环境极简要求",
                 [
@@ -1351,11 +1351,11 @@ def build_talk_06() -> None:
                     ["文档与技能", "EVOLUTION_GUIDE + docs/manual/ + 3 套 SKILL + 9 份 HTML 演讲", "evolution-check 0 drift + Playwright", "PASS"],
                 ],
                 [18, 220, 820, 1290],
-                footnote="基线版本：agent-steward v0.4.0 (Phase 1 ~ Phase 46) · Apache-2.0",
+                footnote="基线版本：agent-body v0.4.0 (Phase 1 ~ Phase 46) · Apache-2.0",
             ),
             "next": "接下来还有哪些未完的演进？看看面向 Phase 47（ISSUE #29）的收官蓝图。",
             "script": (
-                "这是今天为止 agent-steward 的完整工程体检表：27 个模块、43 个原生工具、82 个存储 SPI 方法、27 张表、268 项测试零失败、Bench v3.7 全绿。每一项数字都能通过脚本直接从源码反算出来。"
+                "这是今天为止 agent-body 的完整工程体检表：27 个模块、43 个原生工具、82 个存储 SPI 方法、27 张表、268 项测试零失败、Bench v3.7 全绿。每一项数字都能通过脚本直接从源码反算出来。"
             ),
         },
         {
@@ -1424,7 +1424,7 @@ def build_talk_06() -> None:
                         ],
                     },
                 ],
-                ("仓库地址：https://github.com/digoal/agent-steward · 欢迎 Star、Issue 与 PR。", "Apache-2.0 Open Source", "teal"),
+                ("仓库地址：https://github.com/digoal/agent-body · 欢迎 Star、Issue 与 PR。", "Apache-2.0 Open Source", "teal"),
             ),
             "next": "来到整个 6 讲系列的最终收束页。",
             "script": (
@@ -1437,11 +1437,11 @@ def build_talk_06() -> None:
             "lead": "6 讲 × 30 分钟至此圆满收官。愿每一台开发机上的 AI 大脑，都能拥有一具<b>清醒、敏锐、克制、可信</b>的物理身体。",
             "svg": svg_closing(
                 kicker="SERIES FINALE · 第 06 讲收束（全系列完）",
-                headline="Agent Host Steward：用数据库级工程纪律，锻造 AI 时代的宿主机具身底座",
+                headline="Agent Body：用数据库级工程纪律，锻造 AI 时代的宿主机具身底座",
                 pillars=[
                     ("帕累托实证", "Token -99.22% × 质量 35.8→99.8 × 密度 92.1x", "W1~W17 · M1~M5 · DQ1~DQ8 全绿"),
                     ("零漂移纪律", "evolution-check + lint-panic + 268 测试 + Playwright", "可独立 2 分钟完整复现"),
-                    ("长期主义", "脑体分离、递弱代偿、三层兼容、Apache-2.0 开源", "github.com/digoal/agent-steward"),
+                    ("长期主义", "脑体分离、递弱代偿、三层兼容、Apache-2.0 开源", "github.com/digoal/agent-body"),
                 ],
                 open_question="终局之问：如果五年后每台个人电脑与服务器都默认运行着一层「Agent 本体底座」，它最不可或缺的三条标准协议应该是什么？",
                 next_talk="返回系列导航总览 → presentation/index.html · 或体验路演总览 presentation.html",
@@ -1454,9 +1454,9 @@ def build_talk_06() -> None:
         },
     ]
     render_deck(
-        doc_title="第 06 讲 · 三轨实证 Benchmark v3.7 与可复现工程体系 — Agent Host Steward",
+        doc_title="第 06 讲 · 三轨实证 Benchmark v3.7 与可复现工程体系 — Agent Body",
         brand_label="SERIES 06 / 06 · 实证工程",
-        foot_label="AGENT HOST STEWARD · 第 06 讲：三轨实证 Benchmark v3.7 与可复现工程体系 (v0.4.0)",
+        foot_label="AGENT BODY · 第 06 讲：三轨实证 Benchmark v3.7 与可复现工程体系 (v0.4.0)",
         slides_data=slides,
         out_path=OUT / "06-empirical-benchmark-engineering.html",
     )
@@ -1493,7 +1493,7 @@ def build_index_hub() -> None:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Agent Host Steward · 体系化演讲与路演总览</title>
+<title>Agent Body · 体系化演讲与路演总览</title>
 <style>
 :root{{
   --paper:#F7F6F2; --paper2:#F1EFE9; --line:#D9D5CB; --ink:#1B2B33; --ink2:#46585F;
@@ -1531,7 +1531,7 @@ h1{{font-family:var(--f-r);font-size:44px;font-weight:600;margin-top:12px;letter
 </head>
 <body>
 <div class="wrap">
-  <div class="eyebrow">AGENT HOST STEWARD · PRESENTATION SUITE · v0.4.0 · APACHE-2.0</div>
+  <div class="eyebrow">AGENT BODY · PRESENTATION SUITE · v0.4.0 · APACHE-2.0</div>
   <h1>Agent 本体体系化演讲与路演总览</h1>
   <p class="sub">统一采用<b>「浅色纸基 · 地层剖面 · 工程蓝图」</b>视觉规范（零外部依赖 · 内联正交 SVG · <code>N/T</code> 联动讲稿 · <code>G</code> 目录 · <code>P/A/S/R</code> 步进动画）。基线实测：27 模块 · 43 工具 · 82 SPI · 268 测试全绿 · Bench v3.7 全绿（-99.22% Token · 质量 35.8→99.8）。</p>
   <div class="rule"></div>
@@ -1543,9 +1543,9 @@ h1{{font-family:var(--f-r);font-size:44px;font-weight:600;margin-top:12px;letter
       <p>面向投资人、产品负责人与技术决策者：比较优势 → 脑体分离 → 7 大黄金剧目 → Bench v3.7 全绿实证成绩单。</p>
       <span class="dc-go">打开路演版 →</span>
     </a>
-    <a class="hero-card clay" href="steward-deck.html">
+    <a class="hero-card clay" href="agent-body-deck.html">
       <div class="dc-top"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">22 页 · 45 分钟</span></div>
-      <h2>Agent 本体深度技术交流版（steward-deck.html）</h2>
+      <h2>Agent 本体深度技术交流版（agent-body-deck.html）</h2>
       <p>面向一线架构师与研发团队：三位一体到六大器官完整演进、关键数据结构、工程账与开放技术议题。</p>
       <span class="dc-go">打开交流版 →</span>
     </a>
@@ -1556,7 +1556,7 @@ h1{{font-family:var(--f-r);font-size:44px;font-weight:600;margin-top:12px;letter
   </div>
   <div class="foot">
     <span>digoal 德哥 · 2026-11 · 全部 9 份 HTML 通过 Playwright 0 溢出 / 0 重叠门禁</span>
-    <span>github.com/digoal/agent-steward</span>
+    <span>github.com/digoal/agent-body</span>
   </div>
 </div>
 </body>

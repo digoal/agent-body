@@ -283,10 +283,10 @@ mod tests {
     fn test_is_noise_process_filters_system_daemons() {
         assert!(is_noise_process("kworker/u16:2", "kworker"));
         assert!(is_noise_process("systemd-journald", "/lib/systemd/systemd-journald"));
-        assert!(is_noise_process("tokio-rt-worker", "/usr/local/bin/agent-steward daemon"));
+        assert!(is_noise_process("tokio-rt-worker", "/usr/local/bin/agent-body daemon"));
         assert!(is_noise_process("dbus-daemon", "/usr/bin/dbus-daemon --system"));
         assert!(is_noise_process("python3", ""));
-        assert!(!is_noise_process("agent-steward", "/usr/local/bin/agent-steward daemon"));
+        assert!(!is_noise_process("agent-body", "/usr/local/bin/agent-body daemon"));
         assert!(!is_noise_process("python3", "python3 /root/new/shared_proj/bot.py"));
     }
 

@@ -1,9 +1,9 @@
-# Agent Host Steward (Rust 版) — 研发与测试进度表（断点续传）
+# Agent Body (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-22T17:26:00+08:00  
+> 最新更新: 2026-11-22T17:50:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: **Phase 1~47 全部完成（ISSUE #27/#28/#29/#30 全量交付）**；43 个原生 MCP 工具（黑白屏 100% 同步），27 个 `src/lib.rs` 模块，82 个 SPI 方法，27 张 SQLite 表，Benchmark `v3.7` 全绿基线，`docs/` 统一文档中心与 `presentation/` 9 份离线 HTML 全部通过自动化验真
+> 当前状态: **Phase 1~48 全部完成（ISSUE #27/#28/#29/#30/#31 全量交付）**；项目已彻底更名为 **`Agent Body` (`agent-body`)**，43 个原生 MCP 工具（`body_*` 黑白屏 100% 同步），27 个 `src/lib.rs` 模块，82 个 SPI 方法，27 张 SQLite 表，268 项测试全绿，Benchmark `v3.7` 全绿基线，`docs/` 统一文档中心与 `presentation/` 9 份离线 HTML 全部通过自动化验真
 
 ---
 
@@ -33,7 +33,7 @@
 | | 1.2 | 事实图谱核心：内核级进程与端口拓扑引擎 (/proc & Socket) | `src/fact/process_net.rs` | ✅ **已完成** | 2026-11-15 21:19 |
 | | 1.3 | 事实图谱核心：系统自动化依赖网络 (Systemd & Cron Topology) | `src/fact/automation.rs` | ✅ **已完成** | 2026-11-15 21:28 |
 | | 1.4 | 事实图谱核心：源码工程与知识资料编目器 (Code & Assets Catalog) | `src/fact/assets_catalog.rs` | ✅ **已完成** | 2026-11-17 17:20 |
-| | 1.5 | 事实图谱核心：只读查询语义接口与 MCP/CLI 贯通 (steward_fact_query) | `src/api/` & `src/main.rs` | ✅ **已完成** | 2026-11-17 17:35 |
+| | 1.5 | 事实图谱核心：只读查询语义接口与 MCP/CLI 贯通 (body_fact_query) | `src/api/` & `src/main.rs` | ✅ **已完成** | 2026-11-17 17:35 |
 | **三位一体 Phase 2** | 2.1 | 偏好规约：资产放置规则引擎 2.0 (项目级配置覆盖与意图推导) | `src/placement/engine_v2.rs` | ✅ **已完成** | 2026-11-17 17:39 |
 | | 2.2 | 偏好规约：工程操作习惯与安全规约 (CodeGraph优先/真实性门禁) | `src/placement/conventions.rs` | ✅ **已完成** | 2026-11-17 17:43 |
 | | 2.3 | 偏好规约：纠偏自演化学习器 2.0 (文件跨目录搬移行为捕获沉淀) | `src/placement/learner.rs` | ✅ **已完成** | 2026-11-17 17:52 |
@@ -41,7 +41,7 @@
 | | 3.2 | 可插拔记忆：内置轻量引擎实现 (Builtin Local Provider) | `src/memory/builtin_provider.rs` | ✅ **已完成** | 2026-11-17 18:07 |
 | | 3.3 | 可插拔记忆：成熟开源生态适配器 (Mem0 / Letta / PowerContext) | `src/memory/adapters/` | ✅ **已完成** | 2026-11-17 18:54 |
 | **三位一体 Phase 4** | 4.1 | 自适应情境组装：BriefAssembler 核心组装器 | `src/brief/assembler.rs` | ✅ **已完成** | 2026-11-18 09:45 |
-| | 4.2 | 自适应情境组装：steward_brief MCP 动态化升级 | `src/api/mcp_tools.rs` | ✅ **已完成** | 2026-11-18 09:47 |
+| | 4.2 | 自适应情境组装：body_brief MCP 动态化升级 | `src/api/mcp_tools.rs` | ✅ **已完成** | 2026-11-18 09:47 |
 | | 4.3 | 自适应情境组装：情境质量评分器与 TUI 看板升级 | `src/tui/mod.rs` | ✅ **已完成** | 2026-11-18 09:47 |
 | | 4.4 | 自适应情境组装：端到端集成验收实测与生产部署 | 全系统 | ✅ **已完成** | 2026-11-18 09:48 |
 
@@ -62,7 +62,7 @@
 - 实现了 `LinkRepairer`（基于 Levenshtein 相似度与代码指纹自动推演断链修复 patch）；
 - 实现了 `TuiDashboard`（交互式终端单屏实时看板与状态刷新）；
 - 实现了 23 个原生 MCP 工具端点与 CLI 子系统；
-- 交付件完整落地于 `docs/manual/`、`docs/src_doc/`、`README.md` 与 `/root/new/shared_git/agent-steward`。
+- 交付件完整落地于 `docs/manual/`、`docs/src_doc/`、`README.md` 与 `/root/new/shared_git/agent-body`。
 
 🎉 **三位一体架构 Phase 1（宿主机事实图谱核心）已 100% 全量串行交付**：
 - 详见路线图 [roadmap-modular-phase1.md](roadmap-modular-phase1.md)；
@@ -102,12 +102,12 @@
 | **Phase 19** | 真实事实拓扑修正、进程去噪与 Web UI 2.0 全景交互指挥舱（5 大工作台 + Daemon SSE 实时推流） | 待探讨 ISSUE #5 / 规约 #5 #7 | ✅ **已完成** | 2026-11-19 08:21 |
 | **Phase 20** | 四层贯通文档刷新、全局 3 处 SKILL 镜像同步与现网守护热更新交付 | 规约 #10 #11 #13 #14 | ✅ **已完成** | 2026-11-19 08:23 |
 | **Phase 21** | 黑白屏全能力双向同步与全景工作台升级（补齐 21 项缺失+7 项残缺白屏 API/UI + 黑屏命令镜像器 + 100% Parity 矩阵） | 待探讨 ISSUE #6 / 规约 #13 #16 | ✅ **已完成** | 2026-11-19 09:34 |
-| **Phase 22** | Web 路演演示剧场与产品营销互动引擎（6 大黄金剧目真引擎沙盒推演 + 左右分屏 + ROI 看板 + 第 39 工具 `steward_demo_scenario`） | 待探讨 ISSUE #7 & #6 / 规约 #5 #17 | ✅ **已完成** | 2026-11-19 09:55 |
+| **Phase 22** | Web 路演演示剧场与产品营销互动引擎（6 大黄金剧目真引擎沙盒推演 + 左右分屏 + ROI 看板 + 第 39 工具 `body_demo_scenario`） | 待探讨 ISSUE #7 & #6 / 规约 #5 #17 | ✅ **已完成** | 2026-11-19 09:55 |
 | **Phase 23** | 分层语义元数据 Key 体系与本地 Ollama 小模型双轨自动标注（L1 确定性提取 + L2 `qwen3.5:0.8b` 脱敏精炼 + 三级渐进披露 + 防覆写合并） | 待探讨 ISSUE #8 / 规约 #9 #10 #16 | ✅ **已完成** | 2026-11-19 12:00 |
 | **Phase 24** | 「比较优势」思想源起补完与双 HTML 演说「地层剖面 / 工程蓝图」重构 + Playwright 渲染自检 | 待探讨 ISSUE #9 & #10 | ✅ **已完成** | 2026-11-19 13:05 |
 | **Phase 25** | Web UI 美化（白天工程蓝图 / 夜间深空双主题切换 + 面板去裸 JSON）与「路演演示剧场」三层故事化重构 | 待探讨 ISSUE #11 & #12 | ✅ **已完成** | 2026-11-19 13:50 |
 | **Phase 26** | 数据治理硬化（黑名单零逃逸/`restricted` 落地/噪音门禁）+ `LinksEngine` 真实依赖图谱闭环 + v0.4.0 四层全量对齐 | 规约 #2 #4 #5 #6 #10 #11 | ✅ **已完成** | 2026-11-19 14:50 |
-| **Phase 27** | 实证 Benchmark 双轨内核（8 大 A/B 负载 + 5 大微基准 + 生产效能存证账本 `PR-01~08` + 第 40 工具 `steward_benchmark` & CLI `bench`） | 待探讨 ISSUE #13 / 规约 #18 | ✅ **已完成** | 2026-11-19 15:54 |
+| **Phase 27** | 实证 Benchmark 双轨内核（8 大 A/B 负载 + 5 大微基准 + 生产效能存证账本 `PR-01~08` + 第 40 工具 `body_benchmark` & CLI `bench`） | 待探讨 ISSUE #13 / 规约 #18 | ✅ **已完成** | 2026-11-19 15:54 |
 | **Phase 28** | Web「实证基准与效能账本」白屏工作台 + 40/40 Parity 矩阵 + 路演/PPT 实证联动 + 四层文档/SKILL 热部署 | 待探讨 ISSUE #13 / 规约 #16 #18 | ✅ **已完成** | 2026-11-19 15:54 |
 | **Phase 29** | 事实对象全景属性字典重构、全链路 Ollama Embedding 向量化与 WebUI 元数据深度贯通 | 用户反馈 / ISSUE #8 | ✅ **已完成** | 2026-11-19 20:17 |
 | **Phase 30** | 实际使用反馈闭环（`user_feedback.md`）、`BriefAssembler` 加速、`LinksEngine` 假阳性治理、全渠道账本与记忆沉淀 | [user_feedback.md](../../user_feedback.md) / ISSUE #14 | ✅ **已完成** | 2026-11-19 22:57 |
@@ -121,10 +121,10 @@
 | **Phase 38** | 全生命周期信息新鲜度与写穿失效体系（规约 #9/#13/#14/#21 升级、`mtime_secs` + `stale` 写穿重置旧向量、三后端 FTS `status='active'`、SPI `delete_fact_node`、`AutoSyncEngine` 幂等归档、`ChangeHandler` 删除级联清理、`PropertyGraphOrganizer` 幽灵节点剪枝与 `backfill_embeddings.py` `'ready'` 复位） | [roadmap-phase38-39.md](roadmap-phase38-39.md) / ISSUE #21 | ✅ **已完成** | 2026-11-21 |
 | **Phase 39** | 五点对比探针自进化引擎与 Benchmark `v3.3`（`P1~P5` 对比探针、`FeedbackEngine::add_item_deduped`、`FreshnessReconciler` 守护调度与黑白屏 `feedback reconcile/probes`、`W12` + `DQ5`，实测 `237/237` 全测试 PASS、探针 `5/5 ✅`、`DQ1~DQ5 100.0%`） | [roadmap-phase38-39.md](roadmap-phase38-39.md) / ISSUE #22 | ✅ **已完成** | 2026-11-21 |
 | **Phase 40** | 多维证据分层有向加权图谱增强（`L1/L2/L3` 关系本体、`links→fact_edges` 结构上卷、服务同体桥接、向量+标签隐式发现 Top-$K=3$、加权衰减爆炸半径与黑白屏 1:1 同步） | [roadmap-phase40-41.md](roadmap-phase40-41.md) / ISSUE #23 | ✅ **已完成** | 2026-11-22 |
-| **Phase 41** | 联邦网格 `MeshEnvelope v1.0` 协同协议（HMAC-SHA256 签名与防重放、Peer Scopes、跨机图谱/结构化对话双向脱敏抗投毒、`<=10MB` `~/.steward/mesh_inbox/` 沙盒投递与 Benchmark `v3.4` `W13`/`W14`/`DQ6`） | [roadmap-phase40-41.md](roadmap-phase40-41.md) / ISSUE #24 | ✅ **已完成** | 2026-11-22 |
+| **Phase 41** | 联邦网格 `MeshEnvelope v1.0` 协同协议（HMAC-SHA256 签名与防重放、Peer Scopes、跨机图谱/结构化对话双向脱敏抗投毒、`<=10MB` `~/.agent-body/mesh_inbox/` 沙盒投递与 Benchmark `v3.4` `W13`/`W14`/`DQ6`） | [roadmap-phase40-41.md](roadmap-phase40-41.md) / ISSUE #24 | ✅ **已完成** | 2026-11-22 |
 | **Phase 42** | 悲观 vs 乐观自适应并发控制（AOPCC）与失败早回退（开工乐观租约 `OptimisticLeaseEngine`、三态动作分类器、`PostToolUse` 碰壁秒级自愈与 Benchmark `v3.5` `W15` / `PR-11`） | [roadmap-phase42.md](roadmap-phase42.md) / ISSUE #25 | ✅ **已完成** | 2026-11-22 |
 | **Phase 43** | 双域全链路行为审计（`IN_AGENT` + `OUT_OF_AGENT`）、`Watcher` 60s 折叠防洪、DuckDB OLAP 分析与审计驱动自进化（Benchmark `v3.6` `W16` / `DQ7` / `PR-12`） | [roadmap-phase43.md](roadmap-phase43.md) / ISSUE #26 | ✅ **已完成** | 2026-11-22 |
-| **Phase 44** | **Agent 本体内核**：新增 `src/body/` 与 `body_checkpoints`（`BodyManifest`、`ContinuityCapsule` `<=300 tok`、五维 `HomeostasisVitals`、四级 `AutonomyEnvelope`、多体联邦名片）、第 43 工具 `steward_body_state`（43/43 Parity）与 Benchmark `v3.7`（`W17` / `DQ8` / `PR-13`） | [roadmap-phase44-45.md](roadmap-phase44-45.md) / ISSUE #27 | ✅ **已完成** (`44.1~44.6`) | 2026-11-22 |
+| **Phase 44** | **Agent 本体内核**：新增 `src/body/` 与 `body_checkpoints`（`BodyManifest`、`ContinuityCapsule` `<=300 tok`、五维 `HomeostasisVitals`、四级 `AutonomyEnvelope`、多体联邦名片）、第 43 工具 `body_state`（43/43 Parity）与 Benchmark `v3.7`（`W17` / `DQ8` / `PR-13`） | [roadmap-phase44-45.md](roadmap-phase44-45.md) / ISSUE #27 | ✅ **已完成** (`44.1~44.6`) | 2026-11-22 |
 | **Phase 45** | **全物料本体化刷新与路演升维**：三层命名兼容下刷新代码注释、CLI/MCP 描述、`README`/`manual`/`arch`/`skills/`（含全局镜像），升级 Web 路演剧场第 7 幕「换脑不失忆」并衔接 ISSUE #28/#29 | [roadmap-phase44-45.md](roadmap-phase44-45.md) / ISSUE #27 | ✅ **已完成** (`45.1~45.3`) | 2026-11-22 |
 
 > 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md)、[progress-phase27.md](progress-phase27.md)、[roadmap-phase29.md](roadmap-phase29.md)、[roadmap-phase30.md](roadmap-phase30.md)、[progress-phase30.md](progress-phase30.md)、[roadmap-phase32.md](roadmap-phase32.md)、[roadmap-phase34-35.md](roadmap-phase34-35.md)、[roadmap-phase36.md](roadmap-phase36.md)、[roadmap-phase37.md](roadmap-phase37.md)、[roadmap-phase38-39.md](roadmap-phase38-39.md)、[roadmap-phase40-41.md](roadmap-phase40-41.md)、[roadmap-phase42.md](roadmap-phase42.md)、[roadmap-phase43.md](roadmap-phase43.md) 与 [roadmap-phase44-45.md](roadmap-phase44-45.md)
@@ -152,7 +152,7 @@
 - **事实拓扑图谱**: 聚合 `/proc` 进程、监听端口、Systemd 守护服务、Crontab 定时任务与核心资产，输出符合标准图协议的 Nodes & Edges，支持定向查询爆炸半径多跳子图；
 - **协作锁监控看板**: 实时暴露 Phase 11 `CoordinationEngine` 活跃锁矩阵、租期 TTL 动态倒计时与排队态势，支持受控管理员强制解除超时孤儿锁；
 - **全链路推流**: 实现 `/api/v1/stream` (Server-Sent Events) 长连接推流，实现感知事件秒级推屏；
-- **CLI 与守护集成**: 新增 `agent-steward web [--host] [--port] [--auth-token]` 命令，并在 `steward daemon` 常驻后台中按需托管拉起；
+- **CLI 与守护集成**: 新增 `agent-body web [--host] [--port] [--auth-token]` 命令，并在 `steward daemon` 常驻后台中按需托管拉起；
 - **工业级全量测试**: 新增 4 项 Web 模块单元测试与 1 项端到端全生命周期集成测试（`tests/test_web_dashboard.rs`），全系统 145 项测试 **100% 全部通过**；
 - **官方使用手册**: 发布 `docs/manual/08-web-dashboard.md` 并同步更新 `docs/manual/03-cli-reference.md` 与根目录 `README.md`。
 
@@ -160,14 +160,14 @@
 
 ## 验收总结 (Phase 1~12 全部完成)
 - **单元与集成测试**：122 项单元测试 + 8 项协作锁集成测试 + 5 项 DuckDB 集成测试 + 5 项高性能基准测试共 140 项全部 100% PASS，0 warning。
-- **运行依赖与环境诊断**：新增 `src/preflight/` 预检引擎（REQUIRED / OPTIONAL / INFO 三级判断），CLI 提供 `agent-steward preflight`，守护进程启动自动校验；
+- **运行依赖与环境诊断**：新增 `src/preflight/` 预检引擎（REQUIRED / OPTIONAL / INFO 三级判断），CLI 提供 `agent-body preflight`，守护进程启动自动校验；
 - **配置与可移植部署**：提供带详注的 `config.example.toml`，提供生产部署指南 `INSTALL.md`（含多发行版依赖矩阵与排障 FAQ），提供多阶段 `Dockerfile`、`docker-compose.yml` 与 `Makefile`；
 - **存储后端**：支持 SQLite 嵌入式、PostgreSQL (pgvector + tsvector) 和 DuckDB (OLAP 列存分析与 Parquet/CSV 导出) 三后端；实现跨库双向热迁移与毫秒级增量同步管道。
 - **多 Agent 协作**：实现 `CoordinationEngine`、资源正规化、排他/共享锁、TTL 自动失效、续租、父子目录递归互斥、PG Advisory Lock (跨连接会话级事务保证)、以及 Pre-Hook 自动冲突拦截。
 - **分析与协作工具**：系统原生 MCP 工具总数扩充至 **31 个**。
 - **SKILL 体系**：全面刷新项目内置 3 套技能，测试、工具数与代码事实保持 100% 对齐。
-- **后台守护进程**：`agent-steward.service` 在后台持续稳定运行。
-- **共享仓库同步**：代码已同步至 `/root/new/shared_git/agent-steward`。
+- **后台守护进程**：`agent-body.service` 在后台持续稳定运行。
+- **共享仓库同步**：代码已同步至 `/root/new/shared_git/agent-body`。
 
 ---
 
@@ -182,7 +182,7 @@
 - 代码层：`PreflightChecker` 逐项验证 procfs、inotify、data_dir、SQLite、DuckDB、Systemd、CodeGraph、Ollama，`build.rs` 注入 Git Commit 与平台信息，`Config::validate` 拦截非法配置；
 - 配置层：`config.example.toml` 逐参数注释说明、取值范围与依赖前提；
 - 文档层：`INSTALL.md` 覆盖编译依赖、运行依赖、四大发行版安装、Docker、Systemd 与排障速查表；
-- 技能层：更新 `agent-steward-guide`、`agent-steward-developer`、`agent-steward-doc-writer` 保持 100% 事实一致；
+- 技能层：更新 `agent-body-guide`、`agent-body-developer`、`agent-body-doc-writer` 保持 100% 事实一致；
 - 工程化：`Dockerfile`、`docker-compose.yml`、`Makefile` 一应俱全。
 
 🎉 **Phase 11（多 Agent 协作锁与互斥协调中枢）已 100% 全量串行交付**：
@@ -190,10 +190,10 @@
 - 实现了 `CoordinationEngine` 协作锁引擎：支持 Port、Directory、Service、File、Custom 5 大资源类型，支持 Exclusive 与 Shared 两种锁模式；
 - 存储层 SPI 扩充 5 个锁生命周期方法（`insert_coordination_lock`, `delete_coordination_lock`, `get_coordination_lock`, `list_coordination_locks`, `gc_expired_coordination_locks`），全面覆盖 SQLite、PostgreSQL (集成 Advisory Lock)、DuckDB；
 - 实现了目录层级祖先/后代递归互斥传播（持有父目录排他锁自动阻止子目录操作，持有子目录排他锁自动阻止父目录独占）；
-- 实现了 `steward_lock_acquire`、`steward_lock_release`、`steward_lock_list` 3 个原生 MCP 端点（原生工具数达到 31 个）；
+- 实现了 `body_lock_acquire`、`body_lock_release`、`body_lock_list` 3 个原生 MCP 端点（原生工具数达到 31 个）；
 - 深度集成 `AgentHookEngine` 的 `hook_pre` 门禁，在绑定端口、修改文件时自动检测排他锁冲突；
 - 深度集成守护进程后台调度 `run_inspection_cycle`，定时自动 GC 过期锁；
-- 新增 CLI `agent-steward coordination [list|release|gc]` 命令；
+- 新增 CLI `agent-body coordination [list|release|gc]` 命令；
 - 8 项多 Agent 并发与互斥集成测试（`tests/coordination_integration.rs`）100% PASS！
 
 🎉 **Phase 10（DuckDB 分析后端与增量同步管道）已 100% 全量串行交付**：
@@ -210,13 +210,13 @@
 - 实现了 `ScanStateMachine` 断点续扫状态机，基于确定性文件排序与持久化检查点，实测支持单步挂起与无损续扫；
 - 实现了 `ImportanceScorer` 与 `NoiseFilter` 智能质量门禁，阻断临时缓存与依赖垃圾入库，并在记忆入库端实现 `MemoryIntakeFilter`；
 - 实现了 `fact_nodes` / `fact_edges` 宿主机属性图，`PropertyGraphOrganizer` 全景关联工程、守护服务、端口与 Cron，自动生成规整 Mermaid 依赖图；
-- 实现了 `AgentHookEngine` 与 `steward_hook_pre` / `steward_hook_post` 原生 MCP 工具（工具总数升至 25 个）；
+- 实现了 `AgentHookEngine` 与 `body_hook_pre` / `body_hook_post` 原生 MCP 工具（工具总数升至 25 个）；
 - 后台守护集成 `BackgroundScheduler` 30 分钟自巡检；
-- 全系统单元测试 **101 项 100% 全部通过**；Release 二进制已更新部署，`agent-steward.service` 稳定在线！
+- 全系统单元测试 **101 项 100% 全部通过**；Release 二进制已更新部署，`agent-body.service` 稳定在线！
 
 🎉 **三位一体架构 Phase 4（自适应情境组装与全景中枢）已 100% 全量串行交付**：
 - 详见路线图 [roadmap-modular-phase4.md](roadmap-modular-phase4.md)；
 - 实现了 `BriefAssembler` 自适应组装器，在 `≤ budget_tokens` 内根据任务意图动态从事实、偏好、记忆三模块融合采样；
-- 升级了原生 MCP 工具 `steward_brief`，支持 `query`、`session_id`、`budget_tokens` 动态调控；
+- 升级了原生 MCP 工具 `body_brief`，支持 `query`、`session_id`、`budget_tokens` 动态调控；
 - 升级了 TUI 实时终端看板；
-- 全系统单元测试 **89 项 100% 全部通过**；Release 二进制已热部署，`agent-steward.service` 生产守护稳定运行！
+- 全系统单元测试 **89 项 100% 全部通过**；Release 二进制已热部署，`agent-body.service` 生产守护稳定运行！

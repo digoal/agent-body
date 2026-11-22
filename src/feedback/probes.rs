@@ -228,7 +228,7 @@ impl FreshnessReconciler {
                 "freshness_reconcile",
                 "reconcile",
             )
-            .with_target("host", "steward.db")
+            .with_target("host", "body.db")
             .with_outcome("success")
             .with_elapsed_us(rep.elapsed_us as i64)
             .with_delta(serde_json::json!({
@@ -321,7 +321,7 @@ impl SelfEvolutionProbeEngine {
             recommendation: if p1_healthy {
                 "保持 BriefAssembler 索引优先路径与高置信乐观租约签发".into()
             } else {
-                "建议排查 Brief 慢路径或运行 `agent-steward feedback reconcile`".into()
+                "建议排查 Brief 慢路径或运行 `agent-body feedback reconcile`".into()
             },
         });
 
@@ -351,7 +351,7 @@ impl SelfEvolutionProbeEngine {
             ),
             healthy: p2_healthy,
             healed_action: "持续经由 PR-01~PR-12 双账本带出处留痕与三态 AOPCC 路由".into(),
-            recommendation: "若发现高频违规目录可运行 `agent-steward audit evolve` 或 `place learn` 自动演化规则".into(),
+            recommendation: "若发现高频违规目录可运行 `agent-body audit evolve` 或 `place learn` 自动演化规则".into(),
         });
 
         // P3: 检索效用探针 (FTS 僵尸泄漏与陈旧向量)
@@ -417,7 +417,7 @@ impl SelfEvolutionProbeEngine {
             recommendation: if p4_healthy {
                 "库内快照与磁盘物理状态完全一致".into()
             } else {
-                "执行 `agent-steward feedback reconcile` 修复磁盘漂移".into()
+                "执行 `agent-body feedback reconcile` 修复磁盘漂移".into()
             },
         });
 

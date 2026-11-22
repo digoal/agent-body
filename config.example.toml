@@ -1,14 +1,14 @@
 # ==============================================================================
-# Agent Host Steward (宿主环境大管家) — 配置文件参考模板
+# Agent Body (宿主环境大管家) — 配置文件参考模板
 # ==============================================================================
 #
 # 配置文件默认查找路径:
 #   1. 环境变量: STEWARD_CONFIG (最高优先级)
-#   2. 命令行参数: agent-steward --config <path> ...
-#   3. 用户家目录: ~/.steward/config.toml (默认路径)
+#   2. 命令行参数: agent-body --config <path> ...
+#   3. 用户家目录: ~/.agent-body/config.toml (默认路径)
 #
 # 首次运行任何 steward 命令时，若上述路径均不存在配置文件，
-# 系统将自动根据本模板创建默认的 ~/.steward/config.toml。
+# 系统将自动根据本模板创建默认的 ~/.agent-body/config.toml。
 # ==============================================================================
 
 # 基础数据存储目录 (SQLite 数据库、本地缓存、备份文件均存放于此)
@@ -17,8 +17,8 @@
 data_dir = "/root/.steward"
 
 # SQLite 主存储数据库文件绝对路径
-# 默认: "{data_dir}/steward.db"
-db_path = "/root/.steward/steward.db"
+# 默认: "{data_dir}/body.db"
+db_path = "/root/.agent-body/body.db"
 
 # HTTP API 监听端口 (仅当启动独立的 HTTP/Web 服务模式时生效，stdio MCP 模式不占用端口)
 # 取值范围: 1024 ~ 65535 (禁止使用低于 1024 的特权端口)
@@ -47,11 +47,11 @@ provider = "sqlite"
 # 依赖要求: 
 #   1. PostgreSQL 服务处于监听状态
 #   2. 数据库已执行 CREATE EXTENSION IF NOT EXISTS vector;
-#   3. DDL 迁移可通过 `agent-steward storage migrate --to postgres` 自动导入
+#   3. DDL 迁移可通过 `agent-body storage migrate --to postgres` 自动导入
 # pg_url = "host=localhost port=5432 user=steward dbname=steward"
 
 # DuckDB 数据库文件路径 (若不填则默认为 {data_dir}/steward.duckdb)
-# duckdb_path = "/root/.steward/steward.duckdb"
+# duckdb_path = "/root/.agent-body/steward.duckdb"
 
 # ==============================================================================
 # [embedding] 语义向量嵌入服务配置 (可选，与下方 [annotation] 职责严格分离)
@@ -114,7 +114,7 @@ ignore_patterns = [
     ".git",
     "node_modules",
     "__pycache__",
-    ".steward",
+    ".agent-body",
     "target",
     ".venv",
     ".idea",
@@ -180,7 +180,7 @@ port = 8765
 # event = "on_file_created"
 # filter = { path_prefix = "/root/new/work", extensions = [".md"] }
 # action = "exec"
-# command = "agent-steward asset scan {path} --depth 1"
+# command = "agent-body asset scan {path} --depth 1"
 #
 # 示例 2: 长期记忆写入时，向外部通知中枢发送 Webhook (3秒超时)
 # [[hooks]]
@@ -201,7 +201,7 @@ port = 8765
 # debounce_ms = 500
 # [[pipelines.steps]]
 # name = "step-scan-asset"
-# action = { action = "exec", command = "agent-steward asset scan {path} --depth 1" }
+# action = { action = "exec", command = "agent-body asset scan {path} --depth 1" }
 # filter = { path_prefix = "/root/new/work", extensions = [".md"] }
 # on_failure = "abort"
 # timeout_ms = 3000
@@ -243,8 +243,8 @@ timeout_ms = 1500
 replay_window_secs = 300
 # 跨机受控文件投递体积上限（字节，默认 10MB）
 max_transfer_bytes = 10485760
-# 跨机文件隔离沙盒收件箱路径（默认 ~/.steward/mesh_inbox，严格 0700 权限）
-# inbox_dir = "~/.steward/mesh_inbox"
+# 跨机文件隔离沙盒收件箱路径（默认 ~/.agent-body/mesh_inbox，严格 0700 权限）
+# inbox_dir = "~/.agent-body/mesh_inbox"
 # 按节点独立共享密钥与最小作用域授权（可选）
 # [mesh.peer_keys]
 # "node-gpu-02" = "peer-specific-secret"

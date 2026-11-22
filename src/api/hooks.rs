@@ -72,7 +72,7 @@ impl AgentHookEngine {
             let coord = crate::coordination::CoordinationEngine::new(self.storage.provider().clone());
             if let Ok(Some(lock)) = coord.check_resource(&crate::coordination::ResourceType::Port, &port_str) {
                 warnings.push(format!("🔒 目标端口 `{}` 已被 Agent `{}` 加协作锁（有效期至 {}）！立即绑定将引发冲突！", port, lock.holder_agent, lock.expires_at));
-                suggestions.push(format!("建议先调用 steward_lock_acquire 获取该端口锁，或与 Agent `{}` 协同释放", lock.holder_agent));
+                suggestions.push(format!("建议先调用 body_lock_acquire 获取该端口锁，或与 Agent `{}` 协同释放", lock.holder_agent));
             }
         }
 
@@ -245,7 +245,7 @@ impl AgentHookEngine {
             ("/.ssh/", "SSH 私钥与 authorized_keys 凭据目录"),
             ("/.gnupg/", "GPG 私钥与信任链目录"),
             ("/boot/", "系统内核与引导分区目录"),
-            ("/.steward/steward.db", "大管家主 SQLite 数据库文件，禁止绕过 Steward API 直接写文件"),
+            ("/.agent-body/body.db", "大管家主 SQLite 数据库文件，禁止绕过 Steward API 直接写文件"),
         ];
 
         for (pattern, desc) in critical_rules {

@@ -822,8 +822,8 @@ fn probe_top_level_entries(repo_dir: &Path, limit: usize) -> Vec<String> {
 
 fn describe_well_known_port(port: u16, proc_name: Option<&str>) -> Option<&'static str> {
     if let Some(pn) = proc_name {
-        if pn.contains("agent-steward") {
-            return Some("Agent Host Steward Web 监控大屏与 REST API");
+        if pn.contains("agent-body") {
+            return Some("Agent Body Web 监控大屏与 REST API");
         }
         if pn.contains("ollama") {
             return Some("Ollama 本地大模型推理与 Embedding 向量服务");
@@ -837,7 +837,7 @@ fn describe_well_known_port(port: u16, proc_name: Option<&str>) -> Option<&'stat
         80 | 443 => Some("HTTP/HTTPS Web 入口服务"),
         5432 => Some("PostgreSQL 数据库监听端口"),
         6379 => Some("Redis 内存缓存服务"),
-        8756 => Some("Agent Host Steward Web 监控大屏"),
+        8756 => Some("Agent Body Web 监控大屏"),
         11434 => Some("Ollama 本地 LLM 与 Embedding 服务"),
         _ => None,
     }
@@ -928,17 +928,17 @@ mod tests {
 
         // 手工注入测试节点与边
         let n1 = FactNodeRecord {
-            id: "project:agent-steward".to_string(),
+            id: "project:agent-body".to_string(),
             node_type: "project".to_string(),
-            name: "agent-steward".to_string(),
+            name: "agent-body".to_string(),
             label: "宿主大管家工程".to_string(),
             properties: serde_json::json!({}),
             updated_at: None,
         };
         let n2 = FactNodeRecord {
-            id: "service:agent-steward".to_string(),
+            id: "service:agent-body".to_string(),
             node_type: "service".to_string(),
-            name: "agent-steward".to_string(),
+            name: "agent-body".to_string(),
             label: "大管家守护进程".to_string(),
             properties: serde_json::json!({}),
             updated_at: None,
@@ -957,15 +957,15 @@ mod tests {
         storage.upsert_fact_node(&n3).unwrap();
 
         storage.upsert_fact_edge(&FactEdgeRecord::new_explicit(
-            "service:agent-steward",
-            "project:agent-steward",
+            "service:agent-body",
+            "project:agent-body",
             "depends_on",
             serde_json::json!({}),
             1.0,
         )).unwrap();
 
         storage.upsert_fact_edge(&FactEdgeRecord::new_explicit(
-            "service:agent-steward",
+            "service:agent-body",
             "port:8000",
             "listens_on",
             serde_json::json!({}),
@@ -973,14 +973,14 @@ mod tests {
         )).unwrap();
 
         // 提取子图
-        let sub = organizer.query_subgraph("agent-steward", 2).expect("query subgraph");
+        let sub = organizer.query_subgraph("agent-body", 2).expect("query subgraph");
         assert_eq!(sub.nodes.len(), 3);
         assert_eq!(sub.edges.len(), 2);
 
         // 验证报告与 Mermaid 输出
         let report = organizer.format_graph_report(&sub);
         assert!(report.contains("flowchart LR"));
-        assert!(report.contains("service_agent_steward"));
+        assert!(report.contains("service_agent_body"));
         assert!(report.contains("port_8000"));
         assert!(report.contains("监听"));
         assert!(report.contains("依赖"));

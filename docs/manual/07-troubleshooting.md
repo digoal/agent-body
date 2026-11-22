@@ -1,6 +1,6 @@
 # 07 — 故障诊断与常见问题（Troubleshooting & FAQ）
 
-> **章节目标**: 收集汇总 Agent Host Steward 在构建、运行、守护和 MCP 调用过程中可能遇到的常见问题、报错排查思路与修复方法。
+> **章节目标**: 收集汇总 Agent Body 在构建、运行、守护和 MCP 调用过程中可能遇到的常见问题、报错排查思路与修复方法。
 
 ---
 
@@ -31,12 +31,12 @@
 - **排查与解决**:
   1. 检查是否有卡死的守护进程：
      ```bash
-     ps aux | grep agent-steward
+     ps aux | grep agent-body
      ```
   2. 大管家底层已配置 `PRAGMA busy_timeout = 5000;` 和 WAL 模式，正常情况下读写互不阻塞；
   3. 若持续锁定，可尝试运行修复检查：
      ```bash
-     sqlite3 ~/.steward/steward.db "PRAGMA integrity_check;"
+     sqlite3 ~/.agent-body/body.db "PRAGMA integrity_check;"
      ```
 
 ### Q4: 提示 `no such column: embedding`
@@ -44,7 +44,7 @@
 - **解决方法**:
   在终端中执行字段补齐：
   ```bash
-  sqlite3 ~/.steward/steward.db "ALTER TABLE memories ADD COLUMN embedding TEXT DEFAULT '[]';"
+  sqlite3 ~/.agent-body/body.db "ALTER TABLE memories ADD COLUMN embedding TEXT DEFAULT '[]';"
   ```
 
 ---
@@ -64,9 +64,9 @@
 
 ### Q6: Agent 挂载 MCP 服务后，一直卡在等待响应
 - **排查步骤**:
-  1. 确保在命令行中单独执行 `./target/release/agent-steward mcp` 时能正常进入 stdio 阻塞等待；
-  2. 检查 Agent 客户端配置中的路径是否为**绝对路径**（如 `/root/new/work/agent-steward/target/release/agent-steward`）；
-  3. 确认可执行文件具备执行权限：`chmod +x target/release/agent-steward`。
+  1. 确保在命令行中单独执行 `./target/release/agent-body mcp` 时能正常进入 stdio 阻塞等待；
+  2. 检查 Agent 客户端配置中的路径是否为**绝对路径**（如 `/root/new/work/agent-body/target/release/agent-body`）；
+  3. 确认可执行文件具备执行权限：`chmod +x target/release/agent-body`。
 
 ### Q7: 混合检索调用 Ollama 超时
 - **现象**: `memory search` 能返回结果，但没有显示向量相似度。
@@ -87,20 +87,20 @@
 - **排查与解决**:
   使用内置的运行环境预检命令（退出码 `0` 表示满足全部 `REQUIRED` 项，非 `0` 表示缺失关键依赖）：
   ```bash
-  agent-steward preflight
-  agent-steward preflight --json
+  agent-body preflight
+  agent-body preflight --json
   ```
 
 ### Q9: 本地未拉取 `qwen3.5:0.8b` 或 Ollama 离线时，扫描资产会报错吗？
 - **说明**: 不会报错！资产扫描默认执行 **Track 1 (L1 Rust 确定性语法提取)**，耗时 `<1ms` 即可完成结构化元数据提取；当本地 Ollama 不可达或超时时，L2 异步标注会自动跳过并优雅降级，待模型就绪后可再运行：
   ```bash
   ollama pull qwen3.5:0.8b
-  agent-steward asset scan /root/new/work --enrich-with-ollama
+  agent-body asset scan /root/new/work --enrich-with-ollama
   ```
 
 ### Q10: 跑完路演演示或 Benchmark 测试后，如何安全清理沙盒记录？
 - **说明**: 路演与基准评测默认使用隔离前缀（`demo:*` / `bench:*`），不会污染正式业务资产。如需一键清除测试产生的沙盒锁或基准运行记录，可执行：
   ```bash
-  agent-steward demo reset
-  agent-steward bench reset
+  agent-body demo reset
+  agent-body bench reset
   ```

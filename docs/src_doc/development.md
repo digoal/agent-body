@@ -1,4 +1,4 @@
-# Agent Host Steward (Rust 版) — 本地编译、开发与测试指南
+# Agent Body (Rust 版) — 本地编译、开发与测试指南
 
 > **版本**: v0.4.0 (Rust Edition)  
 > **更新时间**: 2026-11-22  
@@ -39,7 +39,7 @@
 ## 二、完整工程目录树规范
 
 ```
-agent-steward/
+agent-body/
 ├── Cargo.toml               # Rust 项目依赖与元数据配置
 ├── Cargo.lock               # 依赖版本精确锁定
 ├── build.rs                 # 编译期环境与 Git Commit 动态注入脚本
@@ -144,7 +144,7 @@ sudo make restart
 ## 四、本地多后端切换调试
 
 ### 1. 默认 SQLite 本地测试
-无需任何前置命令，运行 `./target/release/agent-steward status` 即自动在 `~/.steward/steward.db` 建库。
+无需任何前置命令，运行 `./target/release/agent-body status` 即自动在 `~/.agent-body/body.db` 建库。
 
 ### 2. 测试 PostgreSQL 后端
 1. 准备本地 PG 实例并创建数据库：
@@ -155,12 +155,12 @@ sudo make restart
    ```
 2. 执行迁移：
    ```bash
-   ./target/release/agent-steward storage migrate --to postgres --to-url "host=127.0.0.1 dbname=steward_test user=postgres"
+   ./target/release/agent-body storage migrate --to postgres --to-url "host=127.0.0.1 dbname=steward_test user=postgres"
    ```
 
 ### 3. 测试 DuckDB 分析副本同步
 ```bash
-./target/release/agent-steward storage sync --to duckdb
+./target/release/agent-body storage sync --to duckdb
 ```
 
 ---
@@ -169,4 +169,4 @@ sudo make restart
 
 1. **零警告原则**: 任何提交前必须执行 `make check`，确保没有任何 `warning`；
 2. **测试驱动 (TDD)**: 新增功能必须在 `tests/` 或对应模块内提供自动化测试；
-3. **断点续传推进**: 严格遵循 `docs/src_doc/progress.md` 进度状态，串行推进，完成一步打勾一步并同步至 `/root/new/shared_git/agent-steward`。
+3. **断点续传推进**: 严格遵循 `docs/src_doc/progress.md` 进度状态，串行推进，完成一步打勾一步并同步至 `/root/new/shared_git/agent-body`。

@@ -1,9 +1,9 @@
 # 06 — 接口规范（API Spec）
 
 > [!NOTE]
-> **历史设计基线说明**：本文档沉淀自项目早期 v2.0 接口设计期（覆盖早期 15 个工具）。当前 `v0.4.0` 全部 **43 个原生 MCP 工具**（含 `steward_body_state`）、CLI 子命令与 Web REST API 权威规格，请以 [docs/manual/04-mcp-integration.md](../manual/04-mcp-integration.md)、[docs/manual/08-web-dashboard.md](../manual/08-web-dashboard.md) 及源码 [src/api/mcp_tools.rs](../../src/api/mcp_tools.rs) 为准。
+> **历史设计基线说明**：本文档沉淀自项目早期 v2.0 接口设计期（覆盖早期 15 个工具）。当前 `v0.4.0` 全部 **43 个原生 MCP 工具**（含 `body_state`）、CLI 子命令与 Web REST API 权威规格，请以 [docs/manual/04-mcp-integration.md](../manual/04-mcp-integration.md)、[docs/manual/08-web-dashboard.md](../manual/08-web-dashboard.md) 及源码 [src/api/mcp_tools.rs](../../src/api/mcp_tools.rs) 为准。
 
-> Agent Host Steward 产品设计 · 交付件 6/7
+> Agent Body 产品设计 · 交付件 6/7
 > 版本: v2.0 · 更新: 2026-11-15 (新增端口防撞、混合检索、爆炸半径推演、会话完工结清工具)
 
 ---
@@ -24,7 +24,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ## 二、MCP 工具定义
 
-### 2.1 steward_brief — 上下文摘要
+### 2.1 body_brief — 上下文摘要
 
 获取当前机器的完整上下文摘要，供 Agent 在新会话开始时快速了解环境。
 
@@ -86,7 +86,7 @@ steward 对外提供三套等价接口，功能完全一致：
   "assets": {
     "total": 12456,
     "active_projects": [
-      {"path": "/root/new/work/agent-steward/", "desc": "Agent Host Steward 产品设计", "last_modified": "10min ago"}
+      {"path": "/root/new/work/agent-body/", "desc": "Agent Body 产品设计", "last_modified": "10min ago"}
     ]
   },
   "changes": {
@@ -100,7 +100,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.2 steward_placement_suggest — 对象放置与路径建议
+### 2.2 body_placement_suggest — 对象放置与路径建议
 
 当 Agent 准备在宿主机新建项目、生成脚本、写入重要笔记或产生临时数据时调用此接口，获取符合宿主机规范的标准落盘路径与命名安全指引。
 
@@ -157,7 +157,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.3 steward_placement_rules — 获取目录规范规则库
+### 2.3 body_placement_rules — 获取目录规范规则库
 
 **参数:**
 
@@ -186,7 +186,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.4 steward_memory_add — 写入记忆
+### 2.4 body_memory_add — 写入记忆
 
 ```json
 {
@@ -248,7 +248,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.3 steward_memory_search — 搜索记忆
+### 2.3 body_memory_search — 搜索记忆
 
 ```json
 {
@@ -383,7 +383,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.9 steward_asset_register — 注册资产
+### 2.9 body_asset_register — 注册资产
 
 ```json
 {
@@ -438,7 +438,7 @@ steward 对外提供三套等价接口，功能完全一致：
 ```json
 {
   "id": "uuid",
-  "path": "/root/new/work/agent-steward/",
+  "path": "/root/new/work/agent-body/",
   "type": "project",
   "owner": "user:digoal",
   "security_level": "internal",
@@ -449,7 +449,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.10 steward_asset_search — 搜索资产
+### 2.10 body_asset_search — 搜索资产
 
 ```json
 {
@@ -468,7 +468,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.11 steward_asset_scan — 目录扫描与分级颗粒度建档
+### 2.11 body_asset_scan — 目录扫描与分级颗粒度建档
 
 依据宿主机 `scan_policies` 策略自动执行分级扫描，**杜绝一股脑全量生成**：
 - 白名单目录：深入递归到最深层，提取完整标量 + 全文 FTS5 + 向量 Embedding + 关联 Links；
@@ -522,7 +522,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.12 steward_env_processes — 动态任务与进程感知
+### 2.12 body_env_processes — 动态任务与进程感知
 
 查询宿主机上除 systemd 守护服务外的活跃动态对象（任务脚本、Worker、临时分析进程、GPU占用与端口）。
 
@@ -565,7 +565,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.10 steward_env_show — 环境信息
+### 2.10 body_env_show — 环境信息
 
 ```json
 {
@@ -678,7 +678,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.16 steward_port_check — 端口防撞诊断与可用推荐
+### 2.16 body_port_check — 端口防撞诊断与可用推荐
 
 在启动任何服务或监听端口前主动校验冲突。
 
@@ -708,7 +708,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.17 steward_links_impact — 变更爆炸半径推演
+### 2.17 body_links_impact — 变更爆炸半径推演
 
 评估重构、改动或删除特定文件/服务对上下游的影响范围。
 
@@ -737,7 +737,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.18 steward_session_close — 会话完工结算与垃圾回收
+### 2.18 body_session_close — 会话完工结算与垃圾回收
 
 在 Agent 任务完成时调用，清理临时资产并归档会话纪要。
 
@@ -766,21 +766,21 @@ steward 对外提供三套等价接口，功能完全一致：
 
 所有 REST 接口前缀: `http://127.0.0.1:9527/api/v1`
 
-认证: `Authorization: Bearer <token>`（token 在 `~/.steward/token`）
+认证: `Authorization: Bearer <token>`（token 在 `~/.agent-body/token`）
 
 | 方法 | 路径 | 对应 MCP 工具 |
 |------|------|---------------|
-| GET | `/brief` | steward_brief |
-| POST | `/memory` | steward_memory_add |
-| GET | `/memory/search?q=...` | steward_memory_search |
+| GET | `/brief` | body_brief |
+| POST | `/memory` | body_memory_add |
+| GET | `/memory/search?q=...` | body_memory_search |
 | GET | `/memory?last=20` | steward_memory_list |
 | PATCH | `/memory/:id` | steward_memory_update |
 | DELETE | `/memory/:id` | steward_memory_delete |
-| POST | `/asset` | steward_asset_register |
-| GET | `/asset/search?q=...` | steward_asset_search |
-| POST | `/asset/scan` | steward_asset_scan |
-| GET | `/env` | steward_env_show |
-| GET | `/env/service/:name` | steward_env_show (service_name) |
+| POST | `/asset` | body_asset_register |
+| GET | `/asset/search?q=...` | body_asset_search |
+| POST | `/asset/scan` | body_asset_scan |
+| GET | `/env` | body_env_show |
+| GET | `/env/service/:name` | body_env_show (service_name) |
 | POST | `/env/snapshot` | steward_env_snapshot |
 | GET | `/search?q=...` | steward_search |
 | GET | `/health` | 健康检查（无需认证） |
@@ -926,7 +926,7 @@ url = "http://localhost:8080/notify"
 
 ## 7. 图智能与联邦协同工具 (v3.0 扩充)
 
-### 7.1 `steward_links_audit`
+### 7.1 `body_links_audit`
 全局依赖断链与幽灵引用审计工具。检测目标文件是否存在、目标服务端口是否在线。
 
 - **输入**:
@@ -953,7 +953,7 @@ url = "http://localhost:8080/notify"
   }
   ```
 
-### 7.2 `steward_codegraph_bridge`
+### 7.2 `body_codegraph_bridge`
 跨层联动 CodeGraph 微观代码图。在目标工程内钻取函数/符号级调用拓扑。
 
 - **输入**:

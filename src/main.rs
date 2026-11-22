@@ -1,16 +1,16 @@
 use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 use anyhow::Result;
-use agent_steward::config::Config;
-use agent_steward::storage::Storage;
-use agent_steward::placement::{PlacementEngine, PlacementRequest};
-use agent_steward::scanner::Scanner;
-use agent_steward::env::EnvCollector;
-use agent_steward::memory::MemoryManager;
-use agent_steward::brief::{BriefAssembler, BriefRequest};
+use agent_body::config::Config;
+use agent_body::storage::Storage;
+use agent_body::placement::{PlacementEngine, PlacementRequest};
+use agent_body::scanner::Scanner;
+use agent_body::env::EnvCollector;
+use agent_body::memory::MemoryManager;
+use agent_body::brief::{BriefAssembler, BriefRequest};
 
 #[derive(Parser)]
-#[command(name = "steward", version = agent_steward::VERSION, about = "Agent Host Steward — 脑体分离 Agent 本体（宿主机具身底座 · Rust 版）")]
+#[command(name = "steward", version = agent_body::VERSION, about = "Agent Body — 脑体分离 Agent 本体（宿主机具身底座 · Rust 版）")]
 struct Cli {
     #[arg(short, long, help = "自定义配置文件路径")]
     config: Option<PathBuf>,
@@ -518,7 +518,7 @@ enum MeshCommands {
         #[arg(long, default_value = "cli-agent")]
         from_agent: String,
     },
-    #[command(about = "查看本机 ~/.steward/mesh_inbox/ 隔离收件箱")]
+    #[command(about = "查看本机 ~/.agent-body/mesh_inbox/ 隔离收件箱")]
     TransferInbox {
         #[arg(short, long, default_value_t = 20)]
         limit: usize,
@@ -759,7 +759,7 @@ enum StorageCommands {
         #[arg(long, help = "目标存储类型 (sqlite / postgres / duckdb)", default_value = "postgres")]
         to: String,
 
-        #[arg(long, help = "目标端连接串或文件路径 (默认 postgresql://postgres@127.0.0.1:5432/agent_steward)")]
+        #[arg(long, help = "目标端连接串或文件路径 (默认 postgresql://postgres@127.0.0.1:5432/agent_body)")]
         to_url: Option<String>,
     },
     #[command(about = "执行主存储到分析副本 (DuckDB) 的增量或全量数据同步")]
@@ -767,7 +767,7 @@ enum StorageCommands {
         #[arg(long, help = "目标分析引擎类型 (duckdb)", default_value = "duckdb")]
         to: String,
 
-        #[arg(long, help = "目标端数据库文件路径 (默认 ~/.steward/steward.duckdb)")]
+        #[arg(long, help = "目标端数据库文件路径 (默认 ~/.agent-body/steward.duckdb)")]
         to_path: Option<String>,
     },
     #[command(about = "查看当前生效的存储后端技术栈与配置")]
@@ -1017,9 +1017,9 @@ fn main() -> Result<()> {
         match cli.command {
         Commands::Status => {
             println!("╔═══════════════════════════════════════════════════════╗");
-            println!("║      Agent Host Steward (Rust 版) — 系统状态          ║");
+            println!("║      Agent Body (Rust 版) — 系统状态          ║");
             println!("╚═══════════════════════════════════════════════════════╝");
-            println!("版本:           {}", agent_steward::version_info());
+            println!("版本:           {}", agent_body::version_info());
             println!("数据目录:       {:?}", cfg.data_dir);
             println!("数据库文件:     {:?}", cfg.db_path);
             let assets = storage.list_assets(100_000)?;
@@ -1038,7 +1038,7 @@ fn main() -> Result<()> {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
                 let arc_storage = std::sync::Arc::new(storage);
-                let dashboard = agent_steward::tui::TuiDashboard::new(arc_storage);
+                let dashboard = agent_body::tui::TuiDashboard::new(arc_storage);
                 dashboard.run_loop(interval, None).await
             })?;
         }
@@ -1066,7 +1066,7 @@ fn main() -> Result<()> {
                 buf
             } else {
                 let provider = std::sync::Arc::new(
-                    agent_steward::memory::builtin_provider::BuiltinMemoryProvider::new(storage.clone()),
+                    agent_body::memory::builtin_provider::BuiltinMemoryProvider::new(storage.clone()),
                 );
                 let assembler = BriefAssembler::new(storage.clone(), Some(provider));
                 let output = assembler.assemble(&BriefRequest {
@@ -1077,10 +1077,10 @@ fn main() -> Result<()> {
                 output.markdown
             };
             print!("{}", out);
-            agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+            agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                 storage.provider().as_ref(),
                 "cli",
-                "steward_brief",
+                "body_brief",
                 &out,
                 t0.elapsed().as_micros() as i64,
             );
@@ -1122,7 +1122,7 @@ fn main() -> Result<()> {
                     }
                 }
                 PlaceCommands::Learn { min_samples, accept } => {
-                    let learner = agent_steward::placement::learner::PlacementLearner::new(&storage);
+                    let learner = agent_body::placement::learner::PlacementLearner::new(&storage);
                     let rep = learner.learn_rules(min_samples)?;
                     if rep.candidates.is_empty() {
                         println!("未发现新的聚类放置模式（样本数低于 {} 或已被既有规则完全覆盖）。", min_samples);
@@ -1167,7 +1167,7 @@ fn main() -> Result<()> {
                     if enrich {
                         let prefix = path.to_string_lossy().to_string();
                         println!("\n🤖 正在调用本地 Ollama 小模型进行 L2 语义标注精炼 (limit={})...", enrich_limit);
-                        let annotator = agent_steward::scanner::OllamaAnnotator::with_default_config(storage);
+                        let annotator = agent_body::scanner::OllamaAnnotator::with_default_config(storage);
                         let er = annotator.enrich_pending_assets(enrich_limit, Some(&prefix))?;
                         println!("  - 模型: {} | 在线: {} | 候选: {} | 成功: {} | 跳过: {} | 失败: {} | 耗时: {}ms",
                             er.model_used, er.ollama_available, er.total_candidates, er.enriched_count, er.skipped_count, er.failed_count, er.elapsed_ms);
@@ -1180,18 +1180,18 @@ fn main() -> Result<()> {
                 }
                 AssetCommands::Search { query, limit, detail } => {
                     let t0 = std::time::Instant::now();
-                    let level = agent_steward::scanner::DetailLevel::from_str_opt(Some(&detail));
+                    let level = agent_body::scanner::DetailLevel::from_str_opt(Some(&detail));
                     let results = storage.search_assets_fts(&query, limit)?;
                     let mut out = format!("资产搜索匹配结果 (共 {} 条, detail={:?}):\n", results.len(), level);
                     for a in results {
-                        out.push_str(&agent_steward::scanner::format_asset_line(&a, level));
+                        out.push_str(&agent_body::scanner::format_asset_line(&a, level));
                         out.push('\n');
                     }
                     print!("{}", out);
-                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         storage.provider().as_ref(),
                         "cli",
-                        "steward_asset_search",
+                        "body_asset_search",
                         &out,
                         t0.elapsed().as_micros() as i64,
                     );
@@ -1199,7 +1199,7 @@ fn main() -> Result<()> {
                 AssetCommands::Register { path, r#type, owner, security_level, description, desc_kv } => {
                     let parsed_kv: serde_json::Value = serde_json::from_str(&desc_kv)
                         .unwrap_or_else(|_| serde_json::json!({}));
-                    let record = agent_steward::storage::models::AssetRecord {
+                    let record = agent_body::storage::models::AssetRecord {
                         id: uuid::Uuid::new_v4().to_string(),
                         path: path.clone(),
                         asset_type: r#type.clone(),
@@ -1225,7 +1225,7 @@ fn main() -> Result<()> {
                     }
                 }
                 AssetCommands::Job { action, target, limit } => {
-                    let sm = agent_steward::scanner::ScanStateMachine::new(storage.clone())?;
+                    let sm = agent_body::scanner::ScanStateMachine::new(storage.clone())?;
                     match action.as_str() {
                         "create" => {
                             let p = target.ok_or_else(|| anyhow::anyhow!("缺少目标扫描路径"))?;
@@ -1314,7 +1314,7 @@ fn main() -> Result<()> {
                     }
                 }
                 EnvCommands::Port { port, suggest_count } => {
-                    let res = agent_steward::env::port::PortChecker::check_port(port, suggest_count)?;
+                    let res = agent_body::env::port::PortChecker::check_port(port, suggest_count)?;
                     println!("{}", serde_json::to_string_pretty(&res)?);
                 }
             }
@@ -1334,7 +1334,7 @@ fn main() -> Result<()> {
                     if hybrid {
                         let arc_storage = std::sync::Arc::new(storage);
                         let results = tokio::runtime::Runtime::new()?.block_on(async {
-                            let engine = agent_steward::memory::hybrid::HybridSearchEngine::new(arc_storage);
+                            let engine = agent_body::memory::hybrid::HybridSearchEngine::new(arc_storage);
                             engine.search_hybrid(&query, limit).await
                         })?;
                         out.push_str(&format!("记忆搜索结果 (混合模式 RRF, 共 {} 条):\n", results.len()));
@@ -1352,16 +1352,16 @@ fn main() -> Result<()> {
                         }
                     }
                     print!("{}", out);
-                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         provider_ref.as_ref(),
                         "cli",
-                        "steward_memory_search",
+                        "body_memory_search",
                         &out,
                         t0.elapsed().as_micros() as i64,
                     );
                 }
                 MemoryCommands::Audit { archive_id } => {
-                    let mgr = agent_steward::memory::lifecycle::MemoryLifecycleManager::new(&storage);
+                    let mgr = agent_body::memory::lifecycle::MemoryLifecycleManager::new(&storage);
                     if let Some(aid) = archive_id {
                         mgr.archive_memory(&aid)?;
                         println!("✅ 已将记忆条目 '{}' 状态归档为 'outdated'。", aid);
@@ -1387,7 +1387,7 @@ fn main() -> Result<()> {
         Commands::Mcp => {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-                let server = agent_steward::api::mcp::McpServer::new(storage);
+                let server = agent_body::api::mcp::McpServer::new(storage);
                 server.run_stdio().await
             })?;
         }
@@ -1395,14 +1395,14 @@ fn main() -> Result<()> {
         Commands::Daemon => {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-                let daemon = agent_steward::daemon::StewardDaemon::new(cfg, storage);
+                let daemon = agent_body::daemon::StewardDaemon::new(cfg, storage);
                 daemon.run().await
             })?;
         }
 
         Commands::Links { action } => {
             let arc_storage = std::sync::Arc::new(storage);
-            let engine = agent_steward::links::LinksEngine::new(arc_storage.clone());
+            let engine = agent_body::links::LinksEngine::new(arc_storage.clone());
             match action {
                 LinksCommands::Query { r#type, id, max_hops, min_weight, include_semantic } => {
                     let links = engine.query_links(&r#type, &id)?;
@@ -1429,7 +1429,7 @@ fn main() -> Result<()> {
                 }
                 LinksCommands::Graph { limit, discover_semantic } => {
                     if discover_semantic {
-                        let miner = agent_steward::fact::GraphRelationshipMiner::new(arc_storage.as_ref());
+                        let miner = agent_body::fact::GraphRelationshipMiner::new(arc_storage.as_ref());
                         let rep = miner.mine_all(true)?;
                         println!("# 关系挖掘完成: L2上卷={}, 服务桥接={}, 工具={}, 衍生={}, L3语义={}",
                             rep.l2_rollup_edges, rep.l2_service_bridge_edges, rep.l2_tool_usage_edges, rep.l2_derivation_edges, rep.l3_semantic_edges);
@@ -1438,13 +1438,13 @@ fn main() -> Result<()> {
                     println!("{}", mermaid);
                 }
                 LinksCommands::Impact { target, max_depth, min_weight, include_semantic } => {
-                    let analyzer = agent_steward::links::impact::ImpactAnalyzer::new(arc_storage);
+                    let analyzer = agent_body::links::impact::ImpactAnalyzer::new(arc_storage);
                     let res = analyzer.analyze_impact_weighted(&target, max_depth, min_weight, include_semantic)?;
                     println!("{}", serde_json::to_string_pretty(&res)?);
                 }
                 LinksCommands::Audit { fix } => {
                     let t0 = std::time::Instant::now();
-                    let auditor = agent_steward::links::audit::LinkAuditor::new(arc_storage.clone());
+                    let auditor = agent_body::links::audit::LinkAuditor::new(arc_storage.clone());
                     let rep = auditor.audit_links(fix)?;
                     println!("{}", rep.summary);
                     if !rep.issues.is_empty() {
@@ -1458,16 +1458,16 @@ fn main() -> Result<()> {
                             println!("    建议: {}", iss.suggested_fix);
                         }
                     }
-                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         arc_storage.provider().as_ref(),
                         "cli",
-                        "steward_links_audit",
+                        "body_links_audit",
                         &rep.summary,
                         t0.elapsed().as_micros() as i64,
                     );
                 }
                 LinksCommands::Repair { apply } => {
-                    let repairer = agent_steward::links::repair::LinkRepairer::new(arc_storage);
+                    let repairer = agent_body::links::repair::LinkRepairer::new(arc_storage);
                     let rep = repairer.repair_links(apply)?;
                     if rep.suggestions.is_empty() {
                         println!("✅ 未发现可修复的断链或拓扑完全健康。");
@@ -1488,13 +1488,13 @@ fn main() -> Result<()> {
                 LinksCommands::Codegraph { path, symbol } => {
                     let p = std::path::Path::new(&path);
                     if let Some(sym) = symbol {
-                        let callers = agent_steward::links::codegraph_bridge::CodeGraphBridge::query_symbol_callers(p, &sym)?;
+                        let callers = agent_body::links::codegraph_bridge::CodeGraphBridge::query_symbol_callers(p, &sym)?;
                         println!("CodeGraph 符号调用方分析: '{}' (共 {} 条):", sym, callers.len());
                         for c in callers {
                             println!("  - [{}] {} ({}:{:?})", c.kind, c.qualified_name, c.file_path, c.line);
                         }
                     } else {
-                        let info = agent_steward::links::codegraph_bridge::CodeGraphBridge::inspect_project(p)?;
+                        let info = agent_body::links::codegraph_bridge::CodeGraphBridge::inspect_project(p)?;
                         match info {
                             Some(stats) => {
                                 println!("CodeGraph 工程概览:");
@@ -1513,14 +1513,14 @@ fn main() -> Result<()> {
 
         Commands::Changes { since, limit } => {
             let arc_storage = std::sync::Arc::new(storage);
-            let engine = agent_steward::changes::ChangesEngine::new(arc_storage);
+            let engine = agent_body::changes::ChangesEngine::new(arc_storage);
             let summary = engine.generate_summary_markdown(since.as_deref(), limit)?;
             println!("{}", summary);
         }
 
         Commands::Close { session_id, clean_temp, dry_run } => {
             let arc_storage = std::sync::Arc::new(storage);
-            let sm = agent_steward::session::SessionManager::new(arc_storage);
+            let sm = agent_body::session::SessionManager::new(arc_storage);
             let res = sm.close_session_with_dry_run(&session_id, clean_temp, dry_run)?;
             println!("{}", serde_json::to_string_pretty(&res)?);
         }
@@ -1529,7 +1529,7 @@ fn main() -> Result<()> {
             let dry_run = !apply;
             println!("正在扫描宿主垃圾资源 (目录: {:?}, 超期阈值: {} 小时, 模式: {})...",
                 tmp_dir, max_age_hours, if dry_run { "预览模式 (dry-run)" } else { "执行清理 (apply)" });
-            let rep = agent_steward::env::gc::HostGarbageCollector::run_gc_audited(&storage, &tmp_dir, max_age_hours, dry_run)?;
+            let rep = agent_body::env::gc::HostGarbageCollector::run_gc_audited(&storage, &tmp_dir, max_age_hours, dry_run)?;
             println!("\n🧹 临时文件清理结果:");
             println!("  - 扫描临时目录:   {}", rep.tmp_dir_scanned);
             println!("  - 发现超期候选:   {} 个文件 ({:.2} MB)", rep.candidate_files_count, rep.candidate_bytes_reclaimed as f64 / (1024.0 * 1024.0));
@@ -1553,12 +1553,12 @@ fn main() -> Result<()> {
         Commands::Fact { query, fact_type } => {
             let t0 = std::time::Instant::now();
             let q = query.unwrap_or_else(|| "all".to_string());
-            let report = agent_steward::fact::FactFacade::query_facts(&fact_type, &q)?;
+            let report = agent_body::fact::FactFacade::query_facts(&fact_type, &q)?;
             println!("{}", report);
-            agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+            agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                 storage.provider().as_ref(),
                 "cli",
-                "steward_fact_query",
+                "body_fact_query",
                 &report,
                 t0.elapsed().as_micros() as i64,
             );
@@ -1577,13 +1577,13 @@ fn main() -> Result<()> {
                     println!("🚀 正在准备执行跨引擎数据迁移: {} -> {} ...", from, to);
                     let src_storage = match from.to_lowercase().as_str() {
                         "postgres" | "pg" => {
-                            let url = from_url.unwrap_or_else(|| "postgresql://postgres@127.0.0.1:5432/agent_steward".to_string());
-                            let p = agent_steward::storage::PgStorageProvider::connect(&url)?;
+                            let url = from_url.unwrap_or_else(|| "postgresql://postgres@127.0.0.1:5432/agent_body".to_string());
+                            let p = agent_body::storage::PgStorageProvider::connect(&url)?;
                             Storage::new(std::sync::Arc::new(p))
                         }
                         "duckdb" => {
                             let path = from_url.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("steward.duckdb"));
-                            let p = agent_steward::storage::DuckDbStorageProvider::open(&path)?;
+                            let p = agent_body::storage::DuckDbStorageProvider::open(&path)?;
                             Storage::new(std::sync::Arc::new(p))
                         }
                         _ => {
@@ -1594,13 +1594,13 @@ fn main() -> Result<()> {
 
                     let dst_storage = match to.to_lowercase().as_str() {
                         "postgres" | "pg" => {
-                            let url = to_url.unwrap_or_else(|| "postgresql://postgres@127.0.0.1:5432/agent_steward".to_string());
-                            let p = agent_steward::storage::PgStorageProvider::connect(&url)?;
+                            let url = to_url.unwrap_or_else(|| "postgresql://postgres@127.0.0.1:5432/agent_body".to_string());
+                            let p = agent_body::storage::PgStorageProvider::connect(&url)?;
                             Storage::new(std::sync::Arc::new(p))
                         }
                         "duckdb" => {
                             let path = to_url.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("steward.duckdb"));
-                            let p = agent_steward::storage::DuckDbStorageProvider::open(&path)?;
+                            let p = agent_body::storage::DuckDbStorageProvider::open(&path)?;
                             Storage::new(std::sync::Arc::new(p))
                         }
                         _ => {
@@ -1609,7 +1609,7 @@ fn main() -> Result<()> {
                         }
                     };
 
-                    let report = agent_steward::storage::StorageMigrator::migrate(&src_storage, &dst_storage)?;
+                    let report = agent_body::storage::StorageMigrator::migrate(&src_storage, &dst_storage)?;
                     println!("✅ 数据热迁移完成！耗时: {} ms", report.duration_ms);
                     println!("  - 放置规则迁移: {} 条", report.placement_rules_migrated);
                     println!("  - 扫描策略迁移: {} 条", report.scan_policies_migrated);
@@ -1625,8 +1625,8 @@ fn main() -> Result<()> {
                 StorageCommands::Sync { to, to_path } => {
                     println!("🔄 正在执行主存储 -> 分析副本 ({}) 同步 ...", to);
                     let target_path = to_path.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("steward.duckdb"));
-                    let duckdb_prov = agent_steward::storage::DuckDbStorageProvider::open(&target_path)?;
-                    let pipeline = agent_steward::storage::SyncPipeline::new(storage.provider().clone(), std::sync::Arc::new(duckdb_prov));
+                    let duckdb_prov = agent_body::storage::DuckDbStorageProvider::open(&target_path)?;
+                    let pipeline = agent_body::storage::SyncPipeline::new(storage.provider().clone(), std::sync::Arc::new(duckdb_prov));
                     let rep = pipeline.sync_all()?;
                     println!("✅ 分析副本同步完成！耗时: {} ms", rep.duration_ms);
                     println!("  - 纳管资产同步:   {} 个", rep.assets_synced);
@@ -1639,13 +1639,13 @@ fn main() -> Result<()> {
         }
 
         Commands::Coordination { action } => {
-            let engine = agent_steward::coordination::CoordinationEngine::new(storage.provider().clone());
+            let engine = agent_body::coordination::CoordinationEngine::new(storage.provider().clone());
             match action {
                 CoordinationCommands::Acquire { resource_type, resource_id, scope, holder_agent, holder_pid, ttl_seconds } => {
-                    let req = agent_steward::coordination::LockRequest {
-                        resource_type: agent_steward::coordination::ResourceType::from_str_loose(&resource_type),
+                    let req = agent_body::coordination::LockRequest {
+                        resource_type: agent_body::coordination::ResourceType::from_str_loose(&resource_type),
                         resource_id,
-                        scope: agent_steward::coordination::LockScope::from_str_loose(&scope),
+                        scope: agent_body::coordination::LockScope::from_str_loose(&scope),
                         holder_agent,
                         holder_pid,
                         ttl_seconds,
@@ -1655,7 +1655,7 @@ fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&res)?);
                 }
                 CoordinationCommands::List { resource_type } => {
-                    let rt_opt = resource_type.as_deref().map(agent_steward::coordination::ResourceType::from_str_loose);
+                    let rt_opt = resource_type.as_deref().map(agent_body::coordination::ResourceType::from_str_loose);
                     let locks = engine.list_active_locks(rt_opt.as_ref())?;
                     println!("╔══════════════════════════════════════════════════════════════════════════════════════════╗");
                     println!("║                        多 Agent 协作锁全景监控看板                                       ║");
@@ -1692,10 +1692,10 @@ fn main() -> Result<()> {
                     println!("🧹 协作锁 GC 完成！已清理释放 {} 个过期锁。", count);
                 }
                 CoordinationCommands::Wait { resource_type, resource_id, scope, holder_agent, ttl_seconds, wait_timeout_ms, priority } => {
-                    let req = agent_steward::coordination::LockRequest {
-                        resource_type: agent_steward::coordination::ResourceType::from_str_loose(&resource_type),
+                    let req = agent_body::coordination::LockRequest {
+                        resource_type: agent_body::coordination::ResourceType::from_str_loose(&resource_type),
                         resource_id,
-                        scope: agent_steward::coordination::LockScope::from_str_loose(&scope),
+                        scope: agent_body::coordination::LockScope::from_str_loose(&scope),
                         holder_agent,
                         holder_pid: None,
                         ttl_seconds,
@@ -1717,7 +1717,7 @@ fn main() -> Result<()> {
         }
 
         Commands::Preflight { json } => {
-            let report = agent_steward::preflight::PreflightChecker::run_all(&cfg.data_dir, Some(&cfg));
+            let report = agent_body::preflight::PreflightChecker::run_all(&cfg.data_dir, Some(&cfg));
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
@@ -1733,7 +1733,7 @@ fn main() -> Result<()> {
             let web_port = port.unwrap_or(cfg.web.port);
             let token = auth_token.or_else(|| cfg.web.auth_token.clone());
 
-            let web_config = agent_steward::web::WebConfig {
+            let web_config = agent_body::web::WebConfig {
                 host: web_host,
                 port: web_port,
                 auth_token: token,
@@ -1741,7 +1741,7 @@ fn main() -> Result<()> {
 
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-                let web_server = agent_steward::web::WebServer::new(web_config, storage.provider().clone());
+                let web_server = agent_body::web::WebServer::new(web_config, storage.provider().clone());
                 web_server.run().await
             })?;
         }
@@ -1749,7 +1749,7 @@ fn main() -> Result<()> {
         Commands::Hooks { action } => {
             match action {
                 HooksCommands::Generate { client, out_dir, dry_run } => {
-                    use agent_steward::hooks::{ClientHookGenerator, ClientType};
+                    use agent_body::hooks::{ClientHookGenerator, ClientType};
                     let client_type = client.parse::<ClientType>()?;
                     let res = ClientHookGenerator::generate(client_type, out_dir.as_deref(), dry_run)?;
 
@@ -1773,14 +1773,14 @@ fn main() -> Result<()> {
                 HooksCommands::Pre { tool_name, args } => {
                     let parsed_args: serde_json::Value = serde_json::from_str(&args)
                         .unwrap_or_else(|_| serde_json::json!({}));
-                    let engine = agent_steward::api::hooks::AgentHookEngine::new(storage);
+                    let engine = agent_body::api::hooks::AgentHookEngine::new(storage);
                     let res = engine.pre_tool_call(&tool_name, &parsed_args);
                     println!("{}", serde_json::to_string_pretty(&res)?);
                 }
                 HooksCommands::Post { tool_name, args, success, error_output } => {
                     let parsed_args: serde_json::Value = serde_json::from_str(&args)
                         .unwrap_or_else(|_| serde_json::json!({}));
-                    let engine = agent_steward::api::hooks::AgentHookEngine::new(storage);
+                    let engine = agent_body::api::hooks::AgentHookEngine::new(storage);
                     let res = engine.post_tool_call_with_error(&tool_name, &parsed_args, success, error_output.as_deref());
                     println!("{}", serde_json::to_string_pretty(&res)?);
                 }
@@ -1788,7 +1788,7 @@ fn main() -> Result<()> {
         }
 
         Commands::Analytics { action } => {
-            use agent_steward::storage::{AnalyticsProvider, DuckDbAnalyticsEngine};
+            use agent_body::storage::{AnalyticsProvider, DuckDbAnalyticsEngine};
             let engine = DuckDbAnalyticsEngine::from_synced_storage(storage.provider().clone())?;
             match action {
                 AnalyticsCommands::Heatmap { days } => {
@@ -1818,7 +1818,7 @@ fn main() -> Result<()> {
         }
 
         Commands::McpCatalog { action } => {
-            let scanner = agent_steward::ecosystem::McpConfigScanner::new(storage.clone());
+            let scanner = agent_body::ecosystem::McpConfigScanner::new(storage.clone());
             match action {
                 McpCatalogCommands::Scan => {
                     let (cnt, sanitized) = scanner.scan_default_clients()?;
@@ -1838,7 +1838,7 @@ fn main() -> Result<()> {
         Commands::Skill { action } => {
             match action {
                 SkillCommands::Scan => {
-                    let scanner = agent_steward::ecosystem::SkillCatalogScanner::new(storage.clone());
+                    let scanner = agent_body::ecosystem::SkillCatalogScanner::new(storage.clone());
                     let (cnt, tokens) = scanner.scan_default_roots()?;
                     println!("✅ SKILL 目录扫描完成：已编目 {} 个 SKILL（若全量注入约消耗 {} tokens）", cnt, tokens);
                 }
@@ -1850,8 +1850,8 @@ fn main() -> Result<()> {
                     }
                 }
                 SkillCommands::Route { intent, budget_tokens, max_skills } => {
-                    let router = agent_steward::ecosystem::ContextBudgetRouter::new(storage.clone());
-                    let plan = router.route(&agent_steward::ecosystem::ContextRouteRequest {
+                    let router = agent_body::ecosystem::ContextBudgetRouter::new(storage.clone());
+                    let plan = router.route(&agent_body::ecosystem::ContextRouteRequest {
                         intent,
                         budget_tokens,
                         max_skills,
@@ -1868,13 +1868,13 @@ fn main() -> Result<()> {
         }
 
         Commands::Service { action } => {
-            let mgr = agent_steward::ecosystem::ExternalContactsManager::new(storage.clone());
+            let mgr = agent_body::ecosystem::ExternalContactsManager::new(storage.clone());
             match action {
                 ServiceCommands::Register {
                     name, category, endpoint, protocol, capabilities,
                     auth_type, auth_env_var, health_endpoint, usage_example
                 } => {
-                    let rec = agent_steward::storage::models::ExternalServiceRecord {
+                    let rec = agent_body::storage::models::ExternalServiceRecord {
                         id: format!("svc:{}", name),
                         service_name: name.clone(),
                         category,
@@ -1911,7 +1911,7 @@ fn main() -> Result<()> {
         }
 
         Commands::Mesh { action } => {
-            use agent_steward::mesh::{build_local_facts, MeshClient};
+            use agent_body::mesh::{build_local_facts, MeshClient};
             let client = MeshClient::new(&cfg.mesh, cfg.web.auth_token.clone());
             match action {
                 MeshCommands::Peers => {
@@ -1929,10 +1929,10 @@ fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&client.federated_port_check(port))?);
                 }
                 MeshCommands::Acquire { peer, resource_type, resource_id, scope, holder_agent, ttl_seconds } => {
-                    let req = agent_steward::coordination::LockRequest {
-                        resource_type: agent_steward::coordination::ResourceType::from_str_loose(&resource_type),
+                    let req = agent_body::coordination::LockRequest {
+                        resource_type: agent_body::coordination::ResourceType::from_str_loose(&resource_type),
                         resource_id,
-                        scope: agent_steward::coordination::LockScope::from_str_loose(&scope),
+                        scope: agent_body::coordination::LockScope::from_str_loose(&scope),
                         holder_agent,
                         holder_pid: None,
                         ttl_seconds,
@@ -1960,7 +1960,7 @@ fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&storage.list_mesh_transfers(limit)?)?);
                 }
                 MeshCommands::TransferAccept { transfer_id, dest_dir } => {
-                    let rec = agent_steward::mesh::transfer::accept_transfer_to_dir(
+                    let rec = agent_body::mesh::transfer::accept_transfer_to_dir(
                         storage.provider().as_ref(),
                         &transfer_id,
                         std::path::Path::new(&dest_dir),
@@ -1968,14 +1968,14 @@ fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&rec)?);
                 }
                 MeshCommands::TransferReject { transfer_id } => {
-                    let ok = agent_steward::mesh::transfer::reject_transfer(storage.provider().as_ref(), &transfer_id)?;
+                    let ok = agent_body::mesh::transfer::reject_transfer(storage.provider().as_ref(), &transfer_id)?;
                     println!("{}", serde_json::to_string_pretty(&serde_json::json!({"transfer_id": transfer_id, "rejected": ok}))?);
                 }
             }
         }
 
         Commands::Platform { action } => {
-            let probe = agent_steward::platform::current_probe();
+            let probe = agent_body::platform::current_probe();
             match action {
                 PlatformCommands::Info => {
                     println!("OS: {}  |  平台探针: {}", std::env::consts::OS, probe.name());
@@ -1998,8 +1998,8 @@ fn main() -> Result<()> {
         }
 
         Commands::Demo { action } => {
-            use agent_steward::api::mcp_tools::McpToolRegistry;
-            use agent_steward::demo::DemoEngine;
+            use agent_body::api::mcp_tools::McpToolRegistry;
+            use agent_body::demo::DemoEngine;
             match action {
                 DemoCommands::List => {
                     println!("{}", serde_json::to_string_pretty(&DemoEngine::list_scenarios())?);
@@ -2028,13 +2028,13 @@ fn main() -> Result<()> {
         }
 
         Commands::Bench { action } => {
-            use agent_steward::benchmark::ledger::EffectivenessLedger;
-            use agent_steward::benchmark::provenance::ProvenanceRule;
-            use agent_steward::benchmark::report::{
+            use agent_body::benchmark::ledger::EffectivenessLedger;
+            use agent_body::benchmark::provenance::ProvenanceRule;
+            use agent_body::benchmark::report::{
                 render_csv_report, render_markdown_report, BenchmarkReportPayload,
             };
-            use agent_steward::benchmark::workloads::list_workload_specs;
-            use agent_steward::benchmark::BenchmarkEngine;
+            use agent_body::benchmark::workloads::list_workload_specs;
+            use agent_body::benchmark::BenchmarkEngine;
 
             match action {
                 BenchCommands::Workloads => {
@@ -2062,7 +2062,7 @@ fn main() -> Result<()> {
                         storage.list_benchmark_runs(1)?.into_iter().next()
                     };
                     let Some(rec) = rec_opt else {
-                        println!("尚无基准评测记录，请先运行 `agent-steward bench run`");
+                        println!("尚无基准评测记录，请先运行 `agent-body bench run`");
                         return Ok(());
                     };
                     let payload = BenchmarkReportPayload::from_record(&rec);
@@ -2136,44 +2136,44 @@ fn main() -> Result<()> {
 
         Commands::Feedback { action } => {
             let t0 = std::time::Instant::now();
-            let fb_path = agent_steward::feedback::FeedbackEngine::default_feedback_path();
+            let fb_path = agent_body::feedback::FeedbackEngine::default_feedback_path();
             match action {
                 FeedbackCommands::List => {
-                    let items = agent_steward::feedback::FeedbackEngine::list_items(&fb_path)?;
+                    let items = agent_body::feedback::FeedbackEngine::list_items(&fb_path)?;
                     println!("📋 反馈总账 ({}, 共 {} 条):", fb_path.display(), items.len());
                     for it in &items {
                         println!("  - [{}][{}] {} ({})", it.id, it.priority, it.title, it.status);
                     }
                 }
                 FeedbackCommands::Add { category, priority, title, evidence, target } => {
-                    let item = agent_steward::feedback::FeedbackEngine::add_item(
+                    let item = agent_body::feedback::FeedbackEngine::add_item(
                         &fb_path, &category, &priority, &title, &evidence, &target,
                     )?;
                     println!("✅ 已写入反馈 {}: [{}] {}", item.id, item.priority, item.title);
-                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         storage.provider().as_ref(),
                         "cli",
-                        "steward_feedback",
+                        "body_feedback",
                         &item.title,
                         t0.elapsed().as_micros() as i64,
                     );
                 }
                 FeedbackCommands::Sync => {
                     let provider_ref = storage.provider().clone();
-                    let added = agent_steward::feedback::FeedbackEngine::sync_verified_to_memories(
+                    let added = agent_body::feedback::FeedbackEngine::sync_verified_to_memories(
                         &fb_path, &storage,
                     )?;
                     println!("✅ 已将 {} 条已验证反馈沉淀至长期记忆库 (memories)", added);
-                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         provider_ref.as_ref(),
                         "cli",
-                        "steward_feedback",
+                        "body_feedback",
                         &format!("synced {} items", added),
                         t0.elapsed().as_micros() as i64,
                     );
                 }
                 FeedbackCommands::Reconcile { json } => {
-                    let rep = agent_steward::feedback::probes::FreshnessReconciler::reconcile(&storage)?;
+                    let rep = agent_body::feedback::probes::FreshnessReconciler::reconcile(&storage)?;
                     if json {
                         println!("{}", serde_json::to_string_pretty(&rep)?);
                     } else {
@@ -2188,10 +2188,10 @@ fn main() -> Result<()> {
                             rep.stale_codegraph_repos
                         );
                     }
-                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         storage.provider().as_ref(),
                         "cli",
-                        "steward_feedback",
+                        "body_feedback",
                         &format!(
                             "reconcile missing={} drifted={} ghost={} dup_mem={}",
                             rep.missing_assets_marked,
@@ -2203,7 +2203,7 @@ fn main() -> Result<()> {
                     );
                 }
                 FeedbackCommands::Probes { auto_heal, auto_feedback, json } => {
-                    let rep = agent_steward::feedback::probes::SelfEvolutionProbeEngine::run_probes(
+                    let rep = agent_body::feedback::probes::SelfEvolutionProbeEngine::run_probes(
                         &storage,
                         &fb_path,
                         auto_heal,
@@ -2230,10 +2230,10 @@ fn main() -> Result<()> {
                             println!("📝 本次自动去重写入反馈: {:?}", rep.feedback_items_created);
                         }
                     }
-                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         storage.provider().as_ref(),
                         "cli",
-                        "steward_feedback",
+                        "body_feedback",
                         &format!("probes healthy={} auto_heal={}", rep.overall_healthy, auto_heal),
                         t0.elapsed().as_micros() as i64,
                     );
@@ -2242,9 +2242,9 @@ fn main() -> Result<()> {
         }
 
         Commands::Audit { action } => {
-            use agent_steward::audit::AuditEvolutionAnalyzer;
-            use agent_steward::storage::duckdb_analytics::{AnalyticsProvider, DuckDbAnalyticsEngine};
-            use agent_steward::storage::models::AuditQueryFilter;
+            use agent_body::audit::AuditEvolutionAnalyzer;
+            use agent_body::storage::duckdb_analytics::{AnalyticsProvider, DuckDbAnalyticsEngine};
+            use agent_body::storage::models::AuditQueryFilter;
 
             match action {
                 AuditCommands::Query {
@@ -2345,7 +2345,7 @@ fn main() -> Result<()> {
                     min_hits,
                     json,
                 } => {
-                    let fb_path = agent_steward::feedback::FeedbackEngine::default_feedback_path();
+                    let fb_path = agent_body::feedback::FeedbackEngine::default_feedback_path();
                     let rep = AuditEvolutionAnalyzer::run_evolution_cycle(
                         &storage,
                         Some(&fb_path),
@@ -2382,7 +2382,7 @@ fn main() -> Result<()> {
         }
 
         Commands::Body { action } => {
-            use agent_steward::body::{
+            use agent_body::body::{
                 AutonomyEnvelope, BodyManifestEngine, ContinuityInput, ContinuityManager,
                 HomeostasisVitalsEngine,
             };
@@ -2391,10 +2391,10 @@ fn main() -> Result<()> {
                 BodyCommands::Manifest { json } => {
                     let m = BodyManifestEngine::build(&storage);
                     let out = serde_json::to_string_pretty(&m)?;
-                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         storage.provider().as_ref(),
                         "cli",
-                        "steward_body_state",
+                        "body_state",
                         &out,
                         t0.elapsed().as_micros() as i64,
                     );
@@ -2483,10 +2483,10 @@ fn main() -> Result<()> {
                         },
                     )?;
                     let out = serde_json::to_string_pretty(&cp)?;
-                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         storage.provider().as_ref(),
                         "cli",
-                        "steward_body_state",
+                        "body_state",
                         &out,
                         t0.elapsed().as_micros() as i64,
                     );
@@ -2504,10 +2504,10 @@ fn main() -> Result<()> {
                 BodyCommands::Resume { by_brain, checkpoint_id, json } => {
                     let res = ContinuityManager::resume_latest(&storage, &by_brain, checkpoint_id.as_deref())?;
                     let out = serde_json::to_string_pretty(&res)?;
-                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         storage.provider().as_ref(),
                         "cli",
-                        "steward_body_state",
+                        "body_state",
                         &out,
                         t0.elapsed().as_micros() as i64,
                     );
@@ -2536,7 +2536,7 @@ fn main() -> Result<()> {
                 }
                 BodyCommands::Peers { json } => {
                     let cfg = Config::load_or_default(None).unwrap_or_default();
-                    let client = agent_steward::mesh::MeshClient::new(&cfg.mesh, cfg.web.auth_token.clone());
+                    let client = agent_body::mesh::MeshClient::new(&cfg.mesh, cfg.web.auth_token.clone());
                     let peers = client.query_peer_body_manifests();
                     if json {
                         println!("{}", serde_json::to_string_pretty(&peers)?);
@@ -2556,9 +2556,9 @@ fn main() -> Result<()> {
 
     if !skip_cli_audit {
         let outcome = if exec_res.is_ok() { "success" } else { "failed" };
-        agent_steward::audit::AuditLogger::record_best_effort(
+        agent_body::audit::AuditLogger::record_best_effort(
             &audit_storage,
-            agent_steward::audit::AuditEventInput::in_agent("cli", "cli_command", cli_cmd_name)
+            agent_body::audit::AuditEventInput::in_agent("cli", "cli_command", cli_cmd_name)
                 .with_target("command", cli_cmd_name)
                 .with_outcome(outcome)
                 .with_elapsed_us(cli_t0.elapsed().as_micros() as i64)

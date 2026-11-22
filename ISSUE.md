@@ -148,7 +148,10 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - **实证根因**：并非本地 Ollama Embedding 引起（Ollama 跑在独立 `ollama.service` cgroup，daemon 调用为单线程阻塞 HTTP）；真正元凶是 Web UI 打开「治理/审计」页并发触发 `DuckDbAnalyticsEngine::from_synced_storage()` → `SyncPipeline::sync_all()`：每次请求都新建 8 线程无上限内存 DuckDB 实例，对 ~3.5 万行数据（21,249 `assets` + 11,577 `changes` + 1,148 `audit_events` 等）执行 **~3.5 万次独立自动提交事务**（单次耗 `174s`，并发请求直接打满 600%~800% CPU 与 `1.3G` 内存峰值并导致前端 `Broken pipe`）。此外 `FileWatcher` 递归监听曾持有 `7,825` 个含 `target/.git` 的无效 inotify 句柄。
     - **三层根治**：① `DuckDbStorageProvider` 默认收敛 `SET threads = 2; SET memory_limit = '256MB'`，并新增显式事务 API；② `SyncPipeline::sync_all()` 改为单事务批量提交，新增 `sync_audit_events_only()` / `from_synced_audit_events()`（审计汇总/导出不再拷贝 2 万+ 资产），`from_synced_storage()` 增加 15s 单飞快照缓存；③ `FileWatcher` 改为剪枝非递归监听（自动跳过 `target/.git/node_modules/.codegraph` 并动态补挂新建子目录）。
 
-31. 项目名要改成 agent-body ，相关的代码、文档、WEB UI、MCP、SKILL、HTML 等配套都要修改。
+31. **全面更名 `agent-body`（方案 B 彻底硬切 · 代码/MCP/CLI/Web/Hooks/Mesh/SKILL/HTML/活跃文档/宿主机生产平滑切换）** `✅ Phase 48 已全量落地`:
+    > 原始需求：项目名要改成 agent-body ，相关的代码、文档、WEB UI、MCP、SKILL、HTML 等配套都要修改。
+    - **已落地交付**：Crate 与二进制全面切为 `agent-body` / `agent_body`；43 个 MCP 工具全面切为 `body_*`（第 43 工具特判为 `body_state`）；默认数据目录切为 `~/.agent-body/body.db`（300 MB 现网库零损直迁并留存 `/root/.steward.bak-20261122` 备份）；Mesh 协议头切为 `X-Body-*`；Hook 桥接切为 `body_bridge.py`；Systemd 守护切为 `agent-body.service`；`skills/agent-body-*` 与 `presentation/agent-body-deck.html` 全部 `git mv` 重命名并刷新；全量 268 项测试、Playwright 9/9、Bench `v3.7` 与 `make evolution-check`（0 drift）全绿（详见 [roadmap-phase48.md](docs/src_doc/roadmap-phase48.md)）。当前仓库目录名保留不动，待用户后续手动改名。
 
 32. 数据库有等待事件、统计信息采样快照、ebpf、AWR等分析性能的手段，是否可以借鉴到当前项目？目的是设计一个可以用于项目自身性能基准抓取或设定,性能诊断,优化的功能。 
 
+33. WEB UI 中实证基准与账本中执行真机运行A/B基准（全量套件）时，我看到打叉的 SLA FAIL.

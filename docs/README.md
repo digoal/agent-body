@@ -1,4 +1,4 @@
-# Agent Host Steward 文档中心 (`docs/`)
+# Agent Body 文档中心 (`docs/`)
 
 本目录统一收拢项目全部文档资产（Phase 47 / ISSUE #29 规整），保持根目录精简聚焦于代码、脚本、技能与演讲入口。
 

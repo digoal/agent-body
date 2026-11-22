@@ -1,9 +1,9 @@
 [package]
-name = "agent-steward"
+name = "agent-body"
 version = "0.4.0"
 edition = "2021"
 authors = ["digoal 德哥"]
-description = "Agent Host Steward — 脑体分离架构的 Agent 本体（宿主机具身底座，Rust Edition）"
+description = "Agent Body — 脑体分离架构的 Agent 本体（宿主机具身底座，Rust Edition）"
 license = "Apache-2.0"
 
 [dependencies]

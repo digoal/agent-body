@@ -7,9 +7,9 @@ use std::path::Path;
 /// Systemd 服务客观依赖事实
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SystemdServiceFact {
-    /// 服务名（如 agent-steward.service, powercontext.service）
+    /// 服务名（如 agent-body.service, powercontext.service）
     pub service_name: String,
-    /// 单元文件物理绝对路径（如 /etc/systemd/system/agent-steward.service）
+    /// 单元文件物理绝对路径（如 /etc/systemd/system/agent-body.service）
     pub unit_file_path: String,
     /// 描述文本
     pub description: String,
@@ -388,7 +388,7 @@ mod tests {
         let services = AutomationTopology::scan_systemd_services().expect("扫描 systemd 应该成功");
         assert!(!services.is_empty(), "宿主机上应该至少存在 systemd 单元");
         
-        // 验证 agent-steward.service 或 ollama.service 等真实单元是否被捕获
+        // 验证 agent-body.service 或 ollama.service 等真实单元是否被捕获
         let found_steward = services.iter().any(|s| s.service_name.contains("steward"));
         println!("扫描到 systemd 服务数: {}, 是否包含 steward: {}", services.len(), found_steward);
     }
@@ -404,10 +404,10 @@ mod tests {
 
     #[test]
     fn test_find_impact_on_file() {
-        // 测试反查 agent-steward 的二进制文件或其配置
-        let impact = AutomationTopology::find_impact_on_file("/usr/local/bin/agent-steward").expect("反查影响面成功");
+        // 测试反查 agent-body 的二进制文件或其配置
+        let impact = AutomationTopology::find_impact_on_file("/usr/local/bin/agent-body").expect("反查影响面成功");
         println!("影响服务数: {}", impact.impacted_services.len());
-        assert!(impact.advice.contains("agent-steward"));
+        assert!(impact.advice.contains("agent-body"));
     }
 
     #[test]

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Shared '地层剖面 · 工程蓝图' (Geological Stratum / Architectural Blueprint)
-HTML slide deck engine for Agent Host Steward presentation series.
+HTML slide deck engine for Agent Body presentation series.
 
-Matches presentation/presentation.html and presentation/steward-deck.html 100%
+Matches presentation/presentation.html and presentation/agent-body-deck.html 100%
 in visual tokens, 1600x900 stage layout, bottom control bar, right speaker-notes
 drawer (N/T), TOC modal (G), step animations (P/A/S/R), and zero external deps.
 """
@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-# Exact color tokens from presentation.html / steward-deck.html
+# Exact color tokens from presentation.html / agent-body-deck.html
 C_PAPER = "#F7F6F2"
 C_PAPER2 = "#F1EFE9"
 C_LINE = "#D9D5CB"
@@ -451,7 +451,7 @@ def svg_closing(
     parts.append(f'<rect x="0" y="302" width="4" height="54" fill="{C_CLAY}"/>')
     parts.append(f'<text x="22" y="335" font-family="var(--f-r)" font-size="18.5" fill="{C_INK}" font-weight="600">{esc(open_question)}</text>')
     parts.append(f'<text x="0" y="396" font-family="var(--f-m)" font-size="13" fill="{C_TEAL}">{esc(next_talk)}</text>')
-    parts.append(f'<text x="1400" y="396" font-family="var(--f-m)" font-size="12" fill="{C_MUTE}" text-anchor="end">github.com/digoal/agent-steward · Apache-2.0</text>')
+    parts.append(f'<text x="1400" y="396" font-family="var(--f-m)" font-size="12" fill="{C_MUTE}" text-anchor="end">github.com/digoal/agent-body · Apache-2.0</text>')
     parts.append("</svg>")
     return "".join(parts)
 

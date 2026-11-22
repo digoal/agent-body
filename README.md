@@ -1,4 +1,4 @@
-# Agent Host Steward — Agent 本体（宿主机具身底座）
+# Agent Body — Agent 本体（宿主机具身底座）
 
 > **脑体分离架构：大语言模型是可热切换的瞬态大脑，本系统是永驻宿主机的 Agent 本体**  
 > **三位一体内核：宿主机事实感官 × 规约脊柱与小脑反射 × 可插拔海马体与连续性接力（Rust Edition · 单二进制交付）**
@@ -10,8 +10,8 @@
 
 ---
 
-## 什么是 Agent 本体（Agent Host Steward）？
-[系列演讲总览（6 讲 × 30 分钟专题 + 总览版）](https://htmlpreview.github.io/?https://github.com/digoal/agent-steward/blob/main/presentation/index.html) · [演讲 PPT](https://htmlpreview.github.io/?https://github.com/digoal/agent-steward/blob/main/presentation/steward-deck.html) · [路演 PPT](https://htmlpreview.github.io/?https://github.com/digoal/agent-steward/blob/main/presentation/presentation.html)  
+## 什么是 Agent 本体（Agent Body）？
+[系列演讲总览（6 讲 × 30 分钟专题 + 总览版）](https://htmlpreview.github.io/?https://github.com/digoal/agent-body/blob/main/presentation/index.html) · [演讲 PPT](https://htmlpreview.github.io/?https://github.com/digoal/agent-body/blob/main/presentation/agent-body-deck.html) · [路演 PPT](https://htmlpreview.github.io/?https://github.com/digoal/agent-body/blob/main/presentation/presentation.html)  
   
 市面上有大量专注于“跨会话记忆”或“对话摘要”的开源项目，但它们没有解决一个更底层、更致命的痛点：**Agent 在 Linux 宿主机上干活时，本质上是一个只有临时大脑皮层、却没有物理身体（无本体感觉、无痛觉反射、无跨大脑连续性）的数字孤魂**：
 - 它不知道机器上其实装了 `pdftotext`，却反复折腾 pip 安装第三方库并报错；
@@ -20,7 +20,7 @@
 - 它不知道哪个 cron 任务在后台定时跑脚本、修改数据库；
 - 它不知道用户偏好把脚本放在哪里，随手乱丢文件污染工作区。
 
-**Agent 本体（工程代号 `Agent Host Steward`，其中「大管家 / 小秘书」是本体面向环境治理与比较优势协同的两大功能侧面）** 将脑与体彻底解耦，确立**三位一体内核**：
+**Agent 本体（工程代号 `Agent Body`，其中「大管家 / 小秘书」是本体面向环境治理与比较优势协同的两大功能侧面）** 将脑与体彻底解耦，确立**三位一体内核**：
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -29,7 +29,7 @@
 └───────────────────────────────────────────┬────────────────────────────────────────────┘
                                             │ MCP (stdio/SSE) / Unix Socket / CLI
 ┌───────────────────────────────────────────▼────────────────────────────────────────────┐
-│                    Agent Host Steward (宿主环境大管家)                                  │
+│                    Agent Body (宿主环境大管家)                                  │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                        │
 │ ┌────────────────────────────────────────────────────────────────────────────────────┐ │
@@ -41,7 +41,7 @@
 │ │ • 源码与资料库编目: 自动发现 Git 仓库(CodeGraph 状态)、本地权威文档与离线知识库   │ │
 │ │ • 变更审计与依赖图: inotify 实时变更流感知、逆向依赖爆炸半径推演                  │ │
 │ │                                                                                    │ │
-│ │ ── 统一只读查询语义接口: steward_fact_query / steward_port_check / links_impact ──│ │
+│ │ ── 统一只读查询语义接口: body_fact_query / body_port_check / links_impact ──│ │
 │ └────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                        │
 │ ┌────────────────────────────────────────────────────────────────────────────────────┐ │
@@ -63,24 +63,24 @@
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
   
-> 💡 **脑体分离与三层命名兼容说明**：本项目核心定位为 **为 Agent 服务的「Agent 本体（宿主机具身底座）」**——“小秘书”是其感官盘点侧面，“大管家”是其稳态防撞侧面，绝非多 Agent 编排调度器或人类个人助理；同时为保障现有 `hooks.json`、Systemd 服务与 43 个原生 MCP 协议的 100% 向后兼容，工程标识（`agent-steward` / `steward_*` / `~/.steward/`）严格保持稳定不破坏（详见 [04-from-steward-to-agent-body.md](docs/idea_doc/04-from-steward-to-agent-body.md) 与 [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)）。
+> 💡 **脑体分离与三层命名兼容说明**：本项目核心定位为 **为 Agent 服务的「Agent 本体（宿主机具身底座）」**——“小秘书”是其感官盘点侧面，“大管家”是其稳态防撞侧面，绝非多 Agent 编排调度器或人类个人助理；同时为保障现有 `hooks.json`、Systemd 服务与 43 个原生 MCP 协议的 100% 向后兼容，工程标识（`agent-body` / `body_*` / `~/.agent-body/`）严格保持稳定不破坏（详见 [04-from-steward-to-agent-body.md](docs/idea_doc/04-from-steward-to-agent-body.md) 与 [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)）。
 
 ---
 
 ## 典型交互场景 (Zero Hallucination Examples)
 
 ### 场景 1：查询机器上的工具能力（问“有没有能处理 PDF 的东西？”）
-- **Agent 请求**: `steward_fact_query(type="capability", intent="处理 PDF 提取纯文本")`
+- **Agent 请求**: `body_fact_query(type="capability", intent="处理 PDF 提取纯文本")`
 - **大管家返回**:
   > “有 `pdftotext`，版本 24.02，绝对路径 `/usr/bin/pdftotext`。**推荐用法**：`pdftotext -layout input.pdf output.txt`（保持原始排版，性能极快，无需 pip 安装 Python 库）。备选工具：`pdftoppm`（转图片）与 Python `pypdf`。”
 
 ### 场景 2：端口排障与防撞（问“8080 端口被谁占了？”）
-- **Agent 请求**: `steward_port_check(port=8080)`
+- **Agent 请求**: `body_port_check(port=8080)`
 - **大管家返回**:
   > “8080 端口已被占用！PID: `18493`，进程名: `python3`，启动命令: `uvicorn main:app --port 8080`，工作目录: `/root/new/work/api-service`，已运行 3 天。**建议**：换用 8081 或 8082 端口。”
 
 ### 场景 3：资产放置偏好（问“我要写个抓取脚本，该放哪里？”）
-- **Agent 请求**: `steward_placement_suggest(type="script", name="sec_crawler", intent="美股财报抓取")`
+- **Agent 请求**: `body_placement_suggest(type="script", name="sec_crawler", intent="美股财报抓取")`
 - **大管家返回**:
   > “依主人规范，复用脚本应放置在 `/root/new/shared_proj/sec_crawler/`；临时文件请放 `/root/new/tmp/`；严禁散落在当前目录。遵循蛇形命名规范。”
 
@@ -155,33 +155,33 @@ export PATH="/root/.cargo/bin:$PATH"
 # 编译 release 生产二进制
 cargo build --release
 
-# 查看运行状态 (自动完成 ~/.steward 数据初始化)
-./target/release/agent-steward status
+# 查看运行状态 (自动完成 ~/.agent-body 数据初始化)
+./target/release/agent-body status
 ```
 
 ### 2. 常用 CLI 命令一览
 
 ```bash
 # 1. 开工获取系统硬件、活跃任务、最近资产与长期记忆简报
-./target/release/agent-steward brief
+./target/release/agent-body brief
 
 # 2. 准备写一个爬虫脚本？先问大管家放哪里
-./target/release/agent-steward place suggest --type script --name sec_fetcher --intent "抓取美股财报"
+./target/release/agent-body place suggest --type script --name sec_fetcher --intent "抓取美股财报"
 
 # 3. 准备启动一个测试服务？先探测 8080 端口是否已被占用 (防撞预警)
-./target/release/agent-steward env port 8080
+./target/release/agent-body env port 8080
 
 # 4. 计划改动公共模块？先推演上下游依赖与多跳爆炸半径
-./target/release/agent-steward links impact /root/new/shared_proj/test.py
+./target/release/agent-body links impact /root/new/shared_proj/test.py
 
 # 5. 跨会话搜索过去的决策与排障经验 (FTS5 + Ollama 向量混合 RRF 检索)
-./target/release/agent-steward memory search "数据库连接池故障应急" --hybrid
+./target/release/agent-body memory search "数据库连接池故障应急" --hybrid
 
 # 6. 本次会话完成？清理 /root/new/tmp/ 临时测试文件并沉淀工单纪要进长期记忆
-./target/release/agent-steward close session-20261115-01 --clean-temp
+./target/release/agent-body close session-20261115-01 --clean-temp
 
 # 7. 启动基于浏览器的可视化监控大屏 (事实拓扑 + 多 Agent 协作锁看板)
-./target/release/agent-steward web --port 8765
+./target/release/agent-body web --port 8765
 ```
 
 ### 3. Agent MCP 挂载配置
@@ -190,8 +190,8 @@ cargo build --release
 ```json
 {
   "mcpServers": {
-    "agent-steward": {
-      "command": "/root/new/work/agent-steward/target/release/agent-steward",
+    "agent-body": {
+      "command": "/root/new/work/agent-body/target/release/agent-body",
       "args": ["mcp"]
     }
   }
@@ -207,7 +207,7 @@ cargo build --release
   - `docs/markdown/` : 对外发布的文章、博客与配套 SVG 图表
   - `docs/releases/` : 发版说明文档
   - `docs/src_doc/` : 本项目的阶段开发路线图、进度追踪与演进文档
-- `presentation/` : 离线 HTML 演讲体系（含 `index.html` 总览、`presentation.html` 路演版、`steward-deck.html` 深度交流版及 `01~06` 6 讲 × 30 分钟单点说透专题）
+- `presentation/` : 离线 HTML 演讲体系（含 `index.html` 总览、`presentation.html` 路演版、`agent-body-deck.html` 深度交流版及 `01~06` 6 讲 × 30 分钟单点说透专题）
 - `scripts/` : 辅助运维与演进脚本（架构清单防漂移检查、演讲生成与 Playwright 门禁、Ollama 向量补齐等）
 - `skills/` : 与本产品相关的对接 AI Agent 的 SKILL 包
 - `src/` : Rust 核心源代码
@@ -252,8 +252,8 @@ cargo build --release
 
 8. **四级自治权限包络、风险分级干预与本体自治留痕红线（Autonomy Envelope × AOPCC × Traceable Homeostasis）**：
    - **四级本体自治权限包络**：所有本体行为显式划分为 `L0_OBSERVE`（纯只读感知，永不阻塞）、`L1_AUTONOMIC`（可逆稳态反射：Watcher 60s 折叠、写穿失效、幽灵端口剪枝、过期锁 GC、AOPCC 租约降级与重复记忆归档）、`L2_SUPERVISED`（宿主写操作：HostGC 物理删除、LinkRepair `--apply` 改写源码、Mesh 收件箱 `accept`、放置规则落盘，默认强制 `dry-run` 或需大脑确认/`auth_token` 鉴权）与 `L3_FORBIDDEN`（绝对痛觉禁区：`/etc/shadow`、`/etc/sudoers`、`~/.ssh/`、明文凭据落盘与跨机直写系统目录）。
-   - 对高危、不可逆或共享资源写操作（端口 bind、高爆炸半径文件写、系统敏感路径、跨 Agent 锁），通过 `steward_hook_pre` 执行**悲观前置拦截与冲突预测**。
-   - 对可逆/低失败代价操作允许依据开工乐观租约直行，并在 `steward_hook_post` 捕获 `success=false`（乐观碰壁）时自动触发宿主机事实反查与替代处方注入。
+   - 对高危、不可逆或共享资源写操作（端口 bind、高爆炸半径文件写、系统敏感路径、跨 Agent 锁），通过 `body_hook_pre` 执行**悲观前置拦截与冲突预测**。
+   - 对可逆/低失败代价操作允许依据开工乐观租约直行，并在 `body_hook_post` 捕获 `success=false`（乐观碰壁）时自动触发宿主机事实反查与替代处方注入。
    - **Agent 之外的本体自治留痕红线**：本体在 Agent 会话之外主动或被动修改宿主机对象与知识库状态时（如 `HostGarbageCollector` 清理文件、`LinkRepairer --apply` 改写引用、`FreshnessReconciler` 写穿失效/剪枝幽灵节点、`BackgroundScheduler` 后台巡检、`CoordinationEngine` 回收过期锁、`PlacementLearner` 应用演化规则），必须 100% 记录脱敏后的 `before_after_delta`（或 Patch Diff / 清理清单）与触发源至审计账本。
    - 会话结清（`session_close`）提供可审计的结项清单与可选跨大脑接力胶囊沉淀。
 
@@ -268,7 +268,7 @@ cargo build --release
 
 11. **开发原则与三层命名兼容纪律**：
     - 本项目使用 AI Agent 开发，收到任务后，先进行任务分解。任务拆解要细致、要按工业级产品标准来要求功能设计/开发/测试/文档、要在任何时刻任何情况任务失败后可以"断点续传"。开发完成后，如有必要记得要及时更新手册、SKILL、MCP 等相关的文档或代码。要将 SKILL、手册、MCP 和代码一样当成一等公民来对待。
-    - **三层命名兼容纪律**：品牌愿景与交互文档/代码注释统一围绕「Agent 本体（脑体分离）」叙事演进，同时底层稳定协议标识（Crate/二进制名 `agent-steward`、目录 `~/.steward/`、既有 `steward_*` MCP 工具与 CLI 子命令）严格保持 100% 向后兼容。
+    - **三层命名兼容纪律**：品牌愿景与交互文档/代码注释统一围绕「Agent 本体（脑体分离）」叙事演进，同时底层稳定协议标识（Crate/二进制名 `agent-body`、目录 `~/.agent-body/`、既有 `body_*` MCP 工具与 CLI 子命令）严格保持 100% 向后兼容。
 
 12. **零 Panic 原则**：
     - 在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误，保证服务 7×24 稳定运行。
@@ -293,20 +293,20 @@ cargo build --release
     - 白屏端每次交互应同步镜像回显等价的 CLI 命令与 MCP JSON-RPC 请求体；并通过 `/api/v1/parity/matrix` 与自动化契约测试强制守卫 **100% 对齐率**。
 
 17. **产品路演、场景演示与体系化演说内建规约 (Built-in Roadshow & Modular Deck Delivery)**：
-    - 从产品经理与市场营销推广视角，将「脑体分离 · Agent 本体」核心理念与高频痛点沉淀为 Web 端可交互的 **路演演示剧场（Roadshow Live Demo）**，与黑屏 `steward_demo_scenario` / `agent-steward demo` 同源演进。
+    - 从产品经理与市场营销推广视角，将「脑体分离 · Agent 本体」核心理念与高频痛点沉淀为 Web 端可交互的 **路演演示剧场（Roadshow Live Demo）**，与黑屏 `body_demo_scenario` / `agent-body demo` 同源演进。
     - 所有路演剧目必须由真实引擎驱动（严禁硬编码假数据），状态写入严格限定在 `demo:*` 隔离沙盒并支持一键无痕复位；同时将离线 HTML 演说（含路演、交流与 30 分钟专题深度拆解体系）与 ROI 实时账单随版本同步刷新。
 
 18. **实证基准、效能存证与全行为审计双账本规约 (Empirical Benchmark, Verifiable ROI & Dual-Domain Audit Ledger)**：
     - 任何宣称的效能提升（Token 节省率、上下文质量净提升、探索轮次缩减、微秒级响应延迟、故障/冲突拦截率、垃圾噪音阻断率）必须通过可复现的 **A/B 对照基准套件（Without Steward 裸奔基线 vs With Steward 管家赋能）** 与 **生产运行态效能存证账本（Effectiveness Telemetry Ledger）** 双轨实证，严禁无出处估算或主观拍脑袋指标。
     - **帕累托双门禁（既省 Token，上下文质量不降反升）**：严禁通过丢弃关键事实或返回空洞摘要来骗取高 Token 压缩率；每个基准负载与竞品对标轨道必须同时考核 **关键事实完整度（Fact Recall）**、**信噪比/纯净度（Signal Precision）**、**结构化可行动性（Actionability）** 与 **有效信息密度提升倍数（Info Density Gain: Facts/1k-tok）**，强制满足 $Q_{\text{steward}} \ge Q_{\text{baseline}}$ 且必含事实 100% 命中。
     - **双账本协同与 OLAP 分析**：`effectiveness_ledger` 专注核定含规则编号（`provenance_rule`）的 Token/轮次/拦截 ROI；`audit_events` 100% 覆盖 43 个工具全通道调用与本体后台自治维护动作，统一经 DuckDB 列存引擎聚合分析与 Parquet/CSV 安全导出，确保大管家使用效果与内部行为 100% 有据可查。
-    - 基准测试必须基于宿主机真实物理探针与 `bench:*` 隔离沙盒实跑（覆盖内核微基准延迟 SLA 与宏观业务负载），并同步核算通过开工乐观租约省去的**整轮对话税 (`rounds_saved` / 回路工具调用轮次)**；每次评测与日常工具调用的真实耗时（`elapsed_us`）、Token 缩减量（`tokens_saved`）、探索轮次缩减（`rounds_saved`）及风险拦截事件（`hazard_intercepted`）均须携带确定性推导规则编号（`provenance_rule`）落库留痕，支持通过 CLI（`agent-steward bench`）、MCP（`steward_benchmark`）、Web UI 与 DuckDB 导出报告随时溯源核验与跨版本回归比对。
+    - 基准测试必须基于宿主机真实物理探针与 `bench:*` 隔离沙盒实跑（覆盖内核微基准延迟 SLA 与宏观业务负载），并同步核算通过开工乐观租约省去的**整轮对话税 (`rounds_saved` / 回路工具调用轮次)**；每次评测与日常工具调用的真实耗时（`elapsed_us`）、Token 缩减量（`tokens_saved`）、探索轮次缩减（`rounds_saved`）及风险拦截事件（`hazard_intercepted`）均须携带确定性推导规则编号（`provenance_rule`）落库留痕，支持通过 CLI（`agent-body bench`）、MCP（`body_benchmark`）、Web UI 与 DuckDB 导出报告随时溯源核验与跨版本回归比对。
 
 19. **纵深安全防御、全链路脱敏与抗投毒规约 (Defense-in-Depth Security, End-to-End Redaction & Anti-Poisoning)**：
     - **全链路凭据零落盘**：在文件扫描、`/proc` `cmdline` 采集、MCP 配置解析、外部服务登记、长期记忆写入、变更审计流水、跨机 Mesh 对话与本地模型推理前，统一强制经过 `SecretRedactor` 脱敏与敏感文件阻断（`.env*`、`.ssh/`、`*.pem`/`*.key`、URI 口令与高危令牌前缀），严禁明文凭据入库或经由 Brief / Mesh 泄露。
-    - **执行门禁与防注入沙盒**：`HookDispatcher` 禁止裸拼接未转义路径交由 `sh -c` 执行；DuckDB 导出在引擎底层强制校验目录白名单与 SQL 转义；`steward_hook_pre` 对高危系统路径（`/etc/shadow`、`/etc/sudoers`、`~/.ssh/` 等）与破坏性操作给出 `CRITICAL` 预警。
-    - **接口最小暴露、写鉴权与 Mesh 信封签名**：Web/Mesh 默认绑定 `127.0.0.1` 回环地址；全量 Web 写端点及 GC 端点统一受 `auth_token` Bearer 保护，非回环暴露未配置 `auth_token` 时拒绝写操作；跨节点 Mesh 协同写操作、对话与文件投递强制采用 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + 时间窗/Nonce 防重放 + `~/.steward/mesh_inbox/` 隔离收件箱），严禁跨机直写覆盖系统与业务文件。
-    - **存储最小权限与抗上下文投毒**：`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限收敛并通过 `preflight` 巡检；对外部仓库/文档语料及跨机 Mesh 对话内容识别并清洗间接提示词注入（Indirect Prompt Injection），同时纳入 `W11`、`W14` 与 `DQ4` 安全回归基准（详见 [11-security-spec.md](docs/design_doc/11-security-spec.md)）。
+    - **执行门禁与防注入沙盒**：`HookDispatcher` 禁止裸拼接未转义路径交由 `sh -c` 执行；DuckDB 导出在引擎底层强制校验目录白名单与 SQL 转义；`body_hook_pre` 对高危系统路径（`/etc/shadow`、`/etc/sudoers`、`~/.ssh/` 等）与破坏性操作给出 `CRITICAL` 预警。
+    - **接口最小暴露、写鉴权与 Mesh 信封签名**：Web/Mesh 默认绑定 `127.0.0.1` 回环地址；全量 Web 写端点及 GC 端点统一受 `auth_token` Bearer 保护，非回环暴露未配置 `auth_token` 时拒绝写操作；跨节点 Mesh 协同写操作、对话与文件投递强制采用 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + 时间窗/Nonce 防重放 + `~/.agent-body/mesh_inbox/` 隔离收件箱），严禁跨机直写覆盖系统与业务文件。
+    - **存储最小权限与抗上下文投毒**：`~/.agent-body/` (`0700`) 与 `body.db`/`config.toml` (`0600`) 权限收敛并通过 `preflight` 巡检；对外部仓库/文档语料及跨机 Mesh 对话内容识别并清洗间接提示词注入（Indirect Prompt Injection），同时纳入 `W11`、`W14` 与 `DQ4` 安全回归基准（详见 [11-security-spec.md](docs/design_doc/11-security-spec.md)）。
 
 20. **零重扫演进导航与横向竞品实证对标规约 (Zero-Rescan Evolution & Competitor Benchmarking)**：
     - **零重扫演进活地图**：新会话演进优先查阅根目录演进指南（[EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md)）、运行架构清单门禁（`make evolution-check`）并使用本项目 `.codegraph/` 符号地图定位触点，严禁把历史冻结 `roadmap-phase*.md` 全盘扫描一遍。
@@ -328,11 +328,11 @@ cargo build --release
 
 24. **联邦网格信封协议、零信任签名认证与受控沙盒协同规约 (Federated Mesh Wire Protocol, Zero-Trust Auth & Sandboxed Collaboration)**：
     - **信封协议与双向防重放**：跨主机 Mesh 协同统一采用 `MeshEnvelope v1.0` 线协议，写与协同请求强制携带 `timestamp_ms`、`nonce`、`scopes`、`payload_sha256` 及 `HMAC-SHA256` 规范签名；服务端校验 `+-300s` 时间窗、`NonceCache` 防重放与 Peer Scope 最小授权（支持 `read:facts` / `write:locks` / `exchange:dialogue` / `transfer:artifact`）。
-    - **受控协同原语**：跨机对话仅限结构化意图（`ASK_CONTEXT` / `HANDOFF_TASK` / `SHARE_MEMORY` / `REPLY`），入出双向经由 `SecretRedactor` 与 `PromptInjectionScanner` 过滤；跨机文件传输严格限额 `<= 10MB`、校验 SHA-256 与阻断敏感文件，隔离落盘至 `~/.steward/mesh_inbox/`（`0600`）待本机显式 `accept`/`reject` 后方可使用（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)）。
+    - **受控协同原语**：跨机对话仅限结构化意图（`ASK_CONTEXT` / `HANDOFF_TASK` / `SHARE_MEMORY` / `REPLY`），入出双向经由 `SecretRedactor` 与 `PromptInjectionScanner` 过滤；跨机文件传输严格限额 `<= 10MB`、校验 SHA-256 与阻断敏感文件，隔离落盘至 `~/.agent-body/mesh_inbox/`（`0600`）待本机显式 `accept`/`reject` 后方可使用（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)）。
 
 25. **乐观-悲观自适应并发控制与失败早回退规约 (Adaptive Optimistic-Pessimistic Concurrency Control & Fail-Fast Fallback, AOPCC)**：
     - **三态动作并发分级**：依据可逆性、失败代价 ($C_{\text{fail}}$) 与冲突概率，将 Agent 动作划分为 `OPTIMISTIC`（只读、服务客户端直连如本机 `:5432`、已授权工具、`/root/new/tmp/` 沙盒验证——0 前置查询直接执行）、`CAUTIOUS_CAS`（常规新建文件的静默本地规则校验）与 `PESSIMISTIC_LOCK`（端口 bind、高爆炸半径文件修改、系统高危路径、跨 Agent 排他锁——强制前置拦截）。
-    - **开工乐观租约与碰壁秒级自愈**：`steward_brief` 在 `SessionStart` 签发高置信度（$P_{\text{valid}} \ge 0.90$）且带纪元指纹（`epoch_hash`）的乐观直通契约；若乐观直行报错（如 `Connection refused` / `command not found` / `Address already in use`），必须由 `steward_hook_post(success=false)` 在 `< 2ms` 内反查宿主机真实状态并注入替代处方，消除整轮对话税（详见 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)）。
+    - **开工乐观租约与碰壁秒级自愈**：`body_brief` 在 `SessionStart` 签发高置信度（$P_{\text{valid}} \ge 0.90$）且带纪元指纹（`epoch_hash`）的乐观直通契约；若乐观直行报错（如 `Connection refused` / `command not found` / `Address already in use`），必须由 `body_hook_post(success=false)` 在 `< 2ms` 内反查宿主机真实状态并注入替代处方，消除整轮对话税（详见 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)）。
 
 26. **双域全链路行为审计、因果溯源与数据驱动自进化规约 (Dual-Domain Behavioral Audit, Causal Provenance & Data-Driven Self-Evolution)**：
     - **双域正交审计全覆盖**：将系统可观测行为严格划分为 **`IN_AGENT` 接入域**（`Brief` 租约签发、`Pre/Post Hook` 裁决与自愈、全部原生 MCP 工具、CLI、Web 写端点及 Mesh 请求）与 **`OUT_OF_AGENT` 自治及被动维护域**（`PROACTIVE_DAEMON` 30 分钟后台巡检、`REACTIVE_WATCHER` 60 秒折叠防洪监听、`GOVERNANCE_MAINTENANCE` 包括 `HostGC` 清理、`LinkRepair --apply` 改写源码、`FreshnessReconciler` 写穿与幽灵剪枝、`PlacementLearner` 规则演化及过期锁 GC），严禁仅记录含路径的文件写操作而丢弃命令、锁与后台修改。
@@ -342,7 +342,7 @@ cargo build --release
 27. **Agent 本体具身底座、跨大脑连续性、五维稳态自治与三层命名兼容规约 (Agent Embodiment Substrate, Cross-Brain Continuity, Homeostasis & Three-Tier Naming Compatibility)**：
     - **脑体分离与具身着陆 (`BodyManifest` & `ContinuityCapsule`)**：确立 LLM/客户端为瞬态大脑、本项目为永驻宿主机的 Agent 本体；任何新接入大脑均可在 `< 10 ms` 内获取确定性 `body_id`、六器官健康自省及 `<= 300 tok` 跨大脑工作态接力胶囊（全量经 `SecretRedactor` 脱敏与 `PromptInjectionScanner` 抗投毒清洗，支持换脑不失忆、多本体只读名片发现）。
     - **五维生命体征与 `L1` 自主稳态反射 (`HomeostasisVitals`)**：聚合感官清晰度、反射灵敏度、海马体纯净度、代谢健康度与免疫可溯度为 0~100 综合稳态分，低于阈值时仅在 `L1_AUTONOMIC` 包络内触发可逆自愈，严禁越界执行 `L2/L3` 动作，并通过 `W17` 与 `DQ8` 基准门禁持续验证。
-    - **三层命名兼容底线**：对外品牌、架构文档、代码注释、WebUI 与演说物料全面围绕「Agent 本体」叙事升级，同时底层 Crate/二进制（`agent-steward`）、配置目录（`~/.steward/`）与既有 `steward_*` MCP/CLI 契约严格保持 100% 向后兼容（详见 [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)）。
+    - **三层命名兼容底线**：对外品牌、架构文档、代码注释、WebUI 与演说物料全面围绕「Agent 本体」叙事升级，同时底层 Crate/二进制（`agent-body`）、配置目录（`~/.agent-body/`）与既有 `body_*` MCP/CLI 契约严格保持 100% 向后兼容（详见 [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)）。
 
 ---
 

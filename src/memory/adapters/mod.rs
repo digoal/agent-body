@@ -10,7 +10,7 @@
 //!
 //! ## 工厂接入示例
 //! ```rust,ignore
-//! use agent_steward::memory::adapters::MemoryFactory;
+//! use agent_body::memory::adapters::MemoryFactory;
 //!
 //! // 由 steward.toml 中的 provider 字段驱动
 //! let provider = MemoryFactory::from_config("powercontext", &config)?;
@@ -58,7 +58,7 @@ impl AdapterConfig {
             self.mem0_url = "https://api.mem0.ai".to_string();
         }
         if self.mem0_user_id.is_empty() {
-            self.mem0_user_id = "agent-steward".to_string();
+            self.mem0_user_id = "agent-body".to_string();
         }
         if self.letta_url.is_empty() {
             self.letta_url = "http://127.0.0.1:8283".to_string();
@@ -199,7 +199,7 @@ mod tests {
         let cfg = AdapterConfig::default().with_defaults();
         assert_eq!(cfg.powercontext_url, "http://127.0.0.1:8000");
         assert_eq!(cfg.mem0_url, "https://api.mem0.ai");
-        assert_eq!(cfg.mem0_user_id, "agent-steward");
+        assert_eq!(cfg.mem0_user_id, "agent-body");
         assert_eq!(cfg.letta_url, "http://127.0.0.1:8283");
     }
 }

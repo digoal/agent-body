@@ -75,7 +75,7 @@ impl Storage {
         match config.storage.provider.to_lowercase().as_str() {
             "postgres" | "pg" | "postgresql" => {
                 let url = config.storage.pg_url.as_deref().unwrap_or(
-                    "postgresql://postgres@127.0.0.1:5432/agent_steward"
+                    "postgresql://postgres@127.0.0.1:5432/agent_body"
                 );
                 let provider = PgStorageProvider::connect(url)?;
                 Ok(Self {
@@ -517,11 +517,11 @@ mod tests {
 
         let mcp = McpCatalogRecord {
             id: "mcp-1".to_string(),
-            server_name: "agent-steward".to_string(),
+            server_name: "agent-body".to_string(),
             client_source: "hermes".to_string(),
             transport: "stdio".to_string(),
-            command_or_url: "/usr/local/bin/agent-steward mcp".to_string(),
-            tools_json: serde_json::json!(["steward_brief", "steward_port_check"]),
+            command_or_url: "/usr/local/bin/agent-body mcp".to_string(),
+            tools_json: serde_json::json!(["body_brief", "body_port_check"]),
             tool_count: 2,
             est_total_tokens: 450,
             status: "active".to_string(),
@@ -704,19 +704,19 @@ mod tests {
 
         // 1. 创建节点: 项目 -> 服务 -> 端口
         let p_node = FactNodeRecord {
-            id: "proj:agent-steward".to_string(),
+            id: "proj:agent-body".to_string(),
             node_type: "project".to_string(),
-            name: "agent-steward".to_string(),
+            name: "agent-body".to_string(),
             label: "宿主环境大管家工程".to_string(),
-            properties: serde_json::json!({"path": "/root/new/work/agent-steward"}),
+            properties: serde_json::json!({"path": "/root/new/work/agent-body"}),
             updated_at: None,
         };
         let s_node = FactNodeRecord {
-            id: "service:agent-steward.service".to_string(),
+            id: "service:agent-body.service".to_string(),
             node_type: "service".to_string(),
-            name: "agent-steward.service".to_string(),
+            name: "agent-body.service".to_string(),
             label: "大管家守护服务".to_string(),
-            properties: serde_json::json!({"unit": "/etc/systemd/system/agent-steward.service"}),
+            properties: serde_json::json!({"unit": "/etc/systemd/system/agent-body.service"}),
             updated_at: None,
         };
         let port_node = FactNodeRecord {
@@ -734,14 +734,14 @@ mod tests {
 
         // 2. 创建边
         let edge1 = FactEdgeRecord::new_explicit(
-            "service:agent-steward.service",
-            "proj:agent-steward",
+            "service:agent-body.service",
+            "proj:agent-body",
             "depends_on",
             serde_json::json!({}),
             1.0,
         );
         let edge2 = FactEdgeRecord::new_explicit(
-            "service:agent-steward.service",
+            "service:agent-body.service",
             "port:8080",
             "listens_on",
             serde_json::json!({}),
@@ -752,12 +752,12 @@ mod tests {
         storage.upsert_fact_edge(&edge2).expect("edge 2");
 
         // 3. 验证从服务节点出发的 1 跳子图
-        let sub1 = storage.traverse_fact_graph("service:agent-steward.service", 1).expect("subgraph 1 hop");
+        let sub1 = storage.traverse_fact_graph("service:agent-body.service", 1).expect("subgraph 1 hop");
         assert_eq!(sub1.nodes.len(), 3, "1跳应该连同项目和端口全部捕获");
         assert_eq!(sub1.edges.len(), 2, "应包含2条边");
 
         // 4. 验证根据名字模糊查找节点
-        let found = storage.find_fact_nodes_by_name("steward").expect("find nodes");
+        let found = storage.find_fact_nodes_by_name("agent-body").expect("find nodes");
         assert_eq!(found.len(), 2);
     }
 
@@ -872,7 +872,7 @@ mod tests {
             event_id: "ev-1".to_string(),
             session_id: "sess-1".to_string(),
             source_channel: "mcp".to_string(),
-            tool_or_action: "steward_skill_route".to_string(),
+            tool_or_action: "body_skill_route".to_string(),
             provenance_rule: "PR-01".to_string(),
             baseline_tokens: 4000,
             steward_tokens: 300,
@@ -890,7 +890,7 @@ mod tests {
             event_id: "ev-2".to_string(),
             session_id: "bench:sess".to_string(),
             source_channel: "mcp".to_string(),
-            tool_or_action: "steward_hook_pre".to_string(),
+            tool_or_action: "body_hook_pre".to_string(),
             provenance_rule: "PR-03".to_string(),
             baseline_tokens: 600,
             steward_tokens: 120,

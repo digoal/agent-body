@@ -27,7 +27,7 @@ impl AutoSyncEngine {
             ".git".to_string(),
             "node_modules".to_string(),
             "__pycache__".to_string(),
-            ".steward".to_string(),
+            ".agent-body".to_string(),
             "target".to_string(),
             ".venv".to_string(),
             ".cache".to_string(),

@@ -1,6 +1,6 @@
 //! 开工乐观直通租约引擎（AOPCC — MVCC Read-Snapshot Lease）
 //!
-//! 在 `SessionStart (steward_brief)` 阶段以 <1ms 开销从持久化事实图谱与本地轻量探针
+//! 在 `SessionStart (body_brief)` 阶段以 <1ms 开销从持久化事实图谱与本地轻量探针
 //! 动态提取高置信度服务/工具/沙盒/CodeGraph 乐观假设租约，使 Agent 对高稳定、可逆操作
 //! 免除执行回路内的强制前置查询（消除整轮对话税 `C_turn`）。
 //! 当近期 `PostToolUse` 捕获 `optimistic_miss` 碰壁事件时，对应目标的置信度自动降级，

@@ -891,10 +891,10 @@ mod tests {
             "file:/root/new/tmp"
         );
         assert_eq!(compute_effective_path_depth("/root/new/work"), 1);
-        assert_eq!(compute_effective_path_depth("/root/new/work/agent-steward"), 2);
-        assert_eq!(compute_effective_path_depth("/root/new/work/agent-steward/src"), 3);
+        assert_eq!(compute_effective_path_depth("/root/new/work/agent-body"), 2);
+        assert_eq!(compute_effective_path_depth("/root/new/work/agent-body/src"), 3);
         assert_eq!(
-            compute_effective_path_depth("/root/new/work/agent-steward/src/web/mod.rs"),
+            compute_effective_path_depth("/root/new/work/agent-body/src/web/mod.rs"),
             5
         );
     }

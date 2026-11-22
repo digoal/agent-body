@@ -506,7 +506,7 @@ mod tests {
         let sqlite = crate::storage::Storage::open_in_memory().expect("sqlite");
         crate::audit::AuditLogger::record(
             &sqlite,
-            crate::audit::AuditEventInput::in_agent("mcp", "tool_call", "steward_port_check")
+            crate::audit::AuditEventInput::in_agent("mcp", "tool_call", "body_port_check")
                 .with_outcome("success")
                 .with_elapsed_us(120),
         )

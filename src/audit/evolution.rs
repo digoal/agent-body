@@ -206,7 +206,7 @@ impl AuditEvolutionAnalyzer {
                         "近 7 天 audit_events 捕获 target=`{}` 累计 {} 次 `{}`",
                         hs.target_id, hs.hit_count, hs.last_outcome
                     );
-                    let rec = "核查前置约束或通过 `agent-steward audit evolve` 调整租约/规则".to_string();
+                    let rec = "核查前置约束或通过 `agent-body audit evolve` 调整租约/规则".to_string();
                     if let Ok((item, created)) =
                         FeedbackEngine::add_item_deduped(fb, "CON", "P1", &title, &evidence, &rec)
                     {

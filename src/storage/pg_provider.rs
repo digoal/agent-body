@@ -2194,7 +2194,7 @@ impl PgStorageProvider {
 mod tests {
     use super::*;
 
-    const PG_TEST_URL: &str = "postgresql://postgres@127.0.0.1:5432/agent_steward_test";
+    const PG_TEST_URL: &str = "postgresql://postgres@127.0.0.1:5432/agent_body_test";
 
     fn get_test_provider() -> Option<PgStorageProvider> {
         PgStorageProvider::connect(PG_TEST_URL).ok()

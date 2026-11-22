@@ -1,11 +1,11 @@
 ---
-name: agent-steward-developer
-description: 专门用于指导和规范 Agent 持续迭代、维护、演化本项目（Agent Host Steward）的闭环工作流技能。包含断点续传状态机、三方隔离实施（设计→实现→验证）、架构规范约束（严格执行黑白名单颗粒度、放置建议、proc 过滤底噪、FTS5 同步、图拓扑审计、CodeGraph 宏微联邦、MCP 协议一致性）与验收交付准则。适用于：对 agent-steward 进行特性扩展、bug 修复、协议升级、性能优化或架构重构。
+name: agent-body-developer
+description: 专门用于指导和规范 Agent 持续迭代、维护、演化本项目（Agent Body）的闭环工作流技能。包含断点续传状态机、三方隔离实施（设计→实现→验证）、架构规范约束（严格执行黑白名单颗粒度、放置建议、proc 过滤底噪、FTS5 同步、图拓扑审计、CodeGraph 宏微联邦、MCP 协议一致性）与验收交付准则。适用于：对 agent-body 进行特性扩展、bug 修复、协议升级、性能优化或架构重构。
 ---
 
-# Agent Host Steward 持续迭代技能 (agent-steward-developer)
+# Agent Body 持续迭代技能 (agent-body-developer)
 
-> **定位**: 本技能驻留在 `agent-steward` 项目内部（`skills/agent-steward-developer/SKILL.md`），是指导任何接手该项目的 AI Agent（无论是主 Agent 还是 Subagent）进行高品质、自闭环、防御性演进的操作准则。
+> **定位**: 本技能驻留在 `agent-body` 项目内部（`skills/agent-body-developer/SKILL.md`），是指导任何接手该项目的 AI Agent（无论是主 Agent 还是 Subagent）进行高品质、自闭环、防御性演进的操作准则。
 
 ---
 
@@ -40,17 +40,17 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 7. **纵深安全防御、全链路脱敏与抗投毒（Defense-in-Depth，对齐规约 #8 & #19）**:
    - 任何写入资产库、`/proc` 进程记录、长期记忆、变更审计流水与本地大模型输入的内容，必须经过 `SecretRedactor` 脱敏；
    - `HookDispatcher` 命令插值强制安全转义防 Shell 注入，导出操作严格限定目录白名单与 SQL 转义；
-   - Web REST 写端点及敏感接口必须统一校验 `auth_token`，`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 保持最小权限；外部语料入库需警惕间接提示词注入。
+   - Web REST 写端点及敏感接口必须统一校验 `auth_token`，`~/.agent-body/` (`0700`) 与 `body.db`/`config.toml` (`0600`) 保持最小权限；外部语料入库需警惕间接提示词注入。
 8. **图谱证据分层与有向加权（Graph Evidence Tiering，对齐规约 #5 & #23）**:
    - 所有跨实体关系边必须标明 `evidence_tier`（`L1_EXPLICIT` 物理事实 / `L2_STRUCTURAL` 结构聚合 / `L3_SEMANTIC` 向量标签隐式发现）、方向语义与合法权重；严禁将语义相似边混作物理硬依赖。
 9. **联邦网格信封协议与沙盒收件箱隔离（Mesh Wire Protocol & Sandbox，对齐规约 #2, #19 & #24）**:
-   - 跨节点协同（对话、文件投递、跨机锁）必须走 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + 时间窗/Nonce 防重放 + Peer Scope 校验）；文件传输严格限制体积上限并隔离落盘至 `~/.steward/mesh_inbox/`，严禁跨机直写宿主机路径。
+   - 跨节点协同（对话、文件投递、跨机锁）必须走 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + 时间窗/Nonce 防重放 + Peer Scope 校验）；文件传输严格限制体积上限并隔离落盘至 `~/.agent-body/mesh_inbox/`，严禁跨机直写宿主机路径。
 10. **悲观与乐观并发自适应（AOPCC，对齐规约 #8 & #25）**:
-   - 高危/写共享/绑定端口/高爆炸半径操作必须坚守悲观前置门禁（`steward_hook_pre`）；可逆只读/服务客户端连接/已授权工具优先消费开工乐观租约直行，并由 `steward_hook_post` 兜底碰壁秒级自愈，禁止低风险回路强行加塞无谓全悲观查询税。
+   - 高危/写共享/绑定端口/高爆炸半径操作必须坚守悲观前置门禁（`body_hook_pre`）；可逆只读/服务客户端连接/已授权工具优先消费开工乐观租约直行，并由 `body_hook_post` 兜底碰壁秒级自愈，禁止低风险回路强行加塞无谓全悲观查询税。
 11. **双域全链路行为审计与自治动作留痕（Dual-Domain Behavioral Audit，对齐规约 #4, #8, #18, #22 & #26）**:
     - 严禁仅审计含 `path` 参数的写文件操作而丢弃命令/服务/锁/非路径工具调用，更严禁后台 `Daemon`、`Reconciler`、`HostGC`、`LinkRepair`、`PlacementLearner` 等 Agent 之外主动/被动更改宿主对象时静默“黑盒变更”；所有双域关键行为必须经 `SecretRedactor` 脱敏、附带 `before_after_delta` 与 `evidence_sha256` 落库，并对 `Watcher` 高频事件实施时间窗折叠防洪。
 12. **Agent 本体脑体分离、四级自治包络与三层命名兼容（Agent Embodiment，对齐规约 #1, #2, #3, #8 & #27）**:
-    - 确立 LLM=瞬态大脑、本项目=永驻宿主机的 Agent 本体（感官/小脑反射/海马体连续性/代谢稳态/多体联邦）；严守递弱代偿，绝不内置主战 LLM 规划循环或替代编排框架；自治行为严格遵循 `L0_OBSERVE` / `L1_AUTONOMIC` / `L2_SUPERVISED` / `L3_FORBIDDEN` 四级权限包络；对外叙事升级为「Agent 本体」，但工程标识（`agent-steward` / `steward_*` / `~/.steward/`）100% 向后兼容。
+    - 确立 LLM=瞬态大脑、本项目=永驻宿主机的 Agent 本体（感官/小脑反射/海马体连续性/代谢稳态/多体联邦）；严守递弱代偿，绝不内置主战 LLM 规划循环或替代编排框架；自治行为严格遵循 `L0_OBSERVE` / `L1_AUTONOMIC` / `L2_SUPERVISED` / `L3_FORBIDDEN` 四级权限包络；对外叙事升级为「Agent 本体」，但工程标识（`agent-body` / `body_*` / `~/.agent-body/`）100% 向后兼容。
 
 ---
 
@@ -60,7 +60,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 |---|---|---|
 | `Cargo.toml`, `Cargo.lock` | Rust 依赖与工作空间配置 | 引入新 crate 需考虑编译耗时与轻量化 |
 | `src/` | Rust 核心源码目录（27 个顶层模块） | 业务实现与单元测试所在 |
-| ├── `src/config/` | 配置文件结构体与 `~/.steward/config.toml` 引导、参数校验 | 保持向后兼容 |
+| ├── `src/config/` | 配置文件结构体与 `~/.agent-body/config.toml` 引导、参数校验 | 保持向后兼容 |
 | ├── `src/preflight/` | 运行时环境与依赖完整性预检引擎 | 严格保障可移植部署与优雅降级 |
 | ├── `src/storage/` | SQLite/PG/DuckDB 三引擎、82 方法 SPI 抽象、27 张表与热迁移 | 任何表变更必须同步 schema |
 | ├── `src/audit/` | 双域行为审计（`IN_AGENT`/`OUT_OF_AGENT`）、脱敏防洪与 AOPCC 自进化 | 写入严禁 Panic，强制脱敏 |
@@ -90,7 +90,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | `EVOLUTION_GUIDE.md` | 零重扫演进活地图与 8 大场景变更触点矩阵 | 新会话 `Tier-0` 必读入口 |
 | `INSTALL.md` | 生产安装、依赖矩阵、Docker 与 Systemd 部署指南 | 与 `preflight` 保持事实对齐 |
 | `ISSUE.md` | 未来演进与待探讨 ISSUE 总账 | 与 Roadmap 及反馈总账协同 |
-| `user_feedback.md` | 主理人与 Agent 实际使用体验与探针自上报总账 | `steward_feedback` 双向读写目标 |
+| `user_feedback.md` | 主理人与 Agent 实际使用体验与探针自上报总账 | `body_feedback` 双向读写目标 |
 | `docs/manual/` | 面向使用者与架构师的分卷深度技术手册 (01~10) | 保持与代码演进实时同步 |
 | `docs/src_doc/` | 开发者手册、产品手册与各阶段研发断点状态表 | 任务流转枢纽，统一 kebab-case |
 | `docs/design_doc/` | 架构设计文档闭环交付件 (01~08, init.sql) | 顶层架构事实依据，统一 kebab-case |
@@ -142,12 +142,12 @@ flowchart TD
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo build --release
    ```
-   **门禁要求**: 编译无 error，binary 产物位于 `target/release/agent-steward`。
+   **门禁要求**: 编译无 error，binary 产物位于 `target/release/agent-body`。
 3. 冒烟运行验证命令：
    ```bash
-   ./target/release/agent-steward status
-   ./target/release/agent-steward brief
-   ./target/release/agent-steward links audit
+   ./target/release/agent-body status
+   ./target/release/agent-body brief
+   ./target/release/agent-body links audit
    ```
 
 ### 步骤 5: 文档同步与交付小结
@@ -189,16 +189,16 @@ flowchart TD
 
 - [ ] 是否在任务开始前已将任务标记为 `⏳ 进行中`？
 - [ ] 代码中是否存在对黑名单目录进行深度递归扫描的风险？
-- [ ] **安全自检（规约 #19 & #24）**：新增采集/记忆/变更/跨机对话路径是否经过 `SecretRedactor` 脱敏与 `PromptInjectionScanner` 检查？新增 Web 写端点是否已接入 `check_auth`？Mesh 协同是否校验证书/HMAC 签名、防重放与 `~/.steward/mesh_inbox/` 沙盒？Hook 命令插值与导出路径是否已防注入与防目录穿越？
+- [ ] **安全自检（规约 #19 & #24）**：新增采集/记忆/变更/跨机对话路径是否经过 `SecretRedactor` 脱敏与 `PromptInjectionScanner` 检查？新增 Web 写端点是否已接入 `check_auth`？Mesh 协同是否校验证书/HMAC 签名、防重放与 `~/.agent-body/mesh_inbox/` 沙盒？Hook 命令插值与导出路径是否已防注入与防目录穿越？
 - [ ] **图谱分级自检（规约 #5 & #23）**：新增图谱连边是否已明确标注 `evidence_tier`（`L1_EXPLICIT`/`L2_STRUCTURAL`/`L3_SEMANTIC`）、方向语义与合法权重，避免语义边伪装物理硬依赖？
 - [ ] **并发模式自检（规约 #8 & #25）**：涉及高危/写共享/绑定端口是否坚守悲观门禁？可逆/客户端连接等高频路径是否支持消费开工乐观租约直行并由 `post_tool_call` 兜底碰壁自愈？
 - [ ] **双域审计自检（规约 #4, #8, #18, #22 & #26）**：新增 `IN_AGENT` 工具/Hook/Web 写操作或 `OUT_OF_AGENT` 守护巡检/GC/修复/写穿动作是否已写入脱敏 `audit_events` 并携带 `before_after_delta` 与 `evidence_sha256`？被动 `Watcher` 事件是否已防洪折叠？
-- [ ] **本体边界与命名兼容自检（规约 #2 & #27）**：是否严守脑体分离不内置业务 LLM 规划循环？自治行为是否遵守 `L0~L3` 权限包络（不越权执行 `L2/L3`）？对外叙事升级为「Agent 本体」的同时，是否保证 `agent-steward` / `steward_*` / `~/.steward/` 100% 向后兼容？
+- [ ] **本体边界与命名兼容自检（规约 #2 & #27）**：是否严守脑体分离不内置业务 LLM 规划循环？自治行为是否遵守 `L0~L3` 权限包络（不越权执行 `L2/L3`）？对外叙事升级为「Agent 本体」的同时，是否保证 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
 - [ ] 是否执行了 `make lint-panic`（生产代码 0 `unwrap`/`expect`）且 `cargo test` 全部通过（**要求 >= 252 tests 全部通过，零 warning**）？
-- [ ] 是否执行了 `agent-steward preflight` 验证环境诊断通过？
+- [ ] 是否执行了 `agent-body preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？
 - [ ] 相关的文档（`product-manual.md` / `INSTALL.md` / `roadmap-phase*.md`）是否已同步刷新？
-- [ ] 工作区改动是否已通过 `make sync-mirror`（`rsync -a --delete --exclude 'target/'`）镜像同步至 `/root/new/shared_git/agent-steward`？
+- [ ] 工作区改动是否已通过 `make sync-mirror`（`rsync -a --delete --exclude 'target/'`）镜像同步至 `/root/new/shared_git/agent-body`？
 - [ ] 是否给出了清晰规范的 Git Commit 建议？

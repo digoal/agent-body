@@ -154,7 +154,7 @@ mod tests {
             content: "决定使用 MemoryProvider SPI 实现多记忆生态插件化".to_string(),
             summary: Some("SPI 特征设计".to_string()),
             tags: vec!["spi".to_string(), "memory".to_string()],
-            source_agent: Some("agent-steward".to_string()),
+            source_agent: Some("agent-body".to_string()),
             source_session: Some("sess-001".to_string()),
             created_at: "2026-11-17 18:00:00".to_string(),
             score: Some(1.0),

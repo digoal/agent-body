@@ -28,7 +28,7 @@ impl FeedbackEngine {
         if cwd_path.exists() {
             return cwd_path;
         }
-        let repo_path = PathBuf::from("/root/new/work/agent-steward/user_feedback.md");
+        let repo_path = PathBuf::from("/root/new/work/agent-body/user_feedback.md");
         if repo_path.exists() {
             return repo_path;
         }
@@ -152,7 +152,7 @@ impl FeedbackEngine {
         let mut content = if path.exists() {
             fs::read_to_string(path)?
         } else {
-            "# Agent Host Steward — 实际使用反馈总账 (`user_feedback.md`)\n\n".to_string()
+            "# Agent Body — 实际使用反馈总账 (`user_feedback.md`)\n\n".to_string()
         };
 
         let marker = "## 七、第五部分：后续新增反馈标准模板";

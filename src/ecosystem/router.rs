@@ -307,11 +307,11 @@ mod tests {
         storage
             .upsert_mcp_catalog(&McpCatalogRecord {
                 id: "mcp-steward".to_string(),
-                server_name: "agent-steward".to_string(),
+                server_name: "agent-body".to_string(),
                 client_source: "hermes".to_string(),
                 transport: "stdio".to_string(),
-                command_or_url: "/usr/local/bin/agent-steward mcp".to_string(),
-                tools_json: serde_json::json!(["steward_brief"]),
+                command_or_url: "/usr/local/bin/agent-body mcp".to_string(),
+                tools_json: serde_json::json!(["body_brief"]),
                 tool_count: 32,
                 est_total_tokens: 2400,
                 status: "active".to_string(),

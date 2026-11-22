@@ -338,7 +338,7 @@ mod tests {
     fn test_audit_logger_redacts_secrets_truncates_4kb_and_computes_sha256() {
         let storage = Storage::open_in_memory().expect("open_in_memory");
         let huge_payload = "x".repeat(6000);
-        let input = AuditEventInput::in_agent("mcp", "tool_call", "steward_memory_add")
+        let input = AuditEventInput::in_agent("mcp", "tool_call", "body_memory_add")
             .with_session("sess-sec-1")
             .with_target(
                 "memory",
@@ -438,7 +438,7 @@ mod tests {
         use std::sync::Arc;
         let storage = Storage::open_in_memory().expect("open_in_memory");
 
-        // 1. IN_AGENT: BriefAssembler + Pre/Post Hook + MCP (无 ROI 规则的工具 steward_env_show)
+        // 1. IN_AGENT: BriefAssembler + Pre/Post Hook + MCP (无 ROI 规则的工具 body_env_show)
         let assembler = crate::brief::BriefAssembler::new(storage.clone(), None);
         let _ = assembler
             .assemble(&crate::brief::BriefRequest {
@@ -462,7 +462,7 @@ mod tests {
 
         let registry = crate::api::mcp_tools::McpToolRegistry::new(storage.clone());
         let _ = registry
-            .call_tool("steward_env_show", serde_json::json!({}))
+            .call_tool("body_env_show", serde_json::json!({}))
             .expect("mcp env show");
 
         // 2. OUT_OF_AGENT: HostGC audited + LinkRepairer + PlacementLearner + MemoryLifecycle + Reconciler

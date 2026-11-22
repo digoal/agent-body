@@ -1,7 +1,7 @@
 use std::time::Instant;
-use agent_steward::storage::models::*;
-use agent_steward::storage::Storage;
-use agent_steward::placement::engine_v2::{PlacementEngineV2, PlacementRequestV2};
+use agent_body::storage::models::*;
+use agent_body::storage::Storage;
+use agent_body::placement::engine_v2::{PlacementEngineV2, PlacementRequestV2};
 
 #[test]
 fn bench_property_graph_traversal() {
@@ -108,7 +108,7 @@ fn bench_placement_engine_decision() {
 
 #[test]
 fn bench_duckdb_aggregate_changes() {
-    use agent_steward::storage::{DuckDbStorageProvider, DuckDbAnalyticsEngine, AnalyticsProvider};
+    use agent_body::storage::{DuckDbStorageProvider, DuckDbAnalyticsEngine, AnalyticsProvider};
     let provider = DuckDbStorageProvider::open_in_memory().expect("duckdb");
 
     // 向量化批量生成 1000 条变更记录（模拟真实批量同步吞吐）
@@ -145,7 +145,7 @@ fn bench_duckdb_aggregate_changes() {
 
 #[test]
 fn bench_duckdb_parquet_export() {
-    use agent_steward::storage::{DuckDbStorageProvider, DuckDbAnalyticsEngine, AnalyticsProvider};
+    use agent_body::storage::{DuckDbStorageProvider, DuckDbAnalyticsEngine, AnalyticsProvider};
     let provider = DuckDbStorageProvider::open_in_memory().expect("duckdb");
 
     // 向量化批量生成 1000 条资产记录
@@ -189,25 +189,25 @@ fn bench_duckdb_parquet_export() {
 #[test]
 fn bench_empirical_mcp_ledger_and_ab_suite() {
     use std::sync::Arc;
-    use agent_steward::api::mcp_tools::McpToolRegistry;
-    use agent_steward::benchmark::BenchmarkEngine;
-    use agent_steward::storage::{Storage, SqliteStorageProvider};
+    use agent_body::api::mcp_tools::McpToolRegistry;
+    use agent_body::benchmark::BenchmarkEngine;
+    use agent_body::storage::{Storage, SqliteStorageProvider};
 
     let provider = Arc::new(SqliteStorageProvider::open_in_memory().expect("sqlite"));
     let storage = Storage::new(provider.clone());
     let registry = McpToolRegistry::new(storage.clone());
 
-    // 1. 验证 MCP 工具已注册至 43 个且包含 steward_benchmark、steward_feedback、steward_audit_query 与 steward_body_state
+    // 1. 验证 MCP 工具已注册至 43 个且包含 body_benchmark、body_feedback、body_audit_query 与 body_state
     let tools = registry.list_tools();
     assert_eq!(tools.len(), 43, "原生 MCP 工具数应为 43 个");
-    assert!(tools.iter().any(|t| t.get("name").and_then(|v| v.as_str()) == Some("steward_benchmark")));
-    assert!(tools.iter().any(|t| t.get("name").and_then(|v| v.as_str()) == Some("steward_feedback")));
-    assert!(tools.iter().any(|t| t.get("name").and_then(|v| v.as_str()) == Some("steward_audit_query")));
-    assert!(tools.iter().any(|t| t.get("name").and_then(|v| v.as_str()) == Some("steward_body_state")));
+    assert!(tools.iter().any(|t| t.get("name").and_then(|v| v.as_str()) == Some("body_benchmark")));
+    assert!(tools.iter().any(|t| t.get("name").and_then(|v| v.as_str()) == Some("body_feedback")));
+    assert!(tools.iter().any(|t| t.get("name").and_then(|v| v.as_str()) == Some("body_audit_query")));
+    assert!(tools.iter().any(|t| t.get("name").and_then(|v| v.as_str()) == Some("body_state")));
 
     // 2. 调用典型工具并验证生产效能账本真实带出处入账
-    let _ = registry.call_tool("steward_brief", serde_json::json!({"query": "benchmark test", "budget_tokens": 800})).expect("brief");
-    let _ = registry.call_tool("steward_skill_route", serde_json::json!({"intent": "postgres", "budget_tokens": 600})).expect("route");
+    let _ = registry.call_tool("body_brief", serde_json::json!({"query": "benchmark test", "budget_tokens": 800})).expect("brief");
+    let _ = registry.call_tool("body_skill_route", serde_json::json!({"intent": "postgres", "budget_tokens": 600})).expect("route");
 
     let ledger = storage.query_effectiveness_ledger("7d", None, 10).expect("ledger");
     assert_eq!(ledger.total_events, 2, "两次 MCP 调用应生成 2 条账本记录");
@@ -216,11 +216,11 @@ fn bench_empirical_mcp_ledger_and_ab_suite() {
     assert!(ledger.by_rule.iter().any(|r| r.provenance_rule == "PR-01"));
 
     // 3. 通过第 40 工具运行 macro A/B 套件并验证 SHA-256 存证与清理
-    let run_out = registry.call_tool("steward_benchmark", serde_json::json!({
+    let run_out = registry.call_tool("body_benchmark", serde_json::json!({
         "action": "run",
         "suite": "macro",
         "save": true
-    })).expect("steward_benchmark run");
+    })).expect("body_benchmark run");
     assert!(run_out.contains("report_sha256"));
 
     let cleaned = BenchmarkEngine::reset_sandbox(provider.as_ref()).expect("reset");

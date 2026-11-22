@@ -26,7 +26,7 @@ impl StewardDaemon {
     /// 启动常驻后台守护进程主循环
     pub async fn run(&self) -> Result<()> {
         println!("╔═══════════════════════════════════════════════════════╗");
-        println!("║      Agent Host Steward Daemon 已在后台启动运行       ║");
+        println!("║      Agent Body Daemon 已在后台启动运行       ║");
         println!("╚═══════════════════════════════════════════════════════╝");
         println!("数据目录:       {:?}", self.config.data_dir);
         println!("数据库路径:     {:?}", self.config.db_path);

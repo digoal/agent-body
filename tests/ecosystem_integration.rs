@@ -1,11 +1,11 @@
-use agent_steward::api::mcp_tools::McpToolRegistry;
-use agent_steward::config::Config;
-use agent_steward::ecosystem::{
+use agent_body::api::mcp_tools::McpToolRegistry;
+use agent_body::config::Config;
+use agent_body::ecosystem::{
     ContextBudgetRouter, ContextRouteRequest, ExternalContactsManager, McpConfigScanner,
     SkillCatalogScanner,
 };
-use agent_steward::storage::models::ExternalServiceRecord;
-use agent_steward::storage::Storage;
+use agent_body::storage::models::ExternalServiceRecord;
+use agent_body::storage::Storage;
 use serde_json::json;
 
 #[test]
@@ -101,8 +101,8 @@ fn test_ecosystem_end_to_end_and_35_mcp_tools() {
     assert!(plan.route_tokens_used <= 550);
 
     let mcp_out = registry
-        .call_tool("steward_skill_route", json!({ "action": "route", "intent": "PostgreSQL", "budget_tokens": 500 }))
-        .expect("call steward_skill_route");
+        .call_tool("body_skill_route", json!({ "action": "route", "intent": "PostgreSQL", "budget_tokens": 500 }))
+        .expect("call body_skill_route");
     assert!(mcp_out.contains("postgres-tuning"));
 
     let _ = std::fs::remove_dir_all(&tmp);

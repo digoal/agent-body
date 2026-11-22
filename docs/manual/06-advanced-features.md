@@ -26,8 +26,8 @@ flowchart TD
 ```
 
 ### 1.3 使用方式
-- **CLI**: `agent-steward env port <PORT>`
-- **MCP**: `steward_port_check(port, suggest_count)`
+- **CLI**: `agent-body env port <PORT>`
+- **MCP**: `body_port_check(port, suggest_count)`
 
 ---
 
@@ -47,8 +47,8 @@ flowchart TD
   - `CRITICAL`: >= 5 个依赖或核心库受到多个应用强依赖。
 
 ### 2.3 使用方式
-- **CLI**: `agent-steward links impact <TARGET>`
-- **MCP**: `steward_links_impact(target, max_depth)`
+- **CLI**: `agent-body links impact <TARGET>`
+- **MCP**: `body_links_impact(target, max_depth)`
 
 ---
 
@@ -66,8 +66,8 @@ flowchart TD
 4. **全自动优雅降级**: 若本地 Ollama 服务未启动或网络超时，大管家自动无感知降级为纯 FTS5 检索，系统 100% 不报错。
 
 ### 3.3 使用方式
-- **CLI**: `agent-steward memory search "容灾预案" --hybrid`
-- **MCP**: `steward_memory_search(query, limit, hybrid=true)`
+- **CLI**: `agent-body memory search "容灾预案" --hybrid`
+- **MCP**: `body_memory_search(query, limit, hybrid=true)`
 
 ---
 
@@ -82,8 +82,8 @@ flowchart TD
 2. **工单纪要沉淀**: 提取该会话期间触发的 `changes` 审计流水线，自动格式化为标准 Markdown 总结，并沉淀入库为一条长期记忆。
 
 ### 4.3 使用方式
-- **CLI**: `agent-steward close <SESSION_ID>`
-- **MCP**: `steward_session_close(session_id, clean_temp=true)`
+- **CLI**: `agent-body close <SESSION_ID>`
+- **MCP**: `body_session_close(session_id, clean_temp=true)`
 
 ---
 
@@ -107,12 +107,12 @@ flowchart TD
 ### 5.3 使用方式
 - **CLI**:
   ```bash
-  agent-steward links audit [--fix]
-  agent-steward links codegraph <PATH> [SYMBOL]
+  agent-body links audit [--fix]
+  agent-body links codegraph <PATH> [SYMBOL]
   ```
 - **MCP**:
-  - `steward_links_audit(fix_dangling=false)`
-  - `steward_codegraph_bridge(path, symbol)`
+  - `body_links_audit(fix_dangling=false)`
+  - `body_codegraph_bridge(path, symbol)`
 
 ---
 
@@ -121,29 +121,29 @@ flowchart TD
   - **L0 管线溯源**：`content_hash`、`annotation_status`、`annotation_model`，保证幂等跳过未变更文件；
   - **L1 确定性提取**：Rust 毫秒级静态解析 `purpose`、`domain`、`capabilities`、`entry_point`、`usage_hint`，不依赖外部模型；
   - **L2 本地小模型精炼**：经 `SecretRedactor` 脱敏后送入本地 Ollama `qwen3.5:0.8b` 异步精炼，零云端 Token 消耗；
-- **三级渐进披露**：`steward_asset_search` 支持 `detail_level = "micro" | "standard" | "full"`，按任务需要控制 Token 注入体积。
+- **三级渐进披露**：`body_asset_search` 支持 `detail_level = "micro" | "standard" | "full"`，按任务需要控制 Token 注入体积。
 
 ---
 
 ## 7. 多 Agent 协作锁与 WFG 死锁检测 (Phase 17)
-- 支持针对 `port`、`directory`、`service`、`file` 等资源申请排他/共享锁（`steward_lock_acquire`），并具备目录祖先-后代路径递归互斥检测；
-- 提供主动排队唤醒（`steward_lock_wait`）与 **Wait-For Graph (WFG)** 全局环路检测（`steward_lock_deadlock_check`），当双 Agent 交叉等锁时毫秒级识别死锁环并阻断。
+- 支持针对 `port`、`directory`、`service`、`file` 等资源申请排他/共享锁（`body_lock_acquire`），并具备目录祖先-后代路径递归互斥检测；
+- 提供主动排队唤醒（`body_lock_wait`）与 **Wait-For Graph (WFG)** 全局环路检测（`body_lock_deadlock_check`），当双 Agent 交叉等锁时毫秒级识别死锁环并阻断。
 
 ---
 
 ## 8. 轻量多机联邦 Peer Mesh (`MeshEnvelope v1.0`) 与跨机协同 (Phase 18 & 41)
-- **Peer Mesh (`steward_mesh_query`)**：基于 **`MeshEnvelope v1.0`** 线协议（`HMAC-SHA256` 规范签名、`+-300s` 时间窗与 `NonceCache` 防重放、`Peer Scopes` 最小权限），支持跨节点只读查询 facts/locks/端口、跨机图谱联邦探查（`graph`）、双向脱敏抗投毒结构化对话（`dialogue_send` / `dialogue_inbox` / `dialogue_ack`）与限额 `<= 10MB` + SHA-256 校验的 `~/.steward/mesh_inbox/` 隔离沙盒文件投递（`transfer_send` / `transfer_inbox` / `transfer_accept` / `transfer_reject`）。
+- **Peer Mesh (`body_mesh_query`)**：基于 **`MeshEnvelope v1.0`** 线协议（`HMAC-SHA256` 规范签名、`+-300s` 时间窗与 `NonceCache` 防重放、`Peer Scopes` 最小权限），支持跨节点只读查询 facts/locks/端口、跨机图谱联邦探查（`graph`）、双向脱敏抗投毒结构化对话（`dialogue_send` / `dialogue_inbox` / `dialogue_ack`）与限额 `<= 10MB` + SHA-256 校验的 `~/.agent-body/mesh_inbox/` 隔离沙盒文件投递（`transfer_send` / `transfer_inbox` / `transfer_accept` / `transfer_reject`）。
 
 ---
 
 ## 9. 多维证据分层有向加权图谱 (Phase 40)
 - **三层证据本体**：`fact_edges` 显式区分 **`L1_EXPLICIT`**（物理硬依赖，`0.85~1.00`）、**`L2_STRUCTURAL`**（文件级 `links` 上卷项目边、Systemd/运行服务同体桥接与工具提取，`0.55~0.84`）与 **`L3_SEMANTIC`**（向量余弦 $\ge 0.78$ + 标签混合发现，`0.35~0.65`，每节点 `Top-K <= 3` 稀疏剪枝）；
-- **加权衰减爆炸半径**：`steward_links_impact` 按跳数衰减系数 `0.8^(hop-1)` 计算有效传播强度，默认以 `L1+L2` 为强影响基准，按需开启 `--include-semantic` 探索跨项目隐式关联。
+- **加权衰减爆炸半径**：`body_links_impact` 按跳数衰减系数 `0.8^(hop-1)` 计算有效传播强度，默认以 `L1+L2` 为强影响基准，按需开启 `--include-semantic` 探索跨项目隐式关联。
 
 ---
 
 ## 10. 全生命周期信息新鲜度、五点对比探针与 AOPCC 自适应并发 (Phase 38~39 & 42)
-- **写穿失效与现实对账 (`FreshnessReconciler`)**：内容变化立即重置旧向量为 `stale`，文件删除级联净化 FTS/图谱/记忆，并通过 `agent-steward feedback reconcile`（及守护进程 30 分钟周期）核销幽灵端口节点、归档同路径重复 `auto_sync` 记忆与检测 `.codegraph` 滞后；
-- **五点对比探针 (`agent-steward feedback probes`)**：在 `P1 开工 Brief` / `P2 事前 Pre-Hook` / `P3 检索效用` / `P4 事后漂移` / `P5 周期回归` 以物理真值量化 Before/After/Delta 差值并自动自愈或去重写入 `user_feedback.md`；
-- **AOPCC 悲观-乐观自适应并发控制**：`steward_brief` 在开工时签发 `<= 120 tok` 乐观直通租约（如本机 `:5432` PostgreSQL、已装 CLI、`/root/new/tmp/`）；高危端口绑定与共享资源写维持悲观前置拦截；若乐观直连碰壁失败，`steward_hook_post(success=false)` 在 `< 2ms` 内注入宿主机替代处方并自适应降级租约；
+- **写穿失效与现实对账 (`FreshnessReconciler`)**：内容变化立即重置旧向量为 `stale`，文件删除级联净化 FTS/图谱/记忆，并通过 `agent-body feedback reconcile`（及守护进程 30 分钟周期）核销幽灵端口节点、归档同路径重复 `auto_sync` 记忆与检测 `.codegraph` 滞后；
+- **五点对比探针 (`agent-body feedback probes`)**：在 `P1 开工 Brief` / `P2 事前 Pre-Hook` / `P3 检索效用` / `P4 事后漂移` / `P5 周期回归` 以物理真值量化 Before/After/Delta 差值并自动自愈或去重写入 `user_feedback.md`；
+- **AOPCC 悲观-乐观自适应并发控制**：`body_brief` 在开工时签发 `<= 120 tok` 乐观直通租约（如本机 `:5432` PostgreSQL、已装 CLI、`/root/new/tmp/`）；高危端口绑定与共享资源写维持悲观前置拦截；若乐观直连碰壁失败，`body_hook_post(success=false)` 在 `< 2ms` 内注入宿主机替代处方并自适应降级租约；
 - **实证 Benchmark 与存证账本**：关于 A/B 对照负载（`W1`~`W15`）、内核微基准 SLA（`M1`~`M5`）、质量门禁（`DQ1`~`DQ6`）、竞品对标（`COMP-C1`~`C4`）及 `PR-01`~`PR-11` 生产效能存证流水，请直接阅读专题章节 [10-benchmark-and-roi.md](10-benchmark-and-roi.md)。

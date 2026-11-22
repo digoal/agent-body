@@ -7,7 +7,7 @@ use std::path::Path;
 /// 宿主机代码仓库客观事实实体
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RepoFact {
-    /// 仓库目录名（如 duckdb, mem0, agent-steward）
+    /// 仓库目录名（如 duckdb, mem0, agent-body）
     pub name: String,
     /// 物理绝对路径（如 /root/new/src/duckdb）
     pub abs_path: String,
@@ -323,9 +323,9 @@ mod tests {
         assert!(!repos.is_empty(), "宿主机上应该存在已克隆的源码仓库");
         println!("扫描到宿主机源码仓库数量: {}", repos.len());
 
-        // 验证当前 agent-steward 或 duckdb 是否被探测到
-        let has_steward = repos.iter().any(|r| r.name == "agent-steward");
-        println!("是否包含 agent-steward 仓库: {}", has_steward);
+        // 验证当前 agent-body 或 duckdb 是否被探测到
+        let has_steward = repos.iter().any(|r| r.name == "agent-body");
+        println!("是否包含 agent-body 仓库: {}", has_steward);
     }
 
     #[test]

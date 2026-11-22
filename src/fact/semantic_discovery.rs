@@ -570,20 +570,20 @@ mod tests {
                 updated_at: None,
             },
             FactNodeRecord {
-                id: "service:agent-steward.service".into(),
+                id: "service:agent-body.service".into(),
                 node_type: "service".into(),
-                name: "agent-steward.service".into(),
-                label: "Systemd: agent-steward".into(),
+                name: "agent-body.service".into(),
+                label: "Systemd: agent-body".into(),
                 properties: serde_json::json!({
-                    "exec_start": "/root/new/src/agentfs/bin/agent-steward daemon"
+                    "exec_start": "/root/new/src/agentfs/bin/agent-body daemon"
                 }),
                 updated_at: None,
             },
             FactNodeRecord {
-                id: "service:agent-steward".into(),
+                id: "service:agent-body".into(),
                 node_type: "service".into(),
-                name: "agent-steward".into(),
-                label: "进程: agent-steward".into(),
+                name: "agent-body".into(),
+                label: "进程: agent-body".into(),
                 properties: serde_json::json!({}),
                 updated_at: None,
             },

@@ -8,7 +8,7 @@
 //! [memory]
 //! provider = "letta"
 //! letta_url = "http://127.0.0.1:8283"   # 本地 letta server 默认端口
-//! letta_agent_id = "agent-steward-mem"   # 目标 Agent 的 ID
+//! letta_agent_id = "agent-body-mem"   # 目标 Agent 的 ID
 //! letta_token = ""                        # 若启用认证则填入 Bearer token
 //! ```
 //!

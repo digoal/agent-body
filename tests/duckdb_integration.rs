@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use tempfile::tempdir;
-use agent_steward::storage::{
+use agent_body::storage::{
     AssetRecord, ChangeRecord, DuckDbAnalyticsEngine, DuckDbStorageProvider,
     FactNodeRecord, MemoryRecord, PlacementRule, Storage,
     StorageMigrator, SyncPipeline, AnalyticsProvider, StorageProvider,

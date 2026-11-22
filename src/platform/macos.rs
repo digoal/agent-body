@@ -173,7 +173,7 @@ mod tests {
     <string>com.digoal.steward</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/bin/agent-steward</string>
+        <string>/usr/local/bin/agent-body</string>
         <string>daemon</string>
     </array>
     <key>RunAtLoad</key>
@@ -182,7 +182,7 @@ mod tests {
 </plist>"#;
         let (label, cmd) = parse_plist_label_and_command(plist).expect("parse");
         assert_eq!(label, "com.digoal.steward");
-        assert_eq!(cmd, "/usr/local/bin/agent-steward daemon");
+        assert_eq!(cmd, "/usr/local/bin/agent-body daemon");
     }
 
     #[test]

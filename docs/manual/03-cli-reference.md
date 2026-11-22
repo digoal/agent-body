@@ -1,13 +1,13 @@
 # 03 — 全量 CLI 命令行实战字典（CLI Reference）
 
-> **章节目标**: 提供 Agent Host Steward 所有命令行子命令、参数选项、使用场景与真实执行输出的标准参考手册。
+> **章节目标**: 提供 Agent Body 所有命令行子命令、参数选项、使用场景与真实执行输出的标准参考手册。
 
 ---
 
 ## 1. CLI 命令总览
 
 ```bash
-agent-steward [OPTIONS] <COMMAND>
+agent-body [OPTIONS] <COMMAND>
 ```
 
 | 顶级子命令 | 简要说明 | 适用场景 |
@@ -51,16 +51,16 @@ agent-steward [OPTIONS] <COMMAND>
 - **说明**: 显示当前大管家的基础运行信息与数据库统计。
 - **示例**:
   ```bash
-  agent-steward status
+  agent-body status
   ```
 - **真实输出**:
   ```text
   ╔═══════════════════════════════════════════════════════╗
-  ║      Agent Host Steward (Rust 版) — 系统状态          ║
+  ║      Agent Body (Rust 版) — 系统状态          ║
   ╚═══════════════════════════════════════════════════════╝
   版本:           v0.4.0 (9ba7bca, linux/x86_64, built at 2026-11-19T07:53:18Z)
-  数据目录:       "/root/.steward"
-  数据库文件:     "/root/.steward/steward.db"
+  数据目录:       "/root/.agent-body"
+  数据库文件:     "/root/.agent-body/body.db"
   已纳管资产数:   26091
   依赖关系边数:   6407 条
   放置规范规则:   8 条
@@ -79,8 +79,8 @@ agent-steward [OPTIONS] <COMMAND>
   - `--legacy`: 兼容旧版极简动态扫描输出
 - **示例**:
   ```bash
-  agent-steward brief
-  agent-steward brief --query "PostgreSQL 调优" --budget-tokens 1200
+  agent-body brief
+  agent-body brief --query "PostgreSQL 调优" --budget-tokens 1200
   ```
 
 ---
@@ -96,7 +96,7 @@ agent-steward [OPTIONS] <COMMAND>
   - `-s, --security <LEVEL>`: 保密级别（默认 `internal`，可选 `public`, `confidential`, `secret`）
 - **示例**:
   ```bash
-  agent-steward place suggest --type script --name sec_scanner --intent "抓取美股财报"
+  agent-body place suggest --type script --name sec_scanner --intent "抓取美股财报"
   ```
 - **真实输出**:
   ```text
@@ -117,7 +117,7 @@ agent-steward [OPTIONS] <COMMAND>
 - **说明**: 查看大管家内置的 8 大宿主机目录放置规范字典。
 - **示例**:
   ```bash
-  agent-steward place rules
+  agent-body place rules
   ```
 
 ---
@@ -129,7 +129,7 @@ agent-steward [OPTIONS] <COMMAND>
 - **说明**: 查看 CPU 核心与型号、总内存/已用内存、磁盘分区容量与可用空间。
 - **示例**:
   ```bash
-  agent-steward env show
+  agent-body env show
   ```
 - **真实输出**:
   ```text
@@ -148,7 +148,7 @@ agent-steward [OPTIONS] <COMMAND>
 - **说明**: 智能过滤内核底噪，列出当前由用户或 Agent 运行的普通动态任务进程。
 - **示例**:
   ```bash
-  agent-steward env processes
+  agent-body env processes
   ```
 
 #### (3) `env port <PORT>`（防撞预警）
@@ -157,7 +157,7 @@ agent-steward [OPTIONS] <COMMAND>
   - `-s, --suggest-count <N>`: 若冲突推荐的空闲端口数（默认 3）
 - **示例 1（冲突场景）**:
   ```bash
-  agent-steward env port 22
+  agent-body env port 22
   ```
   ```json
   {
@@ -175,7 +175,7 @@ agent-steward [OPTIONS] <COMMAND>
   ```
 - **示例 2（空闲场景）**:
   ```bash
-  agent-steward env port 8999
+  agent-body env port 8999
   ```
   ```json
   {
@@ -199,7 +199,7 @@ agent-steward [OPTIONS] <COMMAND>
   - `-s, --summary <TEXT>`: 一句话摘要
 - **示例**:
   ```bash
-  agent-steward memory add -c "决定选用 Rust 编写核心守护进程" -s "选型决策"
+  agent-body memory add -c "决定选用 Rust 编写核心守护进程" -s "选型决策"
   ```
 
 #### (2) `memory search`
@@ -209,12 +209,12 @@ agent-steward [OPTIONS] <COMMAND>
   - `--hybrid`: 是否启用 Ollama 向量 + FTS5 混合 RRF 检索（默认为 true）
 - **示例**:
   ```bash
-  agent-steward memory search "Rust 选型" --hybrid
+  agent-body memory search "Rust 选型" --hybrid
   ```
 - **真实输出**:
   ```text
   记忆搜索结果 (混合模式 RRF, 共 1 条):
-    - [decision] 决定选用 Rust 1.99 与 SQLite 编写 Agent Host Steward 核心进程 [RRF: 0.0164] (ID: mem-82ecbb7b-6e9d-4ab2-bf6a-d596561299a6)
+    - [decision] 决定选用 Rust 1.99 与 SQLite 编写 Agent Body 核心进程 [RRF: 0.0164] (ID: mem-82ecbb7b-6e9d-4ab2-bf6a-d596561299a6)
   ```
 
 ---
@@ -230,7 +230,7 @@ agent-steward [OPTIONS] <COMMAND>
   - `--include-semantic <true|false>`: 是否包含 `L3_SEMANTIC` 隐式语义边（默认 `true`）
 - **示例**:
   ```bash
-  agent-steward links query -t project project:agent-steward --max-hops 2 --min-weight 0.5
+  agent-body links query -t project project:agent-body --max-hops 2 --min-weight 0.5
   ```
 
 #### (2) `links graph`
@@ -240,8 +240,8 @@ agent-steward [OPTIONS] <COMMAND>
   - `--discover-semantic`: 导出前触发 `L2` 结构上卷与 `L3` 语义关系挖掘
 - **示例**:
   ```bash
-  agent-steward links graph
-  agent-steward links graph --discover-semantic --limit 30
+  agent-body links graph
+  agent-body links graph --discover-semantic --limit 30
   ```
 
 #### (3) `links impact <TARGET>`（加权衰减爆炸半径推演）
@@ -252,8 +252,8 @@ agent-steward [OPTIONS] <COMMAND>
   - `--include-semantic`: 是否包含 `L3_SEMANTIC` 隐式语义边
 - **示例**:
   ```bash
-  agent-steward links impact /root/new/shared_proj/test.py
-  agent-steward links impact project:agent-steward --include-semantic --min-weight 0.35
+  agent-body links impact /root/new/shared_proj/test.py
+  agent-body links impact project:agent-body --include-semantic --min-weight 0.35
   ```
 
 #### (4) `links audit`（断链与幽灵依赖体检）
@@ -262,16 +262,16 @@ agent-steward [OPTIONS] <COMMAND>
   - `--fix`: 自动清理已确认失效的文件依赖死链。
 - **示例**:
   ```bash
-  agent-steward links audit
-  agent-steward links audit --fix
+  agent-body links audit
+  agent-body links audit --fix
   ```
 
 #### (4) `links codegraph <PATH> [SYMBOL]`（CodeGraph 宏微联邦联动）
 - **说明**: 跨层联动局部工程内的 CodeGraph 代码图。在不传递 SYMBOL 时输出项目代码图概览；传递 SYMBOL 时输出函数/符号级代码调用方列表（包含文件路径与行号）。
 - **示例**:
   ```bash
-  agent-steward links codegraph /root/new/src/hk2
-  agent-steward links codegraph /root/new/src/hk2 interactive
+  agent-body links codegraph /root/new/src/hk2
+  agent-body links codegraph /root/new/src/hk2 interactive
   ```
 
 #### (5) `links repair`（断链智能修复与重定向推演）
@@ -280,8 +280,8 @@ agent-steward [OPTIONS] <COMMAND>
   - `--apply`: 自动修改源文件并更新关联表。
 - **示例**:
   ```bash
-  agent-steward links repair
-  agent-steward links repair --apply
+  agent-body links repair
+  agent-body links repair --apply
   ```
 
 ---
@@ -292,7 +292,7 @@ agent-steward [OPTIONS] <COMMAND>
   - `-l, --limit <N>`: 返回条数（默认 20）
 - **示例**:
   ```bash
-  agent-steward changes
+  agent-body changes
   ```
 
 ---
@@ -303,7 +303,7 @@ agent-steward [OPTIONS] <COMMAND>
   - `--clean-temp`: 是否清理 `/root/new/tmp/` 下临时文件（默认 true）
 - **示例**:
   ```bash
-  agent-steward close session-20261115-demo
+  agent-body close session-20261115-demo
   ```
 - **真实输出**:
   ```json
@@ -331,8 +331,8 @@ agent-steward [OPTIONS] <COMMAND>
   - `--accept`: 自动采纳并入库所有发现的规则候选
 - **示例**:
   ```bash
-  agent-steward place learn
-  agent-steward place learn --accept
+  agent-body place learn
+  agent-body place learn --accept
   ```
 
 ---
@@ -345,8 +345,8 @@ agent-steward [OPTIONS] <COMMAND>
   - `--apply`: 直接执行清理删除（默认仅 dry-run 预览）
 - **示例**:
   ```bash
-  agent-steward gc
-  agent-steward gc --apply
+  agent-body gc
+  agent-body gc --apply
   ```
 
 ---
@@ -357,8 +357,8 @@ agent-steward [OPTIONS] <COMMAND>
   - `--archive-id <ID>`: 若存在冲突，指定归档淘汰的旧记忆 ID
 - **示例**:
   ```bash
-  agent-steward memory audit
-  agent-steward memory audit --archive-id mem-01
+  agent-body memory audit
+  agent-body memory audit --archive-id mem-01
   ```
 
 ---
@@ -369,7 +369,7 @@ agent-steward [OPTIONS] <COMMAND>
   - `-i, --interval <SECS>`: 看板刷新间隔秒数（默认 2）
 - **示例**:
   ```bash
-  agent-steward tui
+  agent-body tui
   ```
 
 ---
@@ -382,9 +382,9 @@ agent-steward [OPTIONS] <COMMAND>
   - `gc`: 回收所有已超期的过期死锁
 - **示例**:
   ```bash
-  agent-steward coordination list
-  agent-steward coordination release --lock-id "lock-port-8080"
-  agent-steward coordination gc
+  agent-body coordination list
+  agent-body coordination release --lock-id "lock-port-8080"
+  agent-body coordination gc
   ```
 
 ---
@@ -395,7 +395,7 @@ agent-steward [OPTIONS] <COMMAND>
   - `-j, --json`: 输出原始 JSON 格式以便 CI/CD 或 Agent 机器解析
 - **示例**:
   ```bash
-  agent-steward preflight
+  agent-body preflight
   ```
 
 ---
@@ -408,14 +408,14 @@ agent-steward [OPTIONS] <COMMAND>
   - `--auth-token <TOKEN>`: 管理员受控运维操作（如释放锁）鉴权 Token
 - **示例**:
   ```bash
-  agent-steward web
-  agent-steward web --host 0.0.0.0 --port 9000
+  agent-body web
+  agent-body web --host 0.0.0.0 --port 9000
   ```
 
 ---
 
 ### 2.16 `hooks` — HOOK 驱动集成、AOPCC 门禁校验与客户端自动化钩子生成
-- **说明**: 自动生成各 Agent 客户端（Antigravity、Cursor、Claude Code、Git）的 Pre/Post Hook 集成配置（含 `steward_bridge.py` AOPCC 自适应桥接），或直接从 CLI 触发前置/后置门禁与 `<2ms` 碰壁秒级自愈（规约 #13 & #25）。
+- **说明**: 自动生成各 Agent 客户端（Antigravity、Cursor、Claude Code、Git）的 Pre/Post Hook 集成配置（含 `body_bridge.py` AOPCC 自适应桥接），或直接从 CLI 触发前置/后置门禁与 `<2ms` 碰壁秒级自愈（规约 #13 & #25）。
 - **子命令**:
   - `generate`:
     - `-c, --client <CLIENT>`: 目标客户端类型 (`agy`, `cursor`, `claude`, `git`)
@@ -431,10 +431,10 @@ agent-steward [OPTIONS] <COMMAND>
     - `-e, --error-output <TEXT>`: 可选失败错误输出（触发 `OptimisticFailureDiagnoser` `<2ms` 自愈处方注入）
 - **示例**:
   ```bash
-  agent-steward hooks generate --client agy --dry-run
-  agent-steward hooks pre --tool-name run_command --args '{"command":"psql -p 5432"}'
-  agent-steward hooks post --tool-name write_file --args '{"path":"/root/new/work/demo.rs"}'
-  agent-steward hooks post --tool-name run_command --args '{"command":"psql -p 9999"}' --success=false --error-output "Connection refused"
+  agent-body hooks generate --client agy --dry-run
+  agent-body hooks pre --tool-name run_command --args '{"command":"psql -p 5432"}'
+  agent-body hooks post --tool-name write_file --args '{"path":"/root/new/work/demo.rs"}'
+  agent-body hooks post --tool-name run_command --args '{"command":"psql -p 9999"}' --success=false --error-output "Connection refused"
   ```
 
 ---
@@ -447,37 +447,37 @@ agent-steward [OPTIONS] <COMMAND>
   - `export --table <TABLE> --output-path <PATH>`: 将指定表导出为 Parquet/CSV
 - **示例**:
   ```bash
-  agent-steward analytics heatmap --days 7
-  agent-steward analytics trend --metric assets --days 30
-  agent-steward analytics export --table assets --output-path /root/new/tmp/assets.parquet
+  agent-body analytics heatmap --days 7
+  agent-body analytics trend --metric assets --days 30
+  agent-body analytics export --table assets --output-path /root/new/tmp/assets.parquet
   ```
 
 ---
 
 ### 2.18 补充子命令速查（1:1 映射补齐）
-- `agent-steward asset register --path <PATH> --type <TYPE> [--description <DESC>]`：手动向大管家登记单个文件或目录资产（对应 `steward_asset_register`）。
-- `agent-steward coordination acquire -t <TYPE> -i <ID> [-s exclusive|shared] [-a <AGENT>] [--ttl-seconds 300]`：申请资源协作锁（对应 `steward_lock_acquire`）。
-- `agent-steward coordination wait -t <TYPE> -i <ID> [--wait-timeout-ms 5000]`：排队等待并唤醒获取协作锁，内置 WFG 死锁环路拦截（对应 `steward_lock_wait`）。
-- `agent-steward coordination deadlock`：执行 Wait-For Graph 全局死锁与等待队列检测（对应 `steward_lock_deadlock_check`）。
-- `agent-steward close <SESSION_ID> [--dry-run]`：会话结算，增加 `--dry-run` 预览开关（对应 `steward_session_close`）。
+- `agent-body asset register --path <PATH> --type <TYPE> [--description <DESC>]`：手动向大管家登记单个文件或目录资产（对应 `body_asset_register`）。
+- `agent-body coordination acquire -t <TYPE> -i <ID> [-s exclusive|shared] [-a <AGENT>] [--ttl-seconds 300]`：申请资源协作锁（对应 `body_lock_acquire`）。
+- `agent-body coordination wait -t <TYPE> -i <ID> [--wait-timeout-ms 5000]`：排队等待并唤醒获取协作锁，内置 WFG 死锁环路拦截（对应 `body_lock_wait`）。
+- `agent-body coordination deadlock`：执行 Wait-For Graph 全局死锁与等待队列检测（对应 `body_lock_deadlock_check`）。
+- `agent-body close <SESSION_ID> [--dry-run]`：会话结算，增加 `--dry-run` 预览开关（对应 `body_session_close`）。
 
 ---
 
 ### 2.19 `mcp-catalog` / `skill` / `service` — 生态认知与 Context 防爆路由器 (Phase 16)
-- `agent-steward mcp-catalog <scan|list|route>`: 扫描宿主机客户端 MCP 配置（强制脱敏密钥）、列清单与按意图检索（对应 `steward_mcp_catalog`）。
-- `agent-steward skill <scan|list|route>`: 扫描宿主机 130+ SKILL 目录，按 `--budget-tokens` 渐进式路由 Top-K SKILL 路径，防止 Context 膨胀（对应 `steward_skill_route`）。
-- `agent-steward service <register|list|query|check|bootstrap>`: 管理外部可用服务通讯录与轻量健康探活（对应 `steward_service_contact`）。
+- `agent-body mcp-catalog <scan|list|route>`: 扫描宿主机客户端 MCP 配置（强制脱敏密钥）、列清单与按意图检索（对应 `body_mcp_catalog`）。
+- `agent-body skill <scan|list|route>`: 扫描宿主机 130+ SKILL 目录，按 `--budget-tokens` 渐进式路由 Top-K SKILL 路径，防止 Context 膨胀（对应 `body_skill_route`）。
+- `agent-body service <register|list|query|check|bootstrap>`: 管理外部可用服务通讯录与轻量健康探活（对应 `body_service_contact`）。
 
 ---
 
 ### 2.20 `platform` / `mesh` — 跨平台原生探针与 `MeshEnvelope v1.0` 联邦协同 (Phase 18 & 41)
-- `agent-steward platform <info|ports|services>`: 使用运行时 `PlatformProbe`（Linux `/proc`+systemd、macOS `lsof`+launchd、Windows `netstat`+schtasks）查看本机监听端口与自动化任务。
-- `agent-steward mesh <peers|local|ping|facts|locks|port|acquire|graph|dialogue-send|dialogue-inbox|dialogue-ack|transfer-send|transfer-inbox|transfer-accept|transfer-reject>`: 基于 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + `+-300s` 防重放）支持跨节点只读/租约锁协同、跨机图谱联邦探查（`graph`）、双向脱敏对话（`dialogue-*`）与 `<=10MB` `~/.steward/mesh_inbox/` 沙盒投递（`transfer-*`）（对应 `steward_mesh_query`）。
+- `agent-body platform <info|ports|services>`: 使用运行时 `PlatformProbe`（Linux `/proc`+systemd、macOS `lsof`+launchd、Windows `netstat`+schtasks）查看本机监听端口与自动化任务。
+- `agent-body mesh <peers|local|ping|facts|locks|port|acquire|graph|dialogue-send|dialogue-inbox|dialogue-ack|transfer-send|transfer-inbox|transfer-accept|transfer-reject>`: 基于 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + `+-300s` 防重放）支持跨节点只读/租约锁协同、跨机图谱联邦探查（`graph`）、双向脱敏对话（`dialogue-*`）与 `<=10MB` `~/.agent-body/mesh_inbox/` 沙盒投递（`transfer-*`）（对应 `body_mesh_query`）。
 
 ---
 
 ### 2.21 `demo` — 路演场景演示与黑白屏同步自检引擎 (Phase 22)
-- `agent-steward demo <list|run <scenario_id>|roi|parity|reset>`: 列出或用真实宿主机引擎执行 7 大黄金路演剧目（`scene-1`~`scene-7`）、核算实时商业价值 ROI、检查 43 工具黑白屏同步矩阵，或一键清理 `demo:*` 沙盒锁（对应 `steward_demo_scenario`）。
+- `agent-body demo <list|run <scenario_id>|roi|parity|reset>`: 列出或用真实宿主机引擎执行 7 大黄金路演剧目（`scene-1`~`scene-7`）、核算实时商业价值 ROI、检查 43 工具黑白屏同步矩阵，或一键清理 `demo:*` 沙盒锁（对应 `body_demo_scenario`）。
 
 ---
 
@@ -487,23 +487,23 @@ agent-steward [OPTIONS] <COMMAND>
 - **子命令与参数**:
   - `storage info`: 查看当前生效的存储提供者与数据库路径/连接信息。
   - `storage migrate [--from sqlite|postgres|duckdb] [--from-url <URL>] [--to sqlite|postgres|duckdb] [--to-url <URL>]`: 在不同存储后端间执行全量数据热迁移。
-  - `storage sync [--to duckdb] [--to-path <PATH>]`: 将主存储的资产与变更审计同步到 DuckDB 列存副本（默认 `~/.steward/steward.duckdb`）。
+  - `storage sync [--to duckdb] [--to-path <PATH>]`: 将主存储的资产与变更审计同步到 DuckDB 列存副本（默认 `~/.agent-body/steward.duckdb`）。
 - **调用示例**:
   ```bash
-  agent-steward storage info
-  agent-steward storage sync --to duckdb
-  agent-steward storage migrate --from sqlite --to postgres --to-url "host=127.0.0.1 dbname=steward user=postgres"
+  agent-body storage info
+  agent-body storage sync --to duckdb
+  agent-body storage migrate --from sqlite --to postgres --to-url "host=127.0.0.1 dbname=steward user=postgres"
   ```
 - **真实输出解读**:
   ```text
   当前活跃存储提供者: sqlite
-  配置数据库文件路径: "/root/.steward/steward.db"
+  配置数据库文件路径: "/root/.agent-body/body.db"
   ```
 
 ---
 
 ### 2.23 `bench` — 实证 Benchmark v3.7 对照评测与生产效能存证账本 (Phase 27~44)
-- **这是什么**: 在真实宿主机上运行「Without Steward 裸奔基线 vs With Steward Agent 本体」A/B 对照测试套件，运行竞品横向对标，并审计日常每次 MCP/CLI/Web/Hook 调用自动记录的生产效能存证流水（对应 `steward_benchmark`）。
+- **这是什么**: 在真实宿主机上运行「Without Steward 裸奔基线 vs With Steward Agent 本体」A/B 对照测试套件，运行竞品横向对标，并审计日常每次 MCP/CLI/Web/Hook 调用自动记录的生产效能存证流水（对应 `body_benchmark`）。
 - **为什么需要**: 用同机实跑数据与 SHA-256 防篡改指纹证明 Token 节省率、上下文质量净胜（$\Delta Q$）、延迟加速比与冲突拦截率，杜绝“拍脑袋宣传数字”（规约 #18）。
 - **子命令与参数**:
   - `workloads`: 列出 17 大标准 A/B 负载（`W1`~`W17`）、`M1`~`M5`、`DQ1`~`DQ8` 与 `PR-01`~`PR-13` 归因推导规则字典。
@@ -516,14 +516,14 @@ agent-steward [OPTIONS] <COMMAND>
   - `reset`: 清理 `bench:*` 隔离沙盒测试数据。
 - **调用示例**:
   ```bash
-  agent-steward bench workloads
-  agent-steward bench run --suite full --save false
-  agent-steward bench competitors --track all
-  agent-steward bench ledger --window 7d --limit 5
+  agent-body bench workloads
+  agent-body bench run --suite full --save false
+  agent-body bench competitors --track all
+  agent-body bench ledger --window 7d --limit 5
   ```
 - **真实输出解读（`bench run --suite full --save false` 实机片段）**:
   ```markdown
-  # Agent Host Steward 实证基准评测报告 (run-ef911f10-cb74-4733-8908-7744f190e75a)
+  # Agent Body 实证基准评测报告 (run-ef911f10-cb74-4733-8908-7744f190e75a)
 
   - **版本 / Commit**: `v0.4.0` (`9ba7bca`)
   - **评测套件**: `full` · **总耗时**: `1924 ms`
@@ -541,7 +541,7 @@ agent-steward [OPTIONS] <COMMAND>
 ---
 
 ### 2.24 `feedback` — 实际使用反馈总账、信息新鲜度对账与五点自进化探针 (Phase 30 & 38~39)
-- **这是什么**: 直接操作 `user_feedback.md` 反馈总账，将已验证改进经验沉淀为长期记忆，并触发 `FreshnessReconciler` 全生命周期信息新鲜度对账与 `P1~P5` 五点对比自进化探针（对应 `steward_feedback`）。
+- **这是什么**: 直接操作 `user_feedback.md` 反馈总账，将已验证改进经验沉淀为长期记忆，并触发 `FreshnessReconciler` 全生命周期信息新鲜度对账与 `P1~P5` 五点对比自进化探针（对应 `body_feedback`）。
 - **子命令与参数**:
   - `list`: 列出 `user_feedback.md` 中的全部反馈条目 (`PRO` / `CON` / `BENCH` / `REQ`)。
   - `add --title <TEXT> [--category PRO|CON|BENCH|REQ] [--priority P0|P1|P2] [--evidence <TEXT>] [--target <PATH>]`: 结构化追加一条新反馈。
@@ -550,27 +550,27 @@ agent-steward [OPTIONS] <COMMAND>
   - `probes [--auto-heal] [--auto-feedback] [--json]`: 运行 `P1~P5` 执行回路五点对比自进化探针。
 - **调用示例**:
   ```bash
-  agent-steward feedback list
-  agent-steward feedback reconcile
-  agent-steward feedback probes --auto-heal
+  agent-body feedback list
+  agent-body feedback reconcile
+  agent-body feedback probes --auto-heal
   ```
 
 ---
 
 ### 2.25 `audit` — 双域全链路行为审计与自进化 (Phase 43)
-- **这是什么**: 查询 `IN_AGENT`（接入调用）与 `OUT_OF_AGENT`（守护巡检/Watcher 60s 折叠/GC/修复/对账）双域审计流水，触发 DuckDB OLAP 聚合与基于审计流的 AOPCC 租约自进化（对应第 42 个 MCP 工具 `steward_audit_query`）。
+- **这是什么**: 查询 `IN_AGENT`（接入调用）与 `OUT_OF_AGENT`（守护巡检/Watcher 60s 折叠/GC/修复/对账）双域审计流水，触发 DuckDB OLAP 聚合与基于审计流的 AOPCC 租约自进化（对应第 42 个 MCP 工具 `body_audit_query`）。
 - **调用示例**:
   ```bash
-  agent-steward audit summary --window 7d --days 7
-  agent-steward audit query --domain OUT_OF_AGENT --limit 20
-  agent-steward audit evolve
-  agent-steward audit export --output-path /root/new/tmp/audit_events_export.csv
+  agent-body audit summary --window 7d --days 7
+  agent-body audit query --domain OUT_OF_AGENT --limit 20
+  agent-body audit evolve
+  agent-body audit export --output-path /root/new/tmp/audit_events_export.csv
   ```
 
 ---
 
 ### 2.26 `body` — Agent 本体中枢（六器官自省、五维稳态与跨大脑接力，Phase 44）
-- **这是什么**: 面向脑体分离架构的 Agent 本体主控制命令族，提供确定性 `body_id` 自省、五维稳态体检、四级自治包络评估、跨大脑 `<300 tok` 接力胶囊写入/恢复与 `L1_AUTONOMIC` 反射自愈（对应第 43 个 MCP 工具 `steward_body_state`）。
+- **这是什么**: 面向脑体分离架构的 Agent 本体主控制命令族，提供确定性 `body_id` 自省、五维稳态体检、四级自治包络评估、跨大脑 `<300 tok` 接力胶囊写入/恢复与 `L1_AUTONOMIC` 反射自愈（对应第 43 个 MCP 工具 `body_state`）。
 - **子命令与参数**:
   - `manifest [--json]`: 输出 `body_id`、宿主指纹与六大生理器官（感官/小脑/海马体/脊柱/代谢/社会）健康状态。
   - `vitals [--json]`: 计算五维本体生命体征雷达评分（`sensory_clarity` / `reflex_accuracy` / `memory_purity` / `metabolic_health` / `immune_traceability`）。
@@ -581,11 +581,11 @@ agent-steward [OPTIONS] <COMMAND>
   - `peers [--json]`: 拉取多机 Mesh 节点 `/api/v1/mesh/body_manifest` 本体名片。
 - **调用示例**:
   ```bash
-  agent-steward body manifest
-  agent-steward body vitals
-  agent-steward body envelope --action write_file --target /etc/shadow
-  agent-steward body handoff --from-brain antigravity --goal "完成 PG WAL 调优验证" --next-step "跑 pgbench 对比"
-  agent-steward body resume --by-brain claude-code
+  agent-body body manifest
+  agent-body body vitals
+  agent-body body envelope --action write_file --target /etc/shadow
+  agent-body body handoff --from-brain antigravity --goal "完成 PG WAL 调优验证" --next-step "跑 pgbench 对比"
+  agent-body body resume --by-brain claude-code
   ```
 
 

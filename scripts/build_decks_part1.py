@@ -23,7 +23,7 @@ def build_talk_01() -> None:
             "eyebrow": "封面 · 第 01 讲",
             "title": "脑体分离与 Agent 本体哲学",
             "svg": svg_cover(
-                kicker="SERIES 01 / 06 · AGENT HOST STEWARD · v0.4.0 · 30 MIN",
+                kicker="SERIES 01 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
                 title="脑体分离与 Agent 本体哲学",
                 en_sub="Brain-Body Separation & Agent Embodiment Substrate",
                 subtitle1="为什么大模型需要一具永驻宿主机的物理身体",
@@ -40,7 +40,7 @@ def build_talk_01() -> None:
                 right_tag="第 1 讲 · 30 分钟单点说透 · 地层剖面规范",
             ),
             "script": (
-                "大家好，我是德哥。这是 Agent Host Steward 体系化 30 分钟系列演讲的第 1 讲。\n"
+                "大家好，我是德哥。这是 Agent Body 体系化 30 分钟系列演讲的第 1 讲。\n"
                 "今天整整 30 分钟，我们只打穿一个最底层、也最容易被误解的哲学与架构问题：什么是「脑体分离」，为什么我们把项目从「宿主环境大管家 / 小秘书」正式升维为「Agent 本体（Agent Embodiment Substrate）」。\n"
                 "在写一行代码之前，先把定位想透，后面 27 个模块、43 个工具的边界才不会长歪。"
             ),
@@ -88,7 +88,7 @@ def build_talk_01() -> None:
                     },
                     {
                         "tag": "HOST BODY · 永驻本体",
-                        "title": "Agent Host Steward",
+                        "title": "Agent Body",
                         "accent": C_TEAL,
                         "lines": [
                             "擅长：/proc 0.2ms 探测端口与进程",
@@ -161,7 +161,7 @@ def build_talk_01() -> None:
                         "lines": [
                             "确定性 body_id 绑定宿主机（SHA-256 指纹）",
                             "43 个 MCP 工具 + CLI + Web 1:1 暴露同一具身体",
-                            ("agent-steward body manifest / vitals / handoff", True),
+                            ("agent-body body manifest / vitals / handoff", True),
                         ],
                     },
                 ],
@@ -282,7 +282,7 @@ def build_talk_01() -> None:
                 "③ 闭环：双域审计、探针自进化与实证基准",
                 "④ 借力：不重造 AST、分布式共识与记忆轮子",
             ],
-            "next": "定位升维后，老用户已经配好的 42 个 MCP 工具、CLI 命令和 ~/.steward 目录怎么办？",
+            "next": "定位升维后，老用户已经配好的 42 个 MCP 工具、CLI 命令和 ~/.agent-body 目录怎么办？",
             "script": (
                 "很多人一听到「Agent 本体」，第一担心就是：你是不是要越做越重，最后变成又一个大而全的 Agent 平台？\n"
                 "我们在 README 规约第 1 条和第 27 条写死了反膨胀铁律：绝不内置 ReAct 主规划循环，绝不调度多 Agent 干活，绝不重造 CodeGraph 或 Raft。\n"
@@ -326,9 +326,9 @@ def build_talk_01() -> None:
                         "title": "100% 稳定零破坏红线",
                         "accent": C_GREEN,
                         "lines": [
-                            "二进制：agent-steward 不变",
-                            "MCP 前缀：steward_* 43 工具不变",
-                            "数据目录：~/.steward/ 不变",
+                            "二进制：agent-body 不变",
+                            "MCP 前缀：body_* 43 工具不变",
+                            "数据目录：~/.agent-body/ 不变",
                             ("兼容：老配置零迁移直接平滑升级", True),
                         ],
                         "foot_lbl": "硬约束",
@@ -339,8 +339,8 @@ def build_talk_01() -> None:
             ),
             "next": "理念讲透了，现在我们直接钻进代码，看 Phase 44 新建的第 27 模块 src/body/ 到底长什么样。",
             "script": (
-                "工程上最忌讳拍脑袋全局搜索替换。如果我们把 `agent-steward` 改名成 `agent-body`，把 42 个 `steward_*` 工具全改前缀，所有老用户的 `hooks.json`、MCP 配置、Systemd 服务瞬间全挂。\n"
-                "所以我们立了三层契约：第一层品牌与文档全面升维；第二层 CLI 帮助、MCP 描述与三套 SKILL 同步切换心智；第三层二进制名、MCP 工具前缀、`~/.steward/` 目录纹丝不动，只在原有 42 工具上平滑增量扩展第 43 工具 `steward_body_state`。"
+                "工程上最忌讳拍脑袋全局搜索替换。如果我们把 `agent-body` 改名成 `agent-body`，把 42 个 `body_*` 工具全改前缀，所有老用户的 `hooks.json`、MCP 配置、Systemd 服务瞬间全挂。\n"
+                "所以我们立了三层契约：第一层品牌与文档全面升维；第二层 CLI 帮助、MCP 描述与三套 SKILL 同步切换心智；第三层二进制名、MCP 工具前缀、`~/.agent-body/` 目录纹丝不动，只在原有 42 工具上平滑增量扩展第 43 工具 `body_state`。"
             ),
         },
         {
@@ -367,10 +367,10 @@ def build_talk_01() -> None:
                 ],
                 "五大本体原语职责划分",
                 [
-                    ("1. BodyManifest（身体身份证）", "OnceLock 缓存确定性 body_id，实时汇报 6 大器官就绪态与 43/43 能力摘要", "agent-steward body manifest"),
-                    ("2. ContinuityCapsule（接力胶囊）", "落盘至第 27 表 body_checkpoints，经脱敏+防注入净化，严控 <=300 tok", "agent-steward body handoff save/resume"),
-                    ("3. HomeostasisVitals（五维稳态）", "感官/反射/海马体/代谢/免疫实时打分（实机 99.9/100），低分触发 L1 自愈", "agent-steward body vitals"),
-                    ("4. AutonomyEnvelope + Mesh 名片", "显式判定 L0 只读 / L1 自愈 / L2 需确认 / L3 禁区，支持跨机交换本体名片", "agent-steward body envelope / peers"),
+                    ("1. BodyManifest（身体身份证）", "OnceLock 缓存确定性 body_id，实时汇报 6 大器官就绪态与 43/43 能力摘要", "agent-body body manifest"),
+                    ("2. ContinuityCapsule（接力胶囊）", "落盘至第 27 表 body_checkpoints，经脱敏+防注入净化，严控 <=300 tok", "agent-body body handoff save/resume"),
+                    ("3. HomeostasisVitals（五维稳态）", "感官/反射/海马体/代谢/免疫实时打分（实机 99.9/100），低分触发 L1 自愈", "agent-body body vitals"),
+                    ("4. AutonomyEnvelope + Mesh 名片", "显式判定 L0 只读 / L1 自愈 / L2 需确认 / L3 禁区，支持跨机交换本体名片", "agent-body body envelope / peers"),
                 ],
                 animated=True,
             ),
@@ -402,7 +402,7 @@ def build_talk_01() -> None:
                         "lines": [
                             "场景：查端口、搜资产、读图谱、查稳态体检",
                             "判定：allowed = true, requires_confirm = false",
-                            "典型调用：steward_fact_query / body manifest",
+                            "典型调用：body_fact_query / body manifest",
                         ],
                     },
                     {
@@ -439,7 +439,7 @@ def build_talk_01() -> None:
                         ],
                     },
                 ],
-                "实机演练：agent-steward body envelope --action write_file --target /etc/shadow  →  [L3_FORBIDDEN] allowed=false",
+                "实机演练：agent-body body envelope --action write_file --target /etc/shadow  →  [L3_FORBIDDEN] allowed=false",
             ),
             "next": "光有包络还不够，身体每天 24 小时活着，怎么知道自己「健不健康」？",
             "script": (
@@ -464,7 +464,7 @@ def build_talk_01() -> None:
             ),
             "next": "一个好的底座，必须做到「大脑用 MCP、人用 CLI、看大盘用 Web，三端能力分毫不差」。",
             "script": (
-                "看这五条实机雷达条，不是画的假图，是我在 `digoal-home` 主机上跑 `agent-steward body vitals` 的真实输出：综合分 99.9 / 100。\n"
+                "看这五条实机雷达条，不是画的假图，是我在 `digoal-home` 主机上跑 `agent-body body vitals` 的真实输出：综合分 99.9 / 100。\n"
                 "感官维度看资产与图谱新鲜度；反射维度看过去 24 小时乐观直通租约命中率；海马体维度看记忆冲突与过期状态；代谢维度看磁盘水位和过期锁堆积；免疫维度看审计 SHA-256 完整性和明文凭据零泄露。\n"
                 "只要任何一维拉低总分跌破 70，`BackgroundScheduler` 就会自动执行 `L1` 反射自愈，把过期锁清掉、把幽灵节点剪掉，全程留痕。"
             ),
@@ -472,12 +472,12 @@ def build_talk_01() -> None:
         {
             "eyebrow": "05 · 三端同构",
             "title": "43/43 黑白屏 1:1:1 同构：第 43 原生工具全景落地",
-            "lead": "不搞「Web 有按钮、Agent 调不到」的割裂。<b>steward_body_state 在 MCP、CLI、Web 共享同一内核引擎</b>。",
+            "lead": "不搞「Web 有按钮、Agent 调不到」的割裂。<b>body_state 在 MCP、CLI、Web 共享同一内核引擎</b>。",
             "svg": svg_columns(
                 [
                     {
                         "tag": "MCP STDIO · 给大脑调用",
-                        "title": "steward_body_state (#43)",
+                        "title": "body_state (#43)",
                         "accent": C_TEAL_D,
                         "lines": [
                             "action = manifest / vitals",
@@ -491,7 +491,7 @@ def build_talk_01() -> None:
                     },
                     {
                         "tag": "CLI · 给工程师与脚本",
-                        "title": "agent-steward body",
+                        "title": "agent-body body",
                         "accent": C_TEAL_2,
                         "lines": [
                             "body manifest / vitals",
@@ -523,7 +523,7 @@ def build_talk_01() -> None:
             "next": "光说架构好没用，我们拉出实机 Benchmark v3.7 账单，看「脑体分离」到底带来了什么量化收益。",
             "script": (
                 "我们项目有一条铁律叫「黑白屏 1:1:1 双向同步」：黑屏是给 Agent 调的 MCP 和给工程师敲的 CLI，白屏是 Web 2.0 驾驶舱。\n"
-                "Phase 44 新增第 43 个原生工具 `steward_body_state` 时，三个通道同时落地，底层全调同一套 `src/body/` Rust 内核。连测试里都写死了 `test_web_parity_matrix_100_percent`，少对齐一个工具编译测试直接红。"
+                "Phase 44 新增第 43 个原生工具 `body_state` 时，三个通道同时落地，底层全调同一套 `src/body/` Rust 内核。连测试里都写死了 `test_web_parity_matrix_100_percent`，少对齐一个工具编译测试直接红。"
             ),
         },
         {
@@ -600,7 +600,7 @@ def build_talk_01() -> None:
             "lead": "模型能力正在快速商品化；真正决定 AI 长期复利的，是<b>留在本地宿主机上的物理认知与工程秩序</b>。",
             "svg": svg_closing(
                 kicker="KEY TAKEAWAYS · 第 01 讲收束",
-                headline="Agent Host Steward：给每一个瞬态大脑，配一具永驻宿主的可靠身体",
+                headline="Agent Body：给每一个瞬态大脑，配一具永驻宿主的可靠身体",
                 pillars=[
                     ("定位清澈", "不是多 Agent 编排器，也不是人类小秘书", "Agent Embodiment Substrate"),
                     ("边界克制", "严守递弱代偿：只做确定性感知、反射与连续态", "L0~L3 自治包络 · 0 越权"),
@@ -618,9 +618,9 @@ def build_talk_01() -> None:
         },
     ]
     render_deck(
-        doc_title="第 01 讲 · 脑体分离与 Agent 本体哲学 — Agent Host Steward",
+        doc_title="第 01 讲 · 脑体分离与 Agent 本体哲学 — Agent Body",
         brand_label="SERIES 01 / 06 · 脑体分离",
-        foot_label="AGENT HOST STEWARD · 第 01 讲：脑体分离与 Agent 本体哲学 (v0.4.0)",
+        foot_label="AGENT BODY · 第 01 讲：脑体分离与 Agent 本体哲学 (v0.4.0)",
         slides_data=slides,
         out_path=OUT / "01-brain-body-separation.html",
     )
@@ -633,14 +633,14 @@ def build_talk_02() -> None:
             "eyebrow": "封面 · 第 02 讲",
             "title": "宿主机物理感官图谱与零污染扫盘",
             "svg": svg_cover(
-                kicker="SERIES 02 / 06 · AGENT HOST STEWARD · v0.4.0 · 30 MIN",
+                kicker="SERIES 02 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
                 title="宿主机物理感官图谱与零污染扫盘",
                 en_sub="Host Reality Graph, Zero-Noise Scanning & CodeGraph Federation",
                 subtitle1="零幻觉不是靠提示词祈祷，而是只读物理真值",
                 subtitle2="/proc 0.2ms 探测 · 白黑灰分级扫盘 · L1/L2/L3 加权图谱 · 宏微联邦",
                 spec_line="W1 -99.4% · W3 阻断 531 噪音文件 · DQ3 100% · DQ6 100%",
                 strata=[
-                    ("感官入口 · steward_fact_query", "capability / port / automation / impact / repo / doc", "#EBF1EE", C_INK),
+                    ("感官入口 · body_fact_query", "capability / port / automation / impact / repo / doc", "#EBF1EE", C_INK),
                     ("物理实时探针 · 零子进程开销", "Linux /proc/net/tcp · PlatformProbe (macOS/Windows)", "#CFE0DC", C_INK),
                     ("分级颗粒度扫盘 · 敲门不进屋", "Whitelist 深扫 · Blacklist/Shallow 阻断 · 断点续传状态机", C_TEAL_D, C_PAPER),
                     ("三层语义元数据管道", "L1 确定性启发 · L2 Ollama 标注 · L3 Embedding 向量", C_TEAL_2, C_PAPER),
@@ -671,7 +671,7 @@ def build_talk_02() -> None:
             "next": "为什么我们说「零幻觉」是架构属性，而不是提示词技巧？",
             "script": (
                 "很多人以为减少幻觉靠在 System Prompt 里写「请不要编造」。没用的，机器里此刻跑着什么进程，大模型训练权重里根本不可能知道。\n"
-                "我们在 Bench v3.7 的 W1 场景里实测：让 Agent 找本机 PDF/视频/JSON 处理工具，裸奔全扫要花 21,079 tok；调一次 `steward_fact_query` 只花 131 tok，省了 99.4%，速度快了 358 倍，而且 5 条工具事实 100% 命中。"
+                "我们在 Bench v3.7 的 W1 场景里实测：让 Agent 找本机 PDF/视频/JSON 处理工具，裸奔全扫要花 21,079 tok；调一次 `body_fact_query` 只花 131 tok，省了 99.4%，速度快了 358 倍，而且 5 条工具事实 100% 命中。"
             ),
         },
         {
@@ -803,7 +803,7 @@ def build_talk_02() -> None:
                         "lines": [
                             "DQ1 资产描述元数据覆盖率：100.0%（1000/1000 抽检）",
                             "DQ2 本地 Ollama Embedding 覆盖率：99.5%（199/200 抽检）",
-                            ("agent-steward asset scan <dir> --enrich --enrich-limit 30", True),
+                            ("agent-body asset scan <dir> --enrich --enrich-limit 30", True),
                         ],
                     },
                 ],
@@ -899,7 +899,7 @@ def build_talk_02() -> None:
                 "抗假阳性与爆炸半径设计",
                 [
                     ("零假断链自污染", "Phase 37 修复前文档示例制造了大量假断链；免疫后现网 2000/2000 边 100% 物理有效", "DQ3 = 100.0% (>=85%)"),
-                    ("断链自愈修复", "文件被移动或重命名后，Levenshtein 相似度匹配候选目标，支持 dry-run 与 --apply 修复", "steward_links_repair"),
+                    ("断链自愈修复", "文件被移动或重命名后，Levenshtein 相似度匹配候选目标，支持 dry-run 与 --apply 修复", "body_links_repair"),
                     ("三跳加权爆炸半径", "修改一个底层脚本前，毫秒级反查 3 跳内受影响的 systemd、cron 与下游项目", "W5: -96.2% tok · 质量 100.0"),
                 ],
             ),
@@ -936,9 +936,9 @@ def build_talk_02() -> None:
                         "accent": C_GREEN,
                         "bg": C_GREEN_L,
                         "lines": [
-                            "agent-steward 自身已建 .codegraph/ 索引，增量同步 52 文件仅耗时 1.5s（1,707 nodes）",
+                            "agent-body 自身已建 .codegraph/ 索引，增量同步 52 文件仅耗时 1.5s（1,707 nodes）",
                             "Systemd 守护进程自动探测 NVM/Cargo 路径下的 codegraph 二进制",
-                            ("steward_codegraph_bridge(repo_path=\"/root/new/work/agent-steward\")", True),
+                            ("body_codegraph_bridge(repo_path=\"/root/new/work/agent-body\")", True),
                         ],
                     },
                 ],
@@ -947,7 +947,7 @@ def build_talk_02() -> None:
             ),
             "anim_caps": [
                 "① 宏观层：Steward 管理整机仓库与服务拓扑",
-                "② 联邦桥：steward_codegraph_bridge 检测与路由",
+                "② 联邦桥：body_codegraph_bridge 检测与路由",
                 "③ 微观层：CodeGraph 穿透函数与动态派发链",
                 "④ 防漂移：自动检测 .codegraph.db 索引滞后",
                 "⑤ 联邦协同价值与本仓 1.5s 增量同步实测",
@@ -955,7 +955,7 @@ def build_talk_02() -> None:
             "next": "文件在磁盘上每分每秒都在被改、被删，感官图谱怎么保持实时同步而不被 I/O 打爆？",
             "script": (
                 "有的朋友问：你为什么不在 Steward 里顺手把 Tree-sitter AST 解析也做了？\n"
-                "答案还是递弱代偿。CodeGraph 专门干单仓代码符号地图，已经做得极好；Steward 专门干宿主机全局物理现实。我们用 `steward_codegraph_bridge` 把两者接起来：Steward 先帮大脑在 110 个仓库里找到正确项目、顺便检查 `.codegraph/codegraph.db` 有没有过期，再交棒给 CodeGraph 精确读函数源码。"
+                "答案还是递弱代偿。CodeGraph 专门干单仓代码符号地图，已经做得极好；Steward 专门干宿主机全局物理现实。我们用 `body_codegraph_bridge` 把两者接起来：Steward 先帮大脑在 110 个仓库里找到正确项目、顺便检查 `.codegraph/codegraph.db` 有没有过期，再交棒给 CodeGraph 精确读函数源码。"
             ),
         },
         {
@@ -1004,7 +1004,7 @@ def build_talk_02() -> None:
                         "foot_val": "src/daemon/scheduler.rs",
                     },
                 ],
-                ("现网 agent-steward.service 常驻运行，单二进制内存极低，零人工干预维持全机感官鲜活。", "systemctl is-active -> active", "teal"),
+                ("现网 agent-body.service 常驻运行，单二进制内存极低，零人工干预维持全机感官鲜活。", "systemctl is-active -> active", "teal"),
             ),
             "next": "感官数据收集齐了，但不能一股脑全倒进上下文——我们如何做到「索引先行，按需下钻」？",
             "script": (
@@ -1045,7 +1045,7 @@ def build_talk_02() -> None:
             "title": "同机同数据对标 OpenViking、AgentFS 与原生 CLI 组合",
             "lead": "不靠 PPT 嘴炮，我们在 <b>COMP-C2 / C3 / C4</b> 中写好真实对照代码，同机实跑验收差距。",
             "svg": svg_compare_rows(
-                ("对标赛道 (LIVE)", "开源竞品 / 传统基线实测", "Agent Host Steward 实测优势"),
+                ("对标赛道 (LIVE)", "开源竞品 / 传统基线实测", "Agent Body 实测优势"),
                 [
                     ("COMP-C2 上下文路由", "OpenViking 虚拟摘要 + 静态全量技能：144,730 tok", "0 副本搬迁 · 931 tok (-99.4%) · 质量 45.5→100.0"),
                     ("COMP-C3 工作区治理", "AgentFS SQLite VFS 全量导入 290 文件", "白黑灰阻断 4 噪音目录 · 仅 10 净入库 (-96.5% tok)"),
@@ -1065,30 +1065,30 @@ def build_talk_02() -> None:
             "lead": "所有感官能力全部开放为确定性 CLI 与等价 MCP 工具，<b>零门槛复现本讲全部结论</b>。",
             "svg": svg_code_and_flow(
                 "宿主机物理感官 CLI 实战清单",
-                "agent-steward v0.4.0 CLI",
+                "agent-body v0.4.0 CLI",
                 [
                     "# 1. 意图级工具能力发现（返回路径、版本与推荐参数）",
-                    "agent-steward fact \"提取 PDF 文本\" -f capability",
+                    "agent-body fact \"提取 PDF 文本\" -f capability",
                     "",
                     "# 2. 0.2ms 端口查重与空闲推荐",
-                    "agent-steward port check 8756",
+                    "agent-body port check 8756",
                     "",
                     "# 3. 分级颗粒度扫盘 + 本地 Ollama L2 语义精炼",
-                    "agent-steward asset scan /root/new/work/agent-steward --enrich",
+                    "agent-body asset scan /root/new/work/agent-body --enrich",
                     "",
                     "# 4. 3 跳逆向爆炸半径分析 & 断链健康审计",
-                    "agent-steward links impact src/storage/spi.rs --depth 3",
-                    "agent-steward links audit",
+                    "agent-body links impact src/storage/spi.rs --depth 3",
+                    "agent-body links audit",
                     "",
                     "# 5. 宏微联邦：一键检测并桥接 CodeGraph",
-                    "agent-steward codegraph bridge /root/new/work/agent-steward",
+                    "agent-body codegraph bridge /root/new/work/agent-body",
                 ],
                 "等价 MCP 工具（大脑自动调用）",
                 [
-                    ("steward_fact_query / steward_port_check", "只读物理事实入口，零幻觉、亚毫秒返回", "L0_OBSERVE"),
-                    ("steward_asset_scan / steward_asset_search", "白黑灰扫盘与 micro/standard/full 渐进召回", "DQ1=100% · DQ2=99.5%"),
-                    ("steward_links_impact / steward_links_audit", "L1/L2 加权爆炸半径与抗假阳性断链自检", "DQ3=100% · DQ6=100%"),
-                    ("steward_codegraph_bridge", "跨仓定位后平滑交棒 CodeGraph 做符号级分析", "1.5s 增量同步"),
+                    ("body_fact_query / body_port_check", "只读物理事实入口，零幻觉、亚毫秒返回", "L0_OBSERVE"),
+                    ("body_asset_scan / body_asset_search", "白黑灰扫盘与 micro/standard/full 渐进召回", "DQ1=100% · DQ2=99.5%"),
+                    ("body_links_impact / body_links_audit", "L1/L2 加权爆炸半径与抗假阳性断链自检", "DQ3=100% · DQ6=100%"),
+                    ("body_codegraph_bridge", "跨仓定位后平滑交棒 CodeGraph 做符号级分析", "1.5s 增量同步"),
                 ],
             ),
             "next": "感官让我们「看得见」，但接下来马上会遇到一个尖锐问题：每次干活前都先查一次 Steward，会不会太慢、太啰嗦？",
@@ -1163,9 +1163,9 @@ def build_talk_02() -> None:
         },
     ]
     render_deck(
-        doc_title="第 02 讲 · 宿主机物理感官图谱与零污染扫盘 — Agent Host Steward",
+        doc_title="第 02 讲 · 宿主机物理感官图谱与零污染扫盘 — Agent Body",
         brand_label="SERIES 02 / 06 · 物理感官",
-        foot_label="AGENT HOST STEWARD · 第 02 讲：宿主机物理感官图谱与零污染扫盘 (v0.4.0)",
+        foot_label="AGENT BODY · 第 02 讲：宿主机物理感官图谱与零污染扫盘 (v0.4.0)",
         slides_data=slides,
         out_path=OUT / "02-host-reality-graph.html",
     )
@@ -1178,7 +1178,7 @@ def build_talk_03() -> None:
             "eyebrow": "封面 · 第 03 讲",
             "title": "小脑反射、痛觉门禁与自适应并发控制 AOPCC",
             "svg": svg_cover(
-                kicker="SERIES 03 / 06 · AGENT HOST STEWARD · v0.4.0 · 30 MIN",
+                kicker="SERIES 03 / 06 · AGENT BODY · v0.4.0 · 30 MIN",
                 title="小脑反射与自适应并发控制 AOPCC",
                 en_sub="Cerebellar Reflexes, Pre-Hook Guardrails & Adaptive Concurrency",
                 subtitle1="把数据库悲观锁与乐观锁，精准搬进 Agent 执行回路",
@@ -1308,7 +1308,7 @@ def build_talk_03() -> None:
         {
             "eyebrow": "03 · 开工租约",
             "title": "OptimisticLeaseEngine：开工简报附带 <=120 tok 乐观直通契约",
-            "lead": "在 `SessionStart` 组装 `steward_brief` 时，顺手把本机高置信服务的 <b>MVCC 租约</b> 塞进简报尾部。",
+            "lead": "在 `SessionStart` 组装 `body_brief` 时，顺手把本机高置信服务的 <b>MVCC 租约</b> 塞进简报尾部。",
             "svg": svg_code_and_flow(
                 "src/brief/optimistic.rs",
                 "src/brief/optimistic.rs · assembler.rs",
@@ -1384,7 +1384,7 @@ def build_talk_03() -> None:
                         "lines": [
                             "支持 Claude Code / Cursor / Antigravity / Codex 一键生成 hooks.json",
                             "内建防循环与 fail-open 保护：Steward 异常时绝不卡死用户正常编码",
-                            ("agent-steward hooks generate --client antigravity --apply", True),
+                            ("agent-body hooks generate --client antigravity --apply", True),
                         ],
                     },
                     {
@@ -1467,7 +1467,7 @@ def build_talk_03() -> None:
                 "src/coordination/deadlock.rs · tests/deadlock_wait_integration.rs",
                 [
                     "// Agent A 持有 port:8080，等待 dir:/work/api",
-                    "// Agent B 持有 dir:/work/api，请求 port:8080 (steward_lock_wait)",
+                    "// Agent B 持有 dir:/work/api，请求 port:8080 (body_lock_wait)",
                     "",
                     "pub fn detect_cycle(wait_edges: &[(AgentId, AgentId)]) -> Option<Vec<AgentId>> {",
                     "  // DFS 三色标记实时检测 2-Agent / 3-Agent 及目录层级环路",
@@ -1538,7 +1538,7 @@ def build_talk_03() -> None:
                         ],
                     },
                 ],
-                ("W4 8 类资产放置合规门禁：有效信息密度提升 4,519.8 倍，8/8 规则 100% 命中。", "steward_placement_suggest / learn", "teal"),
+                ("W4 8 类资产放置合规门禁：有效信息密度提升 4,519.8 倍，8/8 规则 100% 命中。", "body_placement_suggest / learn", "teal"),
             ),
             "next": "把整套小脑反射体系放到 Bench v3.7 里，看看硬指标表现如何。",
             "script": (
@@ -1579,34 +1579,34 @@ def build_talk_03() -> None:
             "lead": "一套命令同时覆盖 <b>AOPCC 钩子模拟、自治包络裁决、协作锁申请与死锁排查</b>。",
             "svg": svg_code_and_flow(
                 "小脑反射与协作锁 CLI 实操",
-                "agent-steward v0.4.0 CLI",
+                "agent-body v0.4.0 CLI",
                 [
                     "# 1. 模拟 PreToolUse 检查（区分客户端连 5432 vs 服务端绑端口）",
-                    "agent-steward hooks pre --tool run_command --command \"psql -p 5432\"",
-                    "agent-steward hooks pre --tool run_command --command \"uvicorn --port 8756\"",
+                    "agent-body hooks pre --tool run_command --command \"psql -p 5432\"",
+                    "agent-body hooks pre --tool run_command --command \"uvicorn --port 8756\"",
                     "",
                     "# 2. 测试四级自治包络裁决（L0/L1/L2/L3）",
-                    "agent-steward body envelope --action write_file --target /etc/shadow",
+                    "agent-body body envelope --action write_file --target /etc/shadow",
                     "",
                     "# 3. 申请排他目录锁、查看锁表与死锁环路检测",
-                    "agent-steward lock acquire --resource /root/new/work/demo --mode exclusive",
-                    "agent-steward lock list",
-                    "agent-steward lock deadlock-check",
+                    "agent-body lock acquire --resource /root/new/work/demo --mode exclusive",
+                    "agent-body lock list",
+                    "agent-body lock deadlock-check",
                     "",
                     "# 4. 83μs 获取合规文件放置建议",
-                    "agent-steward placement suggest --kind script --name pg_health.py",
+                    "agent-body placement suggest --kind script --name pg_health.py",
                 ],
                 "等价 MCP 工具（大脑无缝协同）",
                 [
-                    ("steward_hook_pre / steward_hook_post", "硬 Hook 自动触发，同时开放为 MCP 工具供显式预演", "AOPCC 三态引擎"),
-                    ("steward_lock_acquire / wait / release", "共享/排他/目录树锁 + EventBus 唤醒 + WFG 检测", "tests/deadlock_wait_integration.rs"),
-                    ("steward_placement_suggest / learn", "8 大放置规则与纠偏自演化闭环", "M3 = 83 μs"),
-                    ("steward_body_state (action=envelope)", "L0~L3 自治边界实时裁决", "DQ8 L3 拦截 = true"),
+                    ("body_hook_pre / body_hook_post", "硬 Hook 自动触发，同时开放为 MCP 工具供显式预演", "AOPCC 三态引擎"),
+                    ("body_lock_acquire / wait / release", "共享/排他/目录树锁 + EventBus 唤醒 + WFG 检测", "tests/deadlock_wait_integration.rs"),
+                    ("body_placement_suggest / learn", "8 大放置规则与纠偏自演化闭环", "M3 = 83 μs"),
+                    ("body_state (action=envelope)", "L0~L3 自治边界实时裁决", "DQ8 L3 拦截 = true"),
                 ],
             ),
             "next": "小脑反射解决了「当下这一步怎么又快又安全」，但长任务跨天、跨模型切换时，大脑还是会失忆。",
             "script": (
-                "把这两条 `hooks pre` 对比着敲一遍特别有意思：敲 `psql -p 5432` 会告诉你乐观直通放行；敲 `uvicorn --port 8756` 会立刻触发悲观门禁并报出 8756 正被 `agent-steward` 占用。这种毫秒级的精准区分，就是 AOPCC 的灵魂。"
+                "把这两条 `hooks pre` 对比着敲一遍特别有意思：敲 `psql -p 5432` 会告诉你乐观直通放行；敲 `uvicorn --port 8756` 会立刻触发悲观门禁并报出 8756 正被 `agent-body` 占用。这种毫秒级的精准区分，就是 AOPCC 的灵魂。"
             ),
         },
         {
@@ -1675,9 +1675,9 @@ def build_talk_03() -> None:
         },
     ]
     render_deck(
-        doc_title="第 03 讲 · 小脑反射、痛觉门禁与自适应并发控制 AOPCC — Agent Host Steward",
+        doc_title="第 03 讲 · 小脑反射、痛觉门禁与自适应并发控制 AOPCC — Agent Body",
         brand_label="SERIES 03 / 06 · 小脑反射",
-        foot_label="AGENT HOST STEWARD · 第 03 讲：小脑反射、痛觉门禁与自适应并发控制 AOPCC (v0.4.0)",
+        foot_label="AGENT BODY · 第 03 讲：小脑反射、痛觉门禁与自适应并发控制 AOPCC (v0.4.0)",
         slides_data=slides,
         out_path=OUT / "03-cerebellum-and-aopcc.html",
     )

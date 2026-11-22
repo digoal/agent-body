@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use std::thread;
-use agent_steward::storage::{CoordinationLock, Storage};
-use agent_steward::coordination::{CoordinationEngine, LockRequest, LockResult, LockScope, ResourceType};
-use agent_steward::api::hooks::AgentHookEngine;
+use agent_body::storage::{CoordinationLock, Storage};
+use agent_body::coordination::{CoordinationEngine, LockRequest, LockResult, LockScope, ResourceType};
+use agent_body::api::hooks::AgentHookEngine;
 
 #[test]
 fn test_concurrent_port_lock_exclusion() {
@@ -250,8 +250,8 @@ fn test_gc_cleans_expired_only() {
 
 #[test]
 fn test_pg_advisory_lock_cross_connection() {
-    use agent_steward::storage::PgStorageProvider;
-    const PG_TEST_URL: &str = "postgresql://postgres@127.0.0.1:5432/agent_steward_test";
+    use agent_body::storage::PgStorageProvider;
+    const PG_TEST_URL: &str = "postgresql://postgres@127.0.0.1:5432/agent_body_test";
 
     let p1 = match PgStorageProvider::connect(PG_TEST_URL) {
         Ok(p) => p,

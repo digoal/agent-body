@@ -96,7 +96,7 @@ impl Drop for CompTempDir {
 pub fn build_competitor_capability_matrix() -> Vec<CompetitorCapabilityRow> {
     vec![
         CompetitorCapabilityRow {
-            product: "Agent Host Steward (本系统)".into(),
+            product: "Agent Body (本系统)".into(),
             track: "All-in-One 宿主认知底座".into(),
             evidence_tier: "LIVE_BENCHMARKED".into(),
             source_ref: "src/lib.rs (25 modules, 41 MCP tools)".into(),

@@ -5,7 +5,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent Host Steward 2.0 — 宿主环境全景指挥舱</title>
+  <title>Agent Body 2.0 — 宿主环境全景指挥舱</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23245A6B'/%3E%3Ctext x='16' y='21' font-size='16' text-anchor='middle' fill='white'%3ES%3C/text%3E%3C/svg%3E">
   <script>
     try {
@@ -21,7 +21,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       <div class="brand">
         <span class="pulse-dot"></span>
         <div>
-          <h1>Agent Host Steward <span class="ver-badge">v0.4.0 · Agent 本体</span></h1>
+          <h1>Agent Body <span class="ver-badge">v0.4.0 · Agent 本体</span></h1>
           <p class="subtitle">脑体分离具身底座 · 宿主机感官 × 小脑反射 × 海马体接力 × 五维稳态</p>
         </div>
       </div>
@@ -314,7 +314,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
             <div class="grid-2">
               <div class="card">
                 <div class="card-header">
-                  <h3>📋 自适应开工简报组装器 (steward_brief)</h3>
+                  <h3>📋 自适应开工简报组装器 (body_brief)</h3>
                   <button id="btn-brief-run" class="btn btn-primary btn-xs">⚡ 生成简报</button>
                 </div>
                 <div class="sandbox-controls">
@@ -567,7 +567,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 
             <div class="card mt-12">
               <div class="item-top">
-                <strong>🔄 使用反馈总账 · 信息新鲜度对账 &amp; 五点自进化探针 (steward_feedback)</strong>
+                <strong>🔄 使用反馈总账 · 信息新鲜度对账 &amp; 五点自进化探针 (body_feedback)</strong>
                 <div class="toolbar-left">
                   <button id="btn-fb-list" class="btn btn-ghost btn-xs">📋 刷新反馈</button>
                   <button id="btn-fb-probes" class="btn btn-primary btn-xs">🔬 运行 P1~P5 探针</button>
@@ -712,12 +712,12 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       <div class="mirror-slots">
         <div class="mirror-slot">
           <span class="badge">CLI</span>
-          <code id="mirror-cli" class="mono">agent-steward brief</code>
+          <code id="mirror-cli" class="mono">agent-body brief</code>
           <button id="btn-copy-cli" class="btn btn-ghost btn-xs">复制</button>
         </div>
         <div class="mirror-slot">
           <span class="badge badge-ok">MCP JSON-RPC</span>
-          <code id="mirror-mcp" class="mono">{"name":"steward_brief","arguments":{}}</code>
+          <code id="mirror-mcp" class="mono">{"name":"body_brief","arguments":{}}</code>
           <button id="btn-copy-mcp" class="btn btn-ghost btn-xs">复制</button>
         </div>
       </div>
@@ -1357,7 +1357,7 @@ body.presenter-mode .sidenav, body.presenter-mode .sse-sidebar, body.presenter-m
 }
 "##;
 
-pub static APP_JS: &str = r##"// Agent Host Steward 2.0 Web Console (Zero External Dependencies)
+pub static APP_JS: &str = r##"// Agent Body 2.0 Web Console (Zero External Dependencies)
 const state = {
   theme: "dark",
   activeView: "topology",
@@ -1475,7 +1475,7 @@ function updateAuthTokenButton() {
 
 function promptAuthToken() {
   const current = getStoredAuthToken();
-  const hint = current ? `当前已配置 (${current.slice(0, 8)}...)，输入新 Token 替换或留空清除：` : "请输入 ~/.steward/config.toml 中配置的 [web].auth_token：";
+  const hint = current ? `当前已配置 (${current.slice(0, 8)}...)，输入新 Token 替换或留空清除：` : "请输入 ~/.agent-body/config.toml 中配置的 [web].auth_token：";
   const next = window.prompt(hint, "");
   if (next === null) return;
   const trimmed = next.trim();
@@ -2669,7 +2669,7 @@ function showNodeDrawer(node) {
   drawer.classList.remove("hidden");
   title.innerText = `${node.label}`;
   const meta = node.metadata || {};
-  const cgPath = node.canonical_path || meta.abs_path || meta.path || (node.id.startsWith("/") ? node.id : "/root/new/work/agent-steward");
+  const cgPath = node.canonical_path || meta.abs_path || meta.path || (node.id.startsWith("/") ? node.id : "/root/new/work/agent-body");
   const desc = meta.description || meta.purpose || "";
   const domain = meta.domain || "";
   const category = meta.category || meta.asset_type || "";
@@ -2716,7 +2716,7 @@ function showNodeDrawer(node) {
       ${rawJsonDrawer(node.metadata, "查看完整元数据 JSON")}
     </div>
   `;
-  mirrorBlackScreen(`agent-steward links query --id "${node.id}"`, "steward_links_query", { id: node.id, type: node.nt });
+  mirrorBlackScreen(`agent-body links query --id "${node.id}"`, "body_links_query", { id: node.id, type: node.nt });
 
   document.getElementById("btn-expand-dir-node")?.addEventListener("click", () => {
     if (node.canonical_path) {
@@ -2730,7 +2730,7 @@ function showNodeDrawer(node) {
       const impact = await apiGet(`/api/v1/topology/impact?target=${encodeURIComponent(node.id)}`);
       state.topoDisplay = impact;
       applyTopoFilter();
-      mirrorBlackScreen(`agent-steward links impact "${node.id}"`, "steward_links_impact", { target: node.id, max_depth: 3 });
+      mirrorBlackScreen(`agent-body links impact "${node.id}"`, "body_links_impact", { target: node.id, max_depth: 3 });
     } catch (e) {
       alert("爆炸半径推演失败: " + e.message);
     }
@@ -2742,7 +2742,7 @@ function showNodeDrawer(node) {
     extra.innerHTML = '<div class="muted-text">正在穿透 CodeGraph...</div>';
     try {
       const cg = await apiGet(`/api/v1/links/codegraph?path=${encodeURIComponent(cgPath)}`);
-      mirrorBlackScreen(`agent-steward links codegraph --path "${cgPath}"`, "steward_codegraph_bridge", { path: cgPath });
+      mirrorBlackScreen(`agent-body links codegraph --path "${cgPath}"`, "body_codegraph_bridge", { path: cgPath });
       const info = cg.project_info || {};
       extra.innerHTML = `
         <div class="item-top"><strong>🔬 CodeGraph 状态</strong> ${cg.has_codegraph ? '<span class="badge badge-ok">已索引</span>' : '<span class="badge">未索引</span>'}</div>
@@ -2765,7 +2765,7 @@ async function runLinksAuditModal() {
   body.innerHTML = '<div class="muted-text">正在扫描依赖图...</div>';
   try {
     const [audit, repair] = await Promise.all([apiGet("/api/v1/links/audit"), apiGet("/api/v1/links/repair")]);
-    mirrorBlackScreen("agent-steward links audit && agent-steward links repair", "steward_links_audit", { fix_dangling: false });
+    mirrorBlackScreen("agent-body links audit && agent-body links repair", "body_links_audit", { fix_dangling: false });
     const score = audit.health_score ?? 100;
     const issues = audit.issues || [];
     const suggestions = repair.suggestions || [];
@@ -2795,7 +2795,7 @@ async function runLinksMermaidModal() {
   title.innerText = "📐 Mermaid 拓扑源码";
   try {
     const res = await apiGet("/api/v1/links/mermaid?limit=30");
-    mirrorBlackScreen("agent-steward links visualize --limit 30", "steward_links_visualize", { limit: 30 });
+    mirrorBlackScreen("agent-body links visualize --limit 30", "body_links_visualize", { limit: 30 });
     body.innerHTML = `<div class="item-box"><pre class="md-pre">${esc(res.mermaid)}</pre></div>`;
   } catch (e) {
     body.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
@@ -2892,7 +2892,7 @@ function renderFactsTab() {
           <option value="full">full</option>
         </select>
         <button id="btn-asset-search" class="btn btn-primary btn-xs">🔍 检索资产</button>
-        <input id="asset-scan-path" class="input" style="width:200px;" type="text" value="/root/new/work/agent-steward" placeholder="待扫描目录路径" />
+        <input id="asset-scan-path" class="input" style="width:200px;" type="text" value="/root/new/work/agent-body" placeholder="待扫描目录路径" />
         <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
           <input id="asset-scan-enrich" type="checkbox" /> 🤖 Ollama精炼
         </label>
@@ -2922,7 +2922,7 @@ async function loadAssetsPanel() {
   if (!out) return;
   try {
     const list = await apiGet(`/api/v1/assets/search?q=${encodeURIComponent(q)}&limit=50&detail=${encodeURIComponent(detail)}`);
-    mirrorBlackScreen(`agent-steward asset search "${q}" --detail ${detail}`, "steward_asset_search", { query: q, limit: 50, detail_level: detail });
+    mirrorBlackScreen(`agent-body asset search "${q}" --detail ${detail}`, "body_asset_search", { query: q, limit: 50, detail_level: detail });
     out.innerHTML = `<table class="data-table"><thead><tr><th>类型 / 域</th><th>路径</th><th>核心用途与结构化 KV</th></tr></thead><tbody>` +
       (list || []).map((a) => {
         const typ = a.type || a.asset_type || "other";
@@ -2946,7 +2946,7 @@ async function registerAssetFromWeb() {
   const description = document.getElementById("asset-reg-desc")?.value || "";
   try {
     await apiPost("/api/v1/assets/register", { path, asset_type, description });
-    mirrorBlackScreen(`agent-steward asset register --path "${path}" --asset-type ${asset_type}`, "steward_asset_register", { path, type: asset_type, description });
+    mirrorBlackScreen(`agent-body asset register --path "${path}" --asset-type ${asset_type}`, "body_asset_register", { path, type: asset_type, description });
     loadAssetsPanel();
   } catch (e) {
     alert("登记失败: " + e.message);
@@ -2959,8 +2959,8 @@ async function scanAssetFromWeb() {
   const out = document.getElementById("asset-panel-out");
   try {
     const rep = await apiPost("/api/v1/assets/scan", { path, enrich_with_ollama: enrich, enrich_limit: 5 });
-    const cliCmd = enrich ? `agent-steward asset scan "${path}" --enrich --enrich-limit 5` : `agent-steward asset scan "${path}"`;
-    mirrorBlackScreen(cliCmd, "steward_asset_scan", { path, enrich_with_ollama: enrich, enrich_limit: 5 });
+    const cliCmd = enrich ? `agent-body asset scan "${path}" --enrich --enrich-limit 5` : `agent-body asset scan "${path}"`;
+    mirrorBlackScreen(cliCmd, "body_asset_scan", { path, enrich_with_ollama: enrich, enrich_limit: 5 });
     if (out) {
       out.innerHTML = `<div class="item-box">
         <div class="item-top"><strong>📂 分级扫描 &amp; 元数据标注完成</strong><span class="badge badge-ok">${esc(path)}</span></div>
@@ -2986,7 +2986,7 @@ async function runFactQuery() {
   box.innerHTML = '<div class="muted-text">正在查询宿主机事实图谱...</div>';
   try {
     const res = await apiGet(`/api/v1/facts/query?q=${encodeURIComponent(q)}&type=${encodeURIComponent(t)}`);
-    mirrorBlackScreen(`agent-steward fact "${q}" --fact-type ${t}`, "steward_fact_query", { query: q, fact_type: t });
+    mirrorBlackScreen(`agent-body fact "${q}" --fact-type ${t}`, "body_fact_query", { query: q, fact_type: t });
     box.innerHTML = `<div class="item-top"><strong>🔍 事实图谱零幻觉回答</strong><button class="btn-icon" onclick="this.closest('.qa-box').classList.add('hidden')">✕</button></div><pre class="md-pre">${esc(res.answer)}</pre>`;
   } catch (e) {
     box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
@@ -3000,7 +3000,7 @@ async function runPortCheck() {
   box.classList.remove("hidden");
   try {
     const res = await apiGet(`/api/v1/facts/port-check?port=${port}`);
-    mirrorBlackScreen(`agent-steward env port ${port}`, "steward_port_check", { port, suggest_count: 3 });
+    mirrorBlackScreen(`agent-body env port ${port}`, "body_port_check", { port, suggest_count: 3 });
     const occupied = res.status === "OCCUPIED";
     const freePorts = (res.recommended_free_ports || []).map((p) => `<span class="badge badge-ok">:${p}</span>`).join(" ");
     const conflictHtml = res.conflict
@@ -3104,7 +3104,7 @@ window.releaseLock = async function (resourceType, resourceId) {
     });
     const json = await res.json();
     if (json.code !== 200) throw new Error(json.message);
-    mirrorBlackScreen(`agent-steward coordination release --resource-type ${resourceType} --resource-id "${resourceId}"`, "steward_lock_release", { resource_type: resourceType, resource_id: resourceId });
+    mirrorBlackScreen(`agent-body coordination release --resource-type ${resourceType} --resource-id "${resourceId}"`, "body_lock_release", { resource_type: resourceType, resource_id: resourceId });
     loadLocks();
     loadOverview();
   } catch (e) {
@@ -3123,7 +3123,7 @@ async function runLockAction(mode) {
   try {
     const url = mode === "wait" ? "/api/v1/locks/wait" : "/api/v1/locks/acquire";
     const data = await apiPost(url, { resource_type, resource_id, holder_agent, scope, ttl_seconds: 120, wait_timeout_ms: 800 }, token);
-    mirrorBlackScreen(`agent-steward coordination ${mode} -t ${resource_type} -i "${resource_id}" -a "${holder_agent}"`, mode === "wait" ? "steward_lock_wait" : "steward_lock_acquire", { resource_type, resource_id, holder_agent, scope });
+    mirrorBlackScreen(`agent-body coordination ${mode} -t ${resource_type} -i "${resource_id}" -a "${holder_agent}"`, mode === "wait" ? "body_lock_wait" : "body_lock_acquire", { resource_type, resource_id, holder_agent, scope });
     if (msgEl) msgEl.innerText = data.acquired ? `✅ 已获锁 (${data.lock_id || "ok"})` : `⏳ 冲突/排队: ${data.conflict_reason || data.status || "waiting"}`;
     loadLocks();
     loadOverview();
@@ -3180,7 +3180,7 @@ function renderEcosystemLists() {
 window.checkExternalService = async function (name) {
   try {
     const rep = await apiGet(`/api/v1/ecosystem/service-check?name=${encodeURIComponent(name)}`);
-    mirrorBlackScreen(`agent-steward service check "${name}"`, "steward_service_contact", { action: "check", service_name: name });
+    mirrorBlackScreen(`agent-body service check "${name}"`, "body_service_contact", { action: "check", service_name: name });
     alert(`服务 ${name} 探活结果:\n${JSON.stringify(rep, null, 2)}`);
     loadEcosystem();
   } catch (e) {
@@ -3202,9 +3202,9 @@ async function runHookTest(kind) {
       : { tool_name, args, success: !isFailure, error_output: isFailure ? error_output : null };
     const res = await apiPost(kind === "pre" ? "/api/v1/hooks/pre" : "/api/v1/hooks/post", reqBody);
     const cliMirror = isFailure
-      ? `agent-steward hooks post --tool-name ${tool_name} --args '${rawArgs}' --success=false --error-output '${error_output}'`
-      : `agent-steward hooks ${kind} --tool-name ${tool_name} --args '${rawArgs}'`;
-    mirrorBlackScreen(cliMirror, kind === "pre" ? "steward_hook_pre" : "steward_hook_post", reqBody);
+      ? `agent-body hooks post --tool-name ${tool_name} --args '${rawArgs}' --success=false --error-output '${error_output}'`
+      : `agent-body hooks ${kind} --tool-name ${tool_name} --args '${rawArgs}'`;
+    mirrorBlackScreen(cliMirror, kind === "pre" ? "body_hook_pre" : "body_hook_post", reqBody);
     if (out) {
       const hasWarn = Boolean(res.has_warnings || (res.warnings && res.warnings.length));
       const allowed = res.allowed !== false;
@@ -3241,7 +3241,7 @@ async function runHookGenerate() {
   const out = document.getElementById("hook-result");
   try {
     const res = await apiGet(`/api/v1/hooks/generate?client=${encodeURIComponent(client)}`);
-    mirrorBlackScreen(`agent-steward hooks generate --client ${client} --dry-run`, "steward_hook_generate", { client, dry_run: true });
+    mirrorBlackScreen(`agent-body hooks generate --client ${client} --dry-run`, "body_hook_generate", { client, dry_run: true });
     if (out) {
       out.innerHTML = `
         <div class="item-top"><strong>⚙️ 客户端 Hook 配置 (${esc(client)})</strong><span class="badge badge-ok">已生成</span></div>
@@ -3262,7 +3262,7 @@ async function runContextRoute() {
   try {
     const plan = await apiGet(`/api/v1/ecosystem/route?intent=${encodeURIComponent(intent)}&budget=${encodeURIComponent(budget)}`);
     badge.innerText = `消耗 ${plan.route_tokens_used} tok · 节省 ${Number(plan.saved_pct || 0).toFixed(1)}% (全量 ${plan.total_skills_full_tokens} tok)`;
-    mirrorBlackScreen(`agent-steward skill route "${intent}" --budget-tokens ${budget}`, "steward_skill_route", { intent, budget_tokens: Number(budget) });
+    mirrorBlackScreen(`agent-body skill route "${intent}" --budget-tokens ${budget}`, "body_skill_route", { intent, budget_tokens: Number(budget) });
     out.innerHTML = `
       <div class="item-box"><strong>命中 SKILL (${plan.skills.length})</strong>${plan.skills.map((s) => `<div class="mt-8"><span class="badge badge-ok">${esc(s.skill_name)}</span><div class="muted-text">${esc(s.summary)}</div></div>`).join("") || '<div class="muted-text">无</div>'}</div>
       <div class="item-box"><strong>推荐 MCP (${plan.mcps.length})</strong>${plan.mcps.map((m) => `<div class="mt-8"><span class="badge">${esc(m.server_name)}</span><div class="mono muted-text">${esc(m.transport)} · ${esc(m.client_source)}</div></div>`).join("") || '<div class="muted-text">无</div>'}</div>
@@ -3322,7 +3322,7 @@ async function runBriefAssemble() {
   const out = document.getElementById("brief-result");
   try {
     const res = await apiGet(`/api/v1/brief?intent=${encodeURIComponent(intent)}&budget=${encodeURIComponent(budget)}`);
-    mirrorBlackScreen(`agent-steward brief`, "steward_brief", { query: intent, budget_tokens: Number(budget) });
+    mirrorBlackScreen(`agent-body brief`, "body_brief", { query: intent, budget_tokens: Number(budget) });
     if (out) out.innerHTML = `<div class="muted-text" style="margin-bottom:6px;">综合质量分: <span class="badge badge-ok">${res.quality?.overall ?? "-"}/100</span></div><pre class="md-pre">${esc(res.markdown)}</pre>`;
   } catch (e) {
     if (out) out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
@@ -3336,7 +3336,7 @@ async function runPlaceSuggest() {
   const out = document.getElementById("place-result");
   try {
     const res = await apiPost("/api/v1/placement/suggest", { object_type, name, intent });
-    mirrorBlackScreen(`agent-steward place suggest --type ${object_type} --name "${name}" --intent "${intent}"`, "steward_placement_suggest", { object_type, name, intent });
+    mirrorBlackScreen(`agent-body place suggest --type ${object_type} --name "${name}" --intent "${intent}"`, "body_placement_suggest", { object_type, name, intent });
     if (out) {
       out.innerHTML = `
         <div class="item-box">
@@ -3359,7 +3359,7 @@ async function runPlaceLearn() {
   const out = document.getElementById("place-result");
   try {
     const res = await apiGet("/api/v1/placement/learn?min_samples=3");
-    mirrorBlackScreen("agent-steward place learn --min-samples 3", "steward_placement_learn", { min_samples: 3, accept: false });
+    mirrorBlackScreen("agent-body place learn --min-samples 3", "body_placement_learn", { min_samples: 3, accept: false });
     if (out) {
       const cands = res.candidates || res.suggestions || [];
       out.innerHTML = `
@@ -3381,7 +3381,7 @@ async function runMemoryAdd() {
   if (!content) return alert("请输入记忆内容");
   try {
     await apiPost("/api/v1/memories/add", { memory_type, content });
-    mirrorBlackScreen(`agent-steward memory add --type ${memory_type} "${content}"`, "steward_memory_add", { type: memory_type, content });
+    mirrorBlackScreen(`agent-body memory add --type ${memory_type} "${content}"`, "body_memory_add", { type: memory_type, content });
     document.getElementById("mem-add-content").value = "";
     loadGovernance();
   } catch (e) {
@@ -3395,7 +3395,7 @@ async function runMemorySearch() {
   const out = document.getElementById("gov-memories");
   try {
     const res = await apiGet(`/api/v1/memories/search?q=${encodeURIComponent(q)}&hybrid=${hybrid}`);
-    mirrorBlackScreen(`agent-steward memory search "${q}"${hybrid ? " --hybrid" : ""}`, "steward_memory_search", { query: q, hybrid });
+    mirrorBlackScreen(`agent-body memory search "${q}"${hybrid ? " --hybrid" : ""}`, "body_memory_search", { query: q, hybrid });
     const items = res.items || [];
     if (out) out.innerHTML = items.map((item) => {
       const m = item.memory || item;
@@ -3411,7 +3411,7 @@ async function runMemoryAudit() {
   const out = document.getElementById("mem-audit-result");
   try {
     const rep = await apiGet("/api/v1/memories/audit");
-    mirrorBlackScreen("agent-steward memory audit", "steward_memory_audit", {});
+    mirrorBlackScreen("agent-body memory audit", "body_memory_audit", {});
     if (out) {
       out.innerHTML = `
         <div class="summary-kpi-row">
@@ -3433,7 +3433,7 @@ async function loadAnalytics() {
   const tEl = document.getElementById("ana-trend");
   try {
     const [heat, trend] = await Promise.all([apiGet("/api/v1/analytics/heatmap?days=30"), apiGet("/api/v1/analytics/trend?days=30")]);
-    mirrorBlackScreen("agent-steward analytics heatmap --days 30", "steward_analytics_heatmap", { days: 30 });
+    mirrorBlackScreen("agent-body analytics heatmap --days 30", "body_analytics_heatmap", { days: 30 });
     if (hEl) {
       const cells = heat.heatmap || [];
       const maxCnt = Math.max(1, ...cells.map((c) => c.change_count || 0));
@@ -3474,7 +3474,7 @@ async function runAnalyticsExport() {
   const msgEl = document.getElementById("ana-export-msg");
   try {
     const res = await apiPost("/api/v1/analytics/export", { table, output_path });
-    mirrorBlackScreen(`agent-steward analytics export --table ${table} --output-path ${output_path}`, "steward_analytics_export", { table, output_path });
+    mirrorBlackScreen(`agent-body analytics export --table ${table} --output-path ${output_path}`, "body_analytics_export", { table, output_path });
     if (msgEl) msgEl.innerText = `✅ 已导出 ${res.rows_exported ?? ""} 行至 ${output_path}`;
   } catch (e) {
     if (msgEl) msgEl.innerText = `导出失败: ${e.message}`;
@@ -3485,7 +3485,7 @@ async function runGcPreview() {
   const out = document.getElementById("gc-result");
   try {
     const res = await apiGet("/api/v1/env/gc?max_age_hours=72");
-    mirrorBlackScreen("agent-steward gc --max-age-hours 72", "steward_env_gc", { max_age_hours: 72, apply: false });
+    mirrorBlackScreen("agent-body gc --max-age-hours 72", "body_env_gc", { max_age_hours: 72, apply: false });
     if (out) {
       const mb = ((res.candidate_bytes_reclaimed || 0) / 1048576).toFixed(1);
       out.innerHTML = `
@@ -3507,7 +3507,7 @@ async function runSessionClosePreview() {
   const out = document.getElementById("gc-result");
   try {
     const res = await apiPost("/api/v1/session/close", { session_id: "web-preview", clean_temp: true });
-    mirrorBlackScreen("agent-steward close web-preview --dry-run", "steward_session_close", { session_id: "web-preview", dry_run: true });
+    mirrorBlackScreen("agent-body close web-preview --dry-run", "body_session_close", { session_id: "web-preview", dry_run: true });
     if (out) {
       out.innerHTML = `
         <div class="item-top"><strong>📋 会话完工结清预览</strong><span class="badge badge-ok">Dry-Run 模拟</span></div>
@@ -3525,7 +3525,7 @@ async function runMeshQuery(action) {
   const out = document.getElementById("mesh-query-result");
   try {
     const res = await apiGet(`/api/v1/mesh/query?action=${action}&port=${port}`);
-    mirrorBlackScreen(`agent-steward mesh ${action === "port" ? "port " + port : action}`, "steward_mesh_query", { action, port });
+    mirrorBlackScreen(`agent-body mesh ${action === "port" ? "port " + port : action}`, "body_mesh_query", { action, port });
     if (out) {
       out.innerHTML = `
         <div class="item-box">
@@ -3966,7 +3966,7 @@ function toggleDemoCruise() {
 async function resetDemoSandbox() {
   try {
     const res = await apiPost("/api/v1/demo/reset", {});
-    mirrorBlackScreen("agent-steward demo reset", "steward_demo_scenario", { action: "reset" });
+    mirrorBlackScreen("agent-body demo reset", "body_demo_scenario", { action: "reset" });
     alert(`✅ 已无痕清理 ${res.cleaned ?? 0} 条 demo:* 沙盒锁与等待队列`);
     loadOverview();
   } catch (e) {
@@ -3995,7 +3995,7 @@ document.addEventListener("keydown", (e) => {
 
 /* ─── Phase 28: 实证 Benchmark 与效能账本工作台 JS ─── */
 async function loadBenchmarkWorkbench() {
-  mirrorBlackScreen("agent-steward bench ledger --window 7d", "steward_benchmark", { action: "ledger", window: "7d" });
+  mirrorBlackScreen("agent-body bench ledger --window 7d", "body_benchmark", { action: "ledger", window: "7d" });
   await Promise.all([loadBenchmarkReport(), loadBenchmarkLedger(), loadFeedbackList()]);
   const runBtn = document.getElementById("btn-bench-run");
   if (runBtn && !runBtn.dataset.bound) {
@@ -4015,7 +4015,7 @@ async function runBenchmarkSuiteFromUi() {
   const suite = document.getElementById("bench-suite-select")?.value || "full";
   const box = document.getElementById("bench-workloads-box");
   if (box) box.innerHTML = `<div class="empty">⏳ 正在宿主机真机运行 ${esc(suite)} A/B 对照基准...</div>`;
-  mirrorBlackScreen(`agent-steward bench run --suite ${suite}`, "steward_benchmark", { action: "run", suite, save: true });
+  mirrorBlackScreen(`agent-body bench run --suite ${suite}`, "body_benchmark", { action: "run", suite, save: true });
   try {
     const rep = await apiPost("/api/v1/benchmark/run", { suite, save: true });
     renderBenchmarkReportPayload(rep);
@@ -4221,7 +4221,7 @@ async function loadFeedbackList() {
 async function runFeedbackProbes() {
   const box = document.getElementById("feedback-workbench-box");
   if (box) box.innerHTML = `<div class="empty">🔬 正在运行五点执行回路对比自进化探针 (P1~P5)...</div>`;
-  mirrorBlackScreen("agent-steward feedback probes --auto-heal", "steward_feedback", { action: "probes", auto_heal: true, auto_feedback: false });
+  mirrorBlackScreen("agent-body feedback probes --auto-heal", "body_feedback", { action: "probes", auto_heal: true, auto_feedback: false });
   try {
     const rep = await apiPost("/api/v1/feedback", { action: "probes", auto_heal: true, auto_feedback: false });
     const probes = rep.probes || [];
@@ -4246,7 +4246,7 @@ async function runFeedbackProbes() {
 async function runFeedbackReconcile() {
   const box = document.getElementById("feedback-workbench-box");
   if (box) box.innerHTML = `<div class="empty">🧹 正在执行全生命周期信息新鲜度对账...</div>`;
-  mirrorBlackScreen("agent-steward feedback reconcile", "steward_feedback", { action: "reconcile" });
+  mirrorBlackScreen("agent-body feedback reconcile", "body_feedback", { action: "reconcile" });
   try {
     const rep = await apiPost("/api/v1/feedback", { action: "reconcile" });
     box.innerHTML = `<div class="item-top"><strong>✅ 信息新鲜度对账完成 (耗时 ${rep.elapsed_us ?? 0} μs)</strong></div>
@@ -4260,7 +4260,7 @@ async function runFeedbackReconcile() {
 
 async function syncFeedbackMemories() {
   const box = document.getElementById("feedback-workbench-box");
-  mirrorBlackScreen("agent-steward feedback sync", "steward_feedback", { action: "sync" });
+  mirrorBlackScreen("agent-body feedback sync", "body_feedback", { action: "sync" });
   try {
     const rep = await apiPost("/api/v1/feedback", { action: "sync" });
     if (box) {
@@ -4297,11 +4297,11 @@ async function loadAuditWorkbench() {
   const win = document.getElementById("audit-window-select")?.value || "7d";
   const traceId = (document.getElementById("audit-trace-filter")?.value || "").trim();
 
-  const cliParts = ["agent-steward audit query", `--window ${win}`];
+  const cliParts = ["agent-body audit query", `--window ${win}`];
   if (domain) cliParts.push(`--domain ${domain}`);
   if (outcome) cliParts.push(`--outcome ${outcome}`);
   if (traceId) cliParts.push(`--trace-id ${traceId}`);
-  mirrorBlackScreen(cliParts.join(" "), "steward_audit_query", {
+  mirrorBlackScreen(cliParts.join(" "), "body_audit_query", {
     action: traceId ? "trace" : "query",
     domain: domain || undefined,
     outcome: outcome || undefined,
@@ -4365,7 +4365,7 @@ async function loadAuditWorkbench() {
 
 async function triggerAuditEvolve() {
   const box = document.getElementById("audit-evolve-box");
-  mirrorBlackScreen("agent-steward audit evolve", "steward_audit_query", { action: "evolve", auto_feedback: false });
+  mirrorBlackScreen("agent-body audit evolve", "body_audit_query", { action: "evolve", auto_feedback: false });
   if (box) box.innerHTML = `<div class="empty">正在分析近 7 天双域审计流...</div>`;
   try {
     const rep = await apiPost("/api/v1/audit/evolve", { auto_feedback: false, min_hits: 3 });
@@ -4386,7 +4386,7 @@ async function triggerAuditEvolve() {
 
 async function triggerAuditExport() {
   const box = document.getElementById("audit-evolve-box");
-  mirrorBlackScreen("agent-steward audit export --output-path /root/new/tmp/audit_events_export.csv", "steward_audit_query", { action: "export", output_path: "/root/new/tmp/audit_events_export.csv" });
+  mirrorBlackScreen("agent-body audit export --output-path /root/new/tmp/audit_events_export.csv", "body_audit_query", { action: "export", output_path: "/root/new/tmp/audit_events_export.csv" });
   try {
     const exp = await apiPost("/api/v1/audit/export", { output_path: "/root/new/tmp/audit_events_export.csv" });
     if (box) {
@@ -4406,7 +4406,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function loadBodyWorkbench() {
-  mirrorBlackScreen("agent-steward body manifest && agent-steward body vitals", "steward_body_state", { action: "manifest" });
+  mirrorBlackScreen("agent-body body manifest && agent-body body vitals", "body_state", { action: "manifest" });
   try {
     const [manifest, vitals, envData, cpData, peersData] = await Promise.all([
       apiGet("/api/v1/body/manifest"),
@@ -4486,7 +4486,7 @@ async function loadBodyWorkbench() {
 }
 
 async function triggerBodyHeal() {
-  mirrorBlackScreen("agent-steward body heal", "steward_body_state", { action: "heal" });
+  mirrorBlackScreen("agent-body body heal", "body_state", { action: "heal" });
   try {
     const rep = await apiPost("/api/v1/body/heal", {});
     showToast(`🩺 L1 自愈完成: ${Number(rep.before_score || 0).toFixed(1)} → ${Number(rep.after_score || 0).toFixed(1)}`);
@@ -4503,7 +4503,7 @@ async function triggerBodyHandoff() {
     showToast("请先输入核心目标摘要");
     return;
   }
-  mirrorBlackScreen(`agent-steward body handoff --from-brain "${fromBrain}" --goal "${goal}"`, "steward_body_state", { action: "handoff_save", from_brain: fromBrain, goal_summary: goal });
+  mirrorBlackScreen(`agent-body body handoff --from-brain "${fromBrain}" --goal "${goal}"`, "body_state", { action: "handoff_save", from_brain: fromBrain, goal_summary: goal });
   try {
     await apiPost("/api/v1/body/handoff", { from_brain: fromBrain, goal_summary: goal });
     document.getElementById("body-cp-goal").value = "";
@@ -4515,7 +4515,7 @@ async function triggerBodyHandoff() {
 }
 
 async function triggerBodyResume() {
-  mirrorBlackScreen("agent-steward body resume --by-brain next-brain", "steward_body_state", { action: "handoff_resume", from_brain: "next-brain" });
+  mirrorBlackScreen("agent-body body resume --by-brain next-brain", "body_state", { action: "handoff_resume", from_brain: "next-brain" });
   try {
     const res = await apiPost("/api/v1/body/resume", { by_brain: "next-brain" });
     showToast(res.resumed ? "🔁 已完成换脑接力恢复！" : "ℹ️ 当前无活跃待接力胶囊");
@@ -4538,7 +4538,7 @@ pub fn serve_js() -> HttpResponse {
     HttpResponse::js(APP_JS)
 }
 
-pub static DECK_HTML: &str = include_str!("../../../presentation/steward-deck.html");
+pub static DECK_HTML: &str = include_str!("../../../presentation/agent-body-deck.html");
 pub static PRESENTATION_HTML: &str = include_str!("../../../presentation/presentation.html");
 
 pub fn serve_deck() -> HttpResponse {

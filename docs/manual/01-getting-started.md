@@ -6,7 +6,7 @@
 
 ## 1. 环境准备
 
-Agent Host Steward 是脑体分离架构下驻留宿主机的 **Agent 本体（宿主机具身底座）**，采用 Rust 语言编写，底层基于嵌入式 SQLite 与 Linux 内核机制，具备单二进制、零重型运行时依赖的特点。
+Agent Body 是脑体分离架构下驻留宿主机的 **Agent 本体（宿主机具身底座）**，采用 Rust 语言编写，底层基于嵌入式 SQLite 与 Linux 内核机制，具备单二进制、零重型运行时依赖的特点。
 
 ### 1.1 系统需求
 - **操作系统**: Linux（内核版本 >= 4.18，支持 inotify 与 `/proc` 文件系统）
@@ -36,7 +36,7 @@ export PATH="/root/.cargo/bin:$PATH"
 进入项目根目录，直接使用 Cargo 执行生产编译优化：
 
 ```bash
-cd /root/new/work/agent-steward
+cd /root/new/work/agent-body
 export PATH="/root/.cargo/bin:$PATH"
 
 # 执行编译 (开启 LTO 与 Release 级优化)
@@ -44,14 +44,14 @@ cargo build --release
 ```
 
 编译完成后，产物二进制文件位于：
-`target/release/agent-steward`（静态内嵌 SQLite FTS5、DuckDB 列存引擎与 Web UI 2.0，单二进制约 79MB）。
+`target/release/agent-body`（静态内嵌 SQLite FTS5、DuckDB 列存引擎与 Web UI 2.0，单二进制约 79MB）。
 
 ### 2.2 (可选) 安装到系统可执行路径
-为了方便在任意目录直接使用 `agent-steward` 命令，可以将其拷贝至系统 PATH：
+为了方便在任意目录直接使用 `agent-body` 命令，可以将其拷贝至系统 PATH：
 
 ```bash
-cp target/release/agent-steward /usr/local/bin/
-chmod +x /usr/local/bin/agent-steward
+cp target/release/agent-body /usr/local/bin/
+chmod +x /usr/local/bin/agent-body
 ```
 
 ---
@@ -64,17 +64,17 @@ chmod +x /usr/local/bin/agent-steward
 在终端中执行：
 
 ```bash
-./target/release/agent-steward status
+./target/release/agent-body status
 ```
 
 **真实输出示例**:
 ```text
 ╔═══════════════════════════════════════════════════════╗
-║      Agent Host Steward (Rust 版) — 系统状态          ║
+║      Agent Body (Rust 版) — 系统状态          ║
 ╚═══════════════════════════════════════════════════════╝
 版本:           v0.4.0 (9ba7bca, linux/x86_64, built at 2026-11-19T07:53:18Z)
-数据目录:       "/root/.steward"
-数据库文件:     "/root/.steward/steward.db"
+数据目录:       "/root/.agent-body"
+数据库文件:     "/root/.agent-body/body.db"
 已纳管资产数:   26091
 依赖关系边数:   6407 条
 放置规范规则:   8 条
@@ -86,9 +86,9 @@ chmod +x /usr/local/bin/agent-steward
 首次运行后，将在当前用户家目录下生成以下文件：
 
 ```
-~/.steward/
+~/.agent-body/
 ├── config.toml    # 主配置文件 (从内置模板自动生成)
-└── steward.db     # SQLite 嵌入式数据库 (包含 WAL 日志与 FTS5 虚拟表)
+└── body.db     # SQLite 嵌入式数据库 (包含 WAL 日志与 FTS5 虚拟表)
 ```
 
 ---
@@ -98,7 +98,7 @@ chmod +x /usr/local/bin/agent-steward
 体验大管家最核心的命令之一：`brief`。该命令聚合了操作系统指标、正在运行的动态任务进程以及跨会话记忆：
 
 ```bash
-./target/release/agent-steward brief
+./target/release/agent-body brief
 ```
 
 **真实输出片段示例**:
@@ -112,10 +112,10 @@ chmod +x /usr/local/bin/agent-steward
 最近更新资产:
   *(暂无已纳管资产，可通过 steward asset scan 扫描录入)*
 最近长期记忆:
-  - [decision] 决定选用 Rust 1.99 与 SQLite 编写 Agent Host Steward 核心进程 (ID: mem-82ecbb7b...)
+  - [decision] 决定选用 Rust 1.99 与 SQLite 编写 Agent Body 核心进程 (ID: mem-82ecbb7b...)
 ```
 
-至此，Agent Host Steward 已在您的宿主环境中顺利就绪！
+至此，Agent Body 已在您的宿主环境中顺利就绪！
 
 ---
 

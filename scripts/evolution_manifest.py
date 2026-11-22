@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Agent Host Steward 确定性架构清单提取与文档防漂移检查器。
+"""Agent Body 确定性架构清单提取与文档防漂移检查器。
 
 用途:
   1. 零重扫打印实时架构事实快照 (<100ms):
@@ -25,7 +25,7 @@ def extract_manifest() -> dict:
 
     mcp_rs = (ROOT / "src/api/mcp_tools.rs").read_text(encoding="utf-8")
     list_tools_block = mcp_rs.split("pub fn call_tool")[0]
-    mcp_tools = re.findall(r'"name"\s*:\s*"(steward_[a-zA-Z0-9_]+)"', list_tools_block)
+    mcp_tools = re.findall(r'"name"\s*:\s*"(body_[a-zA-Z0-9_]+)"', list_tools_block)
 
     spi_rs = (ROOT / "src/storage/spi.rs").read_text(encoding="utf-8")
     spi_methods = re.findall(r"^\s*fn\s+([a-zA-Z0-9_]+)\s*\(", spi_rs, flags=re.MULTILINE)
@@ -135,9 +135,9 @@ def check_drift(manifest: dict) -> list[str]:
     active_docs = [
         ROOT / "README.md",
         ROOT / "EVOLUTION_GUIDE.md",
-        ROOT / "skills/agent-steward-developer/SKILL.md",
-        ROOT / "skills/agent-steward-doc-writer/SKILL.md",
-        ROOT / "skills/agent-steward-guide/SKILL.md",
+        ROOT / "skills/agent-body-developer/SKILL.md",
+        ROOT / "skills/agent-body-doc-writer/SKILL.md",
+        ROOT / "skills/agent-body-guide/SKILL.md",
         ROOT / "docs/arch/01-for-architects.md",
         ROOT / "docs/arch/02-for-developers.md",
         ROOT / "docs/arch/03-for-users.md",
@@ -185,7 +185,7 @@ def check_drift(manifest: dict) -> list[str]:
         "README.md",
         "docs/arch/01-for-architects.md",
         "docs/arch/03-for-users.md",
-        "skills/agent-steward-guide/SKILL.md",
+        "skills/agent-body-guide/SKILL.md",
     ):
         p = ROOT / doc_rel
         if p.exists() and "Agent 本体" not in p.read_text(encoding="utf-8"):
@@ -195,7 +195,7 @@ def check_drift(manifest: dict) -> list[str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Agent Host Steward 架构清单与防漂移检查")
+    parser = argparse.ArgumentParser(description="Agent Body 架构清单与防漂移检查")
     parser.add_argument("--json", action="store_true", help="输出完整 JSON 架构快照")
     parser.add_argument("--check", action="store_true", help="执行文档数字防漂移检查")
     args = parser.parse_args()
@@ -207,7 +207,7 @@ def main() -> int:
 
     c = manifest["counts"]
     print(
-        f"📦 Steward 架构快照: {c['modules']} 模块 | {c['mcp_tools']} MCP工具 | "
+        f"📦 Agent Body 架构快照: {c['modules']} 模块 | {c['mcp_tools']} MCP工具 | "
         f"{c['spi_methods']} SPI方法 | {c['tables']} SQLite表 | "
         f"Bench v{manifest['bench_spec_version']} (W:{c['workloads']}, M:{c['micro']}, DQ:{c['dq']}, COMP:{c['competitors']}, PR:{c['pr_rules']})"
     )
