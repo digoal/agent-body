@@ -21,8 +21,8 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       <div class="brand">
         <span class="pulse-dot"></span>
         <div>
-          <h1>Agent Host Steward <span class="ver-badge">v0.4.0 · 2.0</span></h1>
-          <p class="subtitle">宿主机事实图谱 · 协作锁中枢 · Context 防爆路由器</p>
+          <h1>Agent Host Steward <span class="ver-badge">v0.4.0 · Agent 本体</span></h1>
+          <p class="subtitle">脑体分离具身底座 · 宿主机感官 × 小脑反射 × 海马体接力 × 五维稳态</p>
         </div>
       </div>
 
@@ -36,7 +36,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
       </div>
 
       <div class="topbar-actions">
-        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 41/41 能力对齐矩阵">✅ 41/41</span>
+        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 43/43 能力对齐矩阵">✅ 43/43</span>
         <span id="sse-badge" class="sse-pill connecting">SSE</span>
         <button id="btn-auth-token" class="btn btn-ghost btn-sm" title="配置 [web].auth_token 用于写操作与 GC 鉴权">🔑 Token</button>
         <button id="btn-theme-toggle" class="btn btn-theme btn-sm" title="切换白天工程蓝图 / 夜间深空指挥舱 (快捷键 T)">☀️ 蓝图</button>
@@ -75,6 +75,14 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
         <button class="nav-btn" data-view="benchmark">
           <span class="nav-ico">📊</span>
           <span>实证基准与账本</span>
+        </button>
+        <button class="nav-btn" data-view="audit">
+          <span class="nav-ico">📜</span>
+          <span>双域审计与进化</span>
+        </button>
+        <button class="nav-btn" data-view="body">
+          <span class="nav-ico">🧬</span>
+          <span>本体中枢与稳态</span>
         </button>
         <div class="sidenav-footer">
           <a href="/deck" target="_blank" class="btn btn-ghost btn-xs sidenav-link">📽️ 路演 PPT (/deck)</a>
@@ -299,7 +307,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
               <button class="subtab" data-sub="memory">🧠 长期记忆与审计</button>
               <button class="subtab" data-sub="analytics">🔥 DuckDB 分析与导出</button>
               <button class="subtab" data-sub="gc">🧹 宿主自洁 &amp; 变更流</button>
-              <button class="subtab" data-sub="mesh">🌐 Mesh · 预检 · 41/41 对齐矩阵</button>
+              <button class="subtab" data-sub="mesh">🌐 Mesh · 预检 · 43/43 对齐矩阵</button>
             </div>
           </div>
           <div id="gov-panel-brief" class="scroll-panel">
@@ -449,8 +457,8 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
             <div class="demo-origin-banner">
               <div class="demo-origin-ico">🏛️</div>
               <div class="demo-origin-body">
-                <strong>为什么 AI Agent 需要大管家？—— 经济学「比较优势」分工原则</strong>
-                <p>就像硅谷创业园区物业包办生活琐事让程序员专心写代码、企业高管配秘书打理杂务。大管家驻留本机，替 AI 摸清现成工具与代码家底、拦住危险操作，让大模型把 100% 智商和 Token 用在核心任务上。</p>
+                <strong>脑体分离 · Agent 本体 —— 比较优势的终极工程形态</strong>
+                <p>LLM 客户端只是随时可换班的「瞬态大脑」，而驻留本机的 Agent 本体才是永驻宿主机的数字躯干（“小秘书”是其感官盘点侧面，“大管家”是其稳态防撞侧面）。新大脑接入即可继承六大器官体征、L0~L3 红线与跨大脑接力胶囊，把 100% 智商留给主业。</p>
               </div>
             </div>
 
@@ -459,7 +467,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
               <div class="roi-card"><span class="k-label">全量 SKILL / MCP / 服务</span><strong id="roi-eco" class="c-cyan">-</strong></div>
               <div class="roi-card"><span class="k-label">宿主机 CLI 工具 / 资产</span><strong id="roi-tools">-</strong></div>
               <div class="roi-card"><span class="k-label">事实图谱 (节点 / 边)</span><strong id="roi-graph" class="c-purple">-</strong></div>
-              <div class="roi-card"><span class="k-label">黑白屏同步认证</span><strong id="roi-parity" class="c-orange">41/41 (100%)</strong></div>
+              <div class="roi-card"><span class="k-label">黑白屏同步认证</span><strong id="roi-parity" class="c-orange">43/43 (100%)</strong></div>
             </div>
 
             <div class="demo-control-bar mt-12">
@@ -568,6 +576,116 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                 </div>
               </div>
               <div id="feedback-workbench-box" class="mt-8"><div class="empty">点击按钮查看 user_feedback.md 反馈总账、运行五点对比自进化探针或执行全生命周期新鲜度对账</div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 视图 8: 双域行为审计与自进化中心 (Phase 43) -->
+        <section id="view-audit" class="view">
+          <div class="workbench-wrap">
+            <div class="view-toolbar">
+              <div class="toolbar-left">
+                <select id="audit-domain-filter" class="input" style="width:150px;">
+                  <option value="">全部域 (IN + OUT)</option>
+                  <option value="IN_AGENT">IN_AGENT (接入域)</option>
+                  <option value="OUT_OF_AGENT">OUT_OF_AGENT (自治域)</option>
+                </select>
+                <select id="audit-outcome-filter" class="input" style="width:130px;">
+                  <option value="">全部结果</option>
+                  <option value="success">success</option>
+                  <option value="recovered">recovered (自愈)</option>
+                  <option value="warn">warn</option>
+                  <option value="blocked">blocked</option>
+                  <option value="failed">failed</option>
+                  <option value="dry_run">dry_run</option>
+                </select>
+                <select id="audit-window-select" class="input" style="width:110px;">
+                  <option value="24h">近 24 小时</option>
+                  <option value="7d" selected>近 7 天</option>
+                  <option value="30d">近 30 天</option>
+                  <option value="all">全部历史</option>
+                </select>
+                <input id="audit-trace-filter" class="input" type="text" placeholder="按 trace_id 过滤因果链路..." style="width:210px;" />
+                <button id="btn-audit-refresh" class="btn btn-ghost btn-xs">🔄 查询审计</button>
+              </div>
+              <div class="toolbar-right">
+                <button id="btn-audit-evolve" class="btn btn-primary btn-xs">🧬 触发审计自进化</button>
+                <button id="btn-audit-export" class="btn btn-ghost btn-xs">📦 导出 CSV</button>
+              </div>
+            </div>
+
+            <div class="roi-banner mt-12">
+              <div class="roi-card"><span class="k-label">双域审计总量</span><strong id="aud-kpi-total">-</strong></div>
+              <div class="roi-card"><span class="k-label">IN_AGENT 接入域</span><strong id="aud-kpi-in" class="c-blue">-</strong></div>
+              <div class="roi-card"><span class="k-label">OUT_OF_AGENT 自治域</span><strong id="aud-kpi-out" class="c-green">-</strong></div>
+              <div class="roi-card"><span class="k-label">拦截 / 碰壁自愈</span><strong id="aud-kpi-rec" class="c-orange">-</strong></div>
+            </div>
+
+            <div class="panel-grid-2 mt-12">
+              <div class="card">
+                <div class="item-top"><strong>📊 DuckDB OLAP 双域高频动作热榜</strong><span class="badge">DuckDB 列存聚合</span></div>
+                <div id="audit-olap-box" class="mt-8"><div class="empty">点击「🔄 查询审计」加载 DuckDB OLAP 聚合视图</div></div>
+              </div>
+              <div class="card">
+                <div class="item-top"><strong>🧬 审计驱动自进化引擎 (AOPCC 租约校准 + 热点沉淀)</strong><span class="badge">Phase 43.4</span></div>
+                <div id="audit-evolve-box" class="mt-8"><div class="empty">点击「🧬 触发审计自进化」评估近 24h 租约有效率与摩擦热点</div></div>
+              </div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top"><strong>📜 双域行为审计流水（脱敏 `before_after_delta` + SHA-256 存证 · 点击 `trace_id` 钻取）</strong></div>
+              <div id="audit-events-box" class="mt-8"><div class="empty">暂无审计流水</div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 视图 9: Agent 本体中枢与生命体征 (Phase 44) -->
+        <section id="view-body" class="view">
+          <div class="workbench-wrap">
+            <div class="view-toolbar">
+              <div class="toolbar-left">
+                <strong id="body-id-badge" class="badge">body-...</strong>
+                <span class="muted-text">脑体分离具身底座：瞬态大脑热切换 · 本体躯干永驻宿主机</span>
+              </div>
+              <div class="toolbar-right">
+                <button id="btn-body-refresh" class="btn btn-ghost btn-xs">🔄 刷新体征</button>
+                <button id="btn-body-heal" class="btn btn-primary btn-xs">🩺 L1 稳态反射自愈</button>
+              </div>
+            </div>
+
+            <div class="roi-banner mt-12">
+              <div class="roi-card"><span class="k-label">本体综合稳态分</span><strong id="body-kpi-score" class="c-green">-</strong></div>
+              <div class="roi-card"><span class="k-label">稳态健康状态</span><strong id="body-kpi-status" class="c-cyan">-</strong></div>
+              <div class="roi-card"><span class="k-label">活跃接力胶囊</span><strong id="body-kpi-caps" class="c-orange">-</strong></div>
+              <div class="roi-card"><span class="k-label">对等本体节点</span><strong id="body-kpi-peers" class="c-purple">-</strong></div>
+            </div>
+
+            <div class="panel-grid-2 mt-12">
+              <div class="card">
+                <div class="item-top"><strong>🫀 六大生理器官自省 (BodyManifest)</strong><span class="badge">零子进程索引</span></div>
+                <div id="body-organs-box" class="mt-8"><div class="empty">加载中...</div></div>
+              </div>
+              <div class="card">
+                <div class="item-top"><strong>🩺 五维生命体征雷达 (HomeostasisVitals)</strong><span class="badge">L1_AUTONOMIC</span></div>
+                <div id="body-vitals-box" class="mt-8"><div class="empty">加载中...</div></div>
+              </div>
+            </div>
+
+            <div class="panel-grid-2 mt-12">
+              <div class="card">
+                <div class="item-top"><strong>🧬 跨大脑连续性接力胶囊 (ContinuityCapsule &lt;=300 tok)</strong></div>
+                <div class="form-row mt-8" style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <input id="body-cp-brain" class="input" type="text" placeholder="来源大脑 (如 antigravity)" style="width:145px;" value="web-brain" />
+                  <input id="body-cp-goal" class="input" type="text" placeholder="输入核心目标摘要，保存供下一任大脑接力..." style="flex:1;min-width:200px;" />
+                  <button id="btn-body-handoff" class="btn btn-primary btn-xs">💾 保存胶囊</button>
+                  <button id="btn-body-resume" class="btn btn-ghost btn-xs">🔁 模拟换脑接力</button>
+                </div>
+                <div id="body-checkpoints-box" class="mt-8"><div class="empty">暂无接力胶囊</div></div>
+              </div>
+              <div class="card">
+                <div class="item-top"><strong>🛡️ 四级本体自治权限包络 (L0~L3) &amp; 联邦名片</strong></div>
+                <div id="body-envelope-box" class="mt-8"><div class="empty">加载中...</div></div>
+              </div>
             </div>
           </div>
         </section>
@@ -1423,6 +1541,8 @@ function switchView(view) {
   if (view === "governance" && !state.govData) loadGovernance();
   if (view === "demo") loadDemoTheater();
   if (view === "benchmark") loadBenchmarkWorkbench();
+  if (view === "audit") loadAuditWorkbench();
+  if (view === "body") loadBodyWorkbench();
 }
 
 function bindNavigation() {
@@ -3510,7 +3630,7 @@ async function loadDemoTheater() {
       const speedupHint = roi.latest_benchmark_speedup
         ? ` · 实测 ${Number(roi.latest_benchmark_speedup).toFixed(2)}x`
         : "";
-      parityEl.innerText = `41/41 (100%)${speedupHint}${ledgerHint}`;
+      parityEl.innerText = `43/43 (100%)${speedupHint}${ledgerHint}`;
     }
 
     const btnWrap = document.getElementById("demo-scene-buttons");
@@ -3686,6 +3806,24 @@ function renderDemoSceneWidget(res) {
           ${skills.map((s) => `<span class="badge badge-ok">📚 ${esc(s.skill_name)}</span>`).join("")}
           ${mcps.map((m) => `<span class="badge">🔌 ${esc(m.server_name)}</span>`).join("")}
         </div>
+      </div>
+    `;
+  }
+
+  if (res.scenario_id === "scene-7") {
+    const vit = ws.vitals || {};
+    const orgs = ws.organs || [];
+    const cp = ws.resumed_checkpoint || {};
+    const l3 = ws.l3_guard_decision || {};
+    return `
+      <div class="widget-panel">
+        <div class="widget-title"><span>🧬 跨大脑 1ms 接力胶囊 (${esc(cp.from_brain || "antigravity")} → ${esc(cp.resumed_by_brain || "claude-code")})</span><span class="badge badge-ok">${esc(ws.body_id || "body")}</span></div>
+        <div class="muted-text" style="margin-bottom:8px;"><strong>目标：</strong>${esc(cp.goal_summary || "")}</div>
+        <div class="tag-cloud">${orgs.map((o) => `<span class="badge badge-ok">${esc(o.name)}:${esc(o.status)}</span>`).join(" ")}</div>
+      </div>
+      <div class="widget-panel">
+        <div class="widget-title"><span>🩺 五维稳态评分 ${Number(vit.overall_score || 100).toFixed(1)}/100</span><span class="badge badge-err">🛡️ ${esc(l3.level_code || "L3_FORBIDDEN")} 已拦截</span></div>
+        <div class="muted-text">${esc(l3.reason || "敏感路径红线拦截")}</div>
       </div>
     `;
   }
@@ -4130,6 +4268,260 @@ async function syncFeedbackMemories() {
     }
   } catch (e) {
     if (box) box.innerHTML = `<div class="empty">同步失败: ${esc(e.message)}</div>`;
+  }
+}
+
+/* ─── 8. 双域行为审计与自进化中心 (Phase 43) ──────────────────────────── */
+let _auditEventsBound = false;
+function ensureAuditEventsBound() {
+  if (_auditEventsBound) return;
+  _auditEventsBound = true;
+  document.getElementById("btn-audit-refresh")?.addEventListener("click", loadAuditWorkbench);
+  document.getElementById("btn-audit-evolve")?.addEventListener("click", triggerAuditEvolve);
+  document.getElementById("btn-audit-export")?.addEventListener("click", triggerAuditExport);
+  document.getElementById("audit-domain-filter")?.addEventListener("change", loadAuditWorkbench);
+  document.getElementById("audit-outcome-filter")?.addEventListener("change", loadAuditWorkbench);
+  document.getElementById("audit-window-select")?.addEventListener("change", loadAuditWorkbench);
+}
+
+function filterAuditByTrace(traceId) {
+  const input = document.getElementById("audit-trace-filter");
+  if (input) input.value = traceId || "";
+  loadAuditWorkbench();
+}
+
+async function loadAuditWorkbench() {
+  ensureAuditEventsBound();
+  const domain = document.getElementById("audit-domain-filter")?.value || "";
+  const outcome = document.getElementById("audit-outcome-filter")?.value || "";
+  const win = document.getElementById("audit-window-select")?.value || "7d";
+  const traceId = (document.getElementById("audit-trace-filter")?.value || "").trim();
+
+  const cliParts = ["agent-steward audit query", `--window ${win}`];
+  if (domain) cliParts.push(`--domain ${domain}`);
+  if (outcome) cliParts.push(`--outcome ${outcome}`);
+  if (traceId) cliParts.push(`--trace-id ${traceId}`);
+  mirrorBlackScreen(cliParts.join(" "), "steward_audit_query", {
+    action: traceId ? "trace" : "query",
+    domain: domain || undefined,
+    outcome: outcome || undefined,
+    trace_id: traceId || undefined,
+    window: win,
+  });
+
+  try {
+    const [sumRes, evRes] = await Promise.all([
+      apiGet(`/api/v1/audit/summary?window=${encodeURIComponent(win)}&days=7`),
+      apiGet(`/api/v1/audit/events?window=${encodeURIComponent(win)}&domain=${encodeURIComponent(domain)}&outcome=${encodeURIComponent(outcome)}&trace_id=${encodeURIComponent(traceId)}&limit=50`),
+    ]);
+
+    const s = sumRes.summary || {};
+    document.getElementById("aud-kpi-total").innerText = String(s.total_events ?? 0);
+    document.getElementById("aud-kpi-in").innerText = String(s.in_agent_count ?? 0);
+    document.getElementById("aud-kpi-out").innerText = String(s.out_of_agent_count ?? 0);
+    document.getElementById("aud-kpi-rec").innerText = `${s.failed_or_blocked_count ?? 0} / ${s.recovered_count ?? 0}`;
+
+    const olapBox = document.getElementById("audit-olap-box");
+    const tops = (sumRes.olap && sumRes.olap.top_actions) ? sumRes.olap.top_actions : [];
+    if (olapBox) {
+      if (tops.length === 0) {
+        olapBox.innerHTML = `<div class="empty">近 ${esc(win)} 暂无 DuckDB OLAP 聚合动作</div>`;
+      } else {
+        olapBox.innerHTML = `<table class="data-table"><thead><tr><th>域</th><th>分类.动作</th><th>结果</th><th>频次</th><th>均耗</th></tr></thead><tbody>` +
+          tops.slice(0, 12).map((t) => `<tr><td><span class="badge">${esc(t.domain)}</span></td><td><code>${esc(t.category)}.${esc(t.action)}</code></td><td>${esc(t.outcome)}</td><td><strong>${t.hit_count}</strong></td><td>${Math.round(t.avg_elapsed_us)} μs</td></tr>`).join("") +
+          `</tbody></table>`;
+      }
+    }
+
+    const evBox = document.getElementById("audit-events-box");
+    const events = evRes.events || [];
+    if (evBox) {
+      if (events.length === 0) {
+        evBox.innerHTML = `<div class="empty">当前过滤条件下暂无双域审计记录</div>`;
+      } else {
+        evBox.innerHTML = `<table class="data-table"><thead><tr><th>时间</th><th>域 / 主体</th><th>动作</th><th>目标</th><th>模式 / 结果</th><th>Trace</th><th>前后增量 (脱敏)</th></tr></thead><tbody>` +
+          events.map((ev) => {
+            const deltaStr = JSON.stringify(ev.before_after_delta || {});
+            const shortDelta = deltaStr.length > 90 ? deltaStr.slice(0, 90) + "…" : deltaStr;
+            const traceShort = (ev.trace_id || "").slice(0, 14);
+            return `<tr>
+              <td>${esc((ev.created_at || "").slice(0, 19))}</td>
+              <td><span class="badge">${esc(ev.domain)}</span><div class="muted-text">${esc(ev.actor_kind)}</div></td>
+              <td><code>${esc(ev.category)}.${esc(ev.action)}</code></td>
+              <td><code>${esc(ev.target_id || "-")}</code></td>
+              <td>${esc(ev.concurrency_mode || "-")} / <strong>${esc(ev.outcome)}</strong></td>
+              <td><a href="javascript:void(0)" onclick="filterAuditByTrace('${esc(ev.trace_id)}')" title="按此 trace_id 钻取因果链路"><code>${esc(traceShort)}</code></a></td>
+              <td><details><summary><code>${esc(shortDelta)}</code></summary><pre style="max-width:460px;overflow:auto;font-size:11px;">${esc(JSON.stringify(ev.before_after_delta || {}, null, 2))}\nSHA256: ${esc(ev.evidence_sha256 || "")}</pre></details></td>
+            </tr>`;
+          }).join("") +
+          `</tbody></table>`;
+      }
+    }
+  } catch (e) {
+    const evBox = document.getElementById("audit-events-box");
+    if (evBox) evBox.innerHTML = `<div class="empty">加载双域审计失败: ${esc(e.message)}</div>`;
+  }
+}
+
+async function triggerAuditEvolve() {
+  const box = document.getElementById("audit-evolve-box");
+  mirrorBlackScreen("agent-steward audit evolve", "steward_audit_query", { action: "evolve", auto_feedback: false });
+  if (box) box.innerHTML = `<div class="empty">正在分析近 7 天双域审计流...</div>`;
+  try {
+    const rep = await apiPost("/api/v1/audit/evolve", { auto_feedback: false, min_hits: 3 });
+    if (box) {
+      box.innerHTML = `<div class="kv-grid">
+        <div><span class="k-label">评估事件数</span><strong>${rep.evaluated_events ?? 0}</strong></div>
+        <div><span class="k-label">降级租约</span><strong>${(rep.downgraded_targets || []).length}</strong></div>
+        <div><span class="k-label">康复租约</span><strong>${(rep.rehabilitated_targets || []).length}</strong></div>
+        <div><span class="k-label">摩擦热点 / 新规则</span><strong>${(rep.friction_hotspots || []).length} / ${(rep.placement_candidates || []).length}</strong></div>
+      </div>
+      <details class="mt-8"><summary>查看自进化详情 JSON</summary><pre style="font-size:11px;overflow:auto;">${esc(JSON.stringify(rep, null, 2))}</pre></details>`;
+    }
+    loadAuditWorkbench();
+  } catch (e) {
+    if (box) box.innerHTML = `<div class="empty">自进化触发失败: ${esc(e.message)}</div>`;
+  }
+}
+
+async function triggerAuditExport() {
+  const box = document.getElementById("audit-evolve-box");
+  mirrorBlackScreen("agent-steward audit export --output-path /root/new/tmp/audit_events_export.csv", "steward_audit_query", { action: "export", output_path: "/root/new/tmp/audit_events_export.csv" });
+  try {
+    const exp = await apiPost("/api/v1/audit/export", { output_path: "/root/new/tmp/audit_events_export.csv" });
+    if (box) {
+      box.innerHTML = `<div class="badge badge-ok">📦 已导出 ${exp.row_count ?? 0} 条记录 (${exp.file_size_bytes ?? 0} B) 至 ${esc(exp.output_path || "")}</div>`;
+    }
+  } catch (e) {
+    if (box) box.innerHTML = `<div class="empty">导出失败: ${esc(e.message)}</div>`;
+  }
+}
+
+/* ─── Phase 44: Agent 本体中枢工作台 ──────────────────────────────────── */
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("btn-body-refresh")?.addEventListener("click", loadBodyWorkbench);
+  document.getElementById("btn-body-heal")?.addEventListener("click", triggerBodyHeal);
+  document.getElementById("btn-body-handoff")?.addEventListener("click", triggerBodyHandoff);
+  document.getElementById("btn-body-resume")?.addEventListener("click", triggerBodyResume);
+});
+
+async function loadBodyWorkbench() {
+  mirrorBlackScreen("agent-steward body manifest && agent-steward body vitals", "steward_body_state", { action: "manifest" });
+  try {
+    const [manifest, vitals, envData, cpData, peersData] = await Promise.all([
+      apiGet("/api/v1/body/manifest"),
+      apiGet("/api/v1/body/vitals"),
+      apiGet("/api/v1/body/envelope"),
+      apiGet("/api/v1/body/checkpoints?limit=15"),
+      apiGet("/api/v1/body/peers"),
+    ]);
+    const idBadge = document.getElementById("body-id-badge");
+    if (idBadge) idBadge.innerText = `${manifest.body_id || "body"} (${manifest.hostname || ""})`;
+    const scEl = document.getElementById("body-kpi-score");
+    if (scEl) scEl.innerText = `${Number(vitals.overall_score || 0).toFixed(1)} / 100`;
+    const stEl = document.getElementById("body-kpi-status");
+    if (stEl) stEl.innerText = String(vitals.status || "unknown").toUpperCase();
+    const cpEl = document.getElementById("body-kpi-caps");
+    if (cpEl) cpEl.innerText = String(manifest.active_checkpoints ?? 0);
+    const prEl = document.getElementById("body-kpi-peers");
+    if (prEl) prEl.innerText = String((peersData.configured_peers || []).length);
+
+    const orgBox = document.getElementById("body-organs-box");
+    if (orgBox) {
+      orgBox.innerHTML = (manifest.organs || []).map((o) => `
+        <div class="list-item">
+          <div class="item-top">
+            <strong>${esc(o.label)}</strong>
+            <span class="badge ${o.status === "ready" ? "badge-ok" : "badge-warn"}">${esc(o.status)}</span>
+          </div>
+          <div class="muted-text mono" style="font-size:11px;">${esc(JSON.stringify(o.metrics || {}))}</div>
+        </div>
+      `).join("") || `<div class="empty">无器官信息</div>`;
+    }
+
+    const vitBox = document.getElementById("body-vitals-box");
+    if (vitBox) {
+      vitBox.innerHTML = (vitals.dimensions || []).map((d) => `
+        <div class="list-item">
+          <div class="item-top">
+            <strong>${esc(d.label)} (${d.weight_pct}%)</strong>
+            <span class="badge ${d.score >= 85 ? "badge-ok" : (d.score >= 65 ? "badge-warn" : "badge-err")}">${Number(d.score).toFixed(1)}</span>
+          </div>
+          <div class="muted-text" style="font-size:12px;">${esc(d.detail)}</div>
+        </div>
+      `).join("") + ((vitals.recommended_l1_actions || []).length
+        ? `<div class="mt-8 badge badge-warn">💡 ${esc(vitals.recommended_l1_actions.join("；"))}</div>`
+        : `<div class="mt-8 badge badge-ok">✅ 五维稳态均健康，无需反射干预</div>`);
+    }
+
+    const cpsBox = document.getElementById("body-checkpoints-box");
+    if (cpsBox) {
+      const cps = cpData.checkpoints || [];
+      cpsBox.innerHTML = cps.length ? cps.map((c) => `
+        <div class="list-item">
+          <div class="item-top">
+            <strong>${esc(c.from_brain)} → ${esc(c.resumed_by_brain || "待接力")}</strong>
+            <span class="badge ${c.status === "active" ? "badge-ok" : ""}">${esc(c.status)}</span>
+          </div>
+          <div>${esc(c.goal_summary)}</div>
+          <div class="muted-text mono" style="font-size:11px;">${esc(c.checkpoint_id)} · ${esc(c.created_at)}</div>
+        </div>
+      `).join("") : `<div class="empty">暂无跨大脑接力胶囊</div>`;
+    }
+
+    const envBox = document.getElementById("body-envelope-box");
+    if (envBox) {
+      const mat = envData.matrix || [];
+      envBox.innerHTML = mat.map((r) => `
+        <div class="list-item">
+          <div class="item-top"><strong>${esc(r.level)}</strong><span class="badge">${esc(r.label)}</span></div>
+          <div class="muted-text" style="font-size:12px;">${esc(r.authorization)} · ${esc((r.actions || []).slice(0, 4).join(", "))}</div>
+        </div>
+      `).join("");
+    }
+  } catch (e) {
+    const orgBox = document.getElementById("body-organs-box");
+    if (orgBox) orgBox.innerHTML = `<div class="empty">加载本体中枢失败: ${esc(e.message)}</div>`;
+  }
+}
+
+async function triggerBodyHeal() {
+  mirrorBlackScreen("agent-steward body heal", "steward_body_state", { action: "heal" });
+  try {
+    const rep = await apiPost("/api/v1/body/heal", {});
+    showToast(`🩺 L1 自愈完成: ${Number(rep.before_score || 0).toFixed(1)} → ${Number(rep.after_score || 0).toFixed(1)}`);
+    loadBodyWorkbench();
+  } catch (e) {
+    showToast(`L1 自愈失败: ${e.message}`);
+  }
+}
+
+async function triggerBodyHandoff() {
+  const fromBrain = document.getElementById("body-cp-brain")?.value?.trim() || "web-brain";
+  const goal = document.getElementById("body-cp-goal")?.value?.trim() || "";
+  if (!goal) {
+    showToast("请先输入核心目标摘要");
+    return;
+  }
+  mirrorBlackScreen(`agent-steward body handoff --from-brain "${fromBrain}" --goal "${goal}"`, "steward_body_state", { action: "handoff_save", from_brain: fromBrain, goal_summary: goal });
+  try {
+    await apiPost("/api/v1/body/handoff", { from_brain: fromBrain, goal_summary: goal });
+    document.getElementById("body-cp-goal").value = "";
+    showToast("🧬 已保存跨大脑接力胶囊");
+    loadBodyWorkbench();
+  } catch (e) {
+    showToast(`保存胶囊失败: ${e.message}`);
+  }
+}
+
+async function triggerBodyResume() {
+  mirrorBlackScreen("agent-steward body resume --by-brain next-brain", "steward_body_state", { action: "handoff_resume", from_brain: "next-brain" });
+  try {
+    const res = await apiPost("/api/v1/body/resume", { by_brain: "next-brain" });
+    showToast(res.resumed ? "🔁 已完成换脑接力恢复！" : "ℹ️ 当前无活跃待接力胶囊");
+    loadBodyWorkbench();
+  } catch (e) {
+    showToast(`接力失败: ${e.message}`);
   }
 }
 "##;

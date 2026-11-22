@@ -1,24 +1,25 @@
-# Agent Host Steward — 用户与 Agent 终极实操指南 (面向用户)
+# Agent Host Steward — Agent 本体实操指南 (面向用户与瞬态大脑)
 
-> **目标受众**：人类工程师、系统运维管理员、以及运行在物理宿主机中的各类 AI Agent 智能体  
-> **核心体验**：零幻觉感知 · 杜绝系统碰撞 · 规范资产治理 · 极简开箱即用
+> **目标受众**：人类主理人、系统运维管理员、以及接入宿主机干活的各类 AI Agent 大脑（Antigravity / Claude Code / Cursor / Codex）  
+> **核心体验**：脑体分离 · 本体感觉零幻觉 · 换脑不失忆 · 稳态自愈 · 极简开箱即用
 
 ---
 
-## 一、大管家的心智模型：你是谁？大管家是谁？
+## 一、心智模型：脑体分离下的「Agent 本体」
 
-在没有 Agent Host Steward 之前，Agent 在 Linux 机器上干活就像盲人走钢丝：不知端口谁在用、不知公用库放在哪、不知改动一个配置文件会不会搞垮后台服务。
+在没有 **Agent 本体** 之前，大模型客户端（LLM）就像只有临时大脑皮层、却没有物理身体的孤魂：换个窗口就失忆、不知端口谁在用、不知公用库放在哪、不知改动配置会不会搞垮后台服务。
 
-**Agent Host Steward（宿主环境大管家）** 就是你的**物理世界领航员与安全哨兵**：
-- 它对系统底层（进程、端口、systemd、定时任务、文件拓扑）**了如指掌**；
-- 它对主人习惯（脚本放哪、项目放哪、临时文件放哪）**烂熟于心**；
-- 它对多 Agent 协同（谁在占端口、谁在写目录）**秩序井然**。
+**Agent Host Steward** 就是驻留在物理宿主机上的 **Agent 本体（Agent Embodiment Substrate）**（注：早期的“小秘书 / 大管家”分别代表本体的**感官盘点侧面**与**防撞稳态侧面**）：
+- **感官与本体感觉**：对系统底层（进程、端口、systemd、定时任务、文件拓扑）**了如指掌**；
+- **脊柱与反射弧**：对主人习惯（脚本/项目/临时文件规范）与痛觉红线（`L0~L3` 权限包络）**条件反射式拦截**；
+- **海马体与连续性**：为换脑/换客户端交接提供 `<300 tok` **跨大脑接力胶囊**，实现换脑不失忆；
+- **社会协同**：多大脑共享同一宿主机时通过协作锁与 WFG 死锁检测维持秩序。
 
 ```mermaid
 graph LR
-    User["人类主理人 / 智能调度中枢"] -->|下达业务目标| Agent["AI Agent (开发/测试/运维)"]
-    Agent <-->|MCP 问询 / 事实核验| Steward["Agent Host Steward (宿主大管家)"]
-    Steward <-->|管理与治理| Host["Linux 物理宿主机 (进程/端口/资产)"]
+    User["人类主理人"] -->|下达任务| Brain["瞬态大脑 LLM (Antigravity / Claude Code / Cursor)"]
+    Brain <-->|"MCP 43 工具 / Hooks / 接力胶囊"| Body["Agent 本体 (agent-steward 宿主机具身底座)"]
+    Body <-->|"零幻觉物理感知 & L0~L3 稳态代谢"| Host["物理宿主机 (进程/端口/资产/Systemd)"]
 ```
 
 ---
@@ -92,7 +93,7 @@ agent-steward memory search "数据库连接池排障" --hybrid # 混合检索�
 ```
 
 ### 方式 2：AI Agent MCP 原生挂载（智能体首选）
-在 Claude Desktop、Cursor 或 Antigravity 的配置文件中添加（即插即用 41 个原生工具）：
+在 Claude Desktop、Cursor 或 Antigravity 的配置文件中添加（即插即用 **43 个原生工具**，含本体中枢 `steward_body_state`）：
 ```json
 {
   "mcpServers": {

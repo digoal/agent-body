@@ -1,13 +1,13 @@
 # Agent Host Steward — 官方使用手册：第 8 章 Web UI 2.0 全景交互指挥舱
 
-> 版本: v0.4.0 (Web UI 2.0)  
-> 技术架构: Tokio 异步内嵌 HTTP 引擎 · 原生 Canvas 力导向交互拓扑 · 7 大工作台 · 白天工程蓝图 / 夜间深空双主题 · 单二进制 100% 离线自包含 · 零外部 CDN
+> 版本: v0.4.0 (Web UI 2.0 · Agent 本体中枢版)  
+> 技术架构: Tokio 异步内嵌 HTTP 引擎 · 原生 Canvas 力导向交互拓扑 · 9 大工作台 · 白天工程蓝图 / 夜间深空双主题 · 单二进制 100% 离线自包含 · 零外部 CDN
 
 ---
 
-## 1. 概述与七大核心工作台
+## 1. 概述与九大核心工作台
 
-**Web UI 2.0** 是 Agent Host Steward 提供的轻量级浏览器全景指挥舱，所有 HTML/CSS/JS/Canvas 渲染引擎均编译内嵌于单二进制中，零外部 CDN/Node.js 依赖：
+**Web UI 2.0** 是 **Agent Host Steward（Agent 本体）** 提供的轻量级浏览器全景指挥舱，所有 HTML/CSS/JS/Canvas 渲染引擎均编译内嵌于单二进制中，零外部 CDN/Node.js 依赖：
 
 1. **🕸️ 宿主机事实拓扑图谱 (Host Reality Topology)**：
    - 100% 源自 `/proc` 进程、监听端口、Systemd 服务、Cron 任务、`fact_nodes`/`fact_edges` 属性图与 `links` 依赖边；
@@ -20,16 +20,20 @@
    - 浏览已纳管的 MCP Server、120+ SKILL 目录与脱敏后的外部服务通讯录；
    - 内置交互式 **Context Budget Router 演练沙盒**，输入任务意图与 Token 预算即可实时预览 Top-K 召回清单与节省 Token 百分比。
 5. **📐 规约 · 记忆 · 变更审计与 Mesh (Governance & Mesh)**：
-   - 集中展示 `steward_brief` 自适应简报组装（含 AOPCC 乐观直通租约）、8 大放置规则推导与自演化、跨会话记忆（写入/RRF 混合检索/衰减与矛盾审计）、DuckDB 变更热力图/趋势/导出、宿主 GC/会话结清 `dry-run` 预览、`MeshEnvelope v1.0` 联邦图谱/对话/沙盒收件箱与 **`41/41`** 黑白屏同步矩阵。
-6. **🎬 路演演示剧场 (Roadshow Live Demo Theater · Phase 22 / Phase 25 故事化升级)**：
-   - 顶部提供经济学「比较优势」总立意导览与宿主机商业价值 ROI 实时账单（Context Token 节省率、工具/资产/图谱规模、`41/41` 对齐认证）；
-   - 采用 **三层渐进式故事舞台**：第 1 层展示每幕「💡 一句话生活比喻 (`analogy`)」「🎯 核心用意 (`intent_summary`)」、3 张核心收益数字卡 (`hero_metrics`) 与演讲者 30 秒提词卡；第 2 层左右分屏对比「盲人 Agent 三步翻车故事线」vs「6 套真引擎驱动的专属可视化组件」（黑白名单过滤漏斗与武器库墙、Pre-Hook 1ms 红绿灯、3 跳蝴蝶效应因果链、双 Agent 死锁环路图、Token 99.9% 比例尺、简报评分与 Dry-Run 安全自洁盾）；第 3 层提供默认收起的 `<details>` 技术专家原始 JSON 核验抽屉；
+   - 集中展示 `steward_brief` 自适应简报组装（含 AOPCC 乐观直通租约）、8 大放置规则推导与自演化、跨会话记忆（写入/RRF 混合检索/衰减与矛盾审计）、DuckDB 变更热力图/趋势/导出、宿主 GC/会话结清 `dry-run` 预览、`MeshEnvelope v1.0` 联邦图谱/对话/沙盒收件箱与 **`43/43`** 黑白屏同步矩阵。
+6. **🎬 路演演示剧场 (Roadshow Live Demo Theater · Phase 22 / Phase 25 / Phase 45 升级)**：
+   - 顶部提供「脑体分离 · Agent 本体 —— 比较优势的终极工程形态」导览与宿主机商业价值 ROI 实时账单（Context Token 节省率、工具/资产/图谱规模、`43/43` 对齐认证）；
+   - 采用 **三层渐进式故事舞台**：第 1 层展示每幕「💡 一句话生活比喻 (`analogy`)」「🎯 核心用意 (`intent_summary`)」、3 张核心收益数字卡 (`hero_metrics`) 与演讲者 30 秒提词卡；第 2 层左右分屏对比「盲人 Agent 三步翻车故事线」vs「7 套真引擎驱动的专属可视化组件」（含第 7 幕「换脑不失忆 · 跨大脑 1ms 本体接力」）；第 3 层提供默认收起的 `<details>` 技术专家原始 JSON 核验抽屉；
    - 支持 8 秒/幕自动巡航（`Space` 暂停 / `←→` 切幕）、演讲者大屏模式与一键无痕重置 `demo:*` 沙盒；
    - 左侧内置 `/deck`（[steward-deck.html](../steward-deck.html)）与 `/presentation`（[presentation.html](../presentation.html)）离线 PPT 直达入口，页脚内置全局「⌨️ 黑屏命令镜像器」实时回显等价 CLI 与 MCP JSON-RPC。
-7. **📊 实证基准、竞品对标与自进化探针 (Empirical Benchmark v3.5 & Feedback · Phase 27~42)**：
-   - **轨道 A — A/B 对照基准跑批**：支持一键运行 `full` / `competitors` / `macro` / `micro` / `dq` / 单项负载（`W1`~`W15`），同机实时比对 Without Steward 裸奔基线 vs With Steward 真引擎的 Token 节省率、延迟加速比、四维上下文质量净胜（$\Delta Q$）、有效信息密度倍数、5 大微基准 SLA（`M1`~`M5`）与 6 项质量门禁（`DQ1`~`DQ6`），每批生成 **SHA-256 防篡改指纹**；
-   - **轨道 B — 生产效能存证账本**：按 `24h` / `7d` / `30d` / `all` 时间窗展示日常每一次 MCP/CLI/Web/Hook 调用自动记账的 `PR-01`~`PR-11` 归因收益与溯源流水；
-   - **轨道 C — 热门竞品对标 & 使用反馈/自进化面板 (`steward_feedback`)**：同屏展示 `COMP-C1~C4` 竞品对比与 12 维源码能力矩阵，并直接驱动 `user_feedback.md` 列表、五点对比探针（`P1~P5`）、信息新鲜度对账（`reconcile`）与已验证反馈沉淀入记忆（`sync`），与 41 个原生 MCP 工具及 CLI 保持 **41/41 (100%)** 双向同步。
+7. **📊 实证基准、竞品对标与自进化探针 (Empirical Benchmark v3.7 & Feedback · Phase 27~44)**：
+   - **轨道 A — A/B 对照基准跑批**：支持一键运行 `full` / `competitors` / `macro` / `micro` / `dq` / 单项负载（`W1`~`W17`），同机实时比对 Without Steward 裸奔基线 vs With Steward 真引擎的 Token 节省率、延迟加速比、四维上下文质量净胜（$\Delta Q$）、有效信息密度倍数、5 大微基准 SLA（`M1`~`M5`）与 8 项质量与稳态门禁（`DQ1`~`DQ8`），每批生成 **SHA-256 防篡改指纹**；
+   - **轨道 B — 生产效能存证账本**：按 `24h` / `7d` / `30d` / `all` 时间窗展示日常每一次 MCP/CLI/Web/Hook 调用自动记账的 `PR-01`~`PR-13` 归因收益与溯源流水；
+   - **轨道 C — 热门竞品对标 & 使用反馈/自进化面板 (`steward_feedback`)**：同屏展示 `COMP-C1~C4` 竞品对比与 12 维源码能力矩阵，并直接驱动 `user_feedback.md` 列表、五点对比探针（`P1~P5`）、信息新鲜度对账（`reconcile`）与已验证反馈沉淀入记忆（`sync`），与 43 个原生 MCP 工具及 CLI 保持 **43/43 (100%)** 双向同步。
+8. **📜 双域行为审计与自进化工作台 (Dual-Domain Audit & Self-Evolution · Phase 43)**：
+   - 支持按 `IN_AGENT` / `OUT_OF_AGENT` 双域过滤审计流水、`trace_id` 因果链路钻取、DuckDB OLAP 聚合视图、一键触发审计自进化（AOPCC 租约滑窗升降级 + Placement/Feedback 反哺）与 Parquet/CSV 导出，同步回显等价 `agent-steward audit` CLI 与 `steward_audit_query` MCP 请求体。
+9. **🧬 本体中枢与稳态工作台 (Agent Embodiment Center · Phase 44)**：
+   - 展示确定性 `body_id`、六大生理器官实时自省、五维生命体征雷达与一键 `L1_AUTONOMIC` 稳态自愈、`L0~L3` 四级自治权限包络表、跨大脑 `ContinuityCapsule (<=300 tok)` 接力保存/恢复表单及多本体 `/api/v1/mesh/body_manifest` 联邦名片视图。
 
 ### 1.1 ☀️ 白天工程蓝图 / 🌙 夜间深空双色调切换 (Phase 25)
 - 顶栏右侧提供 `#btn-theme-toggle` 一键昼夜主题切换（非输入焦点时可按快捷键 **`T`** 瞬间切换，状态自动持久化至 `localStorage`）；
@@ -78,13 +82,17 @@ port = 8756
 | `GET` | `/api/v1/ecosystem/route?intent=<q>&budget=600` | Context 防爆路由器演练与 Token 节省估算 | 开放 |
 | `GET` | `/api/v1/governance?q=<kw>` | 放置规则、扫描策略、长期记忆、变更审计流与 Preflight 预检 | 开放 |
 | `GET` | `/api/v1/mesh/status` / `/api/v1/mesh/query` | 本机跨平台探针、Peer Mesh 状态与联邦动作查询 | 开放 |
-| `GET` | `/api/v1/mesh/ping` / `facts` / `locks` / `graph` | 节点间图谱与事实联邦端点（带 `MeshEnvelope` 校验） | Token / HMAC |
+| `GET` | `/api/v1/mesh/ping` / `facts` / `locks` / `graph` / `body_manifest` | 节点间图谱、事实与本体名片联邦端点（带 `MeshEnvelope` 校验） | Token / HMAC |
 | `POST` | `/api/v1/mesh/dialogue` / `transfer` | `MeshEnvelope v1.0` HMAC 签名防重放对话与 `<=10MB` 沙盒投递 | HMAC-SHA256 |
-| `GET` | `/api/v1/parity/matrix` | 黑白屏 41 工具 100% 映射对齐自检矩阵 | 开放 |
-| `GET` | `/api/v1/demo/scenarios` / `/api/v1/demo/roi` | 6 大路演剧目列表与实时 ROI 商业价值核算 | 开放 |
+| `GET` | `/api/v1/parity/matrix` | 黑白屏 43 工具 100% 映射对齐自检矩阵 | 开放 |
+| `GET` | `/api/v1/audit/events` / `summary` / `trace/:id` / `olap` | 双域审计流水查询、时间窗统计、因果链钻取与 DuckDB OLAP 聚合 | 开放 |
+| `POST` | `/api/v1/audit/evolve` / `export` | 手动触发审计驱动自进化飞轮与 Parquet/CSV 安全导出 | Bearer Token |
+| `GET` | `/api/v1/body/manifest` / `vitals` / `envelope` / `checkpoints` / `peers` | 本体六器官自省、五维稳态分、L0~L3 权限矩阵、胶囊历史与对等节点名片 | 开放 |
+| `POST` | `/api/v1/body/handoff` / `resume` / `heal` | 保存/恢复跨大脑接力胶囊与触发 L1 可逆稳态自愈 | Bearer Token |
+| `GET` | `/api/v1/demo/scenarios` / `/api/v1/demo/roi` | 7 大路演剧目列表与实时 ROI 商业价值核算 | 开放 |
 | `POST` | `/api/v1/demo/run` / `/api/v1/demo/reset` | 真引擎实跑指定路演剧目与一键重置 `demo:*` 沙盒 | Bearer Token |
-| `GET` | `/api/v1/benchmark/workloads` | 获取 15 大标准 A/B 负载 (`W1~W15`) 与 `PR-01~11` 规则字典 | 开放 |
-| `POST` | `/api/v1/benchmark/run` | 真机运行 `full` / `competitors` / `macro` / `micro` / `dq` / `W1~W15` 基准 | Bearer Token |
+| `GET` | `/api/v1/benchmark/workloads` | 获取 17 大标准 A/B 负载 (`W1~W17`) 与 `PR-01~13` 规则字典 | 开放 |
+| `POST` | `/api/v1/benchmark/run` | 真机运行 `full` / `competitors` / `macro` / `micro` / `dq` / `W1~W17` 基准 | Bearer Token |
 | `GET` | `/api/v1/benchmark/report` | 查询指定或最近批次报告及历史列表（含 SHA-256 指纹） | 开放 |
 | `GET` | `/api/v1/benchmark/ledger` | 审计指定时间窗内的生产效能存证账本流水 | 开放 |
 | `GET` | `/api/v1/benchmark/compare` | 对比两个批次（`run_a` vs `run_b`）的回归差异 | 开放 |

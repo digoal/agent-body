@@ -6,7 +6,7 @@
 
 ## 1. 环境准备
 
-Agent Host Steward 采用 Rust 语言编写，底层基于嵌入式 SQLite 与 Linux 内核机制，具备单二进制、零重型运行时依赖的特点。
+Agent Host Steward 是脑体分离架构下驻留宿主机的 **Agent 本体（宿主机具身底座）**，采用 Rust 语言编写，底层基于嵌入式 SQLite 与 Linux 内核机制，具备单二进制、零重型运行时依赖的特点。
 
 ### 1.1 系统需求
 - **操作系统**: Linux（内核版本 >= 4.18，支持 inotify 与 `/proc` 文件系统）

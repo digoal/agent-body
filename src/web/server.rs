@@ -281,6 +281,14 @@ impl WebServer {
         auth_token: &Option<String>,
         enforce_token_for_writes: bool,
     ) -> HttpResponse {
+        let t0 = Instant::now();
+        let should_audit = req.method == Method::Post
+            || req.path == "/api/v1/env/gc"
+            || req.path == "/api/v1/links/repair"
+            || req.path.starts_with("/api/v1/mesh/");
+        let is_mesh = req.path.starts_with("/api/v1/mesh/");
+        let audit_storage = if should_audit { Some(storage.clone()) } else { None };
+
         // /api/v1/mesh/dialogue 与 /api/v1/mesh/transfer 内置 MeshEnvelope v1.0 HMAC-SHA256 零信任签名校验
         let uses_envelope_auth = matches!(
             req.path.as_str(),
@@ -290,10 +298,25 @@ impl WebServer {
             if let Some(err_resp) =
                 check_write_or_sensitive_auth(req, auth_token, enforce_token_for_writes)
             {
+                if should_audit {
+                    let st = crate::storage::Storage::new(storage.clone());
+                    crate::audit::AuditLogger::record_best_effort(
+                        &st,
+                        crate::audit::AuditEventInput::in_agent(
+                            if is_mesh { "mesh" } else { "web" },
+                            if is_mesh { "mesh_collab" } else { "web_api" },
+                            format!("{} {}", req.method.as_str(), req.path),
+                        )
+                        .with_target("endpoint", req.path.clone())
+                        .with_outcome("blocked")
+                        .with_elapsed_us(t0.elapsed().as_micros() as i64)
+                        .with_delta(serde_json::json!({"status": err_resp.status.0})),
+                    );
+                }
                 return err_resp;
             }
         }
-        match (req.method.clone(), req.path.as_str()) {
+        let resp = match (req.method.clone(), req.path.as_str()) {
             (Method::Get, "/api/v1/brief") => parity_api::handle_brief(req, storage),
             (Method::Post, "/api/v1/placement/suggest") => parity_api::handle_placement_suggest(req, storage),
             (Method::Get, "/api/v1/placement/learn") => parity_api::handle_placement_learn(req, storage),
@@ -334,9 +357,47 @@ impl WebServer {
             (Method::Get, "/api/v1/benchmark/competitors") => parity_api::handle_benchmark_competitors(req, storage),
             (Method::Post, "/api/v1/benchmark/reset") => parity_api::handle_benchmark_reset(storage.as_ref()),
             (Method::Get, "/api/v1/feedback") => parity_api::handle_feedback_list(),
-            (Method::Post, "/api/v1/feedback") => parity_api::handle_feedback_post(req, storage),
+            (Method::Post, "/api/v1/feedback") => parity_api::handle_feedback_post(req, storage.clone()),
+            (Method::Get, "/api/v1/audit/events") => parity_api::handle_audit_query(req, storage.clone()),
+            (Method::Get, "/api/v1/audit/summary") => parity_api::handle_audit_summary(req, storage.clone()),
+            (Method::Post, "/api/v1/audit/evolve") => parity_api::handle_audit_evolve(req, storage.clone()),
+            (Method::Post, "/api/v1/audit/export") => parity_api::handle_audit_export(req, storage.clone()),
+            (Method::Get, "/api/v1/body/manifest") => parity_api::handle_body_manifest(storage.clone()),
+            (Method::Get, "/api/v1/body/vitals") => parity_api::handle_body_vitals(storage.clone()),
+            (Method::Get, "/api/v1/body/envelope") => parity_api::handle_body_envelope(req),
+            (Method::Get, "/api/v1/body/checkpoints") => parity_api::handle_body_checkpoints(req, storage.clone()),
+            (Method::Get, "/api/v1/body/peers") => parity_api::handle_body_peers(),
+            (Method::Post, "/api/v1/body/handoff") => parity_api::handle_body_handoff(req, storage.clone()),
+            (Method::Post, "/api/v1/body/resume") => parity_api::handle_body_resume(req, storage.clone()),
+            (Method::Post, "/api/v1/body/heal") => parity_api::handle_body_heal(storage.clone()),
             _ => Self::route_request(req, storage.as_ref(), start_time, auth_token),
+        };
+        if let Some(st_arc) = audit_storage {
+            let status_code = resp.status.0;
+            let outcome = if status_code == 401 || status_code == 403 {
+                "blocked"
+            } else if status_code >= 500 {
+                "failed"
+            } else if status_code >= 400 {
+                "warn"
+            } else {
+                "success"
+            };
+            let st = crate::storage::Storage::new(st_arc);
+            crate::audit::AuditLogger::record_best_effort(
+                &st,
+                crate::audit::AuditEventInput::in_agent(
+                    if is_mesh { "mesh" } else { "web" },
+                    if is_mesh { "mesh_collab" } else { "web_api" },
+                    format!("{} {}", req.method.as_str(), req.path),
+                )
+                .with_target("endpoint", req.path.clone())
+                .with_outcome(outcome)
+                .with_elapsed_us(t0.elapsed().as_micros() as i64)
+                .with_delta(serde_json::json!({"status": status_code})),
+            );
         }
+        resp
     }
 
     /// 统一路由分发逻辑
@@ -376,6 +437,7 @@ impl WebServer {
             (Method::Post, "/api/v1/locks/release") => crate::web::locks_api::handle_lock_release(req, storage, auth_token),
             (Method::Get, "/api/v1/mesh/ping") => crate::mesh::handle_mesh_ping(req, auth_token),
             (Method::Get, "/api/v1/mesh/facts") => crate::mesh::handle_mesh_facts(req, auth_token),
+            (Method::Get, "/api/v1/mesh/body_manifest") => crate::mesh::handle_mesh_body_manifest(req, storage, auth_token),
             (Method::Get, "/api/v1/mesh/locks") => crate::mesh::handle_mesh_locks(req, storage, auth_token),
             (Method::Get, "/api/v1/mesh/graph") => crate::mesh::handle_mesh_graph(req, storage, auth_token),
             (Method::Post, "/api/v1/mesh/dialogue") => crate::mesh::handle_mesh_dialogue_http(req, storage, auth_token),

@@ -1,8 +1,8 @@
 # 缘起：从硅谷园区物业、高管秘书到 Agent 的「比较优势」
 
 > **记录人**: digoal 德哥  
-> **对齐**: [README.md ISSUE #9](../README.md#L309-L316)  
-> **核心命题**: 为什么要做 Agent Host Steward？不是因为大模型不够聪明，而是缺了一个帮它打理宿主机琐事、让它发挥「比较优势」的驻留小秘书。
+> **对齐**: [README.md ISSUE #9](../README.md) · **范式延续**: [04-from-steward-to-agent-body.md](04-from-steward-to-agent-body.md)  
+> **核心命题**: 为什么要做 Agent Host Steward？不是因为大模型不够聪明，而是缺了一个驻留本机的**「Agent 本体」**（“小秘书/大管家”是其感官盘点与稳态防撞的两大侧面），让瞬态大脑发挥「比较优势」。
 
 ---
 

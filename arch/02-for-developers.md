@@ -1,6 +1,7 @@
-# Agent Host Steward — 开发者全景开发指南 (面向开发者)
+# Agent Host Steward — Agent 本体开发者全景开发指南 (面向开发者)
 
 > **目标受众**：Rust 研发工程师、开源贡献者、智能体插件与 MCP 工具生态开发者  
+> **定位准则**：**脑体分离架构下的 Agent 本体（宿主机具身底座，27 模块 / 43 MCP / 82 SPI / 27 表）**，严守三层命名兼容纪律（对外叙事为 Agent 本体，底层 `agent-steward` / `steward_*` / `~/.steward/` 100% 向后兼容）  
 > **工程要求**：严格类型安全 · 零内存泄漏 · 100% 测试全绿门禁 · 工业级可调试性
 
 ---
@@ -25,15 +26,16 @@ graph TD
             LINKS["src/links/ (分层加权依赖拓扑/断链修复/CodeGraph联动)"]
             SCAN["src/scanner/ (分级扫描/全链路脱敏/抗投毒/三层元数据)"]
             ENV["src/env/ (内核proc采集/端口防撞/安全GC)"]
-            BENCH["src/benchmark/ (三轨 Benchmark v3.5 / PR-01~11 账本)"]
+            BENCH["src/benchmark/ (三轨 Benchmark v3.7 / PR-01~13 账本)"]
             FB["src/feedback/ (使用反馈总账 / 新鲜度对账 / P1~P5 探针)"]
+            BODY["src/body/ (Agent 本体中枢: 身份证/接力胶囊/五维稳态/L0~L3)"]
         end
 
     subgraph Infrastructure["系统基础设施"]
-        STORAGE["src/storage/ (统一存储门面/74 SPI/SQLite/PG/DuckDB)"]
+        STORAGE["src/storage/ (统一存储门面/82 SPI/SQLite/PG/DuckDB)"]
         PRE["src/preflight/ (环境依赖三级预检引擎)"]
-        WEB["src/web/ (内嵌HTTP/REST API/SSE推流/7大工作台)"]
-        MCP["src/api/ (MCP stdio 服务端 41 Tools / AOPCC Hook门面)"]
+        WEB["src/web/ (内嵌HTTP/REST API/SSE推流/9大工作台)"]
+        MCP["src/api/ (MCP stdio 服务端 43 Tools / AOPCC Hook门面)"]
         DAEMON["src/daemon/ (常驻守护/inotify监听/后台自巡检)"]
         CFG["src/config/ (TOML配置管理与参数校验)"]
     end
@@ -47,15 +49,17 @@ graph TD
 
 | 目录/模块 | 核心职责 | 关键数据类型 / 入口结构 |
 |:---|:---|:---|
-| `src/storage/` | 存储中枢与多后端 SPI 抽象 (74 方法) | `StorageProvider`, `SqliteStorageProvider`, `PgStorageProvider`, `DuckDbStorageProvider` |
+| `src/storage/` | 存储中枢与多后端 SPI 抽象 (82 方法，27 张表) | `StorageProvider`, `SqliteStorageProvider`, `PgStorageProvider`, `DuckDbStorageProvider` |
+| `src/body/` | Agent 本体中枢（身份证、跨大脑接力胶囊、五维稳态、`L0~L3` 包络） | `BodyManifestEngine`, `ContinuityManager`, `HomeostasisVitalsEngine`, `AutonomyEnvelope` |
+| `src/audit/` | 双域全链路行为审计（`IN_AGENT`/`OUT_OF_AGENT`）、60s 折叠与自进化 | `AuditLogger`, `AuditEvolutionAnalyzer` |
 | `src/fact/` | 宿主机只读物理事实采集与 L1~L3 属性图 | `FactFacade`, `CapabilityAnnotation`, `AutomationScanner`, `PropertyGraphOrganizer` |
 | `src/coordination/`| 多 Agent 协作锁、排队唤醒与 WFG 死锁检测 | `CoordinationEngine`, `CoordinationLock`, `DeadlockDetector` |
 | `src/placement/` | 资产规范放置与行为聚类学习 | `PlacementEngine`, `PlacementLearner`, `ConventionChecker` |
 | `src/memory/` | 跨会话长期记忆与三方适配 | `MemoryManager`, `BuiltinLocalProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
 | `src/links/` | 分层加权依赖关系网与爆炸半径推演 | `LinksEngine`, `CodeGraphBridge`, `LinkRepairer` |
 | `src/scanner/` | 资产扫描、全链路脱敏、抗投毒与三层元数据 | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `OllamaAnnotator` |
-| `src/api/` | 41 个原生 MCP 工具服务端 | `McpServer`, `AgentHookEngine`, `StewardResponse` |
-| `src/benchmark/` | 三轨实证 Benchmark v3.5 与生产效能存证账本 | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
+| `src/api/` | 43 个原生 MCP 工具服务端 | `McpServer`, `AgentHookEngine`, `StewardResponse` |
+| `src/benchmark/` | 三轨实证 Benchmark v3.7 (`W1~W17`/`DQ1~DQ8`/`PR-01~13`) | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
 | `src/feedback/` | 使用反馈总账、新鲜度对账与五点对比自进化探针 | `FeedbackEngine`, `FreshnessReconciler`, `SelfEvolutionProbeEngine` |
 | `src/demo/` | 路演沙盒引擎与 ROI 核算 | `DemoEngine`, `DemoExecutionResult`, `RoiReport` |
 | `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` |
@@ -63,7 +67,7 @@ graph TD
 | `src/ecosystem/` | MCP/SKILL 目录、外部服务通讯录与 Context 防爆路由 | `McpConfigScanner`, `SkillCatalogScanner`, `ExternalContactsManager`, `ContextBudgetRouter` |
 | `src/hooks/` | HOOK 事件总线、自动同步、客户端生成与碰壁秒级自愈 | `EventBus`, `AutoSyncEngine`, `ClientHookGenerator`, `OptimisticFailureDiagnoser` |
 | `src/session/` | 会话生命周期自动绑定与安全归档 | `SessionManager`, `SessionLifecycleManager` |
-| `src/web/` | 内嵌轻量 HTTP 引擎与昼夜蓝图 7 大工作台 | `WebServer`, `HttpRequest`, `TopologyGraph`, `LockViewItem` |
+| `src/web/` | 内嵌轻量 HTTP 引擎与昼夜蓝图 9 大工作台 | `WebServer`, `HttpRequest`, `TopologyGraph`, `LockViewItem` |
 | `src/preflight/` | 运行时依赖预检与降级保护 | `PreflightChecker`, `PreflightReport`, `CheckItem` |
 | `src/brief/` | 自适应情境上下文组装器与 AOPCC 乐观租约 | `BriefAssembler`, `BriefQuality`, `OptimisticLeaseEngine` |
 | `src/changes/` | 宿主变更历史与开工回溯摘要 | `ChangesEngine` |
@@ -117,7 +121,7 @@ cargo build --release
 
 ### How-To 1: 如何添加一个新的原生 MCP 工具？
 
-系统原生注册了 41 个 MCP 工具。若需新增一个例如 `steward_system_clean` 工具：
+系统原生注册了 43 个 MCP 工具。若需新增一个例如 `steward_system_clean` 工具：
 
 1. **在 `src/api/mcp_tools.rs` 中声明工具元数据**：
    ```rust
@@ -164,7 +168,7 @@ sequenceDiagram
 
     Dev->>Impl: 创建 MyStorageProvider 结构体
     Dev->>Impl: 实现 impl StorageProvider for MyStorageProvider
-    Note over Impl: 实现 74 个接口方法 (init, upsert_asset, locks, ecosystem, benchmark, mesh...)
+    Note over Impl: 实现 82 个接口方法 (init, upsert_asset, locks, ecosystem, benchmark, mesh, body...)
     Dev->>Facade: 在 Storage::from_config 中注册分支匹配
     Dev->>Dev: 编写单元测试验证 CRUD 与 FTS 行为
 ```

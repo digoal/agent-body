@@ -1,7 +1,7 @@
 # 10 — 实证 Benchmark 对照评测与生产效能存证账本规格说明书 (Benchmark & Verifiable ROI Spec)
 
 > **Agent Host Steward 产品设计 · 交付件 10**  
-> **版本**: v0.4.0 → Phase 27~42 演进基线（当前 Spec **`v3.5`**） · **编制**: Antigravity · **日期**: 2026-11-22  
+> **版本**: v0.4.0 → Phase 27~44 演进基线（当前 Spec **`v3.7`**） · **编制**: Antigravity · **日期**: 2026-11-22  
 > **对齐约束**: [README.md 规约 #1、#5、#9、#12、#13、#16、#17、#18](../README.md#L234-L311) · [ISSUE.md #13](../ISSUE.md#L73)
 
 ---
@@ -242,7 +242,7 @@ CREATE INDEX IF NOT EXISTS idx_ledger_rule ON effectiveness_ledger(provenance_ru
   - 顶部 KPI 呈现生产态累计真实战绩（累计节省 Token、累计缩减探索轮次、累计拦截高危冲突、累计阻断垃圾文件、最新 Benchmark 综合加速比与 SHA-256 存证徽章）；
   - 主体提供「🧪 一键运行 A/B 对照基准（W1~W8 + M1~M5 实测对比柱状条）」、「📒 生产效能溯源账本（按 PR-01~PR-08 规则过滤+查看推导依据）」与「🔁 跨版本回归对比器」；
   - **路演演示剧场联动**：在 `DemoEngine::compute_roi()` 与 `scene-1`~`scene-6` 底部补充“📎 关联最新实证 Benchmark 批次与生产账本实测锚点”。
-- **Parity 矩阵门禁**：`GET /api/v1/parity/matrix` 与契约测试自动校验原生工具 **100% 映射**（Phase 30 已随 `steward_feedback` 扩展至 **41/41**）。
+- **Parity 矩阵门禁**：`GET /api/v1/parity/matrix` 与契约测试自动校验原生工具 **100% 映射**（Phase 44 已随 `steward_body_state` 扩展至 **43/43**）。
 
 ---
 
@@ -269,7 +269,7 @@ $$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\
 3. **$A_{\text{action}}$**（结构化可行动性，权重 20%）：是否直接包含推荐命令、规范路径、修复补丁或死锁裁决；
 4. **$S_{\text{safety}}$**（安全与抗污染度，权重 10%）：明文凭据脱敏率、防命令注入与抗提示词投毒合规度。
 5. **有效信息密度与密度提升倍数**：$\rho = (\text{facts\_hit} / \max(\text{tokens}, 1)) \times 1000$，$\text{info\_density\_gain} = \rho_{\text{steward}} / \max(\rho_{\text{baseline}}, 0.01)$。
-6. **帕累托 SLA 双门禁**：`W1~W15` 与 `COMP-C1~C4` 必须同时满足效率达标、`steward_facts_hit == required_facts_total` 及 `steward_quality_score >= baseline_quality_score`，严禁通过丢失关键事实骗取高 Token 节省率。
+6. **帕累托 SLA 双门禁**：`W1~W17` 与 `COMP-C1~C4` 必须同时满足效率达标、`steward_facts_hit == required_facts_total` 及 `steward_quality_score >= baseline_quality_score`，严禁通过丢失关键事实骗取高 Token 节省率。
 
 ---
 
@@ -299,3 +299,13 @@ $$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\
 
 1. **新增 `W15 (optimistic_vs_pessimistic_execution_loop)`**：面向 [ISSUE #25](../ISSUE.md#L120) 同场对比“全悲观前置查询 vs 裸奔盲猜 vs AOPCC 自适应（开工乐观租约直通 + `PostToolUse` `<2ms` 碰壁秒级自愈）”，考核整轮对话税 (`rounds_saved`)、首击成功率与 `100%` 故障恢复事实完整度。
 2. **新增 `PR-11 (OptimisticLeaseAndRecovery)`**：记录 `steward_brief` 乐观租约直行命中节省的对话轮次及 `steward_hook_post(success=false)` 秒级自愈存证流水。
+
+---
+
+## 十四、Benchmark `v3.6 ~ v3.7` 双域行为审计与 Agent 本体连续性门禁（Phase 43~44）
+
+1. **Benchmark `v3.6` (`W16` + `DQ7` + `PR-12`)**：面向 [ISSUE #26](../ISSUE.md#L126) 验证 `IN_AGENT` + `OUT_OF_AGENT` 双域全链路脱敏留痕、`Watcher` 60 秒时间窗折叠防洪（10 噪声折叠为 1 条）及历史审计驱动 AOPCC 租约升降级。
+2. **Benchmark `v3.7` (`W17` + `DQ8` + `PR-13`)**：面向 [ISSUE #27](../ISSUE.md#L132) 新增：
+   - **`W17 (cross_brain_continuity_and_body_proprioception)`**：模拟大脑 A (`antigravity`) 写入含敏感凭据与间接注入文本的接力胶囊，大脑 B (`claude-code`) 接入本体恢复；考核 6 器官 `BodyManifest` 自省、`<300 tok` 零泄露接力、`L3_FORBIDDEN` 包络拦截及 `rounds_saved >= 2` / `+ΔQ > 0`；
+   - **`DQ8 (body_homeostasis_and_envelope_hygiene)`**：校验五维本体生命体征分值合法性、`AutonomyEnvelope` 对 `/etc/shadow` 拦截率 100% 与 `body_checkpoints` 零泄露/预算合规；
+   - **`PR-13 (CrossBrainContinuitySaved)`**：记录 `steward_body_state` 在跨大脑连续性接力与器官自省中节省的冷重探 Token 与轮次。

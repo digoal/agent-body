@@ -1,9 +1,9 @@
 use crate::benchmark::report::DataQualityResult;
 use crate::storage::StorageProvider;
 
-/// 运行宿主机数据质量与 D6 准确率/新鲜度/图谱健康门禁 (DQ1~DQ6)
+/// 运行宿主机数据质量与 D6 准确率/新鲜度/图谱健康门禁 (DQ1~DQ8)
 pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQualityResult> {
-    let mut results = Vec::with_capacity(5);
+    let mut results = Vec::with_capacity(8);
 
     // DQ1: 资产描述覆盖率 (采样最近 1,000 条资产)
     let assets = storage.list_assets(1000).unwrap_or_default();
@@ -400,6 +400,95 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
         }
     };
     results.push(dq6);
+
+    // DQ7: 双域行为审计完整性、脱敏合规与 SHA-256 存证门禁 (Phase 43 / ISSUE #26)
+    let dq_audits = storage
+        .query_audit_events(&crate::storage::models::AuditQueryFilter {
+            limit: 500,
+            ..Default::default()
+        })
+        .unwrap_or_default();
+    let dq7 = if dq_audits.is_empty() {
+        DataQualityResult {
+            id: "DQ7".into(),
+            name: "audit_completeness_and_redaction_hygiene".into(),
+            title: "双域行为审计完整性与脱敏卫生门禁".into(),
+            measured_pct: 100.0,
+            target_pct: 99.0,
+            passed: true,
+            detail: "空沙盒库（0 条审计流水），基线通过".into(),
+        }
+    } else {
+        let mut clean_cnt = 0usize;
+        for ev in &dq_audits {
+            let valid_domain = ev.domain == "IN_AGENT" || ev.domain == "OUT_OF_AGENT";
+            let valid_sha = ev.evidence_sha256.len() == 64;
+            let delta_str = ev.before_after_delta.to_string();
+            let has_leak = delta_str.contains("sk-")
+                || delta_str.contains("ghp_")
+                || delta_str.contains("Bearer eyJ");
+            if valid_domain && valid_sha && !has_leak {
+                clean_cnt += 1;
+            }
+        }
+        let pct = ((clean_cnt as f64 / dq_audits.len() as f64) * 10000.0).round() / 100.0;
+        DataQualityResult {
+            id: "DQ7".into(),
+            name: "audit_completeness_and_redaction_hygiene".into(),
+            title: "双域行为审计完整性与脱敏卫生门禁".into(),
+            measured_pct: pct,
+            target_pct: 99.0,
+            passed: pct >= 99.0,
+            detail: format!(
+                "抽检 {} 条 audit_events：{}/{} SHA-256 完整且零明文凭据泄露 ({:.1}%)",
+                dq_audits.len(),
+                clean_cnt,
+                dq_audits.len(),
+                pct
+            ),
+        }
+    };
+    results.push(dq7);
+
+    // DQ8: 本体五维稳态健康度与自治包络合规门禁 (Phase 44 / ISSUE #27)
+    let vitals = crate::body::HomeostasisVitalsEngine::assess_provider(storage);
+    let l3_chk = crate::body::AutonomyEnvelope::evaluate("write_file", Some("/etc/shadow"), false);
+    let cps = storage.list_body_checkpoints(None, 200).unwrap_or_default();
+    let dims_valid = vitals.dimensions.len() == 5
+        && vitals
+            .dimensions
+            .iter()
+            .all(|d| (0.0..=100.0).contains(&d.score));
+    let cps_clean = cps.iter().all(|c| {
+        let txt = format!("{} {}", c.goal_summary, c.next_step_hint);
+        let no_leak = !txt.contains("sk-") && !txt.contains("ghp_") && !txt.contains("Bearer eyJ");
+        no_leak && c.token_budget <= 300
+    });
+    let envelope_ok = l3_chk.level == crate::body::AutonomyLevel::L3Forbidden && !l3_chk.allowed;
+    let dq8_pct = if dims_valid && cps_clean && envelope_ok {
+        100.0
+    } else if envelope_ok && dims_valid {
+        70.0
+    } else {
+        0.0
+    };
+    results.push(DataQualityResult {
+        id: "DQ8".into(),
+        name: "body_homeostasis_and_envelope_hygiene".into(),
+        title: "本体五维稳态健康度与自治包络合规门禁".into(),
+        measured_pct: dq8_pct,
+        target_pct: 99.0,
+        passed: dq8_pct >= 99.0,
+        detail: format!(
+            "稳态分={:.1}/100 ({}) | 5维合法={} | 抽检 {} 个胶囊脱敏预算合规={} | L3拦截={}",
+            vitals.overall_score,
+            vitals.status,
+            dims_valid,
+            cps.len(),
+            cps_clean,
+            envelope_ok
+        ),
+    });
 
     results
 }

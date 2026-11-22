@@ -28,7 +28,7 @@ pub fn sha256_hex(input: &str) -> String {
     digest.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
-/// 生产效能存证账本确定性推导规则 (PR-01 ~ PR-11)
+/// 生产效能存证账本确定性推导规则 (PR-01 ~ PR-13)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProvenanceRule {
     Pr01SkillMcpRouting,
@@ -42,6 +42,8 @@ pub enum ProvenanceRule {
     Pr09HybridSemanticSearch,
     Pr10FeedbackAndMemoryLoop,
     Pr11OptimisticLeaseAndRecovery,
+    Pr12AuditDrivenSelfEvolution,
+    Pr13CrossBrainContinuitySaved,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,6 +68,8 @@ impl ProvenanceRule {
             Self::Pr09HybridSemanticSearch => "PR-09",
             Self::Pr10FeedbackAndMemoryLoop => "PR-10",
             Self::Pr11OptimisticLeaseAndRecovery => "PR-11",
+            Self::Pr12AuditDrivenSelfEvolution => "PR-12",
+            Self::Pr13CrossBrainContinuitySaved => "PR-13",
         }
     }
 
@@ -82,6 +86,8 @@ impl ProvenanceRule {
             Self::Pr09HybridSemanticSearch => "语义向量 + FTS RRF 混合检索",
             Self::Pr10FeedbackAndMemoryLoop => "使用反馈与长期记忆自动沉淀",
             Self::Pr11OptimisticLeaseAndRecovery => "AOPCC 乐观直通租约与碰壁秒级自愈",
+            Self::Pr12AuditDrivenSelfEvolution => "双域行为审计溯源与数据驱动自进化",
+            Self::Pr13CrossBrainContinuitySaved => "跨大脑连续性接力与本体器官自省",
         }
     }
 
@@ -120,6 +126,12 @@ impl ProvenanceRule {
             Self::Pr11OptimisticLeaseAndRecovery => {
                 "Optimistic lease hits save 1 turn/step (C_turn); on abort PostToolUse(success=false) heals in <2ms, rounds_saved = 2"
             }
+            Self::Pr12AuditDrivenSelfEvolution => {
+                "IN_AGENT + OUT_OF_AGENT audit coverage 100% (redacted & SHA-256), lease calibration saves repeated miss rounds, rounds_saved = 2"
+            }
+            Self::Pr13CrossBrainContinuitySaved => {
+                "Cross-brain handoff capsule (<=300 tok, redacted & sanitized) + 6-organ BodyManifest saves cold re-discovery, rounds_saved = 3"
+            }
         }
     }
 
@@ -136,6 +148,8 @@ impl ProvenanceRule {
             (Self::Pr09HybridSemanticSearch, "steward_memory_search, memory search --hybrid"),
             (Self::Pr10FeedbackAndMemoryLoop, "steward_feedback, steward_memory_add, steward_session_close"),
             (Self::Pr11OptimisticLeaseAndRecovery, "steward_brief(leases), steward_hook_pre(mode), steward_hook_post(success=false)"),
+            (Self::Pr12AuditDrivenSelfEvolution, "steward_audit_query, AuditLogger, AuditEvolutionAnalyzer"),
+            (Self::Pr13CrossBrainContinuitySaved, "steward_body_state, BodyManifestEngine, ContinuityManager, HomeostasisVitalsEngine"),
         ];
         all.iter()
             .map(|(r, tools)| ProvenanceRuleMeta {

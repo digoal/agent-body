@@ -383,3 +383,84 @@ pub struct EffectivenessSummary {
     pub by_rule: Vec<RuleAggregate>,
     pub recent_events: Vec<EffectivenessLedgerRecord>,
 }
+
+/// Phase 43: 双域全链路行为审计事件记录 (IN_AGENT / OUT_OF_AGENT)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEventRecord {
+    pub event_id: String,
+    pub trace_id: String,
+    pub session_id: String,
+    /// "IN_AGENT" | "OUT_OF_AGENT"
+    pub domain: String,
+    /// "agent_session" | "mcp_client" | "cli_user" | "web_user" | "mesh_peer" | "daemon_scheduler" | "watcher_inotify" | "governance_engine"
+    pub actor_kind: String,
+    pub actor_id: String,
+    pub source_channel: String,
+    pub category: String,
+    pub action: String,
+    pub target_type: String,
+    pub target_id: String,
+    pub concurrency_mode: Option<String>,
+    /// "success" | "warn" | "blocked" | "failed" | "recovered" | "dry_run"
+    pub outcome: String,
+    pub before_after_delta: serde_json::Value,
+    pub elapsed_us: i64,
+    pub evidence_sha256: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AuditQueryFilter {
+    pub domain: Option<String>,
+    pub actor_kind: Option<String>,
+    pub category: Option<String>,
+    pub action: Option<String>,
+    pub outcome: Option<String>,
+    pub trace_id: Option<String>,
+    pub session_id: Option<String>,
+    pub target_contains: Option<String>,
+    pub window: Option<String>,
+    pub limit: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditDomainBreakdown {
+    pub domain: String,
+    pub actor_kind: String,
+    pub outcome: String,
+    pub event_count: usize,
+    pub avg_elapsed_us: f64,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AuditDomainSummary {
+    pub window: String,
+    pub total_events: usize,
+    pub in_agent_count: usize,
+    pub out_of_agent_count: usize,
+    pub failed_or_blocked_count: usize,
+    pub recovered_count: usize,
+    pub breakdown: Vec<AuditDomainBreakdown>,
+}
+
+/// Phase 44: Agent 本体跨大脑连续性接力胶囊记录 (`body_checkpoints` — 第 27 张表)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BodyCheckpointRecord {
+    pub checkpoint_id: String,
+    pub body_id: String,
+    pub from_brain: String,
+    pub session_id: String,
+    pub goal_summary: String,
+    pub active_files: Vec<String>,
+    pub active_locks: Vec<String>,
+    pub verified_facts: Vec<String>,
+    pub open_blockers: Vec<String>,
+    pub next_step_hint: String,
+    pub token_budget: usize,
+    /// "active" | "resumed" | "expired" | "archived"
+    pub status: String,
+    pub evidence_sha256: String,
+    pub created_at: String,
+    pub resumed_by_brain: Option<String>,
+    pub resumed_at: Option<String>,
+}

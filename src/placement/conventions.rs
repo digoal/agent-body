@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 /// 宿主机工程与协作操作规约实体
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EngineeringConvention {
-    /// 规约分类: "tooling", "timezone", "integrity", "presentation", "security", "graph", "mesh", "concurrency"
+    /// 规约分类: "tooling", "timezone", "integrity", "presentation", "security", "graph", "mesh", "concurrency", "audit", "embodiment"
     pub category: String,
     /// 规约标题
     pub rule_title: String,
@@ -128,6 +128,24 @@ impl ConventionsEngine {
                 rule_title: "乐观直通与悲观门禁自适应准则 (AOPCC)".to_string(),
                 requirement: "涉及端口 bind、高爆炸半径文件写、跨 Agent 锁与敏感路径时强制走悲观前置检查 (steward_hook_pre)；对于只读查询、服务客户端直连 (如本机 :5432) 与高置信度开工租约覆盖的可逆验证，优先乐观直行免前置查询，一旦失败由 steward_hook_post 触发 <2ms 自愈处方。".to_string(),
                 applies_to: vec!["all".to_string(), "code".to_string(), "script".to_string(), "ops".to_string()],
+                severity: "HIGH".to_string(),
+            },
+
+            // 8. 双域全链路行为审计与自治动作留痕 (Phase 43 / 规约 #4, #8, #18, #22, #26)
+            EngineeringConvention {
+                category: "audit".to_string(),
+                rule_title: "双域行为审计与自治动作有据可查准则 (Dual-Domain Audit)".to_string(),
+                requirement: "Agent 接入后的全链路调用 (IN_AGENT: Brief/Hook/MCP/CLI/Web/Mesh) 与管家在 Agent 之外的主动/被动宿主机维护动作 (OUT_OF_AGENT: Daemon 巡检/Watcher 60s 折叠/HostGC/LinkRepair/Reconcile/RuleLearn) 必须经 SecretRedactor 脱敏后写入 audit_events 并携带 before_after_delta 与 evidence_sha256，持续驱动 DuckDB OLAP 分析与 AOPCC 租约/规则自进化。".to_string(),
+                applies_to: vec!["all".to_string(), "code".to_string(), "script".to_string(), "ops".to_string()],
+                severity: "CRITICAL".to_string(),
+            },
+
+            // 9. Agent 本体脑体分离、四级自治与三层命名兼容规约 (Phase 44 / 规约 #1, #2, #3, #8, #27)
+            EngineeringConvention {
+                category: "embodiment".to_string(),
+                rule_title: "Agent 本体脑体分离、四级自治与命名零破坏准则 (Agent Embodiment)".to_string(),
+                requirement: "遵循脑体分离与递弱代偿：本项目是永驻宿主机的 Agent 本体（感官/反射/海马体/代谢/跨大脑接力），绝不内置主战 LLM 规划循环或替代编排框架；自治行为严守 L0_OBSERVE/L1_AUTONOMIC/L2_SUPERVISED/L3_FORBIDDEN 四级包络；对外叙事升级为 Agent 本体，但工程标识符 (agent-steward / steward_* / ~/.steward/) 保持 100% 向后兼容。".to_string(),
+                applies_to: vec!["all".to_string(), "code".to_string(), "article".to_string(), "ops".to_string()],
                 severity: "HIGH".to_string(),
             },
         ]
@@ -272,5 +290,29 @@ mod tests {
         let code = ConventionsEngine::get_conventions_for_context("code", true);
         assert!(code.brief_prompt_injection.contains("乐观直通"));
         assert!(code.brief_prompt_injection.contains("steward_hook_post"));
+    }
+
+    #[test]
+    fn test_dual_domain_audit_convention() {
+        let all = ConventionsEngine::get_all_conventions();
+        assert!(all.iter().any(|c| c.category == "audit" && c.rule_title.contains("双域行为审计")));
+
+        let ops = ConventionsEngine::get_conventions_for_context("ops", true);
+        assert!(ops.brief_prompt_injection.contains("IN_AGENT"));
+        assert!(ops.brief_prompt_injection.contains("OUT_OF_AGENT"));
+        assert!(ops.brief_prompt_injection.contains("audit_events"));
+    }
+
+    #[test]
+    fn test_agent_embodiment_convention() {
+        let all = ConventionsEngine::get_all_conventions();
+        assert!(all
+            .iter()
+            .any(|c| c.category == "embodiment" && c.rule_title.contains("Agent 本体")));
+
+        let code = ConventionsEngine::get_conventions_for_context("code", true);
+        assert!(code.brief_prompt_injection.contains("Agent 本体"));
+        assert!(code.brief_prompt_injection.contains("L0_OBSERVE"));
+        assert!(code.brief_prompt_injection.contains("steward_*"));
     }
 }

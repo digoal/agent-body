@@ -77,9 +77,9 @@ fn test_wait_and_acquire_deadlock_interception_and_37_mcp_tools() {
     let storage = Storage::open_in_memory().expect("open");
     let engine = Arc::new(CoordinationEngine::new(storage.provider().clone()));
 
-    // 验证 41 个 MCP 工具
+    // 验证 43 个 MCP 工具
     let registry = McpToolRegistry::new(storage.clone());
-    assert_eq!(registry.list_tools().len(), 41);
+    assert_eq!(registry.list_tools().len(), 43);
 
     // A 持 9201，B 持 9202
     let _ = engine

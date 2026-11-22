@@ -461,6 +461,39 @@ impl Storage {
     pub fn delete_bench_sandbox_records(&self) -> Result<usize> {
         self.provider.delete_bench_sandbox_records()
     }
+
+    // ─── Phase 43: Dual-Domain Behavioral Audit Events ──────────────
+    pub fn insert_audit_event(&self, rec: &AuditEventRecord) -> Result<()> {
+        self.provider.insert_audit_event(rec)
+    }
+
+    pub fn query_audit_events(&self, filter: &AuditQueryFilter) -> Result<Vec<AuditEventRecord>> {
+        self.provider.query_audit_events(filter)
+    }
+
+    pub fn audit_domain_summary(&self, window: &str) -> Result<AuditDomainSummary> {
+        self.provider.audit_domain_summary(window)
+    }
+
+    pub fn prune_old_audit_events(&self, before_iso: &str) -> Result<usize> {
+        self.provider.prune_old_audit_events(before_iso)
+    }
+
+    pub fn insert_body_checkpoint(&self, rec: &BodyCheckpointRecord) -> Result<()> {
+        self.provider.insert_body_checkpoint(rec)
+    }
+
+    pub fn get_latest_active_body_checkpoint(&self, body_id: &str) -> Result<Option<BodyCheckpointRecord>> {
+        self.provider.get_latest_active_body_checkpoint(body_id)
+    }
+
+    pub fn list_body_checkpoints(&self, status_filter: Option<&str>, limit: usize) -> Result<Vec<BodyCheckpointRecord>> {
+        self.provider.list_body_checkpoints(status_filter, limit)
+    }
+
+    pub fn mark_body_checkpoint_resumed(&self, checkpoint_id: &str, by_brain: &str, resumed_at: &str) -> Result<bool> {
+        self.provider.mark_body_checkpoint_resumed(checkpoint_id, by_brain, resumed_at)
+    }
 }
 
 /// 根据时间窗标识 ("24h" | "7d" | "30d" | "all") 返回统一 RFC3339 截止时间

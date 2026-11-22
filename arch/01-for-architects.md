@@ -1,6 +1,7 @@
-# Agent Host Steward — 架构设计与系统规格全景图 (面向架构师)
+# Agent Host Steward — Agent 本体架构设计与系统规格全景图 (面向架构师)
 
 > **目标受众**：系统架构师、技术决策者、Agent 基础设施与智能体平台研发负责人  
+> **核心定位**：**脑体分离架构下的 Agent 本体（宿主机具身底座）**——LLM 为可随时切换的瞬态大脑，本工具为永驻宿主机的数字躯干（原“大管家/小秘书”为本体面向环境治理与比较优势协同的两大侧面）  
 > **设计哲学**：三位一体认知底座 · 递弱代偿原子边界 · 单二进制微内核交付 · 亚毫秒级响应
 
 ---
@@ -29,7 +30,7 @@
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Agent Host Steward（宿主环境大管家）** 的使命，就是作为驻留在宿主机中的**单二进制客观物理世界认知底座**，为 AI Agent 提供零幻觉、结构化、毫秒级响应的系统全景感知、协作准则与环境治理。
+**Agent Host Steward（Agent 本体 · 宿主机具身底座）** 的使命，就是作为驻留在宿主机中的**单二进制客观物理世界具身躯干（包含感官、小脑反射、海马体连续性、规约脊柱、代谢免疫与多体协同六大器官）**，为瞬态接入的 AI Agent 大脑提供零幻觉、结构化、毫秒级响应的系统全景感知、跨大脑接力、协作准则与稳态治理。
 
 ---
 
@@ -49,8 +50,8 @@ graph TD
         direction TB
         
         subgraph Protocols["统一接口与网关层 (Protocol Layer)"]
-            P1["MCP stdio 服务端 (41 Tools)"]
-            P2["CLI 命令解析器 (Clap 28 Commands)"]
+            P1["MCP stdio 服务端 (43 Tools)"]
+            P2["CLI 命令解析器 (Clap 30 Commands)"]
             P3["Tokio 内嵌 HTTP / SSE 服务"]
         end
 
@@ -82,7 +83,7 @@ graph TD
         end
 
         subgraph StorageSPI["存储中枢与多后端 SPI (Storage Layer)"]
-            S_SPI["StorageProvider Trait (74 核心语义接口)"]
+            S_SPI["StorageProvider Trait (82 核心语义接口)"]
             S_SQLITE["SQLite (内嵌 Bundled + FTS5)"]
             S_PG["PostgreSQL (pgvector + Advisory Lock)"]
             S_DUCK["DuckDB (列存 OLAP + Parquet 增量同步)"]
@@ -211,7 +212,7 @@ sequenceDiagram
 | **资源开销** | 空闲内存 `< 25MB` | Tokio 协程多路复用，无请求时 CPU 利用率趋近于 0 |
 | **运行可用性** | 99.99% 防御性容错 | 运行时执行 `Preflight` 预检，内核级 `/proc` 与 inotify 缺失时优雅降级 |
 | **并发吞吐** | 10,000+ QPS (本地) | 亚毫秒内存/嵌入式 FTS 检索，锁判定与冲突检测耗时 `< 1ms` |
-| **实证可核验** | 100% 有据可查（规约 #18） | 三轨实证引擎 v3.5：W1~W15 同机 A/B 负载 + M1~M5 微基准 SLA + DQ1~DQ6 质量门禁 + COMP-C1~C4 竞品对标 + PR-01~11 生产效能账本与 SHA-256 防篡改签名 |
+| **实证可核验** | 100% 有据可查（规约 #18） | 三轨实证引擎 v3.7：W1~W17 同机 A/B 负载 + M1~M5 微基准 SLA + DQ1~DQ8 质量门禁 + COMP-C1~C4 竞品对标 + PR-01~13 生产效能账本与 SHA-256 防篡改签名 |
 
 ---
 

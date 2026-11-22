@@ -123,3 +123,21 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
    - **核心收敛判断**：在 Agent 执行回路中强制事前查 `steward` 本质是**悲观并发控制（PCC）**——即便 `steward` 响应仅 `~1 ms`，也会迫使 Agent 多走一整轮 LLM 对话（重发 `5k~30k` 上下文 + `1.5s~4s` 推理延迟，即**整轮对话税 $C_{\text{turn}}$**）。面向本机 PostgreSQL `:5432` 等高置信、可逆、低回滚代价的只读/试探动作，应采用**乐观直通（`OPTIMISTIC`）**；而涉及破坏性写操作、端口绑定冲突、多 Agent 写锁与生产路径变更时，仍强制**悲观门禁（`PESSIMISTIC_LOCK`）**；介于两者之间的依赖写入采用**轻量条件校验（`CAUTIOUS_CAS`）**。
    - **已落地三层引擎**：(1) `OptimisticLeaseEngine` 在 `SessionStart (steward_brief)` 签发 `<=120 tok` 的 **MVCC 短时乐观直通契约 (`Optimistic Leases`)**；(2) `ConcurrencyPolicyClassifier` 精确区分客户端连接（如 `psql -p 5432`）与服务端端口绑定（如 `uvicorn --port`）；(3) `OptimisticFailureDiagnoser` 在 `PostToolUse(success=false)` 与 `steward_bridge.py` 中捕获 `ECONNREFUSED`、`password authentication failed`、`command not found`、`EADDRINUSE` 并在毫秒级内反查宿主机注入替代处方且自动降级失效租约，同步交付 Benchmark `v3.5`（`W15` + `PR-11`，详见 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md) 与 [roadmap-phase42.md](src_doc/roadmap-phase42.md)）。
 
+26. **双域全链路行为审计、因果溯源与数据驱动自进化 (`IN_AGENT` + `OUT_OF_AGENT`)** `✅ Phase 43 已全量落地（对应规约 #4, #8, #18, #22, #26）`:
+   > 原始探讨：agent-steward 在接入agent后，行为的审计和有据可查，还要可供产品的自进化和数据分析。 agent-steward 在 agent 之外的行为，例如主动或被动维护宿主机的对象或其他行为的审计和有据可查。
+
+   - **现网实证动机**：实测 `/root/.steward/steward.db` 中 `changes` 表共 `10,727` 条，其中 `watcher:file_modified` 占 `10,159` 条（`94.7%` 未折叠 I/O 洪泛），而 `agent_hook` 仅捕获含 `path` 的工具调用、`pre_tool_call` 与 19 个无 ROI 规则的 MCP 工具静默无审计；更关键的是 `BackgroundScheduler` 巡检、`FreshnessReconciler` 剪枝、`HostGarbageCollector` 删除、`LinkRepairer --apply` 改写文件、`PlacementLearner` 规则自学习与过期锁 GC 等 **Agent 之外的宿主机变更行为 0 审计记录**。
+   - **演进方案**：建立 **`IN_AGENT`（Brief/Hook/MCP/CLI/Web/Mesh）+ `OUT_OF_AGENT`（`PROACTIVE_DAEMON` / `REACTIVE_WATCHER` 60s 折叠防洪 / `GOVERNANCE_MAINTENANCE`）** 双域统一行为审计引擎（`audit_events` 表 + `SecretRedactor` 脱敏 + `before_after_delta` + `evidence_sha256` 存证），并打通 **Audit → AOPCC 租约动态升降级 / Placement 聚类 / 反馈自动闭环** 与 **DuckDB 多维 OLAP 导出**，同步交付 Benchmark `v3.6`（`W16` + `DQ7` + `PR-12`，详见 [16-dual-domain-audit-and-self-evolution-spec.md](design_doc/16-dual-domain-audit-and-self-evolution-spec.md) 与 [roadmap-phase43.md](src_doc/roadmap-phase43.md)）。
+  
+27. **产品定位升维：从「大管家 / 小秘书」到「脑体分离 · Agent 本体」及其功能/物料重塑** `✅ Phase 44~45 已全量落地（对应规约 #1, #2, #3, #8, #11, #13, #17, #27）`:
+    > 原始探讨：我有个新想法，Agent 大管家或小秘书似乎很容易误导未接触这个项目的用户，大管家容易被误以为是管理、驱动多个Agent干活的产品，而小秘书则容易误以为是给人类用户设计的Agent秘书。而不是我的初衷：为Agent而设计的秘书、管家。另一方面，容易把路走窄。所以我想突破一下，把项目升华为“Agent本体”。管家、秘书其实是对本体的一部分功能的侧面体现。以此为新的奠基，是不是要改进一下相关的文档、代码里的注释、HTML 演示等物料？是不是也要重新思考一下产品的功能点？
+
+    - **核心收敛判断（方案 B）**：确立 **「脑体分离（Brain-Body Separation）」** 第一性原理——LLM/客户端是可热切换的瞬态大脑，本系统是永驻宿主机的 **Agent 本体（感官图谱 × 小脑反射 × 海马体记忆与接力 × 规约脊柱 × 代谢稳态 × 多体联邦）**；严守递弱代偿不内置主战规划循环，同时执行 **三层命名零破坏兼容**（品牌与文案升维为 Agent 本体，底层 `agent-steward` / `steward_*` / `~/.steward/` 100% 向后兼容）。
+    - **规划演进路线**：**Phase 44** 新增第 27 模块 `src/body/` 与第 27 张表 `body_checkpoints`，落地五大本体原语（`BodyManifest`、`ContinuityCapsule <=300 tok`、`HomeostasisVitals`、`AutonomyEnvelope L0~L3`、多体联邦名片发现）、第 43 原生工具 `steward_body_state` 与 Benchmark `v3.7` (`W17` + `DQ8` + `PR-13`)；**Phase 45** 全面刷新注释/文档/`SKILL`/Web 路演剧场第 7 幕，并为 `#28` → `#29` 铺平零返工衔接序（详见 [04-from-steward-to-agent-body.md](idea_doc/04-from-steward-to-agent-body.md)、[17-agent-embodiment-and-continuity-spec.md](design_doc/17-agent-embodiment-and-continuity-spec.md) 与 [roadmap-phase44-45.md](src_doc/roadmap-phase44-45.md)）。
+  
+28. 新建 presentation 目录，把steward-deck.html presentation.html git mv 进去，同时规划新的演讲 HTML，风格与它们保持一致，内容则可以从当前项目中提取整理成体系化的 HTML，每一个HTML讲30分钟
+左右，但要细、展开，所以每个HTML不要太多的点进去，最好一个点说透，所以需要体系化。另外steward-deck.html presentation.html最后再刷新一下，把当前项目状态放进去，现在似乎有点老了。
+  
+29. 当前的目录结构有点乱，主要是文档目录，都在一级目录里，感觉上有点乱，如果要改的话用 git mv 改名或改层级。并且移动完后，需要把项目中的文件(除了target )都扫一遍，涉及到旧路径的都要刷新为
+新路径。 最后还要刷新 codegraph.
+

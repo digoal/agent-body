@@ -19,7 +19,7 @@ agent-steward [OPTIONS] <COMMAND>
 | `asset` | 资产分级扫描录入、手动注册与全文/语义检索 | 资产盘点与检索 |
 | `env` | 硬件规格、活跃动态任务进程、网络端口防撞检测 | 运维排障、资源防撞 |
 | `memory` | 跨会话长期记忆写入、混合 RRF 检索与矛盾仲裁审计 | 知识与决策沉淀 |
-| `mcp` | 启动标准 JSON-RPC 2.0 stdio MCP 服务端（41 工具） | 供 Agent 客户端挂载 |
+| `mcp` | 启动标准 JSON-RPC 2.0 stdio MCP 服务端（43 工具） | 供 Agent 客户端挂载 |
 | `daemon` | 启动常驻后台守护主循环 (inotify 监听 + 60s 定时巡检 + 30min 新鲜度对账) | 系统服务守护 |
 | `links` | 查询 `L1/L2/L3` 分层加权拓扑、导出 Mermaid、推演爆炸半径、断链修复与 CodeGraph 联动 | 改动代码前影响分析 |
 | `changes` | 查看自某个时间点以来的宿主环境变更历史 | 开工前了解环境变动 |
@@ -37,9 +37,11 @@ agent-steward [OPTIONS] <COMMAND>
 | `service` | 管理外部可用服务通讯录与轻量健康探活 | 外部服务目录治理 |
 | `mesh` | 轻量多机联邦 `MeshEnvelope v1.0`：跨机图谱、HMAC 签名对话与沙盒文件投递 | 多机集群联动 |
 | `platform` | 跨平台原生探针查看本机硬件、端口与自动化任务 | Linux/macOS/Windows 探测 |
-| `demo` | 真引擎路演场景演示、ROI 核算与 41 工具黑白屏对齐自检 | 产品路演与一致性验证 |
-| `bench` | 运行 `v3.5` 实证 Benchmark（`W1~W15` / `M1~M5` / `DQ1~DQ6` / `COMP-C1~C4`）与 `PR-01~11` 账本 | 实证效能评测与回归对比 |
+| `demo` | 真引擎路演场景演示、ROI 核算与 43 工具黑白屏对齐自检 | 产品路演与一致性验证 |
+| `bench` | 运行 `v3.7` 实证 Benchmark（`W1~W17` / `M1~M5` / `DQ1~DQ8` / `COMP-C1~C4`）与 `PR-01~13` 账本 | 实证效能评测与回归对比 |
 | `feedback` | `user_feedback.md` 双向管理、`reconcile` 新鲜度对账与 `P1~P5` 五点自进化探针 | 反馈闭环与自进化体检 |
+| `audit` | 双域全链路行为审计 (`IN_AGENT` + `OUT_OF_AGENT`)、DuckDB OLAP 与自进化 | 行为溯源与数据驱动进化 |
+| `body` | Agent 本体中枢：`manifest` / `vitals` / `envelope` / `handoff` / `resume` / `heal` / `peers` | 跨大脑连续性与稳态治理 |
 
 ---
 
@@ -475,7 +477,7 @@ agent-steward [OPTIONS] <COMMAND>
 ---
 
 ### 2.21 `demo` — 路演场景演示与黑白屏同步自检引擎 (Phase 22)
-- `agent-steward demo <list|run <scenario_id>|roi|parity|reset>`: 列出或用真实宿主机引擎执行 6 大黄金路演剧目（`scene-1`~`scene-6`）、核算实时商业价值 ROI、检查 41 工具黑白屏同步矩阵，或一键清理 `demo:*` 沙盒锁（对应 `steward_demo_scenario`）。
+- `agent-steward demo <list|run <scenario_id>|roi|parity|reset>`: 列出或用真实宿主机引擎执行 7 大黄金路演剧目（`scene-1`~`scene-7`）、核算实时商业价值 ROI、检查 43 工具黑白屏同步矩阵，或一键清理 `demo:*` 沙盒锁（对应 `steward_demo_scenario`）。
 
 ---
 
@@ -500,12 +502,12 @@ agent-steward [OPTIONS] <COMMAND>
 
 ---
 
-### 2.23 `bench` — 实证 Benchmark v3.5 对照评测与生产效能存证账本 (Phase 27~42)
-- **这是什么**: 在真实宿主机上运行「Without Steward 裸奔基线 vs With Steward 大管家」A/B 对照测试套件，运行竞品横向对标，并审计日常每次 MCP/CLI/Web/Hook 调用自动记录的生产效能存证流水（对应 `steward_benchmark`）。
+### 2.23 `bench` — 实证 Benchmark v3.7 对照评测与生产效能存证账本 (Phase 27~44)
+- **这是什么**: 在真实宿主机上运行「Without Steward 裸奔基线 vs With Steward Agent 本体」A/B 对照测试套件，运行竞品横向对标，并审计日常每次 MCP/CLI/Web/Hook 调用自动记录的生产效能存证流水（对应 `steward_benchmark`）。
 - **为什么需要**: 用同机实跑数据与 SHA-256 防篡改指纹证明 Token 节省率、上下文质量净胜（$\Delta Q$）、延迟加速比与冲突拦截率，杜绝“拍脑袋宣传数字”（规约 #18）。
 - **子命令与参数**:
-  - `workloads`: 列出 15 大标准 A/B 负载（`W1`~`W15`）、`M1`~`M5`、`DQ1`~`DQ6` 与 `PR-01`~`PR-11` 归因推导规则字典。
-  - `run [--suite full|macro|micro|dq|competitors|W1~W15|COMP-C1~C4] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
+  - `workloads`: 列出 17 大标准 A/B 负载（`W1`~`W17`）、`M1`~`M5`、`DQ1`~`DQ8` 与 `PR-01`~`PR-13` 归因推导规则字典。
+  - `run [--suite full|macro|micro|dq|competitors|W1~W17|COMP-C1~C4] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
   - `competitors [--track all|C1|C2|C3|C4] [--format markdown|json]`: 运行四大赛道热门开源竞品横向实证对标。
   - `report [--run-id <ID>] [--format table|json|csv]`: 查看指定批次或最近一次跑批报告。
   - `ledger [--window 24h|7d|30d|all] [--tool <NAME>] [--limit 20]`: 审计生产运行态按 PR 规则聚合的效能存证账本。
@@ -534,12 +536,12 @@ agent-steward [OPTIONS] <COMMAND>
   | **事前拦截风险数** | - | - | **16 次** |
   | **阻断垃圾噪音文件** | - | - | **379 个** |
   ```
-  > 💡 **指标解读**: 当前 Benchmark 已演进至 **`v3.5`**，覆盖 `W1~W15`（含分层图谱 `W13`、Mesh 防重放 `W14`、AOPCC 自适应并发 `W15`）、5 项微基准（`M1~M5`）、6 项数据与图谱健康门禁（`DQ1~DQ6`）及 `COMP-C1~C4` 竞品同机对标，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁。
+  > 💡 **指标解读**: 当前 Benchmark 已演进至 **`v3.7`**，覆盖 `W1~W17`（含分层图谱 `W13`、Mesh 防重放 `W14`、AOPCC 自适应并发 `W15`、双域审计 `W16`、跨大脑连续性 `W17`）、5 项微基准（`M1~M5`）、8 项质量与稳态门禁（`DQ1~DQ8`）及 `COMP-C1~C4` 竞品同机对标，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁。
 
 ---
 
 ### 2.24 `feedback` — 实际使用反馈总账、信息新鲜度对账与五点自进化探针 (Phase 30 & 38~39)
-- **这是什么**: 直接操作 `user_feedback.md` 反馈总账，将已验证改进经验沉淀为长期记忆，并触发 `FreshnessReconciler` 全生命周期信息新鲜度对账与 `P1~P5` 五点对比自进化探针（对应第 41 个 MCP 工具 `steward_feedback`）。
+- **这是什么**: 直接操作 `user_feedback.md` 反馈总账，将已验证改进经验沉淀为长期记忆，并触发 `FreshnessReconciler` 全生命周期信息新鲜度对账与 `P1~P5` 五点对比自进化探针（对应 `steward_feedback`）。
 - **子命令与参数**:
   - `list`: 列出 `user_feedback.md` 中的全部反馈条目 (`PRO` / `CON` / `BENCH` / `REQ`)。
   - `add --title <TEXT> [--category PRO|CON|BENCH|REQ] [--priority P0|P1|P2] [--evidence <TEXT>] [--target <PATH>]`: 结构化追加一条新反馈。
@@ -551,6 +553,39 @@ agent-steward [OPTIONS] <COMMAND>
   agent-steward feedback list
   agent-steward feedback reconcile
   agent-steward feedback probes --auto-heal
+  ```
+
+---
+
+### 2.25 `audit` — 双域全链路行为审计与自进化 (Phase 43)
+- **这是什么**: 查询 `IN_AGENT`（接入调用）与 `OUT_OF_AGENT`（守护巡检/Watcher 60s 折叠/GC/修复/对账）双域审计流水，触发 DuckDB OLAP 聚合与基于审计流的 AOPCC 租约自进化（对应第 42 个 MCP 工具 `steward_audit_query`）。
+- **调用示例**:
+  ```bash
+  agent-steward audit summary --window 7d --days 7
+  agent-steward audit query --domain OUT_OF_AGENT --limit 20
+  agent-steward audit evolve
+  agent-steward audit export --output-path /root/new/tmp/audit_events_export.csv
+  ```
+
+---
+
+### 2.26 `body` — Agent 本体中枢（六器官自省、五维稳态与跨大脑接力，Phase 44）
+- **这是什么**: 面向脑体分离架构的 Agent 本体主控制命令族，提供确定性 `body_id` 自省、五维稳态体检、四级自治包络评估、跨大脑 `<300 tok` 接力胶囊写入/恢复与 `L1_AUTONOMIC` 反射自愈（对应第 43 个 MCP 工具 `steward_body_state`）。
+- **子命令与参数**:
+  - `manifest [--json]`: 输出 `body_id`、宿主指纹与六大生理器官（感官/小脑/海马体/脊柱/代谢/社会）健康状态。
+  - `vitals [--json]`: 计算五维本体生命体征雷达评分（`sensory_clarity` / `reflex_accuracy` / `memory_purity` / `metabolic_health` / `immune_traceability`）。
+  - `envelope [--action <ACT>] [--target <PATH>] [--dry-run] [--json]`: 展示 `L0~L3` 策略矩阵或判定特定动作的自治边界。
+  - `handoff --goal <TEXT> [--from-brain <NAME>] [--files <CSV>] [--facts <CSV>] [--blockers <CSV>] [--next-step <TEXT>]`: 脱敏防投毒后保存 `<=300 tok` 接力胶囊。
+  - `resume [--by-brain <NAME>] [--checkpoint-id <ID>]`: 恢复最新未消费接力胶囊并标注接替大脑。
+  - `heal [--json]`: 严格在 `L1_AUTONOMIC` 包络内执行过期锁清理、租约校准与新鲜度对账。
+  - `peers [--json]`: 拉取多机 Mesh 节点 `/api/v1/mesh/body_manifest` 本体名片。
+- **调用示例**:
+  ```bash
+  agent-steward body manifest
+  agent-steward body vitals
+  agent-steward body envelope --action write_file --target /etc/shadow
+  agent-steward body handoff --from-brain antigravity --goal "完成 PG WAL 调优验证" --next-step "跑 pgbench 对比"
+  agent-steward body resume --by-brain claude-code
   ```
 
 

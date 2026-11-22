@@ -866,6 +866,8 @@ fn map_tool_parity(tool_name: &str) -> (&'static str, &'static str, &'static str
         "steward_demo_scenario" => ("agent-steward demo", "POST /api/v1/demo/run", "demo", "synced"),
         "steward_benchmark" => ("agent-steward bench", "POST /api/v1/benchmark/run", "benchmark", "synced"),
         "steward_feedback" => ("agent-steward feedback", "GET/POST /api/v1/feedback", "benchmark", "synced"),
+        "steward_audit_query" => ("agent-steward audit", "GET/POST /api/v1/audit/*", "audit", "synced"),
+        "steward_body_state" => ("agent-steward body", "GET/POST /api/v1/body/*", "body", "synced"),
         _ => ("", "", "", "missing"),
     }
 }
@@ -1178,5 +1180,269 @@ pub fn handle_feedback_post(req: &HttpRequest, storage: Arc<dyn StorageProvider>
                 Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
             }
         }
+    }
+}
+
+/// 处理 GET /api/v1/audit/events
+pub fn handle_audit_query(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let st = Storage::new(storage);
+    let filter = crate::storage::models::AuditQueryFilter {
+        domain: req.query_params.get("domain").filter(|s| !s.is_empty()).cloned(),
+        actor_kind: req.query_params.get("actor_kind").filter(|s| !s.is_empty()).cloned(),
+        category: req.query_params.get("category").filter(|s| !s.is_empty()).cloned(),
+        action: req.query_params.get("action").filter(|s| !s.is_empty()).cloned(),
+        outcome: req.query_params.get("outcome").filter(|s| !s.is_empty()).cloned(),
+        trace_id: req.query_params.get("trace_id").filter(|s| !s.is_empty()).cloned(),
+        session_id: req.query_params.get("session_id").filter(|s| !s.is_empty()).cloned(),
+        target_contains: req.query_params.get("target").filter(|s| !s.is_empty()).cloned(),
+        window: Some(
+            req.query_params
+                .get("window")
+                .cloned()
+                .unwrap_or_else(|| "7d".to_string()),
+        ),
+        limit: req
+            .query_params
+            .get("limit")
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(50),
+    };
+    match st.query_audit_events(&filter) {
+        Ok(events) => WebResponse::success(serde_json::json!({
+            "count": events.len(),
+            "events": events,
+        })),
+        Err(e) => WebResponse::error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Audit query failed: {}", e),
+        ),
+    }
+}
+
+/// 处理 GET /api/v1/audit/summary
+pub fn handle_audit_summary(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    use crate::storage::duckdb_analytics::{AnalyticsProvider, DuckDbAnalyticsEngine};
+    let window = req
+        .query_params
+        .get("window")
+        .map(|s| s.as_str())
+        .unwrap_or("7d");
+    let days = req
+        .query_params
+        .get("days")
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(7);
+    let st = Storage::new(storage.clone());
+    match st.audit_domain_summary(window) {
+        Ok(summary) => {
+            let olap = DuckDbAnalyticsEngine::from_synced_storage(storage)
+                .and_then(|eng| eng.audit_analytics_summary(days))
+                .ok();
+            WebResponse::success(serde_json::json!({
+                "summary": summary,
+                "olap": olap,
+            }))
+        }
+        Err(e) => WebResponse::error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Audit summary failed: {}", e),
+        ),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AuditEvolveBody {
+    pub auto_feedback: Option<bool>,
+    pub min_hits: Option<usize>,
+}
+
+/// 处理 POST /api/v1/audit/evolve
+pub fn handle_audit_evolve(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let body: AuditEvolveBody = req.json().unwrap_or(AuditEvolveBody {
+        auto_feedback: Some(false),
+        min_hits: Some(3),
+    });
+    let st = Storage::new(storage);
+    let fb_path = crate::feedback::FeedbackEngine::default_feedback_path();
+    match crate::audit::AuditEvolutionAnalyzer::run_evolution_cycle(
+        &st,
+        Some(&fb_path),
+        body.auto_feedback.unwrap_or(false),
+        body.min_hits.unwrap_or(3),
+    ) {
+        Ok(rep) => WebResponse::success(rep),
+        Err(e) => WebResponse::error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Audit evolution failed: {}", e),
+        ),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AuditExportBody {
+    pub output_path: Option<String>,
+}
+
+/// 处理 POST /api/v1/audit/export
+pub fn handle_audit_export(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    use crate::storage::duckdb_analytics::{AnalyticsProvider, DuckDbAnalyticsEngine};
+    let body: AuditExportBody = req.json().unwrap_or(AuditExportBody { output_path: None });
+    let out_path = body
+        .output_path
+        .unwrap_or_else(|| "/root/new/tmp/audit_events_export.csv".to_string());
+    match DuckDbAnalyticsEngine::from_synced_storage(storage)
+        .and_then(|eng| eng.export_to_parquet("audit_events", &out_path))
+    {
+        Ok(exp) => WebResponse::success(exp),
+        Err(e) => WebResponse::error(StatusCode::BAD_REQUEST, &format!("Audit export failed: {}", e)),
+    }
+}
+
+/* ─── Phase 44: Agent 本体中枢 (BodyManifest / Vitals / Envelope / Continuity / Peers) ─── */
+
+pub fn handle_body_manifest(storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let st = Storage::new(storage);
+    WebResponse::success(crate::body::BodyManifestEngine::build(&st))
+}
+
+pub fn handle_body_vitals(storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let st = Storage::new(storage);
+    WebResponse::success(crate::body::HomeostasisVitalsEngine::assess(&st))
+}
+
+pub fn handle_body_envelope(req: &HttpRequest) -> HttpResponse {
+    let act = query_str(req, "action", "");
+    if !act.trim().is_empty() {
+        let target = req.query_params.get("target").map(|s| s.as_str());
+        let dry_run = query_str(req, "dry_run", "true") != "false";
+        WebResponse::success(crate::body::AutonomyEnvelope::evaluate(&act, target, dry_run))
+    } else {
+        WebResponse::success(serde_json::json!({
+            "matrix": crate::body::AutonomyEnvelope::policy_matrix(),
+        }))
+    }
+}
+
+pub fn handle_body_checkpoints(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let st = Storage::new(storage);
+    let status = req
+        .query_params
+        .get("status")
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.as_str());
+    let limit = query_str(req, "limit", "20").parse::<usize>().unwrap_or(20);
+    match st.list_body_checkpoints(status, limit) {
+        Ok(items) => WebResponse::success(serde_json::json!({
+            "count": items.len(),
+            "checkpoints": items,
+        })),
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
+pub fn handle_body_peers() -> HttpResponse {
+    let cfg = Config::load_or_default(None).unwrap_or_default();
+    let client = MeshClient::new(&cfg.mesh, cfg.web.auth_token.clone());
+    let results = client.query_peer_body_manifests();
+    WebResponse::success(serde_json::json!({
+        "configured_peers": client.peers(),
+        "results": results,
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BodyHandoffBody {
+    pub from_brain: Option<String>,
+    pub session_id: Option<String>,
+    pub goal_summary: String,
+    pub active_files: Option<Vec<String>>,
+    pub verified_facts: Option<Vec<String>>,
+    pub open_blockers: Option<Vec<String>>,
+    pub next_step_hint: Option<String>,
+}
+
+pub fn handle_body_handoff(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let t0 = std::time::Instant::now();
+    let body: BodyHandoffBody = match req.json() {
+        Ok(b) => b,
+        Err(e) => return WebResponse::error(StatusCode::BAD_REQUEST, &format!("Invalid JSON: {}", e)),
+    };
+    if body.goal_summary.trim().is_empty() {
+        return WebResponse::error(StatusCode::BAD_REQUEST, "goal_summary cannot be empty");
+    }
+    let storage_ref = storage.clone();
+    let st = Storage::new(storage);
+    match crate::body::ContinuityManager::save_capsule(
+        &st,
+        crate::body::ContinuityInput {
+            from_brain: body.from_brain.unwrap_or_else(|| "web-console".to_string()),
+            session_id: body.session_id.unwrap_or_else(|| "web-live".to_string()),
+            goal_summary: body.goal_summary,
+            active_files: body.active_files.unwrap_or_default(),
+            active_locks: Vec::new(),
+            verified_facts: body.verified_facts.unwrap_or_default(),
+            open_blockers: body.open_blockers.unwrap_or_default(),
+            next_step_hint: body.next_step_hint.unwrap_or_default(),
+            token_budget: Some(300),
+        },
+    ) {
+        Ok(cp) => {
+            crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage_ref.as_ref(),
+                "web",
+                "steward_body_state",
+                &cp.goal_summary,
+                t0.elapsed().as_micros() as i64,
+            );
+            WebResponse::success(cp)
+        }
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BodyResumeBody {
+    pub by_brain: Option<String>,
+    pub checkpoint_id: Option<String>,
+}
+
+pub fn handle_body_resume(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let t0 = std::time::Instant::now();
+    let body: BodyResumeBody = req.json().unwrap_or(BodyResumeBody {
+        by_brain: None,
+        checkpoint_id: None,
+    });
+    let storage_ref = storage.clone();
+    let st = Storage::new(storage);
+    let by = body.by_brain.as_deref().unwrap_or("web-console");
+    match crate::body::ContinuityManager::resume_latest(&st, by, body.checkpoint_id.as_deref()) {
+        Ok(Some(cp)) => {
+            let snippet = crate::body::ContinuityManager::render_brief_snippet(&cp, 300);
+            crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage_ref.as_ref(),
+                "web",
+                "steward_body_state",
+                &snippet,
+                t0.elapsed().as_micros() as i64,
+            );
+            WebResponse::success(serde_json::json!({
+                "resumed": true,
+                "checkpoint": cp,
+                "brief_snippet": snippet,
+            }))
+        }
+        Ok(None) => WebResponse::success(serde_json::json!({
+            "resumed": false,
+            "checkpoint": serde_json::Value::Null,
+        })),
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
+pub fn handle_body_heal(storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let st = Storage::new(storage);
+    match crate::body::HomeostasisVitalsEngine::run_l1_autonomic_heal(&st) {
+        Ok(rep) => WebResponse::success(rep),
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }
 }

@@ -1895,9 +1895,276 @@ impl StorageProvider for DuckDbStorageProvider {
         )?;
         Ok(n > 0)
     }
+
+    fn insert_audit_event(&self, rec: &AuditEventRecord) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let delta_str = serde_json::to_string(&rec.before_after_delta)?;
+        let _ = conn.execute("DELETE FROM audit_events WHERE event_id = ?1", params![rec.event_id]);
+        conn.execute(
+            "INSERT INTO audit_events (
+                event_id, trace_id, session_id, domain, actor_kind, actor_id,
+                source_channel, category, action, target_type, target_id,
+                concurrency_mode, outcome, before_after_delta, elapsed_us,
+                evidence_sha256, created_at
+             ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)",
+            params![
+                rec.event_id,
+                rec.trace_id,
+                rec.session_id,
+                rec.domain,
+                rec.actor_kind,
+                rec.actor_id,
+                rec.source_channel,
+                rec.category,
+                rec.action,
+                rec.target_type,
+                rec.target_id,
+                rec.concurrency_mode,
+                rec.outcome,
+                delta_str,
+                rec.elapsed_us,
+                rec.evidence_sha256,
+                rec.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn query_audit_events(&self, filter: &AuditQueryFilter) -> Result<Vec<AuditEventRecord>> {
+        let conn = self.lock_conn()?;
+        let domain = filter.domain.as_deref().unwrap_or("");
+        let actor_kind = filter.actor_kind.as_deref().unwrap_or("");
+        let category = filter.category.as_deref().unwrap_or("");
+        let action = filter.action.as_deref().unwrap_or("");
+        let outcome = filter.outcome.as_deref().unwrap_or("");
+        let trace_id = filter.trace_id.as_deref().unwrap_or("");
+        let session_id = filter.session_id.as_deref().unwrap_or("");
+        let target_kw = filter.target_contains.as_deref().unwrap_or("");
+        let cutoff = filter
+            .window
+            .as_deref()
+            .and_then(crate::storage::window_to_cutoff_iso)
+            .unwrap_or_default();
+        let lim = if filter.limit == 0 { 50 } else { filter.limit.min(5000) } as i64;
+
+        let mut stmt = conn.prepare(
+            "SELECT event_id, trace_id, session_id, domain, actor_kind, actor_id,
+                    source_channel, category, action, target_type, target_id,
+                    concurrency_mode, outcome, before_after_delta, elapsed_us,
+                    evidence_sha256, created_at
+             FROM audit_events
+             WHERE (?1 = '' OR domain = ?1)
+               AND (?2 = '' OR actor_kind = ?2)
+               AND (?3 = '' OR category = ?3)
+               AND (?4 = '' OR action = ?4)
+               AND (?5 = '' OR outcome = ?5)
+               AND (?6 = '' OR trace_id = ?6)
+               AND (?7 = '' OR session_id = ?7)
+               AND (?8 = '' OR target_id LIKE '%' || ?8 || '%')
+               AND (?9 = '' OR created_at >= ?9)
+             ORDER BY created_at DESC LIMIT ?10",
+        )?;
+        let rows = stmt
+            .query_map(
+                params![domain, actor_kind, category, action, outcome, trace_id, session_id, target_kw, cutoff, lim],
+                |r| {
+                    let delta_str: String = r.get(13)?;
+                    Ok(AuditEventRecord {
+                        event_id: r.get(0)?,
+                        trace_id: r.get(1)?,
+                        session_id: r.get(2)?,
+                        domain: r.get(3)?,
+                        actor_kind: r.get(4)?,
+                        actor_id: r.get(5)?,
+                        source_channel: r.get(6)?,
+                        category: r.get(7)?,
+                        action: r.get(8)?,
+                        target_type: r.get(9)?,
+                        target_id: r.get(10)?,
+                        concurrency_mode: r.get(11)?,
+                        outcome: r.get(12)?,
+                        before_after_delta: serde_json::from_str(&delta_str)
+                            .unwrap_or_else(|_| serde_json::json!({})),
+                        elapsed_us: r.get(14)?,
+                        evidence_sha256: r.get(15)?,
+                        created_at: r.get(16)?,
+                    })
+                },
+            )?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    fn audit_domain_summary(&self, window: &str) -> Result<AuditDomainSummary> {
+        let conn = self.lock_conn()?;
+        let cutoff = crate::storage::window_to_cutoff_iso(window).unwrap_or_default();
+        let mut stmt = conn.prepare(
+            "SELECT domain, actor_kind, outcome,
+                    COUNT(*),
+                    CAST(COALESCE(AVG(elapsed_us), 0.0) AS DOUBLE)
+             FROM audit_events
+             WHERE (?1 = '' OR created_at >= ?1)
+             GROUP BY domain, actor_kind, outcome
+             ORDER BY COUNT(*) DESC",
+        )?;
+        let breakdown = stmt
+            .query_map(params![cutoff], |r| {
+                Ok(AuditDomainBreakdown {
+                    domain: r.get(0)?,
+                    actor_kind: r.get(1)?,
+                    outcome: r.get(2)?,
+                    event_count: r.get::<_, i64>(3)? as usize,
+                    avg_elapsed_us: r.get(4)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        let mut summary = AuditDomainSummary {
+            window: window.to_string(),
+            breakdown,
+            ..Default::default()
+        };
+        for b in &summary.breakdown {
+            summary.total_events += b.event_count;
+            if b.domain == "IN_AGENT" {
+                summary.in_agent_count += b.event_count;
+            } else {
+                summary.out_of_agent_count += b.event_count;
+            }
+            if b.outcome == "failed" || b.outcome == "blocked" {
+                summary.failed_or_blocked_count += b.event_count;
+            }
+            if b.outcome == "recovered" {
+                summary.recovered_count += b.event_count;
+            }
+        }
+        Ok(summary)
+    }
+
+    fn prune_old_audit_events(&self, before_iso: &str) -> Result<usize> {
+        let conn = self.lock_conn()?;
+        let affected = conn.execute("DELETE FROM audit_events WHERE created_at < ?1", params![before_iso])?;
+        Ok(affected)
+    }
+
+    fn insert_body_checkpoint(&self, rec: &BodyCheckpointRecord) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let active_files = serde_json::to_string(&rec.active_files)?;
+        let active_locks = serde_json::to_string(&rec.active_locks)?;
+        let verified_facts = serde_json::to_string(&rec.verified_facts)?;
+        let open_blockers = serde_json::to_string(&rec.open_blockers)?;
+        let _ = conn.execute(
+            "DELETE FROM body_checkpoints WHERE checkpoint_id = ?1",
+            params![rec.checkpoint_id],
+        );
+        conn.execute(
+            "INSERT INTO body_checkpoints (
+                checkpoint_id, body_id, from_brain, session_id, goal_summary,
+                active_files_json, active_locks_json, verified_facts_json, open_blockers_json,
+                next_step_hint, token_budget, status, evidence_sha256, created_at,
+                resumed_by_brain, resumed_at
+             ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16)",
+            params![
+                rec.checkpoint_id,
+                rec.body_id,
+                rec.from_brain,
+                rec.session_id,
+                rec.goal_summary,
+                active_files,
+                active_locks,
+                verified_facts,
+                open_blockers,
+                rec.next_step_hint,
+                rec.token_budget as i32,
+                rec.status,
+                rec.evidence_sha256,
+                rec.created_at,
+                rec.resumed_by_brain,
+                rec.resumed_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn get_latest_active_body_checkpoint(&self, body_id: &str) -> Result<Option<BodyCheckpointRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT checkpoint_id, body_id, from_brain, session_id, goal_summary,
+                    active_files_json, active_locks_json, verified_facts_json, open_blockers_json,
+                    next_step_hint, token_budget, status, evidence_sha256, created_at,
+                    resumed_by_brain, resumed_at
+             FROM body_checkpoints
+             WHERE status = 'active' AND (?1 = '' OR body_id = ?1)
+             ORDER BY created_at DESC LIMIT 1",
+        )?;
+        let mut rows = stmt.query_map(params![body_id], Self::map_body_checkpoint_row)?;
+        if let Some(r) = rows.next() {
+            Ok(Some(r?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn list_body_checkpoints(&self, status_filter: Option<&str>, limit: usize) -> Result<Vec<BodyCheckpointRecord>> {
+        let conn = self.lock_conn()?;
+        let st = status_filter.unwrap_or("");
+        let lim = if limit == 0 { 20 } else { limit.min(1000) } as i64;
+        let mut stmt = conn.prepare(
+            "SELECT checkpoint_id, body_id, from_brain, session_id, goal_summary,
+                    active_files_json, active_locks_json, verified_facts_json, open_blockers_json,
+                    next_step_hint, token_budget, status, evidence_sha256, created_at,
+                    resumed_by_brain, resumed_at
+             FROM body_checkpoints
+             WHERE (?1 = '' OR status = ?1)
+             ORDER BY created_at DESC LIMIT ?2",
+        )?;
+        let rows = stmt.query_map(params![st, lim], Self::map_body_checkpoint_row)?;
+        let mut out = Vec::new();
+        for r in rows {
+            out.push(r?);
+        }
+        Ok(out)
+    }
+
+    fn mark_body_checkpoint_resumed(&self, checkpoint_id: &str, by_brain: &str, resumed_at: &str) -> Result<bool> {
+        let conn = self.lock_conn()?;
+        let affected = conn.execute(
+            "UPDATE body_checkpoints
+             SET status = 'resumed', resumed_by_brain = ?2, resumed_at = ?3
+             WHERE checkpoint_id = ?1",
+            params![checkpoint_id, by_brain, resumed_at],
+        )?;
+        Ok(affected > 0)
+    }
 }
 
 impl DuckDbStorageProvider {
+    fn map_body_checkpoint_row(row: &duckdb::Row) -> duckdb::Result<BodyCheckpointRecord> {
+        let files_s: String = row.get(5)?;
+        let locks_s: String = row.get(6)?;
+        let facts_s: String = row.get(7)?;
+        let blockers_s: String = row.get(8)?;
+        let tb: i32 = row.get(10)?;
+        Ok(BodyCheckpointRecord {
+            checkpoint_id: row.get(0)?,
+            body_id: row.get(1)?,
+            from_brain: row.get(2)?,
+            session_id: row.get(3)?,
+            goal_summary: row.get(4)?,
+            active_files: serde_json::from_str(&files_s).unwrap_or_default(),
+            active_locks: serde_json::from_str(&locks_s).unwrap_or_default(),
+            verified_facts: serde_json::from_str(&facts_s).unwrap_or_default(),
+            open_blockers: serde_json::from_str(&blockers_s).unwrap_or_default(),
+            next_step_hint: row.get(9)?,
+            token_budget: tb.max(0) as usize,
+            status: row.get(11)?,
+            evidence_sha256: row.get(12)?,
+            created_at: row.get(13)?,
+            resumed_by_brain: row.get(14)?,
+            resumed_at: row.get(15)?,
+        })
+    }
+
     fn map_benchmark_run_row(row: &duckdb::Row) -> duckdb::Result<BenchmarkRunRecord> {
         let host_str: String = row.get(4)?;
         let res_str: String = row.get(13)?;
@@ -2066,5 +2333,65 @@ pub mod tests {
         assert_eq!(graph.nodes.len(), 2);
         assert_eq!(graph.edges.len(), 1);
         assert_eq!(graph.edges[0].relation, "depends_on");
+    }
+
+    #[test]
+    fn test_duckdb_audit_events_crud_and_summary() {
+        let provider = DuckDbStorageProvider::open_in_memory().expect("open duckdb in memory");
+        let rec1 = AuditEventRecord {
+            event_id: "aud-duck-1".to_string(),
+            trace_id: "tr-duck-1".to_string(),
+            session_id: "sess-1".to_string(),
+            domain: "IN_AGENT".to_string(),
+            actor_kind: "mcp_client".to_string(),
+            actor_id: "agent".to_string(),
+            source_channel: "mcp".to_string(),
+            category: "tool_call".to_string(),
+            action: "steward_port_check".to_string(),
+            target_type: "port".to_string(),
+            target_id: "5432".to_string(),
+            concurrency_mode: Some("OPTIMISTIC".to_string()),
+            outcome: "success".to_string(),
+            before_after_delta: serde_json::json!({"port": 5432}),
+            elapsed_us: 120,
+            evidence_sha256: "a".repeat(64),
+            created_at: chrono::Utc::now().to_rfc3339(),
+        };
+        let rec2 = AuditEventRecord {
+            event_id: "aud-duck-2".to_string(),
+            trace_id: "tr-duck-2".to_string(),
+            session_id: "system".to_string(),
+            domain: "OUT_OF_AGENT".to_string(),
+            actor_kind: "governance_engine".to_string(),
+            actor_id: "steward".to_string(),
+            source_channel: "gc".to_string(),
+            category: "host_gc".to_string(),
+            action: "cleanup_tmp".to_string(),
+            target_type: "dir".to_string(),
+            target_id: "/root/new/tmp".to_string(),
+            concurrency_mode: None,
+            outcome: "dry_run".to_string(),
+            before_after_delta: serde_json::json!({"candidates": 2}),
+            elapsed_us: 400,
+            evidence_sha256: "b".repeat(64),
+            created_at: chrono::Utc::now().to_rfc3339(),
+        };
+        provider.insert_audit_event(&rec1).expect("insert 1");
+        provider.insert_audit_event(&rec2).expect("insert 2");
+
+        let rows = provider
+            .query_audit_events(&AuditQueryFilter {
+                domain: Some("OUT_OF_AGENT".to_string()),
+                limit: 10,
+                ..Default::default()
+            })
+            .expect("query");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].event_id, "aud-duck-2");
+
+        let sum = provider.audit_domain_summary("7d").expect("summary");
+        assert_eq!(sum.total_events, 2);
+        assert_eq!(sum.in_agent_count, 1);
+        assert_eq!(sum.out_of_agent_count, 1);
     }
 }

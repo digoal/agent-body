@@ -1710,6 +1710,10 @@ impl StorageProvider for PgStorageProvider {
             "DELETE FROM benchmark_runs WHERE run_id LIKE 'bench:%' OR suite_name LIKE 'bench:%'",
             &[],
         )? as usize;
+        removed += client.execute(
+            "DELETE FROM audit_events WHERE session_id LIKE 'bench:%' OR target_id LIKE '%bench:%'",
+            &[],
+        )? as usize;
         Ok(removed)
     }
 
@@ -1822,9 +1826,268 @@ impl StorageProvider for PgStorageProvider {
         )?;
         Ok(n > 0)
     }
+
+    fn insert_audit_event(&self, rec: &AuditEventRecord) -> Result<()> {
+        let mut client = self.lock_client()?;
+        let delta_str = serde_json::to_string(&rec.before_after_delta)?;
+        client.execute(
+            "INSERT INTO audit_events (
+                event_id, trace_id, session_id, domain, actor_kind, actor_id,
+                source_channel, category, action, target_type, target_id,
+                concurrency_mode, outcome, before_after_delta, elapsed_us,
+                evidence_sha256, created_at
+             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+             ON CONFLICT (event_id) DO NOTHING",
+            &[
+                &rec.event_id,
+                &rec.trace_id,
+                &rec.session_id,
+                &rec.domain,
+                &rec.actor_kind,
+                &rec.actor_id,
+                &rec.source_channel,
+                &rec.category,
+                &rec.action,
+                &rec.target_type,
+                &rec.target_id,
+                &rec.concurrency_mode,
+                &rec.outcome,
+                &delta_str,
+                &rec.elapsed_us,
+                &rec.evidence_sha256,
+                &rec.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn query_audit_events(&self, filter: &AuditQueryFilter) -> Result<Vec<AuditEventRecord>> {
+        let mut client = self.lock_client()?;
+        let domain = filter.domain.as_deref().unwrap_or("");
+        let actor_kind = filter.actor_kind.as_deref().unwrap_or("");
+        let category = filter.category.as_deref().unwrap_or("");
+        let action = filter.action.as_deref().unwrap_or("");
+        let outcome = filter.outcome.as_deref().unwrap_or("");
+        let trace_id = filter.trace_id.as_deref().unwrap_or("");
+        let session_id = filter.session_id.as_deref().unwrap_or("");
+        let target_kw = filter.target_contains.as_deref().unwrap_or("");
+        let cutoff = filter
+            .window
+            .as_deref()
+            .and_then(crate::storage::window_to_cutoff_iso)
+            .unwrap_or_default();
+        let lim = if filter.limit == 0 { 50 } else { filter.limit.min(5000) } as i64;
+
+        let rows = client.query(
+            "SELECT event_id, trace_id, session_id, domain, actor_kind, actor_id,
+                    source_channel, category, action, target_type, target_id,
+                    concurrency_mode, outcome, before_after_delta, elapsed_us,
+                    evidence_sha256, created_at
+             FROM audit_events
+             WHERE ($1 = '' OR domain = $1)
+               AND ($2 = '' OR actor_kind = $2)
+               AND ($3 = '' OR category = $3)
+               AND ($4 = '' OR action = $4)
+               AND ($5 = '' OR outcome = $5)
+               AND ($6 = '' OR trace_id = $6)
+               AND ($7 = '' OR session_id = $7)
+               AND ($8 = '' OR target_id LIKE '%' || $8 || '%')
+               AND ($9 = '' OR created_at >= $9)
+             ORDER BY created_at DESC LIMIT $10",
+            &[&domain, &actor_kind, &category, &action, &outcome, &trace_id, &session_id, &target_kw, &cutoff, &lim],
+        )?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| {
+                let delta_str: String = r.get(13);
+                AuditEventRecord {
+                    event_id: r.get(0),
+                    trace_id: r.get(1),
+                    session_id: r.get(2),
+                    domain: r.get(3),
+                    actor_kind: r.get(4),
+                    actor_id: r.get(5),
+                    source_channel: r.get(6),
+                    category: r.get(7),
+                    action: r.get(8),
+                    target_type: r.get(9),
+                    target_id: r.get(10),
+                    concurrency_mode: r.get(11),
+                    outcome: r.get(12),
+                    before_after_delta: serde_json::from_str(&delta_str)
+                        .unwrap_or_else(|_| serde_json::json!({})),
+                    elapsed_us: r.get(14),
+                    evidence_sha256: r.get(15),
+                    created_at: r.get(16),
+                }
+            })
+            .collect())
+    }
+
+    fn audit_domain_summary(&self, window: &str) -> Result<AuditDomainSummary> {
+        let mut client = self.lock_client()?;
+        let cutoff = crate::storage::window_to_cutoff_iso(window).unwrap_or_default();
+        let rows = client.query(
+            "SELECT domain, actor_kind, outcome,
+                    COUNT(*)::BIGINT,
+                    COALESCE(AVG(elapsed_us)::DOUBLE PRECISION, 0.0)
+             FROM audit_events
+             WHERE ($1 = '' OR created_at >= $1)
+             GROUP BY domain, actor_kind, outcome
+             ORDER BY COUNT(*) DESC",
+            &[&cutoff],
+        )?;
+        let breakdown: Vec<AuditDomainBreakdown> = rows
+            .into_iter()
+            .map(|r| AuditDomainBreakdown {
+                domain: r.get(0),
+                actor_kind: r.get(1),
+                outcome: r.get(2),
+                event_count: r.get::<_, i64>(3) as usize,
+                avg_elapsed_us: r.get(4),
+            })
+            .collect();
+
+        let mut summary = AuditDomainSummary {
+            window: window.to_string(),
+            breakdown,
+            ..Default::default()
+        };
+        for b in &summary.breakdown {
+            summary.total_events += b.event_count;
+            if b.domain == "IN_AGENT" {
+                summary.in_agent_count += b.event_count;
+            } else {
+                summary.out_of_agent_count += b.event_count;
+            }
+            if b.outcome == "failed" || b.outcome == "blocked" {
+                summary.failed_or_blocked_count += b.event_count;
+            }
+            if b.outcome == "recovered" {
+                summary.recovered_count += b.event_count;
+            }
+        }
+        Ok(summary)
+    }
+
+    fn prune_old_audit_events(&self, before_iso: &str) -> Result<usize> {
+        let mut client = self.lock_client()?;
+        let affected = client.execute("DELETE FROM audit_events WHERE created_at < $1", &[&before_iso])?;
+        Ok(affected as usize)
+    }
+
+    fn insert_body_checkpoint(&self, rec: &BodyCheckpointRecord) -> Result<()> {
+        let mut client = self.lock_client()?;
+        let active_files = serde_json::to_string(&rec.active_files)?;
+        let active_locks = serde_json::to_string(&rec.active_locks)?;
+        let verified_facts = serde_json::to_string(&rec.verified_facts)?;
+        let open_blockers = serde_json::to_string(&rec.open_blockers)?;
+        let tb = rec.token_budget as i32;
+        client.execute(
+            "INSERT INTO body_checkpoints (
+                checkpoint_id, body_id, from_brain, session_id, goal_summary,
+                active_files_json, active_locks_json, verified_facts_json, open_blockers_json,
+                next_step_hint, token_budget, status, evidence_sha256, created_at,
+                resumed_by_brain, resumed_at
+             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+             ON CONFLICT (checkpoint_id) DO UPDATE SET
+                status = EXCLUDED.status,
+                resumed_by_brain = EXCLUDED.resumed_by_brain,
+                resumed_at = EXCLUDED.resumed_at",
+            &[
+                &rec.checkpoint_id,
+                &rec.body_id,
+                &rec.from_brain,
+                &rec.session_id,
+                &rec.goal_summary,
+                &active_files,
+                &active_locks,
+                &verified_facts,
+                &open_blockers,
+                &rec.next_step_hint,
+                &tb,
+                &rec.status,
+                &rec.evidence_sha256,
+                &rec.created_at,
+                &rec.resumed_by_brain,
+                &rec.resumed_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn get_latest_active_body_checkpoint(&self, body_id: &str) -> Result<Option<BodyCheckpointRecord>> {
+        let mut client = self.lock_client()?;
+        let rows = client.query(
+            "SELECT checkpoint_id, body_id, from_brain, session_id, goal_summary,
+                    active_files_json, active_locks_json, verified_facts_json, open_blockers_json,
+                    next_step_hint, token_budget, status, evidence_sha256, created_at,
+                    resumed_by_brain, resumed_at
+             FROM body_checkpoints
+             WHERE status = 'active' AND ($1 = '' OR body_id = $1)
+             ORDER BY created_at DESC LIMIT 1",
+            &[&body_id],
+        )?;
+        Ok(rows.into_iter().next().map(|r| Self::row_to_body_checkpoint(&r)))
+    }
+
+    fn list_body_checkpoints(&self, status_filter: Option<&str>, limit: usize) -> Result<Vec<BodyCheckpointRecord>> {
+        let mut client = self.lock_client()?;
+        let st = status_filter.unwrap_or("");
+        let lim = if limit == 0 { 20 } else { limit.min(1000) } as i64;
+        let rows = client.query(
+            "SELECT checkpoint_id, body_id, from_brain, session_id, goal_summary,
+                    active_files_json, active_locks_json, verified_facts_json, open_blockers_json,
+                    next_step_hint, token_budget, status, evidence_sha256, created_at,
+                    resumed_by_brain, resumed_at
+             FROM body_checkpoints
+             WHERE ($1 = '' OR status = $1)
+             ORDER BY created_at DESC LIMIT $2",
+            &[&st, &lim],
+        )?;
+        Ok(rows.into_iter().map(|r| Self::row_to_body_checkpoint(&r)).collect())
+    }
+
+    fn mark_body_checkpoint_resumed(&self, checkpoint_id: &str, by_brain: &str, resumed_at: &str) -> Result<bool> {
+        let mut client = self.lock_client()?;
+        let affected = client.execute(
+            "UPDATE body_checkpoints
+             SET status = 'resumed', resumed_by_brain = $2, resumed_at = $3
+             WHERE checkpoint_id = $1",
+            &[&checkpoint_id, &by_brain, &resumed_at],
+        )?;
+        Ok(affected > 0)
+    }
 }
 
 impl PgStorageProvider {
+    fn row_to_body_checkpoint(r: &postgres::Row) -> BodyCheckpointRecord {
+        let files_s: String = r.get(5);
+        let locks_s: String = r.get(6);
+        let facts_s: String = r.get(7);
+        let blockers_s: String = r.get(8);
+        let tb: i32 = r.get(10);
+        BodyCheckpointRecord {
+            checkpoint_id: r.get(0),
+            body_id: r.get(1),
+            from_brain: r.get(2),
+            session_id: r.get(3),
+            goal_summary: r.get(4),
+            active_files: serde_json::from_str(&files_s).unwrap_or_default(),
+            active_locks: serde_json::from_str(&locks_s).unwrap_or_default(),
+            verified_facts: serde_json::from_str(&facts_s).unwrap_or_default(),
+            open_blockers: serde_json::from_str(&blockers_s).unwrap_or_default(),
+            next_step_hint: r.get(9),
+            token_budget: tb.max(0) as usize,
+            status: r.get(11),
+            evidence_sha256: r.get(12),
+            created_at: r.get(13),
+            resumed_by_brain: r.get(14),
+            resumed_at: r.get(15),
+        }
+    }
+
     fn row_to_benchmark_run(r: &postgres::Row) -> BenchmarkRunRecord {
         let host_str: String = r.get(4);
         let res_str: String = r.get(13);

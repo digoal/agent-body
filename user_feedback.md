@@ -87,7 +87,7 @@ flowchart LR
 
 ---
 
-## 四、第二部分：实际使用暴露的缺点与痛点 (`CON-01` ~ `CON-18`)
+## 四、第二部分：实际使用暴露的缺点与痛点 (`CON-01` ~ `CON-19`)
 
 ### `CON-01` `[P0 · 性能瓶颈]` `steward_brief` 冷启动简报组装耗时 `474.18 ms`，存在绕过缓存库直扫磁盘与派生子进程问题
 - **状态**: `✅ Verified (Phase 30.2)` · **首次记录**: 2026-11-19 · **验证实测**: `W8` 由 `474,178 μs (0.09x)` 降至 `10,315 μs (2.08x)`，提速 `46.0x`
@@ -240,9 +240,17 @@ flowchart LR
   - [src/api/hooks.rs](src/api/hooks.rs#L248-L254) 与 `steward_bridge.py:298` 在工具失败（`success=false` / `error`）时直接跳过返回，导致乐观假设碰壁后缺少毫秒级事实自愈处方注入。
 - **修复目标**: 按 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md) 与 [roadmap-phase42.md](src_doc/roadmap-phase42.md) 落地开工乐观直通契约、三态并发分类器与 `PostToolUse` 碰壁自愈引擎。
 
+### `CON-19` `[P0 · 双域行为审计盲区与自治动作黑盒]` `IN_AGENT` 审计丢失命令/锁/PreHook 裁决且 `OUT_OF_AGENT` 宿主修改/清理动作 0 审计留痕
+- **状态**: `✅ Verified (Phase 43)` · **首次记录**: 2026-11-22 · **提出依据**: [ISSUE.md #26](ISSUE.md#L126) · **发现渠道**: 现网 `steward.db` 实测盘点与源码审计
+- **现象与复现证据**:
+  - 现网 `/root/.steward/steward.db` 中 `changes` 表共 `10,727` 条，其中 `watcher:file_modified` 占 `10,159` 条（**94.7%** 未折叠底层 I/O 洪泛），而 `agent_hook` 仅 `427` 条（`edit_file=409`、`write_file=18`），`hook_post:optimistic_miss` 仅 `1` 条；
+  - [src/api/hooks.rs](src/api/hooks.rs#L43-L191) `pre_tool_call` 零审计留痕，[src/api/hooks.rs](src/api/hooks.rs#L310) `post_tool_call_with_error` 仅在含 `path` 参数时记 `changes`，丢弃 `run_command`/服务/锁/非路径动作；[src/benchmark/ledger.rs](src/benchmark/ledger.rs#L298) 中 19 个工具命中 `_ => return` 静默无账；
+  - 大管家在 Agent 之外对宿主对象的维护动作——[src/daemon/scheduler.rs](src/daemon/scheduler.rs) 30 分钟后台巡检、[src/feedback/probes.rs](src/feedback/probes.rs) `FreshnessReconciler` 写穿失效/幽灵节点剪枝、[src/env/gc.rs](src/env/gc.rs) `HostGarbageCollector` 物理删文件、[src/links/repair.rs](src/links/repair.rs) `LinkRepairer --apply` 直接改写源码、[src/placement/learner.rs](src/placement/learner.rs) 写入规则及锁 GC——**当前全部 0 审计落盘**，且历史行为未能自动驱动 AOPCC 租约置信度升降级与 DuckDB OLAP 分析。
+- **修复目标**: 按 [16-dual-domain-audit-and-self-evolution-spec.md](design_doc/16-dual-domain-audit-and-self-evolution-spec.md) 与 [roadmap-phase43.md](src_doc/roadmap-phase43.md) 落地 `audit_events` 双域脱敏审计底座、`Watcher` 60s 折叠防洪、DuckDB OLAP 分析导出及 Audit 驱动自进化飞轮。
+
 ---
 
-## 五、第三部分：Benchmark 标准失真诊断与持续迭代诉求 (`BENCH-01` ~ `BENCH-04`)
+## 五、第三部分：Benchmark 标准失真诊断与持续迭代诉求 (`BENCH-01` ~ `BENCH-12`)
 
 ### `BENCH-01` `[P0 · 指标算法缺陷]` 算术总耗时比 (`sum(base_us) / sum(stew_us)`) 导致综合加速比失真为 `0.38x`
 - **状态**: `✅ Verified (Phase 31.1)` · **首次记录**: 2026-11-19 · **验证实测**: 升级为 `v2.0` 几何平均加速比 `1.35x`（`Query/Guard: 2.30x`）
@@ -312,9 +320,19 @@ flowchart LR
 - **状态**: `✅ Verified (Phase 42.6 & v3.5)` · **首次记录**: 2026-11-22 · **验证实测**: `W15` 实测 `174→28 tok (-83.9%)`、`52.0→100.0 (+48.0)`、`4/4` 断言命中、省 8 轮对话税 ✅
 - **标准迭代方向**: 升级 Benchmark 至 `v3.5`，新增 **`W15 (optimistic_vs_pessimistic_execution_loop)`**，混合 8 项高稳定可逆验证与 2 项环境漂移碰壁场景，同场检验三组在 `rounds_saved`、Token 与 100% 事实恢复率上的差异。
 
+### `BENCH-12` `[P0 · 双域审计与自进化闭环基准缺失]` 缺少 `IN_AGENT` + `OUT_OF_AGENT` 全行为留痕与审计驱动 AOPCC 自进化门禁
+- **状态**: `✅ Verified (Phase 43.6 & v3.6)` · **首次记录**: 2026-11-22 · **提出依据**: [ISSUE.md #26](ISSUE.md#L126)
+- **痛点**: 现行 Benchmark `v3.5` 已覆盖单次负载性能与质量，但尚未检验“Agent 接入后 100% 工具/Hook 脱敏审计”、“Agent 之外 `HostGC`/`LinkRepair`/`Reconcile`/`Daemon` 自治修改留痕”、“`Watcher` 折叠防洪”以及“历史碰壁审计自动触发 AOPCC 租约置信度降级与康复回升”。
+- **标准迭代方向**: 升级 Benchmark 至 `v3.6`，新增 **`W16 (dual_domain_audit_and_lease_self_evolution)`**、**`DQ7 (audit_completeness_and_redaction_hygiene)`** 与 **`PR-12` (`AuditDrivenSelfEvolution`)**。
+
+### `BENCH-13` `[P1 · 跨大脑接力与本体稳态基准缺失]` 缺少“换脑不失忆接力 (`ContinuityCapsule`)”与“五维稳态及 `L0~L3` 自治包络合规 (`DQ8`)”门禁
+- **状态**: `✅ Verified (Phase 44.6 & v3.7)` · **首次记录**: 2026-11-22 · **提出依据**: [ISSUE.md #27](ISSUE.md#L132)
+- **痛点**: 当用户或流水线在不同 LLM/客户端间切换（如 Antigravity → Claude Code / Cron Worker）时，现有 Benchmark 尚未实证对比「裸奔换脑重新盘点环境」与「Agent 本体 `<300 tok` 接力胶囊注入」的轮次与质量差，也未量化校验五维生命体征与 `L0~L3` 四级自治包络防越权基线。
+- **标准迭代方向**: 在 Phase 44.6 升级 Benchmark 至 `v3.7`，新增 **`W17 (cross_brain_continuity_and_body_proprioception)`**、**`DQ8 (body_homeostasis_and_envelope_hygiene)`** 与 **`PR-13` (`CrossBrainContinuitySaved`)**。
+
 ---
 
-## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-16`)
+## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-18`)
 
 | ID | 需求简述 | 提出背景 / 触发场景 | 优先级 | 目标归属 | 状态 |
 |:---:|---|---|:---:|:---:|:---:|
@@ -334,6 +352,8 @@ flowchart LR
 | **`REQ-14`** | **多维证据分层有向加权图谱与隐式语义关系发现（规约 #23）** | 解决现网 99.5% 工程节点孤立、`links` 与 `fact_edges` 割裂及向量未参与隐式关系挖掘问题（ISSUE #23） | P0 | Phase 40.1 ~ 40.5 | `✅ Verified` |
 | **`REQ-15`** | **联邦网格 `MeshEnvelope v1.0` 签名防重放协议与跨机对话/沙盒文件协同（规约 #24）** | 解决 Peer Mesh 缺信封协议、缺防重放认证及缺少跨机结构化对话与受控文件投递能力问题（ISSUE #24） | P0 | Phase 41.1 ~ 41.6 | `✅ Verified` |
 | **`REQ-16`** | **乐观-悲观自适应并发控制 AOPCC 与失败早回退机制（规约 #8, #18, #22, #25）** | 消除回路中对高置信可逆动作的强制 PCC 事前查询整轮对话税 $C_{\text{turn}}$，落地 MVCC 乐观假设租约、三态分级路由与 `PostToolUse` `<2 ms` 自愈诊断（ISSUE #25） | P0 | Phase 42.1 ~ 42.6 | `✅ Verified` |
+| **`REQ-17`** | **双域全链路行为审计 (`IN_AGENT` + `OUT_OF_AGENT`)、DuckDB OLAP 分析与数据驱动自进化飞轮（规约 #4, #8, #18, #22, #26）** | 解决 Agent 接入后命令/锁/19工具审计缺失及 Agent 之外守护巡检/GC/断链修复/写穿剪枝零留痕黑盒问题，构建 `audit_events` + `Watcher` 60s 折叠防洪 + AOPCC 租约滑窗自进化与 DuckDB 导出（ISSUE #26） | P0 | Phase 43.1 ~ 43.6 | `✅ Verified` |
+| **`REQ-18`** | **Agent 本体范式升维、五大本体原语（`BodyManifest`/`ContinuityCapsule`/`HomeostasisVitals`/`AutonomyEnvelope`/多体名片）与全物料同步刷新（规约 #1, #2, #3, #8, #11, #13, #17, #27）** | 消除“大管家/小秘书”对产品核心定位的误导，按脑体分离第一性原理落地 `src/body/` 与 `body_checkpoints`、第 43 工具与 `v3.7` 基准，并遵循三层命名兼容刷新代码注释/文档/SKILL/路演剧场（ISSUE #27） | P0 | Phase 44.1 ~ 45.3 | `✅ Verified` |
 
 ---
 

@@ -1,8 +1,8 @@
-# Agent Host Steward (宿主环境大管家) 产品边界与治理准则
+# Agent Host Steward — Agent 本体（宿主机具身底座）产品边界与治理准则
 
 ## 1. 核心定位 (Core Mission)
-**Agent Host Steward** 是常驻于宿主机底层的“物理真实守护者与大管家”（Host Reality Ground-Truth & Governance Engine）。
-它专为 Agent 生产级开发设计，解决当前自主 Agent 在裸机或容器内作业时面临的**四大核心顽疾**：
+**Agent Host Steward** 是常驻于宿主机底层的 **Agent 本体（Agent Embodiment Substrate）**——以“物理真实感官 × 规约脊柱与小脑反射 × 跨大脑海马体”为三位一体内核（原“宿主环境大管家 / 小秘书”为本体面向环境治理与比较优势协同的两大功能侧面）。
+它专为 AI Agent 生产级开发设计，秉持 **「脑体分离」** 架构（LLM 为可随时切换的瞬态大脑，本工具为永驻宿主机的数字躯干），解决当前自主 Agent 在裸机或容器内作业时面临的**四大核心顽疾**：
 1. **真实世界脱节 (Reality Disconnect)**：Agent 不清楚宿主机已安装什么工具、已监听什么端口、已有何种常驻系统服务，反复通过重型 Bash 命令试错探查。
 2. **环境随意破坏 (Host Pollution & Conflict)**：随意建立临时目录、占用核心业务端口、遗留孤儿后台死循环进程。
 3. **记忆虚幻漂移 (Memory Hallucination)**：缺乏物理可证的资产索引与跨会话事实图谱，记忆越积越乱且存在认知对立矛盾。
@@ -21,6 +21,8 @@
 | **机密凭据保管** | 识别敏感路径（如 .env, id_rsa）并标记安全保密级别 | **不替代** HashiCorp Vault 或 1Password。Steward 不负责密钥轮转与加解密托管。 |
 | **宿主事实图谱** | 维护显式物理(`L1`)、结构聚合(`L2`)与稀疏语义(`L3`)三层有向加权拓扑并桥接 CodeGraph | **不伪造** 物理硬依赖；严禁将高维语义近邻混作确定性上游/下游故障依赖。 |
 | **跨主机 Mesh** | 提供基于 `MeshEnvelope v1.0` 签名防重放认证的联邦查询、跨机锁、结构化对话与受控小产物(`<=10MB`)收件箱投递 | **不替代** Raft/Paxos 共识引擎、S3/Rsync 全量文件系统同步或人类聊天 IM；严禁跨机直写覆盖系统与业务路径。 |
+| **双域审计与自进化** | 对 `IN_AGENT`（Brief/Hook/MCP/CLI/Web/Mesh）与 `OUT_OF_AGENT`（后台巡检/Watcher 60s 折叠/GC/断链修复/规则演化）全行为记录脱敏前后增量与 SHA-256 存证，用于 DuckDB OLAP 分析与驱动 AOPCC 租约/规则自进化 | **不替代** 企业级通用 SIEM/ELK 日志中心或应用层 APM 全量链路追踪系统（如 Datadog/Jaeger），仅审计宿主机管家双域关键治理与认知动作。 |
+| **Agent 本体与跨大脑连续性** | 提供本体身份证与六器官自省 (`BodyManifest`)、`<300 tok` 脱敏抗投毒跨大脑接力胶囊 (`ContinuityCapsule`)、五维稳态体检与 `L1` 反射自愈 (`HomeostasisVitals`)、四级自治权限包络 (`L0~L3`) 及多本体只读名片发现 | **不替代** 全栈 Agent Runtime、主战 LLM ReAct 规划循环、模型路由代理或面向人类的个人私人助理。 |
 
 ---
 
@@ -33,7 +35,7 @@
 1. 垃圾清理（GC）默认强制 `dry-run` 预览，绝不静默硬删除；强制限定白名单目录（如 `/root/new/tmp/`）。
 2. **悲观前置门禁 (`PESSIMISTIC_LOCK`)**：涉及启动监听端口、修改被 Systemd/Cron 依赖文件、高危敏感路径与跨 Agent 排他锁时，通过 `steward_hook_pre` 进行强前置冲突预测与阻断。
 3. **乐观直通与碰壁自愈 (`OPTIMISTIC`)**：对可逆/低失败代价操作（如本地客户端直连 `:5432` PostgreSQL、调已安装 CLI 工具），优先通过 `steward_brief` 开工租约零前置查询直接执行；一旦失败由 `steward_hook_post` 在 `< 2ms` 内反查事实图谱注入替代处方。
-4. 会话结清（`session_close`）提供可审计的结项清单，让临时资源随用随清。
+4. 会话结清（`session_close`）提供可审计的结项清单，让临时资源随用随清；所有大管家在 Agent 之外对宿主对象的修改、修复与清理（`env gc`、`links repair --apply`、`feedback reconcile`、`daemon` 巡检）必须写入结构化行为审计流，确保因果与前后变化 100% 有据可查。
 
 ### 原则三：极速与轻量化 (Sub-Millisecond Response)
 Host Steward 是每位 Agent 高频调用的基石底座，核心 API（端口探测、规则放置匹配、属性图遍历、FTS 全文检索）端到端响应必须在毫秒级以内（实测基准：放置决策 120 μs，图遍历 498 μs，FTS 检索 805 μs），坚决避免成为 Agent 执行链路的性能瓶颈。
@@ -45,6 +47,15 @@ Host Steward 是每位 Agent 高频调用的基石底座，核心 API（端口�
 1. **凭据零落盘与全链路脱敏**：任何进入资产库、`/proc` 进程记录、长期记忆、变更审计流水与本地大模型输入的内容，必须经由统一 `SecretRedactor` 脱敏，严禁明文密钥/URI 口令落盘或跨 Mesh 传输。
 2. **安全执行与最小暴露**：Hook 命令插值强制 Shell 安全转义，DuckDB 导出在引擎层锁定白名单目录，Web/Mesh 默认绑定 `127.0.0.1` 且写端点/GC 统一受 `auth_token` 保护。
 3. **上下文抗投毒与最小文件权限**：外部仓库与第三方技能摘要在注入 `steward_brief` 前需识别隔离间接提示词注入；`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限纳入 `PreflightChecker` 强制基线。
+
+### 原则六：双域全链路行为审计、防洪折叠与数据驱动自进化 (Dual-Domain Audit & Data-Driven Self-Evolution)
+1. **双域全覆盖与可溯存证**：围绕 `IN_AGENT` 与 `OUT_OF_AGENT`（后台主动巡检、被动 Watcher 同步、宿主维护动作）统一构建脱敏审计事件流（`audit_events`），携带 `trace_id`、`before_after_delta` 与 `evidence_sha256`。
+2. **去噪防洪与反馈自进化**：对 `inotify` 连续修改实施时间窗折叠避免淹没有效行为，并通过 DuckDB OLAP 分析与滑动窗口自进化引擎反哺 AOPCC 租约升降级、放置规则沉淀与缺陷自上报（详见 [16-dual-domain-audit-and-self-evolution-spec.md](../design_doc/16-dual-domain-audit-and-self-evolution-spec.md)）。
+
+### 原则七：脑体分离、四级自治包络与三层命名兼容 (Brain-Body Separation, Autonomy Envelope & Naming Compatibility)
+1. **脑体分离与防膨胀边界**：任意 LLM/客户端均视为瞬态大脑，本体严禁内置主战规划循环或抢夺思考主权，只做亚毫秒级感官、小脑反射、海马体接力与五维稳态代谢。
+2. **四级自治权限包络 (`L0~L3`)**：显式区分 `L0_OBSERVE`（只读）、`L1_AUTONOMIC`（可逆稳态反射）、`L2_SUPERVISED`（宿主写操作默认 `dry-run` 或需授权）与 `L3_FORBIDDEN`（痛觉红线禁区），严禁越权自治。
+3. **三层命名兼容纪律**：对外品牌与文档/注释全面升维为「Agent 本体」，工程标识（`agent-steward` / `steward_*` / `~/.steward/`）严格保持 100% 向后兼容（详见 [17-agent-embodiment-and-continuity-spec.md](../design_doc/17-agent-embodiment-and-continuity-spec.md)）。
 
 ---
 

@@ -165,6 +165,18 @@ impl ChangeHandler {
                         };
                         let _ = bus.emit(steward_ev);
                     }
+                    crate::audit::AuditLogger::record_best_effort(
+                        &self.storage,
+                        crate::audit::AuditEventInput::out_of_agent(
+                            "watcher_inotify",
+                            "watcher",
+                            "fs_watch_sync",
+                            change_type,
+                        )
+                        .with_target("file", event.path.to_string_lossy().to_string())
+                        .with_outcome("success")
+                        .with_delta(serde_json::json!({"tier": tier})),
+                    );
                     processed += 1;
                 }
 
@@ -198,11 +210,23 @@ impl ChangeHandler {
 
                     if let Some(ref bus) = self.event_bus {
                         let _ = bus.emit(crate::hooks::StewardEvent::FileDeleted {
-                            path: path_str,
+                            path: path_str.clone(),
                             source: "watcher".to_string(),
                             timestamp: chrono::Local::now().to_rfc3339(),
                         });
                     }
+                    crate::audit::AuditLogger::record_best_effort(
+                        &self.storage,
+                        crate::audit::AuditEventInput::out_of_agent(
+                            "watcher_inotify",
+                            "watcher",
+                            "fs_watch_delete",
+                            "file_deleted",
+                        )
+                        .with_target("file", path_str)
+                        .with_outcome("success")
+                        .with_delta(serde_json::json!({"cascaded": true})),
+                    );
                     processed += 1;
                 }
             }

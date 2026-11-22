@@ -49,7 +49,18 @@ impl OptimisticLeaseEngine {
     pub fn issue_leases(storage: &Storage, query: &str) -> OptimisticLeaseReport {
         let all_nodes = storage.list_all_fact_nodes(500).unwrap_or_default();
         let changes = storage.list_changes(100).unwrap_or_default();
-        let downgraded_targets = collect_downgraded_targets(&changes);
+        let mut downgraded_targets = collect_downgraded_targets(&changes);
+        let audit_adjustments =
+            crate::audit::evolution::AuditEvolutionAnalyzer::collect_audit_lease_adjustments(
+                storage,
+            );
+        for (target, eval) in &audit_adjustments {
+            if eval.should_downgrade {
+                downgraded_targets.insert(target.clone());
+            } else if eval.rehabilitated {
+                downgraded_targets.remove(target);
+            }
+        }
 
         let port_nodes: Vec<&FactNodeRecord> = all_nodes
             .iter()
@@ -521,5 +532,46 @@ mod tests {
             !report.markdown_section.contains("postgresql:5432"),
             "被降级租约不得继续作为高置信度直通契约输出"
         );
+    }
+
+    #[test]
+    fn test_optimistic_lease_rehabilitates_after_audit_recovery() {
+        let storage = Storage::open_in_memory().expect("in-memory");
+        storage
+            .upsert_fact_node(&FactNodeRecord {
+                id: "port:5432".to_string(),
+                node_type: "port".to_string(),
+                name: "port:5432".to_string(),
+                label: "postgres".to_string(),
+                properties: serde_json::json!({"port": 5432, "process_name": "postgres"}),
+                updated_at: None,
+            })
+            .expect("upsert port");
+
+        // 1. 先记录一次审计碰壁
+        crate::audit::AuditLogger::record(
+            &storage,
+            crate::audit::AuditEventInput::in_agent("hook", "hook_post_recovery", "run_command")
+                .with_target("tool_target", "port:5432")
+                .with_outcome("recovered"),
+        )
+        .unwrap();
+        let rep1 = OptimisticLeaseEngine::issue_leases(&storage, "postgres");
+        let l1 = rep1.leases.iter().find(|l| l.lease_id == "lease-port-5432").unwrap();
+        assert!(l1.confidence < 0.85, "碰壁后应降级");
+
+        // 2. 连续两次成功直连后，租约自动康复
+        for _ in 0..2 {
+            crate::audit::AuditLogger::record(
+                &storage,
+                crate::audit::AuditEventInput::in_agent("hook", "hook_post_exec", "run_command")
+                    .with_target("tool_target", "port:5432")
+                    .with_outcome("success"),
+            )
+            .unwrap();
+        }
+        let rep2 = OptimisticLeaseEngine::issue_leases(&storage, "postgres");
+        let l2 = rep2.leases.iter().find(|l| l.lease_id == "lease-port-5432").unwrap();
+        assert!(l2.confidence >= 0.85, "连续康复后应回升 >= 0.85，实际 {}", l2.confidence);
     }
 }

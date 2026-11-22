@@ -224,7 +224,9 @@ mod tests {
 
         assert_eq!(v["id"], "req-2");
         let tools = v["result"]["tools"].as_array().expect("tools array");
-        assert_eq!(tools.len(), 41, "必须注册全部 41 个原生 MCP 工具");
+        assert_eq!(tools.len(), 43, "必须注册全部 43 个原生 MCP 工具");
+        assert!(tools.iter().any(|t| t["name"] == "steward_body_state"));
+        assert!(tools.iter().any(|t| t["name"] == "steward_audit_query"));
         assert!(tools.iter().any(|t| t["name"] == "steward_feedback"));
         assert!(tools.iter().any(|t| t["name"] == "steward_benchmark"));
         assert!(tools.iter().any(|t| t["name"] == "steward_demo_scenario"));
@@ -429,7 +431,7 @@ mod tests {
         assert_eq!(v["id"], 105);
         assert_eq!(v["result"]["isError"], false);
         let text = v["result"]["content"][0]["text"].as_str().expect("content text");
-        assert!(text.contains("大管家开工简报"), "输出应含简报标题");
+        assert!(text.contains("Agent 本体开工简报"), "输出应含简报标题");
         assert!(text.contains("宿主机事实"), "输出应含事实模块");
         assert!(text.contains("工程偏好"), "输出应含偏好模块");
         assert!(text.contains("质量分"), "输出应含质量评分");

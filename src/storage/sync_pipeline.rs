@@ -12,6 +12,10 @@ pub struct SyncReport {
     pub memories_synced: usize,
     pub fact_nodes_synced: usize,
     pub fact_edges_synced: usize,
+    #[serde(default)]
+    pub audit_events_synced: usize,
+    #[serde(default)]
+    pub effectiveness_ledger_synced: usize,
     pub duration_ms: u128,
 }
 
@@ -70,6 +74,34 @@ impl SyncPipeline {
             edges_synced += 1;
         }
 
+        // 6. 同步双域行为审计事件 (Phase 43)
+        let audits = self
+            .source
+            .query_audit_events(&crate::storage::models::AuditQueryFilter {
+                limit: 100_000,
+                ..Default::default()
+            })
+            .unwrap_or_default();
+        let mut audit_events_synced = 0;
+        for aud in &audits {
+            if self.target.insert_audit_event(aud).is_ok() {
+                audit_events_synced += 1;
+            }
+        }
+
+        // 7. 同步生产效能存证账本 (Phase 43)
+        let ledger_events = self
+            .source
+            .query_effectiveness_ledger("all", None, 100_000)
+            .map(|s| s.recent_events)
+            .unwrap_or_default();
+        let mut effectiveness_ledger_synced = 0;
+        for ev in &ledger_events {
+            if self.target.insert_effectiveness_event(ev).is_ok() {
+                effectiveness_ledger_synced += 1;
+            }
+        }
+
         let duration_ms = start.elapsed().as_millis();
         Ok(SyncReport {
             assets_synced,
@@ -77,6 +109,8 @@ impl SyncPipeline {
             memories_synced,
             fact_nodes_synced: nodes_synced,
             fact_edges_synced: edges_synced,
+            audit_events_synced,
+            effectiveness_ledger_synced,
             duration_ms,
         })
     }

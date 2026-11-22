@@ -296,6 +296,21 @@ impl CoordinationEngine {
                     }
                 }
             }
+            let st = crate::storage::Storage::new(self.storage.clone());
+            crate::audit::AuditLogger::record_best_effort(
+                &st,
+                crate::audit::AuditEventInput::out_of_agent(
+                    "daemon_scheduler",
+                    "coordination",
+                    "lock_gc",
+                    "gc_expired_locks",
+                )
+                .with_target("table", "coordination_locks")
+                .with_outcome("success")
+                .with_delta(serde_json::json!({
+                    "expired_locks_cleaned": cleaned,
+                })),
+            );
         }
         Ok(cleaned)
     }

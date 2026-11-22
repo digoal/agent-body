@@ -18,6 +18,10 @@ pub struct MigrationReport {
     pub scan_jobs_migrated: usize,
     pub fact_nodes_migrated: usize,
     pub fact_edges_migrated: usize,
+    #[serde(default)]
+    pub audit_events_migrated: usize,
+    #[serde(default)]
+    pub body_checkpoints_migrated: usize,
     pub duration_ms: u128,
 }
 
@@ -112,6 +116,25 @@ impl StorageMigrator {
             edges_count += 1;
         }
 
+        // 10. 迁移 Audit Events (双域全链路行为审计事件)
+        let audits = source.query_audit_events(&crate::storage::models::AuditQueryFilter {
+            limit: 100_000,
+            ..Default::default()
+        })?;
+        let mut audit_count = 0;
+        for aud in &audits {
+            target.insert_audit_event(aud)?;
+            audit_count += 1;
+        }
+
+        // 11. 迁移 Body Checkpoints (Agent 本体跨大脑连续性接力胶囊)
+        let checkpoints = source.list_body_checkpoints(None, 1000).unwrap_or_default();
+        let mut checkpoints_count = 0;
+        for cp in &checkpoints {
+            target.insert_body_checkpoint(cp)?;
+            checkpoints_count += 1;
+        }
+
         let duration_ms = start.elapsed().as_millis();
 
         Ok(MigrationReport {
@@ -127,6 +150,8 @@ impl StorageMigrator {
             scan_jobs_migrated: jobs_count,
             fact_nodes_migrated: nodes_count,
             fact_edges_migrated: edges_count,
+            audit_events_migrated: audit_count,
+            body_checkpoints_migrated: checkpoints_count,
             duration_ms,
         })
     }

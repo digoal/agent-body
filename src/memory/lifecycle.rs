@@ -92,15 +92,34 @@ impl<'a> MemoryLifecycleManager<'a> {
 
         let conflict_count = conflicts.len();
         let decayed_count = decay_candidates.len();
-
-        Ok(MemoryAuditReport {
+        let report = MemoryAuditReport {
             total_memories,
             active_memories,
             decayed_count,
             conflict_count,
             conflicts,
             decay_candidates,
-        })
+        };
+
+        crate::audit::AuditLogger::record_best_effort(
+            self.storage,
+            crate::audit::AuditEventInput::out_of_agent(
+                "daemon_scheduler",
+                "memory_lifecycle",
+                "memory_audit",
+                "audit_memories",
+            )
+            .with_target("table", "memories")
+            .with_outcome(if conflict_count > 0 { "warn" } else { "success" })
+            .with_delta(serde_json::json!({
+                "total_memories": total_memories,
+                "active_memories": active_memories,
+                "conflict_count": conflict_count,
+                "decayed_count": decayed_count,
+            })),
+        );
+
+        Ok(report)
     }
 
     /// 检测两段文本是否包含语义对立或相互矛盾的断言

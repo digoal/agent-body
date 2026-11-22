@@ -15,6 +15,10 @@ pub struct SchedulerCycleReport {
     pub scan_job_resumed: bool,
     pub expired_locks_cleaned: usize,
     pub assets_enriched: usize,
+    #[serde(default)]
+    pub homeostasis_score: f64,
+    #[serde(default)]
+    pub homeostasis_healed: bool,
 }
 
 /// 后台巡查与增量调度引擎
@@ -29,6 +33,7 @@ impl BackgroundScheduler {
 
     /// 执行一次管家深度环境巡检与事实图谱同步循环
     pub fn run_inspection_cycle(&self) -> Result<SchedulerCycleReport> {
+        let t0 = std::time::Instant::now();
         // 1. 动态进程与端口采集
         let env_collector = EnvCollector::new(self.storage.clone());
         let synced_processes = env_collector.collect_and_sync_processes()
@@ -89,7 +94,17 @@ impl BackgroundScheduler {
             0
         };
 
-        Ok(SchedulerCycleReport {
+        // 9. 五维本体稳态体检与 L1 自主自愈反射 (Phase 44)
+        let mut vitals = crate::body::HomeostasisVitalsEngine::assess(&self.storage);
+        let mut homeostasis_healed = false;
+        if vitals.overall_score < 70.0 {
+            if let Ok(heal) = crate::body::HomeostasisVitalsEngine::run_l1_autonomic_heal(&self.storage) {
+                vitals.overall_score = heal.after_score;
+                homeostasis_healed = true;
+            }
+        }
+
+        let report = SchedulerCycleReport {
             synced_processes,
             graph_nodes_updated: graph_nodes,
             graph_edges_updated: graph_edges,
@@ -97,7 +112,25 @@ impl BackgroundScheduler {
             scan_job_resumed,
             expired_locks_cleaned,
             assets_enriched,
-        })
+            homeostasis_score: vitals.overall_score,
+            homeostasis_healed,
+        };
+
+        crate::audit::AuditLogger::record_best_effort(
+            &self.storage,
+            crate::audit::AuditEventInput::out_of_agent(
+                "daemon_scheduler",
+                "daemon",
+                "daemon_cycle",
+                "run_inspection_cycle",
+            )
+            .with_target("host", "steward-daemon")
+            .with_outcome("success")
+            .with_elapsed_us(t0.elapsed().as_micros() as i64)
+            .with_delta(serde_json::to_value(&report).unwrap_or_default()),
+        );
+
+        Ok(report)
     }
 }
 

@@ -301,3 +301,44 @@ CREATE TABLE IF NOT EXISTS mesh_transfers (
     created_at         VARCHAR NOT NULL,
     updated_at         VARCHAR NOT NULL
 );
+
+-- ─── Phase 43: 双域全链路行为审计账本 (IN_AGENT + OUT_OF_AGENT) ──────────
+CREATE TABLE IF NOT EXISTS audit_events (
+    event_id           VARCHAR PRIMARY KEY,
+    trace_id           VARCHAR NOT NULL,
+    session_id         VARCHAR DEFAULT 'system',
+    domain             VARCHAR NOT NULL,
+    actor_kind         VARCHAR NOT NULL,
+    actor_id           VARCHAR DEFAULT 'steward',
+    source_channel     VARCHAR NOT NULL,
+    category           VARCHAR NOT NULL,
+    action             VARCHAR NOT NULL,
+    target_type        VARCHAR DEFAULT 'none',
+    target_id          VARCHAR DEFAULT '',
+    concurrency_mode   VARCHAR,
+    outcome            VARCHAR NOT NULL,
+    before_after_delta VARCHAR DEFAULT '{}',
+    elapsed_us         BIGINT DEFAULT 0,
+    evidence_sha256    VARCHAR NOT NULL,
+    created_at         VARCHAR NOT NULL
+);
+
+-- ─── Phase 44: Agent 本体跨大脑连续性接力胶囊 (ContinuityCapsule) ──────────
+CREATE TABLE IF NOT EXISTS body_checkpoints (
+    checkpoint_id       VARCHAR PRIMARY KEY,
+    body_id             VARCHAR NOT NULL,
+    from_brain          VARCHAR DEFAULT 'unknown',
+    session_id          VARCHAR DEFAULT '',
+    goal_summary        VARCHAR NOT NULL,
+    active_files_json   VARCHAR DEFAULT '[]',
+    active_locks_json   VARCHAR DEFAULT '[]',
+    verified_facts_json VARCHAR DEFAULT '[]',
+    open_blockers_json  VARCHAR DEFAULT '[]',
+    next_step_hint      VARCHAR DEFAULT '',
+    token_budget        INTEGER DEFAULT 300,
+    status              VARCHAR DEFAULT 'active',
+    evidence_sha256     VARCHAR NOT NULL,
+    created_at          VARCHAR NOT NULL,
+    resumed_by_brain    VARCHAR,
+    resumed_at          VARCHAR
+);

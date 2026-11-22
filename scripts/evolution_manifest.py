@@ -151,19 +151,19 @@ def check_drift(manifest: dict) -> list[str]:
     ]
     stale_checks = [
         (
-            re.compile(r"(?<!第\s)(?<!第)\b(39|40)\s*(?:个)?\s*(?:原生)?\s*(?:MCP\s*)?(?:工具|Tools?)"),
+            re.compile(r"(?<!第\s)(?<!第)\b(39|40|41|42)\s*(?:个)?\s*(?:原生)?\s*(?:MCP\s*)?(?:工具|Tools?)"),
             f"MCP 工具数 (源码实测 {mcp_cnt})",
         ),
         (
-            re.compile(r"\b(55|61|65)\s*(?:个)?\s*(?:核心)?(?:语义)?(?:统一)?\s*(?:SPI|方法|接口)"),
+            re.compile(r"\b(55|61|65|74|78)\s*(?:个)?\s*(?:核心)?(?:语义)?(?:统一)?\s*(?:SPI|方法|接口)"),
             f"SPI 方法数 (源码实测 {spi_cnt})",
         ),
         (
-            re.compile(r"\b(23|24)\s*(?:个|大)?\s*(?:Rust\s*)?(?:顶层)?(?:核心)?(?:子)?模块"),
+            re.compile(r"\b(23|24|25|26)\s*(?:个|大)?\s*(?:Rust\s*)?(?:顶层)?(?:核心)?(?:子)?模块"),
             f"顶层模块数 (源码实测 {mod_cnt})",
         ),
         (
-            re.compile(r"\b27\s*(?:个)?\s*(?:CLI\s*)?(?:顶层)?(?:子)?(?:命令|Commands)"),
+            re.compile(r"\b(27|28|29)\s*(?:个)?\s*(?:CLI\s*)?(?:顶层)?(?:子)?(?:命令|Commands)"),
             f"CLI 顶级命令数 (源码实测 {cli_cnt})",
         ),
     ]
@@ -180,6 +180,16 @@ def check_drift(manifest: dict) -> list[str]:
                 errors.append(
                     f"{doc.relative_to(ROOT)} 存在过期{desc}: '{m.group(0)}'"
                 )
+
+    for doc_rel in (
+        "README.md",
+        "arch/01-for-architects.md",
+        "arch/03-for-users.md",
+        "skills/agent-steward-guide/SKILL.md",
+    ):
+        p = ROOT / doc_rel
+        if p.exists() and "Agent 本体" not in p.read_text(encoding="utf-8"):
+            errors.append(f"{doc_rel} 缺少 Tier-1 定位表达「Agent 本体」")
 
     return errors
 

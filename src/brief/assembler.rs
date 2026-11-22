@@ -87,6 +87,8 @@ pub struct BriefOutput {
     pub quality: BriefQuality,
     /// 开工签发的 MVCC 乐观直通租约列表 (Phase 42 AOPCC)
     pub optimistic_leases: Vec<OptimisticLease>,
+    /// 本次注入的跨大脑连续性接力胶囊 ID (Phase 44 Agent 本体)
+    pub active_capsule_id: Option<String>,
 }
 
 // ─── 组装器主体 ─────────────────────────────────────────────────────────────
@@ -143,6 +145,23 @@ impl BriefAssembler {
         // ── 4. 按需生态路由 (Phase 16 Context 防爆按需披露) ─────────────
         let eco_section = self.build_ecosystem_section(&req.query, (budget * 20 / 100).min(350));
 
+        // ── 4.5 跨大脑连续性接力胶囊 (Phase 44 Agent 本体，仅在非沙盒且预算充足时注入) ──
+        let body_id = crate::body::manifest::compute_body_id();
+        let (capsule_section, active_capsule_id) = if budget >= 800
+            && !req.session_id.starts_with("bench:")
+            && !req.session_id.starts_with("demo:")
+        {
+            match self.storage.get_latest_active_body_checkpoint(&body_id) {
+                Ok(Some(cp)) => (
+                    format!("{}\n", crate::body::ContinuityManager::render_brief_snippet(&cp, 150)),
+                    Some(cp.checkpoint_id),
+                ),
+                _ => (String::new(), None),
+            }
+        } else {
+            (String::new(), None)
+        };
+
         // ── 5. 拼装最终 Markdown ─────────────────────────────────────────
         let quality = BriefQuality::compute(fact_score, mem_score, pref_score);
         let session_disp = if req.session_id.is_empty() {
@@ -152,16 +171,19 @@ impl BriefAssembler {
         };
 
         let markdown = format!(
-            "# 🏠 大管家开工简报 (steward_brief)\n\n\
-             **时间**: {now} | **会话**: {session_disp} | **质量分**: {overall}/100\n\n\
+            "# 🧬 Agent 本体开工简报 (steward_brief)\n\n\
+             **时间**: {now} | **本体**: {body_id} | **会话**: {session_disp} | **质量分**: {overall}/100\n\n\
+             {capsule_section}\
              {fact_section}\n\
              {lease_section}\
              {pref_section}\n\
              {mem_section}\
              {eco_section}",
             now = now,
+            body_id = body_id,
             session_disp = session_disp,
             overall = quality.overall,
+            capsule_section = capsule_section,
             fact_section = fact_section,
             lease_section = lease_section,
             pref_section = pref_section,
@@ -170,12 +192,41 @@ impl BriefAssembler {
         );
 
         let tokens_used = estimate_tokens(&markdown);
+        let leases_count = lease_report.leases.len();
+
+        if !req.session_id.starts_with("bench:") && !req.session_id.starts_with("demo:") {
+            let lease_ids: Vec<&str> = lease_report
+                .leases
+                .iter()
+                .map(|l| l.lease_id.as_str())
+                .collect();
+            crate::audit::AuditLogger::record_best_effort(
+                &self.storage,
+                crate::audit::AuditEventInput::in_agent("brief", "brief_lease", "assemble_brief")
+                    .with_session(if req.session_id.is_empty() {
+                        "default".to_string()
+                    } else {
+                        req.session_id.clone()
+                    })
+                    .with_target("query", req.query.chars().take(120).collect::<String>())
+                    .with_concurrency_mode("OPTIMISTIC")
+                    .with_outcome("success")
+                    .with_delta(serde_json::json!({
+                        "tokens_used": tokens_used,
+                        "quality_overall": quality.overall,
+                        "leases_count": leases_count,
+                        "lease_ids": lease_ids,
+                        "active_capsule_id": active_capsule_id,
+                    })),
+            );
+        }
 
         Ok(BriefOutput {
             markdown,
             tokens_used,
             quality,
             optimistic_leases: lease_report.leases,
+            active_capsule_id,
         })
     }
 
@@ -556,7 +607,7 @@ mod tests {
         };
         let output = assembler.assemble(&req).expect("assemble 应成功");
         assert!(!output.markdown.is_empty(), "简报不应为空");
-        assert!(output.markdown.contains("大管家开工简报"), "简报应包含标题");
+        assert!(output.markdown.contains("Agent 本体开工简报"), "简报应包含标题");
         assert!(output.markdown.contains("🔧 宿主机事实"), "应包含事实模块");
         assert!(output.markdown.contains("📐 工程偏好"), "应包含偏好模块");
         assert!(output.markdown.contains("🧠 相关历史经验"), "应包含记忆模块");

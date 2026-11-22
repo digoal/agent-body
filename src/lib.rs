@@ -23,6 +23,8 @@ pub mod mesh;
 pub mod demo;
 pub mod benchmark;
 pub mod feedback;
+pub mod audit;
+pub mod body;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const BUILD_TIMESTAMP: &str = env!("BUILD_TIMESTAMP");

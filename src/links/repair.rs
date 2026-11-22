@@ -190,12 +190,36 @@ impl LinkRepairer {
         }
 
         let reparable_count = suggestions.len();
-        Ok(LinkRepairReport {
+        let report = LinkRepairReport {
             total_missing,
             reparable_count,
             applied_count,
             suggestions,
-        })
+        };
+        let patched_files: Vec<&str> = report
+            .suggestions
+            .iter()
+            .take(15)
+            .map(|s| s.source_file.as_str())
+            .collect();
+        crate::audit::AuditLogger::record_best_effort(
+            &self.storage,
+            crate::audit::AuditEventInput::out_of_agent(
+                "governance_engine",
+                "links_repair",
+                "link_repair",
+                if apply { "apply_patches" } else { "dry_run_scan" },
+            )
+            .with_target("graph", "links")
+            .with_outcome(if apply { "success" } else { "dry_run" })
+            .with_delta(serde_json::json!({
+                "total_missing": report.total_missing,
+                "reparable_count": report.reparable_count,
+                "applied_count": report.applied_count,
+                "patched_files": patched_files,
+            })),
+        );
+        Ok(report)
     }
 }
 

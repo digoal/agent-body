@@ -49,6 +49,27 @@ pub struct ExportSummary {
     pub file_size_bytes: u64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditActionStat {
+    pub domain: String,
+    pub category: String,
+    pub action: String,
+    pub outcome: String,
+    pub hit_count: usize,
+    pub avg_elapsed_us: f64,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AuditAnalyticsReport {
+    pub days: usize,
+    pub total_events: usize,
+    pub in_agent_count: usize,
+    pub out_of_agent_count: usize,
+    pub failed_or_blocked_count: usize,
+    pub recovered_count: usize,
+    pub top_actions: Vec<AuditActionStat>,
+}
+
 /// DuckDB 分析查询专属扩展接口
 pub trait AnalyticsProvider: Send + Sync {
     /// 变更热力图：按目录与时间分桶聚合变更次数
@@ -65,6 +86,9 @@ pub trait AnalyticsProvider: Send + Sync {
 
     /// 事实图谱全景统计：各节点类型与边类型的数量分布
     fn fact_graph_stats(&self) -> Result<GraphStats>;
+
+    /// 双域行为审计 OLAP 多维聚合 (Phase 43)
+    fn audit_analytics_summary(&self, days: usize) -> Result<AuditAnalyticsReport>;
 
     /// Parquet 导出：将指定表数据直接导出为高效压缩的 Parquet 文件
     fn export_to_parquet(&self, table: &str, output_path: &str) -> Result<ExportSummary>;
@@ -235,9 +259,75 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
         })
     }
 
+    fn audit_analytics_summary(&self, days: usize) -> Result<AuditAnalyticsReport> {
+        let conn = self.lock_conn()?;
+        let cutoff = (chrono::Utc::now() - chrono::Duration::days(days.max(1) as i64)).to_rfc3339();
+        let mut stmt = conn.prepare(
+            "SELECT domain, category, action, outcome,
+                    COUNT(*),
+                    CAST(COALESCE(AVG(elapsed_us), 0.0) AS DOUBLE)
+             FROM audit_events
+             WHERE created_at >= ?1
+             GROUP BY domain, category, action, outcome
+             ORDER BY COUNT(*) DESC
+             LIMIT 30",
+        )?;
+        let top_actions = stmt
+            .query_map(params![cutoff], |r| {
+                Ok(AuditActionStat {
+                    domain: r.get(0)?,
+                    category: r.get(1)?,
+                    action: r.get(2)?,
+                    outcome: r.get(3)?,
+                    hit_count: r.get::<_, i64>(4)? as usize,
+                    avg_elapsed_us: r.get(5)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        let mut report = AuditAnalyticsReport {
+            days,
+            ..Default::default()
+        };
+        let mut agg_stmt = conn.prepare(
+            "SELECT domain, outcome, COUNT(*) FROM audit_events WHERE created_at >= ?1 GROUP BY domain, outcome",
+        )?;
+        let agg_rows = agg_stmt.query_map(params![cutoff], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)? as usize))
+        })?;
+        for row in agg_rows {
+            let (domain, outcome, cnt) = row?;
+            report.total_events += cnt;
+            if domain == "IN_AGENT" {
+                report.in_agent_count += cnt;
+            } else {
+                report.out_of_agent_count += cnt;
+            }
+            if outcome == "failed" || outcome == "blocked" {
+                report.failed_or_blocked_count += cnt;
+            }
+            if outcome == "recovered" {
+                report.recovered_count += cnt;
+            }
+        }
+        report.top_actions = top_actions;
+        Ok(report)
+    }
+
     fn export_to_parquet(&self, table: &str, output_path: &str) -> Result<ExportSummary> {
         let conn = self.lock_conn()?;
-        let valid_tables = ["assets", "changes", "memories", "fact_nodes", "fact_edges", "links", "active_processes"];
+        let valid_tables = [
+            "assets",
+            "changes",
+            "memories",
+            "fact_nodes",
+            "fact_edges",
+            "links",
+            "active_processes",
+            "audit_events",
+            "effectiveness_ledger",
+            "body_checkpoints",
+        ];
         if !valid_tables.contains(&table) {
             anyhow::bail!("不支持导出表: {}, 仅允许: {:?}", table, valid_tables);
         }
@@ -355,5 +445,39 @@ mod tests {
         assert!(engine.export_to_parquet("assets", "/root/new/tmp/../../etc/shadow.csv").is_err());
         assert!(engine.export_to_parquet("assets", "/tmp/bad'inject.csv").is_err());
         assert!(engine.export_to_parquet("assets", "relative/out.csv").is_err());
+    }
+
+    #[test]
+    fn test_duckdb_audit_olap_and_export() {
+        let sqlite = crate::storage::Storage::open_in_memory().expect("sqlite");
+        crate::audit::AuditLogger::record(
+            &sqlite,
+            crate::audit::AuditEventInput::in_agent("mcp", "tool_call", "steward_port_check")
+                .with_outcome("success")
+                .with_elapsed_us(120),
+        )
+        .unwrap();
+        crate::audit::AuditLogger::record(
+            &sqlite,
+            crate::audit::AuditEventInput::out_of_agent("governance_engine", "gc", "host_gc", "gc_dry_run")
+                .with_outcome("dry_run")
+                .with_elapsed_us(340),
+        )
+        .unwrap();
+
+        let engine = DuckDbAnalyticsEngine::from_synced_storage(sqlite.provider().clone()).expect("sync");
+        let summary = engine.audit_analytics_summary(7).expect("olap summary");
+        assert_eq!(summary.total_events, 2);
+        assert_eq!(summary.in_agent_count, 1);
+        assert_eq!(summary.out_of_agent_count, 1);
+        assert!(!summary.top_actions.is_empty());
+
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let out_csv = tmp.path().join("audit_export.csv");
+        let exp = engine
+            .export_to_parquet("audit_events", &out_csv.to_string_lossy())
+            .expect("export audit_events");
+        assert_eq!(exp.row_count, 2);
+        assert!(out_csv.exists());
     }
 }

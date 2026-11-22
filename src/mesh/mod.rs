@@ -125,6 +125,43 @@ pub fn handle_mesh_facts(req: &HttpRequest, auth_token: &Option<String>) -> Http
     WebResponse::success(build_local_facts())
 }
 
+/// GET /api/v1/mesh/body_manifest —— 多本体只读联邦名片交换 (Phase 44)
+pub fn handle_mesh_body_manifest(
+    req: &HttpRequest,
+    storage: &dyn StorageProvider,
+    auth_token: &Option<String>,
+) -> HttpResponse {
+    if let Some(deny) = check_mesh_auth(req, auth_token, false) {
+        return deny;
+    }
+    let body_id = crate::body::manifest::compute_body_id();
+    let hostname = System::host_name().unwrap_or_else(|| "localhost".to_string());
+    let fact_nodes = storage.list_all_fact_nodes(2000).unwrap_or_default();
+    let assets_cnt = storage.list_assets(20000).map(|v| v.len()).unwrap_or(0);
+    let active_cps = storage
+        .list_body_checkpoints(Some("active"), 20)
+        .map(|v| v.len())
+        .unwrap_or(0);
+    let locks_cnt = storage.list_coordination_locks(None).map(|v| v.len()).unwrap_or(0);
+    WebResponse::success(serde_json::json!({
+        "body_id": body_id,
+        "hostname": hostname,
+        "os": crate::BUILD_OS,
+        "arch": crate::BUILD_ARCH,
+        "version": crate::VERSION,
+        "sensory": {
+            "fact_nodes": fact_nodes.len(),
+            "assets": assets_cnt,
+            "tools": fact_nodes.iter().filter(|n| n.node_type == "tool").count(),
+            "ports": fact_nodes.iter().filter(|n| n.node_type == "port").count(),
+            "projects": fact_nodes.iter().filter(|n| n.node_type == "project").count(),
+        },
+        "active_checkpoints": active_cps,
+        "active_locks": locks_cnt,
+        "mesh_protocol": "MeshEnvelope v1.0",
+    }))
+}
+
 /// GET /api/v1/mesh/locks
 pub fn handle_mesh_locks(req: &HttpRequest, storage: &dyn StorageProvider, auth_token: &Option<String>) -> HttpResponse {
     if let Some(deny) = check_mesh_auth(req, auth_token, false) {
@@ -467,6 +504,14 @@ impl MeshClient {
         )?;
         let body = serde_json::to_value(&env)?;
         Ok(self.request(peer.trim_end_matches('/'), "POST", "/api/v1/mesh/transfer", Some(body)))
+    }
+
+    /// 跨机拉取对等宿主机 Agent 本体名片 (`/api/v1/mesh/body_manifest`)
+    pub fn query_peer_body_manifests(&self) -> Vec<PeerResult> {
+        self.peers
+            .iter()
+            .map(|p| self.request(p, "GET", "/api/v1/mesh/body_manifest", None))
+            .collect()
     }
 }
 

@@ -157,4 +157,40 @@ pub trait StorageProvider: Send + Sync {
     ) -> Result<bool> {
         Ok(false)
     }
+
+    // ─── Dual-Domain Behavioral Audit Events (Phase 43) ───────────────
+    fn insert_audit_event(&self, rec: &AuditEventRecord) -> Result<()> {
+        let _ = rec;
+        Ok(())
+    }
+    fn query_audit_events(&self, filter: &AuditQueryFilter) -> Result<Vec<AuditEventRecord>> {
+        let _ = filter;
+        Ok(Vec::new())
+    }
+    fn audit_domain_summary(&self, window: &str) -> Result<AuditDomainSummary> {
+        let _ = window;
+        Ok(AuditDomainSummary::default())
+    }
+    fn prune_old_audit_events(&self, before_iso: &str) -> Result<usize> {
+        let _ = before_iso;
+        Ok(0)
+    }
+
+    // ─── Agent Embodiment Cross-Brain Continuity Capsules (Phase 44) ─────
+    fn insert_body_checkpoint(&self, rec: &BodyCheckpointRecord) -> Result<()> {
+        let _ = rec;
+        Ok(())
+    }
+    fn get_latest_active_body_checkpoint(&self, body_id: &str) -> Result<Option<BodyCheckpointRecord>> {
+        let _ = body_id;
+        Ok(None)
+    }
+    fn list_body_checkpoints(&self, status_filter: Option<&str>, limit: usize) -> Result<Vec<BodyCheckpointRecord>> {
+        let _ = (status_filter, limit);
+        Ok(Vec::new())
+    }
+    fn mark_body_checkpoint_resumed(&self, checkpoint_id: &str, by_brain: &str, resumed_at: &str) -> Result<bool> {
+        let _ = (checkpoint_id, by_brain, resumed_at);
+        Ok(false)
+    }
 }

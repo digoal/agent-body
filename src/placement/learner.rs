@@ -157,6 +157,23 @@ impl<'a> PlacementLearner<'a> {
         };
 
         self.storage.insert_placement_rule(&rule)?;
+        crate::audit::AuditLogger::record_best_effort(
+            self.storage,
+            crate::audit::AuditEventInput::out_of_agent(
+                "governance_engine",
+                "placement",
+                "rule_apply",
+                "apply_learned_rule",
+            )
+            .with_target("placement_rule", rule.rule_name.clone())
+            .with_outcome("success")
+            .with_delta(serde_json::json!({
+                "rule_name": rule.rule_name,
+                "target_base_dir": rule.target_base_dir,
+                "sample_count": candidate.sample_count,
+                "confidence": candidate.confidence,
+            })),
+        );
         Ok(rule)
     }
 

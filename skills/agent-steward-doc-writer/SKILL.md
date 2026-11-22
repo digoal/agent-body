@@ -14,7 +14,8 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 写技术文档不是堆砌名词，更不是凭空编造。编写本项目的任何文档，必须严格遵守以下 **六大铁律**：
 
 1. **代码真实性第一（Zero Hallucination）**：
-   - 所有的命令参数、子命令名称、配置项键名、MCP 工具名称（共 41 个）、JSON 返回结构，必须直接源自 `src/` 源码（如 `src/main.rs`, `src/api/mcp_tools.rs`, `src/config/mod.rs`, `src/links/`），绝不允许擅自发明不存在的命令或参数。
+   - 所有的命令参数、子命令名称、配置项键名、MCP 工具名称（共 43 个）、JSON 返回结构，必须直接源自 `src/` 源码（如 `src/main.rs`, `src/api/mcp_tools.rs`, `src/config/mod.rs`, `src/body/`），绝不允许擅自发明不存在的命令或参数。
+   - 遵循 **三层命名兼容纪律**：对外文档叙事统一围绕 **「脑体分离 · Agent 本体（宿主机具身底座）」**（说明大管家/小秘书为两大侧面），同时工程标识（`agent-steward`、`steward_*`、`~/.steward/`）100% 保持原样不误导改动。
    - 凡涉及运行依赖、环境要求与部署配置，必须严格注明**“必选 (Required)”**与**“可选 (Optional)”**，并在 [INSTALL.md](../../INSTALL.md) 与 [config.example.toml](../../config.example.toml) 中保持事实对齐。
 2. **命令必须实跑验证（Execution-Verified）**：
    - 文档中凡是贴出的 CLI 输出、curl 返回或 JSON 示例，**必须使用编译出来的实际二进制执行一次**（例如 `./target/release/agent-steward env port 22`、`./target/release/agent-steward links audit`），捕获真实输出后贴入，严禁“凭印象编造输出”。
@@ -52,7 +53,7 @@ manual/
 ├── 01-getting-started.md          # 快速上手与编译部署
 ├── 02-core-concepts.md            # 核心理念与设计哲学（三位一体与分级扫描）
 ├── 03-cli-reference.md            # 全量 CLI 命令行实战字典
-├── 04-mcp-integration.md          # Agent 接入与 MCP 协议指南（41 个原生工具）
+├── 04-mcp-integration.md          # Agent 接入与 MCP 协议指南（43 个原生工具）
 ├── 05-daemon-and-watcher.md       # 守护进程与 inotify 实时监听
 ├── 06-advanced-features.md        # 进阶特性指南（断链修复、GC、记忆生命周期、TUI）
 ├── 07-troubleshooting.md          # 故障诊断与常见问题 (FAQ)
@@ -75,16 +76,17 @@ flowchart TD
 
 ### 步骤 1: 提取代码事实
 在动笔前，Agent 必须快速查阅：
-- `EVOLUTION_GUIDE.md` & `ISSUE.md`：25 模块 / 41 工具 / 74 SPI 方法 / 25 表计数锚点与演进议题总账；
-- `src/main.rs`：当前支持的所有 28 个顶级子命令与 flags 参数；
-- `src/api/mcp_tools.rs`：当前注册的全部 **41 个原生 MCP 工具** 名与 inputSchema；
+- `EVOLUTION_GUIDE.md` & `ISSUE.md`：27 模块 / 43 工具 / 82 SPI 方法 / 27 表计数锚点与演进议题总账；
+- `src/main.rs`：当前支持的所有 30 个顶级子命令与 flags 参数；
+- `src/api/mcp_tools.rs`：当前注册的全部 **43 个原生 MCP 工具** 名与 inputSchema；
+- `src/body/`：Agent 本体中枢（`BodyManifest`、`ContinuityCapsule`、`HomeostasisVitals`、`AutonomyEnvelope`）；
 - `src/config/mod.rs`：当前的 `config.toml` 配置项结构体；
 - `src/storage/schema.sql`：预置的 8 大放置规则与 10+ 分级扫描策略；
 - `src/links/` & `src/fact/`：`L1_EXPLICIT`/`L2_STRUCTURAL`/`L3_SEMANTIC` 分层加权图谱、断链体检规则与 CodeGraph 穿透接口；
 - `src/brief/optimistic.rs` & `src/hooks/diagnoser.rs`：AOPCC 开工乐观直通租约、三态并发分类器与 `<2ms` 碰壁处方自愈；
 - `src/mesh/`：`MeshEnvelope v1.0` HMAC-SHA256 签名防重放、跨机图谱、双向脱敏对话与沙盒收件箱投递；
-- `src/feedback/`：`user_feedback.md` 双向同步、`FreshnessReconciler` 新鲜度对账与 `P1~P5` 五点对比自进化探针；
-- `src/benchmark/`：`v3.5` 实证评测引擎（`W1~W15` + `M1~M5` + `DQ1~DQ6` + `COMP-C1~C4` + `PR-01~11`）。
+- `src/feedback/` & `src/audit/`：`user_feedback.md` 双向同步、`FreshnessReconciler`、`P1~P5` 自进化探针与双域审计流水；
+- `src/benchmark/`：`v3.7` 实证评测引擎（`W1~W17` + `M1~M5` + `DQ1~DQ8` + `COMP-C1~C4` + `PR-01~13`）。
 
 ### 步骤 2: 实操命令获取真实输出
 针对文档中需要出现的示例，在终端中以 release 二进制执行捕获：
@@ -110,7 +112,7 @@ flowchart TD
   - 错误写法: `A[客户端(Agent)]`
   - 正确写法: `A["客户端 (Agent)"]`
 - **SVG 图表规范**：矢量图保存为独立 `.svg` 文件置于 `markdown/svg/`，保证自适应与文字高对比度无遮挡；
-- **死链检查与防漂移门禁**：运行 `make evolution-check` 校验 25 模块 / 41 工具 / 74 SPI / 25 表 / Benchmark v3.5 计数零漂移，并用 Python 脚本全盘扫描 `.md` 相对链接，保证 0 死链。
+- **死链检查与防漂移门禁**：运行 `make evolution-check` 校验 27 模块 / 43 工具 / 82 SPI / 27 表 / Benchmark v3.7 计数零漂移，并用 Python 脚本全盘扫描 `.md` 相对链接，保证 0 死链。
 
 ### 步骤 5: 交付检查与 Commit
 - 检查 `README.md`、`manual/` 与 `src_doc/` 是否无缝互引；
@@ -129,11 +131,11 @@ flowchart TD
 
 ## 五、自检 Checklist（发布文档前必对）
 
-- [ ] 文档中的 CLI 命令是否与 `src/main.rs`（28 个顶级子命令）中的定义 100% 吻合？
-- [ ] 文档中的 MCP 工具名是否与 `src/api/mcp_tools.rs`（共 41 个）100% 吻合？
+- [ ] 文档中的 CLI 命令是否与 `src/main.rs`（30 个顶级子命令）中的定义 100% 吻合？
+- [ ] 文档中的 MCP 工具名是否与 `src/api/mcp_tools.rs`（共 43 个）100% 吻合？
 - [ ] 文档中贴出的 JSON 输出是否经过实际命令运行捕获，而非凭空假想？
 - [ ] Mermaid 节点文字中的括号是否全部加了双引号（防渲染崩溃）？
 - [ ] 矢量 SVG 资源是否已独立落盘于 `markdown/svg/` 并在 Markdown 中以标准语法正确引用？
-- [ ] `README.md` 是否已同步最新架构、全量 41 个 MCP 工具与演进路线？
+- [ ] `README.md` 是否已同步最新「Agent 本体」架构、全量 43 个 MCP 工具与演进路线？
 - [ ] `manual/` 目录下的 10 卷分卷手册超链接是否全部有效无死链？
 - [ ] 是否已通过 `make evolution-check` 零漂移校验与全局死链审计脚本（0 断链）？

@@ -26,7 +26,7 @@ impl McpToolRegistry {
         vec![
             serde_json::json!({
                 "name": "steward_brief",
-                "description": "一键获取宿主机自适应情境简报（事实图谱、工程偏好规约与历史决策经验三位一体组装）。Agent 在新会话开始或切换任务时必调。",
+                "description": "一键获取 Agent 本体自适应开工简报（宿主机事实感官、规约脊柱、历史记忆海马体与跨大脑接力胶囊一体组装）。瞬态大脑（LLM）在新会话开始或切换任务时必调。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -110,7 +110,7 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_asset_register",
-                "description": "手动向大管家登记一个文件或目录资产，附带结构化意图描述（desc_kv）、所有者与保密级别。",
+                "description": "手动向 Agent 本体登记一个文件或目录资产，附带结构化意图描述（desc_kv）、所有者与保密级别。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -698,20 +698,106 @@ impl McpToolRegistry {
                         "auto_feedback": { "type": "boolean", "default": false, "description": "action=probes 时是否将越阈值异常自动去重写入 user_feedback.md" }
                     }
                 }
+            }),
+            serde_json::json!({
+                "name": "steward_audit_query",
+                "description": "双域全链路行为审计、因果链路回溯、DuckDB OLAP 聚合导出与审计驱动自进化引擎（Phase 43）：覆盖 IN_AGENT（Brief/Hook/MCP/CLI/Web/Mesh）与 OUT_OF_AGENT（Daemon巡检/Watcher 60s折叠/HostGC/LinkRepair/Reconcile/RuleLearn）全行为有据可查。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string", "enum": ["query", "summary", "trace", "evolve", "export"], "default": "query" },
+                        "domain": { "type": "string", "enum": ["IN_AGENT", "OUT_OF_AGENT"], "description": "审计域过滤" },
+                        "actor_kind": { "type": "string" },
+                        "category": { "type": "string" },
+                        "outcome": { "type": "string", "enum": ["success", "warn", "blocked", "failed", "recovered", "dry_run"] },
+                        "trace_id": { "type": "string", "description": "action=trace 时指定因果链路 trace_id" },
+                        "session_id": { "type": "string" },
+                        "target_contains": { "type": "string" },
+                        "window": { "type": "string", "enum": ["24h", "7d", "30d", "all"], "default": "7d" },
+                        "days": { "type": "integer", "default": 7 },
+                        "limit": { "type": "integer", "default": 30 },
+                        "auto_feedback": { "type": "boolean", "default": false, "description": "action=evolve 时是否将高频摩擦热点自动沉淀至 user_feedback.md" },
+                        "output_path": { "type": "string", "default": "/root/new/tmp/audit_events_export.csv", "description": "action=export 时输出路径（仅允许 /root/new/tmp/ 或 /tmp/）" }
+                    }
+                }
+            }),
+            serde_json::json!({
+                "name": "steward_body_state",
+                "description": "Agent 本体中枢（宿主机具身底座，第 43 原生工具）：提供本体身份证与六器官自省 (manifest)、五维稳态生命体征 (vitals)、四级自治权限包络评估 (envelope)、跨大脑工作态接力胶囊保存与恢复 (handoff_save/handoff_resume)、L1 稳态反射自愈 (heal) 及多本体联邦名片发现 (peers)。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string",
+                            "enum": ["manifest", "vitals", "envelope", "handoff_save", "handoff_resume", "heal", "peers"],
+                            "default": "manifest",
+                            "description": "操作类型"
+                        },
+                        "from_brain": { "type": "string", "description": "发起接力的大脑标识 (如 antigravity / claude-code / codex)" },
+                        "session_id": { "type": "string", "description": "当前会话 ID" },
+                        "goal_summary": { "type": "string", "description": "handoff_save 必填：当前核心目标摘要" },
+                        "active_files": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "正在处理的核心文件路径列表"
+                        },
+                        "verified_facts": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "已核实的关键物理事实"
+                        },
+                        "open_blockers": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "尚未解决的阻塞项"
+                        },
+                        "next_step_hint": { "type": "string", "description": "下一步行动建议" },
+                        "checkpoint_id": { "type": "string", "description": "handoff_resume 时指定接力胶囊 ID（留空恢复最新）" },
+                        "check_action": { "type": "string", "description": "action=envelope 时待评估的动作名" },
+                        "target": { "type": "string", "description": "action=envelope 时待评估的目标路径或资源" },
+                        "dry_run": { "type": "boolean", "default": true, "description": "action=envelope 时是否处于 dry_run 预览" },
+                        "limit": { "type": "integer", "default": 20 }
+                    }
+                }
             })
         ]
     }
 
-    /// 执行具体工具调用（带生产效能存证自动记账）
+    /// 执行具体工具调用（带生产效能存证与双域审计自动记账）
     pub fn call_tool(&self, name: &str, args: Value) -> Result<String> {
         let t0 = std::time::Instant::now();
+        let args_preview = args.clone();
         let res = self.call_tool_inner(name, args);
+        let elapsed_us = t0.elapsed().as_micros() as i64;
         if let Ok(ref out) = res {
             crate::benchmark::ledger::EffectivenessLedger::record_mcp_call(
                 self.storage.provider().as_ref(),
                 name,
                 out,
-                t0.elapsed().as_micros() as i64,
+                elapsed_us,
+            );
+        }
+        if name != "steward_benchmark" && name != "steward_demo_scenario" {
+            let outcome = if res.is_ok() { "success" } else { "failed" };
+            let target_id = args_preview
+                .get("path")
+                .or_else(|| args_preview.get("id"))
+                .or_else(|| args_preview.get("query"))
+                .or_else(|| args_preview.get("resource_id"))
+                .or_else(|| args_preview.get("port").map(|v| v))
+                .map(|v| v.as_str().map(|s| s.to_string()).unwrap_or_else(|| v.to_string()))
+                .unwrap_or_default();
+            crate::audit::AuditLogger::record_best_effort(
+                &self.storage,
+                crate::audit::AuditEventInput::in_agent("mcp", "tool_call", name)
+                    .with_target("mcp_arg", target_id)
+                    .with_outcome(outcome)
+                    .with_elapsed_us(elapsed_us)
+                    .with_delta(serde_json::json!({
+                        "args": args_preview,
+                        "ok": res.is_ok(),
+                        "error": res.as_ref().err().map(|e| e.to_string()),
+                    })),
             );
         }
         res
@@ -1623,6 +1709,189 @@ impl McpToolRegistry {
                         Ok(serde_json::to_string_pretty(&rep)?)
                     }
                     other => bail!("未知 feedback action: {}", other),
+                }
+            }
+
+            "steward_audit_query" => {
+                use crate::storage::duckdb_analytics::{AnalyticsProvider, DuckDbAnalyticsEngine};
+                use crate::storage::models::AuditQueryFilter;
+
+                let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("query");
+                match action {
+                    "summary" => {
+                        let window = args.get("window").and_then(|v| v.as_str()).unwrap_or("7d");
+                        let days = args.get("days").and_then(|v| v.as_u64()).unwrap_or(7) as usize;
+                        let summary = self.storage.audit_domain_summary(window)?;
+                        let olap = DuckDbAnalyticsEngine::from_synced_storage(self.storage.provider().clone())
+                            .and_then(|eng| eng.audit_analytics_summary(days))
+                            .ok();
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "summary": summary,
+                            "olap": olap,
+                        }))?)
+                    }
+                    "trace" => {
+                        let trace_id = args.get("trace_id").and_then(|v| v.as_str()).unwrap_or("");
+                        if trace_id.trim().is_empty() {
+                            bail!("action=trace 必须提供 trace_id");
+                        }
+                        let rows = self.storage.query_audit_events(&AuditQueryFilter {
+                            trace_id: Some(trace_id.to_string()),
+                            limit: args.get("limit").and_then(|v| v.as_u64()).unwrap_or(100) as usize,
+                            ..Default::default()
+                        })?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "trace_id": trace_id,
+                            "count": rows.len(),
+                            "events": rows,
+                        }))?)
+                    }
+                    "evolve" => {
+                        let auto_fb = args.get("auto_feedback").and_then(|v| v.as_bool()).unwrap_or(false);
+                        let fb_path = crate::feedback::FeedbackEngine::default_feedback_path();
+                        let rep = crate::audit::AuditEvolutionAnalyzer::run_evolution_cycle(
+                            &self.storage,
+                            Some(&fb_path),
+                            auto_fb,
+                            3,
+                        )?;
+                        Ok(serde_json::to_string_pretty(&rep)?)
+                    }
+                    "export" => {
+                        let out_path = args
+                            .get("output_path")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("/root/new/tmp/audit_events_export.csv");
+                        let engine = DuckDbAnalyticsEngine::from_synced_storage(self.storage.provider().clone())?;
+                        let exp = engine.export_to_parquet("audit_events", out_path)?;
+                        Ok(serde_json::to_string_pretty(&exp)?)
+                    }
+                    _ => {
+                        let filter = AuditQueryFilter {
+                            domain: args.get("domain").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            actor_kind: args.get("actor_kind").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            category: args.get("category").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            action: args.get("filter_action").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            outcome: args.get("outcome").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            trace_id: args.get("trace_id").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            session_id: args.get("session_id").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            target_contains: args.get("target_contains").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                            window: Some(args.get("window").and_then(|v| v.as_str()).unwrap_or("7d").to_string()),
+                            limit: args.get("limit").and_then(|v| v.as_u64()).unwrap_or(30) as usize,
+                        };
+                        let rows = self.storage.query_audit_events(&filter)?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "count": rows.len(),
+                            "events": rows,
+                        }))?)
+                    }
+                }
+            }
+
+            "steward_body_state" => {
+                use crate::body::{
+                    AutonomyEnvelope, BodyManifestEngine, ContinuityInput, ContinuityManager,
+                    HomeostasisVitalsEngine,
+                };
+                let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("manifest");
+                match action {
+                    "manifest" => {
+                        let m = BodyManifestEngine::build(&self.storage);
+                        Ok(serde_json::to_string_pretty(&m)?)
+                    }
+                    "vitals" => {
+                        let v = HomeostasisVitalsEngine::assess(&self.storage);
+                        Ok(serde_json::to_string_pretty(&v)?)
+                    }
+                    "envelope" => {
+                        if let Some(chk_act) = args.get("check_action").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty()) {
+                            let target = args.get("target").and_then(|v| v.as_str());
+                            let dry_run = args.get("dry_run").and_then(|v| v.as_bool()).unwrap_or(true);
+                            let dec = AutonomyEnvelope::evaluate(chk_act, target, dry_run);
+                            Ok(serde_json::to_string_pretty(&dec)?)
+                        } else {
+                            Ok(serde_json::to_string_pretty(&serde_json::json!({
+                                "matrix": AutonomyEnvelope::policy_matrix(),
+                            }))?)
+                        }
+                    }
+                    "handoff_save" => {
+                        let goal = args
+                            .get("goal_summary")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .trim();
+                        if goal.is_empty() {
+                            bail!("action=handoff_save 必须提供 goal_summary");
+                        }
+                        let parse_vec = |k: &str| -> Vec<String> {
+                            args.get(k)
+                                .and_then(|v| v.as_array())
+                                .map(|arr| {
+                                    arr.iter()
+                                        .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                                        .collect()
+                                })
+                                .unwrap_or_default()
+                        };
+                        let cp = ContinuityManager::save_capsule(
+                            &self.storage,
+                            ContinuityInput {
+                                from_brain: args
+                                    .get("from_brain")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("mcp-brain")
+                                    .to_string(),
+                                session_id: args
+                                    .get("session_id")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("mcp-live")
+                                    .to_string(),
+                                goal_summary: goal.to_string(),
+                                active_files: parse_vec("active_files"),
+                                active_locks: Vec::new(),
+                                verified_facts: parse_vec("verified_facts"),
+                                open_blockers: parse_vec("open_blockers"),
+                                next_step_hint: args
+                                    .get("next_step_hint")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("")
+                                    .to_string(),
+                                token_budget: Some(300),
+                            },
+                        )?;
+                        Ok(serde_json::to_string_pretty(&cp)?)
+                    }
+                    "handoff_resume" => {
+                        let by_brain = args
+                            .get("from_brain")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("mcp-brain");
+                        let cid = args.get("checkpoint_id").and_then(|v| v.as_str());
+                        let resumed = ContinuityManager::resume_latest(&self.storage, by_brain, cid)?;
+                        let snippet = resumed
+                            .as_ref()
+                            .map(|c| ContinuityManager::render_brief_snippet(c, 300));
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "resumed": resumed.is_some(),
+                            "checkpoint": resumed,
+                            "brief_snippet": snippet,
+                        }))?)
+                    }
+                    "heal" => {
+                        let rep = HomeostasisVitalsEngine::run_l1_autonomic_heal(&self.storage)?;
+                        Ok(serde_json::to_string_pretty(&rep)?)
+                    }
+                    "peers" => {
+                        let cfg = crate::config::Config::load_or_default(None).unwrap_or_default();
+                        let client = crate::mesh::MeshClient::new(&cfg.mesh, cfg.web.auth_token.clone());
+                        let peers = client.query_peer_body_manifests();
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "configured_peers": client.peers(),
+                            "results": peers,
+                        }))?)
+                    }
+                    _ => bail!("未知 steward_body_state action: {}", action),
                 }
             }
 

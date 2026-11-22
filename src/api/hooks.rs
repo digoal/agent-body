@@ -180,6 +180,37 @@ impl AgentHookEngine {
             class.reason = "命中资源锁/依赖爆炸半径/安全红线冲突，自动升级为悲观强门禁 (PESSIMISTIC_LOCK)".to_string();
         }
 
+        let target_id = path_opt
+            .map(|p| p.to_string())
+            .or_else(|| port_opt.map(|p| format!("port:{}", p)))
+            .or_else(|| service_opt.map(|s| format!("service:{}", s)))
+            .or_else(|| {
+                args.get("command")
+                    .or_else(|| args.get("cmd"))
+                    .and_then(|v| v.as_str())
+                    .map(|c| c.chars().take(120).collect())
+            })
+            .unwrap_or_default();
+        let outcome = if warnings.iter().any(|w| w.contains("CRITICAL")) {
+            "blocked"
+        } else if has_warnings {
+            "warn"
+        } else {
+            "success"
+        };
+        crate::audit::AuditLogger::record_best_effort(
+            &self.storage,
+            crate::audit::AuditEventInput::in_agent("hook", "hook_pre_guard", tool_name)
+                .with_target("tool_arg", target_id)
+                .with_concurrency_mode(class.mode.as_str())
+                .with_outcome(outcome)
+                .with_delta(serde_json::json!({
+                    "warnings_count": warnings.len(),
+                    "warnings": warnings,
+                    "reason": class.reason,
+                })),
+        );
+
         PreHookResult {
             allowed: true, // 管家默认采取建议式，不直接强制阻断
             has_warnings,
@@ -283,6 +314,20 @@ impl AgentHookEngine {
         if !success {
             let err_str = error_output.unwrap_or("");
             if let Some(rx) = OptimisticFailureDiagnoser::diagnose(&self.storage, tool_name, args, err_str) {
+                crate::audit::AuditLogger::record_best_effort(
+                    &self.storage,
+                    crate::audit::AuditEventInput::in_agent("hook", "hook_post_recovery", tool_name)
+                        .with_target("tool_target", rx.target.clone())
+                        .with_concurrency_mode(mode_str.clone())
+                        .with_outcome("recovered")
+                        .with_elapsed_us(rx.elapsed_us as i64)
+                        .with_delta(serde_json::json!({
+                            "failure_kind": rx.failure_kind,
+                            "root_cause": rx.root_cause,
+                            "lease_downgraded": rx.lease_downgraded,
+                            "recovery_actions": rx.recovery_actions,
+                        })),
+                );
                 return PostHookResult {
                     recorded: true,
                     message: format!("⚡ [AOPCC 碰壁秒级自愈] {}: {}", rx.failure_kind, rx.root_cause),
@@ -291,6 +336,15 @@ impl AgentHookEngine {
                     recovery_prescription: Some(rx),
                 };
             }
+            crate::audit::AuditLogger::record_best_effort(
+                &self.storage,
+                crate::audit::AuditEventInput::in_agent("hook", "hook_post_recovery", tool_name)
+                    .with_concurrency_mode(mode_str.clone())
+                    .with_outcome("failed")
+                    .with_delta(serde_json::json!({
+                        "error_snippet": err_str.chars().take(300).collect::<String>(),
+                    })),
+            );
             return PostHookResult {
                 recorded: false,
                 message: "工具执行失败，未匹配特定自愈模式，已忽略后置事实图同步".to_string(),
@@ -331,6 +385,27 @@ impl AgentHookEngine {
             let auto_syncer = crate::hooks::AutoSyncEngine::new(self.storage.clone());
             let _ = auto_syncer.sync_file_output(path_str, tool_name);
         }
+
+        let target_id = path_opt
+            .map(|p| p.to_string())
+            .or_else(|| {
+                args.get("command")
+                    .or_else(|| args.get("cmd"))
+                    .and_then(|v| v.as_str())
+                    .map(|c| c.chars().take(120).collect())
+            })
+            .unwrap_or_default();
+        crate::audit::AuditLogger::record_best_effort(
+            &self.storage,
+            crate::audit::AuditEventInput::in_agent("hook", "hook_post_exec", tool_name)
+                .with_target(if path_opt.is_some() { "file" } else { "command" }, target_id)
+                .with_concurrency_mode(mode_str.clone())
+                .with_outcome("success")
+                .with_delta(serde_json::json!({
+                    "affected_services": affected,
+                    "args": args,
+                })),
+        );
 
         PostHookResult {
             recorded: true,

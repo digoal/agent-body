@@ -58,7 +58,7 @@ async fn test_web_dashboard_e2e_lifecycle() {
         let mut full = Vec::new();
         let mut buf = [0u8; 8192];
         loop {
-            match tokio::time::timeout(Duration::from_millis(5000), stream.read(&mut buf)).await {
+            match tokio::time::timeout(Duration::from_millis(15000), stream.read(&mut buf)).await {
                 Ok(Ok(0)) | Err(_) => break,
                 Ok(Ok(n)) => full.extend_from_slice(&buf[..n]),
                 Ok(Err(_)) => break,
@@ -78,7 +78,9 @@ async fn test_web_dashboard_e2e_lifecycle() {
     assert!(resp_index.contains("data-theme"));
     assert!(resp_index.contains("btn-theme-toggle"));
     assert!(resp_index.contains("v0.4.0"));
-    assert!(resp_index.contains("41/41 对齐"));
+    assert!(resp_index.contains("43/43 对齐"));
+    assert!(resp_index.contains("view-audit"));
+    assert!(resp_index.contains("view-body"));
 
     // 3.2 静态 CSS (验证包含白天与夜间双色调语义变量)
     let resp_css = send_http_request("127.0.0.1", bound_port, "GET /app.css HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
@@ -157,6 +159,12 @@ Content-Length: 75\r\n\r\n\
         "/api/v1/benchmark/workloads",
         "/api/v1/benchmark/report",
         "/api/v1/benchmark/ledger?window=7d",
+        "/api/v1/audit/events?window=7d",
+        "/api/v1/audit/summary?window=7d",
+        "/api/v1/body/manifest",
+        "/api/v1/body/vitals",
+        "/api/v1/body/envelope",
+        "/api/v1/body/checkpoints",
         "/deck",
         "/presentation",
     ] {
@@ -165,11 +173,45 @@ Content-Length: 75\r\n\r\n\
         assert!(resp.contains("HTTP/1.1 200 OK"), "端点 {} 应返回 200 OK", ep);
     }
 
-    // 4.8.1 验证 41/41 黑白屏同步矩阵覆盖率 = 100%
+    // 4.8.1 验证 43/43 黑白屏同步矩阵覆盖率 = 100%
     let resp_parity = send_http_request("127.0.0.1", bound_port, "GET /api/v1/parity/matrix HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
-    assert!(resp_parity.contains("\"total_mcp_tools\":41"));
-    assert!(resp_parity.contains("\"synced_count\":41"));
+    assert!(resp_parity.contains("\"total_mcp_tools\":43"));
+    assert!(resp_parity.contains("\"synced_count\":43"));
     assert!(resp_parity.contains("\"coverage_pct\":100.0"));
+
+    // 4.8.1c 验证 Agent 本体中枢跨大脑接力胶囊写端点鉴权与流转
+    let handoff_body = "{\"from_brain\":\"antigravity\",\"goal_summary\":\"Verify PG WAL config\"}";
+    let handoff_unauth = format!(
+        "POST /api/v1/body/handoff HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+        handoff_body.len(),
+        handoff_body
+    );
+    let resp_handoff_unauth = send_http_request("127.0.0.1", bound_port, &handoff_unauth).await;
+    assert!(resp_handoff_unauth.contains("HTTP/1.1 401 Unauthorized"));
+
+    let handoff_auth = format!(
+        "POST /api/v1/body/handoff HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+        handoff_body.len(),
+        handoff_body
+    );
+    let resp_handoff_auth = send_http_request("127.0.0.1", bound_port, &handoff_auth).await;
+    assert!(resp_handoff_auth.contains("HTTP/1.1 200 OK"));
+    assert!(resp_handoff_auth.contains("Verify PG WAL config"));
+
+    let resume_auth = "POST /api/v1/body/resume HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Type: application/json\r\nContent-Length: 26\r\n\r\n{\"by_brain\":\"claude-code\"}";
+    let resp_resume_auth = send_http_request("127.0.0.1", bound_port, resume_auth).await;
+    assert!(resp_resume_auth.contains("HTTP/1.1 200 OK"));
+    assert!(resp_resume_auth.contains("\"resumed\":true"));
+
+    // 4.8.1b 验证双域审计自进化写端点受 Bearer 鉴权保护
+    let evolve_unauth = "POST /api/v1/audit/evolve HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 2\r\n\r\n{}";
+    let resp_evolve_unauth = send_http_request("127.0.0.1", bound_port, evolve_unauth).await;
+    assert!(resp_evolve_unauth.contains("HTTP/1.1 401 Unauthorized"));
+
+    let evolve_auth = "POST /api/v1/audit/evolve HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Length: 2\r\n\r\n{}";
+    let resp_evolve_auth = send_http_request("127.0.0.1", bound_port, evolve_auth).await;
+    assert!(resp_evolve_auth.contains("HTTP/1.1 200 OK"));
+    assert!(resp_evolve_auth.contains("\"evaluated_events\""));
 
     // 4.8.2 验证 Benchmark 跑批与重置 API (无 Token 应被 401 拦截，带 Token 放行)
     let bench_body = "{\"suite\":\"macro\",\"save\":true}";

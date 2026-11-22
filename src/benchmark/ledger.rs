@@ -295,6 +295,34 @@ impl EffectivenessLedger {
                     evidence_summary: "PR-11: AOPCC 乐观直行碰壁 <2ms 自愈处方注入".into(),
                 }
             }
+            "steward_audit_query" => LedgerEventInput {
+                session_id,
+                source_channel: channel.into(),
+                tool_or_action: tool_or_action.into(),
+                rule: ProvenanceRule::Pr12AuditDrivenSelfEvolution,
+                baseline_tokens: stew_tokens.saturating_mul(3).max(500),
+                steward_tokens: stew_tokens,
+                baseline_rounds: 3,
+                steward_rounds: 1,
+                hazard_intercepted: 0,
+                noise_blocked: 0,
+                elapsed_us,
+                evidence_summary: format!("PR-12: 双域行为审计溯源与自进化闭环 ({} tok)", stew_tokens),
+            },
+            "steward_body_state" => LedgerEventInput {
+                session_id,
+                source_channel: channel.into(),
+                tool_or_action: tool_or_action.into(),
+                rule: ProvenanceRule::Pr13CrossBrainContinuitySaved,
+                baseline_tokens: stew_tokens.saturating_mul(4).max(800),
+                steward_tokens: stew_tokens,
+                baseline_rounds: 4,
+                steward_rounds: 1,
+                hazard_intercepted: 0,
+                noise_blocked: 0,
+                elapsed_us,
+                evidence_summary: format!("PR-13: Agent 本体器官自省与跨大脑接力 ({} tok)", stew_tokens),
+            },
             _ => return,
         };
         Self::record(storage, input);

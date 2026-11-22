@@ -12,10 +12,10 @@ use serde_json::json;
 fn test_ecosystem_end_to_end_and_35_mcp_tools() {
     let storage = Storage::open_in_memory().expect("open_in_memory");
 
-    // 1. 验证 MCP 工具注册总数已达 37 个
+    // 1. 验证 MCP 工具注册总数已达 43 个
     let registry = McpToolRegistry::new(storage.clone());
     let tools = registry.list_tools();
-    assert_eq!(tools.len(), 41, "Phase 30 后原生 MCP 工具应为 41 个");
+    assert_eq!(tools.len(), 43, "Phase 44 后原生 MCP 工具应为 43 个");
 
     // 2. 构造临时目录测试 SKILL 与 MCP 扫描
     let tmp = std::env::temp_dir().join(format!("steward_eco_e2e_{}", uuid::Uuid::new_v4()));

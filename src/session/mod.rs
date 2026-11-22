@@ -19,6 +19,8 @@ pub struct SessionCloseResult {
     pub saved_memory_id: Option<String>,
     #[serde(default)]
     pub is_dry_run: bool,
+    #[serde(default)]
+    pub saved_checkpoint_id: Option<String>,
 }
 
 pub struct SessionManager {
@@ -41,6 +43,19 @@ impl SessionManager {
         session_id: &str,
         clean_temp: bool,
         dry_run: bool,
+    ) -> Result<SessionCloseResult> {
+        self.close_session_with_handoff(session_id, clean_temp, dry_run, None, None, None)
+    }
+
+    /// 支持 dry-run 与可选跨大脑接力胶囊沉淀的会话结算 (Phase 44)
+    pub fn close_session_with_handoff(
+        &self,
+        session_id: &str,
+        clean_temp: bool,
+        dry_run: bool,
+        handoff_goal: Option<&str>,
+        from_brain: Option<&str>,
+        next_step_hint: Option<&str>,
     ) -> Result<SessionCloseResult> {
         let mut cleaned_files_count = 0;
         let mut freed_bytes = 0;
@@ -98,6 +113,42 @@ impl SessionManager {
 
         let _ = self.storage.insert_memory(&memory_rec);
 
+        let saved_checkpoint_id = if let Some(goal) = handoff_goal.filter(|s| !s.trim().is_empty()) {
+            crate::body::ContinuityManager::save_capsule(
+                &self.storage,
+                crate::body::ContinuityInput {
+                    from_brain: from_brain.unwrap_or("session_close").to_string(),
+                    session_id: session_id.to_string(),
+                    goal_summary: goal.to_string(),
+                    active_files: cleaned_paths.iter().take(5).cloned().collect(),
+                    active_locks: vec![],
+                    verified_facts: vec![format!("会话 {} 已完成归档结算", session_id)],
+                    open_blockers: vec![],
+                    next_step_hint: next_step_hint.unwrap_or("").to_string(),
+                    token_budget: Some(300),
+                },
+            )
+            .ok()
+            .map(|c| c.checkpoint_id)
+        } else {
+            None
+        };
+
+        crate::audit::AuditLogger::record_best_effort(
+            &self.storage,
+            crate::audit::AuditEventInput::in_agent("session", "session_close", "close_session")
+                .with_session(session_id)
+                .with_target("session", session_id)
+                .with_outcome(if dry_run { "dry_run" } else { "success" })
+                .with_delta(serde_json::json!({
+                    "cleaned_files_count": cleaned_files_count,
+                    "freed_bytes": freed_bytes,
+                    "cleaned_paths": cleaned_paths,
+                    "saved_memory_id": mem_id,
+                    "saved_checkpoint_id": saved_checkpoint_id,
+                })),
+        );
+
         Ok(SessionCloseResult {
             session_id: session_id.to_string(),
             cleaned_files_count,
@@ -106,6 +157,7 @@ impl SessionManager {
             changes_summary,
             saved_memory_id: Some(mem_id),
             is_dry_run: dry_run,
+            saved_checkpoint_id,
         })
     }
 }

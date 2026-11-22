@@ -291,7 +291,7 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     }
 
     if !report.data_quality.is_empty() {
-        writeln!(md, "## 四、宿主机数据质量与 D6 准确率门禁 (DQ1~DQ6)\n")?;
+        writeln!(md, "## 四、宿主机数据质量与 D6 准确率门禁 (DQ1~DQ8)\n")?;
         writeln!(md, "| ID | 检查项 | 实测指标 | SLA 目标 | 状态 | 详情 |")?;
         writeln!(md, "|:---:|---|---:|---:|:---:|---|")?;
         for dq in &report.data_quality {

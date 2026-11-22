@@ -345,3 +345,53 @@ CREATE TABLE IF NOT EXISTS mesh_transfers (
 );
 
 CREATE INDEX IF NOT EXISTS idx_pg_mesh_transfers_status ON mesh_transfers(status);
+
+-- ─── Phase 43: 双域全链路行为审计账本 (IN_AGENT + OUT_OF_AGENT) ──────────
+CREATE TABLE IF NOT EXISTS audit_events (
+    event_id           TEXT PRIMARY KEY,
+    trace_id           TEXT NOT NULL,
+    session_id         TEXT NOT NULL DEFAULT 'system',
+    domain             TEXT NOT NULL CHECK (domain IN ('IN_AGENT', 'OUT_OF_AGENT')),
+    actor_kind         TEXT NOT NULL,
+    actor_id           TEXT NOT NULL DEFAULT 'steward',
+    source_channel     TEXT NOT NULL,
+    category           TEXT NOT NULL,
+    action             TEXT NOT NULL,
+    target_type        TEXT NOT NULL DEFAULT 'none',
+    target_id          TEXT NOT NULL DEFAULT '',
+    concurrency_mode   TEXT DEFAULT NULL,
+    outcome            TEXT NOT NULL CHECK (outcome IN ('success', 'warn', 'blocked', 'failed', 'recovered', 'dry_run')),
+    before_after_delta TEXT NOT NULL DEFAULT '{}',
+    elapsed_us         BIGINT NOT NULL DEFAULT 0,
+    evidence_sha256    TEXT NOT NULL,
+    created_at         TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_audit_domain_time ON audit_events(domain, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pg_audit_trace ON audit_events(trace_id);
+CREATE INDEX IF NOT EXISTS idx_pg_audit_actor_cat ON audit_events(actor_kind, category, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pg_audit_target ON audit_events(target_id, created_at DESC);
+
+-- ─── Phase 44: Agent 本体跨大脑连续性接力胶囊 (ContinuityCapsule) ──────────
+CREATE TABLE IF NOT EXISTS body_checkpoints (
+    checkpoint_id       TEXT PRIMARY KEY,
+    body_id             TEXT NOT NULL,
+    from_brain          TEXT NOT NULL DEFAULT 'unknown',
+    session_id          TEXT NOT NULL DEFAULT '',
+    goal_summary        TEXT NOT NULL,
+    active_files_json   TEXT NOT NULL DEFAULT '[]',
+    active_locks_json   TEXT NOT NULL DEFAULT '[]',
+    verified_facts_json TEXT NOT NULL DEFAULT '[]',
+    open_blockers_json  TEXT NOT NULL DEFAULT '[]',
+    next_step_hint      TEXT NOT NULL DEFAULT '',
+    token_budget        INTEGER NOT NULL DEFAULT 300,
+    status              TEXT NOT NULL DEFAULT 'active'
+                        CHECK (status IN ('active', 'resumed', 'expired', 'archived')),
+    evidence_sha256     TEXT NOT NULL,
+    created_at          TEXT NOT NULL,
+    resumed_by_brain    TEXT DEFAULT NULL,
+    resumed_at          TEXT DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_body_checkpoints_status_time
+    ON body_checkpoints(status, created_at DESC);

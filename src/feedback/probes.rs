@@ -220,6 +220,26 @@ impl FreshnessReconciler {
         }
 
         rep.elapsed_us = t0.elapsed().as_micros();
+        crate::audit::AuditLogger::record_best_effort(
+            storage,
+            crate::audit::AuditEventInput::out_of_agent(
+                "daemon_scheduler",
+                "reconciler",
+                "freshness_reconcile",
+                "reconcile",
+            )
+            .with_target("host", "steward.db")
+            .with_outcome("success")
+            .with_elapsed_us(rep.elapsed_us as i64)
+            .with_delta(serde_json::json!({
+                "checked_assets": rep.checked_assets,
+                "missing_assets_marked": rep.missing_assets_marked,
+                "drifted_assets_refreshed": rep.drifted_assets_refreshed,
+                "ghost_fact_nodes_pruned": rep.ghost_fact_nodes_pruned,
+                "duplicate_memories_archived": rep.duplicate_memories_archived,
+                "stale_codegraph_repos": rep.stale_codegraph_repos,
+            })),
+        );
         Ok(rep)
     }
 }
@@ -305,27 +325,33 @@ impl SelfEvolutionProbeEngine {
             },
         });
 
-        // P2: 事前预测探针 (PreToolUse + 效能账本)
+        // P2: 事前预测探针 (PreToolUse + 效能账本 + 双域审计)
         let ledger = storage
             .query_effectiveness_ledger("7d", None, 50)
             .unwrap_or_default();
+        let audit_sum = storage.audit_domain_summary("7d").unwrap_or_default();
         let p2_healthy = true;
         probes.push(ComparativeProbeReading {
             probe_id: "P2".into(),
             hook_stage: "PreToolUse(Guard)".into(),
-            metric_name: "7日事前风险拦截与规范路由账本".into(),
-            comparator_baseline: "零护航基线 (0 次拦截 / 0 Token 节省)".into(),
+            metric_name: "7日事前风险拦截、规范路由与双域行为审计".into(),
+            comparator_baseline: "零护航基线 (0 次拦截 / 0 Token 节省 / 0 审计)".into(),
             measured_value: format!(
-                "{} 次调用 · 拦截 {} 次 · 省 {} tok",
-                ledger.total_events, ledger.total_hazards_intercepted, ledger.total_tokens_saved
+                "{} 次ROI调用 · 拦截 {} 次 · 省 {} tok · 双域审计 {} 条 (IN={} / OUT={})",
+                ledger.total_events,
+                ledger.total_hazards_intercepted,
+                ledger.total_tokens_saved,
+                audit_sum.total_events,
+                audit_sum.in_agent_count,
+                audit_sum.out_of_agent_count
             ),
             delta_summary: format!(
-                "+{} 次冲突预警 · 累计省 {} 轮探索",
-                ledger.total_hazards_intercepted, ledger.total_rounds_saved
+                "+{} 次冲突预警 · 累计省 {} 轮探索 · 自愈 {} 次",
+                ledger.total_hazards_intercepted, ledger.total_rounds_saved, audit_sum.recovered_count
             ),
             healthy: p2_healthy,
-            healed_action: "持续经由 PR-01~PR-11 账本带出处留痕与三态 AOPCC 路由".into(),
-            recommendation: "若发现高频违规目录可运行 `agent-steward place learn` 自动演化规则".into(),
+            healed_action: "持续经由 PR-01~PR-12 双账本带出处留痕与三态 AOPCC 路由".into(),
+            recommendation: "若发现高频违规目录可运行 `agent-steward audit evolve` 或 `place learn` 自动演化规则".into(),
         });
 
         // P3: 检索效用探针 (FTS 僵尸泄漏与陈旧向量)

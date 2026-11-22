@@ -1,18 +1,18 @@
 ---
 name: agent-steward-guide
-description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 快速建立全局认知、理解核心定位与作用、掌握环境依赖准备与一键部署流程（含单二进制、Systemd 常驻服务、Docker 编排与 preflight 依赖预检）、以及熟悉日常使用（CLI 命令行实操、41 个原生 MCP 工具全景、图智能与 CodeGraph 宏微联邦、多 Agent 协作锁、开工协同六步心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
+description: 专门帮助新接手、外部接入或初次接触本项目的 Agent 大脑快速建立全局认知、理解「脑体分离 · Agent 本体（宿主机具身底座）」核心定位、掌握环境依赖准备与一键部署流程（含单二进制、Systemd 常驻服务、Docker 编排与 preflight 依赖预检）、以及熟悉日常使用（CLI 命令行实操、43 个原生 MCP 工具全景、跨大脑接力胶囊、图智能与 CodeGraph 宏微联邦、多 Agent 协作锁、开工协同心法）的入门指南与全能向导技能。适用于：当 Agent 询问“这个项目是干什么的”、“如何部署运行”、“怎么接入当前 Agent”、“有哪些常用命令和 MCP 工具”、“如何进行宏微代码穿透”时触发。
 ---
 
-# Agent Host Steward 全景向导与部署使用技能 (agent-steward-guide)
+# Agent Host Steward (Agent 本体) 全景向导与部署使用技能 (agent-steward-guide)
 
-> **定位**: 本技能内置于 `agent-steward` 项目仓库中（`skills/agent-steward-guide/SKILL.md`）。当任何 Agent 初次来到该项目、或需要将该大管家部署到新宿主机、或需要了解如何正确使用大管家时，本技能提供一站式、可实操、零废话的行动向导。
+> **定位**: 本技能内置于 `agent-steward` 项目仓库中（`skills/agent-steward-guide/SKILL.md`）。当任何瞬态 LLM 大脑初次接入该项目、或需要将本 Agent 本体部署到新宿主机、或需要了解如何与本机物理身体协同工作时，本技能提供一站式、可实操、零废话的行动向导。
 
 ---
 
 ## 一、本项目是什么？（核心作用与定位）
 
 ### 1.1 一句话定义
-**Agent Host Steward（宿主环境大管家）** 是常驻在 AI Agent 宿主机中的轻量级系统级认知底座：**管记忆、管素材、管软件环境、管动态进程、管网络端口、管图谱依赖、管一切静态与动态对象的位置规范**。
+**Agent Host Steward（Agent 本体 · 宿主机具身底座）** 是脑体分离架构下常驻在宿主机中的数字躯干与轻量级认知底座（“小秘书/大管家”是本体面向感官盘点与稳态治理的两大侧面）：**管物理感官（软件/进程/端口/图谱）、管规约脊柱与 `L0~L3` 权限红线、管海马体记忆与跨大脑接力、管一切静态与动态对象的位置规范**。
 
 ### 1.2 它不是什么？
 - ❌ 它**不是**为了让 Agent 完成某一次具体编写代码或对话任务的协作框架（它不抢 LangChain、CrewAI 的活）；
@@ -246,7 +246,7 @@ agent-steward close session-20261115-01 --clean-temp
 }
 ```
 
-#### 步骤 2: 41 个原生 MCP 工具全景矩阵
+#### 步骤 2: 43 个原生 MCP 工具全景矩阵
 
 | 分类 | 工具名称 | 核心功能说明 |
 |---|---|---|
@@ -288,9 +288,11 @@ agent-steward close session-20261115-01 --clean-temp
 | | `steward_skill_route` | 按任务意图与 Token 预算路由 Top-K SKILL（防止 Context 被打爆） |
 | | `steward_service_contact` | 管理外部可用服务通讯录与轻量健康探活（严禁存明文密钥） |
 | **多机联邦 Mesh** | `steward_mesh_query` | `MeshEnvelope v1.0` HMAC 防重放联邦协同：ping/facts/locks/port/acquire/跨机图谱/脱敏对话/<=10MB 沙盒投递 |
-| **路演与对齐** | `steward_demo_scenario` | Web/黑屏同源 6 大路演剧目真引擎实跑、ROI 核算、41/41 Parity 对齐与沙盒复位 |
-| **实证基准与账本** | `steward_benchmark` | `v3.5` 基准评测：`W1~W15` A/B 负载 + `M1~M5` 微基准 + `DQ1~DQ6` + `COMP-C1~C4` 竞品对标与 `PR-01~11` 账本 |
+| **路演与对齐** | `steward_demo_scenario` | Web/黑屏同源 7 大路演剧目真引擎实跑、ROI 核算、43/43 Parity 对齐与沙盒复位 |
+| **实证基准与账本** | `steward_benchmark` | `v3.7` 基准评测：`W1~W17` A/B 负载 + `M1~M5` 微基准 + `DQ1~DQ8` + `COMP-C1~C4` 竞品对标与 `PR-01~13` 账本 |
 | **反馈与自进化** | `steward_feedback` | `user_feedback.md` 双向总账读写、已验证反馈沉淀记忆、`reconcile` 新鲜度对账与 `P1~P5` 自进化探针 |
+| **双域行为审计** | `steward_audit_query` | `IN_AGENT` + `OUT_OF_AGENT` 双域审计查询、因果钻取、DuckDB OLAP 导出与租约滑窗自进化 |
+| **Agent 本体中枢** | `steward_body_state` | 六器官自省 (`manifest`)、五维稳态 (`vitals`)、`L0~L3` 自治包络 (`envelope`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`) 与多本体名片发现 (`peers`) |
 
 ---
 

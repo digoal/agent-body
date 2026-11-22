@@ -10,7 +10,7 @@ use agent_steward::memory::MemoryManager;
 use agent_steward::brief::{BriefAssembler, BriefRequest};
 
 #[derive(Parser)]
-#[command(name = "steward", version = agent_steward::VERSION, about = "Agent Host Steward — 宿主环境大管家 (Rust 版)")]
+#[command(name = "steward", version = agent_steward::VERSION, about = "Agent Host Steward — 脑体分离 Agent 本体（宿主机具身底座 · Rust 版）")]
 struct Cli {
     #[arg(short, long, help = "自定义配置文件路径")]
     config: Option<PathBuf>,
@@ -21,7 +21,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about = "查看大管家运行状态与统计")]
+    #[command(about = "查看 Agent 本体运行状态与六器官统计")]
     Status,
 
     #[command(about = "启动交互式终端全景实时看板")]
@@ -30,7 +30,7 @@ enum Commands {
         interval: u64,
     },
 
-    #[command(about = "一键获取宿主环境与上下文简报 (默认走 BriefAssembler 三位一体组装)")]
+    #[command(about = "一键获取 Agent 本体开工简报与宿主机上下文 (默认走 BriefAssembler 三位一体组装)")]
     Brief {
         #[arg(short, long, default_value = "", help = "任务查询意图关键词")]
         query: String,
@@ -72,7 +72,7 @@ enum Commands {
     #[command(about = "启动 MCP (Model Context Protocol) stdio 服务端供 Agent 接入")]
     Mcp,
 
-    #[command(about = "启动大管家常驻后台守护进程 (含 inotify 监听与定时进程巡检)")]
+    #[command(about = "启动 Agent 本体常驻后台守护进程 (含 inotify 监听、定时进程巡检与稳态自愈)")]
     Daemon,
 
     #[command(about = "实体依赖关联与拓扑图")]
@@ -211,6 +211,137 @@ enum Commands {
     Feedback {
         #[command(subcommand)]
         action: FeedbackCommands,
+    },
+
+    #[command(about = "双域全链路行为审计 (IN_AGENT + OUT_OF_AGENT)、DuckDB OLAP 分析与审计驱动自进化")]
+    Audit {
+        #[command(subcommand)]
+        action: AuditCommands,
+    },
+
+    #[command(about = "Agent 本体中枢 (BodyManifest 六器官自省、五维稳态生命体征、四级自治包络与跨大脑连续性接力)")]
+    Body {
+        #[command(subcommand)]
+        action: BodyCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum BodyCommands {
+    #[command(about = "查看本体身份证 (body_id) 与六大器官自省清单")]
+    Manifest {
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "评估五维本体稳态生命体征评分")]
+    Vitals {
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "查询四级自治权限包络矩阵或评估单个动作权限")]
+    Envelope {
+        #[arg(long)]
+        action: Option<String>,
+        #[arg(long)]
+        target: Option<String>,
+        #[arg(long, default_value_t = true)]
+        dry_run: bool,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "保存跨大脑连续性接力胶囊 (<=300 tok, 强制脱敏防投毒)")]
+    Handoff {
+        #[arg(long)]
+        goal: String,
+        #[arg(long, default_value = "cli-brain")]
+        from_brain: String,
+        #[arg(long, default_value = "cli-live")]
+        session_id: String,
+        #[arg(long)]
+        files: Option<String>,
+        #[arg(long)]
+        facts: Option<String>,
+        #[arg(long)]
+        blockers: Option<String>,
+        #[arg(long, default_value = "")]
+        next_step: String,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "恢复最近激活的跨大脑接力胶囊")]
+    Resume {
+        #[arg(long, default_value = "cli-brain")]
+        by_brain: String,
+        #[arg(long)]
+        checkpoint_id: Option<String>,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "在 L1_AUTONOMIC 包络内触发可逆稳态反射自愈")]
+    Heal {
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "探测跨机多本体联邦名片 (/api/v1/mesh/body_manifest)")]
+    Peers {
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum AuditCommands {
+    #[command(about = "查询双域行为审计明细")]
+    Query {
+        #[arg(long)]
+        domain: Option<String>,
+        #[arg(long)]
+        actor_kind: Option<String>,
+        #[arg(long)]
+        category: Option<String>,
+        #[arg(long)]
+        outcome: Option<String>,
+        #[arg(long)]
+        trace_id: Option<String>,
+        #[arg(long)]
+        target: Option<String>,
+        #[arg(long, default_value = "7d")]
+        window: String,
+        #[arg(long, default_value_t = 30)]
+        limit: usize,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "查看双域行为审计汇总与 DuckDB OLAP 热榜")]
+    Summary {
+        #[arg(long, default_value = "7d")]
+        window: String,
+        #[arg(long, default_value_t = 7)]
+        days: usize,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "按 trace_id 回溯因果审计链路")]
+    Trace {
+        trace_id: String,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "运行审计驱动自进化周期 (AOPCC 租约校准 + 摩擦热点沉淀 + 目录规则聚类)")]
+    Evolve {
+        #[arg(long, default_value_t = false)]
+        auto_feedback: bool,
+        #[arg(long, default_value_t = 3)]
+        min_hits: usize,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "导出 audit_events 审计账本至 Parquet/CSV (安全白名单路径)")]
+    Export {
+        #[arg(long, default_value = "/root/new/tmp/audit_events_export.csv")]
+        output_path: String,
+        #[arg(long, default_value_t = false)]
+        json: bool,
     },
 }
 
@@ -869,8 +1000,21 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let cfg = Config::load_or_default(cli.config.as_deref())?;
     let storage = Storage::from_config(&cfg)?;
+    let audit_storage = storage.clone();
+    let cli_t0 = std::time::Instant::now();
+    let cli_cmd_name = cli_command_label(&cli.command);
+    let skip_cli_audit = matches!(
+        cli.command,
+        Commands::Mcp
+            | Commands::Daemon
+            | Commands::Web { .. }
+            | Commands::Tui { .. }
+            | Commands::Bench { .. }
+            | Commands::Demo { .. }
+    );
 
-    match cli.command {
+    let exec_res: Result<()> = (|| -> Result<()> {
+        match cli.command {
         Commands::Status => {
             println!("╔═══════════════════════════════════════════════════════╗");
             println!("║      Agent Host Steward (Rust 版) — 系统状态          ║");
@@ -1385,7 +1529,7 @@ fn main() -> Result<()> {
             let dry_run = !apply;
             println!("正在扫描宿主垃圾资源 (目录: {:?}, 超期阈值: {} 小时, 模式: {})...",
                 tmp_dir, max_age_hours, if dry_run { "预览模式 (dry-run)" } else { "执行清理 (apply)" });
-            let rep = agent_steward::env::gc::HostGarbageCollector::run_gc(&tmp_dir, max_age_hours, dry_run)?;
+            let rep = agent_steward::env::gc::HostGarbageCollector::run_gc_audited(&storage, &tmp_dir, max_age_hours, dry_run)?;
             println!("\n🧹 临时文件清理结果:");
             println!("  - 扫描临时目录:   {}", rep.tmp_dir_scanned);
             println!("  - 发现超期候选:   {} 个文件 ({:.2} MB)", rep.candidate_files_count, rep.candidate_bytes_reclaimed as f64 / (1024.0 * 1024.0));
@@ -2096,9 +2240,371 @@ fn main() -> Result<()> {
                 }
             }
         }
+
+        Commands::Audit { action } => {
+            use agent_steward::audit::AuditEvolutionAnalyzer;
+            use agent_steward::storage::duckdb_analytics::{AnalyticsProvider, DuckDbAnalyticsEngine};
+            use agent_steward::storage::models::AuditQueryFilter;
+
+            match action {
+                AuditCommands::Query {
+                    domain,
+                    actor_kind,
+                    category,
+                    outcome,
+                    trace_id,
+                    target,
+                    window,
+                    limit,
+                    json,
+                } => {
+                    let rows = storage.query_audit_events(&AuditQueryFilter {
+                        domain,
+                        actor_kind,
+                        category,
+                        action: None,
+                        outcome,
+                        trace_id,
+                        session_id: None,
+                        target_contains: target,
+                        window: Some(window),
+                        limit,
+                    })?;
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&rows)?);
+                    } else {
+                        println!("📜 双域行为审计明细 (共 {} 条):", rows.len());
+                        for r in &rows {
+                            println!(
+                                "  [{}] {} | {} | {}.{} | outcome={} | target={} | trace={}",
+                                r.created_at,
+                                r.domain,
+                                r.actor_kind,
+                                r.category,
+                                r.action,
+                                r.outcome,
+                                r.target_id,
+                                r.trace_id
+                            );
+                        }
+                    }
+                }
+                AuditCommands::Summary { window, days, json } => {
+                    let summary = storage.audit_domain_summary(&window)?;
+                    let olap = DuckDbAnalyticsEngine::from_synced_storage(storage.provider().clone())
+                        .and_then(|eng| eng.audit_analytics_summary(days))
+                        .ok();
+                    if json {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&serde_json::json!({
+                                "summary": summary,
+                                "olap": olap,
+                            }))?
+                        );
+                    } else {
+                        println!(
+                            "📊 双域行为审计汇总 ({}): 总计 {} 条 | IN_AGENT={} | OUT_OF_AGENT={} | 异常拦截={} | 自愈={}",
+                            summary.window,
+                            summary.total_events,
+                            summary.in_agent_count,
+                            summary.out_of_agent_count,
+                            summary.failed_or_blocked_count,
+                            summary.recovered_count
+                        );
+                        if let Some(o) = olap {
+                            for top in o.top_actions.iter().take(10) {
+                                println!(
+                                    "  - [{}] {}.{} ({}) -> {} 次 (avg {:.0} μs)",
+                                    top.domain, top.category, top.action, top.outcome, top.hit_count, top.avg_elapsed_us
+                                );
+                            }
+                        }
+                    }
+                }
+                AuditCommands::Trace { trace_id, json } => {
+                    let rows = storage.query_audit_events(&AuditQueryFilter {
+                        trace_id: Some(trace_id.clone()),
+                        limit: 100,
+                        ..Default::default()
+                    })?;
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&rows)?);
+                    } else {
+                        println!("🔗 Trace `{}` 因果链路 ({} 条):", trace_id, rows.len());
+                        for r in &rows {
+                            println!(
+                                "  [{}] {} | {}.{} | outcome={} | delta={}",
+                                r.created_at, r.domain, r.category, r.action, r.outcome, r.before_after_delta
+                            );
+                        }
+                    }
+                }
+                AuditCommands::Evolve {
+                    auto_feedback,
+                    min_hits,
+                    json,
+                } => {
+                    let fb_path = agent_steward::feedback::FeedbackEngine::default_feedback_path();
+                    let rep = AuditEvolutionAnalyzer::run_evolution_cycle(
+                        &storage,
+                        Some(&fb_path),
+                        auto_feedback,
+                        min_hits,
+                    )?;
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&rep)?);
+                    } else {
+                        println!(
+                            "🧬 审计驱动自进化完成: 评估 {} 条 | 租约降级 {:?} | 租约康复 {:?} | 摩擦热点 {} | 新增反馈 {:?} | 目录规则候选 {}",
+                            rep.evaluated_events,
+                            rep.downgraded_targets,
+                            rep.rehabilitated_targets,
+                            rep.friction_hotspots.len(),
+                            rep.feedback_items_created,
+                            rep.placement_candidates.len()
+                        );
+                    }
+                }
+                AuditCommands::Export { output_path, json } => {
+                    let eng = DuckDbAnalyticsEngine::from_synced_storage(storage.provider().clone())?;
+                    let exp = eng.export_to_parquet("audit_events", &output_path)?;
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&exp)?);
+                    } else {
+                        println!(
+                            "📦 已导出 audit_events ({} 行, {} 字节) 至 {}",
+                            exp.row_count, exp.file_size_bytes, exp.output_path
+                        );
+                    }
+                }
+            }
+        }
+
+        Commands::Body { action } => {
+            use agent_steward::body::{
+                AutonomyEnvelope, BodyManifestEngine, ContinuityInput, ContinuityManager,
+                HomeostasisVitalsEngine,
+            };
+            let t0 = std::time::Instant::now();
+            match action {
+                BodyCommands::Manifest { json } => {
+                    let m = BodyManifestEngine::build(&storage);
+                    let out = serde_json::to_string_pretty(&m)?;
+                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "steward_body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else {
+                        println!("🧬 Agent 本体身份证: {} ({}, {} / {})", m.body_id, m.hostname, m.os, m.arch);
+                        println!("📦 活跃接力胶囊: {} | 六大器官状态:", m.active_checkpoints);
+                        for o in &m.organs {
+                            println!("  - {:12} [{}] {}", o.name, o.status, o.label);
+                        }
+                    }
+                }
+                BodyCommands::Vitals { json } => {
+                    let v = HomeostasisVitalsEngine::assess(&storage);
+                    let out = serde_json::to_string_pretty(&v)?;
+                    if json {
+                        println!("{}", out);
+                    } else {
+                        println!(
+                            "🩺 五维本体生命体征 [{}]: 综合稳态分 {:.1}/100 ({})",
+                            v.body_id, v.overall_score, v.status
+                        );
+                        for d in &v.dimensions {
+                            println!(
+                                "  - {:10} ({:>2}%): {:>5.1} [{}] {}",
+                                d.label, d.weight_pct, d.score, d.status, d.detail
+                            );
+                        }
+                        if !v.recommended_l1_actions.is_empty() {
+                            println!("💡 建议 L1 自愈动作: {}", v.recommended_l1_actions.join("；"));
+                        }
+                    }
+                }
+                BodyCommands::Envelope { action: chk_act, target, dry_run, json } => {
+                    if let Some(act) = chk_act {
+                        let dec = AutonomyEnvelope::evaluate(&act, target.as_deref(), dry_run);
+                        if json {
+                            println!("{}", serde_json::to_string_pretty(&dec)?);
+                        } else {
+                            println!(
+                                "🛡️ [{}] allowed={} confirm={} — {}",
+                                dec.level_code, dec.allowed, dec.requires_confirmation, dec.reason
+                            );
+                        }
+                    } else {
+                        let mat = AutonomyEnvelope::policy_matrix();
+                        if json {
+                            println!("{}", serde_json::to_string_pretty(&mat)?);
+                        } else {
+                            for rule in &mat {
+                                println!("• {} ({}) — {}", rule.level, rule.label, rule.authorization);
+                            }
+                        }
+                    }
+                }
+                BodyCommands::Handoff {
+                    goal,
+                    from_brain,
+                    session_id,
+                    files,
+                    facts,
+                    blockers,
+                    next_step,
+                    json,
+                } => {
+                    let split_csv = |opt: Option<String>| -> Vec<String> {
+                        opt.unwrap_or_default()
+                            .split(',')
+                            .map(|s| s.trim().to_string())
+                            .filter(|s| !s.is_empty())
+                            .collect()
+                    };
+                    let cp = ContinuityManager::save_capsule(
+                        &storage,
+                        ContinuityInput {
+                            from_brain,
+                            session_id,
+                            goal_summary: goal,
+                            active_files: split_csv(files),
+                            active_locks: Vec::new(),
+                            verified_facts: split_csv(facts),
+                            open_blockers: split_csv(blockers),
+                            next_step_hint: next_step,
+                            token_budget: Some(300),
+                        },
+                    )?;
+                    let out = serde_json::to_string_pretty(&cp)?;
+                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "steward_body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else {
+                        println!(
+                            "🧬 已保存跨大脑接力胶囊 `{}` (来自 `{}` · SHA256={}...)",
+                            cp.checkpoint_id,
+                            cp.from_brain,
+                            cp.evidence_sha256.chars().take(12).collect::<String>()
+                        );
+                    }
+                }
+                BodyCommands::Resume { by_brain, checkpoint_id, json } => {
+                    let res = ContinuityManager::resume_latest(&storage, &by_brain, checkpoint_id.as_deref())?;
+                    let out = serde_json::to_string_pretty(&res)?;
+                    agent_steward::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "steward_body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else if let Some(cp) = res {
+                        println!("{}", ContinuityManager::render_brief_snippet(&cp, 300));
+                    } else {
+                        println!("ℹ️ 当前暂无待接力的活跃跨大脑胶囊。");
+                    }
+                }
+                BodyCommands::Heal { json } => {
+                    let rep = HomeostasisVitalsEngine::run_l1_autonomic_heal(&storage)?;
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&rep)?);
+                    } else {
+                        println!(
+                            "🩺 L1 稳态反射自愈完成: {:.1} → {:.1} (Δ={:+.2}) | 清理过期锁={} 剪枝幽灵={}",
+                            rep.before_score,
+                            rep.after_score,
+                            rep.delta_score,
+                            rep.expired_locks_cleaned,
+                            rep.pruned_ghost_nodes
+                        );
+                    }
+                }
+                BodyCommands::Peers { json } => {
+                    let cfg = Config::load_or_default(None).unwrap_or_default();
+                    let client = agent_steward::mesh::MeshClient::new(&cfg.mesh, cfg.web.auth_token.clone());
+                    let peers = client.query_peer_body_manifests();
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&peers)?);
+                    } else if peers.is_empty() {
+                        println!("ℹ️ 未配置 [mesh].peers 多本体对等节点。");
+                    } else {
+                        for p in &peers {
+                            println!("🌐 {} -> ok={} ({}ms)", p.peer, p.ok, p.latency_ms);
+                        }
+                    }
+                }
+            }
+        }
+        }
+        Ok(())
+    })();
+
+    if !skip_cli_audit {
+        let outcome = if exec_res.is_ok() { "success" } else { "failed" };
+        agent_steward::audit::AuditLogger::record_best_effort(
+            &audit_storage,
+            agent_steward::audit::AuditEventInput::in_agent("cli", "cli_command", cli_cmd_name)
+                .with_target("command", cli_cmd_name)
+                .with_outcome(outcome)
+                .with_elapsed_us(cli_t0.elapsed().as_micros() as i64)
+                .with_delta(serde_json::json!({
+                    "ok": exec_res.is_ok(),
+                    "error": exec_res.as_ref().err().map(|e| e.to_string()),
+                })),
+        );
     }
 
-    Ok(())
+    exec_res
+}
+
+fn cli_command_label(cmd: &Commands) -> &'static str {
+    match cmd {
+        Commands::Status => "status",
+        Commands::Tui { .. } => "tui",
+        Commands::Brief { .. } => "brief",
+        Commands::Place { .. } => "place",
+        Commands::Asset { .. } => "asset",
+        Commands::Env { .. } => "env",
+        Commands::Fact { .. } => "fact",
+        Commands::Memory { .. } => "memory",
+        Commands::Links { .. } => "links",
+        Commands::Changes { .. } => "changes",
+        Commands::Close { .. } => "close",
+        Commands::Gc { .. } => "gc",
+        Commands::Mcp => "mcp",
+        Commands::Daemon => "daemon",
+        Commands::Preflight { .. } => "preflight",
+        Commands::Web { .. } => "web",
+        Commands::Hooks { .. } => "hooks",
+        Commands::Storage { .. } => "storage",
+        Commands::Coordination { .. } => "coordination",
+        Commands::Analytics { .. } => "analytics",
+        Commands::McpCatalog { .. } => "mcp-catalog",
+        Commands::Skill { .. } => "skill",
+        Commands::Service { .. } => "service",
+        Commands::Mesh { .. } => "mesh",
+        Commands::Platform { .. } => "platform",
+        Commands::Demo { .. } => "demo",
+        Commands::Bench { .. } => "bench",
+        Commands::Feedback { .. } => "feedback",
+        Commands::Audit { .. } => "audit",
+        Commands::Body { .. } => "body",
+    }
 }
 
 #[cfg(test)]
@@ -2131,5 +2637,8 @@ mod tests {
         assert!(Cli::try_parse_from(["steward", "brief"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "brief", "--query", "postgres", "--budget-tokens", "1200"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "brief", "--legacy"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "audit", "query", "--domain", "OUT_OF_AGENT"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "audit", "summary", "--window", "7d"]).is_ok());
+        assert!(Cli::try_parse_from(["steward", "audit", "evolve", "--auto-feedback"]).is_ok());
     }
 }

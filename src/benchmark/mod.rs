@@ -22,7 +22,7 @@ use crate::benchmark::workloads::{run_all_workloads, run_workload, WorkloadResul
 use crate::storage::models::BenchmarkRunRecord;
 use crate::storage::StorageProvider;
 
-pub const BENCHMARK_SPEC_VERSION: &str = "3.5";
+pub const BENCHMARK_SPEC_VERSION: &str = "3.7";
 
 pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
     if workloads.is_empty() {
@@ -39,7 +39,7 @@ pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
 pub fn compute_query_guard_speedup(workloads: &[WorkloadResult]) -> f64 {
     let subset: Vec<&WorkloadResult> = workloads
         .iter()
-        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9" | "W11" | "W15"))
+        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9" | "W11" | "W15" | "W16" | "W17"))
         .collect();
     if subset.is_empty() {
         return 1.0;
@@ -311,11 +311,11 @@ mod tests {
         let report = BenchmarkEngine::run_suite(provider.clone(), "full", true, Some("bench:test"))
             .expect("run full suite");
 
-        assert_eq!(report.workloads.len(), 15);
+        assert_eq!(report.workloads.len(), 17);
         assert_eq!(report.micro_benchmarks.len(), 5);
-        assert_eq!(report.data_quality.len(), 6);
+        assert_eq!(report.data_quality.len(), 8);
         assert_eq!(report.competitors.len(), 4);
-        assert_eq!(report.spec_version, "3.5");
+        assert_eq!(report.spec_version, "3.7");
         assert!(report.quality_non_degraded, "所有负载上下文质量必须不降反升");
         assert!(report.overall_quality_delta > 20.0, "整体上下文质量净提升应 > 20 分，实测: {}", report.overall_quality_delta);
         assert!(report.overall_info_density_gain > 5.0, "有效信息密度应提升 > 5x，实测: {}", report.overall_info_density_gain);
@@ -341,7 +341,7 @@ mod tests {
                 m.id, m.name, m.passed, m.avg_us, m.sla_limit_us
             );
         }
-        assert!(report.sla_passed, "15 大负载 + 5 大微基准 SLA 应全部通过");
+        assert!(report.sla_passed, "17 大负载 + 5 大微基准 + 8 项 DQ SLA 应全部通过");
 
         let fetched = provider
             .get_benchmark_run(&report.run_id)

@@ -47,6 +47,10 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
    - 跨节点协同（对话、文件投递、跨机锁）必须走 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + 时间窗/Nonce 防重放 + Peer Scope 校验）；文件传输严格限制体积上限并隔离落盘至 `~/.steward/mesh_inbox/`，严禁跨机直写宿主机路径。
 10. **悲观与乐观并发自适应（AOPCC，对齐规约 #8 & #25）**:
    - 高危/写共享/绑定端口/高爆炸半径操作必须坚守悲观前置门禁（`steward_hook_pre`）；可逆只读/服务客户端连接/已授权工具优先消费开工乐观租约直行，并由 `steward_hook_post` 兜底碰壁秒级自愈，禁止低风险回路强行加塞无谓全悲观查询税。
+11. **双域全链路行为审计与自治动作留痕（Dual-Domain Behavioral Audit，对齐规约 #4, #8, #18, #22 & #26）**:
+    - 严禁仅审计含 `path` 参数的写文件操作而丢弃命令/服务/锁/非路径工具调用，更严禁后台 `Daemon`、`Reconciler`、`HostGC`、`LinkRepair`、`PlacementLearner` 等 Agent 之外主动/被动更改宿主对象时静默“黑盒变更”；所有双域关键行为必须经 `SecretRedactor` 脱敏、附带 `before_after_delta` 与 `evidence_sha256` 落库，并对 `Watcher` 高频事件实施时间窗折叠防洪。
+12. **Agent 本体脑体分离、四级自治包络与三层命名兼容（Agent Embodiment，对齐规约 #1, #2, #3, #8 & #27）**:
+    - 确立 LLM=瞬态大脑、本项目=永驻宿主机的 Agent 本体（感官/小脑反射/海马体连续性/代谢稳态/多体联邦）；严守递弱代偿，绝不内置主战 LLM 规划循环或替代编排框架；自治行为严格遵循 `L0_OBSERVE` / `L1_AUTONOMIC` / `L2_SUPERVISED` / `L3_FORBIDDEN` 四级权限包络；对外叙事升级为「Agent 本体」，但工程标识（`agent-steward` / `steward_*` / `~/.steward/`）100% 向后兼容。
 
 ---
 
@@ -55,10 +59,12 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | 路径 | 角色与用途 | 读写权限/规则 |
 |---|---|---|
 | `Cargo.toml`, `Cargo.lock` | Rust 依赖与工作空间配置 | 引入新 crate 需考虑编译耗时与轻量化 |
-| `src/` | Rust 核心源码目录（25 个顶层模块） | 业务实现与单元测试所在 |
+| `src/` | Rust 核心源码目录（27 个顶层模块） | 业务实现与单元测试所在 |
 | ├── `src/config/` | 配置文件结构体与 `~/.steward/config.toml` 引导、参数校验 | 保持向后兼容 |
 | ├── `src/preflight/` | 运行时环境与依赖完整性预检引擎 | 严格保障可移植部署与优雅降级 |
-| ├── `src/storage/` | SQLite/PG/DuckDB 三引擎、74 方法 SPI 抽象、25 张表与热迁移 | 任何表变更必须同步 schema |
+| ├── `src/storage/` | SQLite/PG/DuckDB 三引擎、82 方法 SPI 抽象、27 张表与热迁移 | 任何表变更必须同步 schema |
+| ├── `src/audit/` | 双域行为审计（`IN_AGENT`/`OUT_OF_AGENT`）、脱敏防洪与 AOPCC 自进化 | 写入严禁 Panic，强制脱敏 |
+| ├── `src/body/` | Agent 本体中枢（`BodyManifest`、`<300 tok` 接力胶囊、五维稳态、`L0~L3` 包络） | 严守脑体分离不内置 LLM 循环 |
 | ├── `src/coordination/` | 多 Agent 协作锁中枢 (Port/Dir/File 互斥、TTL、WFG 死锁、Advisory Lock) | 跨 Agent 资源互斥保证 |
 | ├── `src/fact/` | 宿主机客观事实图谱 (工具能力/端口/Systemd/Cron/资料编目/L1~L3 属性图) | 客观图谱抽取与语义查询 |
 | ├── `src/brief/` | 自适应情境组装引擎 (`BriefAssembler` + `OptimisticLeaseEngine`) | 意图驱动自适应情境裁剪与 AOPCC 租约 |
@@ -72,15 +78,15 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/changes/` | 变更历史回溯与 Agent 会话简报 | 生成开工 markdown |
 | ├── `src/session/` | 会话绑定、完工结清与临时垃圾回收 | 会话生命周期自洁 |
 | ├── `src/hooks/` | 事件总线、`AutoSyncEngine`、客户端生成器与 `OptimisticFailureDiagnoser` | POSIX 转义防注入与碰壁自愈 |
-| ├── `src/api/` | 41 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI/Web 1:1:1 映射 |
-| ├── `src/benchmark/` | 双轨/三轨实证 Benchmark 引擎（`W1~W15` + `M1~M5` + `DQ1~DQ6` + `COMP-C1~C4` + `PR-01~11` 账本） | 必须真机实测与 SHA-256 存证 |
+| ├── `src/api/` | 43 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI/Web 1:1:1 映射 |
+| ├── `src/benchmark/` | 双轨/三轨实证 Benchmark 引擎（`W1~W17` + `M1~M5` + `DQ1~DQ8` + `COMP-C1~C4` + `PR-01~13` 账本） | 必须真机实测与 SHA-256 存证 |
 | ├── `src/demo/` | 路演沙盒引擎（6 大黄金剧目、ROI 核算、`demo:*` 隔离） | 严禁假数据，必须真引擎实跑 |
 | ├── `src/feedback/` | `user_feedback.md` 双向总账、`FreshnessReconciler` 与 `P1~P5` 五点对比自进化探针 | 探针自愈与反馈沉淀闭环 |
 | ├── `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | 解析函数纯函数跨平台编译 |
 | ├── `src/mesh/` | 轻量多机联邦 HTTP Peer Mesh & `MeshEnvelope v1.0` | 写接口鉴权、HMAC 签名防重放与沙盒收件箱 |
 | ├── `src/ecosystem/` | MCP/SKILL 目录、外部服务通讯录与 Context 防爆路由 | 严禁存明文密钥 |
 | ├── `src/tui/` | 终端单屏实时看板 | 轻量 ANSI 交互刷新 |
-| └── `src/web/` | 内嵌单二进制 HTTP/SSE、昼夜双主题 7 大工作台与 Parity 校验 | 写端点强制鉴权与 100% 黑白屏对齐 |
+| └── `src/web/` | 内嵌单二进制 HTTP/SSE、昼夜双主题 8 大工作台与 Parity 校验 | 写端点强制鉴权与 100% 黑白屏对齐 |
 | `EVOLUTION_GUIDE.md` | 零重扫演进活地图与 8 大场景变更触点矩阵 | 新会话 `Tier-0` 必读入口 |
 | `INSTALL.md` | 生产安装、依赖矩阵、Docker 与 Systemd 部署指南 | 与 `preflight` 保持事实对齐 |
 | `ISSUE.md` | 未来演进与待探讨 ISSUE 总账 | 与 Roadmap 及反馈总账协同 |
@@ -108,7 +114,7 @@ flowchart TD
 
 ### 步骤 1: 需求对齐与设计查验
 1. 检查用户的需求是否符合第一节的“核心信条与设计红线”。
-2. 查阅 `design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../design_doc/08-graph-intelligence.md) 与 [14-graph-intelligence-and-mesh-protocol-spec.md](../../design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)，AOPCC 并发策略查 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](../../design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)）。
+2. 查阅 `design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../design_doc/08-graph-intelligence.md) 与 [14-graph-intelligence-and-mesh-protocol-spec.md](../../design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)，AOPCC 并发策略查 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](../../design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)，双域审计与自进化查 [16-dual-domain-audit-and-self-evolution-spec.md](../../design_doc/16-dual-domain-audit-and-self-evolution-spec.md)，Agent 本体与跨大脑连续性查 [17-agent-embodiment-and-continuity-spec.md](../../design_doc/17-agent-embodiment-and-continuity-spec.md)）。
 3. 如涉及新增数据表或字段，先在 `src/storage/schema.sql`、`src/storage/models.rs`、`src/storage/mod.rs` 设计对齐。
 
 ### 步骤 2: 任务拆解与断点登记（严禁大步跨越）
@@ -186,6 +192,8 @@ flowchart TD
 - [ ] **安全自检（规约 #19 & #24）**：新增采集/记忆/变更/跨机对话路径是否经过 `SecretRedactor` 脱敏与 `PromptInjectionScanner` 检查？新增 Web 写端点是否已接入 `check_auth`？Mesh 协同是否校验证书/HMAC 签名、防重放与 `~/.steward/mesh_inbox/` 沙盒？Hook 命令插值与导出路径是否已防注入与防目录穿越？
 - [ ] **图谱分级自检（规约 #5 & #23）**：新增图谱连边是否已明确标注 `evidence_tier`（`L1_EXPLICIT`/`L2_STRUCTURAL`/`L3_SEMANTIC`）、方向语义与合法权重，避免语义边伪装物理硬依赖？
 - [ ] **并发模式自检（规约 #8 & #25）**：涉及高危/写共享/绑定端口是否坚守悲观门禁？可逆/客户端连接等高频路径是否支持消费开工乐观租约直行并由 `post_tool_call` 兜底碰壁自愈？
+- [ ] **双域审计自检（规约 #4, #8, #18, #22 & #26）**：新增 `IN_AGENT` 工具/Hook/Web 写操作或 `OUT_OF_AGENT` 守护巡检/GC/修复/写穿动作是否已写入脱敏 `audit_events` 并携带 `before_after_delta` 与 `evidence_sha256`？被动 `Watcher` 事件是否已防洪折叠？
+- [ ] **本体边界与命名兼容自检（规约 #2 & #27）**：是否严守脑体分离不内置业务 LLM 规划循环？自治行为是否遵守 `L0~L3` 权限包络（不越权执行 `L2/L3`）？对外叙事升级为「Agent 本体」的同时，是否保证 `agent-steward` / `steward_*` / `~/.steward/` 100% 向后兼容？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
 - [ ] 是否执行了 `make lint-panic`（生产代码 0 `unwrap`/`expect`）且 `cargo test` 全部通过（**要求 >= 252 tests 全部通过，零 warning**）？

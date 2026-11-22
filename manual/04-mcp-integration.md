@@ -1,6 +1,6 @@
 # 04 — Agent 接入与 MCP 协议指南（MCP Integration）
 
-> **章节目标**: 指导 AI Agent（如 Claude Desktop、Cursor、Antigravity 等）通过标准 Model Context Protocol (MCP) 原生挂载并调用大管家。
+> **章节目标**: 指导 AI Agent 大脑（如 Claude Desktop、Cursor、Antigravity、Codex 等）通过标准 Model Context Protocol (MCP) 原生挂载并接入 **Agent 本体（Agent Host Steward）**。
 
 ---
 
@@ -10,16 +10,16 @@ Agent Host Steward 原生内置了轻量级、无依赖的 JSON-RPC 2.0 stdio �
 
 ```mermaid
 sequenceDiagram
-    participant Agent as "AI Agent (Claude / Cursor / AGY)"
-    participant Steward as "steward mcp (stdio 子进程)"
+    participant Agent as "瞬态大脑 (Claude / Cursor / AGY)"
+    participant Steward as "steward mcp (Agent 本体 stdio 进程)"
     participant SQLite as "steward.db"
 
     Agent->>Steward: JSON-RPC "initialize"
     Steward-->>Agent: capabilities (tools: true), serverInfo
     Agent->>Steward: JSON-RPC "tools/list"
-    Steward-->>Agent: 返回 41 个原生工具列表与 JSON Schema
+    Steward-->>Agent: 返回 43 个原生工具列表与 JSON Schema
     Agent->>Steward: JSON-RPC "tools/call" (steward_brief)
-    Steward->>SQLite: 聚合查询环境与记忆
+    Steward->>SQLite: 聚合查询物理感官、规约、海马体与跨大脑接力胶囊
     Steward-->>Agent: 返回结果内容文本
 ```
 
@@ -53,9 +53,9 @@ sequenceDiagram
 
 ---
 
-## 3. 41 个原生 MCP 工具标准字典
+## 3. 43 个原生 MCP 工具标准字典
 
-大管家向 Agent 暴露 41 个原子级认知与管控工具：
+Agent 本体向瞬态大脑暴露 43 个原子级感官、反射、海马体与稳态协同工具：
 
 | MCP 工具名 | 核心功能 | 核心参数说明 |
 |---|---|---|
@@ -97,9 +97,11 @@ sequenceDiagram
 | `steward_lock_wait` | 排队等待获取协作锁，支持超时与主动唤醒（含死锁拦截） | `resource_type`, `resource_id`, `holder_agent`, `wait_timeout_ms` |
 | `steward_lock_deadlock_check` | 运行 Wait-For Graph (WFG) 环路检测，诊断多 Agent 死锁 | 无 |
 | `steward_mesh_query` | `MeshEnvelope v1.0` HMAC 防重放联邦协同：ping/facts/locks/port/acquire/跨机图谱/脱敏对话/<=10MB 沙盒投递 | `action`, `port`, `peer`, `query`, `thread_id`, `intent`, `content`, `file_path`, `transfer_id` |
-| `steward_demo_scenario` | Web 路演与黑屏同源场景演示引擎（6 大剧目、ROI、41/41 Parity、沙盒重置） | `action`, `scenario_id` |
-| `steward_benchmark` | 实证 Benchmark 对照评测（`W1~W15` + `M1~M5` + `DQ1~DQ6` + `COMP-C1~C4`）与生产效能账本（`PR-01~11`） | `action`, `suite`, `track`, `save`, `run_id`, `run_a`, `run_b`, `window`, `tool_filter`, `format`, `limit` |
+| `steward_demo_scenario` | Web 路演与黑屏同源场景演示引擎（7 大剧目、ROI、43/43 Parity、沙盒重置） | `action`, `scenario_id` |
+| `steward_benchmark` | 实证 Benchmark v3.7 对照评测（`W1~W17` + `M1~M5` + `DQ1~DQ8` + `COMP-C1~C4`）与生产效能账本（`PR-01~13`） | `action`, `suite`, `track`, `save`, `run_id`, `run_a`, `run_b`, `window`, `tool_filter`, `format`, `limit` |
 | `steward_feedback` | 使用反馈总账 (`user_feedback.md`) 读写沉淀、`reconcile` 信息新鲜度对账与 `P1~P5` 自进化对比探针 | `action`, `category`, `priority`, `title`, `evidence`, `target`, `auto_heal`, `auto_feedback` |
+| `steward_audit_query` | 双域全链路行为审计 (`IN_AGENT` + `OUT_OF_AGENT`)、因果钻取、DuckDB OLAP 导出与租约滑窗自进化 | `action`, `domain`, `actor_kind`, `category`, `outcome`, `trace_id`, `window`, `auto_feedback`, `output_path` |
+| `steward_body_state` | Agent 本体中枢：六器官自省 (`manifest`)、五维稳态 (`vitals`)、四级包络 (`envelope`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`) 与多本体名片发现 (`peers`) | `action`, `from_brain`, `session_id`, `goal_summary`, `active_files`, `verified_facts`, `open_blockers`, `next_step_hint`, `checkpoint_id`, `check_action`, `target`, `dry_run` |
 
 ---
 

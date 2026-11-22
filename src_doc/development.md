@@ -2,7 +2,7 @@
 
 > **版本**: v0.4.0 (Rust Edition)  
 > **更新时间**: 2026-11-22  
-> **架构基线**: 三位一体架构 (事实图谱 + 偏好规约 + 可插拔记忆) + 多存储引擎 + 协作锁 + 分层加权图谱 + MeshEnvelope v1.0 + AOPCC 并发自适应 + Benchmark v3.5
+> **架构基线**: 脑体分离 Agent 本体（三位一体感官/脊柱/海马体 + `src/body/` 本体中枢）+ 多存储引擎 (82 SPI / 27 表) + 协作锁 + 分层加权图谱 + MeshEnvelope v1.0 + AOPCC 并发自适应 + 双域审计自进化 + Benchmark v3.7
 
 ---
 
@@ -62,12 +62,14 @@ agent-steward/
 │   ├── ecosystem_integration.rs     # 生态目录与防爆路由集成测试 (1 项)
 │   ├── test_web_dashboard.rs        # Web UI 2.0 端到端全生命周期测试 (1 项)
 │   └── benchmarks.rs                # 亚毫秒 OLAP 与实证基准测试 (6 项)
-└── src/                     # Rust 核心源码目录 (25 个顶层模块)
-    ├── main.rs              # CLI 入口与 28 个顶层子命令解析 (Clap derive)
+└── src/                     # Rust 核心源码目录 (27 个顶层模块)
+    ├── main.rs              # CLI 入口与顶层子命令解析 (Clap 30 Commands)
     ├── lib.rs               # 核心库导出与版本元信息
     ├── config/              # 配置文件与环境变量管理、参数校验
     ├── preflight/           # 运行时环境与依赖完整性预检引擎
-    ├── storage/             # 存储层 SPI (74 方法) + SQLite/PG/DuckDB 三引擎 (25 表) + 热迁移与增量同步
+    ├── storage/             # 存储层 SPI (82 方法) + SQLite/PG/DuckDB 三引擎 (27 表) + 热迁移与增量同步
+    ├── audit/               # 双域全链路行为审计 (IN_AGENT/OUT_OF_AGENT) + 脱敏防洪 + AOPCC 自进化 + DuckDB OLAP
+    ├── body/                # Agent 本体中枢 (BodyManifest / ContinuityCapsule / HomeostasisVitals / L0~L3 Envelope)
     ├── coordination/        # 多 Agent 协作锁中枢 (Port/Dir/File 互斥、TTL、WFG 死锁、Advisory Lock)
     ├── fact/                # 宿主机客观事实图谱 (工具能力/端口/Systemd/Cron/资料编目/L1~L3 属性图)
     ├── brief/               # 自适应情境组装引擎 (Dynamic Brief Assembler + AOPCC 乐观直通租约)
@@ -81,15 +83,15 @@ agent-steward/
     ├── daemon/              # 后台常驻守护进程与自主巡查调度器
     ├── session/             # 会话生命周期自动绑定与安全归档
     ├── hooks/               # HOOK 事件总线、自动同步、客户端生成、Pipeline 与 `<2ms` 碰壁自愈
-    ├── web/                 # 内嵌 HTTP/SSE 昼夜蓝图监控大屏服务 (7 大工作台)
+    ├── web/                 # 内嵌 HTTP/SSE 昼夜蓝图监控大屏服务 (9 大工作台)
     ├── tui/                 # 终端全景实时交互看板
     ├── ecosystem/           # MCP/SKILL 生态目录、外部服务通讯录与 Context 防爆路由
     ├── platform/            # 跨平台原生探针 (Linux/macOS/Windows)
-    ├── mesh/                # 轻量多机联邦 HTTP Peer Mesh & MeshEnvelope v1.0
-    ├── demo/                # 路演沙盒引擎（6 大剧目、ROI 核算）
-    ├── benchmark/           # 三轨实证 Benchmark v3.5（W1~W15 + M1~M5 + DQ1~DQ6 + COMP-C1~C4 + PR-01~11）
+    ├── mesh/                # 轻量多机联邦 HTTP Peer Mesh & MeshEnvelope v1.0 (含 body_manifest 名片交换)
+    ├── demo/                # 路演沙盒引擎（7 大剧目、ROI 核算）
+    ├── benchmark/           # 三轨实证 Benchmark v3.7（W1~W17 + M1~M5 + DQ1~DQ8 + COMP-C1~C4 + PR-01~13）
     ├── feedback/            # 使用反馈总账 (user_feedback.md)、新鲜度对账与 P1~P5 对比自进化探针
-    └── api/                 # 41 个原生 MCP 工具端点与 AOPCC Hook 门禁
+    └── api/                 # 43 个原生 MCP 工具端点与 AOPCC Hook 门禁
 ```
 
 ---

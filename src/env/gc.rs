@@ -136,6 +136,38 @@ impl HostGarbageCollector {
         })
     }
 
+    /// 带双域审计留痕的宿主垃圾回收（记录清理前后清单、字节数与 dry_run/apply 状态）
+    pub fn run_gc_audited(
+        storage: &crate::storage::Storage,
+        tmp_dir: &Path,
+        max_age_hours: u64,
+        dry_run: bool,
+    ) -> Result<HostGcReport> {
+        let t0 = std::time::Instant::now();
+        let rep = Self::run_gc(tmp_dir, max_age_hours, dry_run)?;
+        let sample_paths: Vec<&str> = rep.tmp_files.iter().take(20).map(|f| f.path.as_str()).collect();
+        crate::audit::AuditLogger::record_best_effort(
+            storage,
+            crate::audit::AuditEventInput::out_of_agent(
+                "governance_engine",
+                "gc",
+                "host_gc",
+                if dry_run { "gc_dry_run" } else { "gc_apply" },
+            )
+            .with_target("dir", rep.tmp_dir_scanned.clone())
+            .with_outcome(if dry_run { "dry_run" } else { "success" })
+            .with_elapsed_us(t0.elapsed().as_micros() as i64)
+            .with_delta(serde_json::json!({
+                "candidate_files_count": rep.candidate_files_count,
+                "candidate_bytes_reclaimed": rep.candidate_bytes_reclaimed,
+                "deleted_files_count": rep.deleted_files_count,
+                "deleted_bytes_reclaimed": rep.deleted_bytes_reclaimed,
+                "sample_paths": sample_paths,
+            })),
+        );
+        Ok(rep)
+    }
+
     /// 只读巡检给定根目录下各子项目的冗余构建缓存（target/、node_modules/），返回可回收体积建议
     pub fn scan_redundant_build_caches(roots: &[&Path]) -> Vec<BuildCacheCandidate> {
         let mut results = Vec::new();
