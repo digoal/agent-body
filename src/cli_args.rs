@@ -294,8 +294,29 @@ pub(crate) enum BodyCommands {
         snap_a: Option<String>,
         #[arg(long)]
         snap_b: Option<String>,
-        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+        #[arg(long, help = "查看已保存的历史 AWR 报告 ID (如 awr-...)")]
+        report_id: Option<String>,
+        #[arg(long, default_value_t = true, num_args = 0..=1, default_missing_value = "true", action = clap::ArgAction::Set)]
         vs_baseline: bool,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "列出已保存的 AWR 性能快照库元数据与黄金基线标识")]
+    PerfSnapshots {
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "列出已保存的历史 AWR 差分诊断报告清单")]
+    PerfReports {
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "删除指定 AWR 性能快照或历史诊断报告（同步清理索引）")]
+    PerfDelete {
+        #[arg(long, default_value = "auto", help = "删除目标类型: auto | snapshot | report")]
+        kind: String,
+        #[arg(long, help = "快照 ID (snap-...) 或 AWR 报告 ID (awr-...)")]
+        id: String,
         #[arg(long, default_value_t = false)]
         json: bool,
     },
@@ -399,9 +420,9 @@ pub(crate) enum FeedbackCommands {
 
 #[derive(Subcommand)]
 pub(crate) enum BenchCommands {
-    #[command(about = "列出 17 大标准 A/B 负载与 PR-01~13 推导规则")]
+    #[command(about = "列出 18 大标准 A/B 负载与 PR-01~14 推导规则")]
     Workloads,
-    #[command(about = "运行宿主机真机 A/B 对照基准 (full/macro/micro/dq/competitors/W1~W17)")]
+    #[command(about = "运行宿主机真机 A/B 对照基准 (full/macro/micro/dq/competitors/W1~W18)")]
     Run {
         #[arg(long, default_value = "full")]
         suite: String,
@@ -665,7 +686,7 @@ pub(crate) enum AnalyticsCommands {
 pub(crate) enum HooksCommands {
     #[command(about = "自动生成指定 Agent 客户端的 Pre/Post Hook 集成配置")]
     Generate {
-        #[arg(short, long, help = "目标客户端类型 (agy, cursor, claude, git)")]
+        #[arg(short, long, help = "目标客户端类型 (agy, cursor, claude, codex, hermes, git)")]
         client: String,
 
         #[arg(short, long, help = "写入目标根目录 (若未指定则输出到标准输出)")]
@@ -732,10 +753,19 @@ pub(crate) enum CoordinationCommands {
         #[arg(short, long, help = "按资源类别过滤: port, directory, service, file, custom")]
         resource_type: Option<String>,
     },
-    #[command(about = "手动释放指定资源锁 (管理员运维操作)")]
+    #[command(about = "手动释放指定资源锁 (支持 --lock-id 或 -t/-i 资源匹配，--force=false 校验持有者)")]
     Release {
-        #[arg(long, help = "锁的唯一标识 lock_id")]
-        lock_id: String,
+        #[arg(long, help = "锁的唯一标识 lock_id（可与 -t/-i 二选一）")]
+        lock_id: Option<String>,
+
+        #[arg(short = 't', long, help = "按资源类型匹配释放: port, directory, service, file, custom")]
+        resource_type: Option<String>,
+
+        #[arg(short = 'i', long, help = "按资源标识匹配释放")]
+        resource_id: Option<String>,
+
+        #[arg(short = 'a', long, help = "持有者 Agent 标识（当 --force=false 时用于权限校验）")]
+        holder_agent: Option<String>,
 
         #[arg(long, help = "是否强制释放", default_value_t = true, action = clap::ArgAction::Set, num_args = 0..=1, default_missing_value = "true")]
         force: bool,

@@ -28,7 +28,7 @@ pub fn sha256_hex(input: &str) -> String {
     digest.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
-/// 生产效能存证账本确定性推导规则 (PR-01 ~ PR-13)
+/// 生产效能存证账本确定性推导规则 (PR-01 ~ PR-14)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProvenanceRule {
     Pr01SkillMcpRouting,
@@ -44,6 +44,7 @@ pub enum ProvenanceRule {
     Pr11OptimisticLeaseAndRecovery,
     Pr12AuditDrivenSelfEvolution,
     Pr13CrossBrainContinuitySaved,
+    Pr14PerfAwrDiagnosticsSaved,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,6 +71,7 @@ impl ProvenanceRule {
             Self::Pr11OptimisticLeaseAndRecovery => "PR-11",
             Self::Pr12AuditDrivenSelfEvolution => "PR-12",
             Self::Pr13CrossBrainContinuitySaved => "PR-13",
+            Self::Pr14PerfAwrDiagnosticsSaved => "PR-14",
         }
     }
 
@@ -88,6 +90,7 @@ impl ProvenanceRule {
             Self::Pr11OptimisticLeaseAndRecovery => "AOPCC 乐观直通租约与碰壁秒级自愈",
             Self::Pr12AuditDrivenSelfEvolution => "双域行为审计溯源与数据驱动自进化",
             Self::Pr13CrossBrainContinuitySaved => "跨大脑连续性接力与本体器官自省",
+            Self::Pr14PerfAwrDiagnosticsSaved => "内生等待事件与 AWR/ADDM 性能自诊断省轮",
         }
     }
 
@@ -132,6 +135,9 @@ impl ProvenanceRule {
             Self::Pr13CrossBrainContinuitySaved => {
                 "Cross-brain handoff capsule (<=300 tok, redacted & sanitized) + 6-organ BodyManifest saves cold re-discovery, rounds_saved = 3"
             }
+            Self::Pr14PerfAwrDiagnosticsSaved => {
+                "18-event WaitEventRegistry + /proc/self KernelSelfTelemetry + AWR/ADDM auto-tune saves external ps/lsof/iostat probing, rounds_saved = 4"
+            }
         }
     }
 
@@ -149,7 +155,8 @@ impl ProvenanceRule {
             (Self::Pr10FeedbackAndMemoryLoop, "body_feedback, body_memory_add, body_session_close"),
             (Self::Pr11OptimisticLeaseAndRecovery, "body_brief(leases), body_hook_pre(mode), body_hook_post(success=false)"),
             (Self::Pr12AuditDrivenSelfEvolution, "body_audit_query, AuditLogger, AuditEvolutionAnalyzer"),
-            (Self::Pr13CrossBrainContinuitySaved, "body_state, BodyManifestEngine, ContinuityManager, HomeostasisVitalsEngine"),
+            (Self::Pr13CrossBrainContinuitySaved, "body_state(manifest/vitals/envelope/handoff/heal/peers), ContinuityManager"),
+            (Self::Pr14PerfAwrDiagnosticsSaved, "body_state(perf_snapshot/perf_awr/perf_snapshots/perf_reports/perf_delete/perf_tune), BodyPerfEngine"),
         ];
         all.iter()
             .map(|(r, tools)| ProvenanceRuleMeta {

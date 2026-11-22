@@ -122,10 +122,15 @@ impl StewardDaemon {
         println!("✅ 后台自主深度巡查与属性图增量同步就绪 (每 1800 秒自动巡查)");
         println!("按 Ctrl+C 优雅退出...\n");
 
+        let mut idle_wait_start = std::time::Instant::now();
         loop {
             tokio::select! {
                 // 监听文件系统变更事件
                 _ = watch_poll_interval.tick() => {
+                    crate::body::WaitEventRegistry::record_us(
+                        crate::body::WaitEventId::IdleDaemonLoop,
+                        idle_wait_start.elapsed().as_micros() as u64,
+                    );
                     if let Some(ref w) = watcher {
                         let events = w.poll_events();
                         if !events.is_empty() {
@@ -140,6 +145,10 @@ impl StewardDaemon {
 
                 // 定时动态进程扫描与同步
                 _ = process_interval.tick() => {
+                    crate::body::WaitEventRegistry::record_us(
+                        crate::body::WaitEventId::IdleDaemonLoop,
+                        idle_wait_start.elapsed().as_micros() as u64,
+                    );
                     if let Ok(procs) = env_collector.collect_and_sync_processes() {
                         if let Some(ref tx) = sse_broadcaster {
                             let msg = serde_json::json!({
@@ -157,6 +166,10 @@ impl StewardDaemon {
                 // 定时自主深度巡查与属性图同步
                 // 必须在脱离 Tokio 运行时的独立 OS 线程中执行，避免内部 reqwest::blocking 导致主线程 100% CPU 忙等死锁
                 _ = inspection_interval.tick() => {
+                    crate::body::WaitEventRegistry::record_us(
+                        crate::body::WaitEventId::IdleDaemonLoop,
+                        idle_wait_start.elapsed().as_micros() as u64,
+                    );
                     if inspection_running
                         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
                         .is_ok()
@@ -181,6 +194,7 @@ impl StewardDaemon {
                                             "graph_nodes": report.graph_nodes_updated,
                                             "graph_edges": report.graph_edges_updated,
                                             "expired_locks_cleaned": report.expired_locks_cleaned,
+                                            "awr_snapshot_captured": report.awr_snapshot_captured,
                                             "timestamp": chrono::Local::now().to_rfc3339(),
                                         }
                                     });
@@ -194,10 +208,15 @@ impl StewardDaemon {
 
                 // 捕捉退出信号
                 _ = tokio::signal::ctrl_c() => {
+                    crate::body::WaitEventRegistry::record_us(
+                        crate::body::WaitEventId::IdleDaemonLoop,
+                        idle_wait_start.elapsed().as_micros() as u64,
+                    );
                     println!("\n[Steward] 收到停机信号，正在保存状态并安全退出...");
                     break;
                 }
             }
+            idle_wait_start = std::time::Instant::now();
         }
 
         Ok(())

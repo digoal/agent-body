@@ -344,11 +344,20 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             steward_desc: "BodyManifest 6 器官自省 + ContinuityCapsule (<=300 tok 脱敏抗投毒) + L0~L3 自治包络拦截".into(),
             sla_desc: "4/4 接力/脱敏/包络断言命中, rounds_saved >= 2, token_savings_pct >= 50%, +ΔQ > 0".into(),
         },
+        WorkloadSpec {
+            id: "W18".into(),
+            name: "perf_awr_and_self_diagnostics".into(),
+            title: "内生等待事件与 AWR/ADDM 自诊断闭环".into(),
+            category: "D3/D7 Self-Telemetry & AWR".into(),
+            baseline_desc: "无内生遥测时外部轮询 ps/lsof/iostat/top 抓性能瓶颈与内存漂移 (5 rounds)".into(),
+            steward_desc: "18/18 WaitEventRegistry + AWR 快照差分 + ADDM 根因诊断 + 报告删除闭环 (1 round)".into(),
+            sla_desc: "4/4 AWR/ADDM/分位单调性断言命中, token_savings_pct >= 50%, steward_elapsed_us < 250_000".into(),
+        },
     ]
 }
 
 pub fn run_all_workloads(storage: Arc<dyn StorageProvider>) -> Result<Vec<WorkloadResult>> {
-    let mut results = Vec::with_capacity(17);
+    let mut results = Vec::with_capacity(18);
     for spec in list_workload_specs() {
         results.push(run_workload(storage.clone(), &spec.id)?);
     }
@@ -374,7 +383,8 @@ pub fn run_workload(storage: Arc<dyn StorageProvider>, id: &str) -> Result<Workl
         "W15" => run_w15_optimistic_vs_pessimistic_execution_loop(),
         "W16" => run_w16_dual_domain_audit_and_lease_self_evolution(),
         "W17" => run_w17_cross_brain_continuity_and_body_proprioception(),
-        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W17)", id),
+        "W18" => run_w18_perf_awr_and_self_diagnostics(),
+        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W18)", id),
     }
 }
 

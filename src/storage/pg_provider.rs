@@ -1371,6 +1371,17 @@ impl StorageProvider for PgStorageProvider {
         Ok(affected as usize)
     }
 
+    fn count_expired_coordination_locks(&self) -> Result<usize> {
+        let mut client = self.lock_client()?;
+        let now = chrono::Utc::now();
+        let row = client.query_one(
+            "SELECT COUNT(*) FROM coordination_locks WHERE expires_at::timestamptz <= $1",
+            &[&now],
+        )?;
+        let count: i64 = row.get(0);
+        Ok(count.max(0) as usize)
+    }
+
     fn upsert_mcp_catalog(&self, rec: &McpCatalogRecord) -> Result<()> {
         let mut client = self.lock_client()?;
         client.execute(

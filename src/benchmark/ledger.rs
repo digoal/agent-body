@@ -331,20 +331,48 @@ impl EffectivenessLedger {
                 elapsed_us,
                 evidence_summary: format!("PR-12: 双域行为审计溯源与自进化闭环 ({} tok)", stew_tokens),
             },
-            "body_state" => LedgerEventInput {
-                session_id,
-                source_channel: channel.into(),
-                tool_or_action: tool_or_action.into(),
-                rule: ProvenanceRule::Pr13CrossBrainContinuitySaved,
-                baseline_tokens: stew_tokens.saturating_mul(4).max(800),
-                steward_tokens: stew_tokens,
-                baseline_rounds: 4,
-                steward_rounds: 1,
-                hazard_intercepted: 0,
-                noise_blocked: 0,
-                elapsed_us,
-                evidence_summary: format!("PR-13: Agent 本体器官自省与跨大脑接力 ({} tok)", stew_tokens),
-            },
+            "body_state" | "body_perf_awr" => {
+                let is_perf_action = tool_or_action == "body_perf_awr"
+                    || output_text.contains("snapshot_id")
+                    || output_text.contains("report_id")
+                    || output_text.contains("addm_findings")
+                    || output_text.contains("before_rss_kb")
+                    || output_text.contains("perf_deleted")
+                    || output_text.contains("perf_tune")
+                    || output_text.contains("\"snapshots\"")
+                    || output_text.contains("\"reports\"");
+                if is_perf_action {
+                    LedgerEventInput {
+                        session_id,
+                        source_channel: channel.into(),
+                        tool_or_action: tool_or_action.into(),
+                        rule: ProvenanceRule::Pr14PerfAwrDiagnosticsSaved,
+                        baseline_tokens: stew_tokens.saturating_mul(4).max(1200),
+                        steward_tokens: stew_tokens,
+                        baseline_rounds: 5,
+                        steward_rounds: 1,
+                        hazard_intercepted: 0,
+                        noise_blocked: 0,
+                        elapsed_us,
+                        evidence_summary: format!("PR-14: 内生等待事件与 AWR/ADDM 自诊断 ({} tok)", stew_tokens),
+                    }
+                } else {
+                    LedgerEventInput {
+                        session_id,
+                        source_channel: channel.into(),
+                        tool_or_action: tool_or_action.into(),
+                        rule: ProvenanceRule::Pr13CrossBrainContinuitySaved,
+                        baseline_tokens: stew_tokens.saturating_mul(4).max(800),
+                        steward_tokens: stew_tokens,
+                        baseline_rounds: 4,
+                        steward_rounds: 1,
+                        hazard_intercepted: 0,
+                        noise_blocked: 0,
+                        elapsed_us,
+                        evidence_summary: format!("PR-13: Agent 本体器官自省与跨大脑接力 ({} tok)", stew_tokens),
+                    }
+                }
+            }
             _ => return,
         };
         Self::record(storage, input);
@@ -487,5 +515,30 @@ mod tests {
             .expect("query 1");
         assert_eq!(s1.total_events, 1);
         assert_eq!(s1.total_hazards_intercepted, 1);
+    }
+
+    #[test]
+    fn test_body_state_perf_records_pr14_and_manifest_records_pr13() {
+        let provider = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        EffectivenessLedger::record_channel_call(
+            &provider,
+            "mcp",
+            "body_state",
+            r#"{"body_id":"body-1","organs":[]}"#,
+            30,
+        );
+        EffectivenessLedger::record_channel_call(
+            &provider,
+            "mcp",
+            "body_state",
+            r#"{"report_id":"awr-20261122","addm_findings":[]}"#,
+            45,
+        );
+        let s = provider
+            .query_effectiveness_ledger("7d", None, 10)
+            .expect("query ledger");
+        assert_eq!(s.total_events, 2);
+        assert!(s.by_rule.iter().any(|r| r.provenance_rule == "PR-13"));
+        assert!(s.by_rule.iter().any(|r| r.provenance_rule == "PR-14"));
     }
 }

@@ -39,6 +39,7 @@ impl SyncPipeline {
     /// 执行全量同步（使用 DuckDB 原生 Appender + 单事务批量装载，保留真实历史 created_at 并更新水位线）
     pub fn sync_all(&self) -> Result<SyncReport> {
         use std::collections::HashSet;
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::LockDuckDbSync);
         let start = Instant::now();
         let now_str = chrono::Utc::now().to_rfc3339();
 
@@ -528,6 +529,7 @@ impl SyncPipeline {
     /// 轻量单表同步：仅通过 DuckDB Appender 装载双域审计表（< 20ms）
     pub fn sync_audit_events_only(&self) -> Result<usize> {
         use std::collections::HashSet;
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::LockDuckDbSync);
         let audits = self
             .source
             .query_audit_events(&crate::storage::models::AuditQueryFilter {

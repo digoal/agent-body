@@ -340,6 +340,7 @@ impl<'a> GraphRelationshipMiner<'a> {
             return Ok(0);
         }
 
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::CpuVectorCosine);
         let mut count = 0usize;
         let mut emitted_undirected: HashSet<(String, String)> = HashSet::new();
 

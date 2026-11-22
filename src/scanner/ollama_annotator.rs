@@ -235,6 +235,7 @@ impl OllamaAnnotator {
 
     /// 对单个资产调用本地 Ollama 小模型生成结构化语义 KV 并回写
     pub fn enrich_single_asset(&self, asset: &AssetRecord) -> Result<Option<EnrichedSample>> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::NetOllamaEnrich);
         let path = Path::new(&asset.path);
         if !path.exists() || !path.is_file() || is_sensitive_file(path) || asset.scan_tier == "shallow" {
             return Ok(None);

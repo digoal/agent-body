@@ -52,6 +52,7 @@ impl ProcessNetTopology {
 
     /// Linux `/proc` 原生实现：扫描 TCP LISTEN 端口及进程上下文
     pub fn scan_listening_ports_procfs() -> Result<Vec<ListeningPortFact>> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IoProcFs);
         let mut port_facts = Vec::new();
 
         // 1. 扫描 TCP IPv4

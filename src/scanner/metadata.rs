@@ -225,6 +225,7 @@ impl SecretRedactor {
 
     /// 单行脱敏（用于 /proc cmdline、摘要、description 等单行字段，不追加多余换行）
     pub fn redact_single_line(input: &str) -> String {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::CpuSecretRedact);
         let cleaned = Self::redact_private_keys(input);
         Self::redact_line(&cleaned)
     }
@@ -234,6 +235,7 @@ impl SecretRedactor {
         if input.is_empty() {
             return String::new();
         }
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::CpuSecretRedact);
         let had_trailing_nl = input.ends_with('\n');
         let pk_cleaned = Self::redact_private_keys(input);
         let lines: Vec<String> = pk_cleaned.lines().map(Self::redact_line).collect();

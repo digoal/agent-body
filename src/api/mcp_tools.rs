@@ -532,13 +532,29 @@ impl McpToolRegistry {
 
             "body_lock_release" => {
                 use crate::coordination::CoordinationEngine;
-                let lock_id = args.get("lock_id").and_then(|v| v.as_str()).unwrap_or("");
-                let holder = args.get("holder_agent").and_then(|v| v.as_str()).unwrap_or("current-agent");
+                let lock_id = args.get("lock_id").and_then(|v| v.as_str());
+                let resource_type = args.get("resource_type").and_then(|v| v.as_str());
+                let resource_id = args.get("resource_id").and_then(|v| v.as_str());
+                let holder = args
+                    .get("holder_agent")
+                    .or_else(|| args.get("agent_id"))
+                    .and_then(|v| v.as_str())
+                    .or(Some("current-agent"));
+                let force = args.get("force").and_then(|v| v.as_bool()).unwrap_or(false);
                 let engine = CoordinationEngine::new(self.storage.provider().clone());
-                let released = engine.release(lock_id, holder)?;
+                let (resolved_id, released) = engine.release_flexible(
+                    lock_id,
+                    resource_type,
+                    resource_id,
+                    holder,
+                    force,
+                )?;
                 Ok(serde_json::to_string_pretty(&serde_json::json!({
-                    "lock_id": lock_id,
+                    "lock_id": resolved_id.unwrap_or_default(),
+                    "resource_type": resource_type,
+                    "resource_id": resource_id,
                     "released": released,
+                    "force": force,
                 }))?)
             }
 
@@ -1195,6 +1211,43 @@ impl McpToolRegistry {
                             vs_baseline,
                         )?;
                         Ok(serde_json::to_string_pretty(&rep)?)
+                    }
+                    "perf_snapshots" => {
+                        let (snapshots, baseline) =
+                            crate::body::BodyPerfEngine::list_snapshots_meta(self.storage.provider().as_ref());
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "baseline": baseline,
+                            "snapshots": snapshots,
+                            "count": snapshots.len(),
+                        }))?)
+                    }
+                    "perf_reports" => {
+                        let reports =
+                            crate::body::BodyPerfEngine::list_awr_reports_meta(self.storage.provider().as_ref());
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "reports": reports,
+                            "count": reports.len(),
+                        }))?)
+                    }
+                    "perf_delete" => {
+                        let kind = args
+                            .get("target_kind")
+                            .or_else(|| args.get("kind"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("auto");
+                        let target_id = args
+                            .get("target_id")
+                            .or_else(|| args.get("id"))
+                            .or_else(|| args.get("report_id"))
+                            .or_else(|| args.get("snapshot_id"))
+                            .and_then(|v| v.as_str())
+                            .ok_or_else(|| anyhow::anyhow!("perf_delete 需要提供 target_id (或 report_id / snapshot_id)"))?;
+                        let res = crate::body::BodyPerfEngine::delete_perf_artifact(
+                            &self.storage,
+                            kind,
+                            target_id,
+                        )?;
+                        Ok(serde_json::to_string_pretty(&res)?)
                     }
                     "perf_tune" => {
                         let rep = crate::body::BodyPerfEngine::run_l1_auto_tune(&self.storage)?;

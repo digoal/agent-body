@@ -44,9 +44,9 @@ impl Drop for GuardTempDir {
     }
 }
 
-/// 运行 5 大内核微基准 SLA (M1~M5)
+/// 运行 6 大内核微基准 SLA (M1~M6)
 pub fn run_all_micro_benchmarks() -> Result<Vec<MicroBenchResult>> {
-    let mut results = Vec::with_capacity(5);
+    let mut results = Vec::with_capacity(6);
     let is_debug = cfg!(debug_assertions);
 
     // M1: 属性图 3 跳遍历
@@ -279,6 +279,35 @@ pub fn run_all_micro_benchmarks() -> Result<Vec<MicroBenchResult>> {
             sla_limit_us: sla,
             passed: elapsed_us < sla && summary.row_count == 1000,
             detail: format!("DuckDB 1000 条资产导出 Parquet ({} bytes)", summary.file_size_bytes),
+        });
+    }
+
+    // M6: WaitEventGuard 无锁直方图百次批采样微观耗时 (< 150us/100 ops release)
+    {
+        use crate::body::{WaitEventGuard, WaitEventId};
+        let iters = 100usize;
+        let ops_per_batch = 100usize;
+        let mut samples = Vec::with_capacity(iters);
+        for _ in 0..iters {
+            let t = Instant::now();
+            for _ in 0..ops_per_batch {
+                let _g = WaitEventGuard::enter(WaitEventId::CpuSecretRedact);
+            }
+            samples.push(t.elapsed().as_micros());
+        }
+        let (avg_us, p50_us, p95_us, p99_us) = compute_percentiles(&mut samples);
+        let sla = if is_debug { 1_000 } else { 150 };
+        results.push(MicroBenchResult {
+            id: "M6".into(),
+            name: "micro_wait_event_guard".into(),
+            iterations: iters,
+            avg_us,
+            p50_us,
+            p95_us,
+            p99_us,
+            sla_limit_us: sla,
+            passed: avg_us < sla,
+            detail: format!("WaitEventGuard 无锁原子埋点 ({} ops/batch)", ops_per_batch),
         });
     }
 

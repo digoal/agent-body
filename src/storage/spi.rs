@@ -111,6 +111,9 @@ pub trait StorageProvider: Send + Sync {
     fn get_coordination_lock(&self, resource_type: &str, resource_id: &str) -> Result<Option<CoordinationLock>>;
     fn list_coordination_locks(&self, resource_type: Option<&str>) -> Result<Vec<CoordinationLock>>;
     fn gc_expired_coordination_locks(&self) -> Result<usize>;
+    fn count_expired_coordination_locks(&self) -> Result<usize> {
+        Ok(0)
+    }
 
     // ─── Ecosystem Catalogs & External Service Contacts (Phase 16) ────
     fn upsert_mcp_catalog(&self, rec: &McpCatalogRecord) -> Result<()>;

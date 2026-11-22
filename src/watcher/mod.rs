@@ -46,6 +46,7 @@ impl FileWatcher {
 
     /// 尝试拉取一组防抖后的变更事件 (非阻塞)
     pub fn poll_events(&self) -> Vec<FileChangeEvent> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IoInotifyPoll);
         let mut events = Vec::new();
 
         while let Ok(res) = self.rx.try_recv() {

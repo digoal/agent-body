@@ -14,6 +14,7 @@ impl EventBusHandle {
     /// 
     /// 无论是否有活跃的接收端，发射操作均保证快速非阻塞 (< 100μs)
     pub fn emit(&self, event: StewardEvent) -> Result<usize> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IpcEventBus);
         // 如果当前没有订阅者，broadcast::send 会返回 Err(SendError)
         // 在总线语义下，无订阅者属于正常现象，静默返回 0 接收者
         match self.sender.send(Arc::new(event)) {

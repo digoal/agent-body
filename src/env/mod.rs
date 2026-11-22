@@ -87,6 +87,7 @@ impl EnvCollector {
 
     /// 采集并同步动态任务与普通进程 (过滤线程与系统底噪，关联真实监听端口)
     pub fn collect_and_sync_processes(&self) -> Result<Vec<ActiveProcessRecord>> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IoProcFs);
         let mut sys = System::new_with_specifics(
             RefreshKind::new().with_processes(ProcessRefreshKind::everything()),
         );

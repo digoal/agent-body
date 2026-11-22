@@ -1482,6 +1482,18 @@ impl StorageProvider for DuckDbStorageProvider {
         Ok(count)
     }
 
+    fn count_expired_coordination_locks(&self) -> Result<usize> {
+        let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM coordination_locks
+             WHERE COALESCE(try_cast(expires_at AS TIMESTAMPTZ) <= try_cast(?1 AS TIMESTAMPTZ), expires_at <= ?1)",
+            params![now],
+            |row| row.get(0),
+        )?;
+        Ok(count.max(0) as usize)
+    }
+
     fn upsert_mcp_catalog(&self, rec: &McpCatalogRecord) -> Result<()> {
         let conn = self.lock_conn()?;
         let tools_str = serde_json::to_string(&rec.tools_json)?;

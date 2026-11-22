@@ -110,6 +110,8 @@ impl AutonomyEnvelope {
                 | "status"
                 | "perf_awr"
                 | "perf_snapshot"
+                | "perf_snapshots"
+                | "perf_reports"
                 | "audit_query"
                 | "memory_search"
                 | "port_check"
@@ -188,6 +190,7 @@ impl AutonomyEnvelope {
                 | "handoff_save"
                 | "handoff_resume"
                 | "perf_tune"
+                | "perf_delete"
         ) {
             return EnvelopeDecision {
                 action: action.to_string(),

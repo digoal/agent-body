@@ -1,6 +1,6 @@
 # Agent Body — 零重扫项目演进指南 (`EVOLUTION_GUIDE.md`)
 
-<!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=87 tables=27 workloads=17 micro=5 dq=8 pr_rules=13 -->
+<!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=88 tables=27 workloads=18 micro=6 dq=9 pr_rules=14 -->
 
 > **核心定位（解决 ISSUE #17）**：让任何新接手的 AI Agent 或开发者在 **不重复扫描 3.8 万行源码与 48 份历史 `docs/src_doc/` 文档** 的前提下，**2 轮以内**完成需求定位、触点锁定与规范演进。
 
@@ -10,7 +10,7 @@
 
 1. **只读 Tier-0 文档（仅 2 份）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构地图 + 变更触点矩阵）；
-   - 当前活跃路线图 [docs/src_doc/roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)、[docs/src_doc/roadmap-phase51.md](docs/src_doc/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/roadmap-phase42.md)）。
+   - 当前活跃路线图 [docs/src_doc/roadmap-phase54.md](docs/src_doc/roadmap-phase54.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)、[docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)、[docs/src_doc/roadmap-phase51.md](docs/src_doc/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/roadmap-phase42.md)）。
 2. **运行 O(1) 实时架构快照（`<100ms`，禁止手动数模块/工具数）**：
    ```bash
    make evolution-check
@@ -52,7 +52,7 @@
 |---|---|---|
 | `src/api/` | `McpToolRegistry`, `AgentHookEngine`, `McpServer` | 43 个原生 MCP stdio 工具注册与 Hook 门禁（不写业务逻辑） |
 | `src/audit/` | `AuditLogger`, `AuditEvolutionAnalyzer`, `AuditOlapReport` | `IN_AGENT`/`OUT_OF_AGENT` 双域行为审计、脱敏防洪、AOPCC 滑窗自进化与 DuckDB OLAP |
-| `src/benchmark/` | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` | 双轨/三轨实证评测、Micro/DQ/竞品对标与 `PR-01~13` 存证 |
+| `src/benchmark/` | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` | 双轨/三轨实证评测、Micro/DQ/竞品对标与 `PR-01~14` 存证 |
 | `src/body/` | `BodyManifestEngine`, `ContinuityManager`, `HomeostasisVitalsEngine`, `AutonomyEnvelope` | Agent 本体身份证、`<300 tok` 跨大脑接力胶囊、五维稳态自愈与 `L0~L3` 自治权限包络 |
 | `src/brief/` | `BriefAssembler`, `BriefRequest`, `OptimisticLeaseEngine` | 索引优先自适应情境组装（`<10ms`，40% 记忆预算，AOPCC 乐观租约） |
 | `src/changes/` | `ChangesEngine` | 宿主变更审计流与开工回溯摘要（含脱敏） |

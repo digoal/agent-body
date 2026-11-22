@@ -145,6 +145,29 @@ Content-Length: 75\r\n\r\n\
     let resp_locks_empty = send_http_request("127.0.0.1", bound_port, "GET /api/v1/locks HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
     assert!(resp_locks_empty.contains("[]"));
 
+    // 4.7.1 验证通过 lock_id + force=true 也能释放协作锁
+    let test_lock_2 = CoordinationLock {
+        lock_id: "lock-web-test-by-id-100".to_string(),
+        resource_type: "file".to_string(),
+        resource_id: "/tmp/web_release_by_id.txt".to_string(),
+        scope: "exclusive".to_string(),
+        holder_agent: "other_holder".to_string(),
+        holder_pid: None,
+        acquired_at: chrono::Utc::now().to_rfc3339(),
+        expires_at: (chrono::Utc::now() + chrono::Duration::seconds(120)).to_rfc3339(),
+        metadata: None,
+    };
+    storage.insert_coordination_lock(&test_lock_2).expect("insert lock 2");
+    let del_lock_body = "{\"lock_id\":\"lock-web-test-by-id-100\",\"holder_agent\":\"admin\",\"force\":true}";
+    let del_lock_req = format!(
+        "POST /api/v1/locks/release HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+        del_lock_body.len(),
+        del_lock_body
+    );
+    let resp_del_lock = send_http_request("127.0.0.1", bound_port, &del_lock_req).await;
+    assert!(resp_del_lock.contains("HTTP/1.1 200 OK"));
+    assert!(resp_del_lock.contains("\"released\":true"));
+
     // 4.8 验证 Web 2.0 新增全景接口 (/facts, /ecosystem, /ecosystem/route, /governance, /mesh/status, /locks/history)
     for ep in [
         "/api/v1/facts",
@@ -173,11 +196,13 @@ Content-Length: 75\r\n\r\n\
         assert!(resp.contains("HTTP/1.1 200 OK"), "端点 {} 应返回 200 OK", ep);
     }
 
-    // 4.8.1 验证 43/43 黑白屏同步矩阵覆盖率 = 100%
+    // 4.8.1 验证 43/43 黑白屏同步矩阵覆盖率 = 100% 且关键 CLI 映射准确
     let resp_parity = send_http_request("127.0.0.1", bound_port, "GET /api/v1/parity/matrix HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
     assert!(resp_parity.contains("\"total_mcp_tools\":43"));
     assert!(resp_parity.contains("\"synced_count\":43"));
     assert!(resp_parity.contains("\"coverage_pct\":100.0"));
+    assert!(resp_parity.contains("agent-body links graph"));
+    assert!(resp_parity.contains("agent-body coordination deadlock"));
 
     // 4.8.1c 验证 Agent 本体中枢跨大脑接力胶囊写端点鉴权与流转
     let handoff_body = "{\"from_brain\":\"antigravity\",\"goal_summary\":\"Verify PG WAL config\"}";
@@ -292,6 +317,25 @@ Content-Length: 75\r\n\r\n\
     let resp_awr_post = send_http_request("127.0.0.1", bound_port, &awr_post_auth).await;
     assert!(resp_awr_post.contains("HTTP/1.1 200 OK"));
     assert!(resp_awr_post.contains("\"reports_meta\":[{"));
+
+    // 从响应体中提取 report_id 并验证 /api/v1/body/perf/delete 受鉴权保护且同步清理索引
+    let del_unauth = "POST /api/v1/body/perf/delete HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: 31\r\n\r\n{\"kind\":\"report\",\"id\":\"awr-xx\"}";
+    let resp_del_unauth = send_http_request("127.0.0.1", bound_port, del_unauth).await;
+    assert!(resp_del_unauth.contains("HTTP/1.1 401 Unauthorized"));
+
+    let json_start = resp_awr_post.find("\r\n\r\n").expect("http body") + 4;
+    let parsed_awr: serde_json::Value = serde_json::from_str(&resp_awr_post[json_start..]).expect("awr json");
+    let created_rid = parsed_awr["data"]["report"]["report_id"].as_str().expect("report_id");
+    let del_body = serde_json::json!({ "kind": "report", "id": created_rid }).to_string();
+    let del_auth = format!(
+        "POST /api/v1/body/perf/delete HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+        del_body.len(),
+        del_body
+    );
+    let resp_del_auth = send_http_request("127.0.0.1", bound_port, &del_auth).await;
+    assert!(resp_del_auth.contains("HTTP/1.1 200 OK"));
+    assert!(resp_del_auth.contains("\"deleted\":true"));
+    assert!(resp_del_auth.contains("\"reports_meta\":[]"));
 
     let mermaid_write_unauth = send_http_request(
         "127.0.0.1",

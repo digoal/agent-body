@@ -113,6 +113,7 @@ impl BriefAssembler {
 
     /// 组装情境简报
     pub fn assemble(&self, req: &BriefRequest) -> Result<BriefOutput> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::CpuBriefAssemble);
         let now = Local::now().format("%Y-%m-%dT%H:%M CST").to_string();
         let budget = req.budget_tokens.max(300); // 至少 300 tokens
 

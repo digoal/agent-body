@@ -736,14 +736,30 @@ fn main() -> Result<()> {
                         }
                     }
                 }
-                CoordinationCommands::Release { lock_id, force } => {
-                    if force {
-                        let ok = engine.force_release(&lock_id)?;
-                        if ok {
-                            println!("✅ 锁 `{}` 已成功强制解除！", lock_id);
-                        } else {
-                            println!("⚠️ 未找到指定锁 ID `{}` 或该锁已被自动释放。", lock_id);
-                        }
+                CoordinationCommands::Release {
+                    lock_id,
+                    resource_type,
+                    resource_id,
+                    holder_agent,
+                    force,
+                } => {
+                    let (resolved_id, ok) = engine.release_flexible(
+                        lock_id.as_deref(),
+                        resource_type.as_deref(),
+                        resource_id.as_deref(),
+                        holder_agent.as_deref(),
+                        force,
+                    )?;
+                    let display_id = resolved_id.as_deref().unwrap_or("(未匹配)");
+                    if ok {
+                        println!("✅ 锁 `{}` 已成功解除！(force={})", display_id, force);
+                    } else if resolved_id.is_some() && !force {
+                        println!(
+                            "⚠️ 锁 `{}` 释放被拒绝：当前非持有者 (请指定正确的 --holder-agent 或使用 --force=true)。",
+                            display_id
+                        );
+                    } else {
+                        println!("⚠️ 未找到指定锁（lock_id/资源标识均未命中活跃锁）或该锁已自动过期。");
                     }
                 }
                 CoordinationCommands::Gc => {
@@ -1636,13 +1652,21 @@ fn main() -> Result<()> {
                         );
                     }
                 }
-                BodyCommands::PerfAwr { snap_a, snap_b, vs_baseline, json } => {
-                    let rep = agent_body::body::BodyPerfEngine::generate_awr_report(
-                        &storage,
-                        snap_a.as_deref(),
-                        snap_b.as_deref(),
-                        vs_baseline,
-                    )?;
+                BodyCommands::PerfAwr { snap_a, snap_b, report_id, vs_baseline, json } => {
+                    let rep = if let Some(rid) = report_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+                        agent_body::body::BodyPerfEngine::load_awr_report(
+                            storage.provider().as_ref(),
+                            rid,
+                        )
+                        .ok_or_else(|| anyhow::anyhow!("未找到历史 AWR 报告: {}", rid))?
+                    } else {
+                        agent_body::body::BodyPerfEngine::generate_awr_report(
+                            &storage,
+                            snap_a.as_deref(),
+                            snap_b.as_deref(),
+                            vs_baseline,
+                        )?
+                    };
                     let out = serde_json::to_string_pretty(&rep)?;
                     agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         storage.provider().as_ref(),
@@ -1655,6 +1679,101 @@ fn main() -> Result<()> {
                         println!("{}", out);
                     } else {
                         print!("{}", rep.markdown_summary);
+                    }
+                }
+                BodyCommands::PerfSnapshots { json } => {
+                    let (snapshots, baseline) =
+                        agent_body::body::BodyPerfEngine::list_snapshots_meta(storage.provider().as_ref());
+                    let payload = serde_json::json!({
+                        "baseline": baseline,
+                        "snapshots": snapshots,
+                        "count": snapshots.len(),
+                    });
+                    let out = serde_json::to_string_pretty(&payload)?;
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else if snapshots.is_empty() {
+                        println!("ℹ️ 快照库暂无已保存的 AWR 性能快照。");
+                    } else {
+                        println!("📸 已保存 {} 份本体 AWR 性能快照：", snapshots.len());
+                        for s in &snapshots {
+                            println!(
+                                "  - `{}` [{}] {} | RSS={} KB | FDs={} | BodyTime={} μs | 稳态={:.1}",
+                                s.snapshot_id,
+                                if s.is_baseline { "BASELINE" } else { &s.label },
+                                s.captured_at,
+                                s.rss_kb,
+                                s.open_fds,
+                                s.total_body_time_us,
+                                s.homeostasis_score
+                            );
+                        }
+                    }
+                }
+                BodyCommands::PerfReports { json } => {
+                    let reports =
+                        agent_body::body::BodyPerfEngine::list_awr_reports_meta(storage.provider().as_ref());
+                    let payload = serde_json::json!({
+                        "reports": reports,
+                        "count": reports.len(),
+                    });
+                    let out = serde_json::to_string_pretty(&payload)?;
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else if reports.is_empty() {
+                        println!("ℹ️ 报告库暂无已保存的 AWR 差分诊断报告。");
+                    } else {
+                        println!("📈 已保存 {} 份 AWR 历史诊断报告：", reports.len());
+                        for r in &reports {
+                            println!(
+                                "  - `{}` [{} → {}] {} | RSS漂移={:+.1}% | 退化={}",
+                                r.report_id,
+                                r.base_snapshot_id,
+                                r.target_snapshot_id,
+                                r.generated_at,
+                                r.rss_drift_pct,
+                                r.regression_detected
+                            );
+                        }
+                    }
+                }
+                BodyCommands::PerfDelete { kind, id, json } => {
+                    let res = agent_body::body::BodyPerfEngine::delete_perf_artifact(
+                        &storage,
+                        &kind,
+                        &id,
+                    )?;
+                    let out = serde_json::to_string_pretty(&res)?;
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else {
+                        println!(
+                            "🗑️ 已处理 AWR 清理请求: kind={}, target_id={}, deleted={}",
+                            res.get("kind").and_then(|v| v.as_str()).unwrap_or(&kind),
+                            id,
+                            res.get("deleted").and_then(|v| v.as_bool()).unwrap_or(false)
+                        );
                     }
                 }
                 BodyCommands::PerfTune { json } => {

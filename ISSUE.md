@@ -182,8 +182,9 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 37. **`[P0 · Phase 53]` 存储三后端（SQLite/PG/DuckDB）语义对齐、全量迁移与 OLAP 管道真修复** `✅ Phase 53 已全量落地`:
     - 扩展 SPI `82 → 87`（新增 `upsert_scan_policy`/`list_all_memories`/`delete_benchmark_run`/`list_all_benchmark_runs`/`list_created_at_map`），对齐 SQLite/PG/DuckDB 冲突与时间戳瞬间比较、移除 PG 强依赖 `pgvector` 阻断、修复 `awr:%` 泄漏与淘汰孤儿清理，并打通 20 实体全量幂等热迁移、10 表真实时间 OLAP 同步与 `Preflight` 后端探活（详见 [roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)）。
 
-38. **`[P1 · Phase 54]` Phase 50 18/18 WaitEvent 全埋点、黑白屏动作级真 Parity、TUI 升级与 Benchmark `v3.8`** `🗓️ Planned (Phase 54)`:
-    - 补齐 14/18 未埋点 WaitEvent 与定期 AWR 快照，补齐 `9418c51` AWR 报告库 CLI/MCP 对等、Web DQ 渲染与 `body_lock_release` 三端一致，扩展 `codex`/`hermes` Hook、升级 TUI 并上线 Benchmark `v3.8` (`W18`/`M6`/`DQ9`/`PR-14`)。
+38. **`[P1 · Phase 54]` Phase 50 18/18 WaitEvent 全埋点、黑白屏动作级真 Parity、TUI 升级与 Benchmark `v3.8`** `✅ Phase 54 已全量落地`:
+    - 新增 SPI #88 `count_expired_coordination_locks`（SQLite/PG/DuckDB 全实现）修复 `vitals` 过期锁检测，补齐 14/18 未埋点 `WaitEventId`（18/18 全覆盖使 `ADDM-05` 可达），修复 `estimate_percentile_from_buckets` / `run_l1_auto_tune` 缺陷并落地 `daemon-auto` 周期快照与 `delete_snapshot`/`delete_awr_report`；
+    - 实现 AWR 报告库 CLI/MCP/Web 删除与查阅对齐、统一 `body_lock_release` 三端标识、修复 `parity/matrix` CLI 映射，升级 Web Benchmark 至 `v3.8` + `DQ1~DQ9` 渲染，扩展 `codex`/`hermes`/Claude `.claude/settings.json` Hook，升级 `src/tui/mod.rs` 并交付 Benchmark `v3.8` (`W18`/`M6`/`DQ9`/`PR-14`)（详见 [roadmap-phase54.md](docs/src_doc/roadmap-phase54.md)）。
 
 39. **`[P1 · Phase 55]` 开源可移植性解耦（去 `/root/new/` 硬编码）、死配置真相化与跨平台/网络硬化** `🗓️ Planned (Phase 55)`:
     - 抽象 `Config::{workspace_roots, temp_dir, default_owner}`，接通 `AGENT_BODY_CONFIG`/`[memory]`/`[[hooks]]`/`[[pipelines]]`/`assets.ignore_patterns` 清理废弃 `api_port`，完善 musl/macOS/Windows 与 HTTP 头循环解析。

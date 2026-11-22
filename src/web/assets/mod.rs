@@ -498,12 +498,12 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 
             <div class="view-toolbar mt-12" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);">
               <div class="toolbar-left">
-                <select id="bench-suite-select" class="input" style="width:240px;">
-                  <option value="full">全量套件 v3.5 (省Token×提质量帕累托 + 竞品 + 图谱/Mesh + AOPCC)</option>
+                <select id="bench-suite-select" class="input" style="width:260px;">
+                  <option value="full">全量套件 v3.8 (省Token×提质量帕累托 + 竞品 + 图谱/Mesh + AOPCC + AWR)</option>
                   <option value="competitors">🏆 热门竞品横向对标 (COMP-C1~C4)</option>
-                  <option value="macro">宏观业务 A/B (W1~W15)</option>
-                  <option value="micro">内核微基准 SLA (M1~M5)</option>
-                  <option value="dq">宿主机数据与新鲜度/图谱质量 (DQ1~DQ6)</option>
+                  <option value="macro">宏观业务 A/B (W1~W18)</option>
+                  <option value="micro">内核微基准 SLA (M1~M6)</option>
+                  <option value="dq">宿主机数据与遥测/图谱质量 (DQ1~DQ9)</option>
                   <option value="W1">W1 · 宿主工具发现</option>
                   <option value="W2">W2 · 端口防撞选址</option>
                   <option value="W3">W3 · 分级扫描阻断</option>
@@ -519,6 +519,9 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                   <option value="W13">W13 · 分层加权图谱与隐式语义发现</option>
                   <option value="W14">W14 · Mesh 签名防重放与沙盒协同</option>
                   <option value="W15">W15 · AOPCC 乐观直通与碰壁自愈回路</option>
+                  <option value="W16">W16 · 双域行为审计脱敏防洪与租约自进化</option>
+                  <option value="W17">W17 · 跨大脑连续性接力与本体器官自省</option>
+                  <option value="W18">W18 · 内生等待事件与 AWR/ADDM 自诊断闭环</option>
                 </select>
                 <button id="btn-bench-run" class="btn btn-primary btn-xs">▶ 真机运行 A/B 基准</button>
                 <select id="bench-window-select" class="input" style="width:120px;">
@@ -537,10 +540,10 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
             <div class="panel-grid-2 mt-12">
               <div class="card">
                 <div class="item-top"><strong>🧪 实验室 A/B 对照实测 (Without vs With Agent Body)</strong><span id="bench-sla-badge" class="badge">-</span></div>
-                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 17 大负载对照实测</div></div>
+                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 18 大负载对照实测</div></div>
               </div>
               <div class="card">
-                <div class="item-top"><strong>⚡ 5 大内核微基准 SLA & 跨版本回归比对</strong></div>
+                <div class="item-top"><strong>⚡ 6 大内核微基准 SLA & 跨版本回归比对</strong></div>
                 <div id="bench-micro-box" class="mt-8"><div class="empty">暂无微基准数据</div></div>
                 <div class="mt-12" style="border-top:1px solid var(--border);padding-top:10px;">
                   <div class="toolbar-left">
@@ -555,12 +558,17 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
             </div>
 
             <div class="card mt-12">
-              <div class="item-top"><strong>🏆 热门开源竞品横向对标 (轨道 C · LIVE_BENCHMARKED + ARCH_VERIFIED)</strong><span class="badge">Mem0 / OpenViking / AgentFS / rg+psutil</span></div>
-              <div id="bench-competitors-box" class="mt-8"><div class="empty">运行「全量套件 v3.5」或「🏆 热门竞品横向对标」查看同机实测结果与 12 维能力矩阵</div></div>
+              <div class="item-top"><strong>🛡️ 宿主机数据质量与 D6 准确率门禁 (DQ1~DQ9)</strong><span id="bench-dq-badge" class="badge">-</span></div>
+              <div id="bench-dq-box" class="mt-8"><div class="empty">运行「全量套件 v3.8」或「宿主机数据与遥测/图谱质量 (DQ1~DQ9)」查看 9 项质量门禁实测</div></div>
             </div>
 
             <div class="card mt-12">
-              <div class="item-top"><strong>📒 生产运行态效能存证账本（带 PR-01~PR-11 确定性溯源依据）</strong></div>
+              <div class="item-top"><strong>🏆 热门开源竞品横向对标 (轨道 C · LIVE_BENCHMARKED + ARCH_VERIFIED)</strong><span class="badge">Mem0 / OpenViking / AgentFS / rg+psutil</span></div>
+              <div id="bench-competitors-box" class="mt-8"><div class="empty">运行「全量套件 v3.8」或「🏆 热门竞品横向对标」查看同机实测结果与 12 维能力矩阵</div></div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top"><strong>📒 生产运行态效能存证账本（带 PR-01~PR-14 确定性溯源依据）</strong></div>
               <div id="bench-rules-strip" class="mt-8"></div>
               <div id="bench-ledger-list" class="mt-8"><div class="empty">暂无生产流水记录</div></div>
             </div>
@@ -693,6 +701,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                   <option value="">-- 暂无历史 AWR 报告，点击上方「📈 生成 AWR 差分报告」创建 --</option>
                 </select>
                 <button id="btn-body-perf-copy-md" class="btn btn-ghost btn-xs">📋 复制完整 Markdown 报告</button>
+                <button id="btn-body-perf-del-report" class="btn btn-ghost btn-xs">🗑️ 删除所选报告</button>
               </div>
 
               <div id="body-perf-action-banner" class="mt-8" style="display:none;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:600;"></div>
@@ -4177,6 +4186,35 @@ function renderBenchmarkReportPayload(rep) {
     }
   }
 
+  const dqbox = document.getElementById("bench-dq-box");
+  const dqbadge = document.getElementById("bench-dq-badge");
+  const dqs = rep.data_quality || [];
+  if (dqbadge) {
+    if (dqs.length === 0) {
+      dqbadge.innerText = "-";
+      dqbadge.className = "badge";
+    } else {
+      const passedCnt = dqs.filter((d) => d.passed).length;
+      dqbadge.innerText = passedCnt === dqs.length ? `✅ ${passedCnt}/${dqs.length} PASS` : `❌ ${passedCnt}/${dqs.length} PASS`;
+      dqbadge.className = passedCnt === dqs.length ? "badge badge-ok" : "badge badge-err";
+    }
+  }
+  if (dqbox) {
+    if (dqs.length === 0) {
+      dqbox.innerHTML = `<div class="empty">该批次未运行 DQ 数据质量门禁（请选择全量套件 v3.8 或 DQ1~DQ9）</div>`;
+    } else {
+      dqbox.innerHTML = dqs.map((dq) => `
+        <div class="list-item" style="padding:8px 10px;">
+          <div class="item-top">
+            <span><strong>${esc(dq.id)} · ${esc(dq.title)}</strong> <span class="muted-text mono" style="font-size:11px;">(${esc(dq.name)})</span></span>
+            <span class="badge ${dq.passed ? "badge-ok" : "badge-err"}">${Number(dq.measured_pct || 0).toFixed(1)}% / SLA >= ${Number(dq.target_pct || 0).toFixed(1)}% ${dq.passed ? "✅" : "❌"}</span>
+          </div>
+          <div class="muted-text" style="font-size:12px;margin-top:3px;">${esc(dq.detail || "")}</div>
+        </div>
+      `).join("");
+    }
+  }
+
   const cbox = document.getElementById("bench-competitors-box");
   const comps = rep.competitors || [];
   const matrix = rep.competitor_matrix || [];
@@ -4485,6 +4523,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (rid) loadSavedBodyPerfReport(rid);
   });
   document.getElementById("btn-body-perf-copy-md")?.addEventListener("click", copyBodyPerfMarkdown);
+  document.getElementById("btn-body-perf-del-report")?.addEventListener("click", deleteSelectedBodyPerfReport);
 });
 
 async function loadBodyWorkbench() {
@@ -4866,7 +4905,7 @@ async function generateSelectedBodyPerfAwr() {
 
 async function loadSavedBodyPerfReport(reportId) {
   mirrorBlackScreen(
-    `agent-body body perf-awr # 查看历史报告 ${reportId}`,
+    `agent-body body perf-awr --report-id "${reportId}"`,
     "body_state",
     { action: "perf_awr", report_id: reportId }
   );
@@ -4881,6 +4920,36 @@ async function loadSavedBodyPerfReport(reportId) {
   } catch (e) {
     setPerfActionBanner(`❌ 加载历史报告失败: ${e.message}`, true);
     showToast(`加载历史报告失败: ${e.message}`, true);
+  }
+}
+
+async function deleteSelectedBodyPerfReport() {
+  const repSel = document.getElementById("body-perf-report-select");
+  const reportId = repSel?.value || "";
+  if (!reportId) {
+    showToast("请先选择要删除的历史 AWR 报告", true);
+    return;
+  }
+  mirrorBlackScreen(
+    `agent-body body perf-delete --kind report --id "${reportId}"`,
+    "body_state",
+    { action: "perf_delete", target_kind: "report", target_id: reportId }
+  );
+  try {
+    const res = await apiPost("/api/v1/body/perf/delete", {
+      kind: "report",
+      id: reportId,
+    });
+    const deletedOk = res.result?.deleted;
+    const msg = deletedOk
+      ? `🗑️ 已删除 AWR 历史报告 ${reportId}`
+      : `⚠️ 未找到或已删除 AWR 报告 ${reportId}`;
+    setPerfActionBanner(msg, !deletedOk);
+    showToast(msg, !deletedOk);
+    await loadBodyPerfAwr(true);
+  } catch (e) {
+    setPerfActionBanner(`❌ 删除 AWR 报告失败: ${e.message}`, true);
+    showToast(`删除 AWR 报告失败: ${e.message}`, true);
   }
 }
 

@@ -1,9 +1,9 @@
 # Agent Body (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-22T22:05:00+08:00  
+> 最新更新: 2026-11-22T23:09:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: **Phase 1~53 全部完成（方案 A `v1.0.0 GA` Stage 2 · ISSUE #37 交付，#38~#41 规划推进中）**；项目已完成 Phase 53 存储三后端（SQLite/PG/DuckDB）语义对齐、AWR 孤儿行清理、20 实体无损幂等迁移、10 表真实时间 OLAP 同步与 `Preflight` 后端探活；43 个原生 MCP 工具（`body_*` 黑白屏 100% 同步），27 个 `src/lib.rs` 模块，87 个 SPI 方法，27 张 SQLite 表，Benchmark `v3.7` 34/34 项 100% 全绿基线
+> 当前状态: **Phase 1~54 全部完成（方案 A `v1.0.0 GA` Stage 3 · ISSUE #38 交付，#39~#41 规划推进中）**；项目已完成 Phase 54 Telemetry 18/18 WaitEvent 闭环、过期锁 SPI #88、AWR 报告库 CLI/MCP/Web 1:1:1、Web `v3.8`/DQ 渲染、`codex`/`hermes`/Claude Hooks、`AGENT BODY` 全维 TUI 升级与 Benchmark `v3.8`；43 个原生 MCP 工具（`body_*` 黑白屏 100% 同步），27 个 `src/lib.rs` 模块，88 个 SPI 方法，27 张 SQLite 表，295 项测试全绿，Benchmark `v3.8` 37/37 项 100% 全绿基线
 
 ---
 
@@ -181,9 +181,9 @@
 
 ## 断点恢复指引
 如果任务中断，重新启动时只需：
-1. 读取根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase53.md](roadmap-phase53.md)；
+1. 读取根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase54.md](roadmap-phase54.md)；
 2. 查看子任务断点状态表并接续下一未完成原子任务；
-3. 当前已完成 **Phase 1~53**（方案 A `v1.0.0 GA` Stage 2 收官，下一步启动 Phase 54 telemetry/Parity/TUI/Benchmark `v3.8`），后续续传与阶段验收请严格对齐 `EVOLUTION_GUIDE.md` 并通过 `make quality-gate && make verify-decks` 校验。
+3. 当前已完成 **Phase 1~54**（方案 A `v1.0.0 GA` Stage 3 收官，下一步启动 Phase 55 开源可移植性解耦/配置真相化/跨平台与网络硬化），后续续传与阶段验收请严格对齐 `EVOLUTION_GUIDE.md` 并通过 `make quality-gate && make verify-decks` 校验。
 
 🎉 **Phase 12（运行依赖显式化与可移植部署）已 100% 全量串行交付**：
 - 严格对齐 README.md ISSUE #10 四层贯通要求；

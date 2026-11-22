@@ -385,13 +385,13 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_hook_generate",
-                "description": "Agent 客户端 Hook 自动生成器。为 Antigravity (agy)、Cursor、Claude Code 或 Git 生成自动化 Pre/Post Hook 集成配置与执行规则脚本（规约 #13 MCP 与 CLI 1:1 映射）。",
+                "description": "Agent 客户端 Hook 自动生成器。为 Antigravity (agy)、Cursor、Claude Code (含 .claude/settings.json)、Codex (AGENTS.md)、Hermes 或 Git 生成自动化 Pre/Post Hook 集成配置与执行规则脚本（规约 #13 MCP 与 CLI 1:1 映射）。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "client": {
                             "type": "string",
-                            "description": "目标客户端类型 (可选: agy, cursor, claude, git)"
+                            "description": "目标客户端类型 (可选: agy, cursor, claude, codex, hermes, git)"
                         },
                         "out_dir": {
                             "type": "string",
@@ -503,20 +503,37 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_lock_release",
-                "description": "多 Agent 协作锁：主动释放已持有的资源锁。",
+                "description": "多 Agent 协作锁：主动释放已持有的资源锁（支持按 lock_id 或 resource_type + resource_id 二选一匹配，可选 force 强制释放）。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "lock_id": {
                             "type": "string",
-                            "description": "申请锁时返回的 lock_id UUID"
+                            "description": "申请锁时返回的 lock_id UUID（与 resource_type + resource_id 二选一）"
+                        },
+                        "resource_type": {
+                            "type": "string",
+                            "enum": ["port", "directory", "service", "file", "custom"],
+                            "description": "按资源类型匹配释放（未传 lock_id 时必填）"
+                        },
+                        "resource_id": {
+                            "type": "string",
+                            "description": "按资源标识匹配释放（未传 lock_id 时必填）"
                         },
                         "holder_agent": {
                             "type": "string",
                             "description": "持有者 Agent 标识（用于防越权释放，默认为当前 Agent）"
+                        },
+                        "agent_id": {
+                            "type": "string",
+                            "description": "持有者 Agent 标识别名（兼容 Web UI agent_id 字段）"
+                        },
+                        "force": {
+                            "type": "boolean",
+                            "default": false,
+                            "description": "是否强制释放（管理员运维免持有者校验）"
                         }
-                    },
-                    "required": ["lock_id"]
+                    }
                 }
             }),
             serde_json::json!({
@@ -643,12 +660,12 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_benchmark",
-                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v3.5）：运行 A/B 对照负载(W1~W15)、内核微基准(M1~M5)、数据质量与图谱健康(DQ1~DQ6)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-11)。",
+                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v3.8）：运行 A/B 对照负载(W1~W18)、内核微基准(M1~M6)、数据质量与遥测/图谱健康(DQ1~DQ9)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-14)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "action": { "type": "string", "enum": ["workloads", "run", "report", "ledger", "compare", "export", "reset", "competitors"], "default": "report" },
-                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | dq | competitors | W1~W15 | COMP-C1~C4" },
+                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | dq | competitors | W1~W18 | COMP-C1~C4" },
                         "track": { "type": "string", "default": "all", "description": "竞品对标赛道: all | C1 | C2 | C3 | C4" },
                         "save": { "type": "boolean", "default": true },
                         "run_id": { "type": "string" },
@@ -702,13 +719,13 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_state",
-                "description": "Agent 本体中枢（宿主机具身底座，第 43 原生工具）：提供本体身份证与六器官自省 (manifest)、五维稳态生命体征 (vitals)、四级自治权限包络评估 (envelope)、跨大脑工作态接力胶囊保存与恢复 (handoff_save/handoff_resume)、L1 稳态反射自愈 (heal)、多本体联邦名片发现 (peers) 以及内生等待事件与 AWR 性能快照/差分诊断/L1 自调优 (perf_snapshot/perf_awr/perf_tune)。",
+                "description": "Agent 本体中枢（宿主机具身底座，第 43 原生工具）：提供本体身份证与六器官自省 (manifest)、五维稳态生命体征 (vitals)、四级自治权限包络评估 (envelope)、跨大脑工作态接力胶囊保存与恢复 (handoff_save/handoff_resume)、L1 稳态反射自愈 (heal)、多本体联邦名片发现 (peers) 以及内生等待事件与 AWR 快照/报告库管理与 ADDM 自调优 (perf_snapshot/perf_awr/perf_snapshots/perf_reports/perf_delete/perf_tune)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "action": {
                             "type": "string",
-                            "enum": ["manifest", "vitals", "envelope", "handoff_save", "handoff_resume", "heal", "peers", "perf_snapshot", "perf_awr", "perf_tune"],
+                            "enum": ["manifest", "vitals", "envelope", "handoff_save", "handoff_resume", "heal", "peers", "perf_snapshot", "perf_awr", "perf_snapshots", "perf_reports", "perf_delete", "perf_tune"],
                             "default": "manifest",
                             "description": "操作类型"
                         },
@@ -739,7 +756,10 @@ pub fn all_tool_schemas() -> Vec<Value> {
                         "set_baseline": { "type": "boolean", "default": false, "description": "action=perf_snapshot 时是否将该快照设为 Golden Baseline 黄金性能基准" },
                         "snap_a": { "type": "string", "description": "action=perf_awr 时基准快照 ID（留空默认用 baseline）" },
                         "snap_b": { "type": "string", "description": "action=perf_awr 时目标快照 ID（留空默认抓取当前最新态）" },
+                        "report_id": { "type": "string", "description": "action=perf_awr 时直接查看已保存的历史 AWR 报告 ID" },
                         "vs_baseline": { "type": "boolean", "default": true, "description": "action=perf_awr 时是否对比黄金基线" },
+                        "target_kind": { "type": "string", "enum": ["auto", "snapshot", "report"], "default": "auto", "description": "action=perf_delete 时待删除对象类型" },
+                        "target_id": { "type": "string", "description": "action=perf_delete 时待删除的快照或 AWR 报告 ID" },
                         "limit": { "type": "integer", "default": 20 }
                     }
                 }

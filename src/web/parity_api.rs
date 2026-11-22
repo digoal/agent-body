@@ -839,7 +839,7 @@ fn map_tool_parity(tool_name: &str) -> (&'static str, &'static str, &'static str
         "body_memory_search" => ("agent-body memory search", "GET /api/v1/memories/search", "governance", "synced"),
         "body_memory_audit" => ("agent-body memory audit", "GET /api/v1/memories/audit", "governance", "synced"),
         "body_links_query" => ("agent-body links query", "GET /api/v1/topology", "topology", "synced"),
-        "body_links_visualize" => ("agent-body links visualize", "GET /api/v1/links/mermaid", "topology", "synced"),
+        "body_links_visualize" => ("agent-body links graph", "GET /api/v1/links/mermaid", "topology", "synced"),
         "body_links_impact" => ("agent-body links impact", "GET /api/v1/topology/impact", "topology", "synced"),
         "body_links_audit" => ("agent-body links audit", "GET /api/v1/links/audit", "topology", "synced"),
         "body_links_repair" => ("agent-body links repair", "GET /api/v1/links/repair", "topology", "synced"),
@@ -858,7 +858,7 @@ fn map_tool_parity(tool_name: &str) -> (&'static str, &'static str, &'static str
         "body_lock_release" => ("agent-body coordination release", "POST /api/v1/locks/release", "locks", "synced"),
         "body_lock_list" => ("agent-body coordination list", "GET /api/v1/locks", "locks", "synced"),
         "body_lock_wait" => ("agent-body coordination wait", "POST /api/v1/locks/wait", "locks", "synced"),
-        "body_lock_deadlock_check" => ("agent-body coordination deadlock-check", "GET /api/v1/locks/deadlocks", "locks", "synced"),
+        "body_lock_deadlock_check" => ("agent-body coordination deadlock", "GET /api/v1/locks/deadlocks", "locks", "synced"),
         "body_mcp_catalog" => ("agent-body mcp-catalog", "GET /api/v1/ecosystem", "ecosystem", "synced"),
         "body_skill_route" => ("agent-body skill route", "GET /api/v1/ecosystem/route", "ecosystem", "synced"),
         "body_service_contact" => ("agent-body service", "GET /api/v1/ecosystem/service-check", "ecosystem", "synced"),
@@ -1630,6 +1630,72 @@ pub fn handle_body_perf_tune(storage: Arc<dyn StorageProvider>) -> HttpResponse 
                 t0.elapsed().as_micros() as i64,
             );
             WebResponse::success(rep)
+        }
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct BodyPerfDeleteBody {
+    pub kind: Option<String>,
+    pub target_kind: Option<String>,
+    pub id: Option<String>,
+    pub target_id: Option<String>,
+    pub report_id: Option<String>,
+    pub snapshot_id: Option<String>,
+}
+
+/// POST/DELETE /api/v1/body/perf/delete —— 删除指定 AWR 快照或历史诊断报告（受 write auth 保护）
+pub fn handle_body_perf_delete(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let t0 = std::time::Instant::now();
+    let body: BodyPerfDeleteBody = req.json().unwrap_or_default();
+    let kind = body
+        .target_kind
+        .as_deref()
+        .or(body.kind.as_deref())
+        .or_else(|| req.query_params.get("kind").map(String::as_str))
+        .unwrap_or("auto");
+    let target_id = body
+        .target_id
+        .as_deref()
+        .or(body.id.as_deref())
+        .or(body.report_id.as_deref())
+        .or(body.snapshot_id.as_deref())
+        .or_else(|| req.query_params.get("id").map(String::as_str))
+        .or_else(|| req.query_params.get("report_id").map(String::as_str))
+        .or_else(|| req.query_params.get("snapshot_id").map(String::as_str))
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let Some(tid) = target_id else {
+        return WebResponse::error(
+            StatusCode::BAD_REQUEST,
+            "缺少待删除目标 id / target_id / report_id / snapshot_id",
+        );
+    };
+
+    let storage_ref = storage.clone();
+    let st = Storage::new(storage);
+    match crate::body::BodyPerfEngine::delete_perf_artifact(&st, kind, tid) {
+        Ok(res) => {
+            let (snapshots_meta, baseline_meta) =
+                crate::body::BodyPerfEngine::list_snapshots_meta(storage_ref.as_ref());
+            let reports_meta =
+                crate::body::BodyPerfEngine::list_awr_reports_meta(storage_ref.as_ref());
+            let out_str = serde_json::to_string(&res).unwrap_or_default();
+            crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage_ref.as_ref(),
+                "web",
+                "body_state",
+                &out_str,
+                t0.elapsed().as_micros() as i64,
+            );
+            WebResponse::success(serde_json::json!({
+                "result": res,
+                "snapshots_meta": snapshots_meta,
+                "baseline_meta": baseline_meta,
+                "reports_meta": reports_meta,
+            }))
         }
         Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }

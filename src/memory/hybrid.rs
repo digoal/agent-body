@@ -96,6 +96,7 @@ impl HybridSearchEngine {
         let mut cos_sims: HashMap<String, f32> = HashMap::new();
 
         if let Some(ref q_emb) = query_vec {
+            let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::CpuVectorCosine);
             // 获取数据库中所有带 embedding 的活跃记忆
             let all_memories = self.storage.list_all_active_memories(500).unwrap_or_default();
             let mut scored_memories: Vec<(String, f32)> = Vec::new();

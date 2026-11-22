@@ -178,9 +178,7 @@ impl HomeostasisVitalsEngine {
         } else {
             100.0
         };
-        let locks = storage.list_coordination_locks(None).unwrap_or_default();
-        let now_iso = chrono::Utc::now().to_rfc3339();
-        let expired_locks = locks.iter().filter(|l| l.expires_at < now_iso).count();
+        let expired_locks = storage.count_expired_coordination_locks().unwrap_or(0);
         let lock_penalty = (expired_locks as f64 * 5.0).min(30.0);
         let metabolic_score = ((disk_score - lock_penalty).clamp(0.0, 100.0) * 100.0).round() / 100.0;
         if metabolic_score < 75.0 {
@@ -381,10 +379,28 @@ mod tests {
         let before = HomeostasisVitalsEngine::assess(&storage);
         assert_eq!(before.dimensions.len(), 5);
         assert!(before.overall_score <= 100.0);
+        let meta_dim = before
+            .dimensions
+            .iter()
+            .find(|d| d.key == "metabolic_health")
+            .expect("metabolic_health");
+        assert!(
+            meta_dim.detail.contains("过期锁 1 个"),
+            "必须精准检测出 1 把过期协作锁，实测: {}",
+            meta_dim.detail
+        );
+        assert!(meta_dim.score <= 95.0, "过期锁必须扣减代谢健康分");
 
         let heal = HomeostasisVitalsEngine::run_l1_autonomic_heal(&storage).expect("heal");
         assert_eq!(heal.envelope_level, "L1_AUTONOMIC");
         assert_eq!(heal.expired_locks_cleaned, 1);
         assert!(heal.after_score >= heal.before_score);
+        let after = HomeostasisVitalsEngine::assess(&storage);
+        let after_meta = after
+            .dimensions
+            .iter()
+            .find(|d| d.key == "metabolic_health")
+            .expect("metabolic_health");
+        assert!(after_meta.detail.contains("过期锁 0 个"));
     }
 }

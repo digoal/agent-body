@@ -335,7 +335,7 @@ fn estimate_percentile_from_buckets(buckets: &[u64; 8], quantile: f64, max_us: u
     for (i, &cnt) in buckets.iter().enumerate() {
         acc += cnt;
         if acc >= target {
-            return bucket_midpoints[i].min(max_us.max(bucket_midpoints[i]));
+            return bucket_midpoints[i].min(max_us);
         }
     }
     max_us
@@ -893,6 +893,145 @@ impl BodyPerfEngine {
         list
     }
 
+    /// 删除指定 AWR 性能快照（同步维护索引、`awr:latest` 与黄金基线引用）
+    pub fn delete_snapshot(storage: &Storage, snapshot_id: &str) -> Result<bool> {
+        let raw = snapshot_id.trim();
+        if raw.is_empty() {
+            anyhow::bail!("snapshot_id 不能为空");
+        }
+        let provider = storage.provider();
+        let baseline_snap = Self::load_snapshot(provider.as_ref(), "baseline");
+        let resolved_id = if raw == "baseline" {
+            match baseline_snap.as_ref() {
+                Some(b) => b.snapshot_id.clone(),
+                None => return Ok(false),
+            }
+        } else {
+            raw.strip_prefix("awr:snap:").unwrap_or(raw).to_string()
+        };
+
+        let mut deleted = provider.delete_benchmark_run(&format!("awr:snap:{}", resolved_id))?;
+        if raw == "baseline"
+            || baseline_snap
+                .as_ref()
+                .map(|b| b.snapshot_id == resolved_id)
+                .unwrap_or(false)
+        {
+            if provider.delete_benchmark_run(META_BASELINE_KEY)? {
+                deleted = true;
+            }
+        }
+
+        let mut idx_list: Vec<String> = Self::load_meta_json(provider.as_ref(), META_SNAP_INDEX)
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default();
+        let before_len = idx_list.len();
+        idx_list.retain(|id| id != &resolved_id);
+        if idx_list.len() != before_len {
+            deleted = true;
+            if let Ok(idx_val) = serde_json::to_value(&idx_list) {
+                Self::save_meta_json(provider.as_ref(), META_SNAP_INDEX, idx_val)?;
+            }
+        }
+
+        let latest_pointed = Self::load_meta_json(provider.as_ref(), META_LATEST_SNAP_KEY)
+            .and_then(|v| v.get("latest_id").and_then(|x| x.as_str()).map(str::to_string));
+        if latest_pointed.as_deref() == Some(resolved_id.as_str()) {
+            if let Some(new_latest) = idx_list.last() {
+                Self::save_meta_json(
+                    provider.as_ref(),
+                    META_LATEST_SNAP_KEY,
+                    serde_json::json!({ "latest_id": new_latest }),
+                )?;
+            } else {
+                let _deleted_latest = provider.delete_benchmark_run(META_LATEST_SNAP_KEY)?;
+            }
+        }
+
+        AuditLogger::record_best_effort(
+            storage,
+            AuditEventInput::in_agent("body", "perf_awr", "perf_delete")
+                .with_target("awr_snapshot", &resolved_id)
+                .with_outcome(if deleted { "success" } else { "warn" })
+                .with_delta(serde_json::json!({ "kind": "snapshot", "deleted": deleted })),
+        );
+
+        Ok(deleted)
+    }
+
+    /// 删除指定已保存的历史 AWR 诊断报告（同步维护 `awr:report_index`）
+    pub fn delete_awr_report(storage: &Storage, report_id: &str) -> Result<bool> {
+        let raw = report_id.trim();
+        if raw.is_empty() {
+            anyhow::bail!("report_id 不能为空");
+        }
+        let resolved_id = raw.strip_prefix("awr:report:").unwrap_or(raw).to_string();
+        let provider = storage.provider();
+        let mut deleted = provider.delete_benchmark_run(&format!("awr:report:{}", resolved_id))?;
+
+        let mut list = Self::list_awr_reports_meta(provider.as_ref());
+        let before_len = list.len();
+        list.retain(|r| r.report_id != resolved_id);
+        if list.len() != before_len {
+            deleted = true;
+            let idx_val = serde_json::to_value(&list)?;
+            Self::save_meta_json(provider.as_ref(), META_REPORT_INDEX, idx_val)?;
+        }
+
+        AuditLogger::record_best_effort(
+            storage,
+            AuditEventInput::in_agent("body", "perf_awr", "perf_delete")
+                .with_target("awr_report", &resolved_id)
+                .with_outcome(if deleted { "success" } else { "warn" })
+                .with_delta(serde_json::json!({ "kind": "report", "deleted": deleted })),
+        );
+
+        Ok(deleted)
+    }
+
+    /// 统一删除入口（支持 `kind = snapshot | report | auto`）
+    pub fn delete_perf_artifact(
+        storage: &Storage,
+        kind: &str,
+        target_id: &str,
+    ) -> Result<serde_json::Value> {
+        let tid = target_id.trim();
+        if tid.is_empty() {
+            anyhow::bail!("待删除的快照或报告 ID 不能为空");
+        }
+        let k_norm = kind.trim().to_ascii_lowercase();
+        let resolved_kind = match k_norm.as_str() {
+            "snapshot" | "snap" => "snapshot",
+            "report" | "awr" => "report",
+            "auto" | "" => {
+                if tid.starts_with("awr-") || tid.starts_with("awr:report:") {
+                    "report"
+                } else if tid.starts_with("snap-")
+                    || tid.starts_with("awr:snap:")
+                    || tid == "baseline"
+                {
+                    "snapshot"
+                } else {
+                    "report"
+                }
+            }
+            other => anyhow::bail!("不支持的 perf_delete 类型: {} (可选 auto|snapshot|report)", other),
+        };
+
+        let deleted = if resolved_kind == "snapshot" {
+            Self::delete_snapshot(storage, tid)?
+        } else {
+            Self::delete_awr_report(storage, tid)?
+        };
+
+        Ok(serde_json::json!({
+            "perf_deleted": true,
+            "kind": resolved_kind,
+            "target_id": tid,
+            "deleted": deleted,
+        }))
+    }
+
     fn save_awr_report(provider: &dyn StorageProvider, report: &AwrDiffReport) -> Result<()> {
         let key = format!("awr:report:{}", report.report_id);
         let val = serde_json::to_value(report)?;
@@ -1282,15 +1421,24 @@ impl BodyPerfEngine {
 
     /// 在 `L1_AUTONOMIC` 权限包络内执行一键性能自优化 (`perf_tune`)
     pub fn run_l1_auto_tune(storage: &Storage) -> Result<PerfTuneReport> {
+        let env_chk = crate::body::AutonomyEnvelope::evaluate("perf_tune", None, false);
+        if !env_chk.allowed {
+            anyhow::bail!("AutonomyEnvelope 拒绝执行 perf_tune: {}", env_chk.reason);
+        }
         let t0 = Instant::now();
         let before_kernel = KernelSelfTelemetry::collect(None);
         let mut actions = Vec::new();
+        let provider_name = storage.provider().provider_name();
 
-        // 1. SQLite 优化器统计刷新 + WAL 检查点 + 连接缓存释放
-        if let Err(e) = storage.provider().get_benchmark_run(META_PRAGMA_OPTIMIZE) {
-            eprintln!("[PerfTune][WARN] 执行 SQLite PRAGMA 调优失败: {}", e);
+        // 1. SQLite 优化器统计刷新 + WAL 检查点 + 连接缓存释放（非 SQLite 后端明确跳过 PRAGMA）
+        if provider_name == "sqlite" {
+            if let Err(e) = storage.provider().get_benchmark_run(META_PRAGMA_OPTIMIZE) {
+                eprintln!("[PerfTune][WARN] 执行 SQLite PRAGMA 调优失败: {}", e);
+            }
+            actions.push("SQLite 执行 PRAGMA optimize + PRAGMA wal_checkpoint(PASSIVE) + PRAGMA shrink_memory".to_string());
+        } else {
+            actions.push(format!("当前存储后端为 `{}`，跳过 SQLite 专属 PRAGMA 调优", provider_name));
         }
-        actions.push("SQLite 执行 PRAGMA optimize + PRAGMA wal_checkpoint(PASSIVE) + PRAGMA shrink_memory".to_string());
 
         // 2. 过期协作锁回收
         let coord = crate::coordination::CoordinationEngine::new(storage.provider().clone());
@@ -1304,9 +1452,11 @@ impl BodyPerfEngine {
             rec_rep.checked_assets, rec_rep.missing_assets_marked, rec_rep.ghost_fact_nodes_pruned
         ));
 
-        // 4. 再次收缩 SQLite 缓存并调用 glibc malloc_trim(0) 归还物理内存页给 OS
-        if let Err(e) = storage.provider().get_benchmark_run(META_PRAGMA_OPTIMIZE) {
-            eprintln!("[PerfTune][WARN] 二次收缩 SQLite 内存失败: {}", e);
+        // 4. SQLite 再次收缩缓存；Linux glibc 调用 malloc_trim(0) 归还物理内存页给 OS
+        if provider_name == "sqlite" {
+            if let Err(e) = storage.provider().get_benchmark_run(META_PRAGMA_OPTIMIZE) {
+                eprintln!("[PerfTune][WARN] 二次收缩 SQLite 内存失败: {}", e);
+            }
         }
         #[cfg(target_os = "linux")]
         {
@@ -1487,5 +1637,43 @@ mod tests {
                 .expect("query latest rep")
                 .is_some()
         );
+    }
+
+    #[test]
+    fn test_percentile_never_exceeds_max_addm05_and_delete_apis() {
+        // 1. Tiny max_us=5 must clamp est_p95_us <= max_us
+        let mut buckets = [0u64; 8];
+        buckets[0] = 100;
+        let est = estimate_percentile_from_buckets(&buckets, 0.95, 5);
+        assert!(est <= 5, "est_p95_us ({}) must be <= max_us (5)", est);
+
+        // 2. ADDM-05 triggers cleanly when net_pct > 40%
+        let tm = BodyTimeModel {
+            total_body_time_us: 100_000,
+            net_wait_us: 55_000,
+            net_pct: 55.0,
+            ..Default::default()
+        };
+        let findings = BodyPerfEngine::evaluate_addm_rules(&tm, &[], &KernelSelfTelemetry::default());
+        assert!(findings.iter().any(|f| f.rule_id == "ADDM-05"));
+
+        // 3. delete_snapshot & delete_awr_report remove both rows and indices
+        let storage = Storage::open_in_memory().expect("in_memory");
+        let snap = BodyPerfEngine::capture_snapshot(&storage, Some("del-snap"), false).expect("snap");
+        let rep = BodyPerfEngine::generate_awr_report(&storage, None, Some(&snap.snapshot_id), false)
+            .expect("rep");
+        assert!(BodyPerfEngine::load_awr_report(storage.provider().as_ref(), &rep.report_id).is_some());
+        assert!(BodyPerfEngine::delete_awr_report(&storage, &rep.report_id).expect("del rep"));
+        assert!(BodyPerfEngine::load_awr_report(storage.provider().as_ref(), &rep.report_id).is_none());
+        assert!(BodyPerfEngine::list_awr_reports_meta(storage.provider().as_ref())
+            .iter()
+            .all(|r| r.report_id != rep.report_id));
+
+        assert!(BodyPerfEngine::delete_snapshot(&storage, &snap.snapshot_id).expect("del snap"));
+        assert!(BodyPerfEngine::load_snapshot(storage.provider().as_ref(), &snap.snapshot_id).is_none());
+        assert!(BodyPerfEngine::list_snapshot_ids(storage.provider().as_ref())
+            .0
+            .iter()
+            .all(|id| id != &snap.snapshot_id));
     }
 }

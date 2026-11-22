@@ -393,6 +393,7 @@ impl MeshClient {
     }
 
     fn request(&self, peer: &str, method: &str, path: &str, body: Option<Value>) -> PeerResult {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::NetMeshRpc);
         let url = format!("{}{}", peer, path);
         let token = self.token.clone();
         let timeout = std::time::Duration::from_millis(self.timeout_ms);

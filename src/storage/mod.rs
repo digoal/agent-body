@@ -392,6 +392,10 @@ impl Storage {
         self.provider.gc_expired_coordination_locks()
     }
 
+    pub fn count_expired_coordination_locks(&self) -> Result<usize> {
+        self.provider.count_expired_coordination_locks()
+    }
+
     // ─── Phase 16: Ecosystem Catalogs & External Service Contacts ────
     pub fn upsert_mcp_catalog(&self, rec: &McpCatalogRecord) -> Result<()> {
         self.provider.upsert_mcp_catalog(rec)

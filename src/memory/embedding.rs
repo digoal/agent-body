@@ -81,6 +81,7 @@ impl EmbeddingClient {
 
     /// 同步调用本地 Ollama `/api/embeddings` 生成文本向量
     pub fn embed_text(&self, text: &str) -> Option<Vec<f32>> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::NetOllamaEmbed);
         let trimmed = text.trim();
         if trimmed.is_empty() {
             return None;

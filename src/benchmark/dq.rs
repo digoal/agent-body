@@ -1,9 +1,9 @@
 use crate::benchmark::report::DataQualityResult;
 use crate::storage::StorageProvider;
 
-/// 运行宿主机数据质量与 D6 准确率/新鲜度/图谱健康门禁 (DQ1~DQ8)
+/// 运行宿主机数据质量与 D6 准确率/新鲜度/图谱/遥测健康门禁 (DQ1~DQ9)
 pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQualityResult> {
-    let mut results = Vec::with_capacity(8);
+    let mut results = Vec::with_capacity(9);
 
     // DQ1: 资产描述覆盖率 (采样最近 1,000 条资产)
     let assets = storage.list_assets(1000).unwrap_or_default();
@@ -490,6 +490,52 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
         ),
     });
 
+    // DQ9: 内生 WaitEvent 遥测、分位单调性、过期锁 SPI 与 AWR 仓库索引一致性门禁 (Phase 54)
+    let wait_rows = crate::body::WaitEventRegistry::snapshot_all();
+    let all_events_present = wait_rows.len() == crate::body::perf_awr::WAIT_EVENT_COUNT;
+    let p95_monotonic = wait_rows
+        .iter()
+        .all(|r| r.calls == 0 || r.est_p95_us <= r.max_us);
+    let expired_spi_ok = storage.count_expired_coordination_locks().is_ok();
+    let (snap_ids, _) = crate::body::BodyPerfEngine::list_snapshot_ids(storage);
+    let report_metas = crate::body::BodyPerfEngine::list_awr_reports_meta(storage);
+    let snaps_loadable = snap_ids
+        .iter()
+        .all(|id| crate::body::BodyPerfEngine::load_snapshot(storage, id).is_some());
+    let reports_loadable = report_metas
+        .iter()
+        .all(|r| crate::body::BodyPerfEngine::load_awr_report(storage, &r.report_id).is_some());
+    let awr_repo_consistent = snaps_loadable && reports_loadable;
+
+    let checks_ok = [
+        all_events_present,
+        p95_monotonic,
+        expired_spi_ok,
+        awr_repo_consistent,
+    ]
+    .into_iter()
+    .filter(|ok| *ok)
+    .count();
+    let dq9_pct = ((checks_ok as f64 / 4.0) * 100.0 * 100.0).round() / 100.0;
+    results.push(DataQualityResult {
+        id: "DQ9".into(),
+        name: "telemetry_awr_and_storage_integrity".into(),
+        title: "内生遥测、AWR 报告库与锁状态一致性门禁".into(),
+        measured_pct: dq9_pct,
+        target_pct: 100.0,
+        passed: checks_ok == 4,
+        detail: format!(
+            "WaitEvents={}/{} | P95<=Max={} | ExpiredLockSPI={} | AWR仓库索引一致={} (snaps={}, reports={})",
+            wait_rows.len(),
+            crate::body::perf_awr::WAIT_EVENT_COUNT,
+            p95_monotonic,
+            expired_spi_ok,
+            awr_repo_consistent,
+            snap_ids.len(),
+            report_metas.len()
+        ),
+    });
+
     results
 }
 
@@ -541,5 +587,15 @@ mod tests {
         let dq5 = results.iter().find(|r| r.id == "DQ5").expect("DQ5");
         assert_eq!(dq5.measured_pct, 0.0, "物理缺失 file: 节点应触发 DQ5 不健康告警");
         assert!(!dq5.passed);
+    }
+
+    #[test]
+    fn test_dq9_telemetry_and_awr_integrity_check() {
+        let storage = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        let results = run_data_quality_checks(&storage);
+        assert_eq!(results.len(), 9);
+        let dq9 = results.iter().find(|r| r.id == "DQ9").expect("DQ9");
+        assert!(dq9.passed, "空库下 DQ9 应全通过: {}", dq9.detail);
+        assert_eq!(dq9.measured_pct, 100.0);
     }
 }

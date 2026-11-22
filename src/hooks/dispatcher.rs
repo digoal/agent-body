@@ -183,6 +183,9 @@ impl HookDispatcher {
                     // 异步在后台执行，避免阻塞
                     let cmd_to_run = cmd_interpolated.clone();
                     tokio::task::spawn_blocking(move || {
+                        let _wait = crate::body::WaitEventGuard::enter(
+                            crate::body::WaitEventId::IpcHookSubprocess,
+                        );
                         let _ = Command::new("sh")
                             .arg("-c")
                             .arg(&cmd_to_run)

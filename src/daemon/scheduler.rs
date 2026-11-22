@@ -19,6 +19,8 @@ pub struct SchedulerCycleReport {
     pub homeostasis_score: f64,
     #[serde(default)]
     pub homeostasis_healed: bool,
+    #[serde(default)]
+    pub awr_snapshot_captured: bool,
 }
 
 /// 后台巡查与增量调度引擎
@@ -128,6 +130,35 @@ impl BackgroundScheduler {
             }
         }
 
+        // 10. 周期性 AWR 性能快照采样 (>=60 分钟或尚无历史快照时自动留档；若尚无基线则自动设为黄金基线)
+        let mut awr_snapshot_captured = false;
+        let (snap_metas, baseline_meta) =
+            crate::body::BodyPerfEngine::list_snapshots_meta(self.storage.provider().as_ref());
+        let snapshot_due = if let Some(newest) = snap_metas.first() {
+            chrono::DateTime::parse_from_rfc3339(&newest.captured_at)
+                .map(|dt| {
+                    chrono::Utc::now()
+                        .signed_duration_since(dt.with_timezone(&chrono::Utc))
+                        .num_minutes()
+                        >= 60
+                })
+                .unwrap_or(true)
+        } else {
+            true
+        };
+        if snapshot_due {
+            let set_baseline = baseline_meta.is_none();
+            if let Err(e) = crate::body::BodyPerfEngine::capture_snapshot(
+                &self.storage,
+                Some("daemon-auto"),
+                set_baseline,
+            ) {
+                eprintln!("[Scheduler][PerfAWR][WARN] 周期抓取 AWR 快照失败: {}", e);
+            } else {
+                awr_snapshot_captured = true;
+            }
+        }
+
         let report = SchedulerCycleReport {
             synced_processes,
             graph_nodes_updated: graph_nodes,
@@ -138,6 +169,7 @@ impl BackgroundScheduler {
             assets_enriched,
             homeostasis_score: vitals.overall_score,
             homeostasis_healed,
+            awr_snapshot_captured,
         };
 
         crate::audit::AuditLogger::record_best_effort(

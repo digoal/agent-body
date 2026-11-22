@@ -284,6 +284,7 @@ impl StorageProvider for SqliteStorageProvider {
     }
 
     fn upsert_asset(&self, asset: &AssetRecord) -> Result<()> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IoSqliteWrite);
         let conn = self.lock_conn()?;
         let desc_kv_str = serde_json::to_string(&asset.desc_kv)?;
         let tags_str = serde_json::to_string(&asset.tags)?;
@@ -509,6 +510,7 @@ impl StorageProvider for SqliteStorageProvider {
     }
 
     fn insert_memory(&self, mem: &MemoryRecord) -> Result<()> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IoSqliteWrite);
         let conn = self.lock_conn()?;
         let tags_str = serde_json::to_string(&mem.tags)?;
         let emb_str = serde_json::to_string(&mem.embedding)?;
@@ -659,6 +661,7 @@ impl StorageProvider for SqliteStorageProvider {
     }
 
     fn record_change(&self, change: &ChangeRecord) -> Result<()> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IoSqliteWrite);
         let conn = self.lock_conn()?;
         let details_str = serde_json::to_string(&change.details)?;
         conn.execute(
@@ -1386,6 +1389,18 @@ impl StorageProvider for SqliteStorageProvider {
         Ok(count)
     }
 
+    fn count_expired_coordination_locks(&self) -> Result<usize> {
+        let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM coordination_locks
+             WHERE COALESCE(julianday(expires_at) <= julianday(?1), expires_at <= ?1)",
+            params![now],
+            |row| row.get(0),
+        )?;
+        Ok(count.max(0) as usize)
+    }
+
     fn upsert_mcp_catalog(&self, rec: &McpCatalogRecord) -> Result<()> {
         let conn = self.lock_conn()?;
         let tools_str = serde_json::to_string(&rec.tools_json)?;
@@ -2101,6 +2116,7 @@ impl StorageProvider for SqliteStorageProvider {
     }
 
     fn insert_audit_event(&self, rec: &AuditEventRecord) -> Result<()> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IoSqliteWrite);
         let conn = self.lock_conn()?;
         let delta_str = serde_json::to_string(&rec.before_after_delta)?;
         conn.execute(

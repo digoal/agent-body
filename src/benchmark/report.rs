@@ -68,20 +68,26 @@ pub struct BenchmarkReportPayload {
 }
 
 impl BenchmarkReportPayload {
-    /// 基于规范化 payload 摘要生成防篡改 SHA-256 指纹
+    /// 基于规范化 payload 摘要生成防篡改 SHA-256 指纹（完整覆盖 spec_version / workloads / micro / data_quality / competitors）
     pub fn compute_canonical_sha256(
+        spec_version: &str,
         run_id: &str,
         suite_name: &str,
         git_commit: &str,
         workloads: &[WorkloadResult],
         micro: &[MicroBenchResult],
+        data_quality: &[DataQualityResult],
+        competitors: &[CompetitorComparisonResult],
     ) -> String {
         let canonical = serde_json::json!({
+            "spec_version": spec_version,
             "run_id": run_id,
             "suite_name": suite_name,
             "git_commit": git_commit,
             "workloads": workloads,
             "micro_benchmarks": micro,
+            "data_quality": data_quality,
+            "competitors": competitors,
         });
         let raw = serde_json::to_string(&canonical).unwrap_or_default();
         sha256_hex(&raw)
@@ -269,7 +275,7 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     }
 
     if !report.micro_benchmarks.is_empty() {
-        writeln!(md, "## 三、5 大内核微基准 SLA (P50 / P95 / P99)\n")?;
+        writeln!(md, "## 三、{} 大内核微基准 SLA (P50 / P95 / P99)\n", report.micro_benchmarks.len())?;
         writeln!(md, "| ID | 基准项 | 迭代次数 | 平均耗时 (μs) | P50 (μs) | P95 (μs) | P99 (μs) | SLA 上限 (μs) | 状态 |")?;
         writeln!(md, "|:---:|---|---:|---:|---:|---:|---:|---:|:---:|")?;
         for m in &report.micro_benchmarks {
@@ -291,7 +297,7 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
     }
 
     if !report.data_quality.is_empty() {
-        writeln!(md, "## 四、宿主机数据质量与 D6 准确率门禁 (DQ1~DQ8)\n")?;
+        writeln!(md, "## 四、宿主机数据质量与 D6 准确率门禁 (DQ1~DQ{})\n", report.data_quality.len())?;
         writeln!(md, "| ID | 检查项 | 实测指标 | SLA 目标 | 状态 | 详情 |")?;
         writeln!(md, "|:---:|---|---:|---:|:---:|---|")?;
         for dq in &report.data_quality {
@@ -365,4 +371,57 @@ pub fn render_csv_report(report: &BenchmarkReportPayload) -> Result<String> {
         )?;
     }
     Ok(csv)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_canonical_sha256_covers_spec_dq_and_competitors() {
+        let base_dq = DataQualityResult {
+            id: "DQ9".into(),
+            name: "telemetry_integrity".into(),
+            title: "遥测完整性".into(),
+            measured_pct: 100.0,
+            target_pct: 100.0,
+            passed: true,
+            detail: "ok".into(),
+        };
+        let mut modified_dq = base_dq.clone();
+        modified_dq.measured_pct = 75.0;
+
+        let h1 = BenchmarkReportPayload::compute_canonical_sha256(
+            "3.8",
+            "run-1",
+            "full",
+            "abc123",
+            &[],
+            &[],
+            &[base_dq.clone()],
+            &[],
+        );
+        let h_spec = BenchmarkReportPayload::compute_canonical_sha256(
+            "3.7",
+            "run-1",
+            "full",
+            "abc123",
+            &[],
+            &[],
+            &[base_dq],
+            &[],
+        );
+        let h_dq = BenchmarkReportPayload::compute_canonical_sha256(
+            "3.8",
+            "run-1",
+            "full",
+            "abc123",
+            &[],
+            &[],
+            &[modified_dq],
+            &[],
+        );
+        assert_ne!(h1, h_spec, "spec_version 变化必须改变 report_sha256");
+        assert_ne!(h1, h_dq, "data_quality 变化必须改变 report_sha256");
+    }
 }

@@ -22,7 +22,7 @@ use crate::benchmark::workloads::{run_all_workloads, run_workload, WorkloadResul
 use crate::storage::models::BenchmarkRunRecord;
 use crate::storage::StorageProvider;
 
-pub const BENCHMARK_SPEC_VERSION: &str = "3.7";
+pub const BENCHMARK_SPEC_VERSION: &str = "3.8";
 
 pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
     if workloads.is_empty() {
@@ -39,7 +39,7 @@ pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
 pub fn compute_query_guard_speedup(workloads: &[WorkloadResult]) -> f64 {
     let subset: Vec<&WorkloadResult> = workloads
         .iter()
-        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9" | "W11" | "W15" | "W16" | "W17"))
+        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9" | "W11" | "W15" | "W16" | "W17" | "W18"))
         .collect();
     if subset.is_empty() {
         return 1.0;
@@ -135,13 +135,14 @@ impl BenchmarkEngine {
 
         let total_base_us: u128 = workloads.iter().map(|w| w.baseline_elapsed_us).sum();
         let total_stew_us: u128 = workloads.iter().map(|w| w.steward_elapsed_us).sum();
-        let overall_speedup_factor = if total_stew_us > 0 && total_base_us > 0 {
+        let arithmetic_speedup_factor = if total_stew_us > 0 && total_base_us > 0 {
             ((total_base_us as f64 / total_stew_us as f64) * 100.0).round() / 100.0
         } else {
             1.0
         };
 
         let geometric_mean_speedup = compute_geomean_speedup(&workloads);
+        let overall_speedup_factor = geometric_mean_speedup;
         let query_guard_speedup = compute_query_guard_speedup(&workloads);
         let mut d6_samples: Vec<f64> = workloads
             .iter()
@@ -215,11 +216,14 @@ impl BenchmarkEngine {
         let app_version = crate::VERSION.to_string();
         let host_fingerprint = Self::collect_host_fingerprint(storage.as_ref());
         let report_sha256 = BenchmarkReportPayload::compute_canonical_sha256(
+            BENCHMARK_SPEC_VERSION,
             &run_id,
             suite_norm,
             &git_commit,
             &workloads,
             &micro_benchmarks,
+            &data_quality,
+            &competitors,
         );
         let duration_ms = t0.elapsed().as_millis() as i64;
         let created_at = chrono::Utc::now().to_rfc3339();
@@ -273,6 +277,7 @@ impl BenchmarkEngine {
                 results_json: serde_json::json!({
                     "spec_version": BENCHMARK_SPEC_VERSION,
                     "geometric_mean_speedup": geometric_mean_speedup,
+                    "arithmetic_speedup_factor": arithmetic_speedup_factor,
                     "query_guard_speedup": query_guard_speedup,
                     "d6_quality_score": d6_quality_score,
                     "overall_baseline_quality_score": overall_baseline_quality_score,
@@ -311,11 +316,11 @@ mod tests {
         let report = BenchmarkEngine::run_suite(provider.clone(), "full", true, Some("bench:test"))
             .expect("run full suite");
 
-        assert_eq!(report.workloads.len(), 17);
-        assert_eq!(report.micro_benchmarks.len(), 5);
-        assert_eq!(report.data_quality.len(), 8);
+        assert_eq!(report.workloads.len(), 18);
+        assert_eq!(report.micro_benchmarks.len(), 6);
+        assert_eq!(report.data_quality.len(), 9);
         assert_eq!(report.competitors.len(), 4);
-        assert_eq!(report.spec_version, "3.7");
+        assert_eq!(report.spec_version, "3.8");
         assert!(report.quality_non_degraded, "所有负载上下文质量必须不降反升");
         assert!(report.overall_quality_delta > 20.0, "整体上下文质量净提升应 > 20 分，实测: {}", report.overall_quality_delta);
         assert!(report.overall_info_density_gain > 5.0, "有效信息密度应提升 > 5x，实测: {}", report.overall_info_density_gain);
@@ -341,13 +346,14 @@ mod tests {
                 m.id, m.name, m.passed, m.avg_us, m.sla_limit_us
             );
         }
-        assert!(report.sla_passed, "17 大负载 + 5 大微基准 + 8 项 DQ SLA 应全部通过");
+        assert!(report.sla_passed, "18 大负载 + 6 大微基准 + 9 项 DQ SLA 应全部通过");
 
         let fetched = provider
             .get_benchmark_run(&report.run_id)
             .expect("get run")
             .expect("saved run");
         assert_eq!(fetched.report_sha256, report.report_sha256);
+        assert_eq!(fetched.overall_speedup_factor, report.overall_speedup_factor);
 
         let cleaned = BenchmarkEngine::reset_sandbox(provider.as_ref()).expect("reset");
         assert!(cleaned >= 1);

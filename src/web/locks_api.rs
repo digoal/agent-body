@@ -39,12 +39,15 @@ impl From<CoordinationLock> for LockViewItem {
     }
 }
 
-/// 释放锁请求体
+/// 释放锁请求体（支持 lock_id 或 resource_type + resource_id 二选一，兼容 holder_agent / agent_id）
 #[derive(Debug, Deserialize)]
 pub struct ReleaseLockRequest {
-    pub resource_type: String,
-    pub resource_id: String,
+    pub lock_id: Option<String>,
+    pub resource_type: Option<String>,
+    pub resource_id: Option<String>,
     pub agent_id: Option<String>,
+    pub holder_agent: Option<String>,
+    pub force: Option<bool>,
 }
 
 /// 处理 GET /api/v1/locks
@@ -125,25 +128,86 @@ pub fn handle_lock_release(
         Err(e) => return WebResponse::error(StatusCode::BAD_REQUEST, &format!("Invalid JSON body: {}", e)),
     };
 
-    match storage.get_coordination_lock(&payload.resource_type, &payload.resource_id) {
-        Ok(Some(lock)) => {
-            if let Some(ref agent) = payload.agent_id {
-                if &lock.holder_agent != agent && agent != "admin" && agent != "admin_web" {
-                    return WebResponse::error(StatusCode::FORBIDDEN, "Agent mismatch: lock held by another agent");
+    let holder = payload
+        .holder_agent
+        .as_deref()
+        .or(payload.agent_id.as_deref())
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let force = payload.force.unwrap_or(false);
+
+    let lock_opt = if let Some(lid) = payload
+        .lock_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        match storage.list_coordination_locks(None) {
+            Ok(locks) => locks.into_iter().find(|l| l.lock_id == lid),
+            Err(e) => {
+                return WebResponse::error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &format!("Error checking lock: {}", e),
+                )
+            }
+        }
+    } else if let (Some(rt), Some(rid)) = (
+        payload
+            .resource_type
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty()),
+        payload
+            .resource_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty()),
+    ) {
+        let rt_enum = crate::coordination::ResourceType::from_str_loose(rt);
+        let norm_id = crate::coordination::LockRegistry::normalize_resource_id(&rt_enum, rid);
+        match storage.get_coordination_lock(rt_enum.as_str(), &norm_id) {
+            Ok(l) => l,
+            Err(e) => {
+                return WebResponse::error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &format!("Error checking lock: {}", e),
+                )
+            }
+        }
+    } else {
+        return WebResponse::error(
+            StatusCode::BAD_REQUEST,
+            "Must provide lock_id or (resource_type + resource_id)",
+        );
+    };
+
+    match lock_opt {
+        Some(lock) => {
+            if !force {
+                if let Some(agent) = holder {
+                    if lock.holder_agent != agent && agent != "admin" && agent != "admin_web" {
+                        return WebResponse::error(
+                            StatusCode::FORBIDDEN,
+                            "Agent mismatch: lock held by another agent",
+                        );
+                    }
                 }
             }
             match storage.delete_coordination_lock(&lock.lock_id) {
                 Ok(true) => WebResponse::success(serde_json::json!({
                     "released": true,
                     "lock_id": lock.lock_id,
-                    "resource_type": payload.resource_type,
-                    "resource_id": payload.resource_id
+                    "resource_type": lock.resource_type,
+                    "resource_id": lock.resource_id,
+                    "force": force
                 })),
                 Ok(false) => WebResponse::error(StatusCode::NOT_FOUND, "Failed to release lock"),
-                Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &format!("Failed to delete lock: {}", e)),
+                Err(e) => WebResponse::error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &format!("Failed to delete lock: {}", e),
+                ),
             }
         }
-        Ok(None) => WebResponse::error(StatusCode::NOT_FOUND, "Lock not found"),
-        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &format!("Error checking lock: {}", e)),
+        None => WebResponse::error(StatusCode::NOT_FOUND, "Lock not found"),
     }
 }

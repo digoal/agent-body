@@ -106,6 +106,7 @@ impl CoordinationEngine {
 
     /// 尝试获取资源协作互斥/共享锁（非阻塞）
     pub fn try_acquire(&self, req: &LockRequest) -> Result<LockResult> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::LockCoordination);
         let norm_id = LockRegistry::normalize_resource_id(&req.resource_type, &req.resource_id);
         let rt_str = req.resource_type.as_str();
 
@@ -202,6 +203,7 @@ impl CoordinationEngine {
 
     /// 释放锁（校验持有者身份）
     pub fn release(&self, lock_id: &str, holder_agent: &str) -> Result<bool> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::LockCoordination);
         let locks = self.storage.list_coordination_locks(None)?;
         let mut target_lock = None;
         if let Some(l) = locks.iter().find(|x| x.lock_id == lock_id) {
@@ -229,6 +231,7 @@ impl CoordinationEngine {
 
     /// 强制释放锁（管理员/运维 CLI 操作）
     pub fn force_release(&self, lock_id: &str) -> Result<bool> {
+        let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::LockCoordination);
         let locks = self.storage.list_coordination_locks(None)?;
         let target_lock = locks.into_iter().find(|x| x.lock_id == lock_id);
         let res = self.storage.delete_coordination_lock(lock_id)?;
@@ -246,6 +249,40 @@ impl CoordinationEngine {
             }
         }
         Ok(res)
+    }
+
+    /// 统一释放入口：支持按 `lock_id` 或 `(resource_type, resource_id)` 解析目标锁，并按 `force` 决定是否校验 `holder_agent`
+    pub fn release_flexible(
+        &self,
+        lock_id: Option<&str>,
+        resource_type: Option<&str>,
+        resource_id: Option<&str>,
+        holder_agent: Option<&str>,
+        force: bool,
+    ) -> Result<(Option<String>, bool)> {
+        let explicit_id = lock_id.map(str::trim).filter(|s| !s.is_empty());
+        let resolved_id = if let Some(id) = explicit_id {
+            id.to_string()
+        } else if let (Some(rt), Some(rid)) = (
+            resource_type.map(str::trim).filter(|s| !s.is_empty()),
+            resource_id.map(str::trim).filter(|s| !s.is_empty()),
+        ) {
+            let rt_enum = ResourceType::from_str_loose(rt);
+            let norm_id = LockRegistry::normalize_resource_id(&rt_enum, rid);
+            let Some(existing) = self.storage.get_coordination_lock(rt_enum.as_str(), &norm_id)? else {
+                return Ok((None, false));
+            };
+            existing.lock_id
+        } else {
+            anyhow::bail!("必须提供 lock_id 或 (resource_type + resource_id)");
+        };
+
+        let released = if force {
+            self.force_release(&resolved_id)?
+        } else {
+            self.release(&resolved_id, holder_agent.unwrap_or("current-agent"))?
+        };
+        Ok((Some(resolved_id), released))
     }
 
     /// 续期
@@ -538,5 +575,62 @@ mod tests {
         // 同一 Agent 续租
         let renewed = engine.renew(&lock_id, "agent-self", 120).expect("renew");
         assert!(renewed);
+    }
+
+    #[test]
+    fn test_release_flexible_by_id_or_resource_and_holder_guard() {
+        let storage = Storage::open_in_memory().expect("storage");
+        let engine = CoordinationEngine::new(storage.provider().clone());
+        let res = engine
+            .try_acquire(&LockRequest {
+                resource_type: ResourceType::Port,
+                resource_id: "19876".to_string(),
+                scope: LockScope::Exclusive,
+                holder_agent: "owner-agent".to_string(),
+                holder_pid: None,
+                ttl_seconds: 60,
+                metadata: None,
+            })
+            .expect("acquire");
+        let lock_id = match res {
+            LockResult::Granted { lock_id, .. } => lock_id,
+            _ => panic!("expected granted"),
+        };
+
+        // 1. 错误持有者非强制释放应被拒绝
+        let (id1, rel1) = engine
+            .release_flexible(None, Some("port"), Some("19876"), Some("other-agent"), false)
+            .expect("rel1");
+        assert_eq!(id1.as_deref(), Some(lock_id.as_str()));
+        assert!(!rel1);
+
+        // 2. 正确持有者按 (resource_type, resource_id) 释放成功
+        let (id2, rel2) = engine
+            .release_flexible(None, Some("port"), Some("19876"), Some("owner-agent"), false)
+            .expect("rel2");
+        assert_eq!(id2.as_deref(), Some(lock_id.as_str()));
+        assert!(rel2);
+
+        // 3. 按 lock_id + force=true 强制释放
+        let res2 = engine
+            .try_acquire(&LockRequest {
+                resource_type: ResourceType::File,
+                resource_id: "/tmp/flex_lock_test.txt".to_string(),
+                scope: LockScope::Exclusive,
+                holder_agent: "owner-b".to_string(),
+                holder_pid: None,
+                ttl_seconds: 60,
+                metadata: None,
+            })
+            .expect("acquire 2");
+        let lock_id2 = match res2 {
+            LockResult::Granted { lock_id, .. } => lock_id,
+            _ => panic!("expected granted 2"),
+        };
+        let (id3, rel3) = engine
+            .release_flexible(Some(&lock_id2), None, None, Some("admin"), true)
+            .expect("rel3");
+        assert_eq!(id3.as_deref(), Some(lock_id2.as_str()));
+        assert!(rel3);
     }
 }
