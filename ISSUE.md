@@ -135,9 +135,12 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - **核心收敛判断（方案 B）**：确立 **「脑体分离（Brain-Body Separation）」** 第一性原理——LLM/客户端是可热切换的瞬态大脑，本系统是永驻宿主机的 **Agent 本体（感官图谱 × 小脑反射 × 海马体记忆与接力 × 规约脊柱 × 代谢稳态 × 多体联邦）**；严守递弱代偿不内置主战规划循环，同时执行 **三层命名零破坏兼容**（品牌与文案升维为 Agent 本体，底层 `agent-steward` / `steward_*` / `~/.steward/` 100% 向后兼容）。
     - **规划演进路线**：**Phase 44** 新增第 27 模块 `src/body/` 与第 27 张表 `body_checkpoints`，落地五大本体原语（`BodyManifest`、`ContinuityCapsule <=300 tok`、`HomeostasisVitals`、`AutonomyEnvelope L0~L3`、多体联邦名片发现）、第 43 原生工具 `steward_body_state` 与 Benchmark `v3.7` (`W17` + `DQ8` + `PR-13`)；**Phase 45** 全面刷新注释/文档/`SKILL`/Web 路演剧场第 7 幕，并为 `#28` → `#29` 铺平零返工衔接序（详见 [04-from-steward-to-agent-body.md](idea_doc/04-from-steward-to-agent-body.md)、[17-agent-embodiment-and-continuity-spec.md](design_doc/17-agent-embodiment-and-continuity-spec.md) 与 [roadmap-phase44-45.md](src_doc/roadmap-phase44-45.md)）。
   
-28. 新建 presentation 目录，把steward-deck.html presentation.html git mv 进去，同时规划新的演讲 HTML，风格与它们保持一致，内容则可以从当前项目中提取整理成体系化的 HTML，每一个HTML讲30分钟
-左右，但要细、展开，所以每个HTML不要太多的点进去，最好一个点说透，所以需要体系化。另外steward-deck.html presentation.html最后再刷新一下，把当前项目状态放进去，现在似乎有点老了。
+28. **体系化演讲 HTML 矩阵与既有双 Deck 归拢终刷新 (`presentation/`)** `✅ Phase 46 已全量落地`:
+    > 原始需求：新建 presentation 目录，把steward-deck.html presentation.html git mv 进去，同时规划新的演讲 HTML，风格与它们保持一致，内容则可以从当前项目中提取整理成体系化的 HTML，每一个HTML讲30分钟左右，但要细、展开，所以每个HTML不要太多的点进去，最好一个点说透，所以需要体系化。另外steward-deck.html presentation.html最后再刷新一下，把当前项目状态放进去，现在似乎有点老了。
+    - **已落地交付**：新建 `presentation/` 并 `git mv` 迁入 `steward-deck.html` 与 `presentation.html`（同步更新 `src/web/assets/mod.rs`、`README.md`、`manual/08-web-dashboard.md`）；按完全一致的「浅色纸基 · 地层剖面 · 工程蓝图」视觉规范构建 `scripts/deck_engine.py` + `scripts/build_decks_part{1,2}.py`，交付 **`01~06` 共 6 讲 × 30 分钟单点说透专题 HTML** + **`presentation/index.html`**，并将旧版双 Deck 刷新至 `v0.4.0` / Agent 本体 / 43 工具 / 82 SPI / 268 测试 / 7 大剧目 / Bench `v3.7` 全绿现状，全部 9 份 HTML 通过 `scripts/verify_presentations.py` Playwright 无头验真（详见 [roadmap-phase46.md](src_doc/roadmap-phase46.md)）。
   
-29. 当前的目录结构有点乱，主要是文档目录，都在一级目录里，感觉上有点乱，如果要改的话用 git mv 改名或改层级。并且移动完后，需要把项目中的文件(除了target )都扫一遍，涉及到旧路径的都要刷新为
-新路径。 最后还要刷新 codegraph.
+29. 当前的目录结构有点乱，主要是文档目录，都在一级目录里，感觉上有点乱，如果要改的话用 git mv 改名或改层级。并且移动完后，需要把项目中的文件(除了target )都扫一遍，涉及到旧路径的都要刷新为新路径。 最后还要刷新 codegraph.
 
+30. agent-steward daemon 进程 CPU 居高不下，需要排查解决。
+
+31. 项目名要改成 agent-body ，相关的代码、文档、WEB UI、MCP、SKILL、HTML 等配套都要修改。

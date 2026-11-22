@@ -11,9 +11,7 @@
 ---
 
 ## 什么是 Agent 本体（Agent Host Steward）？
-[演讲 PPT](https://htmlpreview.github.io/?https://github.com/digoal/agent-steward/blob/main/steward-deck.html)  
-  
-[路演 PPT](https://htmlpreview.github.io/?https://github.com/digoal/agent-steward/blob/main/presentation.html)  
+[系列演讲总览（6 讲 × 30 分钟专题 + 总览版）](https://htmlpreview.github.io/?https://github.com/digoal/agent-steward/blob/main/presentation/index.html) · [演讲 PPT](https://htmlpreview.github.io/?https://github.com/digoal/agent-steward/blob/main/presentation/steward-deck.html) · [路演 PPT](https://htmlpreview.github.io/?https://github.com/digoal/agent-steward/blob/main/presentation/presentation.html)  
   
 市面上有大量专注于“跨会话记忆”或“对话摘要”的开源项目，但它们没有解决一个更底层、更致命的痛点：**Agent 在 Linux 宿主机上干活时，本质上是一个只有临时大脑皮层、却没有物理身体（无本体感觉、无痛觉反射、无跨大脑连续性）的数字孤魂**：
 - 它不知道机器上其实装了 `pdftotext`，却反复折腾 pip 安装第三方库并报错；
@@ -226,8 +224,7 @@ cargo build --release
 - `build.rs` : Cargo 构建脚本
 - `config.example.toml` : 运行时配置文件示例
 - `docker-compose.yml` : Docker Compose 编排配置
-- `presentation.html` : 产品路演 PPT
-- `steward-deck.html` : 产品交流 PPT
+- `presentation/` : 离线 HTML 演讲体系（含 `index.html` 总览、`presentation.html` 路演版、`steward-deck.html` 深度交流版及 `01~06` 6 讲 × 30 分钟单点说透专题）
 - `user_feedback.md` : 实际使用反馈总账（优点、缺点痛点、新需求与 Benchmark 迭代记录）
   
 ## 核心设计原则与约束 (Design Principles & Constraints)

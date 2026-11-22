@@ -25,7 +25,7 @@
    - 顶部提供「脑体分离 · Agent 本体 —— 比较优势的终极工程形态」导览与宿主机商业价值 ROI 实时账单（Context Token 节省率、工具/资产/图谱规模、`43/43` 对齐认证）；
    - 采用 **三层渐进式故事舞台**：第 1 层展示每幕「💡 一句话生活比喻 (`analogy`)」「🎯 核心用意 (`intent_summary`)」、3 张核心收益数字卡 (`hero_metrics`) 与演讲者 30 秒提词卡；第 2 层左右分屏对比「盲人 Agent 三步翻车故事线」vs「7 套真引擎驱动的专属可视化组件」（含第 7 幕「换脑不失忆 · 跨大脑 1ms 本体接力」）；第 3 层提供默认收起的 `<details>` 技术专家原始 JSON 核验抽屉；
    - 支持 8 秒/幕自动巡航（`Space` 暂停 / `←→` 切幕）、演讲者大屏模式与一键无痕重置 `demo:*` 沙盒；
-   - 左侧内置 `/deck`（[steward-deck.html](../steward-deck.html)）与 `/presentation`（[presentation.html](../presentation.html)）离线 PPT 直达入口，页脚内置全局「⌨️ 黑屏命令镜像器」实时回显等价 CLI 与 MCP JSON-RPC。
+   - 左侧内置 `/deck`（[presentation/steward-deck.html](../presentation/steward-deck.html)）与 `/presentation`（[presentation/presentation.html](../presentation/presentation.html)）离线 PPT 直达入口（全套 6 讲 30 分钟专题见 [presentation/index.html](../presentation/index.html)），页脚内置全局「⌨️ 黑屏命令镜像器」实时回显等价 CLI 与 MCP JSON-RPC。
 7. **📊 实证基准、竞品对标与自进化探针 (Empirical Benchmark v3.7 & Feedback · Phase 27~44)**：
    - **轨道 A — A/B 对照基准跑批**：支持一键运行 `full` / `competitors` / `macro` / `micro` / `dq` / 单项负载（`W1`~`W17`），同机实时比对 Without Steward 裸奔基线 vs With Steward 真引擎的 Token 节省率、延迟加速比、四维上下文质量净胜（$\Delta Q$）、有效信息密度倍数、5 大微基准 SLA（`M1`~`M5`）与 8 项质量与稳态门禁（`DQ1`~`DQ8`），每批生成 **SHA-256 防篡改指纹**；
    - **轨道 B — 生产效能存证账本**：按 `24h` / `7d` / `30d` / `all` 时间窗展示日常每一次 MCP/CLI/Web/Hook 调用自动记账的 `PR-01`~`PR-13` 归因收益与溯源流水；

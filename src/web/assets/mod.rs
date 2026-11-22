@@ -4538,8 +4538,8 @@ pub fn serve_js() -> HttpResponse {
     HttpResponse::js(APP_JS)
 }
 
-pub static DECK_HTML: &str = include_str!("../../../steward-deck.html");
-pub static PRESENTATION_HTML: &str = include_str!("../../../presentation.html");
+pub static DECK_HTML: &str = include_str!("../../../presentation/steward-deck.html");
+pub static PRESENTATION_HTML: &str = include_str!("../../../presentation/presentation.html");
 
 pub fn serve_deck() -> HttpResponse {
     HttpResponse::html(DECK_HTML)

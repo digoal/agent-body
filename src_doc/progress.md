@@ -1,9 +1,9 @@
 # Agent Host Steward (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-22T15:10:00+08:00  
+> 最新更新: 2026-11-22T16:50:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: **Phase 1~45 全部完成（ISSUE #27 全量交付）**；43 个原生 MCP 工具（黑白屏 100% 同步），27 个 `src/lib.rs` 模块，82 个 SPI 方法，27 张 SQLite 表，Benchmark `v3.7`
+> 当前状态: **Phase 1~46 全部完成（ISSUE #27/#28 全量交付）**；43 个原生 MCP 工具（黑白屏 100% 同步），27 个 `src/lib.rs` 模块，82 个 SPI 方法，27 张 SQLite 表，Benchmark `v3.7` 全绿基线，`presentation/` 9 份离线 HTML 演讲体系通过 Playwright 全页验真
 
 ---
 
