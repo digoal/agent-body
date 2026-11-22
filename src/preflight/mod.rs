@@ -189,6 +189,20 @@ impl PreflightChecker {
                     }
                 }
             }
+
+            let inbox_dir = config
+                .and_then(|c| c.mesh.inbox_dir.as_deref())
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|| data_dir.join("mesh_inbox"));
+            if inbox_dir.exists() {
+                if let Ok(meta) = fs::metadata(&inbox_dir) {
+                    let mode = meta.permissions().mode() & 0o777;
+                    if (mode & 0o077) != 0 {
+                        issues.push(format!("Mesh 收件箱 {} 权限过宽 ({:03o})", inbox_dir.display(), mode));
+                        remedies.push(format!("chmod 700 {}", inbox_dir.display()));
+                    }
+                }
+            }
         }
 
         if let Some(cfg) = config {
@@ -202,6 +216,18 @@ impl PreflightChecker {
             if cfg.web.enabled && non_loopback && empty_token {
                 issues.push(format!("Web 服务监听非回环地址 `{}` 且未配置 auth_token", cfg.web.host));
                 remedies.push("在 config.toml 的 [web] 下配置强 auth_token，或将 host 收敛回 127.0.0.1".to_string());
+            }
+            let empty_mesh_secret = cfg
+                .mesh
+                .shared_secret
+                .as_deref()
+                .map(|s| s.trim().is_empty())
+                .unwrap_or(true)
+                && cfg.mesh.peer_keys.is_empty()
+                && empty_token;
+            if cfg.mesh.enabled && empty_mesh_secret {
+                issues.push("Peer Mesh 已启用但未配置 [mesh].shared_secret / peer_keys / [web].auth_token".to_string());
+                remedies.push("在 config.toml 的 [mesh] 下配置 shared_secret 或 peer_keys".to_string());
             }
         }
 

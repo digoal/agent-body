@@ -69,15 +69,13 @@ pub fn run_all_micro_benchmarks() -> Result<Vec<MicroBenchResult>> {
                 updated_at: None,
             })?;
             if i > 0 {
-                storage.upsert_fact_edge(&FactEdgeRecord {
-                    id: None,
-                    source_id: format!("node:{}", i - 1),
-                    target_id: format!("node:{}", i),
-                    relation: "depends_on".to_string(),
-                    properties: serde_json::json!({}),
-                    confidence: 0.95,
-                    updated_at: None,
-                })?;
+                storage.upsert_fact_edge(&FactEdgeRecord::new_explicit(
+                    format!("node:{}", i - 1),
+                    format!("node:{}", i),
+                    "depends_on",
+                    serde_json::json!({}),
+                    0.95,
+                ))?;
             }
         }
         let iters = 50usize;

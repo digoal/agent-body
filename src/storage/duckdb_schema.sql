@@ -139,13 +139,16 @@ CREATE TABLE IF NOT EXISTS fact_nodes (
 );
 
 CREATE TABLE IF NOT EXISTS fact_edges (
-    id          BIGINT PRIMARY KEY DEFAULT nextval('fact_edges_seq'),
-    source_id   VARCHAR NOT NULL,
-    target_id   VARCHAR NOT NULL,
-    relation    VARCHAR NOT NULL,
-    properties  VARCHAR DEFAULT '{}',
-    confidence  FLOAT DEFAULT 1.0,
-    updated_at  VARCHAR
+    id             BIGINT PRIMARY KEY DEFAULT nextval('fact_edges_seq'),
+    source_id      VARCHAR NOT NULL,
+    target_id      VARCHAR NOT NULL,
+    relation       VARCHAR NOT NULL,
+    properties     VARCHAR DEFAULT '{}',
+    confidence     FLOAT DEFAULT 1.0,
+    evidence_tier  VARCHAR DEFAULT 'L1_EXPLICIT',
+    weight         FLOAT DEFAULT 1.0,
+    direction_kind VARCHAR DEFAULT 'forward_dependency',
+    updated_at     VARCHAR
 );
 
 -- 水位线追踪表（用于主库 → DuckDB 增量同步）
@@ -263,4 +266,38 @@ CREATE TABLE IF NOT EXISTS effectiveness_ledger (
     elapsed_us         BIGINT DEFAULT 0,
     evidence_summary   VARCHAR NOT NULL,
     created_at         VARCHAR NOT NULL
+);
+
+-- ─── Phase 41: 联邦网格跨机结构化对话与受控沙盒文件投递 ─────────────────
+CREATE TABLE IF NOT EXISTS mesh_dialogues (
+    dialogue_id        VARCHAR PRIMARY KEY,
+    thread_id          VARCHAR NOT NULL,
+    from_node          VARCHAR NOT NULL,
+    from_agent         VARCHAR NOT NULL,
+    to_node            VARCHAR NOT NULL,
+    to_agent           VARCHAR DEFAULT '',
+    intent             VARCHAR NOT NULL,
+    content            VARCHAR NOT NULL,
+    redaction_hits     INTEGER DEFAULT 0,
+    injection_flagged  INTEGER DEFAULT 0,
+    verified_signature INTEGER DEFAULT 0,
+    status             VARCHAR DEFAULT 'received',
+    created_at         VARCHAR NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS mesh_transfers (
+    transfer_id        VARCHAR PRIMARY KEY,
+    from_node          VARCHAR NOT NULL,
+    from_agent         VARCHAR NOT NULL,
+    to_node            VARCHAR NOT NULL,
+    file_name          VARCHAR NOT NULL,
+    size_bytes         BIGINT NOT NULL,
+    sha256             VARCHAR NOT NULL,
+    inbox_path         VARCHAR NOT NULL,
+    secret_warnings    INTEGER DEFAULT 0,
+    verified_signature INTEGER DEFAULT 0,
+    status             VARCHAR DEFAULT 'quarantined',
+    accepted_path      VARCHAR,
+    created_at         VARCHAR NOT NULL,
+    updated_at         VARCHAR NOT NULL
 );

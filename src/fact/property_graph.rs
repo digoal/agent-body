@@ -20,12 +20,19 @@ impl PropertyGraphOrganizer {
         Self { storage }
     }
 
-    /// 从宿主机事实全量构建或增量刷新属性图 (返回 (新增或更新节点数, 新增或更新边数))
+    /// 从宿主机事实全量构建或增量刷新属性图（默认开启 L2 结构上卷与 L3 语义发现）
     pub fn build_host_graph(&self) -> Result<(usize, usize)> {
+        self.build_host_graph_with_options(true)
+    }
+
+    /// 从宿主机事实构建/刷新属性图（支持按需开关 L3 隐式语义发现）
+    pub fn build_host_graph_with_options(&self, include_semantic: bool) -> Result<(usize, usize)> {
         let mut node_count = 0usize;
         let mut edge_count = 0usize;
         let mut active_port_ids = std::collections::HashSet::new();
         let mut active_project_ids = std::collections::HashSet::new();
+        let mut active_service_ids = std::collections::HashSet::new();
+        let mut active_cron_ids = std::collections::HashSet::new();
 
         // 1. 挖掘系统源码工程节点 (Projects)
         if let Ok(repos) = AssetsCatalogEngine::scan_repos(None) {
@@ -156,6 +163,7 @@ impl PropertyGraphOrganizer {
 
                 if let Some(ref proc_name) = p.process_name {
                     let service_id = format!("service:{}", proc_name);
+                    active_service_ids.insert(service_id.clone());
                     let svc_desc = format!(
                         "运行时监听服务 {} (PID {}, 端口 {}, 用户 {})",
                         proc_name,
@@ -187,15 +195,13 @@ impl PropertyGraphOrganizer {
                     node_count += 1;
 
                     // 边: service -> port (listens_on)
-                    let edge = FactEdgeRecord {
-                        id: None,
-                        source_id: service_id.clone(),
-                        target_id: port_id.clone(),
-                        relation: "listens_on".to_string(),
-                        properties: serde_json::json!({"pid": p.pid}),
-                        confidence: 1.0,
-                        updated_at: None,
-                    };
+                    let edge = FactEdgeRecord::new_explicit(
+                        service_id.clone(),
+                        port_id.clone(),
+                        "listens_on",
+                        serde_json::json!({"pid": p.pid}),
+                        1.0,
+                    );
                     self.storage.upsert_fact_edge(&edge)?;
                     edge_count += 1;
 
@@ -207,15 +213,13 @@ impl PropertyGraphOrganizer {
                                 let proj_name = sub.split('/').next().unwrap_or("");
                                 if !proj_name.is_empty() {
                                     let proj_id = format!("project:{}", proj_name);
-                                    let proj_edge = FactEdgeRecord {
-                                        id: None,
-                                        source_id: service_id.clone(),
-                                        target_id: proj_id,
-                                        relation: "depends_on".to_string(),
-                                        properties: serde_json::json!({"path": cwd}),
-                                        confidence: 0.95,
-                                        updated_at: None,
-                                    };
+                                    let proj_edge = FactEdgeRecord::new_explicit(
+                                        service_id.clone(),
+                                        proj_id,
+                                        "depends_on",
+                                        serde_json::json!({"path": cwd}),
+                                        0.95,
+                                    );
                                     let _ = self.storage.upsert_fact_edge(&proj_edge);
                                     edge_count += 1;
                                 }
@@ -230,6 +234,7 @@ impl PropertyGraphOrganizer {
         if let Ok(services) = AutomationTopology::scan_systemd_services() {
             for s in services {
                 let sid = format!("service:{}", s.service_name);
+                active_service_ids.insert(sid.clone());
                 let assoc_project = s.working_directory.as_deref().and_then(extract_project_from_path);
                 let svc_desc = if s.description.trim().is_empty() {
                     format!("Systemd 守护服务 {} ({})", s.service_name, s.exec_start)
@@ -266,15 +271,13 @@ impl PropertyGraphOrganizer {
                     self.storage.upsert_fact_node(&fnode)?;
                     node_count += 1;
 
-                    let edge = FactEdgeRecord {
-                        id: None,
-                        source_id: sid.clone(),
-                        target_id: fid,
-                        relation: "depends_on".to_string(),
-                        properties: serde_json::json!({}),
-                        confidence: 1.0,
-                        updated_at: None,
-                    };
+                    let edge = FactEdgeRecord::new_explicit(
+                        sid.clone(),
+                        fid,
+                        "depends_on",
+                        serde_json::json!({}),
+                        1.0,
+                    );
                     self.storage.upsert_fact_edge(&edge)?;
                     edge_count += 1;
                 }
@@ -284,6 +287,7 @@ impl PropertyGraphOrganizer {
         if let Ok(crons) = AutomationTopology::scan_cron_jobs() {
             for (i, c) in crons.into_iter().enumerate() {
                 let cid = format!("cron:{}_{}", c.user, i);
+                active_cron_ids.insert(cid.clone());
                 let schedule_human = describe_cron_schedule(&c.schedule);
                 let script_purpose = c
                     .target_script
@@ -324,15 +328,13 @@ impl PropertyGraphOrganizer {
                     self.storage.upsert_fact_node(&fnode)?;
                     node_count += 1;
 
-                    let edge = FactEdgeRecord {
-                        id: None,
-                        source_id: cid,
-                        target_id: fid,
-                        relation: "scheduled_by".to_string(),
-                        properties: serde_json::json!({"schedule": c.schedule}),
-                        confidence: 1.0,
-                        updated_at: None,
-                    };
+                    let edge = FactEdgeRecord::new_explicit(
+                        cid,
+                        fid,
+                        "scheduled_by",
+                        serde_json::json!({"schedule": c.schedule}),
+                        1.0,
+                    );
                     self.storage.upsert_fact_edge(&edge)?;
                     edge_count += 1;
                 }
@@ -369,7 +371,7 @@ impl PropertyGraphOrganizer {
             node_count += 1;
         }
 
-        // 5. 剪除幽灵节点（规约 #21：已关闭端口、已删文件节点与失踪工程节点）
+        // 5. 剪除幽灵节点（规约 #21：已关闭端口、已删文件、失踪工程、失活服务与失效 Cron）
         if let Ok(existing_nodes) = self.storage.list_all_fact_nodes(2000) {
             for node in existing_nodes {
                 if node.id.contains("bench:") || node.id.contains("demo:") {
@@ -377,6 +379,12 @@ impl PropertyGraphOrganizer {
                 }
                 match node.node_type.as_str() {
                     "port" if !active_port_ids.is_empty() && !active_port_ids.contains(&node.id) => {
+                        let _ = self.storage.delete_fact_node(&node.id);
+                    }
+                    "service" if !active_service_ids.is_empty() && !active_service_ids.contains(&node.id) => {
+                        let _ = self.storage.delete_fact_node(&node.id);
+                    }
+                    "cron" if !active_cron_ids.is_empty() && !active_cron_ids.contains(&node.id) => {
                         let _ = self.storage.delete_fact_node(&node.id);
                     }
                     "file" => {
@@ -399,6 +407,13 @@ impl PropertyGraphOrganizer {
                     _ => {}
                 }
             }
+        }
+
+        // 6. 执行多维关系挖掘（L2 结构上卷与服务同体桥接 + 可选 L3 隐式语义发现）
+        if let Ok(mining_rep) = crate::fact::semantic_discovery::GraphRelationshipMiner::new(&self.storage)
+            .mine_all(include_semantic)
+        {
+            edge_count += mining_rep.total_edges();
         }
 
         Ok((node_count, edge_count))
@@ -648,11 +663,14 @@ impl PropertyGraphOrganizer {
         out.push_str("\n");
 
         if !subgraph.edges.is_empty() {
-            out.push_str("### 🔗 关系依赖拓扑\n\n");
-            out.push_str("| 源实体 | 关系类型 | 目标实体 | 关系置信度 |\n");
-            out.push_str("|--------|:--------:|----------|:----------:|\n");
+            out.push_str("### 🔗 关系依赖拓扑 (含证据层级与权重)\n\n");
+            out.push_str("| 源实体 | 关系类型 | 目标实体 | 证据层级 | 权重 | 方向语义 |\n");
+            out.push_str("|--------|:--------:|----------|:--------:|:----:|:--------:|\n");
             for e in &subgraph.edges {
-                out.push_str(&format!("| `{}` | **-- {} -->** | `{}` | {:.2} |\n", e.source_id, e.relation, e.target_id, e.confidence));
+                out.push_str(&format!(
+                    "| `{}` | **-- {} -->** | `{}` | `{}` | {:.2} | `{}` |\n",
+                    e.source_id, e.relation, e.target_id, e.evidence_tier, e.weight, e.direction_kind
+                ));
             }
             out.push_str("\n");
         }
@@ -686,18 +704,28 @@ impl PropertyGraphOrganizer {
             lines.push(format!("    {}{}", clean_id, shape));
         }
 
-        // 边关系
+        // 边关系（L3 隐式语义使用虚线箭头 -.-> 区分物理/结构硬依赖）
         for e in &subgraph.edges {
             let src = sanitize_mermaid_id(&e.source_id);
             let tgt = sanitize_mermaid_id(&e.target_id);
-            let arrow = match e.relation.as_str() {
-                "listens_on" => "-->|\"监听\"|",
-                "depends_on" => "-->|\"依赖\"|",
-                "scheduled_by" => "-->|\"调度\"|",
-                "part_of" => "-->|\"归属\"|",
-                "reads" => "-->|\"读取\"|",
-                "writes" => "-->|\"写入\"|",
-                _ => "-->",
+            let is_semantic = e.evidence_tier == "L3_SEMANTIC";
+            let label = match e.relation.as_str() {
+                "listens_on" => "监听",
+                "depends_on" => "依赖",
+                "scheduled_by" => "调度",
+                "part_of" => "归属",
+                "reads" => "读取",
+                "writes" => "写入",
+                "uses_tool" => "使用工具",
+                "runs_as" => "运行实例",
+                "documented_by" => "衍生文档",
+                "semantically_related" => "语义关联",
+                other => other,
+            };
+            let arrow = if is_semantic {
+                format!("-.->|\"{} {:.2}\"|", label, e.weight)
+            } else {
+                format!("-->|\"{} {:.2}\"|", label, e.weight)
             };
             lines.push(format!("    {} {} {}", src, arrow, tgt));
         }
@@ -928,25 +956,21 @@ mod tests {
         storage.upsert_fact_node(&n2).unwrap();
         storage.upsert_fact_node(&n3).unwrap();
 
-        storage.upsert_fact_edge(&FactEdgeRecord {
-            id: None,
-            source_id: "service:agent-steward".to_string(),
-            target_id: "project:agent-steward".to_string(),
-            relation: "depends_on".to_string(),
-            properties: serde_json::json!({}),
-            confidence: 1.0,
-            updated_at: None,
-        }).unwrap();
+        storage.upsert_fact_edge(&FactEdgeRecord::new_explicit(
+            "service:agent-steward",
+            "project:agent-steward",
+            "depends_on",
+            serde_json::json!({}),
+            1.0,
+        )).unwrap();
 
-        storage.upsert_fact_edge(&FactEdgeRecord {
-            id: None,
-            source_id: "service:agent-steward".to_string(),
-            target_id: "port:8000".to_string(),
-            relation: "listens_on".to_string(),
-            properties: serde_json::json!({}),
-            confidence: 1.0,
-            updated_at: None,
-        }).unwrap();
+        storage.upsert_fact_edge(&FactEdgeRecord::new_explicit(
+            "service:agent-steward",
+            "port:8000",
+            "listens_on",
+            serde_json::json!({}),
+            1.0,
+        )).unwrap();
 
         // 提取子图
         let sub = organizer.query_subgraph("agent-steward", 2).expect("query subgraph");

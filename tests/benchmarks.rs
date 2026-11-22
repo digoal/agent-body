@@ -20,15 +20,13 @@ fn bench_property_graph_traversal() {
         storage.upsert_fact_node(&node).expect("upsert node");
 
         if i > 0 {
-            let edge = FactEdgeRecord {
-                id: None,
-                source_id: format!("node:{}", i - 1),
-                target_id: format!("node:{}", i),
-                relation: "depends_on".to_string(),
-                properties: serde_json::json!({}),
-                confidence: 0.95,
-                updated_at: None,
-            };
+            let edge = FactEdgeRecord::new_explicit(
+                format!("node:{}", i - 1),
+                format!("node:{}", i),
+                "depends_on",
+                serde_json::json!({}),
+                0.95,
+            );
             storage.upsert_fact_edge(&edge).expect("upsert edge");
         }
     }

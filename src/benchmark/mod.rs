@@ -22,7 +22,7 @@ use crate::benchmark::workloads::{run_all_workloads, run_workload, WorkloadResul
 use crate::storage::models::BenchmarkRunRecord;
 use crate::storage::StorageProvider;
 
-pub const BENCHMARK_SPEC_VERSION: &str = "3.3";
+pub const BENCHMARK_SPEC_VERSION: &str = "3.4";
 
 pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
     if workloads.is_empty() {
@@ -311,11 +311,11 @@ mod tests {
         let report = BenchmarkEngine::run_suite(provider.clone(), "full", true, Some("bench:test"))
             .expect("run full suite");
 
-        assert_eq!(report.workloads.len(), 12);
+        assert_eq!(report.workloads.len(), 14);
         assert_eq!(report.micro_benchmarks.len(), 5);
-        assert_eq!(report.data_quality.len(), 5);
+        assert_eq!(report.data_quality.len(), 6);
         assert_eq!(report.competitors.len(), 4);
-        assert_eq!(report.spec_version, "3.3");
+        assert_eq!(report.spec_version, "3.4");
         assert!(report.quality_non_degraded, "所有负载上下文质量必须不降反升");
         assert!(report.overall_quality_delta > 20.0, "整体上下文质量净提升应 > 20 分，实测: {}", report.overall_quality_delta);
         assert!(report.overall_info_density_gain > 5.0, "有效信息密度应提升 > 5x，实测: {}", report.overall_info_density_gain);

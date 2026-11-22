@@ -280,6 +280,17 @@ impl Storage {
         self.provider.traverse_fact_graph(root_id, max_hops)
     }
 
+    pub fn traverse_fact_graph_filtered(
+        &self,
+        root_id: &str,
+        max_hops: usize,
+        min_weight: f32,
+        tiers: Option<&[&str]>,
+    ) -> Result<SubGraph> {
+        self.provider
+            .traverse_fact_graph_filtered(root_id, max_hops, min_weight, tiers)
+    }
+
     pub fn list_all_fact_nodes(&self, limit: usize) -> Result<Vec<FactNodeRecord>> {
         self.provider.list_all_fact_nodes(limit)
     }
@@ -290,6 +301,42 @@ impl Storage {
 
     pub fn delete_fact_node(&self, id: &str) -> Result<usize> {
         self.provider.delete_fact_node(id)
+    }
+
+    pub fn delete_fact_edges_by_tier(&self, tier: &str) -> Result<usize> {
+        self.provider.delete_fact_edges_by_tier(tier)
+    }
+
+    // ─── Mesh Dialogues & Transfers (Phase 41) ───────────────────────
+
+    pub fn insert_mesh_dialogue(&self, rec: &MeshDialogueRecord) -> Result<()> {
+        self.provider.insert_mesh_dialogue(rec)
+    }
+
+    pub fn list_mesh_dialogues(&self, limit: usize) -> Result<Vec<MeshDialogueRecord>> {
+        self.provider.list_mesh_dialogues(limit)
+    }
+
+    pub fn update_mesh_dialogue_status(&self, dialogue_id: &str, status: &str) -> Result<bool> {
+        self.provider.update_mesh_dialogue_status(dialogue_id, status)
+    }
+
+    pub fn insert_mesh_transfer(&self, rec: &MeshTransferRecord) -> Result<()> {
+        self.provider.insert_mesh_transfer(rec)
+    }
+
+    pub fn list_mesh_transfers(&self, limit: usize) -> Result<Vec<MeshTransferRecord>> {
+        self.provider.list_mesh_transfers(limit)
+    }
+
+    pub fn update_mesh_transfer_status(
+        &self,
+        transfer_id: &str,
+        status: &str,
+        accepted_path: Option<&str>,
+    ) -> Result<bool> {
+        self.provider
+            .update_mesh_transfer_status(transfer_id, status, accepted_path)
     }
 
     // ─── Embedding Vectors (Phase 29) ────────────────────────────────
@@ -653,24 +700,20 @@ mod tests {
         storage.upsert_fact_node(&port_node).expect("upsert port");
 
         // 2. 创建边
-        let edge1 = FactEdgeRecord {
-            id: None,
-            source_id: "service:agent-steward.service".to_string(),
-            target_id: "proj:agent-steward".to_string(),
-            relation: "depends_on".to_string(),
-            properties: serde_json::json!({}),
-            confidence: 1.0,
-            updated_at: None,
-        };
-        let edge2 = FactEdgeRecord {
-            id: None,
-            source_id: "service:agent-steward.service".to_string(),
-            target_id: "port:8080".to_string(),
-            relation: "listens_on".to_string(),
-            properties: serde_json::json!({}),
-            confidence: 1.0,
-            updated_at: None,
-        };
+        let edge1 = FactEdgeRecord::new_explicit(
+            "service:agent-steward.service",
+            "proj:agent-steward",
+            "depends_on",
+            serde_json::json!({}),
+            1.0,
+        );
+        let edge2 = FactEdgeRecord::new_explicit(
+            "service:agent-steward.service",
+            "port:8080",
+            "listens_on",
+            serde_json::json!({}),
+            1.0,
+        );
 
         storage.upsert_fact_edge(&edge1).expect("edge 1");
         storage.upsert_fact_edge(&edge2).expect("edge 2");
@@ -683,6 +726,82 @@ mod tests {
         // 4. 验证根据名字模糊查找节点
         let found = storage.find_fact_nodes_by_name("steward").expect("find nodes");
         assert_eq!(found.len(), 2);
+    }
+
+    #[test]
+    fn test_fact_edges_tier_weight_filter_and_legacy_sqlite_migration() {
+        let tmp = tempfile::NamedTempFile::new().expect("tmpfile");
+        let db_path = tmp.path();
+
+        // 1. 构造 Phase 39 老库（无 evidence_tier 且带有旧窄 CHECK 约束）
+        {
+            let raw = rusqlite::Connection::open(db_path).expect("raw open");
+            raw.execute_batch(
+                "CREATE TABLE fact_nodes (
+                    id TEXT PRIMARY KEY, node_type TEXT NOT NULL, name TEXT NOT NULL,
+                    label TEXT NOT NULL, properties TEXT DEFAULT '{}', embedding TEXT DEFAULT '[]',
+                    updated_at TEXT DEFAULT ''
+                 );
+                 CREATE TABLE fact_edges (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, source_id TEXT NOT NULL, target_id TEXT NOT NULL,
+                    relation TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains')),
+                    properties TEXT DEFAULT '{}', confidence REAL DEFAULT 1.0, updated_at TEXT DEFAULT '',
+                    UNIQUE(source_id, target_id, relation)
+                 );
+                 INSERT INTO fact_nodes (id, node_type, name, label) VALUES
+                    ('project:a', 'project', 'a', 'A'),
+                    ('project:b', 'project', 'b', 'B'),
+                    ('tool:rg', 'tool', 'rg', 'ripgrep');
+                 INSERT INTO fact_edges (source_id, target_id, relation, confidence)
+                 VALUES ('project:a', 'project:b', 'depends_on', 0.95);",
+            ).expect("seed legacy db");
+        }
+
+        // 2. 用新 Storage 打开并触发热迁移
+        let storage = Storage::open(db_path).expect("open migrated");
+        let existing = storage.list_all_fact_edges(50).expect("list existing");
+        assert_eq!(existing.len(), 1);
+        assert_eq!(existing[0].evidence_tier, "L1_EXPLICIT");
+        assert!((existing[0].weight - 0.95).abs() < 1e-5);
+
+        // 3. 插入 L2 与 L3 新关系边（若未迁移 CHECK 约束此处会失败）
+        storage.upsert_fact_edge(&FactEdgeRecord {
+            id: None,
+            source_id: "project:a".to_string(),
+            target_id: "tool:rg".to_string(),
+            relation: "uses_tool".to_string(),
+            properties: serde_json::json!({}),
+            confidence: 0.72,
+            evidence_tier: "L2_STRUCTURAL".to_string(),
+            weight: 0.72,
+            direction_kind: "forward_dependency".to_string(),
+            updated_at: None,
+        }).expect("insert L2 uses_tool");
+
+        storage.upsert_fact_edge(&FactEdgeRecord {
+            id: None,
+            source_id: "project:b".to_string(),
+            target_id: "tool:rg".to_string(),
+            relation: "semantically_related".to_string(),
+            properties: serde_json::json!({}),
+            confidence: 0.45,
+            evidence_tier: "L3_SEMANTIC".to_string(),
+            weight: 0.45,
+            direction_kind: "symmetric_affinity".to_string(),
+            updated_at: None,
+        }).expect("insert L3 semantically_related");
+
+        // 4. 分层与权重过滤遍历验证
+        let sub_l12 = storage
+            .traverse_fact_graph_filtered("project:a", 2, 0.50, Some(&["L1_EXPLICIT", "L2_STRUCTURAL"]))
+            .expect("filtered traverse");
+        assert_eq!(sub_l12.edges.len(), 2, "仅应保留 L1 和 L2 边");
+        assert!(sub_l12.edges.iter().all(|e| e.evidence_tier != "L3_SEMANTIC"));
+
+        // 5. 按层清理验证（只清 L3 不伤 L1/L2）
+        let deleted = storage.delete_fact_edges_by_tier("L3_SEMANTIC").expect("delete L3");
+        assert_eq!(deleted, 1);
+        assert_eq!(storage.list_all_fact_edges(50).expect("list after delete").len(), 2);
     }
 
     #[test]

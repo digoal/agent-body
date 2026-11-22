@@ -8,6 +8,11 @@
 //!   裁决（TTL 租约自动过期），无需分布式共识；
 //! - **安全**：写操作（锁申请）强制要求服务端已配置 Token 且请求携带正确 Token。
 
+pub mod auth;
+pub mod dialogue;
+pub mod protocol;
+pub mod transfer;
+
 use std::sync::Arc;
 use std::time::Instant;
 use anyhow::{anyhow, Result};
@@ -151,6 +156,83 @@ pub fn handle_mesh_lock_acquire(
     }
 }
 
+/// GET /api/v1/mesh/graph?q=...&hops=2 —— 跨节点只读图谱联邦查询 (Phase 41.3)
+pub fn handle_mesh_graph(
+    req: &HttpRequest,
+    storage: &dyn StorageProvider,
+    auth_token: &Option<String>,
+) -> HttpResponse {
+    if let Some(deny) = check_mesh_auth(req, auth_token, false) {
+        return deny;
+    }
+    let q = req.query_params.get("q").map(|s| s.trim()).unwrap_or("");
+    let hops = req
+        .query_params
+        .get("hops")
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(2)
+        .clamp(1, 4);
+    let min_weight = req
+        .query_params
+        .get("min_weight")
+        .and_then(|s| s.parse::<f32>().ok())
+        .unwrap_or(0.35);
+
+    if q.is_empty() {
+        let nodes = storage.list_all_fact_nodes(50).unwrap_or_default();
+        let edges = storage.list_all_fact_edges(100).unwrap_or_default();
+        return WebResponse::success(serde_json::json!({
+            "node_id": System::host_name().unwrap_or_else(|| "unknown-node".to_string()),
+            "nodes_count": nodes.len(),
+            "edges_count": edges.len(),
+            "nodes": nodes,
+            "edges": edges,
+        }));
+    }
+
+    let sub = if storage.get_fact_node(q).ok().flatten().is_some() {
+        storage.traverse_fact_graph_filtered(q, hops, min_weight, None)
+    } else if let Ok(matches) = storage.find_fact_nodes_by_name(q) {
+        if let Some(first) = matches.first() {
+            storage.traverse_fact_graph_filtered(&first.id, hops, min_weight, None)
+        } else {
+            Ok(crate::storage::models::SubGraph::default())
+        }
+    } else {
+        Ok(crate::storage::models::SubGraph::default())
+    };
+
+    match sub {
+        Ok(g) => WebResponse::success(serde_json::json!({
+            "node_id": System::host_name().unwrap_or_else(|| "unknown-node".to_string()),
+            "query": q,
+            "hops": hops,
+            "subgraph": g,
+        })),
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &format!("Graph query failed: {}", e)),
+    }
+}
+
+/// POST /api/v1/mesh/dialogue —— HTTP 入口（自动加载 Config::mesh）
+pub fn handle_mesh_dialogue_http(
+    req: &HttpRequest,
+    storage: &dyn StorageProvider,
+    web_auth_token: &Option<String>,
+) -> HttpResponse {
+    let cfg = crate::config::Config::load_or_default(None).unwrap_or_default();
+    crate::mesh::dialogue::handle_mesh_dialogue(req, storage, &cfg.mesh, web_auth_token)
+}
+
+/// POST /api/v1/mesh/transfer —— HTTP 入口（自动加载 Config::mesh）
+pub fn handle_mesh_transfer_http(
+    req: &HttpRequest,
+    storage: &dyn StorageProvider,
+    web_auth_token: &Option<String>,
+) -> HttpResponse {
+    let cfg = crate::config::Config::load_or_default(None).unwrap_or_default();
+    crate::mesh::transfer::handle_mesh_transfer(req, storage, &cfg.mesh, web_auth_token)
+}
+
 // ─────────────────────────── 客户端 ───────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -174,21 +256,49 @@ pub struct NodePortStatus {
 /// 联邦客户端（阻塞式，内部在独立线程执行 HTTP，避免在 tokio 运行时内误用 blocking 客户端）
 pub struct MeshClient {
     peers: Vec<String>,
+    node_id: String,
     token: Option<String>,
     timeout_ms: u64,
+    cfg: MeshConfig,
 }
 
 impl MeshClient {
     pub fn new(cfg: &MeshConfig, token: Option<String>) -> Self {
+        let node_id = cfg
+            .node_id
+            .clone()
+            .filter(|s| !s.trim().is_empty())
+            .or_else(System::host_name)
+            .unwrap_or_else(|| "local-node".to_string());
         Self {
             peers: cfg.peers.iter().map(|p| p.trim_end_matches('/').to_string()).collect(),
+            node_id,
             token,
             timeout_ms: cfg.timeout_ms.max(100),
+            cfg: cfg.clone(),
         }
     }
 
     pub fn peers(&self) -> &[String] {
         &self.peers
+    }
+
+    pub fn node_id(&self) -> &str {
+        &self.node_id
+    }
+
+    fn resolve_signing_secret(&self) -> Result<String> {
+        if let Some(ref s) = self.cfg.shared_secret {
+            if !s.trim().is_empty() {
+                return Ok(s.clone());
+            }
+        }
+        if let Some(ref t) = self.token {
+            if !t.trim().is_empty() {
+                return Ok(t.clone());
+            }
+        }
+        Err(anyhow!("未配置 [mesh].shared_secret 或 [web].auth_token，无法对 MeshEnvelope 签名"))
     }
 
     fn request(&self, peer: &str, method: &str, path: &str, body: Option<Value>) -> PeerResult {
@@ -274,6 +384,90 @@ impl MeshClient {
         let body = serde_json::to_value(req)?;
         Ok(self.request(peer.trim_end_matches('/'), "POST", "/api/v1/mesh/locks/acquire", Some(body)))
     }
+
+    /// 联邦图谱探查：向所有对等节点并发/串行查询指定实体子图
+    pub fn federated_graph_query(&self, query: &str, hops: usize) -> Vec<PeerResult> {
+        let encoded = urlencoding::encode(query);
+        let path = format!("/api/v1/mesh/graph?q={}&hops={}", encoded, hops);
+        self.peers
+            .iter()
+            .map(|p| self.request(p, "GET", &path, None))
+            .collect()
+    }
+
+    /// 向指定对等节点发送签名结构化 Agent 对话（出站前自动脱敏与抗投毒清洗）
+    pub fn send_dialogue(
+        &self,
+        peer: &str,
+        thread_id: &str,
+        intent: &str,
+        content: &str,
+        from_agent: &str,
+        to_agent: &str,
+    ) -> Result<PeerResult> {
+        let secret = self.resolve_signing_secret()?;
+        let (cleaned, _, _) = crate::mesh::dialogue::sanitize_dialogue_content(content);
+        let payload = serde_json::json!({
+            "thread_id": thread_id,
+            "intent": intent,
+            "content": cleaned,
+        });
+        let env = crate::mesh::protocol::MeshEnvelope::build_signed(
+            "dialogue",
+            &self.node_id,
+            from_agent,
+            peer,
+            to_agent,
+            vec!["exchange:dialogue".to_string()],
+            payload,
+            &secret,
+        )?;
+        let body = serde_json::to_value(&env)?;
+        Ok(self.request(peer.trim_end_matches('/'), "POST", "/api/v1/mesh/dialogue", Some(body)))
+    }
+
+    /// 向指定对等节点投递受控文件（自动校验体积上限、敏感文件名、SHA-256 并使用 MeshEnvelope 签名）
+    pub fn send_transfer(
+        &self,
+        peer: &str,
+        file_path: &std::path::Path,
+        from_agent: &str,
+    ) -> Result<PeerResult> {
+        let secret = self.resolve_signing_secret()?;
+        let raw_name = file_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .ok_or_else(|| anyhow!("无效文件路径: {}", file_path.display()))?;
+        let safe_name = crate::mesh::transfer::validate_safe_file_name(raw_name)
+            .map_err(|e| anyhow!(e))?;
+        let bytes = std::fs::read(file_path)?;
+        if bytes.len() > self.cfg.max_transfer_bytes {
+            anyhow::bail!(
+                "文件大小 {} 超过上限 {} 字节",
+                bytes.len(),
+                self.cfg.max_transfer_bytes
+            );
+        }
+        let sha256 = crate::mesh::protocol::sha256_bytes_hex(&bytes);
+        let b64 = crate::mesh::transfer::base64_encode(&bytes);
+        let payload = serde_json::json!({
+            "file_name": safe_name,
+            "sha256": sha256,
+            "content_base64": b64,
+        });
+        let env = crate::mesh::protocol::MeshEnvelope::build_signed(
+            "transfer",
+            &self.node_id,
+            from_agent,
+            peer,
+            "",
+            vec!["transfer:artifact".to_string()],
+            payload,
+            &secret,
+        )?;
+        let body = serde_json::to_value(&env)?;
+        Ok(self.request(peer.trim_end_matches('/'), "POST", "/api/v1/mesh/transfer", Some(body)))
+    }
 }
 
 // ─────────────────────────── 单元测试 ───────────────────────────
@@ -347,7 +541,7 @@ mod tests {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         let peer = format!("http://127.0.0.1:{}", port);
-        let cfg = MeshConfig { enabled: true, peers: vec![peer.clone()], timeout_ms: 3000 };
+        let cfg = MeshConfig { enabled: true, peers: vec![peer.clone()], timeout_ms: 3000, ..Default::default() };
 
         let (pings, facts_ports, ok_lock, deny_lock, bad_token) = tokio::task::spawn_blocking(move || {
             let client = MeshClient::new(&cfg, Some("mesh-secret".to_string()));
@@ -385,5 +579,85 @@ mod tests {
 
         assert!(!bad_token[0].ok, "错误 Token 必须被拒绝");
         assert!(bad_token[0].error.clone().unwrap_or_default().contains("401"));
+    }
+
+    #[test]
+    fn test_mesh_dialogue_and_transfer_sandbox_lifecycle() {
+        use crate::mesh::dialogue::handle_mesh_dialogue;
+        use crate::mesh::protocol::MeshEnvelope;
+        use crate::mesh::transfer::{accept_transfer_to_dir, base64_encode, handle_mesh_transfer, reject_transfer};
+        use crate::storage::sqlite_provider::SqliteStorageProvider;
+
+        let storage = SqliteStorageProvider::open_in_memory().expect("mem");
+        let tmp = tempfile::tempdir().expect("tmpdir");
+        let mut cfg = MeshConfig::default();
+        cfg.node_id = Some("node-b".into());
+        cfg.shared_secret = Some("s3cr3t-mesh".into());
+        cfg.inbox_dir = Some(tmp.path().join("inbox").to_string_lossy().to_string());
+
+        // 1. 测试签名对话 + 脱敏落库
+        let dlg_env = MeshEnvelope::build_signed(
+            "dialogue",
+            "node-a",
+            "agent-a",
+            "node-b",
+            "agent-b",
+            vec!["exchange:dialogue".into()],
+            serde_json::json!({
+                "thread_id": "thr-100",
+                "intent": "ASK_CONTEXT",
+                "content": "please check token sk-proj-abcdefghijklmnopqrstuvwxyz123456"
+            }),
+            "s3cr3t-mesh",
+        )
+        .expect("dlg env");
+        let dlg_req = make_req(
+            Method::Post,
+            "/api/v1/mesh/dialogue",
+            None,
+            serde_json::to_vec(&dlg_env).expect("json"),
+        );
+        let dlg_resp = handle_mesh_dialogue(&dlg_req, &storage, &cfg, &None);
+        assert_eq!(dlg_resp.status, StatusCode::OK);
+        let dlgs = storage.list_mesh_dialogues(10).expect("list dlgs");
+        assert_eq!(dlgs.len(), 1);
+        assert_eq!(dlgs[0].redaction_hits, 1);
+        assert!(!dlgs[0].content.contains("sk-proj-abcdefghijklmnopqrstuvwxyz"));
+
+        // 2. 测试受控文件投递 -> 隔离沙盒 -> accept 落位
+        let content = b"SELECT 1;\n";
+        let sha = crate::mesh::protocol::sha256_bytes_hex(content);
+        let tx_env = MeshEnvelope::build_signed(
+            "transfer",
+            "node-a",
+            "agent-a",
+            "node-b",
+            "",
+            vec!["transfer:artifact".into()],
+            serde_json::json!({
+                "file_name": "query.sql",
+                "sha256": sha,
+                "content_base64": base64_encode(content),
+            }),
+            "s3cr3t-mesh",
+        )
+        .expect("tx env");
+        let tx_req = make_req(
+            Method::Post,
+            "/api/v1/mesh/transfer",
+            None,
+            serde_json::to_vec(&tx_env).expect("json"),
+        );
+        let tx_resp = handle_mesh_transfer(&tx_req, &storage, &cfg, &None);
+        assert_eq!(tx_resp.status, StatusCode::OK);
+        let txs = storage.list_mesh_transfers(10).expect("list txs");
+        assert_eq!(txs.len(), 1);
+        assert_eq!(txs[0].status, "quarantined");
+
+        let dest = tmp.path().join("accepted");
+        let acc = accept_transfer_to_dir(&storage, &txs[0].transfer_id, &dest).expect("accept");
+        assert_eq!(acc.status, "accepted");
+        assert!(dest.join("query.sql").is_file());
+        assert!(!reject_transfer(&storage, "non-existent").expect("reject missing"));
     }
 }

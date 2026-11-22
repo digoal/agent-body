@@ -32,6 +32,14 @@ pub struct TopologyNode {
     pub metadata: serde_json::Value,
 }
 
+fn default_topo_edge_weight() -> f32 {
+    1.0
+}
+
+fn default_topo_edge_tier() -> String {
+    "L1_EXPLICIT".to_string()
+}
+
 /// 拓扑连边
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TopologyEdge {
@@ -39,6 +47,10 @@ pub struct TopologyEdge {
     pub target: String,
     pub relation: String,
     pub label: Option<String>,
+    #[serde(default = "default_topo_edge_weight")]
+    pub weight: f32,
+    #[serde(default = "default_topo_edge_tier")]
+    pub evidence_tier: String,
 }
 
 /// 拓扑图谱响应数据模型
@@ -332,6 +344,8 @@ pub fn build_full_topology(storage: &dyn StorageProvider) -> TopologyGraph {
                 target: dst_id,
                 relation: fe.relation.clone(),
                 label: Some(fe.relation),
+                weight: fe.weight,
+                evidence_tier: fe.evidence_tier,
             },
         );
     }
@@ -406,6 +420,8 @@ pub fn build_full_topology(storage: &dyn StorageProvider) -> TopologyGraph {
                         target: port_id,
                         relation: "listens_on".to_string(),
                         label: Some("bind".to_string()),
+                        weight: 1.0,
+                        evidence_tier: "L1_EXPLICIT".to_string(),
                     },
                 );
             }
@@ -434,6 +450,8 @@ pub fn build_full_topology(storage: &dyn StorageProvider) -> TopologyGraph {
                         target: file_id,
                         relation: "runs".to_string(),
                         label: Some("exec".to_string()),
+                        weight: 1.0,
+                        evidence_tier: "L1_EXPLICIT".to_string(),
                     },
                 );
             }
@@ -481,6 +499,8 @@ pub fn build_full_topology(storage: &dyn StorageProvider) -> TopologyGraph {
                     target: dst_id,
                     relation: l.relation.clone(),
                     label: Some(l.relation),
+                    weight: l.confidence,
+                    evidence_tier: "L1_EXPLICIT".to_string(),
                 },
             );
         }
@@ -617,6 +637,8 @@ pub fn build_impact_topology(target: &str, storage: &dyn StorageProvider) -> Top
                         target: canonicalize_node_id(&fe.target_id, t_type),
                         relation: fe.relation.clone(),
                         label: Some(fe.relation),
+                        weight: fe.weight,
+                        evidence_tier: fe.evidence_tier,
                     },
                 );
             }
@@ -678,6 +700,8 @@ pub fn build_impact_topology(target: &str, storage: &dyn StorageProvider) -> Top
                     target: dep_id,
                     relation: link.relation,
                     label: Some("impacts".to_string()),
+                    weight: link.confidence,
+                    evidence_tier: "L1_EXPLICIT".to_string(),
                 },
             );
         }

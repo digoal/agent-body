@@ -41,6 +41,10 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
    - 任何写入资产库、`/proc` 进程记录、长期记忆、变更审计流水与本地大模型输入的内容，必须经过 `SecretRedactor` 脱敏；
    - `HookDispatcher` 命令插值强制安全转义防 Shell 注入，导出操作严格限定目录白名单与 SQL 转义；
    - Web REST 写端点及敏感接口必须统一校验 `auth_token`，`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 保持最小权限；外部语料入库需警惕间接提示词注入。
+8. **图谱证据分层与有向加权（Graph Evidence Tiering，对齐规约 #5 & #23）**:
+   - 所有跨实体关系边必须标明 `evidence_tier`（`L1_EXPLICIT` 物理事实 / `L2_STRUCTURAL` 结构聚合 / `L3_SEMANTIC` 向量标签隐式发现）、方向语义与合法权重；严禁将语义相似边混作物理硬依赖。
+9. **联邦网格信封协议与沙盒收件箱隔离（Mesh Wire Protocol & Sandbox，对齐规约 #2, #19 & #24）**:
+   - 跨节点协同（对话、文件投递、跨机锁）必须走 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + 时间窗/Nonce 防重放 + Peer Scope 校验）；文件传输严格限制体积上限并隔离落盘至 `~/.steward/mesh_inbox/`，严禁跨机直写宿主机路径。
 
 ---
 
@@ -87,13 +91,13 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 flowchart TD
     A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 src_doc/roadmap-phase*.md)"]
     B --> C["步骤 3: 串行编码与单元测试驱动<br/>(TDD + cargo test 局部验证)"]
-    C --> D["步骤 4: 编译检查与全量回归<br/>(cargo test 202 项全绿 + release 构建)"]
+    C --> D["步骤 4: 编译检查与全量回归<br/>(cargo test 237+ 项全绿 + release 构建)"]
     D --> E["步骤 5: 文档同步与交付三段式小结<br/>(更新手册/README + 状态标记)"]
 ```
 
 ### 步骤 1: 需求对齐与设计查验
 1. 检查用户的需求是否符合第一节的“核心信条与设计红线”。
-2. 查阅 `design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../design_doc/08-graph-intelligence.md)）。
+2. 查阅 `design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../design_doc/08-graph-intelligence.md) 与 [14-graph-intelligence-and-mesh-protocol-spec.md](../../design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)）。
 3. 如涉及新增数据表或字段，先在 `src/storage/schema.sql`、`src/storage/models.rs`、`src/storage/mod.rs` 设计对齐。
 
 ### 步骤 2: 任务拆解与断点登记（严禁大步跨越）
@@ -116,7 +120,7 @@ flowchart TD
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo test
    ```
-   **门禁要求**: 目前必须达到 **202 个 tests 全部 `ok`**，0 failed（另允许 1 项 doc-test ignored）。
+   **门禁要求**: 目前必须达到 **237+ 个 tests 全部 `ok`**，0 failed（另允许 1 项 doc-test ignored）。
 2. 运行 release 生产构建：
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo build --release
@@ -168,10 +172,11 @@ flowchart TD
 
 - [ ] 是否在任务开始前已将任务标记为 `⏳ 进行中`？
 - [ ] 代码中是否存在对黑名单目录进行深度递归扫描的风险？
-- [ ] **安全自检（规约 #19）**：新增采集/记忆/变更路径是否经过 `SecretRedactor` 脱敏？新增 Web 写端点是否已接入 `check_auth`？Hook 命令插值与导出路径是否已防注入与防目录穿越？
+- [ ] **安全自检（规约 #19 & #24）**：新增采集/记忆/变更/跨机对话路径是否经过 `SecretRedactor` 脱敏与 `PromptInjectionScanner` 检查？新增 Web 写端点是否已接入 `check_auth`？Mesh 协同是否校验证书/HMAC 签名、防重放与 `~/.steward/mesh_inbox/` 沙盒？Hook 命令插值与导出路径是否已防注入与防目录穿越？
+- [ ] **图谱分级自检（规约 #5 & #23）**：新增图谱连边是否已明确标注 `evidence_tier`（`L1_EXPLICIT`/`L2_STRUCTURAL`/`L3_SEMANTIC`）、方向语义与合法权重，避免语义边伪装物理硬依赖？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
-- [ ] 是否执行了 `make lint-panic`（生产代码 0 `unwrap`/`expect`）且 `cargo test` 全部通过（**要求 >= 202 tests 全部通过，零 warning**）？
+- [ ] 是否执行了 `make lint-panic`（生产代码 0 `unwrap`/`expect`）且 `cargo test` 全部通过（**要求 >= 237 tests 全部通过，零 warning**）？
 - [ ] 是否执行了 `agent-steward preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？
 - [ ] 相关的文档（`product-manual.md` / `INSTALL.md` / `roadmap-phase*.md`）是否已同步刷新？

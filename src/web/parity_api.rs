@@ -342,10 +342,20 @@ pub fn handle_links_mermaid(req: &HttpRequest, storage: Arc<dyn StorageProvider>
         .parse::<usize>()
         .unwrap_or(25)
         .clamp(5, 100);
-    let engine = LinksEngine::new(Arc::new(Storage::new(storage)));
+    let discover_semantic = query_str(req, "discover_semantic", "false") == "true";
+    let st = Storage::new(storage);
+    let mut mining_summary = None;
+    if discover_semantic {
+        if let Ok(rep) = crate::fact::GraphRelationshipMiner::new(&st).mine_all(true) {
+            mining_summary = Some(rep);
+        }
+    }
+    let engine = LinksEngine::new(Arc::new(st));
     match engine.export_mermaid(limit) {
         Ok(mermaid) => WebResponse::success(serde_json::json!({
             "limit": limit,
+            "discover_semantic": discover_semantic,
+            "mining_report": mining_summary,
             "mermaid": mermaid,
         })),
         Err(e) => WebResponse::error(
@@ -785,6 +795,23 @@ pub fn handle_mesh_query(req: &HttpRequest) -> HttpResponse {
         "port" => {
             let port = query_str(req, "port", "8080").parse::<u16>().unwrap_or(8080);
             WebResponse::success(client.federated_port_check(port))
+        }
+        "graph" => {
+            let q = query_str(req, "query", "");
+            let hops = query_str(req, "hops", "2").parse::<usize>().unwrap_or(2).clamp(1, 4);
+            WebResponse::success(client.federated_graph_query(&q, hops))
+        }
+        "dialogue_inbox" => {
+            match Storage::open(&cfg.db_path) {
+                Ok(st) => WebResponse::success(st.list_mesh_dialogues(30).unwrap_or_default()),
+                Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+            }
+        }
+        "transfer_inbox" => {
+            match Storage::open(&cfg.db_path) {
+                Ok(st) => WebResponse::success(st.list_mesh_transfers(30).unwrap_or_default()),
+                Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+            }
         }
         _ => WebResponse::success(client.ping_all()),
     }

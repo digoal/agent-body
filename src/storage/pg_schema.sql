@@ -167,13 +167,16 @@ CREATE INDEX IF NOT EXISTS idx_pg_fact_nodes_type ON fact_nodes(node_type);
 CREATE INDEX IF NOT EXISTS idx_pg_fact_nodes_name ON fact_nodes(name);
 
 CREATE TABLE IF NOT EXISTS fact_edges (
-    id          BIGSERIAL PRIMARY KEY,
-    source_id   TEXT NOT NULL,
-    target_id   TEXT NOT NULL,
-    relation    TEXT NOT NULL,
-    properties  JSONB DEFAULT '{}'::jsonb,
-    confidence  REAL DEFAULT 1.0,
-    updated_at  TIMESTAMPTZ DEFAULT NOW(),
+    id             BIGSERIAL PRIMARY KEY,
+    source_id      TEXT NOT NULL,
+    target_id      TEXT NOT NULL,
+    relation       TEXT NOT NULL,
+    properties     JSONB DEFAULT '{}'::jsonb,
+    confidence     REAL DEFAULT 1.0,
+    evidence_tier  TEXT NOT NULL DEFAULT 'L1_EXPLICIT',
+    weight         REAL NOT NULL DEFAULT 1.0,
+    direction_kind TEXT NOT NULL DEFAULT 'forward_dependency',
+    updated_at     TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(source_id, target_id, relation)
 );
 
@@ -303,3 +306,42 @@ CREATE TABLE IF NOT EXISTS effectiveness_ledger (
 CREATE INDEX IF NOT EXISTS idx_pg_ledger_created ON effectiveness_ledger(created_at);
 CREATE INDEX IF NOT EXISTS idx_pg_ledger_tool ON effectiveness_ledger(tool_or_action);
 CREATE INDEX IF NOT EXISTS idx_pg_ledger_rule ON effectiveness_ledger(provenance_rule);
+
+-- ─── Phase 41: 联邦网格跨机结构化对话与受控沙盒文件投递 ─────────────────
+CREATE TABLE IF NOT EXISTS mesh_dialogues (
+    dialogue_id        TEXT PRIMARY KEY,
+    thread_id          TEXT NOT NULL,
+    from_node          TEXT NOT NULL,
+    from_agent         TEXT NOT NULL,
+    to_node            TEXT NOT NULL,
+    to_agent           TEXT NOT NULL DEFAULT '',
+    intent             TEXT NOT NULL,
+    content            TEXT NOT NULL,
+    redaction_hits     INTEGER DEFAULT 0,
+    injection_flagged  INTEGER DEFAULT 0,
+    verified_signature INTEGER DEFAULT 0,
+    status             TEXT NOT NULL DEFAULT 'received',
+    created_at         TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_mesh_dialogues_thread ON mesh_dialogues(thread_id);
+CREATE INDEX IF NOT EXISTS idx_pg_mesh_dialogues_status ON mesh_dialogues(status);
+
+CREATE TABLE IF NOT EXISTS mesh_transfers (
+    transfer_id        TEXT PRIMARY KEY,
+    from_node          TEXT NOT NULL,
+    from_agent         TEXT NOT NULL,
+    to_node            TEXT NOT NULL,
+    file_name          TEXT NOT NULL,
+    size_bytes         BIGINT NOT NULL,
+    sha256             TEXT NOT NULL,
+    inbox_path         TEXT NOT NULL,
+    secret_warnings    INTEGER DEFAULT 0,
+    verified_signature INTEGER DEFAULT 0,
+    status             TEXT NOT NULL DEFAULT 'quarantined',
+    accepted_path      TEXT,
+    created_at         TEXT NOT NULL,
+    updated_at         TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_mesh_transfers_status ON mesh_transfers(status);

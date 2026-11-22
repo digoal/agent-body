@@ -102,13 +102,17 @@ impl Default for AnnotationConfig {
     }
 }
 
-/// 轻量多机联邦 (Peer Mesh) 配置 (Phase 18)
-/// 鉴权复用 `[web].auth_token` 作为集群共享密钥 (Bearer)；各节点必须配置相同 Token 才能互通。
+/// 轻量多机联邦 (Peer Mesh) 配置 (Phase 18 -> Phase 41 Wire Protocol v1.0)
+/// 鉴权支持节点独立 `[mesh.peer_keys]`、全局 `[mesh].shared_secret` 或回退 `[web].auth_token`。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeshConfig {
-    /// 是否启用联邦查询客户端能力（服务端 /api/v1/mesh/* 随 Web 服务常驻）
+    /// 是否启用联邦客户端能力（服务端 /api/v1/mesh/* 随 Web 服务常驻）
     #[serde(default)]
     pub enabled: bool,
+
+    /// 本机节点标识（缺省自动取系统 hostname）
+    #[serde(default)]
+    pub node_id: Option<String>,
 
     /// 对等节点 Web 基地址列表，如 ["http://192.168.31.161:8756"]
     #[serde(default)]
@@ -117,18 +121,57 @@ pub struct MeshConfig {
     /// 单次对等节点请求超时毫秒
     #[serde(default = "default_mesh_timeout_ms")]
     pub timeout_ms: u64,
+
+    /// Mesh 共享 HMAC 签名密钥（缺省回退至 [web].auth_token）
+    #[serde(default)]
+    pub shared_secret: Option<String>,
+
+    /// 按节点 ID 指定的独立共享密钥 (node_id -> secret)
+    #[serde(default)]
+    pub peer_keys: std::collections::HashMap<String, String>,
+
+    /// 按节点 ID 授权的作用域白名单 (node_id -> ["read:facts", "write:locks", "exchange:dialogue", "transfer:artifact"])
+    #[serde(default)]
+    pub peer_scopes: std::collections::HashMap<String, Vec<String>>,
+
+    /// 信封防重放时间窗（秒，默认 ±300s）
+    #[serde(default = "default_mesh_replay_window_secs")]
+    pub replay_window_secs: u64,
+
+    /// 跨机文件投递单文件体积上限（字节，默认 10MB）
+    #[serde(default = "default_mesh_max_transfer_bytes")]
+    pub max_transfer_bytes: usize,
+
+    /// 跨机接收文件隔离沙盒收件箱路径（默认 ~/.steward/mesh_inbox）
+    #[serde(default)]
+    pub inbox_dir: Option<String>,
 }
 
 fn default_mesh_timeout_ms() -> u64 {
     1500
 }
 
+fn default_mesh_replay_window_secs() -> u64 {
+    300
+}
+
+fn default_mesh_max_transfer_bytes() -> usize {
+    10 * 1024 * 1024
+}
+
 impl Default for MeshConfig {
     fn default() -> Self {
         Self {
             enabled: false,
+            node_id: None,
             peers: vec![],
             timeout_ms: default_mesh_timeout_ms(),
+            shared_secret: None,
+            peer_keys: std::collections::HashMap::new(),
+            peer_scopes: std::collections::HashMap::new(),
+            replay_window_secs: default_mesh_replay_window_secs(),
+            max_transfer_bytes: default_mesh_max_transfer_bytes(),
+            inbox_dir: None,
         }
     }
 }

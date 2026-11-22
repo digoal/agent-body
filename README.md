@@ -64,6 +64,8 @@
 │                                                                                        │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+  
+PS: 可能叫 Agent 本体 更恰当？
 
 ---
 
@@ -96,6 +98,7 @@
 - 📊 **[10-benchmark-spec.md](design_doc/10-benchmark-spec.md)**：实证 Benchmark 对照评测与生产效能存证账本设计规格说明书（双轨闭环确保使用效果 100% 有据可查）
 - 🛡️ **[11-security-spec.md](design_doc/11-security-spec.md)**：宿主大管家安全架构、威胁建模与纵深防御规格说明书（全链路脱敏、高危拦截、写鉴权与抗投毒防线）
 - 🔄 **[13-freshness-and-self-evolution-spec.md](design_doc/13-freshness-and-self-evolution-spec.md)**：全生命周期信息新鲜度对账与五点对比探针闭环自进化规格说明书（写穿失效、僵尸清理、`FreshnessReconciler` 与 `P1~P5` 探针反馈闭环）
+- 🕸️ **[14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)**：多维证据分层有向加权图谱与联邦网格信封协同协议规格说明书（`L1/L2/L3` 三层关系本体、结构上卷与向量语义发现、`MeshEnvelope v1.0` HMAC 防重放认证、跨机对话与沙盒文件投递）
 
 ---
 
@@ -218,7 +221,7 @@ cargo build --release
 
 2. **边界与递弱代偿哲学**：
    - 产品的边界必须搞清楚，不是啥都做，专注做宿主环境认知的原子功能或分子功能，做专做精做深。如同王东岳所说的"递弱代偿"，越基础的功能越被深度依赖；功能过度泛化会丧失生态定位。
-   - 明确不做：不替代 Agent 编排框架（LangGraph/AutoGen/CrewAI）、不承担业务 LLM 推理、不替代容器沙箱隔离（Docker/gVisor）、不充当通用 OLTP 数据库、不替代密钥管理（Vault/1Password）。
+   - 明确不做：不替代 Agent 编排框架（LangGraph/AutoGen/CrewAI）、不承担业务 LLM 推理、不替代容器沙箱隔离（Docker/gVisor）、不充当通用 OLTP 数据库、不替代密钥管理（Vault/1Password）；在跨主机 Mesh 协同中不造 Raft/Paxos 重型共识引擎、不充当大文件全盘镜像系统（Rsync/S3）、不造人类聊天 IM，仅专注 **Agent-to-Agent 轻量认知交换、租约锁协调与受控小产物（`<= 10MB`）沙盒投递**。
 
 3. **系统底座定位探讨**：
    - 本项目所承载的"宿主机事实感知、环境规约与长期记忆"三位一体能力，未来是否应演进为面向智能体时代的下一代 OS 原生内置标配功能。
@@ -230,6 +233,7 @@ cargo build --release
 
 5. **实事求是、零捏造 (Ground Reality, Zero Simulation)**：
    - 所有暴露给 Agent 的事实必须源自宿主机真实物理状态（`/proc`、`/sys`、`/etc/systemd`、`socket`、`inotify`）。严禁在缺少证据的情况下推测或编造虚拟状态。
+   - **图谱证据分层底线**：事实图谱关系必须严格区分物理显式硬依赖（`L1_EXPLICIT`）、结构聚合派生（`L2_STRUCTURAL`）与隐式语义近邻（`L3_SEMANTIC`），每条边须携带证据层级与推导理由，严禁将高维语义相似伪装成物理硬依赖。
 
 6. **颗粒度分级与白黑名单深度法则**：
    - **白名单目录**（如 `/root/new/shared_proj/`、`/root/new/work/`）：必须深度递归解析到底，构建完整元数据与全文索引。
@@ -262,7 +266,7 @@ cargo build --release
     - 在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误，保证服务 7×24 稳定运行。
 
 13. **测试驱动与零警告**：
-    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 235+ 项自动化测试）。
+    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 237+ 项自动化测试）。
     - 任何提交前必须 `cargo check --tests` 通过零警告门禁。
     - MCP 工具与 CLI 子命令必须保持一一映射（当前 41/41 同步）。
 
@@ -271,12 +275,13 @@ cargo build --release
     - 确保中断后任何新会话均能通过读取 `EVOLUTION_GUIDE.md` + 当前活跃 `roadmap-phase*.md` 恢复上下文无缝继续。
 
 15. **宏微联邦、不重复造轮子**：
-    - 大管家负责宏观宿主拓扑（文件、服务、端口、定时任务间的依赖网络）。
+    - 大管家负责宏观宿主拓扑（文件、服务、端口、定时任务间的依赖网络），并支持将微观文件级 `links` 自动上卷聚合（Roll-up）至宏观项目/服务级 `fact_edges`，实现文件引用、项目拓扑与 CodeGraph 符号级调用的三层贯通。
     - 微观符号调用（函数、类、AST）下钻交给 CodeGraph，大管家通过 `CodeGraphBridge` 无缝桥接。
     - 记忆模块通过 SPI 抽象，拥抱成熟开源生态（Mem0/Letta/PowerContext），绝不重复发明轮子。
 
 16. **黑白屏全能力双向同步规约 (Black/White-Screen Parity)**：
     - 黑屏功能（MCP 工具、SKILL 指导、CLI 子命令）与白屏功能（Web UI 工作台、REST API）必须保持 **1:1 双向同步**，严禁出现仅存在于单侧的孤岛功能。
+    - 为防止 MCP 工具数量膨胀打爆上下文，新能力优先在既有原生 MCP 工具内通过 `action` 子模式内聚聚合，并在 CLI 子命令、Web REST API 与前端工作台按**子动作粒度（Action-level）**保持 1:1:1 同步。
     - 白屏端每次交互应同步镜像回显等价的 CLI 命令与 MCP JSON-RPC 请求体；并通过 `/api/v1/parity/matrix` 与自动化契约测试强制守卫 **100% 对齐率**。
 
 17. **产品路演与场景演示内建规约 (Built-in Roadshow & Live Demo)**：
@@ -289,10 +294,10 @@ cargo build --release
     - 基准测试必须基于宿主机真实物理探针与 `bench:*` 隔离沙盒实跑（覆盖内核微基准延迟 SLA 与宏观业务负载）；每次评测与日常工具调用的真实耗时（`elapsed_us`）、Token 缩减量（`tokens_saved`）、探索轮次缩减（`rounds_saved`）及风险拦截事件（`hazard_intercepted`）均须携带确定性推导规则编号（`provenance_rule`）落库留痕，支持通过 CLI（`agent-steward bench`）、MCP（`steward_benchmark`）、Web UI 与 DuckDB 导出报告随时溯源核验与跨版本回归比对，确保大管家使用效果 100% 有据可查。
 
 19. **纵深安全防御、全链路脱敏与抗投毒规约 (Defense-in-Depth Security, End-to-End Redaction & Anti-Poisoning)**：
-    - **全链路凭据零落盘**：在文件扫描、`/proc` `cmdline` 采集、MCP 配置解析、外部服务登记、长期记忆写入、变更审计流水与本地模型推理前，统一强制经过 `SecretRedactor` 脱敏与敏感文件阻断（`.env*`、`.ssh/`、`*.pem`/`*.key`、URI 口令与高危令牌前缀），严禁明文凭据入库或经由 Brief / Mesh 泄露。
+    - **全链路凭据零落盘**：在文件扫描、`/proc` `cmdline` 采集、MCP 配置解析、外部服务登记、长期记忆写入、变更审计流水、跨机 Mesh 对话与本地模型推理前，统一强制经过 `SecretRedactor` 脱敏与敏感文件阻断（`.env*`、`.ssh/`、`*.pem`/`*.key`、URI 口令与高危令牌前缀），严禁明文凭据入库或经由 Brief / Mesh 泄露。
     - **执行门禁与防注入沙盒**：`HookDispatcher` 禁止裸拼接未转义路径交由 `sh -c` 执行；DuckDB 导出在引擎底层强制校验目录白名单与 SQL 转义；`steward_hook_pre` 对高危系统路径（`/etc/shadow`、`/etc/sudoers`、`~/.ssh/` 等）与破坏性操作给出 `CRITICAL` 预警。
-    - **接口最小暴露与写鉴权**：Web/Mesh 默认绑定 `127.0.0.1` 回环地址；全量 Web 写端点及 GC 端点统一受 `auth_token` Bearer 保护，非回环暴露未配置 `auth_token` 时拒绝写操作。
-    - **存储最小权限与抗上下文投毒**：`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限收敛并通过 `preflight` 巡检；对外部仓库/文档语料识别并清洗间接提示词注入（Indirect Prompt Injection），同时纳入 `W11` 与 `DQ4` 安全回归基准（详见 [11-security-spec.md](design_doc/11-security-spec.md)）。
+    - **接口最小暴露、写鉴权与 Mesh 信封签名**：Web/Mesh 默认绑定 `127.0.0.1` 回环地址；全量 Web 写端点及 GC 端点统一受 `auth_token` Bearer 保护，非回环暴露未配置 `auth_token` 时拒绝写操作；跨节点 Mesh 协同写操作、对话与文件投递强制采用 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + 时间窗/Nonce 防重放 + `~/.steward/mesh_inbox/` 隔离收件箱），严禁跨机直写覆盖系统与业务文件。
+    - **存储最小权限与抗上下文投毒**：`~/.steward/` (`0700`) 与 `steward.db`/`config.toml` (`0600`) 权限收敛并通过 `preflight` 巡检；对外部仓库/文档语料及跨机 Mesh 对话内容识别并清洗间接提示词注入（Indirect Prompt Injection），同时纳入 `W11`、`W14` 与 `DQ4` 安全回归基准（详见 [11-security-spec.md](design_doc/11-security-spec.md)）。
 
 20. **零重扫演进导航与横向竞品实证对标规约 (Zero-Rescan Evolution & Competitor Benchmarking)**：
     - **零重扫演进活地图**：新会话演进优先查阅根目录演进指南（[EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md)）、运行架构清单门禁（`make evolution-check`）并使用本项目 `.codegraph/` 符号地图定位触点，严禁把历史冻结 `roadmap-phase*.md` 全盘扫描一遍。
@@ -306,6 +311,14 @@ cargo build --release
 22. **内生对比探针驱动的闭环自进化规约 (Probe-Driven Closed-Loop Self-Evolution & Auto-Feedback Flywheel)**：
     - **五点回路对比探针**：在 `SessionStart(Brief)`、`PreToolUse(Guard)`、`InFlight(Search)`、`PostToolUse(Drift)` 与 `Periodic(Regression)` 五个执行切面部署确定性对比探针（`P1~P5`），以实测物理态 vs 历史快照/SLA/上一版本 Benchmark 为参照系，量化记录每一项偏差与改善幅度。
     - **数字佐证与去重自上报**：严禁拍脑袋优化。任何自愈修复与能力演进必须提供探针实测数字差值（Before/After/Delta）佐证；当越过退化阈值时自动调用幂等去重的 `FeedbackEngine::add_item_deduped` 写入 [user_feedback.md](user_feedback.md)，形成“探针发现 → 数字佐证 → 自动自愈/反馈 → Benchmark 固化”的自进化飞轮（详见 [13-freshness-and-self-evolution-spec.md](design_doc/13-freshness-and-self-evolution-spec.md)）。
+
+23. **多维证据分层、有向加权与隐式语义图谱规约 (Multi-Tier Evidence, Directed Weighted & Semantic Graph Intelligence)**：
+    - **三层证据契约**：图谱连边强制划分 `L1_EXPLICIT`（物理硬依赖，权重 `0.85~1.00`）、`L2_STRUCTURAL`（文件上卷/同体服务桥接/工具链提取，权重 `0.55~0.84`）与 `L3_SEMANTIC`（向量余弦 `>= 0.78` + 标签混合发现的隐式关联，权重 `0.35~0.65`），每条边须显式携带 `evidence_tier`、`weight` 与方向语义（前向依赖 / 逆向调度 / 衍生流 / 对称亲和）。
+    - **防稠密剪枝与加权衰减推演**：隐式语义边每节点严格 `Top-K <= 3` 稀疏化剪枝；爆炸半径推演按 `S = prod(w_e * 0.8^(hop-1))` 计算有效风险传播，默认以 `L1+L2` 为强影响面基准、以 `L3` 为跨项目关联探索参考，兼顾物理可靠性与隐式关系洞察。
+
+24. **联邦网格信封协议、零信任签名认证与受控沙盒协同规约 (Federated Mesh Wire Protocol, Zero-Trust Auth & Sandboxed Collaboration)**：
+    - **信封协议与双向防重放**：跨主机 Mesh 协同统一采用 `MeshEnvelope v1.0` 线协议，写与协同请求强制携带 `timestamp_ms`、`nonce`、`scopes`、`payload_sha256` 及 `HMAC-SHA256` 规范签名；服务端校验 `+-300s` 时间窗、`NonceCache` 防重放与 Peer Scope 最小授权（支持 `read:facts` / `write:locks` / `exchange:dialogue` / `transfer:artifact`）。
+    - **受控协同原语**：跨机对话仅限结构化意图（`ASK_CONTEXT` / `HANDOFF_TASK` / `SHARE_MEMORY` / `REPLY`），入出双向经由 `SecretRedactor` 与 `PromptInjectionScanner` 过滤；跨机文件传输严格限额 `<= 10MB`、校验 SHA-256 与阻断敏感文件，隔离落盘至 `~/.steward/mesh_inbox/`（`0600`）待本机显式 `accept`/`reject` 后方可使用（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)）。
 
 ---
 
@@ -418,6 +431,17 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
   
 22. **内生对比探针驱动的闭环自进化引擎 (`Probe-Driven Closed-Loop Self-Evolution`)** `✅ Phase 39 已落地`:
     - 在 Agent 执行回路的 5 个关键切面（`P1 开工 Brief` / `P2 事前 Pre-Hook` / `P3 检索效用` / `P4 事后漂移` / `P5 周期回归与图谱`）部署微秒级对比探针，以物理真值、SLA 基线与历史 Benchmark 批次为参照系量化输出数字差值（Before/After/Delta），并集成去重幂等的 `FeedbackEngine::add_item_deduped` 自动驱动 `user_feedback.md`、自愈对账与 Benchmark `v3.3` (`W12` + `DQ5`) 闭环自进化；首轮部署即由 `P3` 探针真实捕获 `stale_vec=3` 缺口并自愈至 **`5/5 ✅`**，现网 `v3.3` 全量评测 `D1 -99.65%`、`D6 37.6 → 99.8 (+62.1)` 全面通过（详见 [13-freshness-and-self-evolution-spec.md](design_doc/13-freshness-and-self-evolution-spec.md)）。
+  
+23. **图谱增强：多维证据分层、有向加权与隐式语义关系挖掘** `✅ Phase 40 已落地（对应规约 #5, #15, #23）`:
+    > 原始探讨：图谱增强，也就是说事实、服务等之间存在的关系，关系的强弱，关系的方向等。这个似乎除了明面上的联系，实则还存在看似断连确存在语义上的联系，例如两个项目，一个服务和一个项目，两个服务之间都可能存在关系。
+    - **现网实证动机**：实测 `/root/.steward/steward.db` 中 `fact_nodes` 已达 `355` 节点（`354` 个拥有向量），但 `fact_edges` 仅 `49` 条边，`project` 节点 `214/215` 孤立（**99.5%**），`links` 表 `5,116` 条文件引用未上卷，服务单元与运行进程同体分裂；
+    - **演进方案**：已落地 **`L1_EXPLICIT`（物理硬依赖, `0.85~1.00`） / `L2_STRUCTURAL`（文件引用上卷 + 服务桥接 + 工具依赖, `0.55~0.84`） / `L3_SEMANTIC`（向量余弦 $\ge 0.78$ + 标签混合发现, `0.35~0.65`, `Top-K=3` 剪枝）** 三层有向加权关系引擎与跳数衰减爆炸半径推演（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 与 [roadmap-phase40-41.md](src_doc/roadmap-phase40-41.md)）。
+
+24. **Mesh 协同协议：基于签名信封、防重放认证的跨机对话、沙盒文件投递与图谱联邦** `✅ Phase 41 已落地（对应规约 #2, #16, #19, #24）`:
+    > 原始探讨：mesh, 除了能通信，是否还要设计通信协议，基于通信的功能点，例如传送文件，交换对话，对话间的身份认证安全措施等。
+    - **演进方案**：遵循递弱代偿原则（不造 Raft/Rsync/聊天软件 IM），已落地 **`MeshEnvelope v1.0`** 线协议（`HMAC-SHA256` 规范签名 + `+-300s` 时间窗与 `NonceCache` 防重放 + `Peer Scopes` 最小权限），在此之上交付 **跨机图谱联邦探查 (`mesh/graph`)**、**双向脱敏抗投毒结构化对话 (`mesh/dialogue`)** 与 **限额 `<=10MB` + SHA-256 校验 + `~/.steward/mesh_inbox/` 隔离沙盒投递 (`mesh/transfer`)**，同步补齐 `W13`/`W14`/`DQ6` Benchmark `v3.4`（详见 [14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 与 [roadmap-phase40-41.md](src_doc/roadmap-phase40-41.md)）。
+
+25. 我从数据库悲观锁和乐观锁想到一个问题，如果你没次都从agent-steward获取（执行回路中强制）这不就悲观锁么，但这一定好吗？有时乐观锁可能更合适，例如我要做个postgresql验证，我可以假设本机5432已经默认有一个可用的实例，且无需密码，直接就连了。不需要从agent-steward先获取一次事实信息啊。你觉得呢？这个想法对接下来的agent-steward产品优化有什么作用么？
 
   
 ---

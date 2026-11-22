@@ -296,11 +296,29 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             steward_desc: "Write-Through 写穿失效 + FreshnessReconciler 跨表一致性自愈闭环".into(),
             sla_desc: "4/4 新鲜度防线命中, token_savings_pct >= 50%, steward_elapsed_us < 100_000".into(),
         },
+        WorkloadSpec {
+            id: "W13".into(),
+            name: "semantic_and_weighted_graph_discovery".into(),
+            title: "多维证据分层有向加权图谱与隐式语义发现".into(),
+            category: "D6 Graph Intelligence".into(),
+            baseline_desc: "无结构上卷与向量隐式挖掘时工程节点孤立且物理边/语义边混杂".into(),
+            steward_desc: "L2 结构上卷 + L3 向量稀疏剪枝 (Top-K=3) + 加权衰减爆炸半径分层过滤".into(),
+            sla_desc: "4/4 图谱发现断言命中, token_savings_pct >= 45%, steward_elapsed_us < 100_000".into(),
+        },
+        WorkloadSpec {
+            id: "W14".into(),
+            name: "mesh_protocol_security_and_collab".into(),
+            title: "MeshEnvelope v1.0 零信任签名、防重放与受控沙盒协同".into(),
+            category: "D4/D6 Mesh Protocol".into(),
+            baseline_desc: "裸 HTTP 明文直写、无防重放与敏感文件直传导致篡改/重放/凭据泄露".into(),
+            steward_desc: "HMAC-SHA256 签名 + NonceCache 防重放 + 对话脱敏 + mesh_inbox 沙盒隔离".into(),
+            sla_desc: "4/4 安全协同防线命中, replay/tamper/sensitive 100% 拦截, steward_elapsed_us < 100_000".into(),
+        },
     ]
 }
 
 pub fn run_all_workloads(storage: Arc<dyn StorageProvider>) -> Result<Vec<WorkloadResult>> {
-    let mut results = Vec::with_capacity(12);
+    let mut results = Vec::with_capacity(14);
     for spec in list_workload_specs() {
         results.push(run_workload(storage.clone(), &spec.id)?);
     }
@@ -321,7 +339,9 @@ pub fn run_workload(storage: Arc<dyn StorageProvider>, id: &str) -> Result<Workl
         "W10" => run_w10_link_precision_regression(),
         "W11" => run_w11_security_redaction_and_guardrail(),
         "W12" => run_w12_freshness_and_staleness_healing(storage),
-        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W12)", id),
+        "W13" => run_w13_semantic_and_weighted_graph_discovery(),
+        "W14" => run_w14_mesh_protocol_security_and_collab(),
+        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W14)", id),
     }
 }
 
@@ -1889,6 +1909,261 @@ fn run_w12_freshness_and_staleness_healing(_storage: Arc<dyn StorageProvider>) -
             baseline_actionability: 0.25,
             steward_actionability: 1.0,
             baseline_safety: 0.50,
+            steward_safety: 1.0,
+        },
+        95.0,
+    );
+    Ok(res)
+}
+
+/// W13: 多维证据分层有向加权图谱与隐式语义发现 (Phase 40 / ISSUE #23)
+fn run_w13_semantic_and_weighted_graph_discovery() -> Result<WorkloadResult> {
+    use crate::fact::GraphRelationshipMiner;
+    use crate::links::impact::ImpactAnalyzer;
+    use crate::storage::models::{FactNodeRecord, LinkRecord};
+
+    // Baseline: 无多维关系挖掘时只能枚举全部项目文件与目录文本，工程间孤立无连边
+    let t_base = Instant::now();
+    let baseline_dump = serde_json::json!({
+        "isolated_projects": [
+            {"id": "project:pg_core", "path": "/root/new/src/pg_core", "readme": "PostgreSQL storage engine with cargo and sqlite3 tools"},
+            {"id": "project:pg_core_articles", "path": "/root/new/work/pg_core_articles", "readme": "Deep dive series referencing /root/new/src/pg_core/src/main.rs and lib.rs"},
+            {"id": "project:pg_vector", "path": "/root/new/src/pg_vector", "readme": "Vector extension for PostgreSQL semantic search"},
+            {"id": "project:unrelated_ui", "path": "/root/new/work/unrelated_ui", "readme": "Frontend CSS color palette generator"}
+        ],
+        "fact_edges": [],
+        "note": "No rollup, no tool edge, no semantic link, no weighted blast radius"
+    })
+    .to_string();
+    let base_us = t_base.elapsed().as_micros().max(1);
+    let base_tokens = estimate_tokens(&baseline_dump);
+
+    // Steward 实跑：建图 -> L2 结构上卷 + L3 隐式语义发现 -> 分层加权爆炸半径
+    let t_stew = Instant::now();
+    let sandbox = Arc::new(Storage::open_in_memory()?);
+    for (id, name, path, desc, emb) in [
+        ("project:pg_core", "pg_core", "/root/new/src/pg_core", "PostgreSQL storage engine using cargo", vec![1.0_f32, 0.0, 0.0]),
+        ("project:pg_core_articles", "pg_core_articles", "/root/new/work/pg_core_articles", "Deep dive articles on pg_core", vec![0.92, 0.39, 0.0]),
+        ("project:pg_vector", "pg_vector", "/root/new/src/pg_vector", "PostgreSQL vector extension", vec![0.98, 0.19, 0.0]),
+        ("project:unrelated_ui", "unrelated_ui", "/root/new/work/unrelated_ui", "CSS frontend palette", vec![0.0, 0.0, 1.0]),
+    ] {
+        sandbox.upsert_fact_node(&FactNodeRecord {
+            id: id.into(),
+            node_type: "project".into(),
+            name: name.into(),
+            label: name.into(),
+            properties: serde_json::json!({ "abs_path": path, "description": desc, "domain": "database" }),
+            updated_at: None,
+        })?;
+        sandbox.update_fact_node_embedding(id, &emb)?;
+    }
+    sandbox.upsert_fact_node(&FactNodeRecord {
+        id: "tool:cargo".into(),
+        node_type: "tool".into(),
+        name: "cargo".into(),
+        label: "CLI: cargo".into(),
+        properties: serde_json::json!({}),
+        updated_at: None,
+    })?;
+    sandbox.add_link(&LinkRecord {
+        id: None,
+        source_type: "asset".into(),
+        source_id: "/root/new/work/pg_core_articles/01.md".into(),
+        target_type: "asset".into(),
+        target_id: "/root/new/src/pg_core/src/main.rs".into(),
+        relation: "references".into(),
+        confidence: 0.9,
+        auto_discovered: true,
+        line_number: Some(12),
+        snippet: None,
+        provenance: Some("path_regex".into()),
+        created_at: None,
+    })?;
+
+    let miner = GraphRelationshipMiner::new(&sandbox);
+    let rep = miner.mine_all(true)?;
+    let analyzer = ImpactAnalyzer::new(sandbox.clone());
+    let strict_impact = analyzer.analyze_impact("project:pg_core", 2)?;
+    let semantic_impact = analyzer.analyze_impact_weighted("project:pg_core", 2, 0.35, true)?;
+
+    let stew_out = serde_json::json!({
+        "l2_rollup": rep.l2_rollup_edges,
+        "l2_tool": rep.l2_tool_usage_edges,
+        "l2_derivation": rep.l2_derivation_edges,
+        "l3_semantic": rep.l3_semantic_edges,
+        "strict_deps": strict_impact.total_dependents_count,
+        "semantic_deps": semantic_impact.total_dependents_count
+    })
+    .to_string();
+    let stew_us = t_stew.elapsed().as_micros().max(1);
+    let stew_tokens = estimate_tokens(&stew_out);
+
+    let hit_rollup = rep.l2_rollup_edges >= 1;
+    let hit_tool = rep.l2_tool_usage_edges >= 1;
+    let hit_deriv = rep.l2_derivation_edges >= 1;
+    let hit_sem_and_filter = rep.l3_semantic_edges >= 1 && semantic_impact.total_dependents_count > strict_impact.total_dependents_count;
+    let hits = [hit_rollup, hit_tool, hit_deriv, hit_sem_and_filter]
+        .iter()
+        .filter(|&&b| b)
+        .count() as i64;
+    let token_savings = if base_tokens > 0 {
+        ((base_tokens - stew_tokens) as f64 / base_tokens as f64) * 100.0
+    } else {
+        0.0
+    };
+    let sla_passed = hits == 4 && token_savings >= 45.0 && stew_us < 100_000;
+
+    let mut res = finalize_result(
+        "W13",
+        "semantic_and_weighted_graph_discovery",
+        "多维证据分层有向加权图谱与隐式语义发现",
+        "D6 Graph Intelligence",
+        base_tokens,
+        stew_tokens,
+        3,
+        1,
+        base_us,
+        stew_us,
+        4,
+        hits,
+        1,
+        1,
+        4,
+        sla_passed,
+        "全量项目文本枚举，工程孤立无 L2/L3 关系".into(),
+        "L2 上卷/衍生/工具边 + L3 向量稀疏发现 + 分层衰减推演".into(),
+        format!(
+            "4/4 图谱断言命中={}/4 (L2上卷={}, 工具={}, 衍生={}, L3语义={})，耗时 {} μs",
+            hits, rep.l2_rollup_edges, rep.l2_tool_usage_edges, rep.l2_derivation_edges, rep.l3_semantic_edges, stew_us
+        ),
+    );
+    apply_quality_eval(
+        &mut res,
+        ContextQualityInputs {
+            required_facts_total: 4,
+            baseline_facts_hit: 0,
+            steward_facts_hit: hits as usize,
+            baseline_signal_precision: 0.25,
+            steward_signal_precision: 1.0,
+            baseline_actionability: 0.20,
+            steward_actionability: 1.0,
+            baseline_safety: 0.80,
+            steward_safety: 1.0,
+        },
+        95.0,
+    );
+    Ok(res)
+}
+
+/// W14: MeshEnvelope v1.0 零信任签名、防重放与受控沙盒协同 (Phase 41 / ISSUE #24)
+fn run_w14_mesh_protocol_security_and_collab() -> Result<WorkloadResult> {
+    use crate::config::MeshConfig;
+    use crate::mesh::auth::{verify_envelope, NonceCache};
+    use crate::mesh::dialogue::sanitize_dialogue_content;
+    use crate::mesh::protocol::MeshEnvelope;
+    use crate::mesh::transfer::validate_safe_file_name;
+
+    let t_base = Instant::now();
+    let baseline_dump = serde_json::json!({
+        "raw_http_body": "POST /mesh/raw { from: node-a, content: sk-proj-1234567890abcdef1234567890abcdef, target_path: /etc/cron.d/backdoor, file: .env.prod }",
+        "signature": null,
+        "nonce": null,
+        "replay_protection": false,
+        "sandbox_inbox": false
+    })
+    .to_string();
+    let base_us = t_base.elapsed().as_micros().max(1);
+    let base_tokens = estimate_tokens(&baseline_dump);
+
+    let t_stew = Instant::now();
+    let cfg = MeshConfig::default();
+    let secret = Some("w14-mesh-secret".to_string());
+    let cache = NonceCache::new();
+
+    let env = MeshEnvelope::build_signed(
+        "dialogue",
+        "node-a",
+        "agent-a",
+        "node-b",
+        "agent-b",
+        vec!["exchange:dialogue".into()],
+        serde_json::json!({"intent": "ASK_CONTEXT", "content": "status check"}),
+        "w14-mesh-secret",
+    )?;
+    let valid_ok = verify_envelope(&env, "exchange:dialogue", &cfg, &secret, &cache).is_ok();
+    let replay_blocked = verify_envelope(&env, "exchange:dialogue", &cfg, &secret, &cache).is_err();
+
+    let mut tampered = MeshEnvelope::build_signed(
+        "dialogue",
+        "node-a",
+        "agent-a",
+        "node-b",
+        "agent-b",
+        vec!["exchange:dialogue".into()],
+        serde_json::json!({"intent": "ASK_CONTEXT", "content": "ok"}),
+        "w14-mesh-secret",
+    )?;
+    tampered.payload = serde_json::json!({"intent": "ASK_CONTEXT", "content": "tampered"});
+    let tamper_blocked = verify_envelope(&tampered, "exchange:dialogue", &cfg, &secret, &cache).is_err();
+
+    let (cleaned_dlg, hits_redacted, _) = sanitize_dialogue_content("key sk-proj-abcdefghijklmnopqrstuvwxyz123456");
+    let sensitive_file_blocked = validate_safe_file_name(".env.prod").is_err()
+        && validate_safe_file_name("../etc/passwd").is_err();
+    let collab_guard_ok = hits_redacted >= 1
+        && !cleaned_dlg.contains("sk-proj-abcdefghijklmnopqrstuvwxyz")
+        && sensitive_file_blocked;
+
+    let stew_out = serde_json::json!({
+        "valid_hmac": valid_ok,
+        "replay_blocked": replay_blocked,
+        "tamper_blocked": tamper_blocked,
+        "sandbox_and_redaction": collab_guard_ok
+    })
+    .to_string();
+    let stew_us = t_stew.elapsed().as_micros().max(1);
+    let stew_tokens = estimate_tokens(&stew_out);
+
+    let hits = [valid_ok, replay_blocked, tamper_blocked, collab_guard_ok]
+        .iter()
+        .filter(|&&b| b)
+        .count() as i64;
+    let sla_passed = hits == 4 && stew_us < 100_000;
+
+    let mut res = finalize_result(
+        "W14",
+        "mesh_protocol_security_and_collab",
+        "MeshEnvelope v1.0 零信任签名、防重放与受控沙盒协同",
+        "D4/D6 Mesh Protocol",
+        base_tokens,
+        stew_tokens,
+        3,
+        1,
+        base_us,
+        stew_us,
+        4,
+        hits,
+        3,
+        0,
+        4,
+        sla_passed,
+        "裸 HTTP 明文传输 + 无防重放 + 允许敏感文件直写".into(),
+        "HMAC-SHA256 签名 + NonceCache 防重放 + 对话脱敏 + mesh_inbox 沙盒".into(),
+        format!(
+            "4/4 Mesh 安全防线命中={}/4 (合法放行={}, 重放拦截={}, 篡改拦截={}, 脱敏/沙盒={})，耗时 {} μs",
+            hits, valid_ok, replay_blocked, tamper_blocked, collab_guard_ok, stew_us
+        ),
+    );
+    apply_quality_eval(
+        &mut res,
+        ContextQualityInputs {
+            required_facts_total: 4,
+            baseline_facts_hit: 0,
+            steward_facts_hit: hits as usize,
+            baseline_signal_precision: 0.25,
+            steward_signal_precision: 1.0,
+            baseline_actionability: 0.25,
+            steward_actionability: 1.0,
+            baseline_safety: 0.0,
             steward_safety: 1.0,
         },
         95.0,

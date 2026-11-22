@@ -129,15 +129,69 @@ pub struct FactNodeRecord {
     pub updated_at: Option<String>,
 }
 
+fn default_evidence_tier() -> String {
+    "L1_EXPLICIT".to_string()
+}
+
+fn default_edge_weight() -> f32 {
+    1.0
+}
+
+fn default_direction_kind() -> String {
+    "forward_dependency".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FactEdgeRecord {
     pub id: Option<i64>,
     pub source_id: String,
     pub target_id: String,
-    pub relation: String, // depends_on, listens_on, scheduled_by, reads, writes, part_of, calls, contains
+    pub relation: String, // depends_on, listens_on, scheduled_by, reads, writes, part_of, calls, contains, uses_tool, runs_as, documented_by, semantically_related
     pub properties: serde_json::Value,
     pub confidence: f32,
+    #[serde(default = "default_evidence_tier")]
+    pub evidence_tier: String, // L1_EXPLICIT | L2_STRUCTURAL | L3_SEMANTIC
+    #[serde(default = "default_edge_weight")]
+    pub weight: f32,
+    #[serde(default = "default_direction_kind")]
+    pub direction_kind: String, // forward_dependency | reverse_schedule | derivation_flow | symmetric_affinity
     pub updated_at: Option<String>,
+}
+
+impl FactEdgeRecord {
+    /// 根据关系名推导默认方向语义
+    pub fn infer_direction_kind(relation: &str) -> &'static str {
+        match relation {
+            "scheduled_by" => "reverse_schedule",
+            "documented_by" | "runs_as" | "part_of" | "contains" => "derivation_flow",
+            "semantically_related" => "symmetric_affinity",
+            _ => "forward_dependency",
+        }
+    }
+
+    /// 构造标准 L1 物理显式边
+    pub fn new_explicit(
+        source_id: impl Into<String>,
+        target_id: impl Into<String>,
+        relation: impl Into<String>,
+        properties: serde_json::Value,
+        confidence: f32,
+    ) -> Self {
+        let rel = relation.into();
+        let dir = Self::infer_direction_kind(&rel).to_string();
+        Self {
+            id: None,
+            source_id: source_id.into(),
+            target_id: target_id.into(),
+            relation: rel,
+            properties,
+            confidence,
+            evidence_tier: "L1_EXPLICIT".to_string(),
+            weight: confidence.clamp(0.0, 1.0),
+            direction_kind: dir,
+            updated_at: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -220,6 +274,43 @@ pub struct LockWaitEntry {
     pub enqueued_at: String,
     pub timeout_at: String,
     pub status: String, // "waiting" | "notified" | "acquired" | "expired" | "cancelled"
+}
+
+/// Phase 41: 联邦网格跨机结构化 Agent 对话记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeshDialogueRecord {
+    pub dialogue_id: String,
+    pub thread_id: String,
+    pub from_node: String,
+    pub from_agent: String,
+    pub to_node: String,
+    pub to_agent: String,
+    pub intent: String, // ASK_CONTEXT | HANDOFF_TASK | SHARE_MEMORY | REPLY
+    pub content: String,
+    pub redaction_hits: usize,
+    pub injection_flagged: bool,
+    pub verified_signature: bool,
+    pub status: String, // sent | received | acked | replied
+    pub created_at: String,
+}
+
+/// Phase 41: 联邦网格跨机受控沙盒文件投递记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MeshTransferRecord {
+    pub transfer_id: String,
+    pub from_node: String,
+    pub from_agent: String,
+    pub to_node: String,
+    pub file_name: String,
+    pub size_bytes: u64,
+    pub sha256: String,
+    pub inbox_path: String,
+    pub secret_warnings: usize,
+    pub verified_signature: bool,
+    pub status: String, // sent | quarantined | accepted | rejected
+    pub accepted_path: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 /// Phase 27: 实验室 A/B 基准评测批次记录 (轨道 A)

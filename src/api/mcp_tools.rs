@@ -201,23 +201,27 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_links_query",
-                "description": "查询指定实体（资产路径、服务名、记忆 ID）的双向关联依赖拓扑与图关系。",
+                "description": "查询指定实体（资产路径、服务名、项目或记忆 ID）的双向关联依赖与分层属性图谱关系（L1 物理/L2 结构/L3 语义）。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "type": { "type": "string", "description": "实体类型: asset, service, memory", "default": "asset" },
-                        "id": { "type": "string", "description": "实体标识 (如绝对路径 /root/new/work/demo.py 或服务名 postgresql:5432)" }
+                        "type": { "type": "string", "description": "实体类型: asset, service, project, tool, memory", "default": "asset" },
+                        "id": { "type": "string", "description": "实体标识 (如绝对路径、project:<name> 或 service:<name>)" },
+                        "max_hops": { "type": "integer", "default": 2, "description": "属性图谱遍历最大跳数" },
+                        "min_weight": { "type": "number", "default": 0.0, "description": "最低边权重过滤 (0.0~1.0)" },
+                        "include_semantic": { "type": "boolean", "default": true, "description": "是否包含 L3_SEMANTIC 隐式语义边" }
                     },
                     "required": ["id"]
                 }
             }),
             serde_json::json!({
                 "name": "steward_links_visualize",
-                "description": "导出宿主机实体关系图拓扑结构为 Mermaid 格式，直观呈现依赖图景。",
+                "description": "导出宿主机实体关系图拓扑结构为 Mermaid 格式，支持按需触发 L2/L3 关系挖掘。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "limit": { "type": "integer", "default": 20 }
+                        "limit": { "type": "integer", "default": 20 },
+                        "discover_semantic": { "type": "boolean", "default": false, "description": "导出前是否运行 L2 结构上卷与 L3 隐式语义关系挖掘" }
                     }
                 }
             }),
@@ -246,12 +250,14 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_links_impact",
-                "description": "变更爆炸半径推演：评估重构、改动或删除特定文件/服务对上下游的影响范围，返回直接与多跳间接依赖列表及风险评级。",
+                "description": "变更爆炸半径推演：融合文件 links 与属性图 fact_edges，按跳数衰减与权重计算影响范围，支持按证据层级与阈值过滤。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "target": { "type": "string", "description": "被评估对象的绝对路径或服务标识" },
-                        "max_depth": { "type": "integer", "default": 3, "description": "依赖推演最大跳数" }
+                        "target": { "type": "string", "description": "被评估对象的绝对路径、project:<name> 或服务标识" },
+                        "max_depth": { "type": "integer", "default": 3, "description": "依赖推演最大跳数" },
+                        "min_weight": { "type": "number", "default": 0.5, "description": "最低边权重阈值 (0.0~1.0)" },
+                        "include_semantic": { "type": "boolean", "default": false, "description": "是否包含 L3_SEMANTIC 隐式语义边" }
                     },
                     "required": ["target"]
                 }
@@ -616,13 +622,23 @@ impl McpToolRegistry {
             }),
             serde_json::json!({
                 "name": "steward_mesh_query",
-                "description": "轻量多机联邦 Peer Mesh（Phase 18）：对 config.toml [mesh].peers 中的对等节点做 ping/facts/locks 只读联邦查询、联邦端口占用查询（集群哪台机器占用某端口），或向属主节点申请跨节点协作锁（HTTP 租约）。",
+                "description": "轻量多机联邦 Peer Mesh Wire Protocol v1.0（Phase 18 -> Phase 41）：支持 ping/facts/locks/port/acquire/local、跨机图谱联邦探查(graph)、HMAC签名双向脱敏结构化对话(dialogue_*)与 <=10MB 沙盒文件投递(transfer_*)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "action": { "type": "string", "enum": ["peers", "ping", "facts", "locks", "port", "acquire", "local"], "default": "ping" },
+                        "action": { "type": "string", "enum": ["peers", "ping", "facts", "locks", "port", "acquire", "local", "graph", "dialogue_send", "dialogue_inbox", "dialogue_ack", "transfer_send", "transfer_inbox", "transfer_accept", "transfer_reject"], "default": "ping" },
                         "port": { "type": "integer", "description": "action=port 时要查询的端口" },
-                        "peer": { "type": "string", "description": "action=acquire 时的目标对等节点基地址" },
+                        "peer": { "type": "string", "description": "目标对等节点基地址" },
+                        "query": { "type": "string", "description": "action=graph 时的图谱实体查询词" },
+                        "hops": { "type": "integer", "default": 2, "description": "action=graph 时的最大跳数" },
+                        "thread_id": { "type": "string", "description": "对话线程 ID" },
+                        "intent": { "type": "string", "enum": ["ASK_CONTEXT", "HANDOFF_TASK", "SHARE_MEMORY", "REPLY"], "default": "ASK_CONTEXT" },
+                        "content": { "type": "string", "description": "对话文本内容" },
+                        "to_agent": { "type": "string", "default": "" },
+                        "dialogue_id": { "type": "string", "description": "action=dialogue_ack 时的对话 ID" },
+                        "file_path": { "type": "string", "description": "action=transfer_send 时的本地文件路径" },
+                        "transfer_id": { "type": "string", "description": "action=transfer_accept/reject 时的传输 ID" },
+                        "dest_dir": { "type": "string", "description": "action=transfer_accept 时的落盘目标目录" },
                         "resource_type": { "type": "string", "enum": ["port", "directory", "service", "file", "custom"] },
                         "resource_id": { "type": "string" },
                         "scope": { "type": "string", "enum": ["exclusive", "shared"], "default": "exclusive" },
@@ -898,24 +914,60 @@ impl McpToolRegistry {
 
             "steward_links_query" => {
                 let arc_storage = Arc::new(self.storage.clone());
-                let engine = LinksEngine::new(arc_storage);
+                let engine = LinksEngine::new(arc_storage.clone());
                 let node_type = args.get("type").and_then(|v| v.as_str()).unwrap_or("asset");
                 let node_id = args.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                let max_hops = args.get("max_hops").and_then(|v| v.as_u64()).unwrap_or(2) as usize;
+                let min_weight = args.get("min_weight").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+                let include_semantic = args.get("include_semantic").and_then(|v| v.as_bool()).unwrap_or(true);
 
                 let links = engine.query_links(node_type, node_id)?;
-                let mut out = format!("实体关联拓扑 (共 {} 条):\n", links.len());
+                let mut out = format!("文件级实体关联拓扑 (共 {} 条):\n", links.len());
                 for l in links {
                     out.push_str(&format!("  - [{}] {} --({})--> [{}] {} (置信度: {:.2})\n",
                         l.source_type, l.source_id, l.relation, l.target_type, l.target_id, l.confidence));
+                }
+
+                let tiers: Vec<&str> = if include_semantic {
+                    vec!["L1_EXPLICIT", "L2_STRUCTURAL", "L3_SEMANTIC"]
+                } else {
+                    vec!["L1_EXPLICIT", "L2_STRUCTURAL"]
+                };
+                let root_cand = if node_id.contains(':') {
+                    node_id.to_string()
+                } else {
+                    format!("{}:{}", node_type, node_id)
+                };
+                if let Ok(sub) = arc_storage.traverse_fact_graph_filtered(&root_cand, max_hops, min_weight, Some(&tiers)) {
+                    if !sub.edges.is_empty() {
+                        out.push_str(&format!("\n属性图谱分层关系 ({} 跳, 共 {} 条边):\n", max_hops, sub.edges.len()));
+                        for e in &sub.edges {
+                            out.push_str(&format!(
+                                "  - [{} w={:.2} {}] {} --({})--> {}\n",
+                                e.evidence_tier, e.weight, e.direction_kind, e.source_id, e.relation, e.target_id
+                            ));
+                        }
+                    }
                 }
                 Ok(out)
             }
 
             "steward_links_visualize" => {
                 let arc_storage = Arc::new(self.storage.clone());
+                let discover = args.get("discover_semantic").and_then(|v| v.as_bool()).unwrap_or(false);
+                let mut header = String::new();
+                if discover {
+                    let miner = crate::fact::GraphRelationshipMiner::new(arc_storage.as_ref());
+                    let rep = miner.mine_all(true)?;
+                    header = format!(
+                        "%% 关系挖掘完成: L2上卷={}, 服务桥接={}, 工具={}, 衍生={}, L3语义={}\n",
+                        rep.l2_rollup_edges, rep.l2_service_bridge_edges, rep.l2_tool_usage_edges, rep.l2_derivation_edges, rep.l3_semantic_edges
+                    );
+                }
                 let engine = LinksEngine::new(arc_storage);
                 let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(20) as usize;
-                engine.export_mermaid(limit)
+                let mermaid = engine.export_mermaid(limit)?;
+                Ok(format!("{}{}", header, mermaid))
             }
 
             "steward_changes_since" => {
@@ -938,7 +990,9 @@ impl McpToolRegistry {
                 let analyzer = crate::links::impact::ImpactAnalyzer::new(arc_storage);
                 let target = args.get("target").and_then(|v| v.as_str()).unwrap_or("");
                 let max_depth = args.get("max_depth").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
-                let res = analyzer.analyze_impact(target, max_depth)?;
+                let min_weight = args.get("min_weight").and_then(|v| v.as_f64()).unwrap_or(0.50) as f32;
+                let include_semantic = args.get("include_semantic").and_then(|v| v.as_bool()).unwrap_or(false);
+                let res = analyzer.analyze_impact_weighted(target, max_depth, min_weight, include_semantic)?;
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
@@ -1324,6 +1378,64 @@ impl McpToolRegistry {
                             metadata: None,
                         };
                         Ok(serde_json::to_string_pretty(&client.acquire_on_peer(peer, &req)?)?)
+                    }
+                    "graph" => {
+                        let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
+                        let hops = args.get("hops").and_then(|v| v.as_u64()).unwrap_or(2) as usize;
+                        Ok(serde_json::to_string_pretty(&client.federated_graph_query(query, hops))?)
+                    }
+                    "dialogue_send" => {
+                        let peer = args.get("peer").and_then(|v| v.as_str()).unwrap_or("");
+                        if peer.is_empty() {
+                            bail!("action=dialogue_send 必须提供 peer 参数");
+                        }
+                        let thread_id = args.get("thread_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let intent = args.get("intent").and_then(|v| v.as_str()).unwrap_or("ASK_CONTEXT");
+                        let content = args.get("content").and_then(|v| v.as_str()).unwrap_or("");
+                        let to_agent = args.get("to_agent").and_then(|v| v.as_str()).unwrap_or("");
+                        let from_agent = args.get("holder_agent").and_then(|v| v.as_str()).unwrap_or("mcp-agent");
+                        Ok(serde_json::to_string_pretty(&client.send_dialogue(
+                            peer, thread_id, intent, content, from_agent, to_agent,
+                        )?)?)
+                    }
+                    "dialogue_inbox" => {
+                        let rows = self.storage.list_mesh_dialogues(30)?;
+                        Ok(serde_json::to_string_pretty(&rows)?)
+                    }
+                    "dialogue_ack" => {
+                        let did = args.get("dialogue_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let updated = self.storage.update_mesh_dialogue_status(did, "acked")?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({ "dialogue_id": did, "acked": updated }))?)
+                    }
+                    "transfer_send" => {
+                        let peer = args.get("peer").and_then(|v| v.as_str()).unwrap_or("");
+                        let file_path = args.get("file_path").and_then(|v| v.as_str()).unwrap_or("");
+                        if peer.is_empty() || file_path.is_empty() {
+                            bail!("action=transfer_send 必须提供 peer 与 file_path 参数");
+                        }
+                        let from_agent = args.get("holder_agent").and_then(|v| v.as_str()).unwrap_or("mcp-agent");
+                        Ok(serde_json::to_string_pretty(&client.send_transfer(
+                            peer, std::path::Path::new(file_path), from_agent,
+                        )?)?)
+                    }
+                    "transfer_inbox" => {
+                        let rows = self.storage.list_mesh_transfers(30)?;
+                        Ok(serde_json::to_string_pretty(&rows)?)
+                    }
+                    "transfer_accept" => {
+                        let tid = args.get("transfer_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let dest_dir = args.get("dest_dir").and_then(|v| v.as_str()).unwrap_or("/root/new/tmp/mesh_accepted");
+                        let rec = crate::mesh::transfer::accept_transfer_to_dir(
+                            self.storage.provider().as_ref(),
+                            tid,
+                            std::path::Path::new(dest_dir),
+                        )?;
+                        Ok(serde_json::to_string_pretty(&rec)?)
+                    }
+                    "transfer_reject" => {
+                        let tid = args.get("transfer_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let ok = crate::mesh::transfer::reject_transfer(self.storage.provider().as_ref(), tid)?;
+                        Ok(serde_json::to_string_pretty(&serde_json::json!({ "transfer_id": tid, "rejected": ok }))?)
                     }
                     _ => Ok(serde_json::to_string_pretty(&client.ping_all())?),
                 }

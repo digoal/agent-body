@@ -1,9 +1,9 @@
 # Agent Host Steward (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-21T22:42:00+08:00  
+> 最新更新: 2026-11-22T08:50:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: Phase 1~39 全部完成（v0.4.0 + 全生命周期信息新鲜度写穿失效 & `FreshnessReconciler` 对账 + 五点对比探针自进化引擎 + Benchmark `v3.3` `W12`/`DQ5` 帕累托双门禁），41 个原生 MCP 工具（黑白屏 100% 同步），25 个 `src/lib.rs` 模块，66 个 SPI 方法，23 张 SQLite 表
+> 当前状态: **Phase 1~41 全部编码完成（v0.4.0 + 多维证据分层有向加权图谱 + `MeshEnvelope v1.0` 零信任协同协议 + Benchmark `v3.4` `W13`/`W14`/`DQ6`）**，41 个原生 MCP 工具（黑白屏 100% 同步），25 个 `src/lib.rs` 模块，74 个 SPI 方法，25 张 SQLite 表
 
 ---
 
@@ -120,8 +120,10 @@
 | **Phase 37** | 生产运行态深度对齐（CLI `brief` 接入 `BriefAssembler`、内联脚本折叠、Unix `SIGPIPE` 零 Panic）、`LinksEngine` 测试/示例免疫（现网 `100/100`）、Systemd `codegraph` PATH 探测与 Benchmark `v3.2` (`DQ3` 联合门禁 & `COMP-C4` 等价校准) | [roadmap-phase37.md](roadmap-phase37.md) / ISSUE #20 | ✅ **已完成** | 2026-11-21 |
 | **Phase 38** | 全生命周期信息新鲜度与写穿失效体系（规约 #9/#13/#14/#21 升级、`mtime_secs` + `stale` 写穿重置旧向量、三后端 FTS `status='active'`、SPI `delete_fact_node`、`AutoSyncEngine` 幂等归档、`ChangeHandler` 删除级联清理、`PropertyGraphOrganizer` 幽灵节点剪枝与 `backfill_embeddings.py` `'ready'` 复位） | [roadmap-phase38-39.md](roadmap-phase38-39.md) / ISSUE #21 | ✅ **已完成** | 2026-11-21 |
 | **Phase 39** | 五点对比探针自进化引擎与 Benchmark `v3.3`（`P1~P5` 对比探针、`FeedbackEngine::add_item_deduped`、`FreshnessReconciler` 守护调度与黑白屏 `feedback reconcile/probes`、`W12` + `DQ5`，实测 `237/237` 全测试 PASS、探针 `5/5 ✅`、`DQ1~DQ5 100.0%`） | [roadmap-phase38-39.md](roadmap-phase38-39.md) / ISSUE #22 | ✅ **已完成** | 2026-11-21 |
+| **Phase 40** | 多维证据分层有向加权图谱增强（`L1/L2/L3` 关系本体、`links→fact_edges` 结构上卷、服务同体桥接、向量+标签隐式发现 Top-$K=3$、加权衰减爆炸半径与黑白屏 1:1 同步） | [roadmap-phase40-41.md](roadmap-phase40-41.md) / ISSUE #23 | 📋 **已规划 (`40.1 ✅`)** | 2026-11-22 |
+| **Phase 41** | 联邦网格 `MeshEnvelope v1.0` 协同协议（HMAC-SHA256 签名与防重放、Peer Scopes、跨机图谱/结构化对话双向脱敏抗投毒、`<=10MB` `~/.steward/mesh_inbox/` 沙盒投递与 Benchmark `v3.4` `W13`/`W14`/`DQ6`） | [roadmap-phase40-41.md](roadmap-phase40-41.md) / ISSUE #24 | 📋 **已规划** | 2026-11-22 |
 
-> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md)、[progress-phase27.md](progress-phase27.md)、[roadmap-phase29.md](roadmap-phase29.md)、[roadmap-phase30.md](roadmap-phase30.md)、[progress-phase30.md](progress-phase30.md)、[roadmap-phase32.md](roadmap-phase32.md)、[roadmap-phase34-35.md](roadmap-phase34-35.md)、[roadmap-phase36.md](roadmap-phase36.md)、[roadmap-phase37.md](roadmap-phase37.md) 与 [roadmap-phase38-39.md](roadmap-phase38-39.md)
+> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md)、[progress-phase27.md](progress-phase27.md)、[roadmap-phase29.md](roadmap-phase29.md)、[roadmap-phase30.md](roadmap-phase30.md)、[progress-phase30.md](progress-phase30.md)、[roadmap-phase32.md](roadmap-phase32.md)、[roadmap-phase34-35.md](roadmap-phase34-35.md)、[roadmap-phase36.md](roadmap-phase36.md)、[roadmap-phase37.md](roadmap-phase37.md)、[roadmap-phase38-39.md](roadmap-phase38-39.md) 与 [roadmap-phase40-41.md](roadmap-phase40-41.md)
 
 ---
 
@@ -167,9 +169,9 @@
 
 ## 断点恢复指引
 如果任务中断，重新启动时只需：
-1. 读取根目录 [EVOLUTION_GUIDE.md](../EVOLUTION_GUIDE.md) 与本文件 `src_doc/progress.md`；
-2. 查看当前全部完成的里程碑记录与下一阶段规划；
-3. 当前已完成 Phase 1~37（Phase 36~37 验收记录见 [roadmap-phase36.md](roadmap-phase36.md) 与 [roadmap-phase37.md](roadmap-phase37.md)），反馈总账对应条目位于 [user_feedback.md](../user_feedback.md)（`CON-08~11`, `BENCH-07~08`, `REQ-11` 已全部 `✅ Verified`）。后续如有新需求或反馈，先通过 `agent-steward feedback add` 登记总账并建立 `roadmap-phase38.md` 后按标准流程串行推进。
+1. 读取根目录 [EVOLUTION_GUIDE.md](../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase40-41.md](roadmap-phase40-41.md)；
+2. 查看子任务断点状态表并接续首个 `⏳` 任务；
+3. 当前已完成 Phase 1~39（最近归档见 [roadmap-phase38-39.md](roadmap-phase38-39.md)），Phase 40~41 已完成 `40.1` 立项与规约/设计规格对齐，反馈总账已登记 `CON-16`、`CON-17`、`BENCH-10`、`REQ-14`、`REQ-15`。后续每完成一个原子子任务立即在 `roadmap-phase40-41.md` 标为 `✅ 已完成` 并通过 `make evolution-check` 校验。
 
 🎉 **Phase 12（运行依赖显式化与可移植部署）已 100% 全量串行交付**：
 - 严格对齐 README.md ISSUE #10 四层贯通要求；

@@ -224,15 +224,13 @@ mod tests {
             updated_at: None,
         }).expect("upsert port");
 
-        storage.upsert_fact_edge(&FactEdgeRecord {
-            id: None,
-            source_id: "service:agent-steward".to_string(),
-            target_id: "port:8756".to_string(),
-            relation: "listens_on".to_string(),
-            properties: serde_json::json!({}),
-            confidence: 1.0,
-            updated_at: None,
-        }).expect("upsert edge");
+        storage.upsert_fact_edge(&FactEdgeRecord::new_explicit(
+            "service:agent-steward",
+            "port:8756",
+            "listens_on",
+            serde_json::json!({}),
+            1.0,
+        )).expect("upsert edge");
 
         // 插入带端口的活跃进程
         storage.replace_active_processes(&[ActiveProcessRecord {

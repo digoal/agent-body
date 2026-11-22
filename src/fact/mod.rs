@@ -3,12 +3,14 @@ pub mod process_net;
 pub mod automation;
 pub mod assets_catalog;
 pub mod property_graph;
+pub mod semantic_discovery;
 
 pub use capability::{CapabilityEngine, ToolCapability, CapabilityQueryResult};
 pub use process_net::{ProcessNetTopology, ListeningPortFact, PortQueryFactResult};
 pub use automation::{AutomationTopology, SystemdServiceFact, CronJobFact, FileImpactReport};
 pub use assets_catalog::{AssetsCatalogEngine, RepoFact, DocFact, CatalogOverview};
 pub use property_graph::PropertyGraphOrganizer;
+pub use semantic_discovery::{GraphRelationshipMiner, MiningReport};
 
 use anyhow::Result;
 

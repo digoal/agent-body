@@ -182,17 +182,20 @@ impl WebServer {
         }
         let mut raw: Vec<u8> = buffer[..bytes_read].to_vec();
 
-        // 若请求体分包到达 (如 reqwest 先发头后发体)，按 Content-Length 补读剩余请求体 (上限 64KB)
+        // 若请求体分包到达 (如 reqwest 先发头后发体)，按 Content-Length 补读剩余请求体
+        // 安全边界: 仅 /api/v1/mesh/transfer 放宽至 15MB (承载 10MB + Base64 信封)，其余一律限制 64KB 防 DoS
         if let Some(header_end) = raw.windows(4).position(|w| w == b"\r\n\r\n") {
             let header_text = String::from_utf8_lossy(&raw[..header_end]).to_lowercase();
+            let is_mesh_transfer = header_text.starts_with("post /api/v1/mesh/transfer");
+            let max_body_limit = if is_mesh_transfer { 15 * 1024 * 1024 } else { 65536 };
             let content_len = header_text
                 .lines()
                 .find_map(|l| l.strip_prefix("content-length:").and_then(|v| v.trim().parse::<usize>().ok()))
                 .unwrap_or(0)
-                .min(65536);
+                .min(max_body_limit);
             let body_start = header_end + 4;
             while raw.len() < body_start + content_len {
-                match tokio::time::timeout(std::time::Duration::from_millis(200), stream.read(&mut buffer)).await {
+                match tokio::time::timeout(std::time::Duration::from_millis(500), stream.read(&mut buffer)).await {
                     Ok(Ok(0)) | Err(_) => break,
                     Ok(Ok(n)) => raw.extend_from_slice(&buffer[..n]),
                     Ok(Err(e)) => return Err(e.into()),
@@ -278,10 +281,17 @@ impl WebServer {
         auth_token: &Option<String>,
         enforce_token_for_writes: bool,
     ) -> HttpResponse {
-        if let Some(err_resp) =
-            check_write_or_sensitive_auth(req, auth_token, enforce_token_for_writes)
-        {
-            return err_resp;
+        // /api/v1/mesh/dialogue 与 /api/v1/mesh/transfer 内置 MeshEnvelope v1.0 HMAC-SHA256 零信任签名校验
+        let uses_envelope_auth = matches!(
+            req.path.as_str(),
+            "/api/v1/mesh/dialogue" | "/api/v1/mesh/transfer"
+        );
+        if !uses_envelope_auth {
+            if let Some(err_resp) =
+                check_write_or_sensitive_auth(req, auth_token, enforce_token_for_writes)
+            {
+                return err_resp;
+            }
         }
         match (req.method.clone(), req.path.as_str()) {
             (Method::Get, "/api/v1/brief") => parity_api::handle_brief(req, storage),
@@ -367,6 +377,9 @@ impl WebServer {
             (Method::Get, "/api/v1/mesh/ping") => crate::mesh::handle_mesh_ping(req, auth_token),
             (Method::Get, "/api/v1/mesh/facts") => crate::mesh::handle_mesh_facts(req, auth_token),
             (Method::Get, "/api/v1/mesh/locks") => crate::mesh::handle_mesh_locks(req, storage, auth_token),
+            (Method::Get, "/api/v1/mesh/graph") => crate::mesh::handle_mesh_graph(req, storage, auth_token),
+            (Method::Post, "/api/v1/mesh/dialogue") => crate::mesh::handle_mesh_dialogue_http(req, storage, auth_token),
+            (Method::Post, "/api/v1/mesh/transfer") => crate::mesh::handle_mesh_transfer_http(req, storage, auth_token),
             _ => HttpResponse::not_found(&format!("Endpoint not found: {} {}", req.method.as_str(), req.path)),
         }
     }

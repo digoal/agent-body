@@ -6,13 +6,27 @@ use anyhow::Result;
 use crate::storage::Storage;
 use crate::links::codegraph_bridge::CodeGraphBridge;
 
+fn default_dep_weight() -> f32 {
+    1.0
+}
+
+fn default_dep_tier() -> String {
+    "L1_EXPLICIT".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DependentNode {
-    pub node_type: String, // "asset" | "service" | "memory" | "cron"
+    pub node_type: String, // "asset" | "service" | "memory" | "cron" | "project"
     pub node_id: String,
     pub relation: String,
     pub depth: usize,
     pub confidence: f32,
+    #[serde(default = "default_dep_weight")]
+    pub weight: f32,
+    #[serde(default = "default_dep_weight")]
+    pub effective_score: f32,
+    #[serde(default = "default_dep_tier")]
+    pub evidence_tier: String,
     pub line_number: Option<i32>,
     pub snippet: Option<String>,
     pub provenance: Option<String>,
@@ -39,9 +53,71 @@ impl ImpactAnalyzer {
         Self { storage }
     }
 
-    /// 分析指定目标对象（资产路径、服务或记忆）被谁所依赖（逆向爆炸半径推演，含精准出处与 CodeGraph 探测）
+    /// 分析指定目标对象（资产路径、服务或记忆）被谁所依赖（默认仅计 L1/L2 物理与结构强依赖，min_weight=0.50）
     pub fn analyze_impact(&self, target_id: &str, max_depth: usize) -> Result<ImpactAnalysisResult> {
-        let all_links = self.storage.list_all_links(1000)?;
+        self.analyze_impact_weighted(target_id, max_depth, 0.50, false)
+    }
+
+    /// 多维证据加权爆炸半径推演（融合 links 与 fact_edges，支持跳数衰减 0.8^(hop-1) 与 L3 隐式语义开关）
+    pub fn analyze_impact_weighted(
+        &self,
+        target_id: &str,
+        max_depth: usize,
+        min_weight: f32,
+        include_semantic: bool,
+    ) -> Result<ImpactAnalysisResult> {
+        let all_links = self.storage.list_all_links(2000)?;
+        let all_fact_edges = self.storage.list_all_fact_edges(5000).unwrap_or_default();
+
+        // 统一候选边模型: (source_id, source_type, target_id, relation, weight, tier, line_number, snippet, provenance)
+        struct UnifiedEdge {
+            src: String,
+            src_type: String,
+            tgt: String,
+            relation: String,
+            weight: f32,
+            tier: String,
+            line_number: Option<i32>,
+            snippet: Option<String>,
+            provenance: Option<String>,
+        }
+
+        let mut unified: Vec<UnifiedEdge> = Vec::with_capacity(all_links.len() + all_fact_edges.len());
+        for l in all_links {
+            if l.confidence >= min_weight {
+                unified.push(UnifiedEdge {
+                    src: l.source_id,
+                    src_type: l.source_type,
+                    tgt: l.target_id,
+                    relation: l.relation,
+                    weight: l.confidence,
+                    tier: "L1_EXPLICIT".to_string(),
+                    line_number: l.line_number,
+                    snippet: l.snippet,
+                    provenance: l.provenance,
+                });
+            }
+        }
+        for fe in all_fact_edges {
+            if fe.weight < min_weight {
+                continue;
+            }
+            if !include_semantic && fe.evidence_tier == "L3_SEMANTIC" {
+                continue;
+            }
+            let src_type = fe.source_id.split(':').next().unwrap_or("fact").to_string();
+            unified.push(UnifiedEdge {
+                src: fe.source_id,
+                src_type,
+                tgt: fe.target_id,
+                relation: fe.relation,
+                weight: fe.weight,
+                tier: fe.evidence_tier,
+                line_number: None,
+                snippet: fe.properties.get("reason").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                provenance: Some("property_graph".to_string()),
+            });
+        }
 
         let mut direct_dependents = Vec::new();
         let mut indirect_dependents = Vec::new();
@@ -53,54 +129,92 @@ impl ImpactAnalyzer {
             .map(|p| p.to_string_lossy().to_string());
         let has_codegraph = codegraph_db.is_some();
 
-        // BFS 队列: (current_id, current_depth)
+        // 兼容带前缀(project:/file:/service:)与裸路径双向匹配
         let mut queue = VecDeque::new();
         visited.insert(target_id.to_string());
-        queue.push_back((target_id.to_string(), 0));
+        queue.push_back((target_id.to_string(), 0usize, 1.0_f32));
 
-        while let Some((curr_id, depth)) = queue.pop_front() {
+        let matches_target = |candidate: &str, curr: &str| -> bool {
+            if candidate == curr {
+                return true;
+            }
+            if let Some(stripped) = curr.strip_prefix("file:").or_else(|| curr.strip_prefix("project:")) {
+                if candidate == stripped {
+                    return true;
+                }
+            }
+            if let Some(stripped) = candidate.strip_prefix("file:").or_else(|| candidate.strip_prefix("project:")) {
+                if stripped == curr {
+                    return true;
+                }
+            }
+            false
+        };
+
+        const HOP_DECAY: f32 = 0.80;
+        while let Some((curr_id, depth, acc_score)) = queue.pop_front() {
             if depth >= max_depth {
                 continue;
             }
 
-            // 在所有 links 中查找哪些 source 指向了当前 target:
-            // 即: link.target_id == curr_id，说明 link.source 依赖于 curr_id
-            for link in &all_links {
-                if link.target_id == curr_id && !visited.contains(&link.source_id) {
-                    visited.insert(link.source_id.clone());
+            for edge in &unified {
+                // 正向依赖: edge.tgt == curr_id => edge.src 受 curr_id 影响
+                // 对称语义(semantically_related): 双向均可发现
+                let hit_neighbor = if matches_target(&edge.tgt, &curr_id) {
+                    Some((&edge.src, &edge.src_type))
+                } else if edge.relation == "semantically_related" && matches_target(&edge.src, &curr_id) {
+                    Some((&edge.tgt, &edge.src_type))
+                } else {
+                    None
+                };
+
+                if let Some((neighbor_id, neighbor_type)) = hit_neighbor {
+                    if visited.contains(neighbor_id) {
+                        continue;
+                    }
+                    visited.insert(neighbor_id.clone());
                     let next_depth = depth + 1;
+                    let eff_score = (acc_score * edge.weight * HOP_DECAY.powi((next_depth as i32) - 1)).clamp(0.0, 1.0);
 
                     let node = DependentNode {
-                        node_type: link.source_type.clone(),
-                        node_id: link.source_id.clone(),
-                        relation: link.relation.clone(),
+                        node_type: neighbor_type.clone(),
+                        node_id: neighbor_id.clone(),
+                        relation: edge.relation.clone(),
                         depth: next_depth,
-                        confidence: link.confidence,
-                        line_number: link.line_number,
-                        snippet: link.snippet.clone(),
-                        provenance: link.provenance.clone(),
+                        confidence: edge.weight,
+                        weight: edge.weight,
+                        effective_score: (eff_score * 1000.0).round() / 1000.0,
+                        evidence_tier: edge.tier.clone(),
+                        line_number: edge.line_number,
+                        snippet: edge.snippet.clone(),
+                        provenance: edge.provenance.clone(),
                     };
 
                     if next_depth == 1 {
-                        direct_dependents.push(node.clone());
+                        direct_dependents.push(node);
                     } else {
-                        indirect_dependents.push(node.clone());
+                        indirect_dependents.push(node);
                     }
-
-                    queue.push_back((link.source_id.clone(), next_depth));
+                    queue.push_back((neighbor_id.clone(), next_depth, eff_score));
                 }
             }
         }
 
+        direct_dependents.sort_by(|a, b| b.effective_score.partial_cmp(&a.effective_score).unwrap_or(std::cmp::Ordering::Equal));
+        indirect_dependents.sort_by(|a, b| b.effective_score.partial_cmp(&a.effective_score).unwrap_or(std::cmp::Ordering::Equal));
+
+        let strong_count = direct_dependents.iter().chain(indirect_dependents.iter())
+            .filter(|d| d.evidence_tier != "L3_SEMANTIC")
+            .count();
         let total_count = direct_dependents.len() + indirect_dependents.len();
 
-        // 评估风险等级
+        // 评估风险等级（仅按强物理/结构依赖评估，避免语义弱关联虚高风险）
         let is_shared_or_core = target_id.contains("shared_proj") || target_id.contains("postgresql") || target_id.contains("config");
-        let risk_level = if total_count >= 5 || (total_count >= 2 && is_shared_or_core) {
+        let risk_level = if strong_count >= 5 || (strong_count >= 2 && is_shared_or_core) {
             "CRITICAL"
-        } else if total_count >= 3 || (total_count >= 1 && is_shared_or_core) {
+        } else if strong_count >= 3 || (strong_count >= 1 && is_shared_or_core) {
             "HIGH"
-        } else if total_count >= 1 {
+        } else if strong_count >= 1 {
             "MEDIUM"
         } else {
             "LOW"
@@ -115,9 +229,10 @@ impl ImpactAnalyzer {
         let summary = if total_count == 0 {
             format!("✅ 未检测到任何上下游资产或服务依赖 '{}'。改动或删除此对象爆炸半径极小 (Risk: LOW)。{}", target_id, codegraph_tip)
         } else {
+            let top_score = direct_dependents.first().map(|d| d.effective_score).unwrap_or(0.0);
             format!(
-                "⚠️ 发现 {} 个直接依赖与 {} 个多跳间接下游依赖于 '{}'。综合风险评级: {}！{}改动需确保接口向后兼容或提前迁移调用方。",
-                direct_dependents.len(), indirect_dependents.len(), target_id, risk_level, codegraph_tip
+                "⚠️ 发现 {} 个直接依赖与 {} 个多跳间接下游依赖于 '{}'（强依赖 {} 个，最高有效权重 {:.2}）。综合风险评级: {}！{}改动需确保接口向后兼容或提前迁移调用方。",
+                direct_dependents.len(), indirect_dependents.len(), target_id, strong_count, top_score, risk_level, codegraph_tip
             )
         };
 
@@ -161,5 +276,70 @@ mod tests {
 
         assert_eq!(res.total_dependents_count, 2);
         assert_eq!(res.risk_level, "CRITICAL"); // 属于 shared_proj 且依赖数 >= 2
+    }
+
+    #[test]
+    fn test_weighted_impact_fuses_fact_edges_and_filters_semantic() {
+        use crate::storage::models::{FactEdgeRecord, FactNodeRecord};
+
+        let storage = Arc::new(Storage::open_in_memory().expect("mem"));
+        for (id, ntype) in [
+            ("project:core", "project"),
+            ("project:downstream", "project"),
+            ("project:semantic_peer", "project"),
+        ] {
+            storage
+                .upsert_fact_node(&FactNodeRecord {
+                    id: id.into(),
+                    node_type: ntype.into(),
+                    name: id.into(),
+                    label: id.into(),
+                    properties: serde_json::json!({}),
+                    updated_at: None,
+                })
+                .expect("node");
+        }
+
+        storage
+            .upsert_fact_edge(&FactEdgeRecord {
+                id: None,
+                source_id: "project:downstream".into(),
+                target_id: "project:core".into(),
+                relation: "depends_on".into(),
+                properties: serde_json::json!({"reason": "L2 rollup"}),
+                confidence: 0.75,
+                evidence_tier: "L2_STRUCTURAL".into(),
+                weight: 0.75,
+                direction_kind: "forward_dependency".into(),
+                updated_at: None,
+            })
+            .expect("l2");
+        storage
+            .upsert_fact_edge(&FactEdgeRecord {
+                id: None,
+                source_id: "project:semantic_peer".into(),
+                target_id: "project:core".into(),
+                relation: "semantically_related".into(),
+                properties: serde_json::json!({"reason": "L3 semantic"}),
+                confidence: 0.48,
+                evidence_tier: "L3_SEMANTIC".into(),
+                weight: 0.48,
+                direction_kind: "symmetric_affinity".into(),
+                updated_at: None,
+            })
+            .expect("l3");
+
+        let analyzer = ImpactAnalyzer::new(storage);
+        // 默认分析应排除 L3 语义弱关联
+        let strict = analyzer.analyze_impact("project:core", 2).expect("strict");
+        assert_eq!(strict.direct_dependents.len(), 1);
+        assert_eq!(strict.direct_dependents[0].node_id, "project:downstream");
+
+        // 显式放开 L3 且降低权重阈值时应全部命中，且强边排在前面
+        let full = analyzer
+            .analyze_impact_weighted("project:core", 2, 0.35, true)
+            .expect("full");
+        assert_eq!(full.direct_dependents.len(), 2);
+        assert!(full.direct_dependents[0].effective_score > full.direct_dependents[1].effective_score);
     }
 }

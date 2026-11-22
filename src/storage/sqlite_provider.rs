@@ -92,20 +92,66 @@ impl StorageProvider for SqliteStorageProvider {
         let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_nodes_name ON fact_nodes(name)", []);
 
         let _ = conn.execute("CREATE TABLE IF NOT EXISTS fact_edges (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            source_id   TEXT NOT NULL,
-            target_id   TEXT NOT NULL,
-            relation    TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains')),
-            properties  TEXT DEFAULT '{}',
-            confidence  REAL DEFAULT 1.0,
-            updated_at  TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id      TEXT NOT NULL,
+            target_id      TEXT NOT NULL,
+            relation       TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains','uses_tool','runs_as','documented_by','semantically_related')),
+            properties     TEXT DEFAULT '{}',
+            confidence     REAL DEFAULT 1.0,
+            evidence_tier  TEXT NOT NULL DEFAULT 'L1_EXPLICIT',
+            weight         REAL NOT NULL DEFAULT 1.0,
+            direction_kind TEXT NOT NULL DEFAULT 'forward_dependency',
+            updated_at     TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
             UNIQUE(source_id, target_id, relation),
             FOREIGN KEY(source_id) REFERENCES fact_nodes(id) ON DELETE CASCADE,
             FOREIGN KEY(target_id) REFERENCES fact_nodes(id) ON DELETE CASCADE
         )", []);
+
+        // 幂等热迁移老库 fact_edges（补充 evidence_tier/weight/direction_kind 并放开新关系 CHECK 约束）
+        let existing_ddl: String = conn
+            .query_row(
+                "SELECT COALESCE(sql, '') FROM sqlite_master WHERE type='table' AND name='fact_edges'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or_default();
+        if !existing_ddl.is_empty()
+            && (!existing_ddl.contains("evidence_tier") || !existing_ddl.contains("semantically_related"))
+        {
+            let _ = conn.execute_batch(
+                "PRAGMA foreign_keys = OFF;
+                 BEGIN IMMEDIATE;
+                 CREATE TABLE fact_edges_v40 (
+                     id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                     source_id      TEXT NOT NULL,
+                     target_id      TEXT NOT NULL,
+                     relation       TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains','uses_tool','runs_as','documented_by','semantically_related')),
+                     properties     TEXT DEFAULT '{}',
+                     confidence     REAL DEFAULT 1.0,
+                     evidence_tier  TEXT NOT NULL DEFAULT 'L1_EXPLICIT',
+                     weight         REAL NOT NULL DEFAULT 1.0,
+                     direction_kind TEXT NOT NULL DEFAULT 'forward_dependency',
+                     updated_at     TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
+                     UNIQUE(source_id, target_id, relation),
+                     FOREIGN KEY(source_id) REFERENCES fact_nodes(id) ON DELETE CASCADE,
+                     FOREIGN KEY(target_id) REFERENCES fact_nodes(id) ON DELETE CASCADE
+                 );
+                 INSERT OR IGNORE INTO fact_edges_v40 (id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at)
+                 SELECT id, source_id, target_id, relation, properties, confidence, 'L1_EXPLICIT', confidence,
+                        CASE relation WHEN 'scheduled_by' THEN 'reverse_schedule' WHEN 'part_of' THEN 'derivation_flow' WHEN 'contains' THEN 'derivation_flow' ELSE 'forward_dependency' END,
+                        updated_at
+                 FROM fact_edges;
+                 DROP TABLE fact_edges;
+                 ALTER TABLE fact_edges_v40 RENAME TO fact_edges;
+                 COMMIT;
+                 PRAGMA foreign_keys = ON;",
+            );
+        }
+
         let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_edges_source ON fact_edges(source_id)", []);
         let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_edges_target ON fact_edges(target_id)", []);
         let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_edges_relation ON fact_edges(relation)", []);
+        let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_edges_tier ON fact_edges(evidence_tier)", []);
         Ok(())
     }
 
@@ -836,13 +882,25 @@ impl StorageProvider for SqliteStorageProvider {
         let conn = self.lock_conn()?;
         let props_str = serde_json::to_string(&edge.properties)?;
         conn.execute(
-            "INSERT INTO fact_edges (source_id, target_id, relation, properties, confidence, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+            "INSERT INTO fact_edges (source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
              ON CONFLICT(source_id, target_id, relation) DO UPDATE SET
                 properties = excluded.properties,
                 confidence = excluded.confidence,
+                evidence_tier = excluded.evidence_tier,
+                weight = excluded.weight,
+                direction_kind = excluded.direction_kind,
                 updated_at = strftime('%Y-%m-%dT%H:%M:%f+00:00','now')",
-            params![edge.source_id, edge.target_id, edge.relation, props_str, edge.confidence],
+            params![
+                edge.source_id,
+                edge.target_id,
+                edge.relation,
+                props_str,
+                edge.confidence,
+                edge.evidence_tier,
+                edge.weight,
+                edge.direction_kind,
+            ],
         )?;
         Ok(())
     }
@@ -915,7 +973,7 @@ impl StorageProvider for SqliteStorageProvider {
 
             for node_id in &current_frontier {
                 let mut stmt = conn.prepare(
-                    "SELECT id, source_id, target_id, relation, properties, confidence, updated_at
+                    "SELECT id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at
                      FROM fact_edges
                      WHERE source_id = ?1 OR target_id = ?1"
                 )?;
@@ -930,7 +988,10 @@ impl StorageProvider for SqliteStorageProvider {
                         relation: row.get(3)?,
                         properties: props,
                         confidence: row.get(5)?,
-                        updated_at: row.get(6)?,
+                        evidence_tier: row.get(6)?,
+                        weight: row.get(7)?,
+                        direction_kind: row.get(8)?,
+                        updated_at: row.get(9)?,
                     })
                 })?.collect::<Result<Vec<_>, _>>()?;
 
@@ -1005,7 +1066,7 @@ impl StorageProvider for SqliteStorageProvider {
     fn list_all_fact_edges(&self, limit: usize) -> Result<Vec<FactEdgeRecord>> {
         let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
-            "SELECT id, source_id, target_id, relation, properties, confidence, updated_at FROM fact_edges ORDER BY id LIMIT ?1"
+            "SELECT id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at FROM fact_edges ORDER BY id LIMIT ?1"
         )?;
         let edges = stmt.query_map(params![limit as i64], |row| {
             let props_str: String = row.get(4)?;
@@ -1017,7 +1078,10 @@ impl StorageProvider for SqliteStorageProvider {
                 relation: row.get(3)?,
                 properties,
                 confidence: row.get(5)?,
-                updated_at: row.get(6)?,
+                evidence_tier: row.get(6)?,
+                weight: row.get(7)?,
+                direction_kind: row.get(8)?,
+                updated_at: row.get(9)?,
             })
         })?.collect::<Result<Vec<_>, _>>()?;
         Ok(edges)
@@ -1030,6 +1094,15 @@ impl StorageProvider for SqliteStorageProvider {
             params![id],
         )?;
         let affected = conn.execute("DELETE FROM fact_nodes WHERE id = ?1", params![id])?;
+        Ok(affected)
+    }
+
+    fn delete_fact_edges_by_tier(&self, tier: &str) -> Result<usize> {
+        let conn = self.lock_conn()?;
+        let affected = conn.execute(
+            "DELETE FROM fact_edges WHERE evidence_tier = ?1",
+            params![tier],
+        )?;
         Ok(affected)
     }
 
@@ -1740,6 +1813,137 @@ impl StorageProvider for SqliteStorageProvider {
             [],
         )?;
         Ok(removed)
+    }
+
+    fn insert_mesh_dialogue(&self, rec: &MeshDialogueRecord) -> Result<()> {
+        let conn = self.lock_conn()?;
+        conn.execute(
+            "INSERT OR REPLACE INTO mesh_dialogues
+             (dialogue_id, thread_id, from_node, from_agent, to_node, to_agent, intent, content, redaction_hits, injection_flagged, verified_signature, status, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            params![
+                rec.dialogue_id,
+                rec.thread_id,
+                rec.from_node,
+                rec.from_agent,
+                rec.to_node,
+                rec.to_agent,
+                rec.intent,
+                rec.content,
+                rec.redaction_hits as i64,
+                if rec.injection_flagged { 1i32 } else { 0i32 },
+                if rec.verified_signature { 1i32 } else { 0i32 },
+                rec.status,
+                rec.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_mesh_dialogues(&self, limit: usize) -> Result<Vec<MeshDialogueRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT dialogue_id, thread_id, from_node, from_agent, to_node, to_agent, intent, content, redaction_hits, injection_flagged, verified_signature, status, created_at
+             FROM mesh_dialogues ORDER BY created_at DESC LIMIT ?1",
+        )?;
+        let rows = stmt
+            .query_map(params![limit as i64], |r| {
+                Ok(MeshDialogueRecord {
+                    dialogue_id: r.get(0)?,
+                    thread_id: r.get(1)?,
+                    from_node: r.get(2)?,
+                    from_agent: r.get(3)?,
+                    to_node: r.get(4)?,
+                    to_agent: r.get(5)?,
+                    intent: r.get(6)?,
+                    content: r.get(7)?,
+                    redaction_hits: r.get::<_, i64>(8)? as usize,
+                    injection_flagged: r.get::<_, i32>(9)? != 0,
+                    verified_signature: r.get::<_, i32>(10)? != 0,
+                    status: r.get(11)?,
+                    created_at: r.get(12)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    fn update_mesh_dialogue_status(&self, dialogue_id: &str, status: &str) -> Result<bool> {
+        let conn = self.lock_conn()?;
+        let n = conn.execute(
+            "UPDATE mesh_dialogues SET status = ?1 WHERE dialogue_id = ?2",
+            params![status, dialogue_id],
+        )?;
+        Ok(n > 0)
+    }
+
+    fn insert_mesh_transfer(&self, rec: &MeshTransferRecord) -> Result<()> {
+        let conn = self.lock_conn()?;
+        conn.execute(
+            "INSERT OR REPLACE INTO mesh_transfers
+             (transfer_id, from_node, from_agent, to_node, file_name, size_bytes, sha256, inbox_path, secret_warnings, verified_signature, status, accepted_path, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+            params![
+                rec.transfer_id,
+                rec.from_node,
+                rec.from_agent,
+                rec.to_node,
+                rec.file_name,
+                rec.size_bytes as i64,
+                rec.sha256,
+                rec.inbox_path,
+                rec.secret_warnings as i64,
+                if rec.verified_signature { 1i32 } else { 0i32 },
+                rec.status,
+                rec.accepted_path,
+                rec.created_at,
+                rec.updated_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_mesh_transfers(&self, limit: usize) -> Result<Vec<MeshTransferRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT transfer_id, from_node, from_agent, to_node, file_name, size_bytes, sha256, inbox_path, secret_warnings, verified_signature, status, accepted_path, created_at, updated_at
+             FROM mesh_transfers ORDER BY created_at DESC LIMIT ?1",
+        )?;
+        let rows = stmt
+            .query_map(params![limit as i64], |r| {
+                Ok(MeshTransferRecord {
+                    transfer_id: r.get(0)?,
+                    from_node: r.get(1)?,
+                    from_agent: r.get(2)?,
+                    to_node: r.get(3)?,
+                    file_name: r.get(4)?,
+                    size_bytes: r.get::<_, i64>(5)? as u64,
+                    sha256: r.get(6)?,
+                    inbox_path: r.get(7)?,
+                    secret_warnings: r.get::<_, i64>(8)? as usize,
+                    verified_signature: r.get::<_, i32>(9)? != 0,
+                    status: r.get(10)?,
+                    accepted_path: r.get(11)?,
+                    created_at: r.get(12)?,
+                    updated_at: r.get(13)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    fn update_mesh_transfer_status(
+        &self,
+        transfer_id: &str,
+        status: &str,
+        accepted_path: Option<&str>,
+    ) -> Result<bool> {
+        let conn = self.lock_conn()?;
+        let n = conn.execute(
+            "UPDATE mesh_transfers SET status = ?1, accepted_path = COALESCE(?2, accepted_path), updated_at = strftime('%Y-%m-%dT%H:%M:%f+00:00','now') WHERE transfer_id = ?3",
+            params![status, accepted_path, transfer_id],
+        )?;
+        Ok(n > 0)
     }
 }
 

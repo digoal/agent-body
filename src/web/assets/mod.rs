@@ -423,6 +423,9 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                     <button id="btn-mesh-ping" class="btn btn-primary btn-xs">📡 Ping Peers</button>
                     <input id="mesh-port-input" class="input input-sm" style="width:80px;" type="number" value="8080" />
                     <button id="btn-mesh-port" class="btn btn-ghost btn-xs">🌐 联邦查端口</button>
+                    <button id="btn-mesh-graph" class="btn btn-ghost btn-xs">🕸️ 联邦图谱</button>
+                    <button id="btn-mesh-dialogue-inbox" class="btn btn-ghost btn-xs">💬 对话收件箱</button>
+                    <button id="btn-mesh-transfer-inbox" class="btn btn-ghost btn-xs">📦 沙盒收件箱</button>
                   </div>
                 </div>
                 <div id="gov-mesh-preflight" class="card-body scroll-sm"></div>
@@ -1495,6 +1498,9 @@ function bindOtherControls() {
   document.getElementById("btn-session-close")?.addEventListener("click", runSessionClosePreview);
   document.getElementById("btn-mesh-ping")?.addEventListener("click", () => runMeshQuery("ping"));
   document.getElementById("btn-mesh-port")?.addEventListener("click", () => runMeshQuery("port"));
+  document.getElementById("btn-mesh-graph")?.addEventListener("click", () => runMeshQuery("graph"));
+  document.getElementById("btn-mesh-dialogue-inbox")?.addEventListener("click", () => runMeshQuery("dialogue_inbox"));
+  document.getElementById("btn-mesh-transfer-inbox")?.addEventListener("click", () => runMeshQuery("transfer_inbox"));
   document.getElementById("btn-demo-cruise")?.addEventListener("click", toggleDemoCruise);
   document.getElementById("btn-demo-presenter")?.addEventListener("click", () => document.body.classList.toggle("presenter-mode"));
   document.getElementById("btn-demo-reset")?.addEventListener("click", resetDemoSandbox);
@@ -2291,12 +2297,16 @@ function drawTopology() {
 
   for (const e of state.simEdges) {
     const isFocus = focusId && (e.source === focusId || e.target === focusId);
+    const isSemantic = e.evidence_tier === "L3_SEMANTIC";
     ctx.beginPath();
+    ctx.setLineDash(isSemantic ? [5, 4] : []);
     ctx.moveTo(e.sNode.x, e.sNode.y);
     ctx.lineTo(e.tNode.x, e.tNode.y);
     ctx.strokeStyle = isFocus ? edgeFocus : edgeNormal;
-    ctx.lineWidth = isFocus ? 2.2 : 1.0;
+    const baseW = typeof e.weight === "number" ? Math.max(0.7, Math.min(2.0, e.weight * 1.8)) : 1.0;
+    ctx.lineWidth = isFocus ? 2.4 : baseW;
     ctx.stroke();
+    ctx.setLineDash([]);
 
     if (isFocus || state.cam.zoom > 0.9) {
       const mx = (e.sNode.x + e.tNode.x) / 2;

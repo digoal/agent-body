@@ -57,9 +57,28 @@ pub trait StorageProvider: Send + Sync {
     fn get_fact_node(&self, id: &str) -> Result<Option<FactNodeRecord>>;
     fn find_fact_nodes_by_name(&self, name: &str) -> Result<Vec<FactNodeRecord>>;
     fn traverse_fact_graph(&self, root_id: &str, max_hops: usize) -> Result<SubGraph>;
+    fn traverse_fact_graph_filtered(
+        &self,
+        root_id: &str,
+        max_hops: usize,
+        min_weight: f32,
+        tiers: Option<&[&str]>,
+    ) -> Result<SubGraph> {
+        let mut sub = self.traverse_fact_graph(root_id, max_hops)?;
+        sub.edges.retain(|e| {
+            e.weight >= min_weight
+                && tiers
+                    .map(|ts| ts.iter().any(|t| *t == e.evidence_tier))
+                    .unwrap_or(true)
+        });
+        Ok(sub)
+    }
     fn list_all_fact_nodes(&self, limit: usize) -> Result<Vec<FactNodeRecord>>;
     fn list_all_fact_edges(&self, limit: usize) -> Result<Vec<FactEdgeRecord>>;
     fn delete_fact_node(&self, _id: &str) -> Result<usize> {
+        Ok(0)
+    }
+    fn delete_fact_edges_by_tier(&self, _tier: &str) -> Result<usize> {
         Ok(0)
     }
 
@@ -109,4 +128,33 @@ pub trait StorageProvider: Send + Sync {
     fn insert_effectiveness_event(&self, event: &EffectivenessLedgerRecord) -> Result<()>;
     fn query_effectiveness_ledger(&self, window: &str, tool_filter: Option<&str>, limit: usize) -> Result<EffectivenessSummary>;
     fn delete_bench_sandbox_records(&self) -> Result<usize>;
+
+    // ─── Mesh Protocol v1.0 Dialogues & Sandboxed Transfers (Phase 41) ──
+    fn insert_mesh_dialogue(&self, rec: &MeshDialogueRecord) -> Result<()> {
+        let _ = rec;
+        Ok(())
+    }
+    fn list_mesh_dialogues(&self, limit: usize) -> Result<Vec<MeshDialogueRecord>> {
+        let _ = limit;
+        Ok(Vec::new())
+    }
+    fn update_mesh_dialogue_status(&self, _dialogue_id: &str, _status: &str) -> Result<bool> {
+        Ok(false)
+    }
+    fn insert_mesh_transfer(&self, rec: &MeshTransferRecord) -> Result<()> {
+        let _ = rec;
+        Ok(())
+    }
+    fn list_mesh_transfers(&self, limit: usize) -> Result<Vec<MeshTransferRecord>> {
+        let _ = limit;
+        Ok(Vec::new())
+    }
+    fn update_mesh_transfer_status(
+        &self,
+        _transfer_id: &str,
+        _status: &str,
+        _accepted_path: Option<&str>,
+    ) -> Result<bool> {
+        Ok(false)
+    }
 }

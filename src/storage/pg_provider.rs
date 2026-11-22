@@ -52,7 +52,11 @@ impl StorageProvider for PgStorageProvider {
             .context("执行内置 PostgreSQL Schema 批处理失败")?;
         let _ = client.batch_execute(
             "ALTER TABLE assets ADD COLUMN IF NOT EXISTS embedding TEXT DEFAULT '[]';
-             ALTER TABLE fact_nodes ADD COLUMN IF NOT EXISTS embedding TEXT DEFAULT '[]';"
+             ALTER TABLE fact_nodes ADD COLUMN IF NOT EXISTS embedding TEXT DEFAULT '[]';
+             ALTER TABLE fact_edges ADD COLUMN IF NOT EXISTS evidence_tier TEXT NOT NULL DEFAULT 'L1_EXPLICIT';
+             ALTER TABLE fact_edges ADD COLUMN IF NOT EXISTS weight REAL NOT NULL DEFAULT 1.0;
+             ALTER TABLE fact_edges ADD COLUMN IF NOT EXISTS direction_kind TEXT NOT NULL DEFAULT 'forward_dependency';
+             CREATE INDEX IF NOT EXISTS idx_pg_fact_edges_tier ON fact_edges(evidence_tier);"
         );
 
         // 预置放置规范规则
@@ -835,13 +839,25 @@ impl StorageProvider for PgStorageProvider {
     fn upsert_fact_edge(&self, edge: &FactEdgeRecord) -> Result<()> {
         let mut client = self.lock_client()?;
         client.execute(
-            "INSERT INTO fact_edges (source_id, target_id, relation, properties, confidence, updated_at)
-             VALUES ($1, $2, $3, $4, $5, NOW())
+            "INSERT INTO fact_edges (source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
              ON CONFLICT (source_id, target_id, relation) DO UPDATE SET
                 properties = EXCLUDED.properties,
                 confidence = EXCLUDED.confidence,
+                evidence_tier = EXCLUDED.evidence_tier,
+                weight = EXCLUDED.weight,
+                direction_kind = EXCLUDED.direction_kind,
                 updated_at = NOW()",
-            &[&edge.source_id, &edge.target_id, &edge.relation, &edge.properties, &edge.confidence],
+            &[
+                &edge.source_id,
+                &edge.target_id,
+                &edge.relation,
+                &edge.properties,
+                &edge.confidence,
+                &edge.evidence_tier,
+                &edge.weight,
+                &edge.direction_kind,
+            ],
         )?;
         Ok(())
     }
@@ -913,7 +929,7 @@ impl StorageProvider for PgStorageProvider {
 
             for node_id in &current_frontier {
                 let rows = client.query(
-                    "SELECT id, source_id, target_id, relation, properties, confidence, updated_at
+                    "SELECT id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at
                      FROM fact_edges
                      WHERE source_id = $1 OR target_id = $1",
                     &[&node_id],
@@ -926,7 +942,10 @@ impl StorageProvider for PgStorageProvider {
                     let rel: String = row.get(3);
                     let props: serde_json::Value = row.get(4);
                     let conf: f32 = row.get(5);
-                    let updated: Option<chrono::DateTime<chrono::Utc>> = row.get(6);
+                    let tier: String = row.get(6);
+                    let weight: f32 = row.get(7);
+                    let dir: String = row.get(8);
+                    let updated: Option<chrono::DateTime<chrono::Utc>> = row.get(9);
 
                     let other_id = if &src == node_id {
                         tgt.clone()
@@ -949,6 +968,9 @@ impl StorageProvider for PgStorageProvider {
                             relation: rel,
                             properties: props,
                             confidence: conf,
+                            evidence_tier: tier,
+                            weight,
+                            direction_kind: dir,
                             updated_at: updated.map(|u| u.to_rfc3339()),
                         });
                     }
@@ -1007,13 +1029,13 @@ impl StorageProvider for PgStorageProvider {
     fn list_all_fact_edges(&self, limit: usize) -> Result<Vec<FactEdgeRecord>> {
         let mut client = self.lock_client()?;
         let rows = client.query(
-            "SELECT id, source_id, target_id, relation, properties, confidence, updated_at FROM fact_edges ORDER BY id LIMIT $1",
+            "SELECT id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at FROM fact_edges ORDER BY id LIMIT $1",
             &[&(limit as i64)],
         )?;
         let mut edges = Vec::new();
         for row in rows {
             let id_i64: i64 = row.get(0);
-            let updated: Option<chrono::DateTime<chrono::Utc>> = row.get(6);
+            let updated: Option<chrono::DateTime<chrono::Utc>> = row.get(9);
             edges.push(FactEdgeRecord {
                 id: Some(id_i64),
                 source_id: row.get(1),
@@ -1021,6 +1043,9 @@ impl StorageProvider for PgStorageProvider {
                 relation: row.get(3),
                 properties: row.get(4),
                 confidence: row.get(5),
+                evidence_tier: row.get(6),
+                weight: row.get(7),
+                direction_kind: row.get(8),
                 updated_at: updated.map(|u| u.to_rfc3339()),
             });
         }
@@ -1034,6 +1059,15 @@ impl StorageProvider for PgStorageProvider {
             &[&id],
         )?;
         let affected = client.execute("DELETE FROM fact_nodes WHERE id = $1", &[&id])?;
+        Ok(affected as usize)
+    }
+
+    fn delete_fact_edges_by_tier(&self, tier: &str) -> Result<usize> {
+        let mut client = self.lock_client()?;
+        let affected = client.execute(
+            "DELETE FROM fact_edges WHERE evidence_tier = $1",
+            &[&tier],
+        )?;
         Ok(affected as usize)
     }
 
@@ -1678,6 +1712,116 @@ impl StorageProvider for PgStorageProvider {
         )? as usize;
         Ok(removed)
     }
+
+    fn insert_mesh_dialogue(&self, rec: &MeshDialogueRecord) -> Result<()> {
+        let mut client = self.lock_client()?;
+        let rh = rec.redaction_hits as i32;
+        let inj = if rec.injection_flagged { 1i32 } else { 0i32 };
+        let ver = if rec.verified_signature { 1i32 } else { 0i32 };
+        client.execute(
+            "INSERT INTO mesh_dialogues
+             (dialogue_id, thread_id, from_node, from_agent, to_node, to_agent, intent, content, redaction_hits, injection_flagged, verified_signature, status, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+             ON CONFLICT (dialogue_id) DO UPDATE SET status = EXCLUDED.status",
+            &[
+                &rec.dialogue_id, &rec.thread_id, &rec.from_node, &rec.from_agent, &rec.to_node,
+                &rec.to_agent, &rec.intent, &rec.content, &rh, &inj, &ver, &rec.status, &rec.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_mesh_dialogues(&self, limit: usize) -> Result<Vec<MeshDialogueRecord>> {
+        let mut client = self.lock_client()?;
+        let rows = client.query(
+            "SELECT dialogue_id, thread_id, from_node, from_agent, to_node, to_agent, intent, content, redaction_hits, injection_flagged, verified_signature, status, created_at
+             FROM mesh_dialogues ORDER BY created_at DESC LIMIT $1",
+            &[&(limit as i64)],
+        )?;
+        Ok(rows.into_iter().map(|r| MeshDialogueRecord {
+            dialogue_id: r.get(0),
+            thread_id: r.get(1),
+            from_node: r.get(2),
+            from_agent: r.get(3),
+            to_node: r.get(4),
+            to_agent: r.get(5),
+            intent: r.get(6),
+            content: r.get(7),
+            redaction_hits: r.get::<_, i32>(8) as usize,
+            injection_flagged: r.get::<_, i32>(9) != 0,
+            verified_signature: r.get::<_, i32>(10) != 0,
+            status: r.get(11),
+            created_at: r.get(12),
+        }).collect())
+    }
+
+    fn update_mesh_dialogue_status(&self, dialogue_id: &str, status: &str) -> Result<bool> {
+        let mut client = self.lock_client()?;
+        let n = client.execute(
+            "UPDATE mesh_dialogues SET status = $1 WHERE dialogue_id = $2",
+            &[&status, &dialogue_id],
+        )?;
+        Ok(n > 0)
+    }
+
+    fn insert_mesh_transfer(&self, rec: &MeshTransferRecord) -> Result<()> {
+        let mut client = self.lock_client()?;
+        let sz = rec.size_bytes as i64;
+        let sw = rec.secret_warnings as i32;
+        let ver = if rec.verified_signature { 1i32 } else { 0i32 };
+        client.execute(
+            "INSERT INTO mesh_transfers
+             (transfer_id, from_node, from_agent, to_node, file_name, size_bytes, sha256, inbox_path, secret_warnings, verified_signature, status, accepted_path, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+             ON CONFLICT (transfer_id) DO UPDATE SET status = EXCLUDED.status, accepted_path = EXCLUDED.accepted_path, updated_at = EXCLUDED.updated_at",
+            &[
+                &rec.transfer_id, &rec.from_node, &rec.from_agent, &rec.to_node, &rec.file_name,
+                &sz, &rec.sha256, &rec.inbox_path, &sw, &ver, &rec.status, &rec.accepted_path,
+                &rec.created_at, &rec.updated_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_mesh_transfers(&self, limit: usize) -> Result<Vec<MeshTransferRecord>> {
+        let mut client = self.lock_client()?;
+        let rows = client.query(
+            "SELECT transfer_id, from_node, from_agent, to_node, file_name, size_bytes, sha256, inbox_path, secret_warnings, verified_signature, status, accepted_path, created_at, updated_at
+             FROM mesh_transfers ORDER BY created_at DESC LIMIT $1",
+            &[&(limit as i64)],
+        )?;
+        Ok(rows.into_iter().map(|r| MeshTransferRecord {
+            transfer_id: r.get(0),
+            from_node: r.get(1),
+            from_agent: r.get(2),
+            to_node: r.get(3),
+            file_name: r.get(4),
+            size_bytes: r.get::<_, i64>(5) as u64,
+            sha256: r.get(6),
+            inbox_path: r.get(7),
+            secret_warnings: r.get::<_, i32>(8) as usize,
+            verified_signature: r.get::<_, i32>(9) != 0,
+            status: r.get(10),
+            accepted_path: r.get(11),
+            created_at: r.get(12),
+            updated_at: r.get(13),
+        }).collect())
+    }
+
+    fn update_mesh_transfer_status(
+        &self,
+        transfer_id: &str,
+        status: &str,
+        accepted_path: Option<&str>,
+    ) -> Result<bool> {
+        let mut client = self.lock_client()?;
+        let now = chrono::Utc::now().to_rfc3339();
+        let n = client.execute(
+            "UPDATE mesh_transfers SET status = $1, accepted_path = COALESCE($2, accepted_path), updated_at = $3 WHERE transfer_id = $4",
+            &[&status, &accepted_path, &now, &transfer_id],
+        )?;
+        Ok(n > 0)
+    }
 }
 
 impl PgStorageProvider {
@@ -1882,15 +2026,13 @@ mod tests {
         };
         provider.upsert_fact_node(&port_node).expect("upsert port node");
 
-        let edge = FactEdgeRecord {
-            id: None,
-            source_id: "service:pg_test_daemon".to_string(),
-            target_id: "port:5432".to_string(),
-            relation: "listens_on".to_string(),
-            properties: serde_json::json!({}),
-            confidence: 1.0,
-            updated_at: None,
-        };
+        let edge = FactEdgeRecord::new_explicit(
+            "service:pg_test_daemon",
+            "port:5432",
+            "listens_on",
+            serde_json::json!({}),
+            1.0,
+        );
         provider.upsert_fact_edge(&edge).expect("upsert edge");
 
         let sub = provider.traverse_fact_graph("service:pg_test_daemon", 1).expect("traverse graph");

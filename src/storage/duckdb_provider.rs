@@ -55,6 +55,9 @@ impl StorageProvider for DuckDbStorageProvider {
             .context("执行 DuckDB Schema 批处理失败")?;
         let _ = conn.execute("ALTER TABLE assets ADD COLUMN embedding VARCHAR DEFAULT '[]'", []);
         let _ = conn.execute("ALTER TABLE fact_nodes ADD COLUMN embedding VARCHAR DEFAULT '[]'", []);
+        let _ = conn.execute("ALTER TABLE fact_edges ADD COLUMN evidence_tier VARCHAR DEFAULT 'L1_EXPLICIT'", []);
+        let _ = conn.execute("ALTER TABLE fact_edges ADD COLUMN weight FLOAT DEFAULT 1.0", []);
+        let _ = conn.execute("ALTER TABLE fact_edges ADD COLUMN direction_kind VARCHAR DEFAULT 'forward_dependency'", []);
 
         // 预置放置规则
         let presets = [
@@ -844,15 +847,22 @@ impl StorageProvider for DuckDbStorageProvider {
         let conn = self.lock_conn()?;
         let props_str = serde_json::to_string(&edge.properties)?;
 
+        let _ = conn.execute(
+            "DELETE FROM fact_edges WHERE source_id = ?1 AND target_id = ?2 AND relation = ?3",
+            params![edge.source_id, edge.target_id, edge.relation],
+        );
         conn.execute(
-            "INSERT INTO fact_edges (source_id, target_id, relation, properties, confidence, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))",
+            "INSERT INTO fact_edges (source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))",
             params![
                 edge.source_id,
                 edge.target_id,
                 edge.relation,
                 props_str,
                 edge.confidence as f64,
+                edge.evidence_tier,
+                edge.weight as f64,
+                edge.direction_kind,
             ],
         )?;
         Ok(())
@@ -929,7 +939,7 @@ impl StorageProvider for DuckDbStorageProvider {
 
             for node_id in &current_frontier {
                 let mut stmt = conn.prepare(
-                    "SELECT id, source_id, target_id, relation, properties, confidence, updated_at
+                    "SELECT id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at
                      FROM fact_edges
                      WHERE source_id = ?1 OR target_id = ?1"
                 )?;
@@ -938,6 +948,9 @@ impl StorageProvider for DuckDbStorageProvider {
                     let props_str: String = row.get(4)?;
                     let props = serde_json::from_str(&props_str).unwrap_or(serde_json::json!({}));
                     let conf_f: f64 = row.get(5)?;
+                    let tier: Option<String> = row.get(6)?;
+                    let weight_f: Option<f64> = row.get(7)?;
+                    let dir: Option<String> = row.get(8)?;
                     Ok(FactEdgeRecord {
                         id: row.get(0)?,
                         source_id: row.get(1)?,
@@ -945,7 +958,10 @@ impl StorageProvider for DuckDbStorageProvider {
                         relation: row.get(3)?,
                         properties: props,
                         confidence: conf_f as f32,
-                        updated_at: row.get(6)?,
+                        evidence_tier: tier.unwrap_or_else(|| "L1_EXPLICIT".to_string()),
+                        weight: weight_f.unwrap_or(conf_f) as f32,
+                        direction_kind: dir.unwrap_or_else(|| "forward_dependency".to_string()),
+                        updated_at: row.get(9)?,
                     })
                 })?.collect::<std::result::Result<Vec<_>, _>>()?;
 
@@ -1026,7 +1042,7 @@ impl StorageProvider for DuckDbStorageProvider {
     fn list_all_fact_edges(&self, limit: usize) -> Result<Vec<FactEdgeRecord>> {
         let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
-            "SELECT id, source_id, target_id, relation, properties, confidence, updated_at
+            "SELECT id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at
              FROM fact_edges
              ORDER BY updated_at DESC
              LIMIT ?1"
@@ -1036,6 +1052,9 @@ impl StorageProvider for DuckDbStorageProvider {
             let props_str: String = row.get(4)?;
             let properties: serde_json::Value = serde_json::from_str(&props_str).unwrap_or(serde_json::json!({}));
             let conf_f: f64 = row.get(5)?;
+            let tier: Option<String> = row.get(6)?;
+            let weight_f: Option<f64> = row.get(7)?;
+            let dir: Option<String> = row.get(8)?;
 
             Ok(FactEdgeRecord {
                 id: row.get(0)?,
@@ -1044,7 +1063,10 @@ impl StorageProvider for DuckDbStorageProvider {
                 relation: row.get(3)?,
                 properties,
                 confidence: conf_f as f32,
-                updated_at: row.get(6)?,
+                evidence_tier: tier.unwrap_or_else(|| "L1_EXPLICIT".to_string()),
+                weight: weight_f.unwrap_or(conf_f) as f32,
+                direction_kind: dir.unwrap_or_else(|| "forward_dependency".to_string()),
+                updated_at: row.get(9)?,
             })
         })?.collect::<std::result::Result<Vec<_>, _>>()?;
 
@@ -1058,6 +1080,15 @@ impl StorageProvider for DuckDbStorageProvider {
             params![id],
         )?;
         let affected = conn.execute("DELETE FROM fact_nodes WHERE id = ?1", params![id])?;
+        Ok(affected)
+    }
+
+    fn delete_fact_edges_by_tier(&self, tier: &str) -> Result<usize> {
+        let conn = self.lock_conn()?;
+        let affected = conn.execute(
+            "DELETE FROM fact_edges WHERE evidence_tier = ?1",
+            params![tier],
+        )?;
         Ok(affected)
     }
 
@@ -1730,6 +1761,140 @@ impl StorageProvider for DuckDbStorageProvider {
         )?;
         Ok(removed)
     }
+
+    fn insert_mesh_dialogue(&self, rec: &MeshDialogueRecord) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let _ = conn.execute("DELETE FROM mesh_dialogues WHERE dialogue_id = ?1", params![rec.dialogue_id]);
+        conn.execute(
+            "INSERT INTO mesh_dialogues
+             (dialogue_id, thread_id, from_node, from_agent, to_node, to_agent, intent, content, redaction_hits, injection_flagged, verified_signature, status, created_at)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)",
+            params![
+                rec.dialogue_id,
+                rec.thread_id,
+                rec.from_node,
+                rec.from_agent,
+                rec.to_node,
+                rec.to_agent,
+                rec.intent,
+                rec.content,
+                rec.redaction_hits as i32,
+                if rec.injection_flagged { 1i32 } else { 0i32 },
+                if rec.verified_signature { 1i32 } else { 0i32 },
+                rec.status,
+                rec.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_mesh_dialogues(&self, limit: usize) -> Result<Vec<MeshDialogueRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT dialogue_id, thread_id, from_node, from_agent, to_node, to_agent, intent, content, redaction_hits, injection_flagged, verified_signature, status, created_at
+             FROM mesh_dialogues ORDER BY created_at DESC LIMIT ?1",
+        )?;
+        let rows = stmt
+            .query_map(params![limit as i64], |r| {
+                Ok(MeshDialogueRecord {
+                    dialogue_id: r.get(0)?,
+                    thread_id: r.get(1)?,
+                    from_node: r.get(2)?,
+                    from_agent: r.get(3)?,
+                    to_node: r.get(4)?,
+                    to_agent: r.get(5)?,
+                    intent: r.get(6)?,
+                    content: r.get(7)?,
+                    redaction_hits: r.get::<_, i32>(8)? as usize,
+                    injection_flagged: r.get::<_, i32>(9)? != 0,
+                    verified_signature: r.get::<_, i32>(10)? != 0,
+                    status: r.get(11)?,
+                    created_at: r.get(12)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    fn update_mesh_dialogue_status(&self, dialogue_id: &str, status: &str) -> Result<bool> {
+        let conn = self.lock_conn()?;
+        let n = conn.execute(
+            "UPDATE mesh_dialogues SET status = ?1 WHERE dialogue_id = ?2",
+            params![status, dialogue_id],
+        )?;
+        Ok(n > 0)
+    }
+
+    fn insert_mesh_transfer(&self, rec: &MeshTransferRecord) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let _ = conn.execute("DELETE FROM mesh_transfers WHERE transfer_id = ?1", params![rec.transfer_id]);
+        conn.execute(
+            "INSERT INTO mesh_transfers
+             (transfer_id, from_node, from_agent, to_node, file_name, size_bytes, sha256, inbox_path, secret_warnings, verified_signature, status, accepted_path, created_at, updated_at)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14)",
+            params![
+                rec.transfer_id,
+                rec.from_node,
+                rec.from_agent,
+                rec.to_node,
+                rec.file_name,
+                rec.size_bytes as i64,
+                rec.sha256,
+                rec.inbox_path,
+                rec.secret_warnings as i32,
+                if rec.verified_signature { 1i32 } else { 0i32 },
+                rec.status,
+                rec.accepted_path,
+                rec.created_at,
+                rec.updated_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_mesh_transfers(&self, limit: usize) -> Result<Vec<MeshTransferRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT transfer_id, from_node, from_agent, to_node, file_name, size_bytes, sha256, inbox_path, secret_warnings, verified_signature, status, accepted_path, created_at, updated_at
+             FROM mesh_transfers ORDER BY created_at DESC LIMIT ?1",
+        )?;
+        let rows = stmt
+            .query_map(params![limit as i64], |r| {
+                Ok(MeshTransferRecord {
+                    transfer_id: r.get(0)?,
+                    from_node: r.get(1)?,
+                    from_agent: r.get(2)?,
+                    to_node: r.get(3)?,
+                    file_name: r.get(4)?,
+                    size_bytes: r.get::<_, i64>(5)? as u64,
+                    sha256: r.get(6)?,
+                    inbox_path: r.get(7)?,
+                    secret_warnings: r.get::<_, i32>(8)? as usize,
+                    verified_signature: r.get::<_, i32>(9)? != 0,
+                    status: r.get(10)?,
+                    accepted_path: r.get(11)?,
+                    created_at: r.get(12)?,
+                    updated_at: r.get(13)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    fn update_mesh_transfer_status(
+        &self,
+        transfer_id: &str,
+        status: &str,
+        accepted_path: Option<&str>,
+    ) -> Result<bool> {
+        let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
+        let n = conn.execute(
+            "UPDATE mesh_transfers SET status = ?1, accepted_path = COALESCE(?2, accepted_path), updated_at = ?3 WHERE transfer_id = ?4",
+            params![status, accepted_path, now, transfer_id],
+        )?;
+        Ok(n > 0)
+    }
 }
 
 impl DuckDbStorageProvider {
@@ -1885,15 +2050,13 @@ pub mod tests {
             properties: serde_json::json!({"type": "olap"}),
             updated_at: Some("2026-11-18T12:00:00Z".to_string()),
         };
-        let edge = FactEdgeRecord {
-            id: Some(1),
-            source_id: node1.id.clone(),
-            target_id: node2.id.clone(),
-            relation: "depends_on".to_string(),
-            properties: serde_json::json!({"scope": "analytics"}),
-            confidence: 0.95,
-            updated_at: Some("2026-11-18T12:00:00Z".to_string()),
-        };
+        let edge = FactEdgeRecord::new_explicit(
+            node1.id.clone(),
+            node2.id.clone(),
+            "depends_on",
+            serde_json::json!({"scope": "analytics"}),
+            0.95,
+        );
 
         provider.upsert_fact_node(&node1).expect("upsert node1");
         provider.upsert_fact_node(&node2).expect("upsert node2");

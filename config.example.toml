@@ -216,9 +216,24 @@ enabled = false
 # 对等节点 Web 基地址列表（当 enabled = true 且 peers 非空时，各节点必须配置相同的 [web].auth_token 作为共享密钥）
 # 示例: peers = ["http://192.168.31.161:8756"]
 peers = []
-# 单次对等请求超时（毫秒）
+# 单次对等节点请求超时（毫秒）
 # 默认: 1500
 timeout_ms = 1500
+# 本机节点标识（缺省自动取操作系统 hostname）
+# node_id = "node-beijing-01"
+# Mesh HMAC-SHA256 共享签名密钥（缺省回退至 [web].auth_token）
+# shared_secret = "change-me-strong-mesh-secret"
+# 信封时间戳防重放时间窗（秒，默认 300）
+replay_window_secs = 300
+# 跨机受控文件投递体积上限（字节，默认 10MB）
+max_transfer_bytes = 10485760
+# 跨机文件隔离沙盒收件箱路径（默认 ~/.steward/mesh_inbox，严格 0700 权限）
+# inbox_dir = "~/.steward/mesh_inbox"
+# 按节点独立共享密钥与最小作用域授权（可选）
+# [mesh.peer_keys]
+# "node-gpu-02" = "peer-specific-secret"
+# [mesh.peer_scopes]
+# "node-gpu-02" = ["read:facts", "write:locks", "exchange:dialogue", "transfer:artifact"]
 
 # ==============================================================================
 # 11. 资产语义元数据 Ollama 自动标注配置 (Phase 23 - ISSUE #8)

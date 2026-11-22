@@ -338,6 +338,69 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
     };
     results.push(dq5);
 
+    // DQ6: 图谱多维连通度与证据分层合规度 (Phase 40 / ISSUE #23)
+    let valid_tiers = ["L1_EXPLICIT", "L2_STRUCTURAL", "L3_SEMANTIC"];
+    let dq_edges = storage.list_all_fact_edges(5000).unwrap_or_default();
+    let dq_projects: Vec<_> = all_nodes
+        .iter()
+        .filter(|n| n.node_type == "project")
+        .collect();
+    let mut connected_projects = std::collections::HashSet::new();
+    let mut valid_tier_edges = 0usize;
+    for e in &dq_edges {
+        if valid_tiers.contains(&e.evidence_tier.as_str()) && e.weight > 0.0 && e.weight <= 1.0 {
+            valid_tier_edges += 1;
+        }
+        if e.source_id.starts_with("project:") {
+            connected_projects.insert(e.source_id.as_str());
+        }
+        if e.target_id.starts_with("project:") {
+            connected_projects.insert(e.target_id.as_str());
+        }
+    }
+    let dq6 = if dq_edges.is_empty() && dq_projects.is_empty() {
+        DataQualityResult {
+            id: "DQ6".into(),
+            name: "graph_connectivity_and_tier_hygiene".into(),
+            title: "图谱多维连通度与证据分层合规度".into(),
+            measured_pct: 100.0,
+            target_pct: 90.0,
+            passed: true,
+            detail: "空沙盒库（0 条图谱边），基线通过".into(),
+        }
+    } else {
+        let tier_pct = if dq_edges.is_empty() {
+            100.0
+        } else {
+            (valid_tier_edges as f64 / dq_edges.len() as f64) * 100.0
+        };
+        let conn_pct = if dq_projects.is_empty() {
+            100.0
+        } else {
+            (connected_projects.len() as f64 / dq_projects.len() as f64) * 100.0
+        };
+        // 分层合法率占 70% + 项目连通率占 30%（目标 >= 70%，彻底告别 99.5% 孤岛）
+        let score = ((tier_pct * 0.70 + conn_pct * 0.30) * 100.0).round() / 100.0;
+        DataQualityResult {
+            id: "DQ6".into(),
+            name: "graph_connectivity_and_tier_hygiene".into(),
+            title: "图谱多维连通度与证据分层合规度".into(),
+            measured_pct: score,
+            target_pct: 70.0,
+            passed: tier_pct >= 99.0 && score >= 70.0,
+            detail: format!(
+                "fact_edges={}/{} 分层合法 ({:.1}%) | 工程节点连通 {}/{} ({:.1}%)",
+                valid_tier_edges,
+                dq_edges.len(),
+                tier_pct,
+                connected_projects.len(),
+                dq_projects.len(),
+                conn_pct
+            ),
+        }
+    };
+    results.push(dq6);
+
     results
 }
 

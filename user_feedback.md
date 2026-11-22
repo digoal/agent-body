@@ -87,7 +87,7 @@ flowchart LR
 
 ---
 
-## 四、第二部分：实际使用暴露的缺点与痛点 (`CON-01` ~ `CON-07`)
+## 四、第二部分：实际使用暴露的缺点与痛点 (`CON-01` ~ `CON-17`)
 
 ### `CON-01` `[P0 · 性能瓶颈]` `steward_brief` 冷启动简报组装耗时 `474.18 ms`，存在绕过缓存库直扫磁盘与派生子进程问题
 - **状态**: `✅ Verified (Phase 30.2)` · **首次记录**: 2026-11-19 · **验证实测**: `W8` 由 `474,178 μs (0.09x)` 降至 `10,315 μs (2.08x)`，提速 `46.0x`
@@ -219,6 +219,20 @@ flowchart LR
 - **现象与复现证据**: 缺少 `P1~P5` 执行回路对比探针及 `FeedbackEngine::add_item_deduped` 联动。
 - **修复落实**: 已落地五点对比探针、`BackgroundScheduler` 自动对账及 `feedback reconcile`/`probes` MCP/CLI/Web 1:1:1 通道。
 
+### `CON-16` `[P0 · 图谱稀疏与显隐关系断层]` 现网 `fact_nodes` 99.5% 工程节点孤立且缺乏有向加权与隐式语义发现
+- **状态**: `✅ Verified (Phase 40)` · **首次记录**: 2026-11-22 · **验证实测**: 现网 `links graph --discover-semantic` 挖掘 `L2上卷=68, 服务桥接=4, 工具=29, 衍生=39, L3语义=588`，`DQ6` 达成 `fact_edges=776/776 (100.0%) | 工程节点连通 215/215 (100.0%)`
+- **现象与复现证据**:
+  - `fact_nodes = 355`（其中 `354` 个已有 Ollama Embedding 向量，`project = 215`），但 `fact_edges` 仅 `49` 条边（`25 depends_on`, `17 listens_on`, `7 scheduled_by`）；
+  - `project` 节点 `214/215` 度数为 `0`（**99.5% 孤立**）、`tool` 节点 `16/16` 度数为 `0`（**100% 孤立**）、`service` 节点 `associated_project` 全为 `None`；`links` 表已有 `5,116` 条文件引用却未上卷至项目级；同时 `service:agent-steward.service` 与运行时 `service:agent-steward` 同体分裂，且残留测试节点 `service:test_web_dashbo`。
+- **修复目标**: 按 [14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 与 [roadmap-phase40-41.md](src_doc/roadmap-phase40-41.md) 落地 `L1/L2/L3` 三层有向加权边、`links` 上卷聚合、向量+标签隐式语义发现与加权衰减爆炸半径。
+
+### `CON-17` `[P0 · Mesh 协议与协同功能缺失]` Peer Mesh 仅支持裸 HTTP 查询锁，缺签名信封、防重放及跨机对话/文件沙盒协同
+- **状态**: `✅ Verified (Phase 41)` · **首次记录**: 2026-11-22 · **验证实测**: `mesh::` 7 项测试 & `W14` 全绿（合法 HMAC 放行、重放 `409`/篡改 `401`/越权 `403`/敏感文件拦截、对话双向脱敏抗投毒、沙盒 `mesh_inbox` 隔离）
+- **现象与复现证据**:
+  - [src/mesh/mod.rs](src/mesh/mod.rs#L84-L100) 仅对比静态 `Bearer [web].auth_token`，无信封版本、时间戳窗、Nonce 防重放或对等节点细粒度作用域权限；
+  - [src/web/server.rs](src/web/server.rs#L192) 将全部 HTTP Body 截断在 `64KB`；`steward_mesh_query` 仅支持基础状态/端口/锁操作，缺少跨机结构化 Agent 对话、联邦图谱探查与受控沙盒文件投递。
+- **修复目标**: 按 [14-graph-intelligence-and-mesh-protocol-spec.md](design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) 实现 `MeshEnvelope v1.0` HMAC-SHA256 防重放认证、`mesh/graph`、`mesh/dialogue`（双向脱敏+抗投毒）与 `mesh/transfer`（`<=10MB` + SHA-256 + `~/.steward/mesh_inbox/` 隔离）。
+
 ---
 
 ## 五、第三部分：Benchmark 标准失真诊断与持续迭代诉求 (`BENCH-01` ~ `BENCH-04`)
@@ -283,9 +297,13 @@ flowchart LR
 - **状态**: `✅ Verified (Phase 39.3 & v3.3)` · **首次记录**: 2026-11-21 · **验证实测**: `run-b832f01c-346c-4058-91af-fcab428b2dda` (`v3.3`, `✅ PASS`): **`W12`** `240 → 21 tok (-91.2%)`、`27.5 → 100.0 (+72.5)`、`4/4` 命中；**`DQ5`** `598/598 (100.0%)`
 - **标准迭代方向**: 升级 Benchmark 至 `v3.3`，新增 `W12 (freshness_and_staleness_healing)` 与 `DQ5 (freshness_and_reconciliation_health)`，并通过 `report.rs` 动态展示 `12` 大负载。
 
+### `BENCH-10` `[P0 · 图谱发现与 Mesh 安全协同盲区]` 缺少三层有向加权图谱 (`W13`/`DQ6`) 与 Mesh 签名防重放沙盒协同 (`W14`) 门禁
+- **状态**: `✅ Verified (Phase 41.5 & v3.4)` · **首次记录**: 2026-11-22 · **验证实测**: `W13` (`158→24 tok`, `19.5→100.0`, `4/4` ✅)、`W14` (`58→23 tok`, `12.5→100.0`, `4/4` ✅)、`DQ6` (`776/776 100.0%` | `215/215 100.0%` ✅)
+- **标准迭代方向**: 升级 Benchmark 至 `v3.4`，新增 **`W13 (semantic_and_weighted_graph_discovery)`**（跨项目隐式发现与物理/语义分层过滤）、**`W14 (mesh_protocol_security_and_collab)`**（HMAC 合法放行 100%、重放/篡改/敏感投递拦截 100%）与 **`DQ6 (graph_connectivity_and_tier_hygiene)`**（现网项目连通度显著跃升且全量边分层合法）。
+
 ---
 
-## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-13`)
+## 六、第四部分：新需求清单 (`REQ-01` ~ `REQ-15`)
 
 | ID | 需求简述 | 提出背景 / 触发场景 | 优先级 | 目标归属 | 状态 |
 |:---:|---|---|:---:|:---:|:---:|
@@ -302,6 +320,8 @@ flowchart LR
 | **`REQ-11`** | **落地 Phase 37 生产运行态深度对齐、拓扑零误报硬化与 Benchmark `v3.2` 等价校准** | 消除 CLI/Hook 简报分裂、多行进程刷屏、`SIGPIPE` Panic、测试/示例假断链与 `DQ3`/`COMP-C4` 口径偏差（ISSUE #20） | P0 | Phase 37.1 ~ 37.6 | `✅ Verified` |
 | **`REQ-12`** | **建立全生命周期信息新鲜度写穿失效与 `FreshnessReconciler` 现实对账体系** | 彻底根治修改后向量/描述僵尸、删后 FTS 僵尸召回、重复记忆霸屏与幽灵端口堆积（ISSUE #21） | P0 | Phase 38.1 ~ 38.3 | `✅ Verified` |
 | **`REQ-13`** | **构建五点对比探针驱动的自进化引擎与 `FeedbackEngine::add_item_deduped` 闭环** | 在执行回路部署 `P1~P5` 对比探针，以数字差值佐证自愈并自动接入反馈总账与 Benchmark `v3.3`（ISSUE #22） | P0 | Phase 39.1 ~ 39.4 | `✅ Verified` |
+| **`REQ-14`** | **多维证据分层有向加权图谱与隐式语义关系发现（规约 #23）** | 解决现网 99.5% 工程节点孤立、`links` 与 `fact_edges` 割裂及向量未参与隐式关系挖掘问题（ISSUE #23） | P0 | Phase 40.1 ~ 40.5 | `✅ Verified` |
+| **`REQ-15`** | **联邦网格 `MeshEnvelope v1.0` 签名防重放协议与跨机对话/沙盒文件协同（规约 #24）** | 解决 Peer Mesh 缺信封协议、缺防重放认证及缺少跨机结构化对话与受控文件投递能力问题（ISSUE #24） | P0 | Phase 41.1 ~ 41.6 | `✅ Verified` |
 
 ---
 

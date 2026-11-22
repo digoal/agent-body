@@ -347,6 +347,61 @@ enum MeshCommands {
         #[arg(long, default_value_t = 300)]
         ttl_seconds: u64,
     },
+    #[command(about = "跨节点图谱联邦探查")]
+    Graph {
+        #[arg(short, long, default_value = "")]
+        query: String,
+        #[arg(long, default_value_t = 2)]
+        hops: usize,
+    },
+    #[command(about = "向对等节点发送 HMAC 签名结构化 Agent 对话")]
+    DialogueSend {
+        #[arg(long)]
+        peer: String,
+        #[arg(long, default_value = "")]
+        thread_id: String,
+        #[arg(long, default_value = "ASK_CONTEXT")]
+        intent: String,
+        #[arg(long)]
+        content: String,
+        #[arg(long, default_value = "cli-agent")]
+        from_agent: String,
+        #[arg(long, default_value = "")]
+        to_agent: String,
+    },
+    #[command(about = "查看本机 Mesh 收到的跨机对话收件箱")]
+    DialogueInbox {
+        #[arg(short, long, default_value_t = 20)]
+        limit: usize,
+    },
+    #[command(about = "确认已读一条 Mesh 对话")]
+    DialogueAck {
+        dialogue_id: String,
+    },
+    #[command(about = "向对等节点投递受控文件 (<=10MB, HMAC 签名 + 沙盒隔离)")]
+    TransferSend {
+        #[arg(long)]
+        peer: String,
+        #[arg(long)]
+        file: String,
+        #[arg(long, default_value = "cli-agent")]
+        from_agent: String,
+    },
+    #[command(about = "查看本机 ~/.steward/mesh_inbox/ 隔离收件箱")]
+    TransferInbox {
+        #[arg(short, long, default_value_t = 20)]
+        limit: usize,
+    },
+    #[command(about = "显式放行隔离收件箱中的文件到目标目录")]
+    TransferAccept {
+        transfer_id: String,
+        #[arg(long)]
+        dest_dir: String,
+    },
+    #[command(about = "拒绝并清除隔离收件箱中的文件")]
+    TransferReject {
+        transfer_id: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -580,28 +635,46 @@ enum StorageCommands {
 
 #[derive(Subcommand)]
 enum LinksCommands {
-    #[command(about = "查询指定实体的关联拓扑")]
+    #[command(about = "查询指定实体的关联拓扑（含 L1/L2/L3 属性图谱边）")]
     Query {
-        #[arg(short, long, help = "实体类型: asset, service, memory", default_value = "asset")]
+        #[arg(short, long, help = "实体类型: asset, service, project, tool, memory", default_value = "asset")]
         r#type: String,
 
         #[arg(help = "实体唯一标识或路径")]
         id: String,
+
+        #[arg(long, default_value_t = 2, help = "属性图谱最大跳数")]
+        max_hops: usize,
+
+        #[arg(long, default_value_t = 0.0, help = "最低边权重过滤 (0.0~1.0)")]
+        min_weight: f32,
+
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set, help = "是否包含 L3_SEMANTIC 隐式语义边")]
+        include_semantic: bool,
     },
 
     #[command(about = "导出当前关联依赖的 Mermaid 架构图")]
     Graph {
         #[arg(short, long, default_value_t = 20)]
         limit: usize,
+
+        #[arg(long, help = "导出前先触发 L2 结构上卷与 L3 语义挖掘")]
+        discover_semantic: bool,
     },
 
-    #[command(about = "分析指定资产变更或删除的爆炸半径与上下游依赖")]
+    #[command(about = "分析指定资产变更或删除的爆炸半径与加权上下游依赖")]
     Impact {
-        #[arg(help = "被评估资产绝对路径或服务标识")]
+        #[arg(help = "被评估资产绝对路径、项目或服务标识")]
         target: String,
 
         #[arg(short, long, default_value_t = 3, help = "依赖多跳推演最大深度")]
         max_depth: usize,
+
+        #[arg(long, default_value_t = 0.50, help = "最低有效权重阈值 (0.0~1.0)")]
+        min_weight: f32,
+
+        #[arg(long, help = "是否包含 L3_SEMANTIC 隐式语义边")]
+        include_semantic: bool,
     },
 
     #[command(about = "主动审计依赖拓扑中的断链、悬空文件与离线服务")]
@@ -1177,21 +1250,42 @@ fn main() -> Result<()> {
             let arc_storage = std::sync::Arc::new(storage);
             let engine = agent_steward::links::LinksEngine::new(arc_storage.clone());
             match action {
-                LinksCommands::Query { r#type, id } => {
+                LinksCommands::Query { r#type, id, max_hops, min_weight, include_semantic } => {
                     let links = engine.query_links(&r#type, &id)?;
-                    println!("实体关联拓扑 (共 {} 条):", links.len());
-                    for l in links {
+                    println!("文件级关联拓扑 (共 {} 条):", links.len());
+                    for l in &links {
                         println!("  - [{}] {} --({})--> [{}] {} (置信度: {:.2})",
                             l.source_type, l.source_id, l.relation, l.target_type, l.target_id, l.confidence);
                     }
+                    let tiers: Vec<&str> = if include_semantic {
+                        vec!["L1_EXPLICIT", "L2_STRUCTURAL", "L3_SEMANTIC"]
+                    } else {
+                        vec!["L1_EXPLICIT", "L2_STRUCTURAL"]
+                    };
+                    let root_cand = if id.contains(':') { id.clone() } else { format!("{}:{}", r#type, id) };
+                    if let Ok(sub) = arc_storage.traverse_fact_graph_filtered(&root_cand, max_hops, min_weight, Some(&tiers)) {
+                        if !sub.edges.is_empty() {
+                            println!("\n属性图谱分层关系 ({} 跳, 共 {} 条边):", max_hops, sub.edges.len());
+                            for e in &sub.edges {
+                                println!("  - [{} w={:.2} {}] {} --({})--> {}",
+                                    e.evidence_tier, e.weight, e.direction_kind, e.source_id, e.relation, e.target_id);
+                            }
+                        }
+                    }
                 }
-                LinksCommands::Graph { limit } => {
+                LinksCommands::Graph { limit, discover_semantic } => {
+                    if discover_semantic {
+                        let miner = agent_steward::fact::GraphRelationshipMiner::new(arc_storage.as_ref());
+                        let rep = miner.mine_all(true)?;
+                        println!("# 关系挖掘完成: L2上卷={}, 服务桥接={}, 工具={}, 衍生={}, L3语义={}",
+                            rep.l2_rollup_edges, rep.l2_service_bridge_edges, rep.l2_tool_usage_edges, rep.l2_derivation_edges, rep.l3_semantic_edges);
+                    }
                     let mermaid = engine.export_mermaid(limit)?;
                     println!("{}", mermaid);
                 }
-                LinksCommands::Impact { target, max_depth } => {
+                LinksCommands::Impact { target, max_depth, min_weight, include_semantic } => {
                     let analyzer = agent_steward::links::impact::ImpactAnalyzer::new(arc_storage);
-                    let res = analyzer.analyze_impact(&target, max_depth)?;
+                    let res = analyzer.analyze_impact_weighted(&target, max_depth, min_weight, include_semantic)?;
                     println!("{}", serde_json::to_string_pretty(&res)?);
                 }
                 LinksCommands::Audit { fix } => {
@@ -1691,6 +1785,37 @@ fn main() -> Result<()> {
                         metadata: None,
                     };
                     println!("{}", serde_json::to_string_pretty(&client.acquire_on_peer(&peer, &req)?)?);
+                }
+                MeshCommands::Graph { query, hops } => {
+                    println!("{}", serde_json::to_string_pretty(&client.federated_graph_query(&query, hops))?);
+                }
+                MeshCommands::DialogueSend { peer, thread_id, intent, content, from_agent, to_agent } => {
+                    println!("{}", serde_json::to_string_pretty(&client.send_dialogue(&peer, &thread_id, &intent, &content, &from_agent, &to_agent)?)?);
+                }
+                MeshCommands::DialogueInbox { limit } => {
+                    println!("{}", serde_json::to_string_pretty(&storage.list_mesh_dialogues(limit)?)?);
+                }
+                MeshCommands::DialogueAck { dialogue_id } => {
+                    let ok = storage.update_mesh_dialogue_status(&dialogue_id, "acked")?;
+                    println!("{}", serde_json::to_string_pretty(&serde_json::json!({"dialogue_id": dialogue_id, "acked": ok}))?);
+                }
+                MeshCommands::TransferSend { peer, file, from_agent } => {
+                    println!("{}", serde_json::to_string_pretty(&client.send_transfer(&peer, std::path::Path::new(&file), &from_agent)?)?);
+                }
+                MeshCommands::TransferInbox { limit } => {
+                    println!("{}", serde_json::to_string_pretty(&storage.list_mesh_transfers(limit)?)?);
+                }
+                MeshCommands::TransferAccept { transfer_id, dest_dir } => {
+                    let rec = agent_steward::mesh::transfer::accept_transfer_to_dir(
+                        storage.provider().as_ref(),
+                        &transfer_id,
+                        std::path::Path::new(&dest_dir),
+                    )?;
+                    println!("{}", serde_json::to_string_pretty(&rec)?);
+                }
+                MeshCommands::TransferReject { transfer_id } => {
+                    let ok = agent_steward::mesh::transfer::reject_transfer(storage.provider().as_ref(), &transfer_id)?;
+                    println!("{}", serde_json::to_string_pretty(&serde_json::json!({"transfer_id": transfer_id, "rejected": ok}))?);
                 }
             }
         }
