@@ -16,23 +16,24 @@ graph TD
         L["src/lib.rs (模块导出与版本元信息)"]
     end
 
-    subgraph CoreEngines["业务核心引擎"]
-        FACT["src/fact/ (事实图谱: 端口/进程/Systemd/Cron/能力)"]
-        PLACE["src/placement/ (规约建议/工程习惯/自学习演化)"]
-        MEM["src/memory/ (混合检索/SPI/生态适配器)"]
-        COORD["src/coordination/ (多Agent协作锁/互斥调度)"]
-        BRIEF["src/brief/ (自适应情境上下文组装器)"]
-        LINKS["src/links/ (依赖拓扑/断链修复/CodeGraph联动)"]
-        SCAN["src/scanner/ (分级扫描/状态机/重要性评分)"]
-        ENV["src/env/ (内核proc采集/端口防撞/安全GC)"]
-        BENCH["src/benchmark/ (双轨 A/B 实证评测 / PR-01~08 账本)"]
-    end
+        subgraph CoreEngines["业务核心引擎"]
+            FACT["src/fact/ (事实图谱: 端口/进程/Systemd/Cron/L1~L3 属性图)"]
+            PLACE["src/placement/ (规约建议/工程习惯/自学习演化)"]
+            MEM["src/memory/ (混合检索/SPI/生态适配器)"]
+            COORD["src/coordination/ (多Agent协作锁/WFG死锁/互斥调度)"]
+            BRIEF["src/brief/ (自适应情境上下文组装器 + AOPCC 乐观租约)"]
+            LINKS["src/links/ (分层加权依赖拓扑/断链修复/CodeGraph联动)"]
+            SCAN["src/scanner/ (分级扫描/全链路脱敏/抗投毒/三层元数据)"]
+            ENV["src/env/ (内核proc采集/端口防撞/安全GC)"]
+            BENCH["src/benchmark/ (三轨 Benchmark v3.5 / PR-01~11 账本)"]
+            FB["src/feedback/ (使用反馈总账 / 新鲜度对账 / P1~P5 探针)"]
+        end
 
     subgraph Infrastructure["系统基础设施"]
-        STORAGE["src/storage/ (统一存储门面/SPI/SQLite/PG/DuckDB)"]
+        STORAGE["src/storage/ (统一存储门面/74 SPI/SQLite/PG/DuckDB)"]
         PRE["src/preflight/ (环境依赖三级预检引擎)"]
-        WEB["src/web/ (内嵌HTTP/REST API/SSE推流/内嵌大屏)"]
-        MCP["src/api/ (MCP stdio 服务端 40 Tools / Hook门面)"]
+        WEB["src/web/ (内嵌HTTP/REST API/SSE推流/7大工作台)"]
+        MCP["src/api/ (MCP stdio 服务端 41 Tools / AOPCC Hook门面)"]
         DAEMON["src/daemon/ (常驻守护/inotify监听/后台自巡检)"]
         CFG["src/config/ (TOML配置管理与参数校验)"]
     end
@@ -46,24 +47,25 @@ graph TD
 
 | 目录/模块 | 核心职责 | 关键数据类型 / 入口结构 |
 |:---|:---|:---|
-| `src/storage/` | 存储中枢与多后端 SPI 抽象 | `StorageProvider`, `SqliteStorageProvider`, `PgStorageProvider`, `DuckDbStorageProvider` |
-| `src/fact/` | 宿主机只读物理事实采集 | `FactFacade`, `CapabilityAnnotation`, `AutomationScanner`, `PropertyGraphOrganizer` |
-| `src/coordination/`| 多 Agent 协作锁与排它协调 | `CoordinationEngine`, `CoordinationLock`, `LockRegistry` |
+| `src/storage/` | 存储中枢与多后端 SPI 抽象 (74 方法) | `StorageProvider`, `SqliteStorageProvider`, `PgStorageProvider`, `DuckDbStorageProvider` |
+| `src/fact/` | 宿主机只读物理事实采集与 L1~L3 属性图 | `FactFacade`, `CapabilityAnnotation`, `AutomationScanner`, `PropertyGraphOrganizer` |
+| `src/coordination/`| 多 Agent 协作锁、排队唤醒与 WFG 死锁检测 | `CoordinationEngine`, `CoordinationLock`, `DeadlockDetector` |
 | `src/placement/` | 资产规范放置与行为聚类学习 | `PlacementEngine`, `PlacementLearner`, `ConventionChecker` |
 | `src/memory/` | 跨会话长期记忆与三方适配 | `MemoryManager`, `BuiltinLocalProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
-| `src/links/` | 依赖关系网与爆炸半径推演 | `LinksEngine`, `CodeGraphBridge`, `LinkRepairer` |
-| `src/scanner/` | 资产扫描与断点续扫状态机 | `Scanner`, `ScanStateMachine`, `ImportanceScorer` |
+| `src/links/` | 分层加权依赖关系网与爆炸半径推演 | `LinksEngine`, `CodeGraphBridge`, `LinkRepairer` |
+| `src/scanner/` | 资产扫描、全链路脱敏、抗投毒与三层元数据 | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `OllamaAnnotator` |
 | `src/api/` | 41 个原生 MCP 工具服务端 | `McpServer`, `AgentHookEngine`, `StewardResponse` |
-| `src/benchmark/` | 双轨实证 Benchmark 引擎与生产效能存证账本 | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
+| `src/benchmark/` | 三轨实证 Benchmark v3.5 与生产效能存证账本 | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
+| `src/feedback/` | 使用反馈总账、新鲜度对账与五点对比自进化探针 | `FeedbackEngine`, `FreshnessReconciler`, `SelfEvolutionProbeEngine` |
 | `src/demo/` | 路演沙盒引擎与 ROI 核算 | `DemoEngine`, `DemoExecutionResult`, `RoiReport` |
 | `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` |
-| `src/mesh/` | 轻量多机联邦 HTTP Peer Mesh | `MeshClient`, `MeshNodeFacts`, `handle_mesh_*` |
+| `src/mesh/` | 轻量多机联邦 HTTP Peer Mesh & `MeshEnvelope v1.0` | `MeshClient`, `MeshNodeFacts`, `MeshEnvelope` |
 | `src/ecosystem/` | MCP/SKILL 目录、外部服务通讯录与 Context 防爆路由 | `McpConfigScanner`, `SkillCatalogScanner`, `ExternalContactsManager`, `ContextBudgetRouter` |
-| `src/hooks/` | HOOK 事件总线与自动同步/生成/Pipeline | `EventBus`, `HookDispatcher`, `AutoSyncEngine`, `ClientHookGenerator`, `HookPipelineEngine` |
+| `src/hooks/` | HOOK 事件总线、自动同步、客户端生成与碰壁秒级自愈 | `EventBus`, `AutoSyncEngine`, `ClientHookGenerator`, `OptimisticFailureDiagnoser` |
 | `src/session/` | 会话生命周期自动绑定与安全归档 | `SessionManager`, `SessionLifecycleManager` |
-| `src/web/` | 内嵌轻量 HTTP 引擎与大屏 | `WebServer`, `HttpRequest`, `TopologyGraph`, `LockViewItem` |
+| `src/web/` | 内嵌轻量 HTTP 引擎与昼夜蓝图 7 大工作台 | `WebServer`, `HttpRequest`, `TopologyGraph`, `LockViewItem` |
 | `src/preflight/` | 运行时依赖预检与降级保护 | `PreflightChecker`, `PreflightReport`, `CheckItem` |
-| `src/brief/` | 自适应情境上下文组装器 | `BriefAssembler`, `BriefQuality` |
+| `src/brief/` | 自适应情境上下文组装器与 AOPCC 乐观租约 | `BriefAssembler`, `BriefQuality`, `OptimisticLeaseEngine` |
 | `src/changes/` | 宿主变更历史与开工回溯摘要 | `ChangesEngine` |
 | `src/daemon/` | 常驻守护进程与后台巡检调度 | `StewardDaemon`, `BackgroundScheduler` |
 | `src/env/` | 内核 `/proc` 进程采集、端口防撞与安全 GC | `EnvCollector`, `PortChecker`, `HostGarbageCollector` |
@@ -92,7 +94,7 @@ export PATH="/root/.cargo/bin:$PATH"
 # 1. 快速语法与类型检查 (耗时约 2~4 秒)
 cargo check
 
-# 2. 运行全量 202 项自动化测试套件（179 单元 + 23 集成）
+# 2. 运行全量 252+ 项自动化测试套件
 cargo test
 
 # 3. 运行特定模块的单元测试 (如测试 web 模块)
@@ -162,7 +164,7 @@ sequenceDiagram
 
     Dev->>Impl: 创建 MyStorageProvider 结构体
     Dev->>Impl: 实现 impl StorageProvider for MyStorageProvider
-    Note over Impl: 实现 61 个接口方法 (init, upsert_asset, locks, ecosystem, benchmark...)
+    Note over Impl: 实现 74 个接口方法 (init, upsert_asset, locks, ecosystem, benchmark, mesh...)
     Dev->>Facade: 在 Storage::from_config 中注册分支匹配
     Dev->>Dev: 编写单元测试验证 CRUD 与 FTS 行为
 ```
@@ -177,7 +179,7 @@ pub struct MyCustomProvider { /* 连接句柄 */ }
 impl StorageProvider for MyCustomProvider {
     fn init(&self) -> Result<()> { /* 创建 schema */ Ok(()) }
     fn provider_name(&self) -> &'static str { "custom" }
-    // 实现其余 59 个接口...
+    // 实现其余 72 个接口...
 }
 ```
 
@@ -205,10 +207,10 @@ pub fn check_custom_feature() -> CheckItem {
 
 ## 四、质量门禁与断点续传开发规范
 
-1. **零 Panic 原则**：在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误。
-2. **四层贯通准则**：
+1. **零 Panic 原则**：在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误（`make lint-panic` 门禁）。
+2. **四层贯通与防漂移门禁**：
    - 增加配置项 -> `src/config/` + `config.example.toml` + `INSTALL.md`；
-   - 增加 MCP 工具 -> `src/api/` + `manual/04-mcp-integration.md` + 单元测试。
-3. **断点续传检查点机制**：
-   - 在开发任何跨步骤大型特性时，必须在 `src_doc/progress.md` 中建立检查点表格；
-   - 确保中断后任何新会话均能通过读取 `progress.md` 恢复上下文无缝继续。
+   - 增加或调整 MCP/CLI/Web 工具 -> `src/api/mcp_tools.rs` + `src/main.rs` + `src/web/` + `manual/03,04,08` + `skills/` + `make evolution-check`。
+3. **零重扫与断点续传检查点机制**：
+   - 新会话先读根目录 [EVOLUTION_GUIDE.md](../EVOLUTION_GUIDE.md) 与当前活跃 `src_doc/roadmap-phase*.md`，跑 `make evolution-check` 并用 `codegraph explore` 查符号；
+   - 在 `src_doc/roadmap-phase*.md` 与总表 `src_doc/progress.md` 中维护原子检查点表格，确保中断后任何新会话均可瞬间恢复上下文无缝继续。

@@ -8,7 +8,7 @@
 
 ## 一、定位与安全边界：大管家管什么安全、不管什么安全？
 
-依据 [README.md 规约 #2（递弱代偿与产品边界）](../README.md#L217-L219) 及 [product-boundaries-and-governance.md](../src_doc/product-boundaries-and-governance.md)，**Agent Host Steward** 面向具备真实宿主操作权限的 AI Agent 提供系统认知底座。大管家不越界替代基础设施级安全组件，但必须对自己纳管的全部数据链路与接口暴露面承担 **100% 纵深防御责任**。
+依据 [README.md 规约 #2（递弱代偿与产品边界）](../README.md#L237-L239) 及 [product-boundaries-and-governance.md](../src_doc/product-boundaries-and-governance.md)，**Agent Host Steward** 面向具备真实宿主操作权限的 AI Agent 提供系统认知底座。大管家不越界替代基础设施级安全组件，但必须对自己纳管的全部数据链路与接口暴露面承担 **100% 纵深防御责任**。
 
 | 安全职责维度 | 大管家必须兜底 (In Scope) | 大管家明确不替代 (Out of Scope) |
 |---|---|---|
@@ -150,7 +150,7 @@ flowchart TD
 
 ## 五、实证安全基准规格 (Benchmark v2.1 Security Extensions)
 
-严格遵循 [README.md 规约 #18](../README.md#L284-L286) 与 [10-benchmark-spec.md](10-benchmark-spec.md)，将安全防御纳入可复现量化评测：
+严格遵循 [README.md 规约 #18](../README.md#L307-L311) 与 [10-benchmark-spec.md](10-benchmark-spec.md)，将安全防御纳入可复现量化评测：
 
 | 基准 ID | 名称 | 测试逻辑（Without vs With / 现网采样） | 量化 SLA 门禁 |
 |:---:|---|---|---|

@@ -2,7 +2,7 @@
 
 > **编制**: Antigravity · **日期**: 2026-11-19  
 > **基线 Commit**: `40affe3` (`v0.3.3`, Phase 1~24 全部交付，194 tests passed，39 个原生 MCP 工具黑白屏 100% 同步)  
-> **对齐基准**: [README.md ISSUE #11 & #12](../README.md#L347-L350) & [核心设计原则与约束 §1-§17](../README.md#L207-L279)  
+> **对齐基准**: [ISSUE.md #11 & #12](../ISSUE.md#L65-L71) & [核心设计原则与约束 §1-§17](../README.md#L232-L302)  
 > **断点续传检查点表**: [progress-phase25.md](progress-phase25.md)
 
 ---

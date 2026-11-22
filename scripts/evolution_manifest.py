@@ -74,10 +74,15 @@ def extract_manifest() -> dict:
     spec_match = re.search(r'BENCHMARK_SPEC_VERSION\s*:\s*&str\s*=\s*"([^"]+)"', bench_mod)
     bench_spec_version = spec_match.group(1) if spec_match else "unknown"
 
+    main_rs = (ROOT / "src/main.rs").read_text(encoding="utf-8")
+    cmd_block = main_rs.split("enum Commands {")[1].split("\n}")[0]
+    cli_commands = re.findall(r"^\s{4}([A-Z][A-Za-z0-9_]*)\s*(?:\{|,)", cmd_block, flags=re.MULTILINE)
+
     return {
         "counts": {
             "modules": len(modules),
             "mcp_tools": len(mcp_tools),
+            "cli_commands": len(cli_commands),
             "spi_methods": len(spi_methods),
             "tables": len(tables),
             "workloads": len(workloads),
@@ -89,6 +94,7 @@ def extract_manifest() -> dict:
         "bench_spec_version": bench_spec_version,
         "modules": modules,
         "mcp_tools": mcp_tools,
+        "cli_commands": cli_commands,
         "spi_methods": spi_methods,
         "tables": tables,
         "workloads": workloads,
@@ -121,28 +127,59 @@ def check_drift(manifest: dict) -> list[str]:
                         f"EVOLUTION_GUIDE.md 漂移: {key} 声明为 {actual}，源码实测为 {expected}"
                     )
 
-    # 校验核心活跃文档不再残留过时计数
+    # 校验核心活跃文档不再残留过时计数（MCP 工具数 / SPI 方法数 / 模块数 / CLI 命令数）
     mcp_cnt = counts["mcp_tools"]
+    spi_cnt = counts["spi_methods"]
+    mod_cnt = counts["modules"]
+    cli_cnt = counts["cli_commands"]
     active_docs = [
         ROOT / "README.md",
+        ROOT / "EVOLUTION_GUIDE.md",
         ROOT / "skills/agent-steward-developer/SKILL.md",
+        ROOT / "skills/agent-steward-doc-writer/SKILL.md",
         ROOT / "skills/agent-steward-guide/SKILL.md",
+        ROOT / "arch/01-for-architects.md",
         ROOT / "arch/02-for-developers.md",
+        ROOT / "arch/03-for-users.md",
         ROOT / "src_doc/development.md",
+        ROOT / "manual/README.md",
+        ROOT / "manual/03-cli-reference.md",
+        ROOT / "manual/04-mcp-integration.md",
+        ROOT / "manual/08-web-dashboard.md",
+        ROOT / "manual/10-benchmark-and-roi.md",
+        ROOT / "design_doc/06-api-spec.md",
     ]
-    stale_mcp_pat = re.compile(r"(?<!第\s)(?<!第)\b(39|40)\s*(?:个)?\s*(?:原生)?\s*MCP\s*(?:工具|Tools?)")
+    stale_checks = [
+        (
+            re.compile(r"(?<!第\s)(?<!第)\b(39|40)\s*(?:个)?\s*(?:原生)?\s*(?:MCP\s*)?(?:工具|Tools?)"),
+            f"MCP 工具数 (源码实测 {mcp_cnt})",
+        ),
+        (
+            re.compile(r"\b(55|61|65)\s*(?:个)?\s*(?:核心)?(?:语义)?(?:统一)?\s*(?:SPI|方法|接口)"),
+            f"SPI 方法数 (源码实测 {spi_cnt})",
+        ),
+        (
+            re.compile(r"\b(23|24)\s*(?:个|大)?\s*(?:Rust\s*)?(?:顶层)?(?:核心)?(?:子)?模块"),
+            f"顶层模块数 (源码实测 {mod_cnt})",
+        ),
+        (
+            re.compile(r"\b27\s*(?:个)?\s*(?:CLI\s*)?(?:顶层)?(?:子)?(?:命令|Commands)"),
+            f"CLI 顶级命令数 (源码实测 {cli_cnt})",
+        ),
+    ]
     for doc in active_docs:
         if not doc.exists():
             continue
         text = doc.read_text(encoding="utf-8")
-        for m in stale_mcp_pat.finditer(text):
-            # 允许历史变更描述如 "39 → 40" / "从 40 扩展"
-            ctx = text[max(0, m.start() - 12) : min(len(text), m.end() + 12)]
-            if "→" in ctx or "Phase " in ctx:
-                continue
-            errors.append(
-                f"{doc.relative_to(ROOT)} 存在过期 MCP 工具数 '{m.group(0)}' (源码实测 {mcp_cnt})"
-            )
+        for pat, desc in stale_checks:
+            for m in pat.finditer(text):
+                # 允许历史变更或早期基线描述
+                ctx = text[max(0, m.start() - 24) : min(len(text), m.end() + 24)]
+                if any(tok in ctx for tok in ("→", "Phase ", "早期", "历史", "v0.3", "v2.0", "第 ")):
+                    continue
+                errors.append(
+                    f"{doc.relative_to(ROOT)} 存在过期{desc}: '{m.group(0)}'"
+                )
 
     return errors
 

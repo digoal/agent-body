@@ -64,7 +64,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 make build
 # 或: cargo build --release
 
-# 3. 运行全量测试验证环境 (目前 202 项测试全部通过，1 项文档示例忽略)
+# 3. 运行全量测试验证环境 (目前 252+ 项测试全部通过，1 项文档示例忽略)
 make test
 # 或: cargo test
 
@@ -181,10 +181,13 @@ agent-steward links audit
 ```
 > 自动诊断全系统悬空引用、已删除的依赖文件与离线服务端口。
 
-#### 场景 6: CodeGraph 宏微联邦穿透查询微观代码符号
+#### 场景 6: 宏微联邦拓扑与 CodeGraph 穿透（Links Query / Bridge）
 ```bash
-# 在已索引 .codegraph/ 的仓库根目录下或显式指定路径
-agent-steward codegraph bridge --query "explore Storage"
+# 查询指定项目或文件的 L1/L2/L3 分层加权关联拓扑
+agent-steward links query -t project project:agent-steward --max-hops 2 --include-semantic
+
+# 穿透调用本地已建索引的 .codegraph/ 微观函数符号调用方
+agent-steward links codegraph /root/new/work/agent-steward StorageProvider
 ```
 
 #### 场景 7: 跨会话长期记忆检索（混合模式）
@@ -199,7 +202,25 @@ agent-steward memory add \
   --summary "PG 连接池应急决策"
 ```
 
-#### 场景 8: 会话结束完工结算与环境自洁
+#### 场景 8: 信息新鲜度对账与五点自进化探针（Freshness & Probes）
+```bash
+# 运行 Agent 执行回路五点对比探针 (P1~P5)
+agent-steward feedback probes
+
+# 执行全生命周期信息新鲜度对账（失效重算标记、幽灵节点剪枝、重复记忆归档）
+agent-steward feedback reconcile
+```
+
+#### 场景 9: 实证 Benchmark 与竞品横向对标（v3.5）
+```bash
+# 真机运行全量套件 (W1~W15 + M1~M5 + DQ1~DQ6 + COMP-C1~C4)
+agent-steward bench run --suite full --save false
+
+# 查看生产运行态效能存证账本 (PR-01~PR-11)
+agent-steward bench ledger --window 7d --limit 20
+```
+
+#### 场景 10: 会话结束完工结算与环境自洁
 ```bash
 agent-steward close session-20261115-01 --clean-temp
 ```
@@ -229,33 +250,33 @@ agent-steward close session-20261115-01 --clean-temp
 
 | 分类 | 工具名称 | 核心功能说明 |
 |---|---|---|
-| **开工与全景** | `steward_brief` | 一键获取宿主机全局上下文与自适应融合态势简报 |
+| **开工与全景** | `steward_brief` | 一键获取宿主机全局上下文、自适应融合简报与 AOPCC 乐观直通租约 (`<=120 tok`) |
 | **规范放置** | `steward_placement_suggest` | 咨询新文件/工程的规范存放路径与命名建议 |
 | | `steward_placement_rules` | 查看生效的 8 大目录放置规则清单 |
 | | `steward_placement_learn` | 放置规范自演化：聚类挖掘新规则候选与持久化 |
-| **资产纳管** | `steward_asset_search` | FTS5 全文与前缀模糊混合检索已知资产 |
+| **资产纳管** | `steward_asset_search` | FTS5 全文与前缀模糊混合检索已知资产 (支持 `micro/standard/full`) |
 | | `steward_asset_register` | 手动纳管或标记特定路径资产 |
-| | `steward_asset_scan` | 触发指定目录白黑名单三级分级扫描 (支持断点续扫) |
+| | `steward_asset_scan` | 触发指定目录白黑名单三级分级扫描 (含 L1 提取与可选 L2 标注) |
 | **客观事实图谱**| `steward_fact_query` | 宿主机事实图谱语义只读查询 (工具能力/端口/Systemd/Cron/资料) |
-| **生命周期门禁**| `steward_hook_pre` | Agent 操作前防撞门禁 (端口占用/文件覆盖/协作锁冲突校验) |
-| | `steward_hook_post` | Agent 操作后状态记录与变更同步 |
+| **生命周期门禁**| `steward_hook_pre` | AOPCC 三态并发路由与防撞门禁 (端口绑定/高爆炸半径/敏路径/锁冲突校验) |
+| | `steward_hook_post` | 操作后状态同步；当 `success=false` 且含 `error_output` 时 `<2ms` 注入碰壁自愈处方 |
 | | `steward_hook_generate` | 自动生成 Antigravity / Cursor / Claude / Git 的 Hook 配置 |
-| **环境与防撞** | `steward_env_processes` | 抓取活跃非系统动态任务脚本进程（过滤底噪） |
+| **环境与防撞** | `steward_env_processes` | 抓取活跃非系统动态任务脚本进程（过滤底噪与脱敏 cmdline） |
 | | `steward_env_show` | 查看宿主机 CPU、内存、磁盘与系统规格 |
-| | `steward_env_gc` | 宿主垃圾回收：安全清理超期临时文件与孤儿进程 |
+| | `steward_env_gc` | 宿主垃圾回收：安全清理超期临时文件与孤儿进程 (默认 dry-run) |
 | | `steward_port_check` | 探测网络端口冲突并推荐连续空闲端口 |
-| **长期记忆** | `steward_memory_add` | 写入架构决策、踩坑教训或项目笔记 (可插拔多后端) |
+| **长期记忆** | `steward_memory_add` | 写入架构决策、踩坑教训或项目笔记 (可插拔多后端 + 脱敏) |
 | | `steward_memory_search` | BGE-M3/Nomic 向量 + FTS5 RRF 倒数融合混合检索 |
 | | `steward_memory_audit` | 长期记忆体检：认知矛盾对与衰减淘汰仲裁 |
-| **图智能与联邦**| `steward_links_query` | 查询指定资产的出度/入度依赖拓扑网络 |
-| | `steward_links_visualize` | 将资产依赖关系导出为 Mermaid 图表 |
-| | `steward_links_impact` | 变更事前推演：递归计算多跳依赖爆炸半径 |
-| | `steward_links_audit` | 拓扑健康体检：扫描断链、缺失资产与离线服务 |
+| **图智能与联邦**| `steward_links_query` | 查询实体双向依赖与 `L1/L2/L3` 分层有向加权属性图谱 |
+| | `steward_links_visualize` | 将资产与项目依赖关系导出为 Mermaid 图表 (支持触发 L2/L3 挖掘) |
+| | `steward_links_impact` | 变更爆炸半径推演：跳数衰减加权计算 (`L1+L2` 强影响 + 可选 `L3` 语义) |
+| | `steward_links_audit` | 拓扑健康体检：扫描断链、缺失资产与离线服务 (免疫测试/示例假边) |
 | | `steward_links_repair` | 断链智能修复与重定向推演 (生成 patch 或自动应用) |
 | | `steward_codegraph_bridge`| 宏微双层联邦：穿透调用 CodeGraph 探索微观代码符号 |
 | **列存时序分析**| `steward_analytics_heatmap` | 宿主文件变更日历热力图分析 (DuckDB 列存聚合) |
 | | `steward_analytics_trend` | 资产与代码时序演进趋势对比 |
-| | `steward_analytics_export`| 宿主全景数据高性能导出 (Parquet / CSV) |
+| | `steward_analytics_export`| 宿主全景数据高性能导出 (Parquet / CSV，白名单沙盒校验) |
 | **多Agent协作锁**| `steward_lock_acquire` | 跨 Agent 资源互斥/共享锁申请 (端口/目录/文件/服务，带TTL) |
 | | `steward_lock_release` | 协作锁释放或提前退租 |
 | | `steward_lock_list` | 查看当前全系统活跃协作锁看板 |
@@ -266,9 +287,10 @@ agent-steward close session-20261115-01 --clean-temp
 | **生态防爆路由** | `steward_mcp_catalog` | 扫描与路由宿主机客户端已配置的 MCP Server 目录（脱敏） |
 | | `steward_skill_route` | 按任务意图与 Token 预算路由 Top-K SKILL（防止 Context 被打爆） |
 | | `steward_service_contact` | 管理外部可用服务通讯录与轻量健康探活（严禁存明文密钥） |
-| **多机联邦 Mesh** | `steward_mesh_query` | 对等节点 ping/facts/locks 联邦查询、跨机端口检测与跨节点租约锁 |
-| **路演与对齐** | `steward_demo_scenario` | Web/黑屏同源 6 大路演剧目真引擎实跑、ROI 核算、Parity 对齐与沙盒复位 |
-| **实证基准与账本** | `steward_benchmark` | 运行 8 大 A/B 对照负载与 5 大微基准、审计 PR-01~08 效能存证账本与回归比对 |
+| **多机联邦 Mesh** | `steward_mesh_query` | `MeshEnvelope v1.0` HMAC 防重放联邦协同：ping/facts/locks/port/acquire/跨机图谱/脱敏对话/<=10MB 沙盒投递 |
+| **路演与对齐** | `steward_demo_scenario` | Web/黑屏同源 6 大路演剧目真引擎实跑、ROI 核算、41/41 Parity 对齐与沙盒复位 |
+| **实证基准与账本** | `steward_benchmark` | `v3.5` 基准评测：`W1~W15` A/B 负载 + `M1~M5` 微基准 + `DQ1~DQ6` + `COMP-C1~C4` 竞品对标与 `PR-01~11` 账本 |
+| **反馈与自进化** | `steward_feedback` | `user_feedback.md` 双向总账读写、已验证反馈沉淀记忆、`reconcile` 新鲜度对账与 `P1~P5` 自进化探针 |
 
 ---
 
@@ -314,9 +336,9 @@ sequenceDiagram
     S-->>Agent: 释放空间，工单纪要沉淀入库完毕
 ```
 
-1. **进门先问候（steward_brief）**：接手任务第一件事，调用 brief 看一眼宿主机运行状态和历史经验；
-2. **动刀先请教（placement_suggest）**：产生任何新脚本、新工程、新技能先问放置建议，禁止散落；
-3. **起网先防撞（port_check & links_audit）**：启动新测试服务先测端口防冲突，改动前先扫拓扑断链；
-4. **遇码穿宏微（codegraph_bridge）**：宏观文件拓扑看 steward，微观代码符号穿透调用 CodeGraph；
-5. **经验随时存（memory_add）**：攻克了棘手 bug 或做出了重大架构决策，立刻记一条长期记忆；
-6. **出门随手关（session_close）**：任务结束清理垃圾并沉淀工单总结，保持宿主机自洁。
+1. **进门先问候并领租约（steward_brief）**：接手任务第一件事，调用 brief 看一眼宿主机运行状态、历史经验与 **⚡ AOPCC 乐观直通契约**；
+2. **乐观直通省轮次，碰壁交由后置自愈**：拥有高置信乐观租约的客户端直连（如本机 `:5432` PostgreSQL、已就绪 CLI 与 `/root/new/tmp/` 沙盒）可直接执行，省去整轮对话税；一旦执行报错，由 `steward_hook_post(success=false)` `<2ms` 注入宿主机替代处方；
+3. **动刀先请教（placement_suggest）**：产生任何新脚本、新工程、新技能先问放置建议，禁止散落；
+4. **写前与起网守悲观红线（hook_pre / port_check / links_impact）**：绑定服务端监听端口、修改高爆炸半径或系统高危路径前坚守悲观前置门禁，防止端口打架与破坏依赖；
+5. **遇码穿宏微（links_query & codegraph_bridge）**：宏观分层拓扑（`L1/L2/L3`）看 steward，微观代码符号穿透调用 CodeGraph；
+6. **经验随时存，出门随手关（memory_add & session_close）**：攻克棘手 bug 或做出架构决策立刻记一条长期记忆，任务结束清理垃圾并沉淀工单总结，保持宿主机自洁。

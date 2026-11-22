@@ -35,7 +35,7 @@
 ![Agent Host Steward 分层架构全景图](svg/architecture.svg)
 
 大管家采用高内聚的四层工业级解耦架构：
-1. **接入与交互通道 (Interface Layer)**：内置免额外端口的标准 MCP Stdio 服务（提供 **40 个原生治理工具**，与 CLI、Web UI 2.0 保持 1:1:1 双向同步）、CLI 终端与内嵌 Tokio Web 监控大屏（支持昼夜双主题蓝图、6 幕路演剧场与实证基准工作台）；
+1. **接入与交互通道 (Interface Layer)**：内置免额外端口的标准 MCP Stdio 服务（提供 **41 个原生治理工具**，与 CLI、Web UI 2.0 保持 1:1:1 双向同步）、CLI 终端与内嵌 Tokio Web 监控大屏（支持昼夜双主题蓝图、6 幕路演剧场与实证基准工作台）；
 2. **核心治理与认知引擎 (Core Engines)**：遵循「**宿主机事实图谱 × 用户偏好规约 × 可插拔记忆**」三位一体架构，涵盖放置建议、分级扫描（含黑名单浅层阻断与 `restricted` 入口过滤）、端口防撞、多 Agent 协作锁与 WFG 死锁检测、Ollama 小模型双轨元数据标注、混合检索、爆炸半径推演与会话自洁；
 3. **存储持久化层 (Storage Layer)**：支持 SQLite（WAL + Bundled FTS5）、PostgreSQL（pgvector + Advisory Lock）与 DuckDB（OLAP 列存与增量同步）三后端 SPI 抽象；
 4. **Linux 内核与物理文件系统**：直连 `/proc/net/tcp` 内存虚拟文件系统与 Linux inotify 事件。
@@ -133,7 +133,7 @@ Agent 每次任务结束后调用 `agent-steward close <SESSION_ID>`：
   - 放置推导 `M3` P95 **27 μs**（SLA `< 400 μs`）；
   - 3 跳依赖图查询 `M1` P95 **144 μs**（SLA `< 1500 μs`）；
   - FTS5 全文检索 `M2` P95 **269 μs**（SLA `< 1500 μs`）；
-- **8 大标准业务负载 A/B 对照实证**：Without Steward 裸奔基线累计消耗 `76,690 tok`，启用大管家后降至 `1,381 tok`（**Prompt Token 节省 98.20%**），事前拦截 **16 次** 端口/锁/乱放/断链风险，阻断 **379 个** 垃圾噪音文件，评测报告自带 **SHA-256 防篡改存证指纹**；日常每次 MCP 调用自动写入生产效能存证账本（`PR-01`~`PR-08`），收益 100% 可复现、可审计；
+- **A/B 实证基线（以 v1.0 8 大标准业务负载 `W1~W8` 首测为锚，现已演进至 v3.5 15 大负载 + 4 赛道竞品对标）**：Without Steward 裸奔基线累计消耗 `76,690 tok`，启用大管家后降至 `1,381 tok`（**Prompt Token 节省 98.20%**），事前拦截 **16 次** 端口/锁/乱放/断链风险，阻断 **379 个** 垃圾噪音文件，评测报告自带 **SHA-256 防篡改存证指纹**；日常每次 MCP 调用自动写入生产效能存证账本（`PR-01`~`PR-11`），收益 100% 可复现、可审计；
 - **开箱即用**：自带 SQLite / PostgreSQL / DuckDB Schema 自动建表与增量迁移。
 
 ---
@@ -159,7 +159,7 @@ agent-steward links audit
 agent-steward links codegraph /root/new/src/hk2 interactive
 ```
 
-同时，我们通过标准 Stdio 注册了 **40 个原生 MCP 工具**，无缝兼容 Claude Desktop、Cursor IDE 与 Antigravity CLI。Agent 每次开工前，输入首帧即自动收到宿主全貌简报（`steward_brief`），彻底告别盲人摸象。
+同时，我们通过标准 Stdio 注册了 **41 个原生 MCP 工具**，无缝兼容 Claude Desktop、Cursor IDE 与 Antigravity CLI。Agent 每次开工前，输入首帧即自动收到宿主全貌简报与 AOPCC 乐观直通租约（`steward_brief`），彻底告别盲人摸象。
 
 ---
 

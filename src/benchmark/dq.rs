@@ -1,7 +1,7 @@
 use crate::benchmark::report::DataQualityResult;
 use crate::storage::StorageProvider;
 
-/// 运行宿主机数据质量与 D6 准确率/新鲜度门禁 (DQ1~DQ5)
+/// 运行宿主机数据质量与 D6 准确率/新鲜度/图谱健康门禁 (DQ1~DQ6)
 pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQualityResult> {
     let mut results = Vec::with_capacity(5);
 

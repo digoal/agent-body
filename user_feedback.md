@@ -274,12 +274,12 @@ flowchart LR
 - **标准迭代方向**: 新增 **`W9`（混合向量检索召回率对比）**、**`W10`（复杂模板代码依赖抽取抗假阳性对比）** 与 **`DQ1~DQ3`（现网宿主机数据质量门禁）**。
 
 ### `BENCH-05` `[P1 · 横向参照系缺失]` Benchmark 仅与“裸奔基线”纵向自对比，缺乏与热门开源竞品的同场实证对标
-- **状态**: `✅ Verified (Phase 35)` · **首次记录**: 2026-11-21 · **提出依据**: [README.md ISSUE #18](README.md#L386) · **验证实测**: `src/benchmark/competitors.rs` (`COMP-C1~C4` + 12 维能力矩阵) 单测及现网 `bench v3.0` 实跑全部 PASS
+- **状态**: `✅ Verified (Phase 35)` · **首次记录**: 2026-11-21 · **提出依据**: [ISSUE.md #18](ISSUE.md#L92) · **验证实测**: `src/benchmark/competitors.rs` (`COMP-C1~C4` + 12 维能力矩阵) 单测及现网 `bench v3.0` 实跑全部 PASS
 - **现状核实**: 现行 Benchmark `v2.1` 已涵盖轨道 A（`W1~W11` 裸奔自对比）与轨道 B（`PR-01~10` 生产账本），但尚无轨道 C 对标行业主流产品（**记忆赛道**: Mem0 / Letta / PowerContext / Shodh-Memory；**上下文数据库**: OpenViking；**Agent 文件系统**: AgentFS；**宿主探针与检索**: `rg` + `psutil` + `ss` + `git`）。
 - **标准迭代方向**: 在 Phase 35 升级 Benchmark Spec 至 `v3.0`，落地 `src/benchmark/competitors.rs`（`COMP-C1 ~ COMP-C4` 同机同数据集真跑）与 12 维源码能力对标矩阵，严格区分 `LIVE_BENCHMARKED` 与 `ARCH_VERIFIED`。
 
 ### `BENCH-06` `[P0 · 质量对照与帕累托门禁缺失]` Benchmark 过度突出“省 Token”，缺少 `W1~W8` 质量评分、「基线质量 vs 管家质量 ($\Delta Q$)」成对比较与防截断门禁
-- **状态**: `✅ Verified (Phase 36)` · **首次记录**: 2026-11-21 · **提出依据**: [README.md ISSUE #19](README.md#L396) · **验证实测**: `W1~W11` & `COMP-C1~C4` 全量实装四维质量评分与帕累托防截断门禁，现网 `v3.1` 实跑全绿
+- **状态**: `✅ Verified (Phase 36)` · **首次记录**: 2026-11-21 · **提出依据**: [ISSUE.md #19](ISSUE.md#L96) · **验证实测**: `W1~W11` & `COMP-C1~C4` 全量实装四维质量评分与帕累托防截断门禁，现网 `v3.1` 实跑全绿
 - **源码审计证据**:
   1. `src/benchmark/workloads.rs:292` (`make_result`) 中 `W1~W8` 的 `quality_score` 全部为 `None`，仅 `W9/W10/W11` 计算了单侧质量分；
   2. `WorkloadResult`、`CompetitorComparisonResult` 与 `report.rs` 缺少 `baseline_quality_score`、`quality_delta` 与 `info_density_gain`（每千 Token 有效事实密度倍数），导致报告汇总表中基线质量栏为 `-`；

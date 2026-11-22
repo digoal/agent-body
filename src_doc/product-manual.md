@@ -2,7 +2,7 @@
 
 > 版本: v0.4.0 · 核心实现: Rust 1.99 + SQLite 3 (rusqlite bundled with FTS5) / PostgreSQL / DuckDB  
 > 存放路径: `src_doc/product-manual.md`  
-> 更新时间: 2026-11-19
+> 更新时间: 2026-11-22 · 完整 10 卷官方手册请优先参阅 [manual/README.md](../manual/README.md)（41 个原生 MCP 工具 / 28 个顶级 CLI 命令 / Benchmark v3.5）
 
 ---
 

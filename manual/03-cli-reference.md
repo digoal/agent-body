@@ -19,9 +19,9 @@ agent-steward [OPTIONS] <COMMAND>
 | `asset` | 资产分级扫描录入、手动注册与全文/语义检索 | 资产盘点与检索 |
 | `env` | 硬件规格、活跃动态任务进程、网络端口防撞检测 | 运维排障、资源防撞 |
 | `memory` | 跨会话长期记忆写入、混合 RRF 检索与矛盾仲裁审计 | 知识与决策沉淀 |
-| `mcp` | 启动标准 JSON-RPC 2.0 stdio MCP 服务端（40 工具） | 供 Agent 客户端挂载 |
-| `daemon` | 启动常驻后台守护主循环 (inotify 监听 + 60s 定时巡检) | 系统服务守护 |
-| `links` | 查询实体依赖拓扑、导出 Mermaid、推演爆炸半径、断链修复与 CodeGraph 联动 | 改动代码前影响分析 |
+| `mcp` | 启动标准 JSON-RPC 2.0 stdio MCP 服务端（41 工具） | 供 Agent 客户端挂载 |
+| `daemon` | 启动常驻后台守护主循环 (inotify 监听 + 60s 定时巡检 + 30min 新鲜度对账) | 系统服务守护 |
+| `links` | 查询 `L1/L2/L3` 分层加权拓扑、导出 Mermaid、推演爆炸半径、断链修复与 CodeGraph 联动 | 改动代码前影响分析 |
 | `changes` | 查看自某个时间点以来的宿主环境变更历史 | 开工前了解环境变动 |
 | `close` | 会话完工结算、清理临时测试资产、归档沉淀长期记忆 | 会话结束自洁 |
 | `gc` | 安全清理白名单临时目录过期文件与诊断孤儿进程 | 宿主环境自洁 |
@@ -30,15 +30,16 @@ agent-steward [OPTIONS] <COMMAND>
 | `coordination` | 管理跨 Agent 资源协作锁、等待队列唤醒与 WFG 死锁检测 | 多 Agent 防踩踏协同 |
 | `preflight` | 运行时环境与系统依赖完整性预检（支持 `--json`） | 部署前与 CI/CD 校验 |
 | `web` | 启动内嵌 Web UI 2.0 昼夜蓝图可视化大屏与 REST/SSE 服务 | 浏览器监控与路演 |
-| `hooks` | 触发 Pre/Post Hook 门禁与生成客户端自动化钩子 | 客户端工作流集成 |
+| `hooks` | 触发 AOPCC Pre/Post Hook 门禁（含 `<2ms` 碰壁自愈）与生成客户端钩子 | 客户端工作流集成 |
 | `analytics` | 基于 DuckDB 列存统计变更热力图、趋势与 Parquet/CSV 导出 | 宿主时序聚合分析 |
 | `mcp-catalog` | 扫描与路由宿主机客户端已纳管 MCP Server（密钥脱敏） | 生态目录管理 |
 | `skill` | 扫描 120+ SKILL 目录并按 Token 预算防爆路由 Top-K | 防止大模型上下文爆炸 |
 | `service` | 管理外部可用服务通讯录与轻量健康探活 | 外部服务目录治理 |
-| `mesh` | 轻量多机联邦 HTTP Peer Mesh 跨节点查询与协调 | 多机集群联动 |
+| `mesh` | 轻量多机联邦 `MeshEnvelope v1.0`：跨机图谱、HMAC 签名对话与沙盒文件投递 | 多机集群联动 |
 | `platform` | 跨平台原生探针查看本机硬件、端口与自动化任务 | Linux/macOS/Windows 探测 |
-| `demo` | 真引擎路演场景演示、ROI 核算与 40 工具黑白屏对齐自检 | 产品路演与一致性验证 |
-| `bench` | 运行 8 大 A/B 对照负载与 5 大微基准、审计 PR-01~08 存证账本 | 实证效能评测与回归对比 |
+| `demo` | 真引擎路演场景演示、ROI 核算与 41 工具黑白屏对齐自检 | 产品路演与一致性验证 |
+| `bench` | 运行 `v3.5` 实证 Benchmark（`W1~W15` / `M1~M5` / `DQ1~DQ6` / `COMP-C1~C4`）与 `PR-01~11` 账本 | 实证效能评测与回归对比 |
+| `feedback` | `user_feedback.md` 双向管理、`reconcile` 新鲜度对账与 `P1~P5` 五点自进化探针 | 反馈闭环与自进化体检 |
 
 ---
 
@@ -67,11 +68,17 @@ agent-steward [OPTIONS] <COMMAND>
 
 ---
 
-### 2.2 `brief` — 宿主环境开工简报
-- **说明**: 聚合硬件、动态进程、资产与长期记忆，生成 Agent 开工即食的全局上下文。
+### 2.2 `brief` — 宿主环境开工简报与乐观直通契约
+- **说明**: 聚合硬件、动态进程、资产、长期记忆与 **AOPCC 开工乐观直通租约** (`<= 120 tok`)，默认走 `BriefAssembler` 三位一体组装。
+- **参数**:
+  - `-q, --query <QUERY>`: 任务查询意图关键词
+  - `-s, --session-id <ID>`: 会话 ID（用于召回本会话关键决策）
+  - `-b, --budget-tokens <N>`: Token 预算上限（默认 1500）
+  - `--legacy`: 兼容旧版极简动态扫描输出
 - **示例**:
   ```bash
   agent-steward brief
+  agent-steward brief --query "PostgreSQL 调优" --budget-tokens 1200
   ```
 
 ---
@@ -210,24 +217,44 @@ agent-steward [OPTIONS] <COMMAND>
 
 ---
 
-### 2.6 `links` — 关联依赖与爆炸半径
-提供 `query`, `graph`, `impact`, `audit`, `codegraph` 五大子命令。
+### 2.6 `links` — 关联依赖、分层图谱与爆炸半径
+提供 `query`, `graph`, `impact`, `audit`, `repair`, `codegraph` 六大子命令，支持 **`L1_EXPLICIT` / `L2_STRUCTURAL` / `L3_SEMANTIC`** 多维证据分层有向加权图谱。
 
-#### (1) `links graph`
+#### (1) `links query <ID>`（分层属性图查询）
+- **参数**:
+  - `-t, --type <TYPE>`: 实体类型（`asset`, `service`, `project`, `tool`, `memory`）
+  - `--max-hops <N>`: 属性图谱遍历最大跳数（默认 `2`）
+  - `--min-weight <W>`: 最低边权重过滤（`0.0~1.0`，默认 `0.0`）
+  - `--include-semantic <true|false>`: 是否包含 `L3_SEMANTIC` 隐式语义边（默认 `true`）
+- **示例**:
+  ```bash
+  agent-steward links query -t project project:agent-steward --max-hops 2 --min-weight 0.5
+  ```
+
+#### (2) `links graph`
 - **说明**: 输出 Mermaid 格式的实体拓扑关系图。
+- **参数**:
+  - `-l, --limit <N>`: 输出边数上限（默认 `20`）
+  - `--discover-semantic`: 导出前触发 `L2` 结构上卷与 `L3` 语义关系挖掘
 - **示例**:
   ```bash
   agent-steward links graph
+  agent-steward links graph --discover-semantic --limit 30
   ```
 
-#### (2) `links impact <TARGET>`（爆炸半径推演）
-- **说明**: 输入资产路径，BFS 递归计算直接依赖与多跳间接下游，并附带代码行号出处与 CodeGraph 微观下钻标记。
+#### (3) `links impact <TARGET>`（加权衰减爆炸半径推演）
+- **说明**: 融合文件 `links` 与属性图 `fact_edges`，按跳数衰减系数 `0.8^(hop-1)` 与边权重计算影响范围，默认以 `L1+L2` 为强影响基准。
+- **参数**:
+  - `-m, --max-depth <N>`: 依赖多跳推演最大深度（默认 `3`）
+  - `--min-weight <W>`: 最低有效权重阈值（默认 `0.50`）
+  - `--include-semantic`: 是否包含 `L3_SEMANTIC` 隐式语义边
 - **示例**:
   ```bash
   agent-steward links impact /root/new/shared_proj/test.py
+  agent-steward links impact project:agent-steward --include-semantic --min-weight 0.35
   ```
 
-#### (3) `links audit`（断链与幽灵依赖体检）
+#### (4) `links audit`（断链与幽灵依赖体检）
 - **说明**: 主动扫描全局依赖拓扑中的断链与悬空引用（目标文件不存在、依赖服务离线），输出健康评分与修复建议。
 - **参数**:
   - `--fix`: 自动清理已确认失效的文件依赖死链。
@@ -385,25 +412,27 @@ agent-steward [OPTIONS] <COMMAND>
 
 ---
 
-### 2.16 `hooks` — HOOK 驱动集成、门禁校验与客户端自动化钩子生成
-- **说明**: 自动生成各 Agent 客户端（Antigravity、Cursor、Claude Code、Git）的 Pre/Post Hook 集成配置，或直接从 CLI 触发前置/后置门禁（规约 #13 MCP 与 CLI 1:1 映射）。
+### 2.16 `hooks` — HOOK 驱动集成、AOPCC 门禁校验与客户端自动化钩子生成
+- **说明**: 自动生成各 Agent 客户端（Antigravity、Cursor、Claude Code、Git）的 Pre/Post Hook 集成配置（含 `steward_bridge.py` AOPCC 自适应桥接），或直接从 CLI 触发前置/后置门禁与 `<2ms` 碰壁秒级自愈（规约 #13 & #25）。
 - **子命令**:
   - `generate`:
     - `-c, --client <CLIENT>`: 目标客户端类型 (`agy`, `cursor`, `claude`, `git`)
     - `-o, --out-dir <DIR>`: 写入目标根目录（若未指定则输出到标准输出预览）
     - `--dry-run`: 仅预览生成内容，不实际写盘
   - `pre`:
-    - `-t, --tool-name <NAME>`: 即将调用的工具名（如 `bind_port`、`write_file`）
+    - `-t, --tool-name <NAME>`: 即将调用的工具名（如 `bind_port`、`write_file`、`run_command`）
     - `-a, --args <JSON>`: 工具入参 JSON 字符串
   - `post`:
     - `-t, --tool-name <NAME>`: 刚执行完成的工具名
     - `-a, --args <JSON>`: 工具入参 JSON 字符串
-    - `--success`: 调用是否成功（默认 `true`）
+    - `--success <true|false>`: 调用是否成功（默认 `true`，兼容 `--success=false`）
+    - `-e, --error-output <TEXT>`: 可选失败错误输出（触发 `OptimisticFailureDiagnoser` `<2ms` 自愈处方注入）
 - **示例**:
   ```bash
   agent-steward hooks generate --client agy --dry-run
-  agent-steward hooks pre --tool-name bind_port --args '{"port":8080}'
+  agent-steward hooks pre --tool-name run_command --args '{"command":"psql -p 5432"}'
   agent-steward hooks post --tool-name write_file --args '{"path":"/root/new/work/demo.rs"}'
+  agent-steward hooks post --tool-name run_command --args '{"command":"psql -p 9999"}' --success=false --error-output "Connection refused"
   ```
 
 ---
@@ -439,14 +468,14 @@ agent-steward [OPTIONS] <COMMAND>
 
 ---
 
-### 2.20 `platform` / `mesh` — 跨平台原生探针与轻量多机联邦 (Phase 18)
+### 2.20 `platform` / `mesh` — 跨平台原生探针与 `MeshEnvelope v1.0` 联邦协同 (Phase 18 & 41)
 - `agent-steward platform <info|ports|services>`: 使用运行时 `PlatformProbe`（Linux `/proc`+systemd、macOS `lsof`+launchd、Windows `netstat`+schtasks）查看本机监听端口与自动化任务。
-- `agent-steward mesh <peers|local|ping|facts|locks|port|acquire>`: 对等节点只读联邦查询、跨机端口占用查询与 HTTP 租约锁申请（对应 `steward_mesh_query`）。
+- `agent-steward mesh <peers|local|ping|facts|locks|port|acquire|graph|dialogue-send|dialogue-inbox|dialogue-ack|transfer-send|transfer-inbox|transfer-accept|transfer-reject>`: 基于 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + `+-300s` 防重放）支持跨节点只读/租约锁协同、跨机图谱联邦探查（`graph`）、双向脱敏对话（`dialogue-*`）与 `<=10MB` `~/.steward/mesh_inbox/` 沙盒投递（`transfer-*`）（对应 `steward_mesh_query`）。
 
 ---
 
 ### 2.21 `demo` — 路演场景演示与黑白屏同步自检引擎 (Phase 22)
-- `agent-steward demo <list|run <scenario_id>|roi|parity|reset>`: 列出或用真实宿主机引擎执行 6 大黄金路演剧目（`scene-1`~`scene-6`）、核算实时商业价值 ROI、检查 40 工具黑白屏同步矩阵，或一键清理 `demo:*` 沙盒锁（对应 `steward_demo_scenario`）。
+- `agent-steward demo <list|run <scenario_id>|roi|parity|reset>`: 列出或用真实宿主机引擎执行 6 大黄金路演剧目（`scene-1`~`scene-6`）、核算实时商业价值 ROI、检查 41 工具黑白屏同步矩阵，或一键清理 `demo:*` 沙盒锁（对应 `steward_demo_scenario`）。
 
 ---
 
@@ -471,12 +500,13 @@ agent-steward [OPTIONS] <COMMAND>
 
 ---
 
-### 2.23 `bench` — 实证 Benchmark 对照评测与生产效能存证账本 (Phase 27~28)
-- **这是什么**: 在真实宿主机上运行「Without Steward 裸奔基线 vs With Steward 大管家」A/B 对照测试套件，并审计日常每次 MCP 调用自动记录的生产效能存证流水（对应第 40 个 MCP 工具 `steward_benchmark`）。
-- **为什么需要**: 用同机实跑数据与 SHA-256 防篡改指纹证明 Token 节省率、延迟加速比与冲突拦截率，杜绝“拍脑袋宣传数字”（规约 #18）。
+### 2.23 `bench` — 实证 Benchmark v3.5 对照评测与生产效能存证账本 (Phase 27~42)
+- **这是什么**: 在真实宿主机上运行「Without Steward 裸奔基线 vs With Steward 大管家」A/B 对照测试套件，运行竞品横向对标，并审计日常每次 MCP/CLI/Web/Hook 调用自动记录的生产效能存证流水（对应 `steward_benchmark`）。
+- **为什么需要**: 用同机实跑数据与 SHA-256 防篡改指纹证明 Token 节省率、上下文质量净胜（$\Delta Q$）、延迟加速比与冲突拦截率，杜绝“拍脑袋宣传数字”（规约 #18）。
 - **子命令与参数**:
-  - `workloads`: 列出 8 大标准 A/B 负载（`W1`~`W8`）与 `PR-01`~`PR-08` 归因推导规则字典。
-  - `run [--suite full|macro|micro|W1~W8] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
+  - `workloads`: 列出 15 大标准 A/B 负载（`W1`~`W15`）、`M1`~`M5`、`DQ1`~`DQ6` 与 `PR-01`~`PR-11` 归因推导规则字典。
+  - `run [--suite full|macro|micro|dq|competitors|W1~W15|COMP-C1~C4] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
+  - `competitors [--track all|C1|C2|C3|C4] [--format markdown|json]`: 运行四大赛道热门开源竞品横向实证对标。
   - `report [--run-id <ID>] [--format table|json|csv]`: 查看指定批次或最近一次跑批报告。
   - `ledger [--window 24h|7d|30d|all] [--tool <NAME>] [--limit 20]`: 审计生产运行态按 PR 规则聚合的效能存证账本。
   - `compare <RUN_A> <RUN_B>`: 跨版本或跨批次比对 Token 节省率与耗时回归差异。
@@ -486,6 +516,7 @@ agent-steward [OPTIONS] <COMMAND>
   ```bash
   agent-steward bench workloads
   agent-steward bench run --suite full --save false
+  agent-steward bench competitors --track all
   agent-steward bench ledger --window 7d --limit 5
   ```
 - **真实输出解读（`bench run --suite full --save false` 实机片段）**:
@@ -503,6 +534,23 @@ agent-steward [OPTIONS] <COMMAND>
   | **事前拦截风险数** | - | - | **16 次** |
   | **阻断垃圾噪音文件** | - | - | **379 个** |
   ```
-  > 💡 **指标解读**: 8 大负载全跑仅需 ~1.9 秒，其中 W1（工具能力发现）加速 `567.44x`（`142.99ms → 252μs`）、W7（百级 SKILL 预算路由）节省 `99.8%` Token，且所有 5 项微基准 P95（`M1=144μs`, `M2=269μs`, `M3=27μs`）均远低于 SLA 红线。
+  > 💡 **指标解读**: 当前 Benchmark 已演进至 **`v3.5`**，覆盖 `W1~W15`（含分层图谱 `W13`、Mesh 防重放 `W14`、AOPCC 自适应并发 `W15`）、5 项微基准（`M1~M5`）、6 项数据与图谱健康门禁（`DQ1~DQ6`）及 `COMP-C1~C4` 竞品同机对标，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁。
+
+---
+
+### 2.24 `feedback` — 实际使用反馈总账、信息新鲜度对账与五点自进化探针 (Phase 30 & 38~39)
+- **这是什么**: 直接操作 `user_feedback.md` 反馈总账，将已验证改进经验沉淀为长期记忆，并触发 `FreshnessReconciler` 全生命周期信息新鲜度对账与 `P1~P5` 五点对比自进化探针（对应第 41 个 MCP 工具 `steward_feedback`）。
+- **子命令与参数**:
+  - `list`: 列出 `user_feedback.md` 中的全部反馈条目 (`PRO` / `CON` / `BENCH` / `REQ`)。
+  - `add --title <TEXT> [--category PRO|CON|BENCH|REQ] [--priority P0|P1|P2] [--evidence <TEXT>] [--target <PATH>]`: 结构化追加一条新反馈。
+  - `sync`: 将标为 `✅ Verified` 的反馈条目沉淀入长期记忆库。
+  - `reconcile [--json]`: 执行全生命周期信息新鲜度对账（失效重算 `stale` 标记、删除级联清理、幽灵节点剪枝与同路径重复记忆归档）。
+  - `probes [--auto-heal] [--auto-feedback] [--json]`: 运行 `P1~P5` 执行回路五点对比自进化探针。
+- **调用示例**:
+  ```bash
+  agent-steward feedback list
+  agent-steward feedback reconcile
+  agent-steward feedback probes --auto-heal
+  ```
 
 

@@ -341,7 +341,7 @@ mod tests {
                 m.id, m.name, m.passed, m.avg_us, m.sla_limit_us
             );
         }
-        assert!(report.sla_passed, "8 大负载 + 5 大微基准 SLA 应全部通过");
+        assert!(report.sla_passed, "15 大负载 + 5 大微基准 SLA 应全部通过");
 
         let fetched = provider
             .get_benchmark_run(&report.run_id)

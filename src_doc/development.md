@@ -1,8 +1,8 @@
 # Agent Host Steward (Rust 版) — 本地编译、开发与测试指南
 
 > **版本**: v0.4.0 (Rust Edition)  
-> **更新时间**: 2026-11-19  
-> **架构基线**: 三位一体架构 (事实图谱 + 偏好规约 + 可插拔记忆) + 多存储引擎 + 协作锁引擎 + Web UI 2.0 + 依赖预检
+> **更新时间**: 2026-11-22  
+> **架构基线**: 三位一体架构 (事实图谱 + 偏好规约 + 可插拔记忆) + 多存储引擎 + 协作锁 + 分层加权图谱 + MeshEnvelope v1.0 + AOPCC 并发自适应 + Benchmark v3.5
 
 ---
 
@@ -62,43 +62,43 @@ agent-steward/
 │   ├── ecosystem_integration.rs     # 生态目录与防爆路由集成测试 (1 项)
 │   ├── test_web_dashboard.rs        # Web UI 2.0 端到端全生命周期测试 (1 项)
 │   └── benchmarks.rs                # 亚毫秒 OLAP 与实证基准测试 (6 项)
-└── src/                     # Rust 核心源码目录 (24 个顶层模块)
-    ├── main.rs              # CLI 入口与 27 个顶层子命令解析 (Clap derive)
+└── src/                     # Rust 核心源码目录 (25 个顶层模块)
+    ├── main.rs              # CLI 入口与 28 个顶层子命令解析 (Clap derive)
     ├── lib.rs               # 核心库导出与版本元信息
     ├── config/              # 配置文件与环境变量管理、参数校验
     ├── preflight/           # 运行时环境与依赖完整性预检引擎
-    ├── storage/             # 存储层 SPI (61 方法) + SQLite/PG/DuckDB 三引擎 + 热迁移与增量同步
+    ├── storage/             # 存储层 SPI (74 方法) + SQLite/PG/DuckDB 三引擎 (25 表) + 热迁移与增量同步
     ├── coordination/        # 多 Agent 协作锁中枢 (Port/Dir/File 互斥、TTL、WFG 死锁、Advisory Lock)
-    ├── fact/                # 宿主机客观事实图谱 (工具能力/端口/Systemd/Cron/资料编目)
-    ├── brief/               # 自适应情境组装引擎 (Dynamic Brief Assembler)
+    ├── fact/                # 宿主机客观事实图谱 (工具能力/端口/Systemd/Cron/资料编目/L1~L3 属性图)
+    ├── brief/               # 自适应情境组装引擎 (Dynamic Brief Assembler + AOPCC 乐观直通租约)
     ├── placement/           # 新对象放置建议引擎 (Rules 2.0 / 意图打分 / 纠偏自学习)
-    ├── scanner/             # 资产分级颗粒度扫描器 (Deep/Shallow/Restricted + 三层元数据 + Ollama 标注)
+    ├── scanner/             # 资产分级颗粒度扫描器 (Deep/Shallow/Restricted + 脱敏/抗投毒 + 三层元数据)
     ├── env/                 # 宿主系统感知与 /proc 动态任务采集器
     ├── memory/              # 记忆管理与可插拔适配器 (内置/PowerContext/Mem0/Letta)
-    ├── links/               # 宏微双层依赖拓扑与 CodeGraph 联邦桥接
+    ├── links/               # 分层加权依赖拓扑、爆炸半径推演与 CodeGraph 联邦桥接
     ├── changes/             # 宿主变更历史与开工回溯摘要
-    ├── watcher/             # inotify 实时监听与防抖 ChangeHandler
+    ├── watcher/             # inotify 实时监听、写穿失效与防抖 ChangeHandler
     ├── daemon/              # 后台常驻守护进程与自主巡查调度器
     ├── session/             # 会话生命周期自动绑定与安全归档
-    ├── hooks/               # HOOK 事件总线、自动同步、客户端生成与 Pipeline 编排
+    ├── hooks/               # HOOK 事件总线、自动同步、客户端生成、Pipeline 与 `<2ms` 碰壁自愈
     ├── web/                 # 内嵌 HTTP/SSE 昼夜蓝图监控大屏服务 (7 大工作台)
     ├── tui/                 # 终端全景实时交互看板
     ├── ecosystem/           # MCP/SKILL 生态目录、外部服务通讯录与 Context 防爆路由
     ├── platform/            # 跨平台原生探针 (Linux/macOS/Windows)
-    ├── mesh/                # 轻量多机联邦 HTTP Peer Mesh
+    ├── mesh/                # 轻量多机联邦 HTTP Peer Mesh & MeshEnvelope v1.0
     ├── demo/                # 路演沙盒引擎（6 大剧目、ROI 核算）
-    ├── benchmark/           # 双轨实证 Benchmark 引擎（W1~W8 + M1~M5 + PR-01~08 账本）
-    └── api/                 # 41 个原生 MCP 工具端点与 Hook 门禁
+    ├── benchmark/           # 三轨实证 Benchmark v3.5（W1~W15 + M1~M5 + DQ1~DQ6 + COMP-C1~C4 + PR-01~11）
+    ├── feedback/            # 使用反馈总账 (user_feedback.md)、新鲜度对账与 P1~P5 对比自进化探针
+    └── api/                 # 41 个原生 MCP 工具端点与 AOPCC Hook 门禁
 ```
 
 ---
 
 ## 三、常用构建、测试与开发命令
 
-### 1. 快速检查与语法校验 (零警告标准)
+### 1. 快速检查、防漂移与语法校验 (零警告标准)
 ```bash
-make check
-# 等价于: cargo check --tests
+make evolution-check && make lint-panic && make check
 ```
 
 ### 2. 运行环境与依赖预检
@@ -109,7 +109,7 @@ make preflight
 
 ### 3. 运行测试套件
 ```bash
-# 运行全部库内单元测试 (178 项；全量 cargo test 共 202 项通过，1 项 doc-test 忽略)
+# 运行全部库内与集成自动化测试 (252+ 项通过，1 项 doc-test 忽略)
 cargo test --lib
 
 # 运行协作锁并发集成测试 (8 项)

@@ -8,7 +8,7 @@
 > - **65 个 `StorageProvider` SPI 方法** + **23 张 SQLite 表 / FTS5 虚拟表**（SQLite / PostgreSQL / DuckDB 三后端等价）
 > - Benchmark Spec **`v2.1`**：11 大宏观 A/B 负载（`W1~W11`）+ 5 大内核微基准（`M1~M5`）+ 4 大数据健康门禁（`DQ1~DQ4`）+ 10 条生产效能推导规则（`PR-01~PR-10`）
 > - 全量自动化测试：**223 passed, 0 failed, 1 ignored**  
-> **对齐约束**: [README.md 规约 #1-#20](../README.md) · [ISSUE #17 & #18](../README.md#L384-L386) · [user_feedback.md](../user_feedback.md) (`BENCH-05`, `REQ-08`, `REQ-09`)  
+> **对齐约束**: [README.md 规约 #1-#20](../README.md) · [ISSUE #17 & #18](../ISSUE.md#L88-L94) · [user_feedback.md](../user_feedback.md) (`BENCH-05`, `REQ-08`, `REQ-09`)  
 > **当前状态**: 📋 Phase 34 ~ Phase 35 已规划就绪，待串行实施
 
 ---

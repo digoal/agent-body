@@ -85,7 +85,7 @@ impl EffectivenessLedger {
         }
     }
 
-    /// 根据 MCP 工具名与实际输出自动按 PR-01~PR-10 推导并记入生产效能账本
+    /// 根据 MCP 工具名与实际输出自动按 PR-01~PR-11 推导并记入生产效能账本
     pub fn record_mcp_call(
         storage: &dyn StorageProvider,
         tool_name: &str,

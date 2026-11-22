@@ -49,8 +49,8 @@ graph TD
         direction TB
         
         subgraph Protocols["统一接口与网关层 (Protocol Layer)"]
-            P1["MCP stdio 服务端 (40 Tools)"]
-            P2["CLI 命令解析器 (Clap 27 Commands)"]
+            P1["MCP stdio 服务端 (41 Tools)"]
+            P2["CLI 命令解析器 (Clap 28 Commands)"]
             P3["Tokio 内嵌 HTTP / SSE 服务"]
         end
 
@@ -82,7 +82,7 @@ graph TD
         end
 
         subgraph StorageSPI["存储中枢与多后端 SPI (Storage Layer)"]
-            S_SPI["StorageProvider Trait (61 核心语义接口)"]
+            S_SPI["StorageProvider Trait (74 核心语义接口)"]
             S_SQLITE["SQLite (内嵌 Bundled + FTS5)"]
             S_PG["PostgreSQL (pgvector + Advisory Lock)"]
             S_DUCK["DuckDB (列存 OLAP + Parquet 增量同步)"]
@@ -211,7 +211,7 @@ sequenceDiagram
 | **资源开销** | 空闲内存 `< 25MB` | Tokio 协程多路复用，无请求时 CPU 利用率趋近于 0 |
 | **运行可用性** | 99.99% 防御性容错 | 运行时执行 `Preflight` 预检，内核级 `/proc` 与 inotify 缺失时优雅降级 |
 | **并发吞吐** | 10,000+ QPS (本地) | 亚毫秒内存/嵌入式 FTS 检索，锁判定与冲突检测耗时 `< 1ms` |
-| **实证可核验** | 100% 有据可查（规约 #18） | 双轨实证引擎：W1~W8 同机 A/B 负载 + M1~M5 微基准 SLA + PR-01~08 生产效能账本与 SHA-256 防篡改签名 |
+| **实证可核验** | 100% 有据可查（规约 #18） | 三轨实证引擎 v3.5：W1~W15 同机 A/B 负载 + M1~M5 微基准 SLA + DQ1~DQ6 质量门禁 + COMP-C1~C4 竞品对标 + PR-01~11 生产效能账本与 SHA-256 防篡改签名 |
 
 ---
 

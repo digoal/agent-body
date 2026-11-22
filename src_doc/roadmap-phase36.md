@@ -2,14 +2,14 @@
 
 > **编制**: Antigravity · **日期**: 2026-11-21  
 > **基线版本**: `v0.4.0` + Phase 1~35 全部完成（Benchmark `v3.0` 含轨道 A `W1~W11`、轨道 B `PR-01~10`、轨道 C `COMP-C1~C4`）  
-> **对齐约束**: [README.md 规约 #5, #18, #20](../README.md) · [ISSUE #19](../README.md#L396) · [EVOLUTION_GUIDE.md](../EVOLUTION_GUIDE.md) · [user_feedback.md](../user_feedback.md) (`BENCH-06`, `REQ-10`)  
+> **对齐约束**: [README.md 规约 #5, #18, #20](../README.md) · [ISSUE #19](../ISSUE.md#L96) · [EVOLUTION_GUIDE.md](../EVOLUTION_GUIDE.md) · [user_feedback.md](../user_feedback.md) (`BENCH-06`, `REQ-10`)  
 > **当前状态**: 📋 Phase 36 已规划就绪，待串行实施
 
 ---
 
 ## 一、立项背景与第一性原理逆向剖析（为什么“只看省 Token”是危险的？）
 
-在 [README.md ISSUE #19](../README.md#L396) 中，主理人提出了一针见血的修正建议：
+在 [ISSUE.md #19](../ISSUE.md#L96) 中，主理人提出了一针见血的修正建议：
 > **“关于 Benchmark，我想提出一个修正建议，不能只体现省 Token，既要省 Token，同时上下文质量不能下降甚至应该有提升。”**
 
 ### 1.1 信息论视角：「空输出悖论」与「注意力稀释陷阱」

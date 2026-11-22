@@ -17,7 +17,7 @@ sequenceDiagram
     Agent->>Steward: JSON-RPC "initialize"
     Steward-->>Agent: capabilities (tools: true), serverInfo
     Agent->>Steward: JSON-RPC "tools/list"
-    Steward-->>Agent: 返回 40 个原生工具列表与 JSON Schema
+    Steward-->>Agent: 返回 41 个原生工具列表与 JSON Schema
     Agent->>Steward: JSON-RPC "tools/call" (steward_brief)
     Steward->>SQLite: 聚合查询环境与记忆
     Steward-->>Agent: 返回结果内容文本
@@ -53,29 +53,29 @@ sequenceDiagram
 
 ---
 
-## 3. 40 个原生 MCP 工具标准字典
+## 3. 41 个原生 MCP 工具标准字典
 
-大管家向 Agent 暴露 40 个原子级认知与管控工具：
+大管家向 Agent 暴露 41 个原子级认知与管控工具：
 
 | MCP 工具名 | 核心功能 | 核心参数说明 |
 |---|---|---|
-| `steward_brief` | 一键获取宿主硬件、活跃任务、资产与记忆简报 | 无必填参数 |
-| `steward_placement_suggest` | 索取新文件/工程的标准存放路径与命名建议 | `type`, `name`, `intent`, `security` |
+| `steward_brief` | 一键获取宿主硬件、活跃任务、资产、记忆简报与 AOPCC 开工乐观直通租约 (`<=120 tok`) | `query`, `session_id`, `budget_tokens` |
+| `steward_placement_suggest` | 索取新文件/工程的标准存放路径与命名建议 | `object_type`, `name`, `intent`, `security_level` |
 | `steward_placement_rules` | 查看生效的 8 大目录放置规范 | 无 |
 | `steward_placement_learn` | 放置规范自演化：聚类挖掘新规则候选与持久化 | `min_samples`, `accept` |
 | `steward_asset_search` | 全文与语义检索已知纳管资产（支持三级渐进 Token 披露） | `query`, `limit`, `detail_level` (`micro`/`standard`/`full`) |
 | `steward_asset_register` | 手动注册一个新资产对象 | `path`, `type`, `owner`, `desc` |
 | `steward_asset_scan` | 触发指定目录白黑名单分级扫描（含 L1 提取与可选 Ollama L2 标注） | `path`, `enrich_with_ollama`, `enrich_limit` |
-| `steward_env_processes` | 检索当前运行的普通任务进程 (过滤底噪) | 无 |
+| `steward_env_processes` | 检索当前运行的普通任务进程 (过滤底噪与脱敏 cmdline) | 无 |
 | `steward_env_show` | 查看系统硬件规格 (CPU/内存/磁盘) | 无 |
 | `steward_env_gc` | 宿主垃圾回收：安全清理超期临时文件与孤儿进程 | `tmp_dir`, `max_age_hours`, `apply` |
 | `steward_port_check` | 端口防撞检测与空闲可用端口推荐 | `port`, `suggest_count` |
 | `steward_memory_add` | 写入一条跨会话长期记忆 | `type`, `content`, `summary` |
 | `steward_memory_search` | 语义+全文混合 RRF 检索记忆 | `query`, `limit`, `hybrid` |
 | `steward_memory_audit` | 长期记忆体检：认知矛盾对与衰减淘汰仲裁 | `archive_id` |
-| `steward_links_query` | 查询指定实体的依赖关联关系 | `type`, `id` |
-| `steward_links_visualize` | 导出当前实体拓扑关系为 Mermaid 架构图 | `limit` |
-| `steward_links_impact` | 变更爆炸半径推演 (BFS 逆向多跳分析) | `target`, `max_depth` |
+| `steward_links_query` | 查询实体双向依赖与 `L1/L2/L3` 分层有向加权属性图谱 | `type`, `id`, `max_hops`, `min_weight`, `include_semantic` |
+| `steward_links_visualize` | 导出当前实体拓扑关系为 Mermaid 架构图 (支持触发 L2/L3 挖掘) | `limit`, `discover_semantic` |
+| `steward_links_impact` | 变更爆炸半径推演 (加权衰减 BFS，支持 `L1+L2` 基准与可选 `L3` 语义) | `target`, `max_depth`, `min_weight`, `include_semantic` |
 | `steward_links_audit` | 全局依赖断链审计 (缺失文件/离线端口) | `fix_dangling` |
 | `steward_links_repair` | 断链智能修复与重定向推演 (生成 patch 或自动应用) | `apply` |
 | `steward_codegraph_bridge` | CodeGraph 宏微联邦联动与符号调用方下钻 | `path`, `symbol` |
@@ -89,16 +89,17 @@ sequenceDiagram
 | `steward_lock_release` | 释放指定资源协作互斥锁 | `lock_id`, `holder_agent` |
 | `steward_lock_list` | 列出当前所有活跃的协作互斥锁 | `resource_type` |
 | `steward_analytics_heatmap` | 宿主变更活跃度热力图与密度聚合分析 (DuckDB) | `days` |
-| `steward_analytics_trend` | 资产增长趋势与类别分布聚合统计 (DuckDB) | `days` |
-| `steward_analytics_export` | 导出宿主分析数据为 Parquet 列存文件 (DuckDB) | `export_type`, `output_path` |
-| `steward_mcp_catalog` | 扫描/列出/路由宿主机已纳管的 MCP Server 与工具摘要 | `action`, `intent`, `limit` |
-| `steward_skill_route` | 扫描 120+ SKILL 目录并按 Token 预算防爆路由推荐 Top-K | `action`, `intent`, `budget_tokens` |
+| `steward_analytics_trend` | 资产增长趋势与类别分布聚合统计 (DuckDB) | `metric`, `days` |
+| `steward_analytics_export` | 导出宿主分析数据为 Parquet 列存文件 (DuckDB) | `table`, `output_path` |
+| `steward_mcp_catalog` | 扫描/列出/路由宿主机已纳管的 MCP Server 与工具摘要 | `action`, `query`, `limit` |
+| `steward_skill_route` | 扫描 120+ SKILL 目录并按 Token 预算防爆路由推荐 Top-K | `action`, `intent`, `budget_tokens`, `max_skills` |
 | `steward_service_contact` | 外部可用服务通讯录管理（脱敏登记、查询与健康探活） | `action`, `service_name`, `endpoint`, `auth_env_var` |
-| `steward_lock_wait` | 排队等待获取协作锁，支持超时与主动唤醒（含死锁拦截） | `resource_type`, `resource_id`, `holder_agent`, `timeout_secs` |
-| `steward_lock_deadlock_check` | 运行 Wait-For Graph (WFG) 环路检测，诊断多 Agent 死锁 | `agent` |
-| `steward_mesh_query` | 多机轻量 HTTP Peer Mesh 联邦查询与跨节点端口/锁协同 | `action`, `port`, `peer` |
-| `steward_demo_scenario` | Web 路演与黑屏同源场景演示引擎（6 大剧目、ROI、Parity、沙盒重置） | `action`, `scenario_id` |
-| `steward_benchmark` | 实证 Benchmark 对照评测（W1~W8 + M1~M5）与生产效能存证账本（PR-01~08） | `action`, `suite`, `save`, `run_id`, `run_a`, `run_b`, `window`, `tool_filter`, `format`, `limit` |
+| `steward_lock_wait` | 排队等待获取协作锁，支持超时与主动唤醒（含死锁拦截） | `resource_type`, `resource_id`, `holder_agent`, `wait_timeout_ms` |
+| `steward_lock_deadlock_check` | 运行 Wait-For Graph (WFG) 环路检测，诊断多 Agent 死锁 | 无 |
+| `steward_mesh_query` | `MeshEnvelope v1.0` HMAC 防重放联邦协同：ping/facts/locks/port/acquire/跨机图谱/脱敏对话/<=10MB 沙盒投递 | `action`, `port`, `peer`, `query`, `thread_id`, `intent`, `content`, `file_path`, `transfer_id` |
+| `steward_demo_scenario` | Web 路演与黑屏同源场景演示引擎（6 大剧目、ROI、41/41 Parity、沙盒重置） | `action`, `scenario_id` |
+| `steward_benchmark` | 实证 Benchmark 对照评测（`W1~W15` + `M1~M5` + `DQ1~DQ6` + `COMP-C1~C4`）与生产效能账本（`PR-01~11`） | `action`, `suite`, `track`, `save`, `run_id`, `run_a`, `run_b`, `window`, `tool_filter`, `format`, `limit` |
+| `steward_feedback` | 使用反馈总账 (`user_feedback.md`) 读写沉淀、`reconcile` 信息新鲜度对账与 `P1~P5` 自进化对比探针 | `action`, `category`, `priority`, `title`, `evidence`, `target`, `auto_heal`, `auto_feedback` |
 
 ---
 
@@ -148,9 +149,9 @@ sequenceDiagram
 ```
 
 ### (3) 工具调用 (`tools/call`) — 运行实证 Benchmark 与审计账本 (`steward_benchmark`)
-支持 `action`: `"workloads" | "run" | "report" | "ledger" | "compare" | "export" | "reset"`（默认为 `"report"`）。
+支持 `action`: `"workloads" | "run" | "report" | "ledger" | "compare" | "export" | "reset" | "competitors"`（默认为 `"report"`）。
 
-**请求（真机跑批全量套件）**:
+**请求（真机跑批全量套件 v3.5）**:
 ```json
 {
   "jsonrpc": "2.0",
@@ -179,6 +180,25 @@ sequenceDiagram
       "action": "ledger",
       "window": "7d",
       "limit": 20
+    }
+  }
+}
+```
+
+### (4) 工具调用 (`tools/call`) — 五点对比探针与新鲜度对账 (`steward_feedback`)
+支持 `action`: `"list" | "add" | "sync" | "reconcile" | "probes"`（默认为 `"list"`）。
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "tools/call",
+  "params": {
+    "name": "steward_feedback",
+    "arguments": {
+      "action": "probes",
+      "auto_heal": true,
+      "auto_feedback": false
     }
   }
 }

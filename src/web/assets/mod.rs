@@ -490,12 +490,12 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 
             <div class="view-toolbar mt-12" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);">
               <div class="toolbar-left">
-                <select id="bench-suite-select" class="input" style="width:200px;">
-                  <option value="full">全量套件 v3.3 (省Token×提质量帕累托 + 竞品 + 新鲜度)</option>
+                <select id="bench-suite-select" class="input" style="width:240px;">
+                  <option value="full">全量套件 v3.5 (省Token×提质量帕累托 + 竞品 + 图谱/Mesh + AOPCC)</option>
                   <option value="competitors">🏆 热门竞品横向对标 (COMP-C1~C4)</option>
-                  <option value="macro">宏观业务 A/B (W1~W12)</option>
+                  <option value="macro">宏观业务 A/B (W1~W15)</option>
                   <option value="micro">内核微基准 SLA (M1~M5)</option>
-                  <option value="dq">宿主机数据与新鲜度质量 (DQ1~DQ5)</option>
+                  <option value="dq">宿主机数据与新鲜度/图谱质量 (DQ1~DQ6)</option>
                   <option value="W1">W1 · 宿主工具发现</option>
                   <option value="W2">W2 · 端口防撞选址</option>
                   <option value="W3">W3 · 分级扫描阻断</option>
@@ -508,6 +508,9 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                   <option value="W10">W10 · 依赖抽取抗假阳性</option>
                   <option value="W11">W11 · 全链路脱敏与抗投毒安全防线</option>
                   <option value="W12">W12 · 资产改删写穿失效与一致性自愈</option>
+                  <option value="W13">W13 · 分层加权图谱与隐式语义发现</option>
+                  <option value="W14">W14 · Mesh 签名防重放与沙盒协同</option>
+                  <option value="W15">W15 · AOPCC 乐观直通与碰壁自愈回路</option>
                 </select>
                 <button id="btn-bench-run" class="btn btn-primary btn-xs">▶ 真机运行 A/B 基准</button>
                 <select id="bench-window-select" class="input" style="width:120px;">
@@ -526,7 +529,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
             <div class="panel-grid-2 mt-12">
               <div class="card">
                 <div class="item-top"><strong>🧪 实验室 A/B 对照实测 (Without vs With Steward)</strong><span id="bench-sla-badge" class="badge">-</span></div>
-                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 8 大负载对照实测</div></div>
+                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 15 大负载对照实测</div></div>
               </div>
               <div class="card">
                 <div class="item-top"><strong>⚡ 5 大内核微基准 SLA & 跨版本回归比对</strong></div>
@@ -545,13 +548,26 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
 
             <div class="card mt-12">
               <div class="item-top"><strong>🏆 热门开源竞品横向对标 (轨道 C · LIVE_BENCHMARKED + ARCH_VERIFIED)</strong><span class="badge">Mem0 / OpenViking / AgentFS / rg+psutil</span></div>
-              <div id="bench-competitors-box" class="mt-8"><div class="empty">运行「全量套件 v3.0」或「🏆 热门竞品横向对标」查看同机实测结果与 12 维能力矩阵</div></div>
+              <div id="bench-competitors-box" class="mt-8"><div class="empty">运行「全量套件 v3.5」或「🏆 热门竞品横向对标」查看同机实测结果与 12 维能力矩阵</div></div>
             </div>
 
             <div class="card mt-12">
               <div class="item-top"><strong>📒 生产运行态效能存证账本（带 PR-01~PR-11 确定性溯源依据）</strong></div>
               <div id="bench-rules-strip" class="mt-8"></div>
               <div id="bench-ledger-list" class="mt-8"><div class="empty">暂无生产流水记录</div></div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top">
+                <strong>🔄 使用反馈总账 · 信息新鲜度对账 &amp; 五点自进化探针 (steward_feedback)</strong>
+                <div class="toolbar-left">
+                  <button id="btn-fb-list" class="btn btn-ghost btn-xs">📋 刷新反馈</button>
+                  <button id="btn-fb-probes" class="btn btn-primary btn-xs">🔬 运行 P1~P5 探针</button>
+                  <button id="btn-fb-reconcile" class="btn btn-ghost btn-xs">🧹 新鲜度对账</button>
+                  <button id="btn-fb-sync" class="btn btn-ghost btn-xs">🧠 同步入记忆</button>
+                </div>
+              </div>
+              <div id="feedback-workbench-box" class="mt-8"><div class="empty">点击按钮查看 user_feedback.md 反馈总账、运行五点对比自进化探针或执行全生命周期新鲜度对账</div></div>
             </div>
           </div>
         </section>
@@ -3842,7 +3858,7 @@ document.addEventListener("keydown", (e) => {
 /* ─── Phase 28: 实证 Benchmark 与效能账本工作台 JS ─── */
 async function loadBenchmarkWorkbench() {
   mirrorBlackScreen("agent-steward bench ledger --window 7d", "steward_benchmark", { action: "ledger", window: "7d" });
-  await Promise.all([loadBenchmarkReport(), loadBenchmarkLedger()]);
+  await Promise.all([loadBenchmarkReport(), loadBenchmarkLedger(), loadFeedbackList()]);
   const runBtn = document.getElementById("btn-bench-run");
   if (runBtn && !runBtn.dataset.bound) {
     runBtn.dataset.bound = "1";
@@ -3850,6 +3866,10 @@ async function loadBenchmarkWorkbench() {
     document.getElementById("btn-bench-refresh")?.addEventListener("click", loadBenchmarkLedger);
     document.getElementById("bench-window-select")?.addEventListener("change", loadBenchmarkLedger);
     document.getElementById("btn-bench-compare")?.addEventListener("click", compareBenchmarkRunsFromUi);
+    document.getElementById("btn-fb-list")?.addEventListener("click", loadFeedbackList);
+    document.getElementById("btn-fb-probes")?.addEventListener("click", runFeedbackProbes);
+    document.getElementById("btn-fb-reconcile")?.addEventListener("click", runFeedbackReconcile);
+    document.getElementById("btn-fb-sync")?.addEventListener("click", syncFeedbackMemories);
   }
 }
 
@@ -4035,6 +4055,81 @@ async function compareBenchmarkRunsFromUi() {
     }
   } catch (e) {
     if (box) box.innerHTML = `<div class="muted-text">对比失败: ${esc(e.message)}</div>`;
+  }
+}
+
+async function loadFeedbackList() {
+  const box = document.getElementById("feedback-workbench-box");
+  if (!box) return;
+  try {
+    const data = await apiGet("/api/v1/feedback");
+    const items = data.items || [];
+    if (items.length === 0) {
+      box.innerHTML = `<div class="empty">user_feedback.md 暂无反馈条目</div>`;
+      return;
+    }
+    box.innerHTML = `<div class="muted-text" style="font-size:12px;margin-bottom:6px;">文件: <code class="mono">${esc(data.path || "user_feedback.md")}</code> · 共 ${items.length} 条</div>` +
+      items.slice(0, 12).map((it) => `
+        <div class="item-top" style="padding:6px 0;border-bottom:1px dashed var(--border);font-size:12px;">
+          <div><span class="badge">${esc(it.id)}</span> <span class="badge">${esc(it.priority)}</span> <strong>${esc(it.title)}</strong></div>
+          <span class="badge ${String(it.status || "").includes("Verified") ? "badge-ok" : ""}">${esc(it.status)}</span>
+        </div>
+      `).join("");
+  } catch (e) {
+    box.innerHTML = `<div class="empty">加载反馈总账失败: ${esc(e.message)}</div>`;
+  }
+}
+
+async function runFeedbackProbes() {
+  const box = document.getElementById("feedback-workbench-box");
+  if (box) box.innerHTML = `<div class="empty">🔬 正在运行五点执行回路对比自进化探针 (P1~P5)...</div>`;
+  mirrorBlackScreen("agent-steward feedback probes --auto-heal", "steward_feedback", { action: "probes", auto_heal: true, auto_feedback: false });
+  try {
+    const rep = await apiPost("/api/v1/feedback", { action: "probes", auto_heal: true, auto_feedback: false });
+    const probes = rep.probes || [];
+    box.innerHTML = `<div class="item-top" style="margin-bottom:8px;">
+        <strong>${esc(rep.summary || "P1~P5 探针评估完成")}</strong>
+        <span class="badge ${rep.overall_healthy ? "badge-ok" : "badge-err"}">${rep.overall_healthy ? "✅ 全部健康" : "⚠️ 存在异常"}</span>
+      </div>` +
+      probes.map((p) => `
+        <div class="card" style="padding:8px 10px;margin-bottom:6px;font-size:12px;">
+          <div class="item-top">
+            <strong>${esc(p.probe_id)} · ${esc(p.metric_name)} (${esc(p.hook_stage)})</strong>
+            <span class="badge ${p.healthy ? "badge-ok" : "badge-err"}">${p.healthy ? "PASS" : "ALERT"}</span>
+          </div>
+          <div class="muted-text" style="margin-top:4px;">基线: ${esc(p.comparator_baseline)} ｜ 实测: ${esc(p.measured_value)} ｜ 差值: ${esc(p.delta_summary)}</div>
+        </div>
+      `).join("");
+  } catch (e) {
+    if (box) box.innerHTML = `<div class="empty">探针运行失败: ${esc(e.message)}</div>`;
+  }
+}
+
+async function runFeedbackReconcile() {
+  const box = document.getElementById("feedback-workbench-box");
+  if (box) box.innerHTML = `<div class="empty">🧹 正在执行全生命周期信息新鲜度对账...</div>`;
+  mirrorBlackScreen("agent-steward feedback reconcile", "steward_feedback", { action: "reconcile" });
+  try {
+    const rep = await apiPost("/api/v1/feedback", { action: "reconcile" });
+    box.innerHTML = `<div class="item-top"><strong>✅ 信息新鲜度对账完成 (耗时 ${rep.elapsed_us ?? 0} μs)</strong></div>
+      <div class="muted-text" style="font-size:12px;margin-top:6px;">
+        核查活跃资产: <strong>${rep.checked_assets ?? 0}</strong> ｜ 标记失踪: <strong>${rep.missing_assets_marked ?? 0}</strong> ｜ 刷新漂移: <strong>${rep.drifted_assets_refreshed ?? 0}</strong> ｜ 剪除幽灵节点: <strong>${rep.ghost_fact_nodes_pruned ?? 0}</strong> ｜ 归档重复记忆: <strong>${rep.duplicate_memories_archived ?? 0}</strong>
+      </div>`;
+  } catch (e) {
+    if (box) box.innerHTML = `<div class="empty">对账失败: ${esc(e.message)}</div>`;
+  }
+}
+
+async function syncFeedbackMemories() {
+  const box = document.getElementById("feedback-workbench-box");
+  mirrorBlackScreen("agent-steward feedback sync", "steward_feedback", { action: "sync" });
+  try {
+    const rep = await apiPost("/api/v1/feedback", { action: "sync" });
+    if (box) {
+      box.innerHTML = `<div class="badge badge-ok">🧠 已将 ${rep.synced_to_memories ?? 0} 条已验证反馈沉淀入长期记忆</div>`;
+    }
+  } catch (e) {
+    if (box) box.innerHTML = `<div class="empty">同步失败: ${esc(e.message)}</div>`;
   }
 }
 "##;

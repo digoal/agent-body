@@ -1,45 +1,50 @@
 # 10 — 实证 Benchmark 对照评测与生产效能存证账本
 
-> 对应规约：[README.md 规约 #18](../README.md#L282-L284) · 架构规格：[10-benchmark-spec.md](../design_doc/10-benchmark-spec.md)
+> 对应规约：[README.md 规约 #18](../README.md#L307-L311) · 架构规格：[10-benchmark-spec.md](../design_doc/10-benchmark-spec.md) · 当前标准：**`Benchmark v3.5`**
 
 ---
 
-## 一、为什么需要双轨实证体系？
+## 一、为什么需要三轨实证体系？
 
-AI 基础设施最容易陷入“自说自话”的宣传陷阱：写死几个漂亮的百分比，却拿不出同机对照数据和日常流水凭证。**Agent Host Steward** 通过 **双轨实证闭环** 确保每一项收益都 100% 有据可查：
+AI 基础设施最容易陷入“自说自话”的宣传陷阱：写死几个漂亮的百分比，却拿不出同机对照数据和日常流水凭证。**Agent Host Steward** 通过 **三轨实证闭环** 确保每一项收益都 100% 有据可查：
 
 1. **轨道 A — 实验室可复现 A/B 对照基准 (`BenchmarkEngine`)**：
    - 在同一宿主机上真实运行 **Without Steward（裸奔等价命令/遍历/绑定碰撞）** 与 **With Steward（大管家引擎）**；
-   - 覆盖 **8 大标准宿主业务负载（`W1`~`W8`）** 与 **5 大内核微基准 SLA（`M1`~`M5`）**；
+   - 覆盖 **15 大标准宿主业务负载（`W1`~`W15`）**、**5 大内核微基准 SLA（`M1`~`M5`）** 与 **6 大现网数据及图谱质量门禁（`DQ1`~`DQ6`）**，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁；
    - 每次跑批输出带宿主机指纹与 **SHA-256 防篡改签名** 的报告并落库 `benchmark_runs`。
 2. **轨道 B — 生产运行态效能存证账本 (`EffectivenessLedger`)**：
-   - 日常每一次 MCP 调用、Pre-Hook 拦截与分级扫描都会以 `<100 μs` 极低开销自动记账至 `effectiveness_ledger`；
-   - 每笔收益绑定确定性推导规则 **`PR-01` ~ `PR-08`** 与可读溯源依据 `evidence_summary`，随时可反算核验。
+   - 日常每一次 MCP/CLI/Web/Hook 调用与分级扫描都会以 `<100 μs` 极低开销自动记账至 `effectiveness_ledger`；
+   - 每笔收益绑定确定性推导规则 **`PR-01` ~ `PR-11`** 与可读溯源依据 `evidence_summary`，随时可反算核验。
+3. **轨道 C — 热门开源竞品横向同机对标 (`COMP-C1` ~ `COMP-C4`)**：
+   - 在记忆（Mem0/Letta/PowerContext/Shodh-Memory）、上下文数据库（OpenViking）、Agent 文件系统（AgentFS）与宿主探针（`rg`+`psutil`+`ss`+`git`）四大开源赛道同机实跑对比，严格区分 `LIVE_BENCHMARKED` 与 `ARCH_VERIFIED`。
 
 ---
 
 ## 二、CLI 快速实操（`agent-steward bench`）
 
 ```bash
-# 1. 查看 8 大标准负载与 PR-01~08 推导规则字典
+# 1. 查看 15 大标准负载与 PR-01~11 推导规则字典
 agent-steward bench workloads
 
-# 2. 在当前宿主机真机跑批（W1~W8 + M1~M5）并落库存证
-agent-steward bench run --suite full --save
+# 2. 在当前宿主机真机跑批（W1~W15 + M1~M5 + DQ1~DQ6 + COMP-C1~C4）并落库存证
+agent-steward bench run --suite full --save true
 
-# 3. 查看最近一次实证报告（Markdown 表格 + SHA-256 存证指纹）
+# 3. 单独运行竞品横向对标
+agent-steward bench competitors --track all
+
+# 4. 查看最近一次实证报告（Markdown 表格 + SHA-256 存证指纹）
 agent-steward bench report
 
-# 4. 审计过去 7 天的生产效能存证账本（按 PR 规则聚合 + 逐笔明细）
+# 5. 审计过去 7 天的生产效能存证账本（按 PR 规则聚合 + 逐笔明细）
 agent-steward bench ledger --window 7d --limit 20
 
-# 5. 跨版本 / 跨批次性能与 Token 节省回归对比
+# 6. 跨版本 / 跨批次性能与 Token 节省回归对比
 agent-steward bench compare <run_a_id> <run_b_id>
 
-# 6. 导出可发表 Markdown / JSON / CSV 报告
+# 7. 导出可发表 Markdown / JSON / CSV 报告
 agent-steward bench export --format markdown --out /root/new/tmp/steward-bench.md
 
-# 7. 清理 bench:* 隔离测试沙盒记录
+# 8. 清理 bench:* 隔离测试沙盒记录
 agent-steward bench reset
 ```
 
@@ -58,7 +63,7 @@ agent-steward bench reset
 }
 ```
 
-支持 `action`: `"workloads" | "run" | "report" | "ledger" | "compare" | "export" | "reset"`，与 CLI 和 Web UI「📊 实证基准与账本」工作台保持 **41/41 (100%)** 双向同步。
+支持 `action`: `"workloads" | "run" | "report" | "ledger" | "compare" | "export" | "reset" | "competitors"`，与 CLI 和 Web UI「📊 实证基准与账本」工作台保持 **41/41 (100%)** 双向同步。
 
 ---
 

@@ -123,7 +123,7 @@ enum Commands {
         fact_type: String,
     },
 
-    #[command(about = "跨存储后端管理与热迁移 (SQLite / PostgreSQL)")]
+    #[command(about = "跨存储后端管理与热迁移 (SQLite / PostgreSQL / DuckDB)")]
     Storage {
         #[command(subcommand)]
         action: StorageCommands,
@@ -183,7 +183,7 @@ enum Commands {
         action: ServiceCommands,
     },
 
-    #[command(about = "轻量多机联邦 Peer Mesh：对等节点 ping/facts/locks/联邦端口查询/跨节点锁")]
+    #[command(about = "轻量多机联邦 Peer Mesh：对等节点 ping/facts/locks/端口/跨节点锁/图谱/对话/沙盒投递")]
     Mesh {
         #[command(subcommand)]
         action: MeshCommands,
@@ -251,9 +251,9 @@ enum FeedbackCommands {
 
 #[derive(Subcommand)]
 enum BenchCommands {
-    #[command(about = "列出 8 大标准 A/B 负载与 PR-01~08 推导规则")]
+    #[command(about = "列出 15 大标准 A/B 负载与 PR-01~11 推导规则")]
     Workloads,
-    #[command(about = "运行宿主机真机 A/B 对照基准 (full/macro/micro/W1~W8)")]
+    #[command(about = "运行宿主机真机 A/B 对照基准 (full/macro/micro/dq/competitors/W1~W15)")]
     Run {
         #[arg(long, default_value = "full")]
         suite: String,
@@ -310,7 +310,7 @@ enum DemoCommands {
     },
     #[command(about = "核算宿主机实时商业价值 ROI 指标")]
     Roi,
-    #[command(about = "输出黑白屏 39 工具对齐自检列表")]
+    #[command(about = "输出黑白屏 41 工具对齐自检列表")]
     Parity,
     #[command(about = "一键清理 demo:* 沙盒隔离锁与等待队列")]
     Reset,

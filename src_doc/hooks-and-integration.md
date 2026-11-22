@@ -1,8 +1,8 @@
 # Agent Host Steward — Agent 接入与 Hook 机制配置指南
 
-> 版本: v0.2.0 · 适用对象: Antigravity, Cursor, Claude Desktop, Aider 等 Agent 框架  
+> 版本: v0.4.0 · 适用对象: Antigravity, Cursor, Claude Desktop, Aider 等 Agent 框架  
 > 存放路径: `src_doc/hooks-and-integration.md`  
-> 更新时间: 2026-11-15
+> 更新时间: 2026-11-22 · 完整 Hook 集成与 AOPCC 门禁指南请同时参阅 [manual/09-hooks-integration.md](../manual/09-hooks-integration.md)
 
 ---
 
@@ -187,10 +187,10 @@ systemctl --user enable --now steward
 steward brief
 ```
 
-#### 2. 工具调用前置校验 (Pre-Tool Execution Hook)
-如果客户端支持拦截 `write_file` 或 `create_directory`：
-* 拦截器检测到目标路径为根目录或未归档目录；
-* 自动阻断并提示：“检测到未按规范存放，请先调用 steward_placement_suggest 获取规范路径”。
+#### 2. 工具调用前置与后置自愈 Hook (PreToolUse / PostToolUse · AOPCC)
+通过 `agent-steward hooks generate --client agy` 生成并激活的 `steward_bridge.py` 集成：
+* **PreToolUse（`agent-steward hooks pre`）**：`ConcurrencyPolicyClassifier` 对可逆只读/客户端直连（如持有开工乐观租约的 `:5432`、`curl`）零阻塞放行；对端口 bind、高爆炸半径文件写、系统敏感路径及多 Agent 排他锁执行悲观前置拦截；
+* **PostToolUse（`agent-steward hooks post`）**：写操作成功后自动登记资产与刷新依赖拓扑；当 `run_command` 等工具失败（`--success=false --error-output "..."`）时，`OptimisticFailureDiagnoser` 在 `< 2ms` 内反查宿主机真实端口/工具/服务状态并注入替代处方。
 
 ---
 

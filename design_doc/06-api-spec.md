@@ -1,7 +1,7 @@
 # 06 — 接口规范（API Spec）
 
 > [!NOTE]
-> **历史设计基线说明**：本文档沉淀自项目早期 v2.0 接口设计期（覆盖早期 15 个工具）。当前 `v0.4.0` 全部 **40 个原生 MCP 工具**、27 个 CLI 子命令与 Web REST API 权威规格，请以 [manual/04-mcp-integration.md](../manual/04-mcp-integration.md)、[manual/08-web-dashboard.md](../manual/08-web-dashboard.md) 及源码 [src/api/mcp_tools.rs](../src/api/mcp_tools.rs) 为准。
+> **历史设计基线说明**：本文档沉淀自项目早期 v2.0 接口设计期（覆盖早期 15 个工具）。当前 `v0.4.0` 全部 **41 个原生 MCP 工具**、28 个 CLI 子命令与 Web REST API 权威规格，请以 [manual/04-mcp-integration.md](../manual/04-mcp-integration.md)、[manual/08-web-dashboard.md](../manual/08-web-dashboard.md) 及源码 [src/api/mcp_tools.rs](../src/api/mcp_tools.rs) 为准。
 
 > Agent Host Steward 产品设计 · 交付件 6/7
 > 版本: v2.0 · 更新: 2026-11-15 (新增端口防撞、混合检索、爆炸半径推演、会话完工结清工具)

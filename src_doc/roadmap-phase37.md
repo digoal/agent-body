@@ -2,7 +2,7 @@
 
 > **编制**: Antigravity · **日期**: 2026-11-21  
 > **基线版本**: `v0.4.0`（`4853910`）+ Phase 1~36 全部完成（Benchmark `v3.1` 帕累托双门禁、41/41 黑白屏同步、原生 `hooks.json` 对接）  
-> **对齐约束**: [README.md 规约 #5, #10, #12, #16, #18](../README.md) · [ISSUE #20](../README.md#L400) · [EVOLUTION_GUIDE.md](../EVOLUTION_GUIDE.md) · [user_feedback.md](../user_feedback.md) (`CON-08~11`, `BENCH-07~08`, `REQ-11`)  
+> **对齐约束**: [README.md 规约 #5, #10, #12, #16, #18](../README.md) · [ISSUE #20](../ISSUE.md#L100) · [EVOLUTION_GUIDE.md](../EVOLUTION_GUIDE.md) · [user_feedback.md](../user_feedback.md) (`CON-08~11`, `BENCH-07~08`, `REQ-11`)  
 > **当前状态**: ✅ Phase 37 已完成（233 项测试全绿，现网健康分 `100/100`，Benchmark `v3.2` 全量 PASS）
 
 ---

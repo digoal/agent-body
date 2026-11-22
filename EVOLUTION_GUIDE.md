@@ -52,7 +52,7 @@
 |---|---|---|
 | `src/api/` | `McpToolRegistry`, `AgentHookEngine`, `McpServer` | 41 个原生 MCP stdio 工具注册与 Hook 门禁（不写业务逻辑） |
 | `src/benchmark/` | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` | 双轨/三轨实证评测、Micro/DQ/竞品对标与 `PR-01~11` 存证 |
-| `src/brief/` | `BriefAssembler`, `BriefRequest` | 索引优先自适应情境组装（`<10ms`，40% 记忆预算） |
+| `src/brief/` | `BriefAssembler`, `BriefRequest`, `OptimisticLeaseEngine` | 索引优先自适应情境组装（`<10ms`，40% 记忆预算，AOPCC 乐观租约） |
 | `src/changes/` | `ChangesEngine` | 宿主变更审计流与开工回溯摘要（含脱敏） |
 | `src/config/` | `Config`, `WebConfig`, `StorageConfig` | TOML 配置加载、校验与 `~/.steward/` 权限收敛 |
 | `src/coordination/` | `CoordinationEngine`, `DeadlockDetector`, `LockWaitQueue` | 多 Agent 协作锁、层级互斥传播与 WFG 死锁环路检测 |
@@ -60,18 +60,18 @@
 | `src/demo/` | `DemoEngine`, `RoiReport` | 6 大路演沙盒剧目（`demo:*` 隔离，真引擎实跑） |
 | `src/ecosystem/` | `McpConfigScanner`, `SkillCatalogScanner`, `ContextBudgetRouter` | MCP/SKILL 目录、外部服务通讯录与 Token 防爆路由 |
 | `src/env/` | `EnvCollector`, `PortChecker`, `HostGarbageCollector` | `/proc` 任务采集（脱敏+去噪）、端口防撞与白名单 `dry-run` GC |
-| `src/fact/` | `FactFacade`, `CapabilityEngine`, `ProcessNetTopology`, `AutomationScanner` | 宿主机客观事实图谱（工具/端口/Systemd/Cron/资料编目） |
-| `src/feedback/` | `FeedbackEngine` | `user_feedback.md` 结构化双向读写与已验证反馈沉淀记忆 |
-| `src/hooks/` | `EventBus`, `HookDispatcher`, `ClientHookGenerator`, `HookPipelineEngine` | 事件总线、POSIX 转义防注入分发与客户端 Hook 生成 |
-| `src/links/` | `LinksEngine`, `ImpactAnalyzer`, `LinkAuditor`, `LinkRepairer`, `CodeGraphBridge` | 宏观依赖拓扑、3 跳爆炸半径、假阳性过滤与 CodeGraph 桥接 |
+| `src/fact/` | `FactFacade`, `CapabilityEngine`, `ProcessNetTopology`, `AutomationScanner`, `PropertyGraphOrganizer` | 宿主机客观事实图谱（工具/端口/Systemd/Cron/资料编目/L1~L3 属性图） |
+| `src/feedback/` | `FeedbackEngine`, `FreshnessReconciler`, `SelfEvolutionProbeEngine` | `user_feedback.md` 双向读写、新鲜度对账与 `P1~P5` 自进化探针 |
+| `src/hooks/` | `EventBus`, `HookDispatcher`, `ClientHookGenerator`, `HookPipelineEngine`, `OptimisticFailureDiagnoser` | 事件总线、POSIX 转义防注入、客户端生成与 `<2ms` 碰壁自愈 |
+| `src/links/` | `LinksEngine`, `ImpactAnalyzer`, `LinkAuditor`, `LinkRepairer`, `CodeGraphBridge` | 宏观依赖拓扑、加权 3 跳爆炸半径、假阳性过滤与 CodeGraph 桥接 |
 | `src/memory/` | `MemoryManager`, `MemoryProvider`, `MemoryFactory`, `MemoryIntakeFilter` | FTS5+Ollama RRF 混合检索、SPI 与 Mem0/Letta/PowerContext 适配 |
-| `src/mesh/` | `MeshClient`, `MeshNodeFacts` | 轻量多机联邦 HTTP Peer Mesh 与跨节点锁查询 |
+| `src/mesh/` | `MeshClient`, `MeshNodeFacts`, `MeshEnvelope` | 轻量多机联邦 HTTP Peer Mesh、HMAC 防重放信封、跨机对话与沙盒投递 |
 | `src/placement/` | `PlacementEngineV2`, `ConventionChecker`, `PlacementLearner` | 8 大目录放置建议、工程安全规约与搬移纠偏自演化 |
 | `src/platform/` | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` | 跨平台系统探针抽象与纯函数解析 |
 | `src/preflight/` | `PreflightChecker`, `PreflightReport` | 依赖预检、磁盘水位预警与 `0600/0700` 安全基线检查 |
 | `src/scanner/` | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `OllamaAnnotator` | 白黑灰分级扫描、全链路脱敏、抗投毒清洗与三层元数据标注 |
 | `src/session/` | `SessionManager`, `SessionLifecycleManager` | 会话绑定、完工结清与临时垃圾回收 |
-| `src/storage/` | `Storage`, `StorageProvider`, `Sqlite/Pg/DuckDbStorageProvider`, `DuckDbAnalyticsEngine` | 65 方法 SPI 门面、三后端实现、跨库热迁移与 Parquet/CSV 导出 |
+| `src/storage/` | `Storage`, `StorageProvider`, `Sqlite/Pg/DuckDbStorageProvider`, `DuckDbAnalyticsEngine` | 74 方法 SPI 门面、三后端实现、跨库热迁移与 Parquet/CSV 导出 |
 | `src/tui/` | `TuiDashboard` | 终端单屏实时看板 |
 | `src/watcher/` | `FileWatcher`, `ChangeHandler` | `inotify` 300ms 防抖监听与增量变更同步 |
 | `src/web/` | `WebServer`, `TopologyGraph`, `parity_api`, `assets/mod.rs` | 单二进制 HTTP/SSE、昼夜双主题 7 大工作台、`check_auth` 与 Parity 校验 |

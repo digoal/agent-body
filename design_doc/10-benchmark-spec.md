@@ -1,8 +1,8 @@
 # 10 — 实证 Benchmark 对照评测与生产效能存证账本规格说明书 (Benchmark & Verifiable ROI Spec)
 
 > **Agent Host Steward 产品设计 · 交付件 10**  
-> **版本**: v0.4.0 → Phase 27~28 设计基线 · **编制**: Antigravity · **日期**: 2026-11-19  
-> **对齐约束**: [README.md 规约 #1、#5、#9、#12、#13、#16、#17、#18](../README.md#L207-L285) · [待探讨 ISSUE #13](../README.md#L360-L363)
+> **版本**: v0.4.0 → Phase 27~42 演进基线（当前 Spec **`v3.5`**） · **编制**: Antigravity · **日期**: 2026-11-22  
+> **对齐约束**: [README.md 规约 #1、#5、#9、#12、#13、#16、#17、#18](../README.md#L234-L311) · [ISSUE.md #13](../ISSUE.md#L73)
 
 ---
 
@@ -18,7 +18,7 @@
 
 ### 1.2 核心设计哲学：双轨实证闭环 (Dual-Track Empirical Loop)
 
-为严格履行 [README.md 规约 #5（实事求是、零捏造）](../README.md#L226-L227) 与 **规约 #18（实证基准与效能有据可查）**，确立以下双轨架构：
+为严格履行 [README.md 规约 #5（实事求是、零捏造）](../README.md#L249-L251) 与 **规约 #18（实证基准与效能有据可查）**，确立以下双轨（现已演进至含轨道 C 竞品对标的三轨）架构：
 
 - **轨道 A — 实验室可复现 A/B 对照基准引擎 (`BenchmarkEngine`)**：
   在同一台宿主机、同一个时间窗口、同一个隔离沙盒（`bench:*` 命名空间）内，先真实执行 **Without Steward（裸奔模式物理等价操作）** 记录基线耗时、输出字节/Token、探索轮次与故障/噪音数，再执行 **With Steward（大管家 API/引擎）** 记录实测结果；两者自动配对计算加速比、压缩率与拦截率，并生成带宿主机硬件/Git 指纹与 SHA-256 内容签名的不可抵赖评测报告。
@@ -260,7 +260,7 @@ CREATE INDEX IF NOT EXISTS idx_ledger_rule ON effectiveness_ledger(provenance_ru
 
 ## 九、Benchmark `v3.1`「既省 Token × 质量不降反升」帕累托双门禁规格（Phase 36）
 
-为贯彻 [ISSUE #19](../README.md#L397)（不能只体现省 Token，必须同时实证上下文质量不降反升），确立以下确定性四维上下文质量评分公式（$Q \in [0, 100]$）：
+为贯彻 [ISSUE #19](../ISSUE.md#L96)（不能只体现省 Token，必须同时实证上下文质量不降反升），确立以下确定性四维上下文质量评分公式（$Q \in [0, 100]$）：
 
 $$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\text{signal}} + 0.20 \cdot A_{\text{action}} + 0.10 \cdot S_{\text{safety}})\Big)$$
 
@@ -269,7 +269,7 @@ $$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\
 3. **$A_{\text{action}}$**（结构化可行动性，权重 20%）：是否直接包含推荐命令、规范路径、修复补丁或死锁裁决；
 4. **$S_{\text{safety}}$**（安全与抗污染度，权重 10%）：明文凭据脱敏率、防命令注入与抗提示词投毒合规度。
 5. **有效信息密度与密度提升倍数**：$\rho = (\text{facts\_hit} / \max(\text{tokens}, 1)) \times 1000$，$\text{info\_density\_gain} = \rho_{\text{steward}} / \max(\rho_{\text{baseline}}, 0.01)$。
-6. **帕累托 SLA 双门禁**：`W1~W12` 与 `COMP-C1~C4` 必须同时满足效率达标、`steward_facts_hit == required_facts_total` 及 `steward_quality_score >= baseline_quality_score`，严禁通过丢失关键事实骗取高 Token 节省率。
+6. **帕累托 SLA 双门禁**：`W1~W15` 与 `COMP-C1~C4` 必须同时满足效率达标、`steward_facts_hit == required_facts_total` 及 `steward_quality_score >= baseline_quality_score`，严禁通过丢失关键事实骗取高 Token 节省率。
 
 ---
 
@@ -282,5 +282,20 @@ $$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\
 
 ## 十一、Benchmark `v3.3` 实时新鲜度与自愈评测基准（Phase 38~39）
 
-1. **新增 `W12 (freshness_and_staleness_healing)`**：面向 [ISSUE #21](../README.md#L401) 构建沙盒实测负载，模拟单次操作同时触发“活跃文件改写内容漂移 + 旧文件物理删除 + 幽灵 `file:` 事实节点 + 同路径多版本 `auto_sync` 记忆重复”，对比无写穿失效基线与 `FreshnessReconciler` 自愈链路：要求 `embedding_status="stale"` 与 `embedding='[]'` 清空、已删除资产 FTS 零命中、幽灵节点剪枝及同路径重复记忆归档 `4/4` 全命中且帕累托质量净胜。
+1. **新增 `W12 (freshness_and_staleness_healing)`**：面向 [ISSUE #21](../ISSUE.md#L105) 构建沙盒实测负载，模拟单次操作同时触发“活跃文件改写内容漂移 + 旧文件物理删除 + 幽灵 `file:` 事实节点 + 同路径多版本 `auto_sync` 记忆重复”，对比无写穿失效基线与 `FreshnessReconciler` 自愈链路：要求 `embedding_status="stale"` 与 `embedding='[]'` 清空、已删除资产 FTS 零命中、幽灵节点剪枝及同路径重复记忆归档 `4/4` 全命中且帕累托质量净胜。
 2. **新增 `DQ5 (freshness_and_reconciliation_health)`**：抽检宿主机活跃资产物理存在性、未标 `stale` 漂移率、幽灵 `port:/file:` 事实节点与 `auto_sync` 同路径重复记忆，要求综合新鲜度健康率 `>= 98.0%`。
+
+---
+
+## 十二、Benchmark `v3.4` 多维分层图谱与 Mesh 安全协同门禁（Phase 40~41）
+
+1. **新增 `W13 (semantic_and_weighted_graph_discovery)`**：面向 [ISSUE #23](../ISSUE.md#L111) 在沙盒构建 `L2` 结构上卷、`L3` 向量隐式语义边与加权衰减爆炸半径校验，要求有效边分层精确且跨项目隐式语义关系 `4/4` 命中并实现帕累托净胜。
+2. **新增 `W14 (mesh_protocol_security_and_collab)`**：面向 [ISSUE #24](../ISSUE.md#L116) 实测 `MeshEnvelope v1.0` HMAC-SHA256 规范验签、时间窗/Nonce 防重放拦截、双向脱敏抗投毒结构化对话与 `<=10MB` 沙盒投递防敏感泄露。
+3. **新增 `DQ6 (graph_connectivity_and_tier_hygiene)`**：考核现网 `fact_nodes`/`fact_edges` 工程节点连通率及 `L1/L2/L3` 边权重分层合规率（`100.0%`）。
+
+---
+
+## 十三、Benchmark `v3.5` AOPCC 自适应并发与整轮对话税门禁（Phase 42）
+
+1. **新增 `W15 (optimistic_vs_pessimistic_execution_loop)`**：面向 [ISSUE #25](../ISSUE.md#L120) 同场对比“全悲观前置查询 vs 裸奔盲猜 vs AOPCC 自适应（开工乐观租约直通 + `PostToolUse` `<2ms` 碰壁秒级自愈）”，考核整轮对话税 (`rounds_saved`)、首击成功率与 `100%` 故障恢复事实完整度。
+2. **新增 `PR-11 (OptimisticLeaseAndRecovery)`**：记录 `steward_brief` 乐观租约直行命中节省的对话轮次及 `steward_hook_post(success=false)` 秒级自愈存证流水。

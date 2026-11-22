@@ -20,16 +20,16 @@
    - 浏览已纳管的 MCP Server、120+ SKILL 目录与脱敏后的外部服务通讯录；
    - 内置交互式 **Context Budget Router 演练沙盒**，输入任务意图与 Token 预算即可实时预览 Top-K 召回清单与节省 Token 百分比。
 5. **📐 规约 · 记忆 · 变更审计与 Mesh (Governance & Mesh)**：
-   - 集中展示 `steward_brief` 自适应简报组装、8 大放置规则推导与自演化、跨会话记忆（写入/RRF 混合检索/衰减与矛盾审计）、DuckDB 变更热力图/趋势/导出、宿主 GC/会话结清 `dry-run` 预览、Peer Mesh 联邦探活与 `40/40` 黑白屏同步矩阵。
+   - 集中展示 `steward_brief` 自适应简报组装（含 AOPCC 乐观直通租约）、8 大放置规则推导与自演化、跨会话记忆（写入/RRF 混合检索/衰减与矛盾审计）、DuckDB 变更热力图/趋势/导出、宿主 GC/会话结清 `dry-run` 预览、`MeshEnvelope v1.0` 联邦图谱/对话/沙盒收件箱与 **`41/41`** 黑白屏同步矩阵。
 6. **🎬 路演演示剧场 (Roadshow Live Demo Theater · Phase 22 / Phase 25 故事化升级)**：
-   - 顶部提供经济学「比较优势」总立意导览与宿主机商业价值 ROI 实时账单（Context Token 节省率、工具/资产/图谱规模、40/40 对齐认证）；
+   - 顶部提供经济学「比较优势」总立意导览与宿主机商业价值 ROI 实时账单（Context Token 节省率、工具/资产/图谱规模、`41/41` 对齐认证）；
    - 采用 **三层渐进式故事舞台**：第 1 层展示每幕「💡 一句话生活比喻 (`analogy`)」「🎯 核心用意 (`intent_summary`)」、3 张核心收益数字卡 (`hero_metrics`) 与演讲者 30 秒提词卡；第 2 层左右分屏对比「盲人 Agent 三步翻车故事线」vs「6 套真引擎驱动的专属可视化组件」（黑白名单过滤漏斗与武器库墙、Pre-Hook 1ms 红绿灯、3 跳蝴蝶效应因果链、双 Agent 死锁环路图、Token 99.9% 比例尺、简报评分与 Dry-Run 安全自洁盾）；第 3 层提供默认收起的 `<details>` 技术专家原始 JSON 核验抽屉；
    - 支持 8 秒/幕自动巡航（`Space` 暂停 / `←→` 切幕）、演讲者大屏模式与一键无痕重置 `demo:*` 沙盒；
    - 左侧内置 `/deck`（[steward-deck.html](../steward-deck.html)）与 `/presentation`（[presentation.html](../presentation.html)）离线 PPT 直达入口，页脚内置全局「⌨️ 黑屏命令镜像器」实时回显等价 CLI 与 MCP JSON-RPC。
-7. **📊 实证基准与账本 (Empirical Benchmark & ROI Ledger · Phase 27~28)**：
-   - **轨道 A — A/B 对照基准跑批**：支持一键运行 `full` / `macro` / `micro` / 单项负载（`W1`~`W8`），同机实时比对 Without Steward 裸奔基线 vs With Steward 真引擎的 Token 节省率、延迟加速比、风险拦截率、噪音阻断率与 5 大内核微基准 SLA（`M1`~`M5`），每批生成 **SHA-256 防篡改指纹**；
-   - **轨道 B — 生产效能存证账本**：按 `24h` / `7d` / `30d` / `all` 时间窗展示日常每一次 MCP 调用自动记账的 `PR-01`~`PR-08` 归因收益与溯源流水；
-   - 支持跨批次历史回归对比（`compare`）与清理 `bench:*` 隔离沙盒数据（`reset`），与第 40 个 MCP 工具 `steward_benchmark` 及 `agent-steward bench` 保持 **40/40 (100%)** 双向同步。
+7. **📊 实证基准、竞品对标与自进化探针 (Empirical Benchmark v3.5 & Feedback · Phase 27~42)**：
+   - **轨道 A — A/B 对照基准跑批**：支持一键运行 `full` / `competitors` / `macro` / `micro` / `dq` / 单项负载（`W1`~`W15`），同机实时比对 Without Steward 裸奔基线 vs With Steward 真引擎的 Token 节省率、延迟加速比、四维上下文质量净胜（$\Delta Q$）、有效信息密度倍数、5 大微基准 SLA（`M1`~`M5`）与 6 项质量门禁（`DQ1`~`DQ6`），每批生成 **SHA-256 防篡改指纹**；
+   - **轨道 B — 生产效能存证账本**：按 `24h` / `7d` / `30d` / `all` 时间窗展示日常每一次 MCP/CLI/Web/Hook 调用自动记账的 `PR-01`~`PR-11` 归因收益与溯源流水；
+   - **轨道 C — 热门竞品对标 & 使用反馈/自进化面板 (`steward_feedback`)**：同屏展示 `COMP-C1~C4` 竞品对比与 12 维源码能力矩阵，并直接驱动 `user_feedback.md` 列表、五点对比探针（`P1~P5`）、信息新鲜度对账（`reconcile`）与已验证反馈沉淀入记忆（`sync`），与 41 个原生 MCP 工具及 CLI 保持 **41/41 (100%)** 双向同步。
 
 ### 1.1 ☀️ 白天工程蓝图 / 🌙 夜间深空双色调切换 (Phase 25)
 - 顶栏右侧提供 `#btn-theme-toggle` 一键昼夜主题切换（非输入焦点时可按快捷键 **`T`** 瞬间切换，状态自动持久化至 `localStorage`）；
@@ -66,26 +66,33 @@ port = 8756
 |:---:|:---|:---|:---:|
 | `GET` | `/api/v1/health` | 探活与基础运行健康度检查 | 开放 |
 | `GET` | `/api/v1/overview` | 宿主机硬件、事实图谱、协作锁与生态全局 KPI 概览 | 开放 |
-| `GET` | `/api/v1/topology` | 宿主机全景真实事实拓扑图谱 (Nodes & Edges) | 开放 |
-| `GET` | `/api/v1/topology/impact?target=<id>` | 指定实体或路径的 3 跳爆炸半径上下游子图 | 开放 |
+| `GET` | `/api/v1/topology` | 宿主机全景真实事实拓扑图谱 (Nodes & Edges，含 `L1/L2/L3`) | 开放 |
+| `GET` | `/api/v1/topology/impact?target=<id>` | 指定实体或路径的 3 跳加权衰减爆炸半径上下游子图 | 开放 |
 | `GET` | `/api/v1/facts` | 监听端口、去噪进程、Systemd/Cron、工程仓库与 CLI 工具能力 | 开放 |
 | `GET` | `/api/v1/locks` | 当前所有生效中的活跃协作锁矩阵 | 开放 |
 | `GET` | `/api/v1/locks/wait-queue` | 协作锁等待队列 (`lock_wait_queue`) | 开放 |
 | `GET` | `/api/v1/locks/deadlocks` | WFG 死锁环路检测报告 | 开放 |
 | `GET` | `/api/v1/locks/history` | 最近锁生命周期与协调审计历史 | 开放 |
-| `POST` | `/api/v1/locks/release` | 强制释放指定资源锁 | 可选 Bearer Token |
+| `POST` | `/api/v1/locks/release` | 强制释放指定资源锁 | Bearer Token |
 | `GET` | `/api/v1/ecosystem?q=<kw>` | MCP Server、SKILL 目录与外部服务通讯录清单 | 开放 |
 | `GET` | `/api/v1/ecosystem/route?intent=<q>&budget=600` | Context 防爆路由器演练与 Token 节省估算 | 开放 |
 | `GET` | `/api/v1/governance?q=<kw>` | 放置规则、扫描策略、长期记忆、变更审计流与 Preflight 预检 | 开放 |
-| `GET` | `/api/v1/mesh/status` | 本机跨平台探针与 Peer Mesh 节点配置状态 | 开放 |
-| `GET` | `/api/v1/parity/matrix` | 黑白屏 40 工具 100% 映射对齐自检矩阵 | 开放 |
+| `GET` | `/api/v1/mesh/status` / `/api/v1/mesh/query` | 本机跨平台探针、Peer Mesh 状态与联邦动作查询 | 开放 |
+| `GET` | `/api/v1/mesh/ping` / `facts` / `locks` / `graph` | 节点间图谱与事实联邦端点（带 `MeshEnvelope` 校验） | Token / HMAC |
+| `POST` | `/api/v1/mesh/dialogue` / `transfer` | `MeshEnvelope v1.0` HMAC 签名防重放对话与 `<=10MB` 沙盒投递 | HMAC-SHA256 |
+| `GET` | `/api/v1/parity/matrix` | 黑白屏 41 工具 100% 映射对齐自检矩阵 | 开放 |
 | `GET` | `/api/v1/demo/scenarios` / `/api/v1/demo/roi` | 6 大路演剧目列表与实时 ROI 商业价值核算 | 开放 |
-| `POST` | `/api/v1/demo/run` / `/api/v1/demo/reset` | 真引擎实跑指定路演剧目与一键重置 `demo:*` 沙盒 | 开放 |
-| `GET` | `/api/v1/benchmark/workloads` | 获取 8 大标准 A/B 负载与 PR-01~08 推导规则字典 | 开放 |
-| `POST` | `/api/v1/benchmark/run` | 真机运行 `full` / `macro` / `micro` / `W1~W8` 对照基准并存证 | 开放 |
+| `POST` | `/api/v1/demo/run` / `/api/v1/demo/reset` | 真引擎实跑指定路演剧目与一键重置 `demo:*` 沙盒 | Bearer Token |
+| `GET` | `/api/v1/benchmark/workloads` | 获取 15 大标准 A/B 负载 (`W1~W15`) 与 `PR-01~11` 规则字典 | 开放 |
+| `POST` | `/api/v1/benchmark/run` | 真机运行 `full` / `competitors` / `macro` / `micro` / `dq` / `W1~W15` 基准 | Bearer Token |
 | `GET` | `/api/v1/benchmark/report` | 查询指定或最近批次报告及历史列表（含 SHA-256 指纹） | 开放 |
 | `GET` | `/api/v1/benchmark/ledger` | 审计指定时间窗内的生产效能存证账本流水 | 开放 |
 | `GET` | `/api/v1/benchmark/compare` | 对比两个批次（`run_a` vs `run_b`）的回归差异 | 开放 |
-| `POST` | `/api/v1/benchmark/reset` | 清理 `bench:*` 隔离沙盒记录 | 开放 |
+| `GET` | `/api/v1/benchmark/competitors` | 运行或查看 `COMP-C1~C4` 热门开源竞品横向对标与 12 维矩阵 | 开放 |
+| `POST` | `/api/v1/benchmark/reset` | 清理 `bench:*` 隔离沙盒记录 | Bearer Token |
+| `GET` | `/api/v1/feedback` | 列出 `user_feedback.md` 实际使用反馈总账条目 | 开放 |
+| `POST` | `/api/v1/feedback` | 触发反馈追加 (`add`)、同步入记忆 (`sync`)、对账 (`reconcile`) 与 `P1~P5` 探针 (`probes`) | Bearer Token |
 | `GET` | `/deck` / `/presentation` | 内嵌离线版路演与架构演示 PPT | 开放 |
 | `GET` | `/api/v1/stream` | Server-Sent Events (SSE) 实时事件推流 | 开放 |
+
+> 💡 **安全说明**：当非回环暴露（`host != 127.0.0.1`）或配置了 `[web].auth_token` 时，所有 `POST` 写端点及 `/api/v1/env/gc` 等敏感接口均统一受 `Authorization: Bearer <token>` 保护。

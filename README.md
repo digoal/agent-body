@@ -115,7 +115,7 @@ PS: 可能叫 Agent 本体 更恰当？
 - 🛠️ **[02-for-developers.md](arch/02-for-developers.md)**（面向研发工程师与贡献者）：
   - 源码 25 大模块全景职责与依赖拓扑速查；
   - 核心扩展三大 How-To（添加原生 MCP 工具、实现新存储后端 SPI、新增环境预检项）；
-  - 235+ 项自动化测试套件与本地开发流；
+  - 252+ 项自动化测试套件与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
 - 🧭 **[03-for-users.md](arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
   - 大管家核心心智模型与物理世界哨兵定位；
@@ -138,7 +138,7 @@ PS: 可能叫 Agent 本体 更恰当？
 - 🛠️ **[07-troubleshooting.md](manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
 - 🌐 **[08-web-dashboard.md](manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级大管家拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
 - 🪝 **[09-hooks-integration.md](manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
-- 📊 **[10-benchmark-and-roi.md](manual/10-benchmark-and-roi.md)**：实证 Benchmark 对照评测与生产效能存证账本（8 大 A/B 负载 + 5 大微基准 + PR-01~08 溯源流水）
+- 📊 **[10-benchmark-and-roi.md](manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.5 与生产效能存证账本（W1~W15 A/B 负载 + M1~M5 微基准 + DQ1~DQ6 + COMP-C1~C4 竞品对标 + PR-01~11 溯源流水）
 
 ---
 
@@ -216,6 +216,7 @@ cargo build --release
 - `Dockerfile` : 容器化构建镜像配置
 - `EVOLUTION_GUIDE.md` : 零重扫项目演进指南（架构地图、变更触点矩阵与开发 SOP）
 - `INSTALL.md` : 详细安装部署指南（依赖矩阵、Docker、Systemd 与故障排查）
+- `ISSUE.md` : 未来演进与待探讨 ISSUE (Roadmap & Open Issues)
 - `LICENSE` : Apache-2.0 开源许可证
 - `Makefile` : 构建、测试、门禁检查与部署任务编排
 - `README.md` : 本文件
@@ -281,7 +282,7 @@ cargo build --release
     - 在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误，保证服务 7×24 稳定运行。
 
 13. **测试驱动与零警告**：
-    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 237+ 项自动化测试）。
+    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 252+ 项自动化测试）。
     - 任何提交前必须 `cargo check --tests` 通过零警告门禁。
     - MCP 工具与 CLI 子命令必须保持一一映射（当前 41/41 同步）。
 
@@ -344,4 +345,3 @@ cargo build --release
 ## 开源协议
 
 本项目采用 [Apache-2.0](LICENSE) 开源许可证。
-                                                                      

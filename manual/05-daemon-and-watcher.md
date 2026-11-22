@@ -37,9 +37,9 @@ flowchart LR
 1. 捕获到文件创建/修改/删除事件后，暂存入内存通道；
 2. 聚合 300ms 窗口内的同路径变动；
 3. 将最终稳定态分发给 `src/watcher/handler.rs`：
-   - **新增/修改文件**：先经 `PolicyMatcher`（黑名单目录仅记目录本身，子文件直接跳过）与 `NoiseFilter` 去噪；再通过 `HeuristicMetadataExtractor` 生成 L1 语义元数据、更新 `assets` 与 FTS5；若属于 `deep` 白名单目录，同步触发 `LinksEngine::refresh_links_for_asset` 幂等刷新依赖边，并记录 `changes` 与推送 `EventBus`；
-   - **删除文件**：将 `assets` 对应记录置为 `missing`，清理关联自动依赖边（`delete_auto_links_for_source`），记录 `file_deleted` 并推送 `EventBus`。
-4. **后台巡检协同（`src/daemon/scheduler.rs`）**：每 60 秒执行一次 `run_inspection_cycle`，自动刷新 `/proc` 动态进程、构建事实属性图、审计记忆冲突、推进断点扫描任务、回收过期协作锁、刷新 MCP/SKILL 生态目录，并按 `annotation.auto_enrich_batch_size` 调用本地 Ollama（`qwen3.5:0.8b`）异步精炼待标注资产的 L2 语义元数据。
+   - **新增/修改文件**：先经 `PolicyMatcher`（黑名单目录仅记目录本身，子文件直接跳过）与 `NoiseFilter` 去噪；再通过 `HeuristicMetadataExtractor` 生成 L1 语义元数据、更新 `assets` 与 FTS5；若内容哈希/尺寸变化，执行写穿失效（将旧向量重置为 `'[]'` 并标 `embedding_status="stale"`、旧 L2 标注标为 `"needs_re_enrich"`）；若属于 `deep` 白名单目录，同步触发 `LinksEngine::refresh_links_for_asset` 幂等刷新依赖边，并记录 `changes` 与推送 `EventBus`；
+   - **删除文件**：将 `assets` 对应记录置为 `missing`（`search_assets_fts` 三后端强制仅召回 `status = 'active'` 零僵尸返回），级联清理 `fact_nodes`、`links` 入出边（`delete_auto_links_for_source` & `delete_links_for_target`）与同路径关联 `auto_sync` 记忆，记录 `file_deleted` 并推送 `EventBus`。
+4. **后台巡检协同（`src/daemon/scheduler.rs`）**：每 60 秒执行一次 `run_inspection_cycle`，自动刷新 `/proc` 动态进程、构建多层属性图（含 `L2` 结构上卷与 `L3` 语义发现）、审计记忆冲突、推进断点扫描任务、回收过期协作锁、刷新 MCP/SKILL 生态目录，每 30 分钟运行 `FreshnessReconciler::reconcile` 核对磁盘存在性/剪除幽灵端口节点/检验 `.codegraph` 时效，并按 `annotation.auto_enrich_batch_size` 调用本地 Ollama（`qwen3.5:0.8b`）异步精炼待标注资产的 L2 语义元数据。
 
 ---
 

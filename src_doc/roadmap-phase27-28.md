@@ -2,7 +2,7 @@
 
 > **编制**: Antigravity · **日期**: 2026-11-19  
 > **基线 Commit**: `9ba7bca` (`v0.4.0`, Phase 1~26 全部交付，198 tests passed，39 个原生 MCP 工具黑白屏 100% 同步)  
-> **对齐基准**: [README.md 核心设计原则与约束 §1-§18](../README.md#L207-L285) · [待探讨 ISSUE #13](../README.md#L360-L363) · [10-benchmark-spec.md](../design_doc/10-benchmark-spec.md)  
+> **对齐基准**: [README.md 核心设计原则与约束 §1-§18](../README.md#L232-L311) · [待探讨 ISSUE #13](../ISSUE.md#L73) · [10-benchmark-spec.md](../design_doc/10-benchmark-spec.md)  
 > **断点续传检查点表**: [progress-phase27.md](progress-phase27.md)
 
 ---

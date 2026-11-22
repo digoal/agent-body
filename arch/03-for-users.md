@@ -36,8 +36,8 @@ flowchart TD
     S5 --> S6["第 6 步: 完工结清 (close & gc)<br>会话结束，清理 /tmp 垃圾并沉淀总结至长期记忆"]
 ```
 
-### 1. 开工对齐：`steward brief`
-一键获取宿主机当前客观规格、最近修改过的资产、活跃服务与历史排障经验：
+### 1. 开工对齐与领取乐观租约：`steward brief`
+一键获取宿主机当前客观规格、最近修改过的资产、活跃服务、历史排障经验，以及 **⚡ AOPCC 乐观直通契约 (`Optimistic Leases`)**（如本机 `:5432` PostgreSQL、已就绪 CLI 与 `/root/new/tmp/` 沙盒），允许低风险可逆操作免前置查询直接执行（失败时由 `PostToolUse` `<2ms` 注入替代处方）：
 ```bash
 agent-steward brief
 ```
@@ -92,7 +92,7 @@ agent-steward memory search "数据库连接池排障" --hybrid # 混合检索�
 ```
 
 ### 方式 2：AI Agent MCP 原生挂载（智能体首选）
-在 Claude Desktop、Cursor 或 Antigravity 的配置文件中添加（即插即用 40 个原生工具）：
+在 Claude Desktop、Cursor 或 Antigravity 的配置文件中添加（即插即用 41 个原生工具）：
 ```json
 {
   "mcpServers": {

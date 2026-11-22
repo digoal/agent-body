@@ -2,7 +2,7 @@
 
 > **Agent Host Steward 产品设计 · 交付件 15**  
 > **版本**: v1.0 · **编制**: Antigravity · **日期**: 2026-11-22  
-> **对齐约束**: [README.md 规约 #8, #18, #22, #25](../README.md) · [ISSUE #25](../README.md#L444) · [roadmap-phase42.md](../src_doc/roadmap-phase42.md)
+> **对齐约束**: [README.md 规约 #8, #18, #22, #25](../README.md) · [ISSUE #25](../ISSUE.md#L120) · [roadmap-phase42.md](../src_doc/roadmap-phase42.md)
 
 ---
 
