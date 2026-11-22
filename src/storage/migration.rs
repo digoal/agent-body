@@ -11,26 +11,48 @@ pub struct MigrationReport {
     pub placement_rules_migrated: usize,
     pub scan_policies_migrated: usize,
     pub assets_migrated: usize,
+    #[serde(default)]
+    pub asset_embeddings_migrated: usize,
     pub active_processes_migrated: usize,
     pub memories_migrated: usize,
     pub changes_migrated: usize,
     pub links_migrated: usize,
     pub scan_jobs_migrated: usize,
     pub fact_nodes_migrated: usize,
+    #[serde(default)]
+    pub fact_node_embeddings_migrated: usize,
     pub fact_edges_migrated: usize,
     #[serde(default)]
     pub audit_events_migrated: usize,
     #[serde(default)]
     pub body_checkpoints_migrated: usize,
+    #[serde(default)]
+    pub coordination_locks_migrated: usize,
+    #[serde(default)]
+    pub lock_wait_queue_migrated: usize,
+    #[serde(default)]
+    pub mcp_catalog_migrated: usize,
+    #[serde(default)]
+    pub skills_catalog_migrated: usize,
+    #[serde(default)]
+    pub external_services_migrated: usize,
+    #[serde(default)]
+    pub benchmark_runs_migrated: usize,
+    #[serde(default)]
+    pub effectiveness_ledger_migrated: usize,
+    #[serde(default)]
+    pub mesh_dialogues_migrated: usize,
+    #[serde(default)]
+    pub mesh_transfers_migrated: usize,
     pub duration_ms: u128,
 }
 
 /// 跨存储引擎热迁移器 (Storage Migrator)
-/// 支撑在 SQLite、PostgreSQL 及未来 DuckDB 间无损双向迁移全部实体与图谱数据
+/// 支撑在 SQLite、PostgreSQL 及 DuckDB 间无损双向迁移全量实体、向量与图谱数据
 pub struct StorageMigrator;
 
 impl StorageMigrator {
-    /// 执行两个存储提供者之间的全量数据热迁移
+    /// 执行两个存储提供者之间的全量数据热迁移（幂等可重入）
     pub fn migrate(source: &Storage, target: &Storage) -> Result<MigrationReport> {
         let start = Instant::now();
 
@@ -45,16 +67,26 @@ impl StorageMigrator {
             rules_count += 1;
         }
 
-        // 2. 扫描策略 (默认策略已有，记录策略数)
+        // 2. 迁移扫描策略 (覆盖含用户自定义的 Scan Policies)
         let policies = source.get_scan_policies()?;
-        let policies_count = policies.len();
+        let mut policies_count = 0;
+        for policy in &policies {
+            target.upsert_scan_policy(policy)?;
+            policies_count += 1;
+        }
 
-        // 3. 迁移 Assets (全量资产与元数据)
+        // 3. 迁移 Assets (全量资产与元数据 + 非空向量)
         let assets = source.list_assets(1_000_000)?;
         let mut assets_count = 0;
+        let mut asset_embeddings_count = 0;
         for asset in &assets {
             target.upsert_asset(asset)?;
             assets_count += 1;
+            let emb = source.get_asset_embedding(&asset.path)?;
+            if !emb.is_empty() {
+                target.update_asset_embedding(&asset.path, &emb)?;
+                asset_embeddings_count += 1;
+            }
         }
 
         // 4. 迁移 Active Processes
@@ -64,8 +96,8 @@ impl StorageMigrator {
             target.replace_active_processes(&procs)?;
         }
 
-        // 5. 迁移 Memories (活跃记忆与向量)
-        let memories = source.list_all_active_memories(1_000_000)?;
+        // 5. 迁移 Memories (全状态记忆含 archived/outdated 与向量)
+        let memories = source.list_all_memories(1_000_000)?;
         let mut memories_count = 0;
         for mem in &memories {
             target.insert_memory(mem)?;
@@ -92,7 +124,6 @@ impl StorageMigrator {
         let jobs = source.list_scan_jobs(1_000_000)?;
         let mut jobs_count = 0;
         for job in &jobs {
-            // 如果目标库已存在该 job 则更新，否则创建
             if target.get_scan_job(&job.id)?.is_some() {
                 target.update_scan_job(job)?;
             } else {
@@ -101,12 +132,18 @@ impl StorageMigrator {
             jobs_count += 1;
         }
 
-        // 9. 迁移 Fact Graph Nodes & Edges (宿主机属性图)
+        // 9. 迁移 Fact Graph Nodes & Edges (宿主机属性图 + 非空向量)
         let nodes = source.list_all_fact_nodes(1_000_000)?;
         let mut nodes_count = 0;
+        let mut node_embeddings_count = 0;
         for node in &nodes {
             target.upsert_fact_node(node)?;
             nodes_count += 1;
+            let emb = source.get_fact_node_embedding(&node.id)?;
+            if !emb.is_empty() {
+                target.update_fact_node_embedding(&node.id, &emb)?;
+                node_embeddings_count += 1;
+            }
         }
 
         let edges = source.list_all_fact_edges(1_000_000)?;
@@ -128,11 +165,79 @@ impl StorageMigrator {
         }
 
         // 11. 迁移 Body Checkpoints (Agent 本体跨大脑连续性接力胶囊)
-        let checkpoints = source.list_body_checkpoints(None, 1000).unwrap_or_default();
+        let checkpoints = source.list_body_checkpoints(None, 100_000)?;
         let mut checkpoints_count = 0;
         for cp in &checkpoints {
             target.insert_body_checkpoint(cp)?;
             checkpoints_count += 1;
+        }
+
+        // 12. 迁移多 Agent 协作锁与等待队列
+        let locks = source.list_coordination_locks(None)?;
+        let mut locks_count = 0;
+        for lock in &locks {
+            if target.insert_coordination_lock(lock)? {
+                locks_count += 1;
+            }
+        }
+
+        let wait_entries = source.list_lock_wait_queue(None, None)?;
+        let mut wait_count = 0;
+        for entry in &wait_entries {
+            target.enqueue_lock_wait(entry)?;
+            wait_count += 1;
+        }
+
+        // 13. 迁移生态认知目录 (MCP / Skills / External Services)
+        let mcps = source.list_mcp_catalog()?;
+        let mut mcp_count = 0;
+        for rec in &mcps {
+            target.upsert_mcp_catalog(rec)?;
+            mcp_count += 1;
+        }
+
+        let skills = source.list_skills_catalog()?;
+        let mut skills_count = 0;
+        for rec in &skills {
+            target.upsert_skill_catalog(rec)?;
+            skills_count += 1;
+        }
+
+        let ext_svcs = source.list_external_services(None)?;
+        let mut ext_svc_count = 0;
+        for rec in &ext_svcs {
+            target.upsert_external_service(rec)?;
+            ext_svc_count += 1;
+        }
+
+        // 14. 迁移 Benchmark Runs (含 AWR snapshots/reports 内部元数据) 与效能存证账本
+        let runs = source.list_all_benchmark_runs(100_000)?;
+        let mut runs_count = 0;
+        for run in &runs {
+            target.insert_benchmark_run(run)?;
+            runs_count += 1;
+        }
+
+        let ledger = source.query_effectiveness_ledger("all", None, 100_000)?;
+        let mut ledger_count = 0;
+        for ev in &ledger.recent_events {
+            target.insert_effectiveness_event(ev)?;
+            ledger_count += 1;
+        }
+
+        // 15. 迁移联邦网格跨机对话与沙盒文件投递记录
+        let dialogues = source.list_mesh_dialogues(100_000)?;
+        let mut dialogues_count = 0;
+        for dlg in &dialogues {
+            target.insert_mesh_dialogue(dlg)?;
+            dialogues_count += 1;
+        }
+
+        let transfers = source.list_mesh_transfers(100_000)?;
+        let mut transfers_count = 0;
+        for tr in &transfers {
+            target.insert_mesh_transfer(tr)?;
+            transfers_count += 1;
         }
 
         let duration_ms = start.elapsed().as_millis();
@@ -143,15 +248,26 @@ impl StorageMigrator {
             placement_rules_migrated: rules_count,
             scan_policies_migrated: policies_count,
             assets_migrated: assets_count,
+            asset_embeddings_migrated: asset_embeddings_count,
             active_processes_migrated: procs_count,
             memories_migrated: memories_count,
             changes_migrated: changes_count,
             links_migrated: links_count,
             scan_jobs_migrated: jobs_count,
             fact_nodes_migrated: nodes_count,
+            fact_node_embeddings_migrated: node_embeddings_count,
             fact_edges_migrated: edges_count,
             audit_events_migrated: audit_count,
             body_checkpoints_migrated: checkpoints_count,
+            coordination_locks_migrated: locks_count,
+            lock_wait_queue_migrated: wait_count,
+            mcp_catalog_migrated: mcp_count,
+            skills_catalog_migrated: skills_count,
+            external_services_migrated: ext_svc_count,
+            benchmark_runs_migrated: runs_count,
+            effectiveness_ledger_migrated: ledger_count,
+            mesh_dialogues_migrated: dialogues_count,
+            mesh_transfers_migrated: transfers_count,
             duration_ms,
         })
     }
@@ -217,8 +333,9 @@ mod tests {
 
     #[test]
     fn test_storage_migration_sqlite_to_real_postgres() {
-        const PG_TEST_URL: &str = "postgresql://postgres@127.0.0.1:5432/agent_body_test";
-        let pg_provider = match PgStorageProvider::connect(PG_TEST_URL) {
+        let pg_url = std::env::var("AGENT_BODY_TEST_PG_URL")
+            .unwrap_or_else(|_| "postgresql://postgres@127.0.0.1:5432/agent_body_test".to_string());
+        let pg_provider = match PgStorageProvider::connect(&pg_url) {
             Ok(p) => p,
             Err(_) => {
                 eprintln!("跳过真实 PG 迁移测试 (本地 PG 暂不可用)");

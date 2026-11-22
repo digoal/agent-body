@@ -1,6 +1,6 @@
 # Agent Body — 零重扫项目演进指南 (`EVOLUTION_GUIDE.md`)
 
-<!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=82 tables=27 workloads=17 micro=5 dq=8 pr_rules=13 -->
+<!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=87 tables=27 workloads=17 micro=5 dq=8 pr_rules=13 -->
 
 > **核心定位（解决 ISSUE #17）**：让任何新接手的 AI Agent 或开发者在 **不重复扫描 3.8 万行源码与 48 份历史 `docs/src_doc/` 文档** 的前提下，**2 轮以内**完成需求定位、触点锁定与规范演进。
 
@@ -10,7 +10,7 @@
 
 1. **只读 Tier-0 文档（仅 2 份）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构地图 + 变更触点矩阵）；
-   - 当前活跃路线图 [docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase51.md](docs/src_doc/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/roadmap-phase42.md)）。
+   - 当前活跃路线图 [docs/src_doc/roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)、[docs/src_doc/roadmap-phase51.md](docs/src_doc/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/roadmap-phase42.md)）。
 2. **运行 O(1) 实时架构快照（`<100ms`，禁止手动数模块/工具数）**：
    ```bash
    make evolution-check
@@ -73,7 +73,7 @@
 | `src/preflight/` | `PreflightChecker`, `PreflightReport` | 依赖预检、磁盘水位预警与 `0600/0700` 安全基线检查 |
 | `src/scanner/` | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `OllamaAnnotator` | 白黑灰分级扫描、全链路脱敏、抗投毒清洗与三层元数据标注 |
 | `src/session/` | `SessionManager`, `SessionLifecycleManager` | 会话绑定、完工结清与临时垃圾回收 |
-| `src/storage/` | `Storage`, `StorageProvider`, `Sqlite/Pg/DuckDbStorageProvider`, `DuckDbAnalyticsEngine` | 82 方法 SPI 门面、三后端实现、跨库热迁移与 Parquet/CSV 导出 |
+| `src/storage/` | `Storage`, `StorageProvider`, `Sqlite/Pg/DuckDbStorageProvider`, `DuckDbAnalyticsEngine` | 87 方法 SPI 门面、三后端实现、跨库热迁移与 Parquet/CSV 导出 |
 | `src/tui/` | `TuiDashboard` | 终端单屏实时看板 |
 | `src/watcher/` | `FileWatcher`, `ChangeHandler` | `inotify` 300ms 防抖监听与增量变更同步 |
 | `src/web/` | `WebServer`, `TopologyGraph`, `parity_api`, `assets/mod.rs` | 单二进制 HTTP/SSE、昼夜双主题 8 大工作台、`check_auth` 与 Parity 校验 |

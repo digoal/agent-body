@@ -13,13 +13,19 @@ pub struct SyncReport {
     pub fact_nodes_synced: usize,
     pub fact_edges_synced: usize,
     #[serde(default)]
+    pub links_synced: usize,
+    #[serde(default)]
+    pub active_processes_synced: usize,
+    #[serde(default)]
+    pub body_checkpoints_synced: usize,
+    #[serde(default)]
     pub audit_events_synced: usize,
     #[serde(default)]
     pub effectiveness_ledger_synced: usize,
     pub duration_ms: u128,
 }
 
-/// 主存储 (SQLite / PG) → DuckDB 分析副本的增量数据同步管道
+/// 主存储 (SQLite / PG) → DuckDB 分析副本的同步管道
 pub struct SyncPipeline {
     source: Arc<dyn StorageProvider>,
     target: Arc<DuckDbStorageProvider>,
@@ -30,17 +36,25 @@ impl SyncPipeline {
         Self { source, target }
     }
 
-    /// 执行全量或增量同步（使用 DuckDB 原生 Appender + 单事务批量装载，3.5 万行 < 150ms，彻底根治高 CPU）
+    /// 执行全量同步（使用 DuckDB 原生 Appender + 单事务批量装载，保留真实历史 created_at 并更新水位线）
     pub fn sync_all(&self) -> Result<SyncReport> {
         use std::collections::HashSet;
         let start = Instant::now();
         let now_str = chrono::Utc::now().to_rfc3339();
 
         let assets = self.source.list_assets(500_000)?;
+        let asset_ts = self.source.list_created_at_map("assets").unwrap_or_default();
         let changes = self.source.list_changes(500_000)?;
-        let memories = self.source.list_all_active_memories(500_000)?;
+        let memories = self.source.list_all_memories(500_000)?;
+        let mem_ts = self.source.list_created_at_map("memories").unwrap_or_default();
         let nodes = self.source.list_all_fact_nodes(500_000)?;
         let edges = self.source.list_all_fact_edges(500_000)?;
+        let links = self.source.list_all_links(500_000).unwrap_or_default();
+        let procs = self.source.list_active_processes().unwrap_or_default();
+        let checkpoints = self
+            .source
+            .list_body_checkpoints(None, 10_000)
+            .unwrap_or_default();
         let audits = self
             .source
             .query_audit_events(&crate::storage::models::AuditQueryFilter {
@@ -66,11 +80,27 @@ impl SyncPipeline {
              DELETE FROM memories;
              DELETE FROM fact_nodes;
              DELETE FROM fact_edges;
+             DELETE FROM links;
+             DELETE FROM active_processes;
+             DELETE FROM body_checkpoints;
              DELETE FROM audit_events;
              DELETE FROM effectiveness_ledger;",
         )?;
 
-        let write_res: Result<(usize, usize, usize, usize, usize, usize, usize)> = (|| {
+        struct SyncCounts {
+            assets: usize,
+            changes: usize,
+            memories: usize,
+            nodes: usize,
+            edges: usize,
+            links: usize,
+            procs: usize,
+            checkpoints: usize,
+            audits: usize,
+            ledger: usize,
+        }
+
+        let write_res: Result<SyncCounts> = (|| {
             // 1. assets (18 cols)
             let mut assets_synced = 0usize;
             {
@@ -83,6 +113,7 @@ impl SyncPipeline {
                     }
                     let desc_kv = serde_json::to_string(&a.desc_kv).unwrap_or_else(|_| "{}".into());
                     let tags = serde_json::to_string(&a.tags).unwrap_or_else(|_| "[]".into());
+                    let created_ts = asset_ts.get(&a.id).map(String::as_str).unwrap_or(&now_str);
                     app.append_row(duckdb::params![
                         a.id,
                         a.path,
@@ -100,7 +131,7 @@ impl SyncPipeline {
                         "[]",
                         now_str,
                         now_str,
-                        now_str,
+                        created_ts,
                         now_str
                     ])?;
                     assets_synced += 1;
@@ -147,7 +178,7 @@ impl SyncPipeline {
                 app.flush()?;
             }
 
-            // 3. memories (15 cols)
+            // 3. memories (16 cols: 第 11 列保留真实 embedding，第 12 列保留真实 created_at，第 16 列 sensitive)
             let mut memories_synced = 0usize;
             {
                 let mut seen_ids = HashSet::with_capacity(memories.len());
@@ -157,6 +188,8 @@ impl SyncPipeline {
                         continue;
                     }
                     let tags = serde_json::to_string(&m.tags).unwrap_or_else(|_| "[]".into());
+                    let emb = serde_json::to_string(&m.embedding).unwrap_or_else(|_| "[]".into());
+                    let created_ts = mem_ts.get(&m.id).map(String::as_str).unwrap_or(&now_str);
                     app.append_row(duckdb::params![
                         m.id,
                         m.memory_type,
@@ -168,11 +201,12 @@ impl SyncPipeline {
                         m.weight,
                         m.pinned,
                         m.status,
-                        "[]",
+                        emb,
+                        created_ts,
                         now_str,
                         now_str,
-                        now_str,
-                        0i32
+                        0i32,
+                        false
                     ])?;
                     memories_synced += 1;
                 }
@@ -246,7 +280,118 @@ impl SyncPipeline {
                 app.flush()?;
             }
 
-            // 6. audit_events (17 cols)
+            // 6. links (12 cols)
+            let mut links_synced = 0usize;
+            {
+                let mut seen_ids = HashSet::with_capacity(links.len());
+                let mut next_id: i64 = 1;
+                let mut app = conn.appender("links")?;
+                for l in &links {
+                    let lid = match l.id {
+                        Some(id) if seen_ids.insert(id) => {
+                            if id >= next_id {
+                                next_id = id + 1;
+                            }
+                            id
+                        }
+                        _ => {
+                            while !seen_ids.insert(next_id) {
+                                next_id += 1;
+                            }
+                            let id = next_id;
+                            next_id += 1;
+                            id
+                        }
+                    };
+                    let prov = l.provenance.as_deref().unwrap_or("static_scan");
+                    let created_at = l.created_at.as_deref().unwrap_or(&now_str);
+                    app.append_row(duckdb::params![
+                        lid,
+                        l.source_type,
+                        l.source_id,
+                        l.target_type,
+                        l.target_id,
+                        l.relation,
+                        l.confidence,
+                        l.auto_discovered,
+                        l.line_number,
+                        l.snippet,
+                        prov,
+                        created_at
+                    ])?;
+                    links_synced += 1;
+                }
+                app.flush()?;
+            }
+
+            // 7. active_processes (13 cols)
+            let mut active_processes_synced = 0usize;
+            {
+                let mut seen_ids = HashSet::with_capacity(procs.len());
+                let mut seen_pids = HashSet::with_capacity(procs.len());
+                let mut app = conn.appender("active_processes")?;
+                for p in &procs {
+                    if !seen_ids.insert(p.id.as_str()) || !seen_pids.insert(p.pid) {
+                        continue;
+                    }
+                    let ports = serde_json::to_string(&p.listening_ports).unwrap_or_else(|_| "[]".into());
+                    app.append_row(duckdb::params![
+                        p.id,
+                        p.pid as i32,
+                        p.name,
+                        p.command,
+                        p.owner,
+                        p.associated_path,
+                        ports,
+                        p.status,
+                        p.cpu_pct,
+                        p.mem_bytes as i64,
+                        p.gpu_allocated_mb as i32,
+                        p.started_at,
+                        now_str
+                    ])?;
+                    active_processes_synced += 1;
+                }
+                app.flush()?;
+            }
+
+            // 8. body_checkpoints (16 cols)
+            let mut body_checkpoints_synced = 0usize;
+            {
+                let mut seen_ids = HashSet::with_capacity(checkpoints.len());
+                let mut app = conn.appender("body_checkpoints")?;
+                for cp in &checkpoints {
+                    if !seen_ids.insert(cp.checkpoint_id.as_str()) {
+                        continue;
+                    }
+                    let active_files = serde_json::to_string(&cp.active_files).unwrap_or_else(|_| "[]".into());
+                    let active_locks = serde_json::to_string(&cp.active_locks).unwrap_or_else(|_| "[]".into());
+                    let verified_facts = serde_json::to_string(&cp.verified_facts).unwrap_or_else(|_| "[]".into());
+                    let open_blockers = serde_json::to_string(&cp.open_blockers).unwrap_or_else(|_| "[]".into());
+                    app.append_row(duckdb::params![
+                        cp.checkpoint_id,
+                        cp.body_id,
+                        cp.from_brain,
+                        cp.session_id,
+                        cp.goal_summary,
+                        active_files,
+                        active_locks,
+                        verified_facts,
+                        open_blockers,
+                        cp.next_step_hint,
+                        cp.token_budget as i32,
+                        cp.status,
+                        cp.evidence_sha256,
+                        cp.created_at,
+                        cp.resumed_by_brain,
+                        cp.resumed_at
+                    ])?;
+                    body_checkpoints_synced += 1;
+                }
+                app.flush()?;
+            }
+
+            // 9. audit_events (17 cols)
             let mut audit_events_synced = 0usize;
             {
                 let mut seen_ids = HashSet::with_capacity(audits.len());
@@ -280,7 +425,7 @@ impl SyncPipeline {
                 app.flush()?;
             }
 
-            // 7. effectiveness_ledger (16 cols)
+            // 10. effectiveness_ledger (16 cols)
             let mut effectiveness_ledger_synced = 0usize;
             {
                 let mut seen_ids = HashSet::with_capacity(ledger_events.len());
@@ -312,45 +457,70 @@ impl SyncPipeline {
                 app.flush()?;
             }
 
-            Ok((
-                assets_synced,
-                changes_synced,
-                memories_synced,
-                nodes_synced,
-                edges_synced,
-                audit_events_synced,
-                effectiveness_ledger_synced,
-            ))
+            // 11. 写入 sync_watermarks 水位线追踪记录
+            let watermarks = [
+                ("assets", assets_synced),
+                ("changes", changes_synced),
+                ("memories", memories_synced),
+                ("fact_nodes", nodes_synced),
+                ("fact_edges", edges_synced),
+                ("links", links_synced),
+                ("active_processes", active_processes_synced),
+                ("body_checkpoints", body_checkpoints_synced),
+                ("audit_events", audit_events_synced),
+                ("effectiveness_ledger", effectiveness_ledger_synced),
+            ];
+            for (table_name, rows) in watermarks {
+                conn.execute(
+                    "INSERT INTO sync_watermarks (table_name, last_sync_ts, synced_rows, updated_at)
+                     VALUES (?1, ?2, ?3, ?2)
+                     ON CONFLICT(table_name) DO UPDATE SET
+                        last_sync_ts = excluded.last_sync_ts,
+                        synced_rows = excluded.synced_rows,
+                        updated_at = excluded.updated_at",
+                    duckdb::params![table_name, now_str, rows as i64],
+                )?;
+            }
+
+            Ok(SyncCounts {
+                assets: assets_synced,
+                changes: changes_synced,
+                memories: memories_synced,
+                nodes: nodes_synced,
+                edges: edges_synced,
+                links: links_synced,
+                procs: active_processes_synced,
+                checkpoints: body_checkpoints_synced,
+                audits: audit_events_synced,
+                ledger: effectiveness_ledger_synced,
+            })
         })();
 
-        let (
-            assets_synced,
-            changes_synced,
-            memories_synced,
-            nodes_synced,
-            edges_synced,
-            audit_events_synced,
-            effectiveness_ledger_synced,
-        ) = match write_res {
+        let counts = match write_res {
             Ok(counts) => {
                 conn.execute_batch("COMMIT;")?;
                 counts
             }
             Err(e) => {
-                let _ = conn.execute_batch("ROLLBACK;");
+                if let Err(rb_err) = conn.execute_batch("ROLLBACK;") {
+                    eprintln!("[SyncPipeline][WARN] sync_all ROLLBACK 失败: {}", rb_err);
+                }
                 return Err(e);
             }
         };
 
         let duration_ms = start.elapsed().as_millis();
         Ok(SyncReport {
-            assets_synced,
-            changes_synced,
-            memories_synced,
-            fact_nodes_synced: nodes_synced,
-            fact_edges_synced: edges_synced,
-            audit_events_synced,
-            effectiveness_ledger_synced,
+            assets_synced: counts.assets,
+            changes_synced: counts.changes,
+            memories_synced: counts.memories,
+            fact_nodes_synced: counts.nodes,
+            fact_edges_synced: counts.edges,
+            links_synced: counts.links,
+            active_processes_synced: counts.procs,
+            body_checkpoints_synced: counts.checkpoints,
+            audit_events_synced: counts.audits,
+            effectiveness_ledger_synced: counts.ledger,
             duration_ms,
         })
     }
@@ -401,6 +571,16 @@ impl SyncPipeline {
                 synced += 1;
             }
             app.flush()?;
+            let now_str = chrono::Utc::now().to_rfc3339();
+            conn.execute(
+                "INSERT INTO sync_watermarks (table_name, last_sync_ts, synced_rows, updated_at)
+                 VALUES ('audit_events', ?1, ?2, ?1)
+                 ON CONFLICT(table_name) DO UPDATE SET
+                    last_sync_ts = excluded.last_sync_ts,
+                    synced_rows = excluded.synced_rows,
+                    updated_at = excluded.updated_at",
+                duckdb::params![now_str, synced as i64],
+            )?;
             Ok(())
         })();
         match res {
@@ -409,7 +589,9 @@ impl SyncPipeline {
                 Ok(synced)
             }
             Err(e) => {
-                let _ = conn.execute_batch("ROLLBACK;");
+                if let Err(rb_err) = conn.execute_batch("ROLLBACK;") {
+                    eprintln!("[SyncPipeline][WARN] sync_audit_events_only ROLLBACK 失败: {}", rb_err);
+                }
                 Err(e)
             }
         }

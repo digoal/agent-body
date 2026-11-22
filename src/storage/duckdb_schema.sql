@@ -83,7 +83,8 @@ CREATE TABLE IF NOT EXISTS memories (
     created_at      VARCHAR,
     updated_at      VARCHAR,
     last_accessed_at VARCHAR,
-    access_count    INTEGER DEFAULT 0
+    access_count    INTEGER DEFAULT 0,
+    sensitive       BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS changes (

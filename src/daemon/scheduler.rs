@@ -51,9 +51,12 @@ impl BackgroundScheduler {
         let memory_conflicts = lifecycle.audit_memories()
             .map(|r| r.conflict_count)
             .unwrap_or(0);
-        let _mem_embedded = crate::memory::MemoryManager::new(self.storage.clone())
-            .backfill_missing_embeddings(20)
-            .unwrap_or(0);
+        match crate::memory::MemoryManager::new(self.storage.clone()).backfill_missing_embeddings(20) {
+            Ok(_) => {}
+            Err(e) => {
+                eprintln!("[Scheduler][WARN] 记忆向量补全失败: {}", e);
+            }
+        }
 
         // 4. 若有挂起或未完成的断点扫描任务，自动推进恢复执行
         let mut scan_job_resumed = false;

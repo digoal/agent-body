@@ -756,13 +756,19 @@ impl BodyPerfEngine {
             Self::save_meta_json(provider.as_ref(), META_BASELINE_KEY, snap_val)?;
         }
 
-        // 维护最近 32 份滚动索引
+        // 维护最近 32 份滚动索引，同时物理清理被淘汰的孤儿快照行（黄金基线豁免）
+        let baseline_snap_id = Self::load_snapshot(provider.as_ref(), "baseline").map(|s| s.snapshot_id);
         let mut idx_list: Vec<String> = Self::load_meta_json(provider.as_ref(), META_SNAP_INDEX)
             .and_then(|v| serde_json::from_value(v).ok())
             .unwrap_or_default();
         idx_list.push(snap_id.clone());
         while idx_list.len() > MAX_RETAINED_SNAPSHOTS {
-            let _oldest = idx_list.remove(0);
+            let oldest = idx_list.remove(0);
+            if baseline_snap_id.as_deref() != Some(oldest.as_str()) {
+                if let Err(e) = provider.delete_benchmark_run(&format!("awr:snap:{}", oldest)) {
+                    eprintln!("[PerfAWR][WARN] 清理淘汰快照 awr:snap:{} 失败: {}", oldest, e);
+                }
+            }
         }
         if let Ok(idx_val) = serde_json::to_value(&idx_list) {
             Self::save_meta_json(provider.as_ref(), META_SNAP_INDEX, idx_val)?;
@@ -895,8 +901,12 @@ impl BodyPerfEngine {
         let mut list = Self::list_awr_reports_meta(provider);
         list.retain(|r| r.report_id != report.report_id);
         list.insert(0, report.to_meta());
-        if list.len() > MAX_RETAINED_REPORTS {
-            list.truncate(MAX_RETAINED_REPORTS);
+        while list.len() > MAX_RETAINED_REPORTS {
+            if let Some(evicted) = list.pop() {
+                if let Err(e) = provider.delete_benchmark_run(&format!("awr:report:{}", evicted.report_id)) {
+                    eprintln!("[PerfAWR][WARN] 清理淘汰报告 awr:report:{} 失败: {}", evicted.report_id, e);
+                }
+            }
         }
         let idx_val = serde_json::to_value(&list)?;
         Self::save_meta_json(provider, META_REPORT_INDEX, idx_val)?;
@@ -1411,5 +1421,71 @@ mod tests {
 
         let tune = BodyPerfEngine::run_l1_auto_tune(&storage).expect("auto tune");
         assert!(!tune.actions_executed.is_empty());
+    }
+
+    #[test]
+    fn test_awr_snapshot_and_report_eviction_deletes_orphan_rows() {
+        let storage = Storage::open_in_memory().expect("in_memory");
+        let base_snap = BodyPerfEngine::capture_snapshot(&storage, Some("golden-evict"), true)
+            .expect("capture base");
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        let second_snap = BodyPerfEngine::capture_snapshot(&storage, Some("evict-candidate"), false)
+            .expect("capture second");
+
+        for i in 0..MAX_RETAINED_SNAPSHOTS {
+            std::thread::sleep(std::time::Duration::from_millis(2));
+            let label = format!("roll-{}", i);
+            BodyPerfEngine::capture_snapshot(&storage, Some(&label), false).expect("roll snap");
+        }
+
+        // 黄金基线虽移出 32 滚动窗口但受豁免保留，第 2 份普通淘汰快照应被物理删除
+        assert!(
+            BodyPerfEngine::load_snapshot(storage.provider().as_ref(), "baseline").is_some(),
+            "黄金基线不应被淘汰清理"
+        );
+        assert!(
+            storage
+                .get_benchmark_run(&format!("awr:snap:{}", base_snap.snapshot_id))
+                .expect("query base")
+                .is_some()
+        );
+        assert!(
+            storage
+                .get_benchmark_run(&format!("awr:snap:{}", second_snap.snapshot_id))
+                .expect("query second")
+                .is_none(),
+            "超窗淘汰快照 awr:snap:* 必须从 benchmark_runs 删除"
+        );
+
+        // 验证报告 20 份滚动淘汰同步物理清理 awr:report:*
+        let mut generated_ids = Vec::new();
+        for _ in 0..(MAX_RETAINED_REPORTS + 2) {
+            std::thread::sleep(std::time::Duration::from_millis(2));
+            let rep = BodyPerfEngine::generate_awr_report(&storage, None, None, false).expect("gen");
+            generated_ids.push(rep.report_id);
+        }
+        assert!(
+            storage
+                .get_benchmark_run(&format!("awr:report:{}", generated_ids[0]))
+                .expect("query evicted rep 0")
+                .is_none(),
+            "最早生成的淘汰 AWR 报告必须已删除"
+        );
+        assert!(
+            storage
+                .get_benchmark_run(&format!("awr:report:{}", generated_ids[1]))
+                .expect("query evicted rep 1")
+                .is_none(),
+            "第 2 早生成的淘汰 AWR 报告必须已删除"
+        );
+        assert!(
+            storage
+                .get_benchmark_run(&format!(
+                    "awr:report:{}",
+                    generated_ids[generated_ids.len() - 1]
+                ))
+                .expect("query latest rep")
+                .is_some()
+        );
     }
 }

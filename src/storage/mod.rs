@@ -52,6 +52,11 @@ impl Storage {
         self.provider.provider_name()
     }
 
+    /// 批量读取指定实体的 `id -> created_at` 映射（用于全量同步保留真实时间）
+    pub fn list_created_at_map(&self, table: &str) -> Result<std::collections::HashMap<String, String>> {
+        self.provider.list_created_at_map(table)
+    }
+
     /// 打开或创建基于内置 SQLite 的存储实现（默认生产模式）
     pub fn open(path: &Path) -> Result<Self> {
         let provider = SqliteStorageProvider::open(path)?;
@@ -124,6 +129,10 @@ impl Storage {
         self.provider.get_scan_policies()
     }
 
+    pub fn upsert_scan_policy(&self, policy: &ScanPolicy) -> Result<()> {
+        self.provider.upsert_scan_policy(policy)
+    }
+
     // ─── Assets ──────────────────────────────────────────────────────
 
     pub fn upsert_asset(&self, asset: &AssetRecord) -> Result<()> {
@@ -184,6 +193,10 @@ impl Storage {
 
     pub fn list_all_active_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {
         self.provider.list_all_active_memories(limit)
+    }
+
+    pub fn list_all_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {
+        self.provider.list_all_memories(limit)
     }
 
     pub fn update_memory_status(&self, memory_id: &str, status: &str) -> Result<usize> {
@@ -448,6 +461,14 @@ impl Storage {
 
     pub fn list_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>> {
         self.provider.list_benchmark_runs(limit)
+    }
+
+    pub fn list_all_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>> {
+        self.provider.list_all_benchmark_runs(limit)
+    }
+
+    pub fn delete_benchmark_run(&self, run_id: &str) -> Result<bool> {
+        self.provider.delete_benchmark_run(run_id)
     }
 
     pub fn insert_effectiveness_event(&self, event: &EffectivenessLedgerRecord) -> Result<()> {
@@ -943,5 +964,93 @@ mod tests {
         let details_str = serde_json::to_string(&changes[0].details).unwrap_or_default();
         assert!(!details_str.contains("sk-1234567890abcdef"));
         assert!(!details_str.contains("eyJhbGciOiJIUzI1NiJ9"));
+    }
+
+    #[test]
+    fn test_sqlite_memory_upsert_and_fts_active_filter() {
+        let storage = Storage::open_in_memory().expect("open");
+        let mem1 = MemoryRecord {
+            id: "mem-upsert-1".to_string(),
+            memory_type: "experience".to_string(),
+            content: "Phase53 sqlite upsert alpha".to_string(),
+            summary: Some("alpha summary".to_string()),
+            source_agent: Some("agent-a".to_string()),
+            source_session: Some("sess-a".to_string()),
+            tags: vec!["tag1".to_string()],
+            weight: 0.7,
+            pinned: false,
+            status: "active".to_string(),
+            embedding: vec![0.1, 0.2, 0.3],
+        };
+        storage.insert_memory(&mem1).expect("insert mem1");
+
+        // 同一 ID 二次写入（空向量），应保留原向量并更新标签/权重/置顶
+        let mem1_upd = MemoryRecord {
+            id: "mem-upsert-1".to_string(),
+            memory_type: "decision".to_string(),
+            content: "Phase53 sqlite upsert uniquetok".to_string(),
+            summary: Some("updated summary".to_string()),
+            source_agent: None,
+            source_session: None,
+            tags: vec!["tag1".to_string(), "tag2".to_string()],
+            weight: 0.95,
+            pinned: true,
+            status: "active".to_string(),
+            embedding: Vec::new(),
+        };
+        storage.insert_memory(&mem1_upd).expect("upsert empty emb");
+
+        let hits = storage.search_memories_fts("uniquetok", 10).expect("fts active");
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].embedding, vec![0.1, 0.2, 0.3]);
+        assert_eq!(hits[0].tags, vec!["tag1".to_string(), "tag2".to_string()]);
+        assert!(hits[0].pinned);
+        assert_eq!(hits[0].source_agent.as_deref(), Some("agent-a"));
+
+        // 非空新向量应覆盖旧向量
+        let mut mem1_new_emb = mem1_upd.clone();
+        mem1_new_emb.embedding = vec![0.9, 0.8];
+        storage.insert_memory(&mem1_new_emb).expect("upsert new emb");
+        let hits2 = storage.search_memories_fts("uniquetok", 10).expect("fts new emb");
+        assert_eq!(hits2[0].embedding, vec![0.9, 0.8]);
+
+        // 归档后 FTS 不再返回，但 list_all_memories 仍可全量读出用于迁移
+        storage.update_memory_status("mem-upsert-1", "archived").expect("archive");
+        let hits_archived = storage.search_memories_fts("uniquetok", 10).expect("fts after archive");
+        assert!(hits_archived.is_empty(), "archived 记忆不应出现在 active FTS 召回中");
+        let all = storage.list_all_memories(10).expect("list all memories");
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].status, "archived");
+    }
+
+    #[test]
+    fn test_sqlite_benchmark_awr_isolation_and_delete() {
+        let storage = Storage::open_in_memory().expect("open");
+        let mk = |run_id: &str, suite: &str| BenchmarkRunRecord {
+            run_id: run_id.to_string(),
+            suite_name: suite.to_string(),
+            git_commit: "test".to_string(),
+            app_version: crate::VERSION.to_string(),
+            host_fingerprint: serde_json::json!({}),
+            workload_count: 1,
+            total_baseline_tokens: 100,
+            total_steward_tokens: 10,
+            overall_token_savings_pct: 90.0,
+            overall_speedup_factor: 2.0,
+            total_hazards_intercepted: 0,
+            total_noise_blocked: 0,
+            sla_passed: true,
+            results_json: serde_json::json!([]),
+            report_sha256: "sha".to_string(),
+            duration_ms: 5,
+            created_at: chrono::Utc::now().to_rfc3339(),
+        };
+        storage.insert_benchmark_run(&mk("bench:normal-1", "full")).expect("insert normal");
+        storage.insert_benchmark_run(&mk("awr:snap:snap-1", "awr_internal")).expect("insert awr");
+
+        assert_eq!(storage.list_benchmark_runs(10).expect("filtered").len(), 1);
+        assert_eq!(storage.list_all_benchmark_runs(10).expect("all").len(), 2);
+        assert!(storage.delete_benchmark_run("awr:snap:snap-1").expect("delete awr"));
+        assert!(storage.get_benchmark_run("awr:snap:snap-1").expect("get deleted").is_none());
     }
 }

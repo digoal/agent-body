@@ -7,6 +7,9 @@ pub trait StorageProvider: Send + Sync {
     // ─── 生命周期与元数据 ───────────────────────────────────────────────
     fn init(&self) -> Result<()>;
     fn provider_name(&self) -> &'static str;
+    fn list_created_at_map(&self, _table: &str) -> Result<std::collections::HashMap<String, String>> {
+        Ok(std::collections::HashMap::new())
+    }
 
     // ─── Placement Rules ─────────────────────────────────────────────
     fn get_placement_rules(&self) -> Result<Vec<PlacementRule>>;
@@ -14,6 +17,9 @@ pub trait StorageProvider: Send + Sync {
 
     // ─── Scan Policies ───────────────────────────────────────────────
     fn get_scan_policies(&self) -> Result<Vec<ScanPolicy>>;
+    fn upsert_scan_policy(&self, _policy: &ScanPolicy) -> Result<()> {
+        Ok(())
+    }
 
     // ─── Assets ──────────────────────────────────────────────────────
     fn upsert_asset(&self, asset: &AssetRecord) -> Result<()>;
@@ -29,6 +35,9 @@ pub trait StorageProvider: Send + Sync {
     fn insert_memory(&self, mem: &MemoryRecord) -> Result<()>;
     fn search_memories_fts(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>>;
     fn list_all_active_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>>;
+    fn list_all_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {
+        self.list_all_active_memories(limit)
+    }
     fn update_memory_status(&self, memory_id: &str, status: &str) -> Result<usize>;
 
     // ─── Changes ─────────────────────────────────────────────────────
@@ -125,6 +134,12 @@ pub trait StorageProvider: Send + Sync {
     fn insert_benchmark_run(&self, run: &BenchmarkRunRecord) -> Result<()>;
     fn get_benchmark_run(&self, run_id: &str) -> Result<Option<BenchmarkRunRecord>>;
     fn list_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>>;
+    fn list_all_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>> {
+        self.list_benchmark_runs(limit)
+    }
+    fn delete_benchmark_run(&self, _run_id: &str) -> Result<bool> {
+        Ok(false)
+    }
     fn insert_effectiveness_event(&self, event: &EffectivenessLedgerRecord) -> Result<()>;
     fn query_effectiveness_ledger(&self, window: &str, tool_filter: Option<&str>, limit: usize) -> Result<EffectivenessSummary>;
     fn delete_bench_sandbox_records(&self) -> Result<usize>;

@@ -639,14 +639,40 @@ fn main() -> Result<()> {
                     println!("✅ 数据热迁移完成！耗时: {} ms", report.duration_ms);
                     println!("  - 放置规则迁移: {} 条", report.placement_rules_migrated);
                     println!("  - 扫描策略迁移: {} 条", report.scan_policies_migrated);
-                    println!("  - 纳管资产迁移: {} 个", report.assets_migrated);
+                    println!(
+                        "  - 纳管资产迁移: {} 个 (向量 {} 条)",
+                        report.assets_migrated, report.asset_embeddings_migrated
+                    );
                     println!("  - 活跃进程迁移: {} 个", report.active_processes_migrated);
                     println!("  - 记忆条目迁移: {} 条", report.memories_migrated);
                     println!("  - 变更记录迁移: {} 条", report.changes_migrated);
                     println!("  - 依赖关系迁移: {} 条", report.links_migrated);
                     println!("  - 扫描作业迁移: {} 个", report.scan_jobs_migrated);
-                    println!("  - 属性图节点迁移: {} 个", report.fact_nodes_migrated);
-                    println!("  - 属性图边迁移:   {} 条", report.fact_edges_migrated);
+                    println!(
+                        "  - 属性图迁移:   {} 节点 (向量 {} 条) / {} 边",
+                        report.fact_nodes_migrated,
+                        report.fact_node_embeddings_migrated,
+                        report.fact_edges_migrated
+                    );
+                    println!(
+                        "  - 协作与目录:   锁 {} / 队列 {} / MCP {} / SKILL {} / 外服 {}",
+                        report.coordination_locks_migrated,
+                        report.lock_wait_queue_migrated,
+                        report.mcp_catalog_migrated,
+                        report.skills_catalog_migrated,
+                        report.external_services_migrated
+                    );
+                    println!(
+                        "  - 存证与审计:   Bench/AWR {} / 账本 {} / 审计 {} / 胶囊 {}",
+                        report.benchmark_runs_migrated,
+                        report.effectiveness_ledger_migrated,
+                        report.audit_events_migrated,
+                        report.body_checkpoints_migrated
+                    );
+                    println!(
+                        "  - 网格记录:     对话 {} / 文件投递 {}",
+                        report.mesh_dialogues_migrated, report.mesh_transfers_migrated
+                    );
                 }
                 StorageCommands::Sync { to, to_path } => {
                     println!("🔄 正在执行主存储 -> 分析副本 ({}) 同步 ...", to);
@@ -658,8 +684,15 @@ fn main() -> Result<()> {
                     println!("  - 纳管资产同步:   {} 个", rep.assets_synced);
                     println!("  - 变更记录同步:   {} 条", rep.changes_synced);
                     println!("  - 长期记忆同步:   {} 条", rep.memories_synced);
-                    println!("  - 属性图节点同步: {} 个", rep.fact_nodes_synced);
-                    println!("  - 属性图边同步:   {} 条", rep.fact_edges_synced);
+                    println!("  - 属性图同步:     {} 节点 / {} 边", rep.fact_nodes_synced, rep.fact_edges_synced);
+                    println!(
+                        "  - 拓扑与运行态:   Links {} / 活跃进程 {} / 接力胶囊 {}",
+                        rep.links_synced, rep.active_processes_synced, rep.body_checkpoints_synced
+                    );
+                    println!(
+                        "  - 审计与账本:     审计事件 {} / 效能账本 {}",
+                        rep.audit_events_synced, rep.effectiveness_ledger_synced
+                    );
                 }
             }
         }

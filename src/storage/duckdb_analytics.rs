@@ -57,6 +57,10 @@ pub struct AuditActionStat {
     pub outcome: String,
     pub hit_count: usize,
     pub avg_elapsed_us: f64,
+    #[serde(default)]
+    pub p50_elapsed_us: f64,
+    #[serde(default)]
+    pub p95_elapsed_us: f64,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -112,6 +116,7 @@ impl DuckDbAnalyticsEngine {
             source_ptr: usize,
             latest_asset: String,
             latest_change: Option<i64>,
+            latest_memory: (String, String),
             created_at: Instant,
             conn: Arc<Mutex<Connection>>,
         }
@@ -133,10 +138,16 @@ impl DuckDbAnalyticsEngine {
             .ok()
             .and_then(|v| v.into_iter().next().map(|c| c.id))
             .unwrap_or_default();
+        let latest_memory = source
+            .list_all_memories(1)
+            .ok()
+            .and_then(|v| v.into_iter().next().map(|m| (m.id, m.status)))
+            .unwrap_or_default();
         if let Some(ref cached) = *guard {
             if cached.source_ptr == source_ptr
                 && cached.latest_asset == latest_asset
                 && cached.latest_change == latest_change
+                && cached.latest_memory == latest_memory
                 && cached.created_at.elapsed() < Duration::from_secs(15)
             {
                 return Ok(Self::new(cached.conn.clone()));
@@ -145,12 +156,13 @@ impl DuckDbAnalyticsEngine {
 
         let duckdb_prov = crate::storage::DuckDbStorageProvider::open_in_memory()?;
         let pipeline = crate::storage::SyncPipeline::new(source, Arc::new(duckdb_prov.clone()));
-        let _ = pipeline.sync_all()?;
+        pipeline.sync_all()?;
         let conn = duckdb_prov.conn();
         *guard = Some(CachedDuckDb {
             source_ptr,
             latest_asset,
             latest_change,
+            latest_memory,
             created_at: Instant::now(),
             conn: conn.clone(),
         });
@@ -161,7 +173,7 @@ impl DuckDbAnalyticsEngine {
     pub fn from_synced_audit_events(source: Arc<dyn crate::storage::StorageProvider>) -> Result<Self> {
         let duckdb_prov = crate::storage::DuckDbStorageProvider::open_in_memory()?;
         let pipeline = crate::storage::SyncPipeline::new(source, Arc::new(duckdb_prov.clone()));
-        let _ = pipeline.sync_audit_events_only()?;
+        pipeline.sync_audit_events_only()?;
         Ok(Self::new(duckdb_prov.conn()))
     }
 
@@ -173,22 +185,24 @@ impl DuckDbAnalyticsEngine {
 }
 
 impl AnalyticsProvider for DuckDbAnalyticsEngine {
-    fn changes_heatmap(&self, _days: usize) -> Result<Vec<HeatmapCell>> {
+    fn changes_heatmap(&self, days: usize) -> Result<Vec<HeatmapCell>> {
         let conn = self.lock_conn()?;
+        let cutoff = (chrono::Utc::now() - chrono::Duration::days(days.max(1) as i64)).to_rfc3339();
         let mut stmt = conn.prepare(
-            "SELECT 
-                CASE 
+            "SELECT
+                CASE
                     WHEN position('/' in target) > 0 THEN substr(target, 1, instr(substr(target, 2), '/') + 1)
-                    ELSE target 
+                    ELSE target
                 END as dir,
                 coalesce(substr(created_at, 1, 13) || ':00:00Z', 'unknown') as time_bucket,
                 count(*) as cnt
              FROM changes
+             WHERE COALESCE(try_cast(created_at AS TIMESTAMPTZ) >= try_cast(?1 AS TIMESTAMPTZ), created_at >= ?1)
              GROUP BY 1, 2
              ORDER BY cnt DESC"
         )?;
 
-        let rows = stmt.query_map([], |row| {
+        let rows = stmt.query_map(params![cutoff], |row| {
             let cnt: i64 = row.get(2)?;
             Ok(HeatmapCell {
                 directory: row.get(0)?,
@@ -200,20 +214,22 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
         Ok(rows)
     }
 
-    fn asset_growth_trend(&self, _days: usize) -> Result<Vec<TrendPoint>> {
+    fn asset_growth_trend(&self, days: usize) -> Result<Vec<TrendPoint>> {
         let conn = self.lock_conn()?;
+        let cutoff = (chrono::Utc::now() - chrono::Duration::days(days.max(1) as i64)).to_rfc3339();
         let mut stmt = conn.prepare(
-            "SELECT 
+            "SELECT
                 coalesce(substr(created_at, 1, 10), 'unknown') as day,
                 type,
                 count(*) as daily_cnt,
                 sum(count(*)) OVER (PARTITION BY type ORDER BY coalesce(substr(created_at, 1, 10), 'unknown')) as cum_cnt
              FROM assets
+             WHERE COALESCE(try_cast(created_at AS TIMESTAMPTZ) >= try_cast(?1 AS TIMESTAMPTZ), created_at >= ?1)
              GROUP BY 1, 2
              ORDER BY 1 ASC"
         )?;
 
-        let rows = stmt.query_map([], |row| {
+        let rows = stmt.query_map(params![cutoff], |row| {
             let daily: i64 = row.get(2)?;
             let cum: i64 = row.get(3)?;
             Ok(TrendPoint {
@@ -227,17 +243,19 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
         Ok(rows)
     }
 
-    fn most_changed_assets(&self, _days: usize, limit: usize) -> Result<Vec<ChangeFrequency>> {
+    fn most_changed_assets(&self, days: usize, limit: usize) -> Result<Vec<ChangeFrequency>> {
         let conn = self.lock_conn()?;
+        let cutoff = (chrono::Utc::now() - chrono::Duration::days(days.max(1) as i64)).to_rfc3339();
         let mut stmt = conn.prepare(
             "SELECT target, count(*) as cnt, max(created_at) as last_changed
              FROM changes
+             WHERE COALESCE(try_cast(created_at AS TIMESTAMPTZ) >= try_cast(?1 AS TIMESTAMPTZ), created_at >= ?1)
              GROUP BY target
              ORDER BY cnt DESC
-             LIMIT ?1"
+             LIMIT ?2"
         )?;
 
-        let rows = stmt.query_map(params![limit as i64], |row| {
+        let rows = stmt.query_map(params![cutoff, limit as i64], |row| {
             let cnt: i64 = row.get(1)?;
             let last: Option<String> = row.get(2)?;
             Ok(ChangeFrequency {
@@ -253,19 +271,21 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
     fn memory_decay_curve(&self) -> Result<Vec<DecayPoint>> {
         let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
-            "SELECT 
-                0 as age_days,
+            "SELECT
+                CAST(GREATEST(0, COALESCE(date_diff('day', try_cast(created_at AS TIMESTAMPTZ), current_timestamp), 0)) AS BIGINT) as age_days,
                 sum(case when status = 'active' then 1 else 0 end) as active_cnt,
-                sum(case when status = 'archived' then 1 else 0 end) as archived_cnt
+                sum(case when status != 'active' then 1 else 0 end) as archived_cnt
              FROM memories
-             GROUP BY 1"
+             GROUP BY 1
+             ORDER BY 1 ASC"
         )?;
 
         let rows = stmt.query_map([], |row| {
+            let age_days: i64 = row.get(0)?;
             let active: Option<i64> = row.get(1)?;
             let archived: Option<i64> = row.get(2)?;
             Ok(DecayPoint {
-                age_days: 0,
+                age_days: age_days.max(0) as usize,
                 active_count: active.unwrap_or(0) as usize,
                 archived_count: archived.unwrap_or(0) as usize,
             })
@@ -319,9 +339,11 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
         let mut stmt = conn.prepare(
             "SELECT domain, category, action, outcome,
                     COUNT(*),
-                    CAST(COALESCE(AVG(elapsed_us), 0.0) AS DOUBLE)
+                    CAST(COALESCE(AVG(elapsed_us), 0.0) AS DOUBLE),
+                    CAST(COALESCE(QUANTILE_CONT(elapsed_us, 0.50), 0.0) AS DOUBLE),
+                    CAST(COALESCE(QUANTILE_CONT(elapsed_us, 0.95), 0.0) AS DOUBLE)
              FROM audit_events
-             WHERE created_at >= ?1
+             WHERE COALESCE(try_cast(created_at AS TIMESTAMPTZ) >= try_cast(?1 AS TIMESTAMPTZ), created_at >= ?1)
              GROUP BY domain, category, action, outcome
              ORDER BY COUNT(*) DESC
              LIMIT 30",
@@ -335,6 +357,8 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
                     outcome: r.get(3)?,
                     hit_count: r.get::<_, i64>(4)? as usize,
                     avg_elapsed_us: r.get(5)?,
+                    p50_elapsed_us: r.get(6)?,
+                    p95_elapsed_us: r.get(7)?,
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -344,7 +368,10 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
             ..Default::default()
         };
         let mut agg_stmt = conn.prepare(
-            "SELECT domain, outcome, COUNT(*) FROM audit_events WHERE created_at >= ?1 GROUP BY domain, outcome",
+            "SELECT domain, outcome, COUNT(*)
+             FROM audit_events
+             WHERE COALESCE(try_cast(created_at AS TIMESTAMPTZ) >= try_cast(?1 AS TIMESTAMPTZ), created_at >= ?1)
+             GROUP BY domain, outcome",
         )?;
         let agg_rows = agg_stmt.query_map(params![cutoff], |r| {
             Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, i64>(2)? as usize))

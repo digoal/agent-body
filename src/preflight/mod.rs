@@ -733,9 +733,144 @@ impl PreflightChecker {
         }
     }
 
-    /// 检查后端存储配置（如配置了 PostgreSQL，验证其连通性与 pgvector）
-    pub fn check_storage_backend(_report: &mut PreflightReport, _config: &crate::config::Config) {
-        // 若未来支持从 config 直接读 storage_backend，在此做连接探活
+    /// 检查后端存储配置（校验 sqlite / duckdb 可用性，如配置 postgres 则脱敏后探活连通性与版本）
+    pub fn check_storage_backend(report: &mut PreflightReport, config: &crate::config::Config) {
+        let provider = config.storage.provider.trim().to_lowercase();
+        match provider.as_str() {
+            "sqlite" | "" => {
+                let db_path = &config.db_path;
+                let parent_ok = db_path
+                    .parent()
+                    .map(|p| p.exists() || fs::create_dir_all(p).is_ok())
+                    .unwrap_or(true);
+                if parent_ok {
+                    report.add(CheckItem {
+                        name: "主存储后端 (Storage Backend)".to_string(),
+                        category: CheckCategory::Required,
+                        status: CheckStatus::Pass,
+                        message: format!("provider=sqlite，目标路径 {:?}", db_path),
+                        remedy: None,
+                    });
+                } else {
+                    report.add(CheckItem {
+                        name: "主存储后端 (Storage Backend)".to_string(),
+                        category: CheckCategory::Required,
+                        status: CheckStatus::Fail,
+                        message: format!("provider=sqlite，父目录无法创建或访问: {:?}", db_path),
+                        remedy: Some("检查 db_path 配置及目录写权限".to_string()),
+                    });
+                }
+            }
+            "duckdb" => {
+                let duck_path = config
+                    .storage
+                    .duckdb_path
+                    .clone()
+                    .unwrap_or_else(|| config.data_dir.join("steward.duckdb"));
+                let parent_ok = duck_path
+                    .parent()
+                    .map(|p| p.exists() || fs::create_dir_all(p).is_ok())
+                    .unwrap_or(true);
+                if !parent_ok {
+                    report.add(CheckItem {
+                        name: "主存储后端 (Storage Backend)".to_string(),
+                        category: CheckCategory::Required,
+                        status: CheckStatus::Fail,
+                        message: format!("provider=duckdb，父目录不可写: {:?}", duck_path),
+                        remedy: Some("检查 storage.duckdb_path 与目录权限".to_string()),
+                    });
+                    return;
+                }
+                match crate::storage::DuckDbStorageProvider::open_in_memory() {
+                    Ok(_) => {
+                        report.add(CheckItem {
+                            name: "主存储后端 (Storage Backend)".to_string(),
+                            category: CheckCategory::Required,
+                            status: CheckStatus::Pass,
+                            message: format!("provider=duckdb，目标路径 {:?}（引擎就绪）", duck_path),
+                            remedy: None,
+                        });
+                    }
+                    Err(e) => {
+                        report.add(CheckItem {
+                            name: "主存储后端 (Storage Backend)".to_string(),
+                            category: CheckCategory::Required,
+                            status: CheckStatus::Fail,
+                            message: format!("provider=duckdb 初始化探测失败: {}", e),
+                            remedy: Some("检查 DuckDB 磁盘空间、文件锁或 C++ 运行时库".to_string()),
+                        });
+                    }
+                }
+            }
+            "postgres" | "pg" | "postgresql" => {
+                let raw_url = config
+                    .storage
+                    .pg_url
+                    .as_deref()
+                    .unwrap_or("postgresql://postgres@127.0.0.1:5432/agent_body");
+                let safe_url = crate::scanner::metadata::SecretRedactor::redact_single_line(raw_url);
+                let url_owned = raw_url.to_string();
+                let probe_res = std::thread::spawn(move || -> anyhow::Result<String> {
+                    use std::str::FromStr;
+                    let mut pg_cfg = postgres::Config::from_str(&url_owned)?;
+                    pg_cfg.connect_timeout(Duration::from_secs(2));
+                    let mut client = pg_cfg.connect(postgres::NoTls)?;
+                    let row = client.query_one("SELECT current_setting('server_version')", &[])?;
+                    let ver: String = row.get(0);
+                    Ok(ver)
+                })
+                .join();
+
+                match probe_res {
+                    Ok(Ok(ver)) => {
+                        report.add(CheckItem {
+                            name: "主存储后端 (Storage Backend)".to_string(),
+                            category: CheckCategory::Required,
+                            status: CheckStatus::Pass,
+                            message: format!(
+                                "provider=postgres ({}) 已连通，PostgreSQL server_version = {}",
+                                safe_url, ver
+                            ),
+                            remedy: None,
+                        });
+                    }
+                    Ok(Err(e)) => {
+                        let safe_err =
+                            crate::scanner::metadata::SecretRedactor::redact_single_line(&e.to_string());
+                        report.add(CheckItem {
+                            name: "主存储后端 (Storage Backend)".to_string(),
+                            category: CheckCategory::Required,
+                            status: CheckStatus::Fail,
+                            message: format!("provider=postgres ({}) 连接失败: {}", safe_url, safe_err),
+                            remedy: Some(
+                                "检查 PostgreSQL 服务状态、pg_hba 鉴权规则及 storage.pg_url 配置"
+                                    .to_string(),
+                            ),
+                        });
+                    }
+                    Err(_) => {
+                        report.add(CheckItem {
+                            name: "主存储后端 (Storage Backend)".to_string(),
+                            category: CheckCategory::Required,
+                            status: CheckStatus::Fail,
+                            message: format!("provider=postgres ({}) 探活线程异常终止", safe_url),
+                            remedy: Some("检查 storage.pg_url 连接串格式及网络可达性".to_string()),
+                        });
+                    }
+                }
+            }
+            other => {
+                report.add(CheckItem {
+                    name: "主存储后端 (Storage Backend)".to_string(),
+                    category: CheckCategory::Required,
+                    status: CheckStatus::Fail,
+                    message: format!("未知存储后端 provider='{}'", other),
+                    remedy: Some(
+                        "请将 storage.provider 配置为 sqlite、postgres 或 duckdb 之一".to_string(),
+                    ),
+                });
+            }
+        }
     }
 
     /// 检查根分区磁盘水位与冗余镜像构建缓存（CON-06 防满盘预警）
@@ -895,5 +1030,55 @@ mod tests {
     fn test_resolve_binary_path_finds_sh_and_handles_missing() {
         assert!(PreflightChecker::resolve_binary_path("sh").is_some());
         assert!(PreflightChecker::resolve_binary_path("__nonexistent_steward_bin_999__").is_none());
+    }
+
+    #[test]
+    fn test_check_storage_backend_variants() {
+        let dir = tempfile::tempdir().expect("tempdir");
+
+        // 1. sqlite
+        let mut cfg_sqlite = crate::config::Config::default();
+        cfg_sqlite.storage.provider = "sqlite".to_string();
+        cfg_sqlite.db_path = dir.path().join("body.db");
+        let mut rep_sqlite = PreflightReport::new();
+        PreflightChecker::check_storage_backend(&mut rep_sqlite, &cfg_sqlite);
+        assert!(rep_sqlite.passed_required);
+        let item_sq = rep_sqlite
+            .items
+            .iter()
+            .find(|i| i.name.contains("Storage Backend"))
+            .expect("sqlite item");
+        assert_eq!(item_sq.status, CheckStatus::Pass);
+
+        // 2. duckdb
+        let mut cfg_duck = crate::config::Config::default();
+        cfg_duck.storage.provider = "duckdb".to_string();
+        cfg_duck.storage.duckdb_path = Some(dir.path().join("body.duckdb"));
+        let mut rep_duck = PreflightReport::new();
+        PreflightChecker::check_storage_backend(&mut rep_duck, &cfg_duck);
+        assert!(rep_duck.passed_required);
+        assert_eq!(rep_duck.items[0].status, CheckStatus::Pass);
+
+        // 3. invalid provider
+        let mut cfg_bad = crate::config::Config::default();
+        cfg_bad.storage.provider = "redis".to_string();
+        let mut rep_bad = PreflightReport::new();
+        PreflightChecker::check_storage_backend(&mut rep_bad, &cfg_bad);
+        assert!(!rep_bad.passed_required);
+        assert_eq!(rep_bad.items[0].status, CheckStatus::Fail);
+
+        // 4. unreachable postgres must fail and redact password
+        let mut cfg_pg = crate::config::Config::default();
+        cfg_pg.storage.provider = "postgres".to_string();
+        cfg_pg.storage.pg_url = Some("postgres://user:SuperSecret99@127.0.0.1:1/db".to_string());
+        let mut rep_pg = PreflightReport::new();
+        PreflightChecker::check_storage_backend(&mut rep_pg, &cfg_pg);
+        assert!(!rep_pg.passed_required);
+        assert_eq!(rep_pg.items[0].status, CheckStatus::Fail);
+        assert!(
+            !rep_pg.items[0].message.contains("SuperSecret99"),
+            "PG 错误信息禁止泄露明文密码: {}",
+            rep_pg.items[0].message
+        );
     }
 }

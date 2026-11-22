@@ -52,6 +52,7 @@ impl StorageProvider for PgStorageProvider {
             .context("执行内置 PostgreSQL Schema 批处理失败")?;
         let _ = client.batch_execute(
             "ALTER TABLE assets ADD COLUMN IF NOT EXISTS embedding TEXT DEFAULT '[]';
+             ALTER TABLE memories ADD COLUMN IF NOT EXISTS sensitive BOOLEAN DEFAULT FALSE;
              ALTER TABLE fact_nodes ADD COLUMN IF NOT EXISTS embedding TEXT DEFAULT '[]';
              ALTER TABLE fact_edges ADD COLUMN IF NOT EXISTS evidence_tier TEXT NOT NULL DEFAULT 'L1_EXPLICIT';
              ALTER TABLE fact_edges ADD COLUMN IF NOT EXISTS weight REAL NOT NULL DEFAULT 1.0;
@@ -108,6 +109,29 @@ impl StorageProvider for PgStorageProvider {
 
     fn provider_name(&self) -> &'static str {
         "postgres"
+    }
+
+    fn list_created_at_map(&self, table: &str) -> Result<std::collections::HashMap<String, String>> {
+        let mut client = self.lock_client()?;
+        let sql = match table {
+            "assets" => {
+                "SELECT id, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')
+                 FROM assets WHERE created_at IS NOT NULL"
+            }
+            "memories" => {
+                "SELECT id, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')
+                 FROM memories WHERE created_at IS NOT NULL"
+            }
+            _ => anyhow::bail!("不支持批量提取 created_at 的表: {}", table),
+        };
+        let rows = client.query(sql, &[])?;
+        let mut map = std::collections::HashMap::new();
+        for row in rows {
+            let id: String = row.get(0);
+            let ts: String = row.get(1);
+            map.insert(id, ts);
+        }
+        Ok(map)
     }
 
     fn get_placement_rules(&self) -> Result<Vec<PlacementRule>> {
@@ -185,8 +209,40 @@ impl StorageProvider for PgStorageProvider {
         Ok(policies)
     }
 
+    fn upsert_scan_policy(&self, policy: &ScanPolicy) -> Result<()> {
+        let mut client = self.lock_client()?;
+        client.execute(
+            "INSERT INTO scan_policies (id, path_pattern, tier, max_depth, enable_fts, enable_vec, enable_graph, notes)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (path_pattern) DO UPDATE SET
+                tier = EXCLUDED.tier,
+                max_depth = EXCLUDED.max_depth,
+                enable_fts = EXCLUDED.enable_fts,
+                enable_vec = EXCLUDED.enable_vec,
+                enable_graph = EXCLUDED.enable_graph,
+                notes = EXCLUDED.notes",
+            &[
+                &policy.id,
+                &policy.path_pattern,
+                &policy.tier,
+                &policy.max_depth,
+                &policy.enable_fts,
+                &policy.enable_vec,
+                &policy.enable_graph,
+                &policy.notes,
+            ],
+        )?;
+        Ok(())
+    }
+
     fn upsert_asset(&self, asset: &AssetRecord) -> Result<()> {
         let mut client = self.lock_client()?;
+        let invalidate_embedding = asset
+            .desc_kv
+            .get("embedding_status")
+            .and_then(|v| v.as_str())
+            == Some("stale")
+            || asset.status == "missing";
         client.execute(
             "INSERT INTO assets (id, path, type, owner, security_level, scan_tier, description, desc_kv, usage, size_bytes, file_count, tags, status, updated_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
@@ -202,6 +258,7 @@ impl StorageProvider for PgStorageProvider {
                 file_count = EXCLUDED.file_count,
                 tags = EXCLUDED.tags,
                 status = EXCLUDED.status,
+                embedding = CASE WHEN $14 THEN '[]' ELSE assets.embedding END,
                 updated_at = NOW()",
             &[
                 &asset.id,
@@ -217,6 +274,7 @@ impl StorageProvider for PgStorageProvider {
                 &asset.file_count,
                 &serde_json::to_value(&asset.tags)?,
                 &asset.status,
+                &invalidate_embedding,
             ],
         )?;
         Ok(())
@@ -404,10 +462,16 @@ impl StorageProvider for PgStorageProvider {
             "INSERT INTO memories (id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
              ON CONFLICT (id) DO UPDATE SET
+                type = EXCLUDED.type,
                 content = EXCLUDED.content,
                 summary = EXCLUDED.summary,
+                source_agent = COALESCE(EXCLUDED.source_agent, memories.source_agent),
+                source_session = COALESCE(EXCLUDED.source_session, memories.source_session),
+                tags = EXCLUDED.tags,
                 weight = EXCLUDED.weight,
+                pinned = EXCLUDED.pinned,
                 status = EXCLUDED.status,
+                embedding = CASE WHEN EXCLUDED.embedding != '[]' THEN EXCLUDED.embedding ELSE memories.embedding END,
                 updated_at = NOW()",
             &[
                 &mem.id,
@@ -504,6 +568,40 @@ impl StorageProvider for PgStorageProvider {
         Ok(results)
     }
 
+    fn list_all_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {
+        let mut client = self.lock_client()?;
+        let rows = client.query(
+            "SELECT id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding
+             FROM memories
+             ORDER BY updated_at DESC
+             LIMIT $1",
+            &[&(limit as i64)],
+        )?;
+
+        let mut results = Vec::new();
+        for row in rows {
+            let tags_val: serde_json::Value = row.get(6);
+            let tags: Vec<String> = serde_json::from_value(tags_val).unwrap_or_default();
+            let emb_str: String = row.get(10);
+            let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+
+            results.push(MemoryRecord {
+                id: row.get(0),
+                memory_type: row.get(1),
+                content: row.get(2),
+                summary: row.get(3),
+                source_agent: row.get(4),
+                source_session: row.get(5),
+                tags,
+                weight: row.get(7),
+                pinned: row.get(8),
+                status: row.get(9),
+                embedding,
+            });
+        }
+        Ok(results)
+    }
+
     fn update_memory_status(&self, memory_id: &str, status: &str) -> Result<usize> {
         let mut client = self.lock_client()?;
         let count = client.execute(
@@ -515,15 +613,22 @@ impl StorageProvider for PgStorageProvider {
 
     fn record_change(&self, change: &ChangeRecord) -> Result<()> {
         let mut client = self.lock_client()?;
+        let created_ts = change
+            .created_at
+            .as_deref()
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+            .map(|dt| dt.with_timezone(&chrono::Utc))
+            .unwrap_or_else(chrono::Utc::now);
         client.execute(
-            "INSERT INTO changes (type, target, description, details, source)
-             VALUES ($1, $2, $3, $4, $5)",
+            "INSERT INTO changes (type, target, description, details, source, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6)",
             &[
                 &change.change_type,
                 &change.target,
                 &change.description,
                 &change.details,
                 &change.source,
+                &created_ts,
             ],
         )?;
         Ok(())
@@ -1123,18 +1228,22 @@ impl StorageProvider for PgStorageProvider {
     fn insert_coordination_lock(&self, lock: &CoordinationLock) -> Result<bool> {
         let mut client = self.lock_client()?;
         let mut tx = client.transaction()?;
+        let now = chrono::Utc::now();
 
-        // 1. 先清理该资源上已过期的锁记录
+        // 1. 先清理该资源上已过期的锁记录（统一按 timestamptz 瞬间对比，消除 RFC3339 'T' 与 NOW()::text ' ' 字典序偏差）
         tx.execute(
-            "DELETE FROM coordination_locks WHERE resource_type = $1 AND resource_id = $2 AND expires_at <= NOW()::text",
-            &[&lock.resource_type, &lock.resource_id],
+            "DELETE FROM coordination_locks
+             WHERE resource_type = $1 AND resource_id = $2
+               AND expires_at::timestamptz <= $3",
+            &[&lock.resource_type, &lock.resource_id, &now],
         )?;
 
         // 2. 检查当前资源是否已被有效锁占用
         let rows = tx.query(
-            "SELECT lock_id, scope, holder_agent, expires_at FROM coordination_locks 
-             WHERE resource_type = $1 AND resource_id = $2 AND expires_at > NOW()::text",
-            &[&lock.resource_type, &lock.resource_id],
+            "SELECT lock_id, scope, holder_agent, expires_at FROM coordination_locks
+             WHERE resource_type = $1 AND resource_id = $2
+               AND expires_at::timestamptz > $3",
+            &[&lock.resource_type, &lock.resource_id, &now],
         )?;
 
         for row in rows {
@@ -1186,12 +1295,14 @@ impl StorageProvider for PgStorageProvider {
 
     fn get_coordination_lock(&self, resource_type: &str, resource_id: &str) -> Result<Option<CoordinationLock>> {
         let mut client = self.lock_client()?;
+        let now = chrono::Utc::now();
         let rows = client.query(
             "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
              FROM coordination_locks
-             WHERE resource_type = $1 AND resource_id = $2 AND expires_at > NOW()::text
+             WHERE resource_type = $1 AND resource_id = $2
+               AND expires_at::timestamptz > $3
              ORDER BY acquired_at DESC LIMIT 1",
-            &[&resource_type, &resource_id],
+            &[&resource_type, &resource_id, &now],
         )?;
 
         if let Some(row) = rows.into_iter().next() {
@@ -1214,20 +1325,21 @@ impl StorageProvider for PgStorageProvider {
 
     fn list_coordination_locks(&self, resource_type: Option<&str>) -> Result<Vec<CoordinationLock>> {
         let mut client = self.lock_client()?;
+        let now = chrono::Utc::now();
         let rows = match resource_type {
             Some(rt) => client.query(
                 "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
                  FROM coordination_locks
-                 WHERE resource_type = $1 AND expires_at > NOW()::text
+                 WHERE resource_type = $1 AND expires_at::timestamptz > $2
                  ORDER BY acquired_at DESC",
-                &[&rt],
+                &[&rt, &now],
             )?,
             None => client.query(
                 "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
                  FROM coordination_locks
-                 WHERE expires_at > NOW()::text
+                 WHERE expires_at::timestamptz > $1
                  ORDER BY acquired_at DESC",
-                &[],
+                &[&now],
             )?,
         };
 
@@ -1251,9 +1363,10 @@ impl StorageProvider for PgStorageProvider {
 
     fn gc_expired_coordination_locks(&self) -> Result<usize> {
         let mut client = self.lock_client()?;
+        let now = chrono::Utc::now();
         let affected = client.execute(
-            "DELETE FROM coordination_locks WHERE expires_at <= NOW()::text",
-            &[],
+            "DELETE FROM coordination_locks WHERE expires_at::timestamptz <= $1",
+            &[&now],
         )?;
         Ok(affected as usize)
     }
@@ -1396,7 +1509,12 @@ impl StorageProvider for PgStorageProvider {
         let mut client = self.lock_client()?;
         client.execute(
             "INSERT INTO lock_wait_queue (wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             ON CONFLICT (wait_id) DO UPDATE SET
+                scope = EXCLUDED.scope,
+                priority = EXCLUDED.priority,
+                timeout_at = EXCLUDED.timeout_at,
+                status = EXCLUDED.status",
             &[
                 &entry.wait_id, &entry.resource_type, &entry.resource_id, &entry.scope,
                 &entry.waiting_agent, &entry.priority, &entry.enqueued_at, &entry.timeout_at, &entry.status,
@@ -1407,26 +1525,26 @@ impl StorageProvider for PgStorageProvider {
 
     fn list_lock_wait_queue(&self, resource_type: Option<&str>, resource_id: Option<&str>) -> Result<Vec<LockWaitEntry>> {
         let mut client = self.lock_client()?;
-        let now = chrono::Utc::now().to_rfc3339();
+        let now = chrono::Utc::now();
         let rows = match (resource_type, resource_id) {
             (Some(rt), Some(rid)) => client.query(
                 "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
                  FROM lock_wait_queue
-                 WHERE resource_type = $1 AND resource_id = $2 AND status IN ('waiting','notified') AND timeout_at > $3
+                 WHERE resource_type = $1 AND resource_id = $2 AND status IN ('waiting','notified') AND timeout_at::timestamptz > $3
                  ORDER BY priority ASC, enqueued_at ASC",
                 &[&rt, &rid, &now],
             )?,
             (Some(rt), None) => client.query(
                 "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
                  FROM lock_wait_queue
-                 WHERE resource_type = $1 AND status IN ('waiting','notified') AND timeout_at > $2
+                 WHERE resource_type = $1 AND status IN ('waiting','notified') AND timeout_at::timestamptz > $2
                  ORDER BY priority ASC, enqueued_at ASC",
                 &[&rt, &now],
             )?,
             _ => client.query(
                 "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
                  FROM lock_wait_queue
-                 WHERE status IN ('waiting','notified') AND timeout_at > $1
+                 WHERE status IN ('waiting','notified') AND timeout_at::timestamptz > $1
                  ORDER BY priority ASC, enqueued_at ASC",
                 &[&now],
             )?,
@@ -1436,11 +1554,11 @@ impl StorageProvider for PgStorageProvider {
 
     fn pop_next_lock_waiter(&self, resource_type: &str, resource_id: &str) -> Result<Option<LockWaitEntry>> {
         let mut client = self.lock_client()?;
-        let now = chrono::Utc::now().to_rfc3339();
+        let now = chrono::Utc::now();
         let rows = client.query(
             "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
              FROM lock_wait_queue
-             WHERE resource_type = $1 AND resource_id = $2 AND status = 'waiting' AND timeout_at > $3
+             WHERE resource_type = $1 AND resource_id = $2 AND status = 'waiting' AND timeout_at::timestamptz > $3
              ORDER BY priority ASC, enqueued_at ASC LIMIT 1",
             &[&resource_type, &resource_id, &now],
         )?;
@@ -1468,9 +1586,9 @@ impl StorageProvider for PgStorageProvider {
 
     fn gc_expired_lock_waits(&self) -> Result<usize> {
         let mut client = self.lock_client()?;
-        let now = chrono::Utc::now().to_rfc3339();
+        let now = chrono::Utc::now();
         let affected = client.execute(
-            "UPDATE lock_wait_queue SET status = 'expired' WHERE status IN ('waiting','notified') AND timeout_at <= $1",
+            "UPDATE lock_wait_queue SET status = 'expired' WHERE status IN ('waiting','notified') AND timeout_at::timestamptz <= $1",
             &[&now],
         )?;
         Ok(affected as usize)
@@ -1491,8 +1609,21 @@ impl StorageProvider for PgStorageProvider {
              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
              ON CONFLICT (run_id) DO UPDATE SET
                 suite_name = EXCLUDED.suite_name,
+                git_commit = EXCLUDED.git_commit,
+                app_version = EXCLUDED.app_version,
+                host_fingerprint = EXCLUDED.host_fingerprint,
+                workload_count = EXCLUDED.workload_count,
+                total_baseline_tokens = EXCLUDED.total_baseline_tokens,
+                total_steward_tokens = EXCLUDED.total_steward_tokens,
+                overall_token_savings_pct = EXCLUDED.overall_token_savings_pct,
+                overall_speedup_factor = EXCLUDED.overall_speedup_factor,
+                total_hazards_intercepted = EXCLUDED.total_hazards_intercepted,
+                total_noise_blocked = EXCLUDED.total_noise_blocked,
+                sla_passed = EXCLUDED.sla_passed,
                 results_json = EXCLUDED.results_json,
-                report_sha256 = EXCLUDED.report_sha256",
+                report_sha256 = EXCLUDED.report_sha256,
+                duration_ms = EXCLUDED.duration_ms,
+                created_at = EXCLUDED.created_at",
             &[
                 &run.run_id,
                 &run.suite_name,
@@ -1538,10 +1669,33 @@ impl StorageProvider for PgStorageProvider {
                     overall_token_savings_pct, overall_speedup_factor,
                     total_hazards_intercepted, total_noise_blocked, sla_passed,
                     results_json, report_sha256, duration_ms, created_at
+             FROM benchmark_runs WHERE run_id NOT LIKE 'awr:%' ORDER BY created_at DESC LIMIT $1",
+            &[&(limit as i64)],
+        )?;
+        Ok(rows.iter().map(Self::row_to_benchmark_run).collect())
+    }
+
+    fn list_all_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>> {
+        let mut client = self.lock_client()?;
+        let rows = client.query(
+            "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
+                    workload_count, total_baseline_tokens, total_steward_tokens,
+                    overall_token_savings_pct, overall_speedup_factor,
+                    total_hazards_intercepted, total_noise_blocked, sla_passed,
+                    results_json, report_sha256, duration_ms, created_at
              FROM benchmark_runs ORDER BY created_at DESC LIMIT $1",
             &[&(limit as i64)],
         )?;
         Ok(rows.iter().map(Self::row_to_benchmark_run).collect())
+    }
+
+    fn delete_benchmark_run(&self, run_id: &str) -> Result<bool> {
+        let mut client = self.lock_client()?;
+        let affected = client.execute(
+            "DELETE FROM benchmark_runs WHERE run_id = $1",
+            &[&run_id],
+        )?;
+        Ok(affected > 0)
     }
 
     fn insert_effectiveness_event(&self, event: &EffectivenessLedgerRecord) -> Result<()> {
@@ -1876,7 +2030,7 @@ impl StorageProvider for PgStorageProvider {
             .as_deref()
             .and_then(crate::storage::window_to_cutoff_iso)
             .unwrap_or_default();
-        let lim = if filter.limit == 0 { 50 } else { filter.limit.min(5000) } as i64;
+        let lim = if filter.limit == 0 { 50 } else { filter.limit.min(100_000) } as i64;
 
         let rows = client.query(
             "SELECT event_id, trace_id, session_id, domain, actor_kind, actor_id,
@@ -2197,7 +2351,8 @@ mod tests {
     const PG_TEST_URL: &str = "postgresql://postgres@127.0.0.1:5432/agent_body_test";
 
     fn get_test_provider() -> Option<PgStorageProvider> {
-        PgStorageProvider::connect(PG_TEST_URL).ok()
+        let url = std::env::var("AGENT_BODY_TEST_PG_URL").unwrap_or_else(|_| PG_TEST_URL.to_string());
+        PgStorageProvider::connect(&url).ok()
     }
 
     #[test]
@@ -2301,5 +2456,171 @@ mod tests {
         let sub = provider.traverse_fact_graph("service:pg_test_daemon", 1).expect("traverse graph");
         assert_eq!(sub.nodes.len(), 2);
         assert_eq!(sub.edges.len(), 1);
+    }
+
+    #[test]
+    fn test_pg_provider_phase53_parity() {
+        let pg_url = std::env::var("AGENT_BODY_TEST_PG_URL").unwrap_or_else(|_| PG_TEST_URL.to_string());
+        let provider = match PgStorageProvider::connect(&pg_url) {
+            Ok(p) => p,
+            Err(_) => {
+                eprintln!("跳过 Phase 53 PG 一致性测试 (PG 暂不可用)");
+                return;
+            }
+        };
+
+        // 1. 验证无需 vector 扩展也可建库，且 memories.sensitive 列存在
+        {
+            let mut client = provider.lock_client().expect("lock client");
+            let row = client
+                .query_one(
+                    "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'memories' AND column_name = 'sensitive'",
+                    &[],
+                )
+                .expect("check sensitive column");
+            assert_eq!(row.get::<_, i64>(0), 1);
+        }
+
+        let uid = uuid::Uuid::new_v4();
+
+        // 2. upsert_asset 标记 stale 清空向量
+        let asset_path = format!("/root/new/work/pg_stale_{}", uid);
+        let asset = AssetRecord {
+            id: format!("pg-stale-{}", uid),
+            path: asset_path.clone(),
+            asset_type: "project".to_string(),
+            owner: "user:digoal".to_string(),
+            security_level: "internal".to_string(),
+            scan_tier: "deep".to_string(),
+            description: Some("PG stale embedding test".to_string()),
+            desc_kv: serde_json::json!({}),
+            usage: None,
+            size_bytes: Some(128),
+            file_count: Some(1),
+            tags: vec!["pg".to_string()],
+            status: "active".to_string(),
+        };
+        provider.upsert_asset(&asset).expect("upsert asset");
+        provider
+            .update_asset_embedding(&asset_path, &[0.5, 0.5])
+            .expect("set emb");
+        assert_eq!(
+            provider.get_asset_embedding(&asset_path).expect("get emb"),
+            vec![0.5, 0.5]
+        );
+        let mut stale_asset = asset.clone();
+        stale_asset.desc_kv = serde_json::json!({"embedding_status": "stale"});
+        provider.upsert_asset(&stale_asset).expect("upsert stale");
+        assert!(
+            provider
+                .get_asset_embedding(&asset_path)
+                .expect("cleared emb")
+                .is_empty()
+        );
+
+        // 3. insert_memory ON CONFLICT 全字段更新与空向量保留
+        let mem_id = format!("pg-mem-{}", uid);
+        let mem = MemoryRecord {
+            id: mem_id.clone(),
+            memory_type: "experience".to_string(),
+            content: format!("PG upsert memory token {}", uid),
+            summary: Some("pg s1".to_string()),
+            source_agent: Some("agent-pg".to_string()),
+            source_session: Some("sess-pg".to_string()),
+            tags: vec!["v1".to_string()],
+            weight: 0.6,
+            pinned: false,
+            status: "active".to_string(),
+            embedding: vec![0.1, 0.2, 0.3],
+        };
+        provider.insert_memory(&mem).expect("insert mem");
+        let mut mem2 = mem.clone();
+        mem2.tags = vec!["v1".to_string(), "v2".to_string()];
+        mem2.pinned = true;
+        mem2.embedding = Vec::new();
+        provider.insert_memory(&mem2).expect("upsert mem empty emb");
+        let found = provider
+            .search_memories_fts(&uid.to_string(), 5)
+            .expect("fts mem");
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].embedding, vec![0.1, 0.2, 0.3]);
+        assert_eq!(found[0].tags, vec!["v1".to_string(), "v2".to_string()]);
+        assert!(found[0].pinned);
+
+        // 4. 同日仅过期 5 秒的协作锁必须立即失效并被 GC 清理（回归 NOW()::text ' ' vs RFC3339 'T' Bug）
+        let expired_at = (chrono::Utc::now() - chrono::Duration::seconds(5)).to_rfc3339();
+        let acquired_at = (chrono::Utc::now() - chrono::Duration::seconds(65)).to_rfc3339();
+        let res_id = format!("/root/new/tmp/pg_lock_{}", uid);
+        let exp_lock = CoordinationLock {
+            lock_id: format!("lock-exp-{}", uid),
+            resource_type: "file".to_string(),
+            resource_id: res_id.clone(),
+            scope: "exclusive".to_string(),
+            holder_agent: "agent-old".to_string(),
+            holder_pid: Some(1234),
+            acquired_at,
+            expires_at: expired_at,
+            metadata: None,
+        };
+        assert!(provider.insert_coordination_lock(&exp_lock).expect("insert exp lock"));
+        assert!(
+            provider
+                .get_coordination_lock("file", &res_id)
+                .expect("get exp lock")
+                .is_none(),
+            "同日已过期 5 秒的锁必须不可见"
+        );
+        assert!(
+            provider
+                .gc_expired_coordination_locks()
+                .expect("gc locks")
+                >= 1
+        );
+
+        // 5. benchmark_runs awr:% 过滤与删除
+        let awr_id = format!("awr:snap:pg-{}", uid);
+        let awr_run = BenchmarkRunRecord {
+            run_id: awr_id.clone(),
+            suite_name: "awr_internal".to_string(),
+            git_commit: "pg".to_string(),
+            app_version: crate::VERSION.to_string(),
+            host_fingerprint: serde_json::json!({}),
+            workload_count: 0,
+            total_baseline_tokens: 0,
+            total_steward_tokens: 0,
+            overall_token_savings_pct: 0.0,
+            overall_speedup_factor: 1.0,
+            total_hazards_intercepted: 0,
+            total_noise_blocked: 0,
+            sla_passed: true,
+            results_json: serde_json::json!({}),
+            report_sha256: "awr".to_string(),
+            duration_ms: 0,
+            created_at: chrono::Utc::now().to_rfc3339(),
+        };
+        provider.insert_benchmark_run(&awr_run).expect("insert awr");
+        assert!(
+            provider
+                .list_benchmark_runs(100)
+                .expect("filtered")
+                .iter()
+                .all(|r| !r.run_id.starts_with("awr:"))
+        );
+        assert!(
+            provider
+                .list_all_benchmark_runs(100)
+                .expect("all")
+                .iter()
+                .any(|r| r.run_id == awr_id)
+        );
+        assert!(provider.delete_benchmark_run(&awr_id).expect("del awr"));
+
+        // 6. Preflight PostgreSQL 连通性探针通过
+        let mut cfg = crate::config::Config::default();
+        cfg.storage.provider = "postgres".to_string();
+        cfg.storage.pg_url = Some(pg_url);
+        let mut rep = crate::preflight::PreflightReport::new();
+        crate::preflight::PreflightChecker::check_storage_backend(&mut rep, &cfg);
+        assert!(rep.passed_required);
     }
 }

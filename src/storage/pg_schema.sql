@@ -2,7 +2,7 @@
 -- Agent Host Steward — PostgreSQL Schema (Production Scale)
 -- ============================================================
 
-CREATE EXTENSION IF NOT EXISTS vector;
+-- embedding 存储为可移植 JSON TEXT，无需强依赖 pgvector 扩展
 
 CREATE TABLE IF NOT EXISTS placement_rules (
     id              TEXT PRIMARY KEY,
@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS memories (
     tags            JSONB DEFAULT '[]'::jsonb,
     weight          REAL DEFAULT 1.0 CHECK (weight >= 0 AND weight <= 1),
     pinned          BOOLEAN DEFAULT FALSE,
+    sensitive       BOOLEAN DEFAULT FALSE,
     status          TEXT DEFAULT 'active' CHECK (status IN ('active','archived','outdated')),
     embedding       TEXT DEFAULT '[]',
     created_at      TIMESTAMPTZ DEFAULT NOW(),

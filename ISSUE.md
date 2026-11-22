@@ -173,14 +173,14 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 
 ### 方案 A · `v1.0.0 GA` 工业级收口演进总账（Phase 52 ~ Phase 57 · 2026-11-22 立项）
 
-36. **`[P0 · Phase 52]` 安全止血、Dockerfile 编译阻断修复、Tokio/边界 Panic 排雷与 P0 损毁文档/SKILL 急救** `⏳ In Progress (Phase 52)`:
+36. **`[P0 · Phase 52]` 安全止血、Dockerfile 编译阻断修复、Tokio/边界 Panic 排雷与 P0 损毁文档/SKILL 急救** `✅ Phase 52 已全量落地`:
     - 修复 `Dockerfile` (`rust:1.88-bookworm`、补 `presentation/`、`EXPOSE 8765`、`HEALTHCHECK`)、`docker-compose.yml`、`.dockerignore`、`build.rs`；
     - 消除 MCP `run_stdio` 阻塞 Panic、`contacts`/`embedding` Tokio drop panic 及 `placement`/`port`/`powercontext`/`state_machine` 边界缺陷；
     - 修复 `body_bridge.py` 无端口破坏性命令绕过、Web `GET` 写库免鉴权、Mesh `read:facts` scope、`SKILL.md` 抗注入、`gc`/`port` 脱敏与 `AutonomyEnvelope` fail-closed；
     - 纠错 `ledger.rs` 死锁误报/漏记、`handle_mesh_graph` URL 解码、`cli_args.rs` `bool` 与错误模板 CLI，并急救修复 `04`/`17` 损毁文档与 3 套 `SKILL.md` 断链/镜像（详见 [roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)）。
 
-37. **`[P0 · Phase 53]` 存储三后端（SQLite/PG/DuckDB）语义对齐、全量迁移与 OLAP 管道真修复** `🗓️ Planned (Phase 53)`:
-    - 对齐 SQLite/PG/DuckDB `insert_memory` 冲突语义、`search_memories_fts` 状态过滤、PG 锁时间戳比较、`awr:%` 过滤、DuckDB `init()`/`add_link`/事务原子性与 AWR 孤儿行清理，修通 `StorageMigrator`、`SyncPipeline` 与 `DuckDbAnalyticsEngine`。
+37. **`[P0 · Phase 53]` 存储三后端（SQLite/PG/DuckDB）语义对齐、全量迁移与 OLAP 管道真修复** `✅ Phase 53 已全量落地`:
+    - 扩展 SPI `82 → 87`（新增 `upsert_scan_policy`/`list_all_memories`/`delete_benchmark_run`/`list_all_benchmark_runs`/`list_created_at_map`），对齐 SQLite/PG/DuckDB 冲突与时间戳瞬间比较、移除 PG 强依赖 `pgvector` 阻断、修复 `awr:%` 泄漏与淘汰孤儿清理，并打通 20 实体全量幂等热迁移、10 表真实时间 OLAP 同步与 `Preflight` 后端探活（详见 [roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)）。
 
 38. **`[P1 · Phase 54]` Phase 50 18/18 WaitEvent 全埋点、黑白屏动作级真 Parity、TUI 升级与 Benchmark `v3.8`** `🗓️ Planned (Phase 54)`:
     - 补齐 14/18 未埋点 WaitEvent 与定期 AWR 快照，补齐 `9418c51` AWR 报告库 CLI/MCP 对等、Web DQ 渲染与 `body_lock_release` 三端一致，扩展 `codex`/`hermes` Hook、升级 TUI 并上线 Benchmark `v3.8` (`W18`/`M6`/`DQ9`/`PR-14`)。

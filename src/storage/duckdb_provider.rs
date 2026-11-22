@@ -75,13 +75,19 @@ impl StorageProvider for DuckDbStorageProvider {
         let conn = self.lock_conn()?;
         conn.execute_batch(DUCKDB_SCHEMA_SQL)
             .context("执行 DuckDB Schema 批处理失败")?;
-        let _ = conn.execute("ALTER TABLE assets ADD COLUMN embedding VARCHAR DEFAULT '[]'", []);
-        let _ = conn.execute("ALTER TABLE fact_nodes ADD COLUMN embedding VARCHAR DEFAULT '[]'", []);
-        let _ = conn.execute("ALTER TABLE fact_edges ADD COLUMN evidence_tier VARCHAR DEFAULT 'L1_EXPLICIT'", []);
-        let _ = conn.execute("ALTER TABLE fact_edges ADD COLUMN weight FLOAT DEFAULT 1.0", []);
-        let _ = conn.execute("ALTER TABLE fact_edges ADD COLUMN direction_kind VARCHAR DEFAULT 'forward_dependency'", []);
+        conn.execute_batch(
+            "ALTER TABLE assets ADD COLUMN IF NOT EXISTS embedding VARCHAR DEFAULT '[]';
+             ALTER TABLE memories ADD COLUMN IF NOT EXISTS sensitive BOOLEAN DEFAULT FALSE;
+             ALTER TABLE fact_nodes ADD COLUMN IF NOT EXISTS embedding VARCHAR DEFAULT '[]';
+             ALTER TABLE fact_edges ADD COLUMN IF NOT EXISTS evidence_tier VARCHAR DEFAULT 'L1_EXPLICIT';
+             ALTER TABLE fact_edges ADD COLUMN IF NOT EXISTS weight FLOAT DEFAULT 1.0;
+             ALTER TABLE fact_edges ADD COLUMN IF NOT EXISTS direction_kind VARCHAR DEFAULT 'forward_dependency';",
+        )
+        .context("执行 DuckDB 增量列迁移失败")?;
 
-        // 预置放置规则
+        let now = chrono::Utc::now().to_rfc3339();
+
+        // 预置放置规则（使用 ON CONFLICT DO NOTHING 避免覆写用户自定义规则）
         let presets = [
             ("rule-1", "shared_tools", "script", "/root/new/shared_proj/", "{name}/", "长期沉淀的可复用脚本与程序库", "建立独立子目录，配备 README.md 与入口脚本，严禁硬编码敏感信息", 10),
             ("rule-2", "work_projects", "project", "/root/new/work/", "{name}/", "常规立项的工作工程与开发目录", "每个工程独立版本控制，优先采用设计文档闭环验证", 20),
@@ -94,22 +100,15 @@ impl StorageProvider for DuckDbStorageProvider {
         ];
 
         for (id, name, ptype, base, pat, desc, guide, prio) in presets {
-            let _ = conn.execute(
+            conn.execute(
                 "INSERT INTO placement_rules (id, rule_name, pattern_type, target_base_dir, naming_pattern, description, guideline, priority, created_at, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'), strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))
-                 ON CONFLICT(rule_name) DO UPDATE SET
-                    pattern_type = excluded.pattern_type,
-                    target_base_dir = excluded.target_base_dir,
-                    naming_pattern = excluded.naming_pattern,
-                    description = excluded.description,
-                    guideline = excluded.guideline,
-                    priority = excluded.priority,
-                    updated_at = strftime(now(), '%Y-%m-%dT%H:%M:%SZ')",
-                params![id, name, ptype, base, pat, desc, guide, prio],
-            );
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
+                 ON CONFLICT DO NOTHING",
+                params![id, name, ptype, base, pat, desc, guide, prio, now],
+            )?;
         }
 
-        // 预置扫描策略
+        // 预置扫描策略（同样仅缺失时补齐，绝不覆盖用户策略）
         let scan_policies = [
             ("policy-1", "/root/new/shared_proj/**", "deep", -1, true, true, true, "白名单: 核心工具库，深度递归到底"),
             ("policy-2", "/root/new/work/**", "deep", -1, true, true, true, "白名单: 核心工作区，深度递归到底"),
@@ -124,18 +123,12 @@ impl StorageProvider for DuckDbStorageProvider {
         ];
 
         for (id, pat, tier, depth, fts, vec, graph, notes) in scan_policies {
-            let _ = conn.execute(
+            conn.execute(
                 "INSERT INTO scan_policies (id, path_pattern, tier, max_depth, enable_fts, enable_vec, enable_graph, notes, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))
-                 ON CONFLICT(path_pattern) DO UPDATE SET
-                    tier = excluded.tier,
-                    max_depth = excluded.max_depth,
-                    enable_fts = excluded.enable_fts,
-                    enable_vec = excluded.enable_vec,
-                    enable_graph = excluded.enable_graph,
-                    notes = excluded.notes",
-                params![id, pat, tier, depth, fts, vec, graph, notes],
-            );
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                 ON CONFLICT DO NOTHING",
+                params![id, pat, tier, depth, fts, vec, graph, notes, now],
+            )?;
         }
 
         Ok(())
@@ -143,6 +136,23 @@ impl StorageProvider for DuckDbStorageProvider {
 
     fn provider_name(&self) -> &'static str {
         "duckdb"
+    }
+
+    fn list_created_at_map(&self, table: &str) -> Result<std::collections::HashMap<String, String>> {
+        let conn = self.lock_conn()?;
+        let sql = match table {
+            "assets" => "SELECT id, created_at FROM assets WHERE created_at IS NOT NULL",
+            "memories" => "SELECT id, created_at FROM memories WHERE created_at IS NOT NULL",
+            _ => anyhow::bail!("不支持批量提取 created_at 的表: {}", table),
+        };
+        let mut stmt = conn.prepare(sql)?;
+        let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?;
+        let mut map = std::collections::HashMap::new();
+        for r in rows {
+            let (id, ts) = r?;
+            map.insert(id, ts);
+        }
+        Ok(map)
     }
 
     fn get_placement_rules(&self) -> Result<Vec<PlacementRule>> {
@@ -218,14 +228,49 @@ impl StorageProvider for DuckDbStorageProvider {
         Ok(rows)
     }
 
+    fn upsert_scan_policy(&self, policy: &ScanPolicy) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO scan_policies (id, path_pattern, tier, max_depth, enable_fts, enable_vec, enable_graph, notes, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+             ON CONFLICT(path_pattern) DO UPDATE SET
+                tier = excluded.tier,
+                max_depth = excluded.max_depth,
+                enable_fts = excluded.enable_fts,
+                enable_vec = excluded.enable_vec,
+                enable_graph = excluded.enable_graph,
+                notes = excluded.notes",
+            params![
+                policy.id,
+                policy.path_pattern,
+                policy.tier,
+                policy.max_depth,
+                policy.enable_fts,
+                policy.enable_vec,
+                policy.enable_graph,
+                policy.notes,
+                now,
+            ],
+        )?;
+        Ok(())
+    }
+
     fn upsert_asset(&self, asset: &AssetRecord) -> Result<()> {
         let conn = self.lock_conn()?;
         let desc_kv_str = serde_json::to_string(&asset.desc_kv)?;
         let tags_str = serde_json::to_string(&asset.tags)?;
+        let invalidate_embedding = asset
+            .desc_kv
+            .get("embedding_status")
+            .and_then(|v| v.as_str())
+            == Some("stale")
+            || asset.status == "missing";
+        let now = chrono::Utc::now().to_rfc3339();
 
         conn.execute(
-            "INSERT INTO assets (id, path, type, owner, security_level, scan_tier, description, desc_kv, usage, size_bytes, file_count, tags, status, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))
+            "INSERT INTO assets (id, path, type, owner, security_level, scan_tier, description, desc_kv, usage, size_bytes, file_count, tags, status, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?15, ?15)
              ON CONFLICT(path) DO UPDATE SET
                 type = excluded.type,
                 owner = excluded.owner,
@@ -238,7 +283,8 @@ impl StorageProvider for DuckDbStorageProvider {
                 file_count = excluded.file_count,
                 tags = excluded.tags,
                 status = excluded.status,
-                updated_at = strftime(now(), '%Y-%m-%dT%H:%M:%SZ')",
+                embedding = CASE WHEN ?14 THEN '[]' ELSE assets.embedding END,
+                updated_at = excluded.updated_at",
             params![
                 asset.id,
                 asset.path,
@@ -253,6 +299,8 @@ impl StorageProvider for DuckDbStorageProvider {
                 asset.file_count,
                 tags_str,
                 asset.status,
+                invalidate_embedding,
+                now,
             ],
         )?;
         Ok(())
@@ -366,29 +414,46 @@ impl StorageProvider for DuckDbStorageProvider {
 
     fn replace_active_processes(&self, procs: &[ActiveProcessRecord]) -> Result<()> {
         let conn = self.lock_conn()?;
-        conn.execute("DELETE FROM active_processes", [])?;
-        for p in procs {
-            let ports_str = serde_json::to_string(&p.listening_ports)?;
-            conn.execute(
-                "INSERT INTO active_processes (id, pid, name, command, owner, associated_path, listening_ports, status, cpu_pct, mem_bytes, gpu_allocated_mb, started_at, last_seen_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))",
-                params![
-                    p.id,
-                    p.pid as i32,
-                    p.name,
-                    p.command,
-                    p.owner,
-                    p.associated_path,
-                    ports_str,
-                    p.status,
-                    p.cpu_pct as f64,
-                    p.mem_bytes as i64,
-                    p.gpu_allocated_mb as i32,
-                    p.started_at,
-                ],
-            )?;
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute_batch("BEGIN TRANSACTION;")?;
+        let res: Result<()> = (|| {
+            conn.execute("DELETE FROM active_processes", [])?;
+            for p in procs {
+                let ports_str = serde_json::to_string(&p.listening_ports)?;
+                conn.execute(
+                    "INSERT INTO active_processes (id, pid, name, command, owner, associated_path, listening_ports, status, cpu_pct, mem_bytes, gpu_allocated_mb, started_at, last_seen_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+                    params![
+                        p.id,
+                        p.pid as i32,
+                        p.name,
+                        p.command,
+                        p.owner,
+                        p.associated_path,
+                        ports_str,
+                        p.status,
+                        p.cpu_pct as f64,
+                        p.mem_bytes as i64,
+                        p.gpu_allocated_mb as i32,
+                        p.started_at,
+                        now,
+                    ],
+                )?;
+            }
+            Ok(())
+        })();
+        match res {
+            Ok(()) => {
+                conn.execute_batch("COMMIT;")?;
+                Ok(())
+            }
+            Err(e) => {
+                if let Err(rb) = conn.execute_batch("ROLLBACK;") {
+                    eprintln!("[DuckDB][WARN] replace_active_processes ROLLBACK 失败: {}", rb);
+                }
+                Err(e)
+            }
         }
-        Ok(())
     }
 
     fn list_active_processes(&self) -> Result<Vec<ActiveProcessRecord>> {
@@ -429,20 +494,23 @@ impl StorageProvider for DuckDbStorageProvider {
         let conn = self.lock_conn()?;
         let tags_str = serde_json::to_string(&mem.tags)?;
         let embedding_str = serde_json::to_string(&mem.embedding)?;
+        let now = chrono::Utc::now().to_rfc3339();
 
         conn.execute(
             "INSERT INTO memories (id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'), strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?12)
              ON CONFLICT(id) DO UPDATE SET
                 type = excluded.type,
                 content = excluded.content,
                 summary = excluded.summary,
+                source_agent = COALESCE(excluded.source_agent, memories.source_agent),
+                source_session = COALESCE(excluded.source_session, memories.source_session),
                 tags = excluded.tags,
                 weight = excluded.weight,
                 pinned = excluded.pinned,
                 status = excluded.status,
-                embedding = excluded.embedding,
-                updated_at = strftime(now(), '%Y-%m-%dT%H:%M:%SZ')",
+                embedding = CASE WHEN excluded.embedding != '[]' THEN excluded.embedding ELSE memories.embedding END,
+                updated_at = excluded.updated_at",
             params![
                 mem.id,
                 mem.memory_type,
@@ -455,6 +523,7 @@ impl StorageProvider for DuckDbStorageProvider {
                 mem.pinned,
                 mem.status,
                 embedding_str,
+                now,
             ],
         )?;
         Ok(())
@@ -531,11 +600,48 @@ impl StorageProvider for DuckDbStorageProvider {
         Ok(rows)
     }
 
+    fn list_all_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding
+             FROM memories
+             ORDER BY updated_at DESC
+             LIMIT ?1",
+        )?;
+
+        let rows = stmt
+            .query_map(params![limit as i64], |row| {
+                let tags_str: String = row.get(6)?;
+                let emb_str: String = row.get(10)?;
+                let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
+                let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+                let weight_f: f64 = row.get(7)?;
+
+                Ok(MemoryRecord {
+                    id: row.get(0)?,
+                    memory_type: row.get(1)?,
+                    content: row.get(2)?,
+                    summary: row.get(3)?,
+                    source_agent: row.get(4)?,
+                    source_session: row.get(5)?,
+                    tags,
+                    weight: weight_f as f32,
+                    pinned: row.get(8)?,
+                    status: row.get(9)?,
+                    embedding,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(rows)
+    }
+
     fn update_memory_status(&self, memory_id: &str, status: &str) -> Result<usize> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let rows = conn.execute(
-            "UPDATE memories SET status = ?1, updated_at = strftime(now(), '%Y-%m-%dT%H:%M:%SZ') WHERE id = ?2",
-            params![status, memory_id],
+            "UPDATE memories SET status = ?1, updated_at = ?3 WHERE id = ?2",
+            params![status, memory_id, now],
         )?;
         Ok(rows)
     }
@@ -543,15 +649,20 @@ impl StorageProvider for DuckDbStorageProvider {
     fn record_change(&self, change: &ChangeRecord) -> Result<()> {
         let conn = self.lock_conn()?;
         let details_str = serde_json::to_string(&change.details)?;
+        let created_at = change
+            .created_at
+            .clone()
+            .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
         conn.execute(
             "INSERT INTO changes (type, target, description, details, source, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             params![
                 change.change_type,
                 change.target,
                 change.description,
                 details_str,
                 change.source,
+                created_at,
             ],
         )?;
         Ok(())
@@ -586,23 +697,60 @@ impl StorageProvider for DuckDbStorageProvider {
 
     fn add_link(&self, link: &LinkRecord) -> Result<()> {
         let conn = self.lock_conn()?;
-        conn.execute(
-            "INSERT INTO links (source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, line_number, snippet, provenance, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))",
-            params![
-                link.source_type,
-                link.source_id,
-                link.target_type,
-                link.target_id,
-                link.relation,
-                link.confidence as f64,
-                link.auto_discovered,
-                link.line_number,
-                link.snippet,
-                link.provenance,
-            ],
-        )?;
-        Ok(())
+        let now = chrono::Utc::now().to_rfc3339();
+        let prov = link.provenance.as_deref().unwrap_or("static_scan");
+        conn.execute_batch("BEGIN TRANSACTION;")?;
+        let res: Result<()> = (|| {
+            let updated = conn.execute(
+                "UPDATE links
+                 SET confidence = ?1, auto_discovered = ?2, line_number = ?3, snippet = ?4, provenance = ?5
+                 WHERE source_type = ?6 AND source_id = ?7 AND target_type = ?8 AND target_id = ?9 AND relation = ?10",
+                params![
+                    link.confidence as f64,
+                    link.auto_discovered,
+                    link.line_number,
+                    link.snippet,
+                    prov,
+                    link.source_type,
+                    link.source_id,
+                    link.target_type,
+                    link.target_id,
+                    link.relation,
+                ],
+            )?;
+            if updated == 0 {
+                conn.execute(
+                    "INSERT INTO links (source_type, source_id, target_type, target_id, relation, confidence, auto_discovered, line_number, snippet, provenance, created_at)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                    params![
+                        link.source_type,
+                        link.source_id,
+                        link.target_type,
+                        link.target_id,
+                        link.relation,
+                        link.confidence as f64,
+                        link.auto_discovered,
+                        link.line_number,
+                        link.snippet,
+                        prov,
+                        link.created_at.as_deref().unwrap_or(&now),
+                    ],
+                )?;
+            }
+            Ok(())
+        })();
+        match res {
+            Ok(()) => {
+                conn.execute_batch("COMMIT;")?;
+                Ok(())
+            }
+            Err(e) => {
+                if let Err(rb) = conn.execute_batch("ROLLBACK;") {
+                    eprintln!("[DuckDB][WARN] add_link ROLLBACK 失败: {}", rb);
+                }
+                Err(e)
+            }
+        }
     }
 
     fn delete_link(&self, id: i64) -> Result<()> {
@@ -1161,61 +1309,89 @@ impl StorageProvider for DuckDbStorageProvider {
     // ─── Multi-Agent Coordination Locks (多 Agent 协作锁) ────────────
     fn insert_coordination_lock(&self, lock: &CoordinationLock) -> Result<bool> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
+        conn.execute_batch("BEGIN TRANSACTION;")?;
+        let res: Result<bool> = (|| {
+            // 1. 清理该资源已过期的锁
+            conn.execute(
+                "DELETE FROM coordination_locks
+                 WHERE resource_type = ?1 AND resource_id = ?2
+                   AND COALESCE(try_cast(expires_at AS TIMESTAMPTZ) <= try_cast(?3 AS TIMESTAMPTZ), expires_at <= ?3)",
+                params![lock.resource_type, lock.resource_id, now],
+            )?;
 
-        // 1. 清理该资源已过期的锁
-        conn.execute(
-            "DELETE FROM coordination_locks WHERE resource_type = ?1 AND resource_id = ?2 AND expires_at <= strftime(now(), '%Y-%m-%dT%H:%M:%SZ')",
-            params![lock.resource_type, lock.resource_id],
-        )?;
+            // 2. 检查有效冲突
+            let mut stmt = conn.prepare(
+                "SELECT lock_id, scope, holder_agent, expires_at FROM coordination_locks
+                 WHERE resource_type = ?1 AND resource_id = ?2
+                   AND COALESCE(try_cast(expires_at AS TIMESTAMPTZ) > try_cast(?3 AS TIMESTAMPTZ), expires_at > ?3)"
+            )?;
+            let mut rows = stmt.query(params![lock.resource_type, lock.resource_id, now])?;
 
-        // 2. 检查有效冲突
-        let mut stmt = conn.prepare(
-            "SELECT lock_id, scope, holder_agent, expires_at FROM coordination_locks 
-             WHERE resource_type = ?1 AND resource_id = ?2 AND expires_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')"
-        )?;
-        let mut rows = stmt.query(params![lock.resource_type, lock.resource_id])?;
+            while let Some(row) = rows.next()? {
+                let existing_scope: String = row.get(1)?;
+                let existing_holder: String = row.get(2)?;
 
-        while let Some(row) = rows.next()? {
-            let existing_scope: String = row.get(1)?;
-            let existing_holder: String = row.get(2)?;
+                if existing_holder == lock.holder_agent {
+                    continue;
+                }
 
-            if existing_holder == lock.holder_agent {
-                continue;
+                if lock.scope == "exclusive" || existing_scope == "exclusive" {
+                    return Ok(false);
+                }
             }
+            drop(rows);
+            drop(stmt);
 
-            if lock.scope == "exclusive" || existing_scope == "exclusive" {
-                return Ok(false);
+            // 3. 插入新锁
+            let metadata_str = lock
+                .metadata
+                .as_ref()
+                .map(|m| serde_json::to_string(m).unwrap_or_else(|_| "{}".to_string()))
+                .unwrap_or_else(|| "{}".to_string());
+
+            let pid_i64 = lock.holder_pid.map(|p| p as i64);
+
+            conn.execute(
+                "INSERT INTO coordination_locks (lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                 ON CONFLICT(lock_id) DO UPDATE SET
+                    expires_at = excluded.expires_at,
+                    metadata = excluded.metadata,
+                    scope = excluded.scope,
+                    holder_pid = excluded.holder_pid",
+                params![
+                    lock.lock_id,
+                    lock.resource_type,
+                    lock.resource_id,
+                    lock.scope,
+                    lock.holder_agent,
+                    pid_i64,
+                    lock.acquired_at,
+                    lock.expires_at,
+                    metadata_str,
+                ],
+            )?;
+            Ok(true)
+        })();
+        match res {
+            Ok(true) => {
+                conn.execute_batch("COMMIT;")?;
+                Ok(true)
+            }
+            Ok(false) => {
+                if let Err(rb) = conn.execute_batch("ROLLBACK;") {
+                    eprintln!("[DuckDB][WARN] insert_coordination_lock conflict ROLLBACK 失败: {}", rb);
+                }
+                Ok(false)
+            }
+            Err(e) => {
+                if let Err(rb) = conn.execute_batch("ROLLBACK;") {
+                    eprintln!("[DuckDB][WARN] insert_coordination_lock err ROLLBACK 失败: {}", rb);
+                }
+                Err(e)
             }
         }
-
-        // 3. 插入新锁
-        let metadata_str = lock.metadata.as_ref()
-            .map(|m| serde_json::to_string(m).unwrap_or_else(|_| "{}".to_string()))
-            .unwrap_or_else(|| "{}".to_string());
-
-        let pid_i64 = lock.holder_pid.map(|p| p as i64);
-
-        conn.execute(
-            "INSERT INTO coordination_locks (lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-             ON CONFLICT(lock_id) DO UPDATE SET
-                expires_at = excluded.expires_at,
-                metadata = excluded.metadata,
-                scope = excluded.scope,
-                holder_pid = excluded.holder_pid",
-            params![
-                lock.lock_id,
-                lock.resource_type,
-                lock.resource_id,
-                lock.scope,
-                lock.holder_agent,
-                pid_i64,
-                lock.acquired_at,
-                lock.expires_at,
-                metadata_str,
-            ],
-        )?;
-        Ok(true)
     }
 
     fn delete_coordination_lock(&self, lock_id: &str) -> Result<bool> {
@@ -1226,13 +1402,15 @@ impl StorageProvider for DuckDbStorageProvider {
 
     fn get_coordination_lock(&self, resource_type: &str, resource_id: &str) -> Result<Option<CoordinationLock>> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let mut stmt = conn.prepare(
             "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
              FROM coordination_locks
-             WHERE resource_type = ?1 AND resource_id = ?2 AND expires_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+             WHERE resource_type = ?1 AND resource_id = ?2
+               AND COALESCE(try_cast(expires_at AS TIMESTAMPTZ) > try_cast(?3 AS TIMESTAMPTZ), expires_at > ?3)
              ORDER BY acquired_at DESC LIMIT 1"
         )?;
-        let mut rows = stmt.query(params![resource_type, resource_id])?;
+        let mut rows = stmt.query(params![resource_type, resource_id, now])?;
         if let Some(row) = rows.next()? {
             let meta_str: String = row.get(8)?;
             let metadata = serde_json::from_str(&meta_str).ok();
@@ -1255,20 +1433,22 @@ impl StorageProvider for DuckDbStorageProvider {
 
     fn list_coordination_locks(&self, resource_type: Option<&str>) -> Result<Vec<CoordinationLock>> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let sql = match resource_type {
             Some(_) => "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
                         FROM coordination_locks
-                        WHERE resource_type = ?1 AND expires_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+                        WHERE resource_type = ?1
+                          AND COALESCE(try_cast(expires_at AS TIMESTAMPTZ) > try_cast(?2 AS TIMESTAMPTZ), expires_at > ?2)
                         ORDER BY acquired_at DESC",
             None => "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
                      FROM coordination_locks
-                     WHERE expires_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+                     WHERE COALESCE(try_cast(expires_at AS TIMESTAMPTZ) > try_cast(?1 AS TIMESTAMPTZ), expires_at > ?1)
                      ORDER BY acquired_at DESC",
         };
         let mut stmt = conn.prepare(sql)?;
         let mut rows = match resource_type {
-            Some(rt) => stmt.query(params![rt])?,
-            None => stmt.query([])?,
+            Some(rt) => stmt.query(params![rt, now])?,
+            None => stmt.query(params![now])?,
         };
 
         let mut list = Vec::new();
@@ -1293,9 +1473,11 @@ impl StorageProvider for DuckDbStorageProvider {
 
     fn gc_expired_coordination_locks(&self) -> Result<usize> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let count = conn.execute(
-            "DELETE FROM coordination_locks WHERE expires_at <= strftime(now(), '%Y-%m-%dT%H:%M:%SZ')",
-            [],
+            "DELETE FROM coordination_locks
+             WHERE COALESCE(try_cast(expires_at AS TIMESTAMPTZ) <= try_cast(?1 AS TIMESTAMPTZ), expires_at <= ?1)",
+            params![now],
         )?;
         Ok(count)
     }
@@ -1303,13 +1485,23 @@ impl StorageProvider for DuckDbStorageProvider {
     fn upsert_mcp_catalog(&self, rec: &McpCatalogRecord) -> Result<()> {
         let conn = self.lock_conn()?;
         let tools_str = serde_json::to_string(&rec.tools_json)?;
+        let now = chrono::Utc::now().to_rfc3339();
         conn.execute(
-            "INSERT OR REPLACE INTO mcp_catalog (id, server_name, client_source, transport, command_or_url, tools_json, tool_count, est_total_tokens, status, last_scanned_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))",
+            "INSERT INTO mcp_catalog (id, server_name, client_source, transport, command_or_url, tools_json, tool_count, est_total_tokens, status, last_scanned_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+             ON CONFLICT(server_name) DO UPDATE SET
+                client_source = excluded.client_source,
+                transport = excluded.transport,
+                command_or_url = excluded.command_or_url,
+                tools_json = excluded.tools_json,
+                tool_count = excluded.tool_count,
+                est_total_tokens = excluded.est_total_tokens,
+                status = excluded.status,
+                last_scanned_at = excluded.last_scanned_at",
             params![
                 rec.id, rec.server_name, rec.client_source, rec.transport,
                 rec.command_or_url, tools_str, rec.tool_count as i32,
-                rec.est_total_tokens as i32, rec.status
+                rec.est_total_tokens as i32, rec.status, now
             ],
         )?;
         Ok(())
@@ -1345,13 +1537,24 @@ impl StorageProvider for DuckDbStorageProvider {
     fn upsert_skill_catalog(&self, rec: &SkillCatalogRecord) -> Result<()> {
         let conn = self.lock_conn()?;
         let triggers_str = serde_json::to_string(&rec.triggers)?;
+        let now = chrono::Utc::now().to_rfc3339();
         conn.execute(
-            "INSERT OR REPLACE INTO skills_catalog (id, skill_name, root_source, skill_path, description, triggers_json, est_tokens, has_scripts, has_references, status, last_scanned_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, strftime(now(), '%Y-%m-%dT%H:%M:%SZ'))",
+            "INSERT INTO skills_catalog (id, skill_name, root_source, skill_path, description, triggers_json, est_tokens, has_scripts, has_references, status, last_scanned_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+             ON CONFLICT(skill_name) DO UPDATE SET
+                root_source = excluded.root_source,
+                skill_path = excluded.skill_path,
+                description = excluded.description,
+                triggers_json = excluded.triggers_json,
+                est_tokens = excluded.est_tokens,
+                has_scripts = excluded.has_scripts,
+                has_references = excluded.has_references,
+                status = excluded.status,
+                last_scanned_at = excluded.last_scanned_at",
             params![
                 rec.id, rec.skill_name, rec.root_source, rec.skill_path,
                 rec.description, triggers_str, rec.est_tokens as i32,
-                rec.has_scripts, rec.has_references, rec.status
+                rec.has_scripts, rec.has_references, rec.status, now
             ],
         )?;
         Ok(())
@@ -1386,13 +1589,25 @@ impl StorageProvider for DuckDbStorageProvider {
 
     fn upsert_external_service(&self, rec: &ExternalServiceRecord) -> Result<()> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         conn.execute(
-            "INSERT OR REPLACE INTO external_services (id, service_name, category, endpoint, protocol, capabilities, auth_type, auth_env_var, health_endpoint, usage_example, status, last_checked_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, COALESCE(?12, strftime(now(), '%Y-%m-%dT%H:%M:%SZ')))",
+            "INSERT INTO external_services (id, service_name, category, endpoint, protocol, capabilities, auth_type, auth_env_var, health_endpoint, usage_example, status, last_checked_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, COALESCE(?12, ?13))
+             ON CONFLICT(service_name) DO UPDATE SET
+                category = excluded.category,
+                endpoint = excluded.endpoint,
+                protocol = excluded.protocol,
+                capabilities = excluded.capabilities,
+                auth_type = excluded.auth_type,
+                auth_env_var = excluded.auth_env_var,
+                health_endpoint = excluded.health_endpoint,
+                usage_example = excluded.usage_example,
+                status = excluded.status,
+                last_checked_at = excluded.last_checked_at",
             params![
                 rec.id, rec.service_name, rec.category, rec.endpoint, rec.protocol,
                 rec.capabilities, rec.auth_type, rec.auth_env_var, rec.health_endpoint,
-                rec.usage_example, rec.status, rec.last_checked_at
+                rec.usage_example, rec.status, rec.last_checked_at, now
             ],
         )?;
         Ok(())
@@ -1440,7 +1655,7 @@ impl StorageProvider for DuckDbStorageProvider {
     fn enqueue_lock_wait(&self, entry: &LockWaitEntry) -> Result<()> {
         let conn = self.lock_conn()?;
         conn.execute(
-            "INSERT INTO lock_wait_queue (wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status)
+            "INSERT OR REPLACE INTO lock_wait_queue (wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 entry.wait_id, entry.resource_type, entry.resource_id, entry.scope,
@@ -1452,6 +1667,7 @@ impl StorageProvider for DuckDbStorageProvider {
 
     fn list_lock_wait_queue(&self, resource_type: Option<&str>, resource_id: Option<&str>) -> Result<Vec<LockWaitEntry>> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let mut res = Vec::new();
         match (resource_type, resource_id) {
             (Some(rt), Some(rid)) => {
@@ -1459,10 +1675,10 @@ impl StorageProvider for DuckDbStorageProvider {
                     "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
                      FROM lock_wait_queue
                      WHERE resource_type = ?1 AND resource_id = ?2 AND status IN ('waiting','notified')
-                       AND timeout_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+                       AND COALESCE(try_cast(timeout_at AS TIMESTAMPTZ) > try_cast(?3 AS TIMESTAMPTZ), timeout_at > ?3)
                      ORDER BY priority ASC, enqueued_at ASC"
                 )?;
-                let rows = stmt.query_map(params![rt, rid], Self::map_wait_row)?;
+                let rows = stmt.query_map(params![rt, rid, now], Self::map_wait_row)?;
                 for r in rows { res.push(r?); }
             }
             (Some(rt), None) => {
@@ -1470,10 +1686,10 @@ impl StorageProvider for DuckDbStorageProvider {
                     "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
                      FROM lock_wait_queue
                      WHERE resource_type = ?1 AND status IN ('waiting','notified')
-                       AND timeout_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+                       AND COALESCE(try_cast(timeout_at AS TIMESTAMPTZ) > try_cast(?2 AS TIMESTAMPTZ), timeout_at > ?2)
                      ORDER BY priority ASC, enqueued_at ASC"
                 )?;
-                let rows = stmt.query_map(params![rt], Self::map_wait_row)?;
+                let rows = stmt.query_map(params![rt, now], Self::map_wait_row)?;
                 for r in rows { res.push(r?); }
             }
             _ => {
@@ -1481,10 +1697,10 @@ impl StorageProvider for DuckDbStorageProvider {
                     "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
                      FROM lock_wait_queue
                      WHERE status IN ('waiting','notified')
-                       AND timeout_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+                       AND COALESCE(try_cast(timeout_at AS TIMESTAMPTZ) > try_cast(?1 AS TIMESTAMPTZ), timeout_at > ?1)
                      ORDER BY priority ASC, enqueued_at ASC"
                 )?;
-                let rows = stmt.query_map([], Self::map_wait_row)?;
+                let rows = stmt.query_map(params![now], Self::map_wait_row)?;
                 for r in rows { res.push(r?); }
             }
         }
@@ -1493,14 +1709,15 @@ impl StorageProvider for DuckDbStorageProvider {
 
     fn pop_next_lock_waiter(&self, resource_type: &str, resource_id: &str) -> Result<Option<LockWaitEntry>> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let mut stmt = conn.prepare(
             "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
              FROM lock_wait_queue
              WHERE resource_type = ?1 AND resource_id = ?2 AND status = 'waiting'
-               AND timeout_at > strftime(now(), '%Y-%m-%dT%H:%M:%SZ')
+               AND COALESCE(try_cast(timeout_at AS TIMESTAMPTZ) > try_cast(?3 AS TIMESTAMPTZ), timeout_at > ?3)
              ORDER BY priority ASC, enqueued_at ASC LIMIT 1"
         )?;
-        let mut rows = stmt.query_map(params![resource_type, resource_id], Self::map_wait_row)?;
+        let mut rows = stmt.query_map(params![resource_type, resource_id, now], Self::map_wait_row)?;
         if let Some(first) = rows.next() {
             let mut item = first?;
             drop(rows);
@@ -1527,10 +1744,12 @@ impl StorageProvider for DuckDbStorageProvider {
 
     fn gc_expired_lock_waits(&self) -> Result<usize> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let affected = conn.execute(
             "UPDATE lock_wait_queue SET status = 'expired'
-             WHERE status IN ('waiting','notified') AND timeout_at <= strftime(now(), '%Y-%m-%dT%H:%M:%SZ')",
-            [],
+             WHERE status IN ('waiting','notified')
+               AND COALESCE(try_cast(timeout_at AS TIMESTAMPTZ) <= try_cast(?1 AS TIMESTAMPTZ), timeout_at <= ?1)",
+            params![now],
         )?;
         Ok(affected)
     }
@@ -1596,12 +1815,34 @@ impl StorageProvider for DuckDbStorageProvider {
                     overall_token_savings_pct, overall_speedup_factor,
                     total_hazards_intercepted, total_noise_blocked, sla_passed,
                     results_json, report_sha256, duration_ms, created_at
+             FROM benchmark_runs WHERE run_id NOT LIKE 'awr:%' ORDER BY created_at DESC LIMIT ?1",
+        )?;
+        let rows = stmt
+            .query_map(params![limit as i64], Self::map_benchmark_run_row)?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    fn list_all_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
+                    workload_count, total_baseline_tokens, total_steward_tokens,
+                    overall_token_savings_pct, overall_speedup_factor,
+                    total_hazards_intercepted, total_noise_blocked, sla_passed,
+                    results_json, report_sha256, duration_ms, created_at
              FROM benchmark_runs ORDER BY created_at DESC LIMIT ?1",
         )?;
         let rows = stmt
             .query_map(params![limit as i64], Self::map_benchmark_run_row)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(rows)
+    }
+
+    fn delete_benchmark_run(&self, run_id: &str) -> Result<bool> {
+        let conn = self.lock_conn()?;
+        let affected = conn.execute("DELETE FROM benchmark_runs WHERE run_id = ?1", params![run_id])?;
+        Ok(affected > 0)
     }
 
     fn insert_effectiveness_event(&self, event: &EffectivenessLedgerRecord) -> Result<()> {
@@ -1779,6 +2020,10 @@ impl StorageProvider for DuckDbStorageProvider {
         )?;
         removed += conn.execute(
             "DELETE FROM benchmark_runs WHERE run_id LIKE 'bench:%' OR suite_name LIKE 'bench:%'",
+            [],
+        )?;
+        removed += conn.execute(
+            "DELETE FROM audit_events WHERE session_id LIKE 'bench:%' OR target_id LIKE '%bench:%'",
             [],
         )?;
         Ok(removed)
@@ -1967,7 +2212,7 @@ impl StorageProvider for DuckDbStorageProvider {
             .as_deref()
             .and_then(crate::storage::window_to_cutoff_iso)
             .unwrap_or_default();
-        let lim = if filter.limit == 0 { 50 } else { filter.limit.min(5000) } as i64;
+        let lim = if filter.limit == 0 { 50 } else { filter.limit.min(100_000) } as i64;
 
         let mut stmt = conn.prepare(
             "SELECT event_id, trace_id, session_id, domain, actor_kind, actor_id,

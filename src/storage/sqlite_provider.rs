@@ -168,6 +168,23 @@ impl StorageProvider for SqliteStorageProvider {
         "sqlite"
     }
 
+    fn list_created_at_map(&self, table: &str) -> Result<std::collections::HashMap<String, String>> {
+        let conn = self.lock_conn()?;
+        let sql = match table {
+            "assets" => "SELECT id, created_at FROM assets WHERE created_at IS NOT NULL",
+            "memories" => "SELECT id, created_at FROM memories WHERE created_at IS NOT NULL",
+            _ => anyhow::bail!("不支持批量提取 created_at 的表: {}", table),
+        };
+        let mut stmt = conn.prepare(sql)?;
+        let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?;
+        let mut map = std::collections::HashMap::new();
+        for r in rows {
+            let (id, ts) = r?;
+            map.insert(id, ts);
+        }
+        Ok(map)
+    }
+
     fn get_placement_rules(&self) -> Result<Vec<PlacementRule>> {
         let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
@@ -238,6 +255,32 @@ impl StorageProvider for SqliteStorageProvider {
         })?.collect::<Result<Vec<_>, _>>()?;
 
         Ok(policies)
+    }
+
+    fn upsert_scan_policy(&self, policy: &ScanPolicy) -> Result<()> {
+        let conn = self.lock_conn()?;
+        conn.execute(
+            "INSERT INTO scan_policies (id, path_pattern, tier, max_depth, enable_fts, enable_vec, enable_graph, notes)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+             ON CONFLICT(path_pattern) DO UPDATE SET
+                tier = excluded.tier,
+                max_depth = excluded.max_depth,
+                enable_fts = excluded.enable_fts,
+                enable_vec = excluded.enable_vec,
+                enable_graph = excluded.enable_graph,
+                notes = excluded.notes",
+            params![
+                policy.id,
+                policy.path_pattern,
+                policy.tier,
+                policy.max_depth,
+                policy.enable_fts as i32,
+                policy.enable_vec as i32,
+                policy.enable_graph as i32,
+                policy.notes,
+            ],
+        )?;
+        Ok(())
     }
 
     fn upsert_asset(&self, asset: &AssetRecord) -> Result<()> {
@@ -472,7 +515,19 @@ impl StorageProvider for SqliteStorageProvider {
 
         conn.execute(
             "INSERT INTO memories (id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+             ON CONFLICT(id) DO UPDATE SET
+                type = excluded.type,
+                content = excluded.content,
+                summary = excluded.summary,
+                source_agent = COALESCE(excluded.source_agent, memories.source_agent),
+                source_session = COALESCE(excluded.source_session, memories.source_session),
+                tags = excluded.tags,
+                weight = excluded.weight,
+                pinned = excluded.pinned,
+                status = excluded.status,
+                embedding = CASE WHEN excluded.embedding != '[]' THEN excluded.embedding ELSE memories.embedding END,
+                updated_at = strftime('%Y-%m-%dT%H:%M:%f+00:00','now')",
             params![
                 mem.id,
                 mem.memory_type,
@@ -496,7 +551,7 @@ impl StorageProvider for SqliteStorageProvider {
             "SELECT m.id, m.type, m.content, m.summary, m.source_agent, m.source_session, m.tags, m.weight, m.pinned, m.status, m.embedding
              FROM memories_fts f
              JOIN memories m ON f.rowid = m.rowid
-             WHERE memories_fts MATCH ?1
+             WHERE memories_fts MATCH ?1 AND m.status = 'active'
              ORDER BY rank
              LIMIT ?2"
         )?;
@@ -559,6 +614,41 @@ impl StorageProvider for SqliteStorageProvider {
         Ok(rows)
     }
 
+    fn list_all_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding
+             FROM memories
+             ORDER BY updated_at DESC
+             LIMIT ?1",
+        )?;
+
+        let rows = stmt
+            .query_map(params![limit as i64], |row| {
+                let tags_str: String = row.get(6)?;
+                let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
+                let emb_str: String = row.get(10)?;
+                let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+
+                Ok(MemoryRecord {
+                    id: row.get(0)?,
+                    memory_type: row.get(1)?,
+                    content: row.get(2)?,
+                    summary: row.get(3)?,
+                    source_agent: row.get(4)?,
+                    source_session: row.get(5)?,
+                    tags,
+                    weight: row.get(7)?,
+                    pinned: row.get(8)?,
+                    status: row.get(9)?,
+                    embedding,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(rows)
+    }
+
     fn update_memory_status(&self, memory_id: &str, status: &str) -> Result<usize> {
         let conn = self.lock_conn()?;
         let rows = conn.execute(
@@ -572,14 +662,15 @@ impl StorageProvider for SqliteStorageProvider {
         let conn = self.lock_conn()?;
         let details_str = serde_json::to_string(&change.details)?;
         conn.execute(
-            "INSERT INTO changes (type, target, description, details, source)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
+            "INSERT INTO changes (type, target, description, details, source, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, COALESCE(?6, strftime('%Y-%m-%dT%H:%M:%f+00:00','now')))",
             params![
                 change.change_type,
                 change.target,
                 change.description,
                 details_str,
                 change.source,
+                change.created_at,
             ],
         )?;
         Ok(())
@@ -1162,18 +1253,22 @@ impl StorageProvider for SqliteStorageProvider {
     // ─── Multi-Agent Coordination Locks (多 Agent 协作锁) ────────────
     fn insert_coordination_lock(&self, lock: &CoordinationLock) -> Result<bool> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         // 1. 先清理该资源上已过期的锁记录
         conn.execute(
-            "DELETE FROM coordination_locks WHERE resource_type = ?1 AND resource_id = ?2 AND expires_at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now')",
-            params![lock.resource_type, lock.resource_id],
+            "DELETE FROM coordination_locks
+             WHERE resource_type = ?1 AND resource_id = ?2
+               AND COALESCE(julianday(expires_at) <= julianday(?3), expires_at <= ?3)",
+            params![lock.resource_type, lock.resource_id, now],
         )?;
 
         // 2. 检查当前资源是否已被有效锁占用
         let mut stmt = conn.prepare(
-            "SELECT lock_id, scope, holder_agent, expires_at FROM coordination_locks 
-             WHERE resource_type = ?1 AND resource_id = ?2 AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')"
+            "SELECT lock_id, scope, holder_agent, expires_at FROM coordination_locks
+             WHERE resource_type = ?1 AND resource_id = ?2
+               AND COALESCE(julianday(expires_at) > julianday(?3), expires_at > ?3)"
         )?;
-        let mut rows = stmt.query(params![lock.resource_type, lock.resource_id])?;
+        let mut rows = stmt.query(params![lock.resource_type, lock.resource_id, now])?;
 
         while let Some(row) = rows.next()? {
             let existing_scope: String = row.get(1)?;
@@ -1226,13 +1321,15 @@ impl StorageProvider for SqliteStorageProvider {
 
     fn get_coordination_lock(&self, resource_type: &str, resource_id: &str) -> Result<Option<CoordinationLock>> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let mut stmt = conn.prepare(
             "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
              FROM coordination_locks
-             WHERE resource_type = ?1 AND resource_id = ?2 AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+             WHERE resource_type = ?1 AND resource_id = ?2
+               AND COALESCE(julianday(expires_at) > julianday(?3), expires_at > ?3)
              ORDER BY acquired_at DESC LIMIT 1"
         )?;
-        let mut rows = stmt.query(params![resource_type, resource_id])?;
+        let mut rows = stmt.query(params![resource_type, resource_id, now])?;
         if let Some(row) = rows.next()? {
             let meta_str: String = row.get(8)?;
             let metadata = serde_json::from_str(&meta_str).ok();
@@ -1254,20 +1351,22 @@ impl StorageProvider for SqliteStorageProvider {
 
     fn list_coordination_locks(&self, resource_type: Option<&str>) -> Result<Vec<CoordinationLock>> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let sql = match resource_type {
             Some(_) => "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
                         FROM coordination_locks
-                        WHERE resource_type = ?1 AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                        WHERE resource_type = ?1
+                          AND COALESCE(julianday(expires_at) > julianday(?2), expires_at > ?2)
                         ORDER BY acquired_at DESC",
             None => "SELECT lock_id, resource_type, resource_id, scope, holder_agent, holder_pid, acquired_at, expires_at, metadata
                      FROM coordination_locks
-                     WHERE expires_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                     WHERE COALESCE(julianday(expires_at) > julianday(?1), expires_at > ?1)
                      ORDER BY acquired_at DESC",
         };
         let mut stmt = conn.prepare(sql)?;
         let rows = match resource_type {
-            Some(rt) => stmt.query_map(params![rt], Self::map_lock_row)?,
-            None => stmt.query_map([], Self::map_lock_row)?,
+            Some(rt) => stmt.query_map(params![rt, now], Self::map_lock_row)?,
+            None => stmt.query_map(params![now], Self::map_lock_row)?,
         };
         let mut result = Vec::new();
         for r in rows {
@@ -1278,9 +1377,11 @@ impl StorageProvider for SqliteStorageProvider {
 
     fn gc_expired_coordination_locks(&self) -> Result<usize> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let count = conn.execute(
-            "DELETE FROM coordination_locks WHERE expires_at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now')",
-            [],
+            "DELETE FROM coordination_locks
+             WHERE COALESCE(julianday(expires_at) <= julianday(?1), expires_at <= ?1)",
+            params![now],
         )?;
         Ok(count)
     }
@@ -1480,7 +1581,7 @@ impl StorageProvider for SqliteStorageProvider {
     fn enqueue_lock_wait(&self, entry: &LockWaitEntry) -> Result<()> {
         let conn = self.lock_conn()?;
         conn.execute(
-            "INSERT INTO lock_wait_queue (wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status)
+            "INSERT OR REPLACE INTO lock_wait_queue (wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 entry.wait_id, entry.resource_type, entry.resource_id, entry.scope,
@@ -1492,6 +1593,7 @@ impl StorageProvider for SqliteStorageProvider {
 
     fn list_lock_wait_queue(&self, resource_type: Option<&str>, resource_id: Option<&str>) -> Result<Vec<LockWaitEntry>> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let mut res = Vec::new();
         match (resource_type, resource_id) {
             (Some(rt), Some(rid)) => {
@@ -1499,10 +1601,10 @@ impl StorageProvider for SqliteStorageProvider {
                     "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
                      FROM lock_wait_queue
                      WHERE resource_type = ?1 AND resource_id = ?2 AND status IN ('waiting','notified')
-                       AND timeout_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                       AND COALESCE(julianday(timeout_at) > julianday(?3), timeout_at > ?3)
                      ORDER BY priority ASC, enqueued_at ASC"
                 )?;
-                let rows = stmt.query_map(params![rt, rid], Self::map_wait_row)?;
+                let rows = stmt.query_map(params![rt, rid, now], Self::map_wait_row)?;
                 for r in rows { res.push(r?); }
             }
             (Some(rt), None) => {
@@ -1510,10 +1612,10 @@ impl StorageProvider for SqliteStorageProvider {
                     "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
                      FROM lock_wait_queue
                      WHERE resource_type = ?1 AND status IN ('waiting','notified')
-                       AND timeout_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                       AND COALESCE(julianday(timeout_at) > julianday(?2), timeout_at > ?2)
                      ORDER BY priority ASC, enqueued_at ASC"
                 )?;
-                let rows = stmt.query_map(params![rt], Self::map_wait_row)?;
+                let rows = stmt.query_map(params![rt, now], Self::map_wait_row)?;
                 for r in rows { res.push(r?); }
             }
             _ => {
@@ -1521,10 +1623,10 @@ impl StorageProvider for SqliteStorageProvider {
                     "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
                      FROM lock_wait_queue
                      WHERE status IN ('waiting','notified')
-                       AND timeout_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                       AND COALESCE(julianday(timeout_at) > julianday(?1), timeout_at > ?1)
                      ORDER BY priority ASC, enqueued_at ASC"
                 )?;
-                let rows = stmt.query_map([], Self::map_wait_row)?;
+                let rows = stmt.query_map(params![now], Self::map_wait_row)?;
                 for r in rows { res.push(r?); }
             }
         }
@@ -1533,14 +1635,15 @@ impl StorageProvider for SqliteStorageProvider {
 
     fn pop_next_lock_waiter(&self, resource_type: &str, resource_id: &str) -> Result<Option<LockWaitEntry>> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let mut stmt = conn.prepare(
             "SELECT wait_id, resource_type, resource_id, scope, waiting_agent, priority, enqueued_at, timeout_at, status
              FROM lock_wait_queue
              WHERE resource_type = ?1 AND resource_id = ?2 AND status = 'waiting'
-               AND timeout_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+               AND COALESCE(julianday(timeout_at) > julianday(?3), timeout_at > ?3)
              ORDER BY priority ASC, enqueued_at ASC LIMIT 1"
         )?;
-        let mut rows = stmt.query_map(params![resource_type, resource_id], Self::map_wait_row)?;
+        let mut rows = stmt.query_map(params![resource_type, resource_id, now], Self::map_wait_row)?;
         if let Some(first) = rows.next() {
             let mut item = first?;
             drop(rows);
@@ -1567,10 +1670,12 @@ impl StorageProvider for SqliteStorageProvider {
 
     fn gc_expired_lock_waits(&self) -> Result<usize> {
         let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
         let affected = conn.execute(
             "UPDATE lock_wait_queue SET status = 'expired'
-             WHERE status IN ('waiting','notified') AND timeout_at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now')",
-            [],
+             WHERE status IN ('waiting','notified')
+               AND COALESCE(julianday(timeout_at) <= julianday(?1), timeout_at <= ?1)",
+            params![now],
         )?;
         Ok(affected)
     }
@@ -1652,6 +1757,32 @@ impl StorageProvider for SqliteStorageProvider {
             .query_map(params![limit as i64], Self::map_benchmark_run_row)?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
+    }
+
+    fn list_all_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>> {
+        let _io_guard = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IoSqliteRead);
+        let conn = self.lock_conn()?;
+        let mut stmt = conn.prepare(
+            "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
+                    workload_count, total_baseline_tokens, total_steward_tokens,
+                    overall_token_savings_pct, overall_speedup_factor,
+                    total_hazards_intercepted, total_noise_blocked, sla_passed,
+                    results_json, report_sha256, duration_ms, created_at
+             FROM benchmark_runs ORDER BY created_at DESC LIMIT ?1",
+        )?;
+        let rows = stmt
+            .query_map(params![limit as i64], Self::map_benchmark_run_row)?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    fn delete_benchmark_run(&self, run_id: &str) -> Result<bool> {
+        let conn = self.lock_conn()?;
+        let affected = conn.execute(
+            "DELETE FROM benchmark_runs WHERE run_id = ?1",
+            params![run_id],
+        )?;
+        Ok(affected > 0)
     }
 
     fn insert_effectiveness_event(&self, event: &EffectivenessLedgerRecord) -> Result<()> {
@@ -2017,7 +2148,7 @@ impl StorageProvider for SqliteStorageProvider {
             .as_deref()
             .and_then(crate::storage::window_to_cutoff_iso)
             .unwrap_or_default();
-        let lim = if filter.limit == 0 { 50 } else { filter.limit.min(5000) } as i64;
+        let lim = if filter.limit == 0 { 50 } else { filter.limit.min(100_000) } as i64;
 
         let mut stmt = conn.prepare(
             "SELECT event_id, trace_id, session_id, domain, actor_kind, actor_id,
