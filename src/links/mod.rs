@@ -204,6 +204,7 @@ impl LinksEngine {
 
     /// 自动分析脚本/代码文件内容中的跨资产引用或服务依赖 (支持精准行号、切片与多语言语法抽取)
     pub fn discover_links_from_script(&self, asset_path: &str, content: &str) -> Result<usize> {
+        let _wait_guard = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::CpuLinkRegex);
         // 测试目录内的集成测试夹具（非 /tmp/ 沙盒）不纳入宿主拓扑图
         if !asset_path.starts_with("/tmp/")
             && (asset_path.contains("/tests/")

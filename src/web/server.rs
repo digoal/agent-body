@@ -370,6 +370,9 @@ impl WebServer {
             (Method::Post, "/api/v1/body/handoff") => parity_api::handle_body_handoff(req, storage.clone()),
             (Method::Post, "/api/v1/body/resume") => parity_api::handle_body_resume(req, storage.clone()),
             (Method::Post, "/api/v1/body/heal") => parity_api::handle_body_heal(storage.clone()),
+            (Method::Post, "/api/v1/body/perf/snapshot") => parity_api::handle_body_perf_snapshot(req, storage.clone()),
+            (Method::Get, "/api/v1/body/perf/awr") => parity_api::handle_body_perf_awr(req, storage.clone()),
+            (Method::Post, "/api/v1/body/perf/tune") => parity_api::handle_body_perf_tune(storage.clone()),
             _ => Self::route_request(req, storage.as_ref(), start_time, auth_token),
         };
         if let Some(st_arc) = audit_storage {

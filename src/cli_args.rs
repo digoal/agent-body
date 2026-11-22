@@ -279,6 +279,31 @@ pub(crate) enum BodyCommands {
         #[arg(long, default_value_t = false)]
         json: bool,
     },
+    #[command(about = "抓取本体内生等待事件与 /proc/self 内核性能快照（可选设为黄金性能基准）")]
+    PerfSnapshot {
+        #[arg(long, default_value = "cli-snap")]
+        label: String,
+        #[arg(long, default_value_t = false)]
+        set_baseline: bool,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "生成本体 AWR 快照/黄金基线差分性能报告与 ADDM 瓶颈诊断处方")]
+    PerfAwr {
+        #[arg(long)]
+        snap_a: Option<String>,
+        #[arg(long)]
+        snap_b: Option<String>,
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
+        vs_baseline: bool,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "在 L1_AUTONOMIC 包络内执行一键性能与内存自优化 (PRAGMA optimize + WAL + malloc_trim)")]
+    PerfTune {
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]

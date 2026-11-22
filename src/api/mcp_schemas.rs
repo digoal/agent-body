@@ -702,13 +702,13 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_state",
-                "description": "Agent 本体中枢（宿主机具身底座，第 43 原生工具）：提供本体身份证与六器官自省 (manifest)、五维稳态生命体征 (vitals)、四级自治权限包络评估 (envelope)、跨大脑工作态接力胶囊保存与恢复 (handoff_save/handoff_resume)、L1 稳态反射自愈 (heal) 及多本体联邦名片发现 (peers)。",
+                "description": "Agent 本体中枢（宿主机具身底座，第 43 原生工具）：提供本体身份证与六器官自省 (manifest)、五维稳态生命体征 (vitals)、四级自治权限包络评估 (envelope)、跨大脑工作态接力胶囊保存与恢复 (handoff_save/handoff_resume)、L1 稳态反射自愈 (heal)、多本体联邦名片发现 (peers) 以及内生等待事件与 AWR 性能快照/差分诊断/L1 自调优 (perf_snapshot/perf_awr/perf_tune)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "action": {
                             "type": "string",
-                            "enum": ["manifest", "vitals", "envelope", "handoff_save", "handoff_resume", "heal", "peers"],
+                            "enum": ["manifest", "vitals", "envelope", "handoff_save", "handoff_resume", "heal", "peers", "perf_snapshot", "perf_awr", "perf_tune"],
                             "default": "manifest",
                             "description": "操作类型"
                         },
@@ -735,6 +735,11 @@ pub fn all_tool_schemas() -> Vec<Value> {
                         "check_action": { "type": "string", "description": "action=envelope 时待评估的动作名" },
                         "target": { "type": "string", "description": "action=envelope 时待评估的目标路径或资源" },
                         "dry_run": { "type": "boolean", "default": true, "description": "action=envelope 时是否处于 dry_run 预览" },
+                        "label": { "type": "string", "description": "action=perf_snapshot 时快照标签" },
+                        "set_baseline": { "type": "boolean", "default": false, "description": "action=perf_snapshot 时是否将该快照设为 Golden Baseline 黄金性能基准" },
+                        "snap_a": { "type": "string", "description": "action=perf_awr 时基准快照 ID（留空默认用 baseline）" },
+                        "snap_b": { "type": "string", "description": "action=perf_awr 时目标快照 ID（留空默认抓取当前最新态）" },
+                        "vs_baseline": { "type": "boolean", "default": true, "description": "action=perf_awr 时是否对比黄金基线" },
                         "limit": { "type": "integer", "default": 20 }
                     }
                 }

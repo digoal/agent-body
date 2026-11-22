@@ -1574,6 +1574,83 @@ fn main() -> Result<()> {
                         }
                     }
                 }
+                BodyCommands::PerfSnapshot { label, set_baseline, json } => {
+                    let snap = agent_body::body::BodyPerfEngine::capture_snapshot(
+                        &storage,
+                        Some(&label),
+                        set_baseline,
+                    )?;
+                    let out = serde_json::to_string_pretty(&snap)?;
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else {
+                        println!(
+                            "📸 已抓取本体 AWR 性能快照 `{}` (label={}, baseline={}) | RSS={} KB | HWM={} KB | FDs={} | 稳态分={:.1}",
+                            snap.snapshot_id,
+                            snap.label,
+                            snap.is_baseline,
+                            snap.kernel_telemetry.rss_kb,
+                            snap.kernel_telemetry.hwm_kb,
+                            snap.kernel_telemetry.open_fds,
+                            snap.homeostasis_score
+                        );
+                    }
+                }
+                BodyCommands::PerfAwr { snap_a, snap_b, vs_baseline, json } => {
+                    let rep = agent_body::body::BodyPerfEngine::generate_awr_report(
+                        &storage,
+                        snap_a.as_deref(),
+                        snap_b.as_deref(),
+                        vs_baseline,
+                    )?;
+                    let out = serde_json::to_string_pretty(&rep)?;
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else {
+                        print!("{}", rep.markdown_summary);
+                    }
+                }
+                BodyCommands::PerfTune { json } => {
+                    let rep = agent_body::body::BodyPerfEngine::run_l1_auto_tune(&storage)?;
+                    let out = serde_json::to_string_pretty(&rep)?;
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else {
+                        println!(
+                            "⚡ L1 内生性能自调优完成 ({} μs): RSS {} KB → {} KB (释放 {:+} KB) | WAL {} KB → {} KB",
+                            rep.elapsed_us,
+                            rep.before_rss_kb,
+                            rep.after_rss_kb,
+                            rep.rss_freed_kb,
+                            rep.before_wal_bytes / 1024,
+                            rep.after_wal_bytes / 1024
+                        );
+                        for act in &rep.actions_executed {
+                            println!("  - {}", act);
+                        }
+                    }
+                }
             }
         }
         }
@@ -1666,5 +1743,8 @@ mod tests {
         assert!(Cli::try_parse_from(["steward", "audit", "query", "--domain", "OUT_OF_AGENT"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "audit", "summary", "--window", "7d"]).is_ok());
         assert!(Cli::try_parse_from(["steward", "audit", "evolve", "--auto-feedback"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "body", "perf-snapshot", "--label", "gold", "--set-baseline"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "body", "perf-awr", "--vs-baseline", "true"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "body", "perf-tune"]).is_ok());
     }
 }

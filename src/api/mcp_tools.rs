@@ -1155,6 +1155,38 @@ impl McpToolRegistry {
                             "results": peers,
                         }))?)
                     }
+                    "perf_snapshot" => {
+                        let label = args.get("label").and_then(|v| v.as_str());
+                        let set_baseline = args
+                            .get("set_baseline")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+                        let snap = crate::body::BodyPerfEngine::capture_snapshot(
+                            &self.storage,
+                            label,
+                            set_baseline,
+                        )?;
+                        Ok(serde_json::to_string_pretty(&snap)?)
+                    }
+                    "perf_awr" => {
+                        let snap_a = args.get("snap_a").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty());
+                        let snap_b = args.get("snap_b").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty());
+                        let vs_baseline = args
+                            .get("vs_baseline")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(true);
+                        let rep = crate::body::BodyPerfEngine::generate_awr_report(
+                            &self.storage,
+                            snap_a,
+                            snap_b,
+                            vs_baseline,
+                        )?;
+                        Ok(serde_json::to_string_pretty(&rep)?)
+                    }
+                    "perf_tune" => {
+                        let rep = crate::body::BodyPerfEngine::run_l1_auto_tune(&self.storage)?;
+                        Ok(serde_json::to_string_pretty(&rep)?)
+                    }
                     _ => bail!("未知 body_state action: {}", action),
                 }
             }

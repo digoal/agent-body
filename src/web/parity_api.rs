@@ -1446,3 +1446,81 @@ pub fn handle_body_heal(storage: Arc<dyn StorageProvider>) -> HttpResponse {
         Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }
 }
+
+#[derive(Debug, Deserialize, Default)]
+pub struct BodyPerfSnapshotBody {
+    pub label: Option<String>,
+    pub set_baseline: Option<bool>,
+}
+
+pub fn handle_body_perf_snapshot(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let t0 = std::time::Instant::now();
+    let body: BodyPerfSnapshotBody = req.json().unwrap_or_default();
+    let storage_ref = storage.clone();
+    let st = Storage::new(storage);
+    let set_base = body.set_baseline.unwrap_or(false);
+    match crate::body::BodyPerfEngine::capture_snapshot(&st, body.label.as_deref(), set_base) {
+        Ok(snap) => {
+            crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage_ref.as_ref(),
+                "web",
+                "body_state",
+                &snap.snapshot_id,
+                t0.elapsed().as_micros() as i64,
+            );
+            WebResponse::success(snap)
+        }
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
+pub fn handle_body_perf_awr(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let t0 = std::time::Instant::now();
+    let snap_a = req.query_params.get("snap_a").map(|s| s.as_str()).filter(|s| !s.trim().is_empty());
+    let snap_b = req.query_params.get("snap_b").map(|s| s.as_str()).filter(|s| !s.trim().is_empty());
+    let vs_baseline = req
+        .query_params
+        .get("vs_baseline")
+        .map(|s| s != "false" && s != "0")
+        .unwrap_or(true);
+    let storage_ref = storage.clone();
+    let st = Storage::new(storage);
+    match crate::body::BodyPerfEngine::generate_awr_report(&st, snap_a, snap_b, vs_baseline) {
+        Ok(rep) => {
+            let (snapshots, baseline_id) =
+                crate::body::BodyPerfEngine::list_snapshot_ids(storage_ref.as_ref());
+            crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage_ref.as_ref(),
+                "web",
+                "body_state",
+                &rep.markdown_summary,
+                t0.elapsed().as_micros() as i64,
+            );
+            WebResponse::success(serde_json::json!({
+                "report": rep,
+                "snapshots": snapshots,
+                "baseline_id": baseline_id,
+            }))
+        }
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
+pub fn handle_body_perf_tune(storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let t0 = std::time::Instant::now();
+    let storage_ref = storage.clone();
+    let st = Storage::new(storage);
+    match crate::body::BodyPerfEngine::run_l1_auto_tune(&st) {
+        Ok(rep) => {
+            crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage_ref.as_ref(),
+                "web",
+                "body_state",
+                "perf_tune",
+                t0.elapsed().as_micros() as i64,
+            );
+            WebResponse::success(rep)
+        }
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}

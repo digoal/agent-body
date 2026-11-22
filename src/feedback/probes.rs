@@ -59,6 +59,7 @@ pub struct FreshnessReconciler;
 impl FreshnessReconciler {
     /// 执行全生命周期信息新鲜度对账（资产改删写穿 + 幽灵节点剪枝 + 同路径记忆去重 + CodeGraph 时效检查）
     pub fn reconcile(storage: &Storage) -> Result<FreshnessReconcileReport> {
+        let _wait_guard = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IoDiskWalk);
         let t0 = Instant::now();
         let mut rep = FreshnessReconcileReport::default();
 
@@ -232,6 +233,19 @@ impl FreshnessReconciler {
                         }
                     }
                 }
+            }
+        }
+
+        drop(active_memories);
+        drop(fact_nodes);
+        let _ = storage.provider().get_benchmark_run("awr:pragma_optimize");
+        #[cfg(target_os = "linux")]
+        {
+            unsafe extern "C" {
+                fn malloc_trim(pad: usize) -> i32;
+            }
+            unsafe {
+                let _ = malloc_trim(0);
             }
         }
 

@@ -10,9 +10,15 @@
 pub mod continuity;
 pub mod envelope;
 pub mod manifest;
+pub mod perf_awr;
 pub mod vitals;
 
 pub use continuity::{ContinuityInput, ContinuityManager};
 pub use envelope::{AutonomyEnvelope, AutonomyLevel, EnvelopeDecision, EnvelopeRuleSpec};
 pub use manifest::{compute_body_id, BodyManifest, BodyManifestEngine, OrganStatus};
+pub use perf_awr::{
+    AddmFinding, AwrDiffReport, AwrSnapshot, BodyPerfEngine, BodyTimeModel, KernelSelfTelemetry,
+    OperationStatRow, PerfTuneReport, WaitEventGuard, WaitEventId, WaitEventRegistry,
+    WaitEventSnapshotRow,
+};
 pub use vitals::{HomeostasisHealReport, HomeostasisVitals, HomeostasisVitalsEngine, VitalDimension};

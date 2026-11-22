@@ -687,6 +687,19 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                 <div id="body-envelope-box" class="mt-8"><div class="empty">加载中...</div></div>
               </div>
             </div>
+
+            <div class="card mt-12">
+              <div class="item-top">
+                <strong>📈 内生等待事件 (Wait Events)、<code>/proc/self</code> 内核遥测与 AWR 性能诊断 (Phase 50)</strong>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button id="btn-body-perf-snap" class="btn btn-ghost btn-xs">📸 抓取性能快照</button>
+                  <button id="btn-body-perf-base" class="btn btn-ghost btn-xs">⭐ 设为黄金基准 (Baseline)</button>
+                  <button id="btn-body-perf-awr" class="btn btn-primary btn-xs">📈 生成 AWR 差分报告</button>
+                  <button id="btn-body-perf-tune" class="btn btn-primary btn-xs">⚡ L1 一键性能自调优</button>
+                </div>
+              </div>
+              <div id="body-perf-awr-box" class="mt-8"><div class="empty">点击「📈 生成 AWR 差分报告」查看 6 大类 18 种等待事件、内核 RSS/FD/上下文切换遥测与 ADDM 瓶颈诊断</div></div>
+            </div>
           </div>
         </section>
       </main>
@@ -4403,6 +4416,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-body-heal")?.addEventListener("click", triggerBodyHeal);
   document.getElementById("btn-body-handoff")?.addEventListener("click", triggerBodyHandoff);
   document.getElementById("btn-body-resume")?.addEventListener("click", triggerBodyResume);
+  document.getElementById("btn-body-perf-snap")?.addEventListener("click", () => triggerBodyPerfSnapshot(false));
+  document.getElementById("btn-body-perf-base")?.addEventListener("click", () => triggerBodyPerfSnapshot(true));
+  document.getElementById("btn-body-perf-awr")?.addEventListener("click", loadBodyPerfAwr);
+  document.getElementById("btn-body-perf-tune")?.addEventListener("click", triggerBodyPerfTune);
 });
 
 async function loadBodyWorkbench() {
@@ -4522,6 +4539,76 @@ async function triggerBodyResume() {
     loadBodyWorkbench();
   } catch (e) {
     showToast(`接力失败: ${e.message}`);
+  }
+}
+
+async function triggerBodyPerfSnapshot(setBaseline) {
+  const cmd = setBaseline ? "agent-body body perf-snapshot --set-baseline" : "agent-body body perf-snapshot";
+  mirrorBlackScreen(cmd, "body_state", { action: "perf_snapshot", set_baseline: setBaseline });
+  try {
+    const snap = await apiPost("/api/v1/body/perf/snapshot", { label: setBaseline ? "web-golden" : "web-snap", set_baseline: setBaseline });
+    showToast(setBaseline ? `⭐ 已设定黄金性能基准: ${snap.snapshot_id}` : `📸 已抓取性能快照: ${snap.snapshot_id}`);
+    loadBodyPerfAwr();
+  } catch (e) {
+    showToast(`抓取快照失败: ${e.message}`);
+  }
+}
+
+async function loadBodyPerfAwr() {
+  const box = document.getElementById("body-perf-awr-box");
+  mirrorBlackScreen("agent-body body perf-awr --vs-baseline true", "body_state", { action: "perf_awr", vs_baseline: true });
+  try {
+    const data = await apiGet("/api/v1/body/perf/awr?vs_baseline=true");
+    const rep = data.report || {};
+    const tm = rep.delta_time_model || {};
+    const kt = rep.target_kernel || {};
+    const waits = rep.top_wait_events || [];
+    const findings = rep.addm_findings || [];
+    if (box) {
+      box.innerHTML = `
+        <div class="list-item">
+          <div class="item-top">
+            <strong>${esc(rep.report_id || "awr")} (${esc(rep.base_snapshot_id || "-")} → ${esc(rep.target_snapshot_id || "-")})</strong>
+            <span class="badge ${rep.regression_detected ? "badge-warn" : "badge-ok"}">${rep.regression_detected ? "⚠️ 检测到退化" : "✅ 0 退化稳态"}</span>
+          </div>
+          <div class="muted-text mono" style="font-size:12px;">
+            /proc/self: VmRSS=${kt.rss_kb ?? 0} KB (${Number(rep.rss_drift_pct || 0).toFixed(1)}%) · VmHWM=${kt.hwm_kb ?? 0} KB · FDs=${kt.open_fds ?? 0} · 主动切换=${kt.voluntary_ctxt_switches ?? 0} · WAL=${Math.round((kt.sqlite_wal_bytes || 0) / 1024)} KB
+          </div>
+          <div class="muted-text mono" style="font-size:12px;margin-top:4px;">
+            Body Time (${tm.total_body_time_us ?? 0} μs): CPU ${Number(tm.cpu_pct || 0).toFixed(1)}% | Lock ${Number(tm.lock_pct || 0).toFixed(1)}% | IO ${Number(tm.io_pct || 0).toFixed(1)}% | Net ${Number(tm.net_pct || 0).toFixed(1)}% | IPC ${Number(tm.ipc_pct || 0).toFixed(1)}%
+          </div>
+        </div>
+        <div class="mt-8">
+          ${waits.slice(0, 5).map((w) => `
+            <div class="list-item">
+              <div class="item-top"><strong class="mono">${esc(w.event_name)}</strong><span class="badge">${Number(w.pct_of_body_time || 0).toFixed(1)}% · P95=${w.est_p95_us ?? 0}μs</span></div>
+              <div class="muted-text" style="font-size:11px;">${esc(w.description)} · calls=${w.calls ?? 0} · total=${w.total_us ?? 0}μs · max=${w.max_us ?? 0}μs</div>
+            </div>
+          `).join("")}
+        </div>
+        <div class="mt-8">
+          ${findings.map((f) => `
+            <div class="list-item">
+              <div class="item-top"><strong>[${esc(f.rule_id)}] ${esc(f.summary)}</strong><span class="badge ${f.severity === "CRITICAL" ? "badge-err" : (f.severity === "WARN" ? "badge-warn" : "badge-ok")}">${esc(f.severity)}</span></div>
+              <div class="muted-text" style="font-size:12px;">证据: ${esc(f.evidence)} → <strong>处方: ${esc(f.recommendation)}</strong></div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+  } catch (e) {
+    if (box) box.innerHTML = `<div class="empty">加载 AWR 报告失败: ${esc(e.message)}</div>`;
+  }
+}
+
+async function triggerBodyPerfTune() {
+  mirrorBlackScreen("agent-body body perf-tune", "body_state", { action: "perf_tune" });
+  try {
+    const rep = await apiPost("/api/v1/body/perf/tune", {});
+    showToast(`⚡ L1 性能自调优完成: RSS ${rep.before_rss_kb ?? 0} → ${rep.after_rss_kb ?? 0} KB`);
+    loadBodyPerfAwr();
+  } catch (e) {
+    showToast(`L1 性能自调优失败: ${e.message}`);
   }
 }
 "##;

@@ -152,7 +152,9 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     > 原始需求：项目名要改成 agent-body ，相关的代码、文档、WEB UI、MCP、SKILL、HTML 等配套都要修改。
     - **已落地交付**：Crate 与二进制全面切为 `agent-body` / `agent_body`；43 个 MCP 工具全面切为 `body_*`（第 43 工具特判为 `body_state`）；默认数据目录切为 `~/.agent-body/body.db`（300 MB 现网库零损直迁并留存 `/root/.steward.bak-20261122` 备份）；Mesh 协议头切为 `X-Body-*`；Hook 桥接切为 `body_bridge.py`；Systemd 守护切为 `agent-body.service`；`skills/agent-body-*` 与 `presentation/agent-body-deck.html` 全部 `git mv` 重命名并刷新；全量 268 项测试、Playwright 9/9、Bench `v3.7` 与 `make evolution-check`（0 drift）全绿（详见 [roadmap-phase48.md](docs/src_doc/roadmap-phase48.md)）。当前仓库目录名保留不动，待用户后续手动改名。
 
-32. 数据库有等待事件、统计信息采样快照、ebpf、AWR等分析性能的手段，是否可以借鉴到当前项目？目的是设计一个可以用于项目自身性能基准抓取或设定,性能诊断,优化的功能。 
+32. **本体内生等待事件 (Wait Events)、`/proc/self` 内核探针、AWR 快照黄金基线差分与 ADDM 自优化 (`Phase 50`)** `✅ Phase 50 已全量落地（对应规约 #2, #8, #9, #16, #27, #28）`:
+    > 原始探讨：数据库有等待事件、统计信息采样快照、ebpf、AWR等分析性能的手段，是否可以借鉴到当前项目？目的是设计一个可以用于项目自身性能基准抓取或设定,性能诊断,优化的功能。
+    - **演进方案**：遵循单二进制零外部依赖与 43 工具零膨胀原则（不引入重型 `libbpf/OTel`），在 `src/body/perf_awr.rs` 落地四大内生性能工程支柱：① **无锁等待事件直方图 (`WaitEventRegistry`)**：划分 `Lock` / `IO` / `Net` / `CPU` / `IPC` / `Idle` 6 大类 18 事件 + 8 档对数分位桶 + RAII `WaitEventGuard`（单次开销 `<100ns`）；② **零特权 `/proc/self` 内核探针 (`KernelSelfTelemetry`)**：直读 `VmRSS`、`VmHWM`、`open_fds`、`voluntary/nonvoluntary_ctxt_switches`、物理读写字节与 SQLite WAL 尺寸；③ **AWR 快照、黄金基准 (`Golden Baseline`) 与差分报告**：支持抓取快照、设定黄金基线、计算 `Body Time` 分解与资源漂移率；④ **ADDM 5 大瓶颈诊断规则与 `L1` 一键自调优 (`perf_tune`)**：联动 SQLite `PRAGMA optimize/wal_checkpoint/shrink_memory` 与 Linux `malloc_trim(0)`，内聚挂载于 `body_state` (`perf_snapshot` / `perf_awr` / `perf_tune`) 实现 CLI/MCP/Web 1:1:1 同步（详见 [18-wait-events-and-awr-perf-diagnostics-spec.md](docs/design_doc/18-wait-events-and-awr-perf-diagnostics-spec.md) 与 [roadmap-phase50.md](docs/src_doc/roadmap-phase50.md)）。
 
 33. **代码质量治理、`W10`/`DQ5` SLA 全绿修复、位置无关性硬化与五重质量门禁 (`Phase 49`)** `✅ Phase 49 已全量落地（对应规约 #9, #11, #13, #28）`:
     > 原始反馈：WEB UI 中实证基准与账本中执行真机运行A/B基准（全量套件）时，我看到打叉的 SLA FAIL 以及打叉的 W10 · 复杂模板依赖抽取抗假阳性 FAIL · 省 88.9% · 质量 56→90 (+34.0) · 事实 2/2 · 密度 9.0x。改过名字后，似乎代码质量下降了，请治理一下代码质量。

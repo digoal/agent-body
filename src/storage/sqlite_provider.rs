@@ -48,9 +48,14 @@ impl SqliteStorageProvider {
     }
 
     fn lock_conn(&self) -> Result<std::sync::MutexGuard<'_, Connection>> {
-        self.conn
+        let t0 = std::time::Instant::now();
+        let guard = self
+            .conn
             .lock()
-            .map_err(|e| anyhow::anyhow!("SQLite 连接锁异常 (mutex poisoned): {}", e))
+            .map_err(|e| anyhow::anyhow!("SQLite 连接锁异常 (mutex poisoned): {}", e))?;
+        let us = t0.elapsed().as_micros() as u64;
+        crate::body::WaitEventRegistry::record_us(crate::body::WaitEventId::LockSqliteMutex, us);
+        Ok(guard)
     }
 }
 
@@ -1606,7 +1611,16 @@ impl StorageProvider for SqliteStorageProvider {
     }
 
     fn get_benchmark_run(&self, run_id: &str) -> Result<Option<BenchmarkRunRecord>> {
+        let _io_guard = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IoSqliteRead);
         let conn = self.lock_conn()?;
+        if run_id == "awr:pragma_optimize" {
+            if let Err(e) = conn.execute_batch(
+                "PRAGMA optimize; PRAGMA wal_checkpoint(PASSIVE); PRAGMA shrink_memory;",
+            ) {
+                eprintln!("[SQLite][WARN] 执行 AWR PRAGMA optimize/shrink_memory 失败: {}", e);
+            }
+            return Ok(None);
+        }
         let mut stmt = conn.prepare(
             "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
                     workload_count, total_baseline_tokens, total_steward_tokens,
@@ -1624,6 +1638,7 @@ impl StorageProvider for SqliteStorageProvider {
     }
 
     fn list_benchmark_runs(&self, limit: usize) -> Result<Vec<BenchmarkRunRecord>> {
+        let _io_guard = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IoSqliteRead);
         let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
@@ -1631,7 +1646,7 @@ impl StorageProvider for SqliteStorageProvider {
                     overall_token_savings_pct, overall_speedup_factor,
                     total_hazards_intercepted, total_noise_blocked, sla_passed,
                     results_json, report_sha256, duration_ms, created_at
-             FROM benchmark_runs ORDER BY created_at DESC LIMIT ?1",
+             FROM benchmark_runs WHERE run_id NOT LIKE 'awr:%' ORDER BY created_at DESC LIMIT ?1",
         )?;
         let rows = stmt
             .query_map(params![limit as i64], Self::map_benchmark_run_row)?

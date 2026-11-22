@@ -579,6 +579,9 @@ agent-body [OPTIONS] <COMMAND>
   - `resume [--by-brain <NAME>] [--checkpoint-id <ID>]`: 恢复最新未消费接力胶囊并标注接替大脑。
   - `heal [--json]`: 严格在 `L1_AUTONOMIC` 包络内执行过期锁清理、租约校准与新鲜度对账。
   - `peers [--json]`: 拉取多机 Mesh 节点 `/api/v1/mesh/body_manifest` 本体名片。
+  - `perf-snapshot [--label <NAME>] [--set-baseline] [--json]`: 抓取本体内生 6 类 18 种等待事件与 `/proc/self` 内核性能快照（可选设为 `Golden Baseline` 黄金性能基准）。
+  - `perf-awr [--snap-a <ID>] [--snap-b <ID>] [--vs-baseline true|false] [--json]`: 生成 AWR 快照/黄金基线差分性能报告与 ADDM 瓶颈诊断处方。
+  - `perf-tune [--json]`: 在 `L1_AUTONOMIC` 包络内执行一键性能与内存自优化（`PRAGMA optimize` + `wal_checkpoint` + `shrink_memory` + `malloc_trim(0)`）。
 - **调用示例**:
   ```bash
   agent-body body manifest
@@ -586,6 +589,9 @@ agent-body [OPTIONS] <COMMAND>
   agent-body body envelope --action write_file --target /etc/shadow
   agent-body body handoff --from-brain antigravity --goal "完成 PG WAL 调优验证" --next-step "跑 pgbench 对比"
   agent-body body resume --by-brain claude-code
+  agent-body body perf-snapshot --label golden-v1 --set-baseline
+  agent-body body perf-awr --vs-baseline true
+  agent-body body perf-tune
   ```
 
 

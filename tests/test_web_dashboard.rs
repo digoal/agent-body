@@ -254,6 +254,35 @@ Content-Length: 75\r\n\r\n\
     let resp_reset = send_http_request("127.0.0.1", bound_port, reset_req).await;
     assert!(resp_reset.contains("HTTP/1.1 200 OK"));
 
+    // 4.10 验证 Phase 50 内生 AWR 性能快照、差分报告与 L1 自调优 Web API (写接口鉴权 + 读接口响应)
+    let snap_unauth = "POST /api/v1/body/perf/snapshot HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}";
+    let resp_snap_unauth = send_http_request("127.0.0.1", bound_port, snap_unauth).await;
+    assert!(resp_snap_unauth.contains("HTTP/1.1 401 Unauthorized"));
+
+    let snap_body = "{\"label\":\"e2e-golden\",\"set_baseline\":true}";
+    let snap_req = format!(
+        "POST /api/v1/body/perf/snapshot HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+        snap_body.len(),
+        snap_body
+    );
+    let resp_snap = send_http_request("127.0.0.1", bound_port, &snap_req).await;
+    assert!(resp_snap.contains("HTTP/1.1 200 OK"));
+    assert!(resp_snap.contains("\"is_baseline\":true"));
+
+    let resp_awr = send_http_request(
+        "127.0.0.1",
+        bound_port,
+        "GET /api/v1/body/perf/awr?vs_baseline=true HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
+    )
+    .await;
+    assert!(resp_awr.contains("HTTP/1.1 200 OK"));
+    assert!(resp_awr.contains("\"addm_findings\""));
+
+    let tune_req = "POST /api/v1/body/perf/tune HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer secret123\r\nContent-Length: 2\r\n\r\n{}";
+    let resp_tune = send_http_request("127.0.0.1", bound_port, tune_req).await;
+    assert!(resp_tune.contains("HTTP/1.1 200 OK"));
+    assert!(resp_tune.contains("\"actions_executed\""));
+
     // 5. 验证 SSE (Server-Sent Events) 长连接推流
     let mut sse_stream = TcpStream::connect(format!("127.0.0.1:{}", bound_port)).await.expect("connect sse");
     let sse_req = "GET /api/v1/stream HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n";

@@ -101,6 +101,7 @@
 - ⚡ **[15-adaptive-optimistic-pessimistic-concurrency-spec.md](docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)**：乐观-悲观自适应并发控制（AOPCC）与失败早回退规格说明书（期望代价数学边界、开工乐观直通租约、三态动作分级器与 `PostToolUse` 碰壁秒级自愈）
 - 📜 **[16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md)**：双域全链路行为审计、因果溯源与数据驱动自进化规格说明书（`IN_AGENT` + `OUT_OF_AGENT` 双域审计、`Watcher` 60s 折叠防洪、`before_after_delta` + `evidence_sha256`、DuckDB OLAP 分析与 AOPCC 租约/规则自进化飞轮）
 - 🧬 **[17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)**：Agent 本体（宿主机具身底座）、跨大脑连续性接力、五维稳态生命体征与四级自治包络规格说明书（`BodyManifest`、`ContinuityCapsule` `<=300 tok`、`HomeostasisVitals`、`L0~L3` 权限边界与三层命名兼容契约）
+- 📈 **[18-wait-events-and-awr-perf-diagnostics-spec.md](docs/design_doc/18-wait-events-and-awr-perf-diagnostics-spec.md)**：本体内生等待事件（Wait Events）、`/proc/self` 零特权内核遥测、AWR 快照黄金基线差分与 ADDM 自优化设计规格说明书（6 大类 18 事件、`Body Time` 分解、8 档对数分位桶与 `L1` 内存/锁自调优）
 
 ---
 
@@ -259,7 +260,7 @@ cargo build --release
 
 9. **极速与轻量化 (Sub-Millisecond Response)**：
    - 核心只读/决策 API 端到端响应必须在毫秒/微秒级以内（实测微基准：放置决策 `~30 μs`，3 跳图遍历 `~120 μs`，FTS5 检索 `~250 μs`，三位一体冷启动简报 `< 15 ms`），绝不能成为 Agent 执行链路的性能瓶颈。
-   - CLI/MCP 单次进程常驻内存 `< 15 MB`，内嵌 Web + DuckDB + inotify 的全功能常驻守护内存 `< 90 MB`、空闲 CPU `< 0.5%`。
+   - CLI/MCP 单次进程常驻内存 `< 15 MB`，内嵌 Web + DuckDB + inotify 的全功能常驻守护内存 `< 90 MB`、空闲 CPU `< 0.5%`；大批量资产对账与后台巡检在释放工作集后必须主动触发 SQLite `PRAGMA shrink_memory` 与 `malloc_trim(0)` 归还堆页。
 
 ### 工程开发规约
 
@@ -340,10 +341,10 @@ cargo build --release
     - **因果溯源、不可篡改存证与脱敏底线**：每条 `audit_events` 记录必须携带 `trace_id`、`session_id`、`domain`、`actor_kind`、`concurrency_mode`、`outcome`、`before_after_delta`（`<= 4KB` 经 `SecretRedactor` 强制脱敏）及 `evidence_sha256` 完整性指纹，写入耗时 `< 80 μs` 且零阻塞降级容错。
     - **OLAP 分析与自进化闭环**：审计账本统一同步至 DuckDB 列存引擎支持多维聚合洞察与安全 Parquet/CSV 导出，并通过 `W16` 与 `DQ7` 门禁持续守护双域留痕完整性、零明文凭据残留与自进化有效率（详见 [16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md)）。
 
-27. **Agent 本体具身底座、跨大脑连续性、五维稳态自治与三层命名兼容规约 (Agent Embodiment Substrate, Cross-Brain Continuity, Homeostasis & Three-Tier Naming Compatibility)**：
+27. **Agent 本体具身底座、跨大脑连续性、五维稳态自治、内生 AWR 性能遥测与三层命名兼容规约 (Agent Embodiment Substrate, Cross-Brain Continuity, Homeostasis, Built-in AWR & Three-Tier Naming Compatibility)**：
     - **脑体分离与具身着陆 (`BodyManifest` & `ContinuityCapsule`)**：确立 LLM/客户端为瞬态大脑、本项目为永驻宿主机的 Agent 本体；任何新接入大脑均可在 `< 10 ms` 内获取确定性 `body_id`、六器官健康自省及 `<= 300 tok` 跨大脑工作态接力胶囊（全量经 `SecretRedactor` 脱敏与 `PromptInjectionScanner` 抗投毒清洗，支持换脑不失忆、多本体只读名片发现）。
-    - **五维生命体征与 `L1` 自主稳态反射 (`HomeostasisVitals`)**：聚合感官清晰度、反射灵敏度、海马体纯净度、代谢健康度与免疫可溯度为 `0~100` 综合稳态分，低于阈值时仅在 `L1_AUTONOMIC` 包络内触发可逆自愈，严禁越界执行 `L2/L3` 动作，并通过 `W17` 与 `DQ8` 基准门禁持续验证。
-    - **三层命名兼容底线**：对外品牌、架构文档、代码注释、WebUI 与演说物料全面围绕「Agent 本体」叙事升级，同时底层 Crate/二进制（`agent-body`）、配置目录（`~/.agent-body/`）与既有 `body_*` MCP/CLI 契约严格保持 100% 向后兼容（详见 [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)）。
+    - **五维生命体征、内生等待事件与 AWR 基线自调优 (`HomeostasisVitals` & `BodyPerfEngine`)**：聚合感官清晰度、反射灵敏度、海马体纯净度、代谢健康度与免疫可溯度为 `0~100` 综合稳态分；内置 `< 100 ns` 零锁等待事件直方图（`Lock / IO / Net / CPU / IPC`）、`/proc/self` 内核资源探针、AWR 快照/黄金基线差分与 ADDM 根因诊断引擎，支持在 `L1_AUTONOMIC` 包络内一键触发 SQLite `PRAGMA optimize / shrink_memory` 与 `malloc_trim(0)` 自优化（详见 [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md) 与 [18-wait-events-and-awr-perf-diagnostics-spec.md](docs/design_doc/18-wait-events-and-awr-perf-diagnostics-spec.md)）。
+    - **三层命名兼容底线**：对外品牌、架构文档、代码注释、WebUI 与演说物料全面围绕「Agent 本体」叙事升级，同时底层 Crate/二进制（`agent-body`）、配置目录（`~/.agent-body/`）与既有 `body_*` MCP/CLI 契约严格保持 100% 向后兼容。
 
 28. **二进制位置无关性、模块化复杂度与错误可观测性规约 (Relocatable Binary, Modularity & Observable Error Hygiene)**：
     - **二进制 100% 位置无关**：生产路径及内嵌 Benchmark/Demo 严禁依赖编译期源码绝对路径（如 `env!("CARGO_MANIFEST_DIR")`），单二进制搬移至任意目录、改名或运行于容器内必须 100% 通过 `bench run --suite full`（由 `make lint-hygiene` 强制守卫）。
