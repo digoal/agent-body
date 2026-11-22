@@ -196,7 +196,7 @@ flowchart TD
 - [ ] **本体边界与命名兼容自检（规约 #2 & #27）**：是否严守脑体分离不内置业务 LLM 规划循环？自治行为是否遵守 `L0~L3` 权限包络（不越权执行 `L2/L3`）？对外叙事升级为「Agent 本体」的同时，是否保证 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
-- [ ] 是否执行了 `make quality-gate`（`evolution-check` + `lint-panic` + `lint-hygiene` 位置无关性与错误可观测性 + `lint-strict` 零警告编译）且 `cargo test` 全部通过（**要求 >= 268 tests 全部通过，零 warning**）？
+- [ ] 是否执行了 `make quality-gate`（`evolution-check` 含根目录核心文件自文档化 + `lint-panic` + `lint-hygiene` 位置无关性与错误可观测性 + `lint-strict` 零警告编译）且 `cargo test` 全部通过（**要求 >= 270 tests 全部通过，零 warning**）？若改动 `presentation/` 或演说生成脚本，是否已通过 `make verify-decks` Playwright 无头验真？
 - [ ] **二进制位置无关与发版一致性自检（规约 #11 & #28）**：生产路径是否 0 处 `env!("CARGO_MANIFEST_DIR")`？改名/核心修复提交后是否已重编安装 `make restart` 并核验 `agent-body --version` hash 与 `HEAD` 一致且 `DQ5 >= 98%`？
 - [ ] 是否执行了 `agent-body preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？

@@ -6,7 +6,7 @@ SHELL := /bin/bash
 TARGET := target/release/agent-body
 INSTALL_PATH ?= /usr/local/bin/agent-body
 
-.PHONY: all build check test preflight install restart clean docker-build lint-panic lint-hygiene lint-strict quality-gate sync-mirror codegraph evolution-check
+.PHONY: all build check test preflight install restart clean docker-build lint-panic lint-hygiene lint-strict quality-gate sync-mirror codegraph evolution-check verify-decks
 
 all: build
 
@@ -72,3 +72,7 @@ codegraph:
 # 确定性架构清单生成与文档数字防漂移门禁
 evolution-check:
 	python3 scripts/evolution_manifest.py --check
+
+# Playwright 无头演说视觉与交互全量门禁（规约 #13 & #17）
+verify-decks:
+	python3 scripts/verify_presentations.py

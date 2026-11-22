@@ -1,9 +1,9 @@
 # Agent Body (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-22T18:55:00+08:00  
+> 最新更新: 2026-11-22T20:08:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: **Phase 1~50 全部完成（ISSUE #27~#33 全量交付）**；项目已彻底更名为 **`Agent Body` (`agent-body`)**，完成 Phase 49 代码质量治理与五重确定性门禁（`make quality-gate`），以及 Phase 50 内生等待事件 (`WaitEventRegistry` `<100ns`)、`/proc/self` 内核探针、AWR 快照黄金基线差分与 ADDM `L1` 自调优引擎；43 个原生 MCP 工具（`body_*` 黑白屏 100% 同步），27 个 `src/lib.rs` 模块，82 个 SPI 方法，27 张 SQLite 表，270+ 项测试全绿，Benchmark `v3.7` 34/34 项 100% 全绿基线
+> 当前状态: **Phase 1~51 全部完成（ISSUE #27~#35 全量交付）**；项目已彻底更名为 **`Agent Body` (`agent-body`)**，完成 Phase 49 代码质量治理与五重确定性门禁（`make quality-gate`）、Phase 50 内生等待事件/AWR/ADDM 自调优，以及 Phase 51 根目录 15 项核心文件自文档化门禁、规约 `#13/#14/#17/#20` 深化升级与旗舰双演说 HTML（`presentation.html` 16 页 + `agent-body-deck.html` 24 页）Decks-as-Code 推翻重写（Playwright 9/9 全绿）；43 个原生 MCP 工具（`body_*` 黑白屏 100% 同步），27 个 `src/lib.rs` 模块，82 个 SPI 方法，27 张 SQLite 表，270+ 项测试全绿，Benchmark `v3.7` 34/34 项 100% 全绿基线
 
 ---
 
@@ -126,6 +126,12 @@
 | **Phase 43** | 双域全链路行为审计（`IN_AGENT` + `OUT_OF_AGENT`）、`Watcher` 60s 折叠防洪、DuckDB OLAP 分析与审计驱动自进化（Benchmark `v3.6` `W16` / `DQ7` / `PR-12`） | [roadmap-phase43.md](roadmap-phase43.md) / ISSUE #26 | ✅ **已完成** | 2026-11-22 |
 | **Phase 44** | **Agent 本体内核**：新增 `src/body/` 与 `body_checkpoints`（`BodyManifest`、`ContinuityCapsule` `<=300 tok`、五维 `HomeostasisVitals`、四级 `AutonomyEnvelope`、多体联邦名片）、第 43 工具 `body_state`（43/43 Parity）与 Benchmark `v3.7`（`W17` / `DQ8` / `PR-13`） | [roadmap-phase44-45.md](roadmap-phase44-45.md) / ISSUE #27 | ✅ **已完成** (`44.1~44.6`) | 2026-11-22 |
 | **Phase 45** | **全物料本体化刷新与路演升维**：三层命名兼容下刷新代码注释、CLI/MCP 描述、`README`/`manual`/`arch`/`skills/`（含全局镜像），升级 Web 路演剧场第 7 幕「换脑不失忆」并衔接 ISSUE #28/#29 | [roadmap-phase44-45.md](roadmap-phase44-45.md) / ISSUE #27 | ✅ **已完成** (`45.1~45.3`) | 2026-11-22 |
+| **Phase 46** | **体系化演讲 HTML 矩阵**：新建 `presentation/` 并迁入双旗舰 Deck，基于 `deck_engine.py` 交付 `01~06` 六讲 × 30 分钟单点说透专题与 `index.html`，Playwright 9/9 全绿 | [roadmap-phase46.md](roadmap-phase46.md) / ISSUE #28 | ✅ **已完成** | 2026-11-22 |
+| **Phase 47** | **文档结构收拢与路径刷新**：将 7 个分散一级文档目录 `git mv` 统一收拢至 `docs/`，全仓刷新 90 文件旧路径并重建 `.codegraph/` | ISSUE #29 | ✅ **已完成** | 2026-11-22 |
+| **Phase 48** | **全面更名 `agent-body`（彻底硬切）**：Crate/二进制/43 MCP 工具 (`body_*`)/数据目录 (`~/.agent-body/`)/Mesh 协议头/Systemd 服务/SKILL/活跃文档全量无损切换 + 600% CPU 根治 | [roadmap-phase48.md](roadmap-phase48.md) / ISSUE #30 #31 | ✅ **已完成** | 2026-11-22 |
+| **Phase 49** | **代码质量治理与五重确定性门禁**：移除生产路径 `CARGO_MANIFEST_DIR` 实现 100% 位置无关、`W10`/`DQ5` 全绿修复、新增 `code_hygiene.py` 与 `make quality-gate`、大文件模块化拆分 | [roadmap-phase49.md](roadmap-phase49.md) / ISSUE #33 | ✅ **已完成** | 2026-11-22 |
+| **Phase 50** | **内生等待事件、`/proc/self` 内核探针、AWR 基线差分与 ADDM 自优化**：6 类 18 等待事件 (`<100ns`)、32 快照黄金基线、5 大 ADDM 规则与 `L1` 一键自调优 (`body_state` 零膨胀内聚) | [roadmap-phase50.md](roadmap-phase50.md) / ISSUE #32 | ✅ **已完成** | 2026-11-22 |
+| **Phase 51** | **根目录核心文件自文档化、规约深化与旗舰双演说 HTML 推翻重写**：`README.md` 15 项根文件逐一建档 + 防漂移校验、规约 `#13/#14/#17/#20` 升级、Decks-as-Code 推翻重写 `presentation.html` (16 页) 与 `agent-body-deck.html` (24 页) | [roadmap-phase51.md](roadmap-phase51.md) / ISSUE #34 #35 | ✅ **已完成** | 2026-11-22 |
 
 > 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md)、[progress-phase27.md](progress-phase27.md)、[roadmap-phase29.md](roadmap-phase29.md)、[roadmap-phase30.md](roadmap-phase30.md)、[progress-phase30.md](progress-phase30.md)、[roadmap-phase32.md](roadmap-phase32.md)、[roadmap-phase34-35.md](roadmap-phase34-35.md)、[roadmap-phase36.md](roadmap-phase36.md)、[roadmap-phase37.md](roadmap-phase37.md)、[roadmap-phase38-39.md](roadmap-phase38-39.md)、[roadmap-phase40-41.md](roadmap-phase40-41.md)、[roadmap-phase42.md](roadmap-phase42.md)、[roadmap-phase43.md](roadmap-phase43.md) 与 [roadmap-phase44-45.md](roadmap-phase44-45.md)
 
@@ -173,9 +179,9 @@
 
 ## 断点恢复指引
 如果任务中断，重新启动时只需：
-1. 读取根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase44-45.md](roadmap-phase44-45.md)；
-2. 查看子任务断点状态表并接续下一议题 **Phase 46 ([ISSUE.md #28](../../ISSUE.md#L134))** 与 **Phase 47 ([ISSUE.md #29](../../ISSUE.md#L137))**；
-3. 当前已完成 **Phase 1~45**，后续续传与阶段验收请严格对齐 `EVOLUTION_GUIDE.md` 并通过 `make evolution-check` 校验。
+1. 读取根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase51.md](roadmap-phase51.md)；
+2. 查看子任务断点状态表并接续下一未完成原子任务；
+3. 当前已完成 **Phase 1~51**，后续续传与阶段验收请严格对齐 `EVOLUTION_GUIDE.md` 并通过 `make quality-gate && make verify-decks` 校验。
 
 🎉 **Phase 12（运行依赖显式化与可移植部署）已 100% 全量串行交付**：
 - 严格对齐 README.md ISSUE #10 四层贯通要求；

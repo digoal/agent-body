@@ -1533,20 +1533,20 @@ h1{{font-family:var(--f-r);font-size:44px;font-weight:600;margin-top:12px;letter
 <div class="wrap">
   <div class="eyebrow">AGENT BODY · PRESENTATION SUITE · v0.4.0 · APACHE-2.0</div>
   <h1>Agent 本体体系化演讲与路演总览</h1>
-  <p class="sub">统一采用<b>「浅色纸基 · 地层剖面 · 工程蓝图」</b>视觉规范（零外部依赖 · 内联正交 SVG · <code>N/T</code> 联动讲稿 · <code>G</code> 目录 · <code>P/A/S/R</code> 步进动画）。基线实测：27 模块 · 43 工具 · 82 SPI · 268 测试全绿 · Bench v3.7 全绿（-99.22% Token · 质量 35.8→99.8）。</p>
+  <p class="sub">统一采用<b>「浅色纸基 · 地层剖面 · 工程蓝图」</b>视觉规范（零外部依赖 · 内联正交 SVG · <code>N/T</code> 联动讲稿 · <code>G</code> 目录 · <code>P/A/S/R</code> 步进动画 · Decks-as-Code 确定性生成）。基线实测：27 模块 · 43 工具 · 82 SPI · 270+ 测试全绿 · Bench v3.7 全绿（-99.24% Token · 质量 35.8→99.8 · 内生 AWR 稳态）。</p>
   <div class="rule"></div>
-  <div class="sec-lbl">OVERVIEW DECKS · 全景总览版（已刷新至 v0.4.0 Agent 本体现状）</div>
+  <div class="sec-lbl">OVERVIEW DECKS · 旗舰全景总览版（Phase 51 推翻重写 · 全面对齐 v0.4.0 Agent 本体现状）</div>
   <div class="hero-grid">
     <a class="hero-card" href="presentation.html">
-      <div class="dc-top"><span>ROADSHOW · 路演总览版</span><span class="dc-meta">16 页 · 20 分钟</span></div>
+      <div class="dc-top"><span>ROADSHOW · 路演总览版</span><span class="dc-meta">16 页 · 15~20 分钟</span></div>
       <h2>Agent 本体对外路演版（presentation.html）</h2>
-      <p>面向投资人、产品负责人与技术决策者：比较优势 → 脑体分离 → 7 大黄金剧目 → Bench v3.7 全绿实证成绩单。</p>
+      <p>面向投资人、CTO 与技术决策者：比较优势 → 脑体分离六大器官 → AOPCC 乐观-悲观并发 → 换脑不失忆 → 内生 AWR → Bench v3.7 帕累托双门禁与四赛道竞品实测。</p>
       <span class="dc-go">打开路演版 →</span>
     </a>
     <a class="hero-card clay" href="agent-body-deck.html">
-      <div class="dc-top"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">22 页 · 45 分钟</span></div>
+      <div class="dc-top"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">24 页 · 45~60 分钟</span></div>
       <h2>Agent 本体深度技术交流版（agent-body-deck.html）</h2>
-      <p>面向一线架构师与研发团队：三位一体到六大器官完整演进、关键数据结构、工程账与开放技术议题。</p>
+      <p>面向数据库内核与 AI Infra 架构师：27 模块 / 82 SPI、L1~L3 分层图谱、AOPCC 数学边界、新鲜度写穿、MeshEnvelope v1.0、双域审计自进化、Wait Events / AWR / ADDM 与五重确定性门禁。</p>
       <span class="dc-go">打开交流版 →</span>
     </a>
   </div>

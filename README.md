@@ -117,7 +117,7 @@
 - 🛠️ **[02-for-developers.md](docs/arch/02-for-developers.md)**（面向研发工程师与贡献者）：
   - 源码 27 大模块全景职责与依赖拓扑速查；
   - 核心扩展三大 How-To（添加原生 MCP 工具、实现新存储后端 SPI、新增环境预检项）；
-  - 252+ 项自动化测试套件与本地开发流；
+  - 270+ 项自动化测试套件与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
 - 🧭 **[03-for-users.md](docs/arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
   - 大管家核心心智模型与物理世界哨兵定位；
@@ -140,7 +140,7 @@
 - 🛠️ **[07-troubleshooting.md](docs/manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
 - 🌐 **[08-web-dashboard.md](docs/manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级大管家拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
 - 🪝 **[09-hooks-integration.md](docs/manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
-- 📊 **[10-benchmark-and-roi.md](docs/manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.6 与生产效能存证账本（`W1~W16` A/B 负载 + `M1~M5` 微基准 + `DQ1~DQ7` + `COMP-C1~C4` 竞品对标 + `PR-01~12` 溯源流水）
+- 📊 **[10-benchmark-and-roi.md](docs/manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.7 与生产效能存证账本（`W1~W17` A/B 负载 + `M1~M5` 微基准 + `DQ1~DQ8` + `COMP-C1~C4` 竞品对标 + `PR-01~13` 溯源流水）
 
 ---
 
@@ -213,7 +213,22 @@ cargo build --release
 - `skills/` : 与本产品相关的对接 AI Agent 的 SKILL 包
 - `src/` : Rust 核心源代码
 - `tests/` : 自动化集成测试与 Benchmark 评测套件
-- 根目录核心文件：`README.md` · `INSTALL.md` · `EVOLUTION_GUIDE.md` · `ISSUE.md` · `user_feedback.md` · `Cargo.toml` · `Cargo.lock` · `build.rs` · `Makefile` · `Dockerfile` · `docker-compose.yml` · `config.example.toml` · `LICENSE`
+- 根目录核心文件：
+  - `README.md` : 项目总览、核心架构定位、快速上手指南、项目结构与 28 条顶层设计规约
+  - `INSTALL.md` : 生产安装部署手册（多发行版系统依赖矩阵、Docker 容器化、Systemd 常驻托管与故障排查）
+  - `EVOLUTION_GUIDE.md` : 零重扫项目演进活地图（架构事实锚点、8 大演进场景 O(1) 变更触点矩阵与 27 模块坐标表）
+  - `ISSUE.md` : 未来演进路线与待探讨议题（Roadmap & Open Issues）总账，记录历史落盘状态与后续探索方向
+  - `user_feedback.md` : 主理人与 Agent 现网使用体验、痛点与自进化探针上报总账（与 `body_feedback` 双向同步）
+  - `Cargo.toml` : Rust Crate 元数据、生产依赖清单与 Release 编译优化配置
+  - `Cargo.lock` : Rust 依赖树精确版本锁定文件，保障跨环境确定性可复现构建
+  - `build.rs` : Rust 编译期构建脚本，负责注入 Git Commit Hash、构建时间与目标平台信息至 `--version`
+  - `Makefile` : 一键构建、五重质量门禁（`quality-gate`）、演说验真（`verify-decks`）、服务热重启与开源镜像同步自动化入口
+  - `Dockerfile` : 多阶段轻量容器镜像构建文件（编译期 Rust 工具链与运行期精简 Debian 镜像分离）
+  - `docker-compose.yml` : 本地及生产容器化一键编排配置（数据卷挂载、端口映射、健康检查与环境变量模板）
+  - `config.example.toml` : 带完整参数注释的 `~/.agent-body/config.toml` 配置模板（存储后端、扫描策略、安全鉴权、Web/Mesh 与 Ollama 配置）
+  - `.gitignore` : Git 版本控制忽略清单（排除 `target/` 构建产物、本地缓存、临时数据与敏感文件）
+  - `.dockerignore` : Docker 构建上下文排除清单（排除 `target/`、`.git/`、`.codegraph/` 等大目录以加速镜像构建）
+  - `LICENSE` : 本项目开源许可协议全文（Apache License 2.0）
   
 ## 核心设计原则与约束 (Design Principles & Constraints)
 
@@ -276,12 +291,12 @@ cargo build --release
     - 在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误，保证服务 7×24 稳定运行。
 
 13. **测试驱动、零警告与五重确定性门禁**：
-    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 268+ 项自动化测试）。
-    - 任何提交前必须通过一键五重确定性门禁 `make quality-gate && make test`：`make evolution-check`（架构计数、活跃路线图、CLI 帮助与部署路径 0 漂移）、`make lint-panic`（生产代码 0 `unwrap`/`expect`）、`make lint-hygiene`（位置无关性、配置卫生与静默吞错预算检查）、`make lint-strict`（本 crate `-D warnings` 严格编译 + 自动联动 `clippy`）及 `cargo test` 全绿。
+    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 270+ 项自动化测试）。
+    - 任何提交前必须通过一键五重确定性门禁 `make quality-gate && make test`：`make evolution-check`（架构计数、根目录核心文件自文档化、活跃路线图、CLI 帮助与部署路径 0 漂移）、`make lint-panic`（生产代码 0 `unwrap`/`expect`）、`make lint-hygiene`（位置无关性、配置卫生与静默吞错预算检查）、`make lint-strict`（本 crate `-D warnings` 严格编译 + 自动联动 `clippy`）及 `cargo test` 全绿；凡修改 `presentation/` 或演说生成脚本时，必须追加通过 `make verify-decks` Playwright 无头视觉与交互门禁。
     - MCP 工具与 CLI 子命令必须保持一一映射（Phase 44 已实现 43/43 同步）。
 
 14. **断点续传检查点机制**：
-    - 开发任何跨步骤大型特性时，必须在当前活跃的 `docs/src_doc/roadmap-phase*.md` 内建立原子检查点追踪表，并在总表 [docs/src_doc/progress.md](docs/src_doc/progress.md) 登记阶段状态（与规约 #20 零重扫配合，不再为每个 Phase 额外生成碎片化的 `progress-phase*.md`）。
+    - 开发任何跨步骤大型特性时，必须在当前活跃的 `docs/src_doc/roadmap-phase*.md` 内建立原子检查点追踪表，并在阶段收口时同步刷新总表 [docs/src_doc/progress.md](docs/src_doc/progress.md)（含阶段明细行与断点恢复指引）及 [EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md) 的 `Tier-0` 活跃路线图链接（与规约 #20 零重扫配合，不再为每个 Phase 额外生成碎片化的 `progress-phase*.md`）。
     - 确保中断后任何新会话均能通过读取 `EVOLUTION_GUIDE.md` + 当前活跃 `roadmap-phase*.md` 恢复上下文无缝继续。
 
 15. **宏微联邦、不重复造轮子**：
@@ -294,9 +309,9 @@ cargo build --release
     - 为防止 MCP 工具数量膨胀打爆上下文，新能力优先在既有原生 MCP 工具内通过 `action` 子模式内聚聚合，并在 CLI 子命令、Web REST API 与前端工作台按**子动作粒度（Action-level）**保持 1:1:1 同步。
     - 白屏端每次交互应同步镜像回显等价的 CLI 命令与 MCP JSON-RPC 请求体；并通过 `/api/v1/parity/matrix` 与自动化契约测试强制守卫 **100% 对齐率**。
 
-17. **产品路演、场景演示与体系化演说内建规约 (Built-in Roadshow & Modular Deck Delivery)**：
-    - 从产品经理与市场营销推广视角，将「脑体分离 · Agent 本体」核心理念与高频痛点沉淀为 Web 端可交互的 **路演演示剧场（Roadshow Live Demo）**，与黑屏 `body_demo_scenario` / `agent-body demo` 同源演进。
-    - 所有路演剧目必须由真实引擎驱动（严禁硬编码假数据），状态写入严格限定在 `demo:*` 隔离沙盒并支持一键无痕复位；同时将离线 HTML 演说（含路演、交流与 30 分钟专题深度拆解体系）与 ROI 实时账单随版本同步刷新。
+17. **产品路演、场景演示与演说代码化交付规约 (Built-in Roadshow & Decks-as-Code Delivery)**：
+    - 从产品经理与市场营销推广视角，将「脑体分离 · Agent 本体」核心理念与高频痛点沉淀为 Web 端可交互的 **路演演示剧场（Roadshow Live Demo）**，与黑屏 `body_demo_scenario` / `agent-body demo` 同源演进；所有路演剧目必须由真实引擎驱动（严禁硬编码假数据），状态写入严格限定在 `demo:*` 隔离沙盒并支持一键无痕复位。
+    - **演说代码化与整体重构红线（Decks-as-Code）**：所有旗舰演说（`presentation/presentation.html`、`presentation/agent-body-deck.html`）与 30 分钟专题演说统一由确定性 Python 引擎（`scripts/deck_engine.py` + `scripts/build_*.py`）生成，共享「地层剖面 / 工程蓝图」视觉 Token 与真实架构数据，严禁手工在成品大 HTML 上局部打补丁拼接；当项目发生核心架构范式跃迁时，旗舰演说必须重构叙事主线并经 `make verify-decks`（Playwright 无头验真：0 报错、0 溢出、0 SVG 重叠/越界、快捷键 `G/N/T/F` 与动画全通）后，重编安装同步至 Web UI 内嵌资产。
 
 18. **实证基准、效能存证与全行为审计双账本规约 (Empirical Benchmark, Verifiable ROI & Dual-Domain Audit Ledger)**：
     - 任何宣称的效能提升（Token 节省率、上下文质量净提升、探索轮次缩减、微秒级响应延迟、故障/冲突拦截率、垃圾噪音阻断率）必须通过可复现的 **A/B 对照基准套件（Without Steward 裸奔基线 vs With Steward 管家赋能）** 与 **生产运行态效能存证账本（Effectiveness Telemetry Ledger）** 双轨实证，严禁无出处估算或主观拍脑袋指标。
@@ -310,8 +325,9 @@ cargo build --release
     - **接口最小暴露、写鉴权与 Mesh 信封签名**：Web/Mesh 默认绑定 `127.0.0.1` 回环地址；全量 Web 写端点及 GC 端点统一受 `auth_token` Bearer 保护，非回环暴露未配置 `auth_token` 时拒绝写操作；跨节点 Mesh 协同写操作、对话与文件投递强制采用 `MeshEnvelope v1.0`（HMAC-SHA256 签名 + 时间窗/Nonce 防重放 + `~/.agent-body/mesh_inbox/` 隔离收件箱），严禁跨机直写覆盖系统与业务文件。
     - **存储最小权限与抗上下文投毒**：`~/.agent-body/` (`0700`) 与 `body.db`/`config.toml` (`0600`) 权限收敛并通过 `preflight` 巡检；对外部仓库/文档语料及跨机 Mesh 对话内容识别并清洗间接提示词注入（Indirect Prompt Injection），同时纳入 `W11`、`W14` 与 `DQ4` 安全回归基准（详见 [11-security-spec.md](docs/design_doc/11-security-spec.md)）。
 
-20. **零重扫演进导航与横向竞品实证对标规约 (Zero-Rescan Evolution & Competitor Benchmarking)**：
+20. **零重扫演进导航、根目录自文档化与横向竞品实证对标规约 (Zero-Rescan Evolution, Root Self-Documentation & Competitor Benchmarking)**：
     - **零重扫演进活地图**：新会话演进优先查阅根目录演进指南（[EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md)）、运行架构清单门禁（`make evolution-check`）并使用本项目 `.codegraph/` 符号地图定位触点，严禁把历史冻结 `roadmap-phase*.md` 全盘扫描一遍。
+    - **根目录核心文件自文档化红线**：仓库根目录新增或重命名核心文件时，必须在 `README.md`「项目结构」中逐一登记其职责说明，并由 `scripts/evolution_manifest.py --check` 自动比对校验，杜绝出现无描述的孤立根目录文件。
     - **横向竞品同场实证**：Benchmark 在与裸奔自对比和生产账本对齐的同时，必须纳入与主流 Agent 基础设施（Mem0 / Letta / PowerContext / Shodh-Memory / OpenViking / AgentFS / rg+psutil）的同机实跑与源码级能力对标，严格区分 `LIVE_BENCHMARKED`（实跑）与 `ARCH_VERIFIED`（源码核实），绝不捏造竞品跑分。
 
 21. **全生命周期信息新鲜度、写穿失效与现实对账规约 (Information Freshness, Write-Through Invalidation & Reality Reconciliation)**：

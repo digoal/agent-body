@@ -242,6 +242,29 @@ def check_drift(manifest: dict) -> list[str]:
         if dp.exists() and "/.steward" in dp.read_text(encoding="utf-8"):
             errors.append(f"{deploy_rel} 仍残留旧数据目录路径 '/.steward'，请统一改为 '/.agent-body'")
 
+    # 校验根目录核心文件是否在 README.md「项目结构」中逐一登记并附描述（规约 #20 / ISSUE #34）
+    readme_path = ROOT / "README.md"
+    if readme_path.exists():
+        readme_text = readme_path.read_text(encoding="utf-8")
+        struct_match = re.search(r"## 项目结构\s*\n(.*?)(?=\n## |\Z)", readme_text, flags=re.S)
+        if not struct_match:
+            errors.append("README.md 缺少「## 项目结构」章节")
+        else:
+            struct_sec = struct_match.group(1)
+            described_files = set(
+                re.findall(r"^\s*-\s+`([^`/]+)`\s*:\s*\S+", struct_sec, flags=re.MULTILINE)
+            )
+            root_files = sorted(
+                p.name
+                for p in ROOT.iterdir()
+                if p.is_file() and (not p.name.startswith(".") or p.name in (".gitignore", ".dockerignore"))
+            )
+            for rf in root_files:
+                if rf not in described_files:
+                    errors.append(
+                        f"README.md 项目结构缺少根目录核心文件 `{rf}` 的逐项职责描述（规约 #20）"
+                    )
+
     return errors
 
 

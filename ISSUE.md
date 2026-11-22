@@ -161,6 +161,10 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - **实证根因**：① `W10` 在生产基准代码中硬编码了编译期宏 `env!("CARGO_MANIFEST_DIR")`，仓库改名为 `agent-body` 后旧二进制指向失效的 `/root/new/work/agent-steward/README.md`，导致 `.md` 示例免疫失效产生 1 条假阳性；② 目录改名后现网遗留 `247` 个失活资产、`98` 个幽灵节点与 `10` 条冗余记忆，使 `DQ5` 跌至 `45.3%`；③ `Dockerfile`/`docker-compose.yml`/`config.example.toml` 残留 `/.steward` 路径断链，且缺少代码卫生/位置无关/吞错门禁。
     - **已落地治理**：移除生产路径 `CARGO_MANIFEST_DIR` 实现 100% 位置无关二进制；修复 Docker/配置/CLI Help/Web UI 残留；治理 `scheduler`/`watcher`/`probes`/`property_graph`/`links` 核心自治路径静默 `let _ =` 吞错；新增 `scripts/code_hygiene.py` 与 `make quality-gate` 五重门禁；模块化拆分 `mcp_schemas.rs`、`cli_args.rs`、`benchmark/workloads/{mod,advanced}.rs`；收敛 SQLite 页缓存 + 巡检后 `malloc_trim(0)` 压降守护进程 RSS；升级 README 规约 #11/#13 并新增规约 #28（详见 [roadmap-phase49.md](docs/src_doc/roadmap-phase49.md)）。
 
-34. README.md 项目结构中，根目录核心文件中的每个文件都要有描述。
+34. **README.md 项目结构中根目录核心文件逐项描述与防漂移门禁 (`Phase 51`)** `✅ Phase 51 已全量落地（对应规约 #20）`:
+    > 原始需求：README.md 项目结构中，根目录核心文件中的每个文件都要有描述。
+    - **已落地交付**：将 `README.md`「项目结构」根目录全部 **15 个核心文件**（含补齐的 `.gitignore` 与 `.dockerignore`）逐一登记并附精准职责说明，校准 2 处计数微漂移（`270+` 测试 / `Benchmark v3.7`）；升级 `scripts/evolution_manifest.py --check` 新增根目录文件自文档化防漂移校验并同步升级 `README.md` 规约 `#13/#14/#17/#20`（详见 [roadmap-phase51.md](docs/src_doc/roadmap-phase51.md)）。
 
-35. presentation/presentation.html, agent-body-deck.html 已经不能完全传达现在的项目了，请先吸收内容，然后基于当前项目的代码和其他文档，推翻重写。
+35. **旗舰双演说 HTML (`presentation.html` & `agent-body-deck.html`) Decks-as-Code 推翻重写与 Playwright 门禁 (`Phase 51`)** `✅ Phase 51 已全量落地（对应规约 #13, #17）`:
+    > 原始需求：presentation/presentation.html, agent-body-deck.html 已经不能完全传达现在的项目了，请先吸收内容，然后基于当前项目的代码和其他文档，推翻重写。
+    - **已落地交付**：彻底告别 Phase 24 手工打补丁旧骨架，构建确定性代码生成器 `scripts/build_flagship_roadshow.py` 与 `scripts/build_flagship_techdeck.py`（复用 `scripts/deck_engine.py`「地层剖面 / 工程蓝图」视觉体系与 `G/N/T/F/P/A/S/R` 交互），推翻重写 **16 页对外路演版 (`presentation/presentation.html`)** 与 **24 页深度技术交流版 (`presentation/agent-body-deck.html`)**，完整传达脑体分离六大器官、L1~L3 分层图谱、AOPCC 乐观-悲观并发控制、写穿新鲜度与换脑不失忆、`MeshEnvelope v1.0`、双域审计与 `P1~P5` 自进化、内生 Wait Events/AWR/ADDM、Benchmark `v3.7` 帕累托双门禁与四赛道竞品实测；同步刷新 `presentation/index.html`、新增 `make verify-decks` Playwright 无头验真 9/9 全绿并重编重启服务同步 Web UI 内嵌演说（详见 [roadmap-phase51.md](docs/src_doc/roadmap-phase51.md)）。
