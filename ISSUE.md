@@ -162,3 +162,5 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - **已落地治理**：移除生产路径 `CARGO_MANIFEST_DIR` 实现 100% 位置无关二进制；修复 Docker/配置/CLI Help/Web UI 残留；治理 `scheduler`/`watcher`/`probes`/`property_graph`/`links` 核心自治路径静默 `let _ =` 吞错；新增 `scripts/code_hygiene.py` 与 `make quality-gate` 五重门禁；模块化拆分 `mcp_schemas.rs`、`cli_args.rs`、`benchmark/workloads/{mod,advanced}.rs`；收敛 SQLite 页缓存 + 巡检后 `malloc_trim(0)` 压降守护进程 RSS；升级 README 规约 #11/#13 并新增规约 #28（详见 [roadmap-phase49.md](docs/src_doc/roadmap-phase49.md)）。
 
 34. README.md 项目结构中，根目录核心文件中的每个文件都要有描述。
+
+35. presentation/presentation.html, agent-body-deck.html 已经不能完全传达现在的项目了，请先吸收内容，然后基于当前项目的代码和其他文档，推翻重写。

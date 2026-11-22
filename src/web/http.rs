@@ -232,18 +232,21 @@ impl HttpResponse {
     pub fn html(html: &str) -> Self {
         Self::new(StatusCode::OK)
             .header("Content-Type", "text/html; charset=utf-8")
+            .header("Cache-Control", "no-cache, no-store, must-revalidate")
             .body_str(html)
     }
 
     pub fn css(css: &str) -> Self {
         Self::new(StatusCode::OK)
             .header("Content-Type", "text/css; charset=utf-8")
+            .header("Cache-Control", "no-cache, no-store, must-revalidate")
             .body_str(css)
     }
 
     pub fn js(js: &str) -> Self {
         Self::new(StatusCode::OK)
             .header("Content-Type", "application/javascript; charset=utf-8")
+            .header("Cache-Control", "no-cache, no-store, must-revalidate")
             .body_str(js)
     }
 

@@ -1169,6 +1169,18 @@ impl McpToolRegistry {
                         Ok(serde_json::to_string_pretty(&snap)?)
                     }
                     "perf_awr" => {
+                        if let Some(rid) = args
+                            .get("report_id")
+                            .and_then(|v| v.as_str())
+                            .filter(|s| !s.trim().is_empty())
+                        {
+                            let rep = crate::body::BodyPerfEngine::load_awr_report(
+                                self.storage.provider().as_ref(),
+                                rid,
+                            )
+                            .ok_or_else(|| anyhow::anyhow!("未找到历史 AWR 报告: {}", rid))?;
+                            return Ok(serde_json::to_string_pretty(&rep)?);
+                        }
                         let snap_a = args.get("snap_a").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty());
                         let snap_b = args.get("snap_b").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty());
                         let vs_baseline = args

@@ -502,6 +502,36 @@ pub struct AwrSnapshot {
     pub kernel_telemetry: KernelSelfTelemetry,
 }
 
+/// AWR 快照轻量摘要（供前端/CLI 快照下拉选择器展示）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AwrSnapshotMeta {
+    pub snapshot_id: String,
+    pub label: String,
+    pub is_baseline: bool,
+    pub captured_at: String,
+    pub rss_kb: u64,
+    pub hwm_kb: u64,
+    pub open_fds: usize,
+    pub total_body_time_us: u64,
+    pub homeostasis_score: f64,
+}
+
+impl AwrSnapshot {
+    pub fn to_meta(&self) -> AwrSnapshotMeta {
+        AwrSnapshotMeta {
+            snapshot_id: self.snapshot_id.clone(),
+            label: self.label.clone(),
+            is_baseline: self.is_baseline,
+            captured_at: self.captured_at.clone(),
+            rss_kb: self.kernel_telemetry.rss_kb,
+            hwm_kb: self.kernel_telemetry.hwm_kb,
+            open_fds: self.kernel_telemetry.open_fds,
+            total_body_time_us: self.time_model.total_body_time_us,
+            homeostasis_score: self.homeostasis_score,
+        }
+    }
+}
+
 /// ADDM 自动性能瓶颈诊断发现项
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddmFinding {
@@ -514,6 +544,21 @@ pub struct AddmFinding {
     pub auto_tunable_l1: bool,
 }
 
+/// 已保存的 AWR 诊断报告轻量摘要（供历史报告下拉选择器展示）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AwrReportMeta {
+    pub report_id: String,
+    pub mode: String,
+    pub base_snapshot_id: String,
+    pub base_label: String,
+    pub target_snapshot_id: String,
+    pub target_label: String,
+    pub generated_at: String,
+    pub regression_detected: bool,
+    pub rss_drift_pct: f64,
+    pub total_body_time_us: u64,
+}
+
 /// AWR 快照差分对比与 ADDM 诊断报告
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AwrDiffReport {
@@ -521,7 +566,15 @@ pub struct AwrDiffReport {
     pub body_id: String,
     pub mode: String, // "baseline_vs_current" | "snap_a_vs_snap_b" | "single_snapshot"
     pub base_snapshot_id: String,
+    #[serde(default)]
+    pub base_label: String,
+    #[serde(default)]
+    pub base_captured_at: String,
     pub target_snapshot_id: String,
+    #[serde(default)]
+    pub target_label: String,
+    #[serde(default)]
+    pub target_captured_at: String,
     pub generated_at: String,
     pub regression_detected: bool,
     pub rss_delta_kb: i64,
@@ -534,8 +587,27 @@ pub struct AwrDiffReport {
     pub top_wait_events: Vec<WaitEventSnapshotRow>,
     pub top_slow_operations: Vec<OperationStatRow>,
     pub addm_findings: Vec<AddmFinding>,
+    #[serde(default)]
+    pub base_kernel: KernelSelfTelemetry,
     pub target_kernel: KernelSelfTelemetry,
     pub markdown_summary: String,
+}
+
+impl AwrDiffReport {
+    pub fn to_meta(&self) -> AwrReportMeta {
+        AwrReportMeta {
+            report_id: self.report_id.clone(),
+            mode: self.mode.clone(),
+            base_snapshot_id: self.base_snapshot_id.clone(),
+            base_label: self.base_label.clone(),
+            target_snapshot_id: self.target_snapshot_id.clone(),
+            target_label: self.target_label.clone(),
+            generated_at: self.generated_at.clone(),
+            regression_detected: self.regression_detected,
+            rss_drift_pct: self.rss_drift_pct,
+            total_body_time_us: self.delta_time_model.total_body_time_us,
+        }
+    }
 }
 
 /// L1 自主性能调优报告 (`perf_tune`)
@@ -556,10 +628,12 @@ pub struct PerfTuneReport {
 }
 
 const META_SNAP_INDEX: &str = "awr:index";
+const META_REPORT_INDEX: &str = "awr:report_index";
 const META_BASELINE_KEY: &str = "awr:baseline";
 const META_LATEST_SNAP_KEY: &str = "awr:latest";
 const META_PRAGMA_OPTIMIZE: &str = "awr:pragma_optimize";
 const MAX_RETAINED_SNAPSHOTS: usize = 32;
+const MAX_RETAINED_REPORTS: usize = 32;
 
 pub struct BodyPerfEngine;
 
@@ -728,6 +802,30 @@ impl BodyPerfEngine {
         serde_json::from_value(val).ok()
     }
 
+    /// 构造内存瞬时快照（不写入快照历史列表，避免查看报告时污染用户快照库）
+    pub fn sample_transient_snapshot(storage: &Storage, label: &str) -> AwrSnapshot {
+        let provider = storage.provider();
+        let snap_id = format!("live-{}", Local::now().format("%H%M%S"));
+        let wait_events = WaitEventRegistry::snapshot_all();
+        let time_model = BodyTimeModel::from_wait_rows(&wait_events);
+        let top_operations = Self::collect_operation_stats(provider.as_ref(), 10);
+        let kernel_telemetry = KernelSelfTelemetry::collect(None);
+        let vitals = HomeostasisVitalsEngine::assess_provider(provider.as_ref());
+
+        AwrSnapshot {
+            snapshot_id: snap_id,
+            body_id: compute_body_id(),
+            label: label.to_string(),
+            is_baseline: false,
+            captured_at: Local::now().format("%Y-%m-%dT%H:%M:%S+08:00").to_string(),
+            homeostasis_score: vitals.overall_score,
+            time_model,
+            wait_events,
+            top_operations,
+            kernel_telemetry,
+        }
+    }
+
     /// 列出已保存的快照 ID 列表与当前是否已设定黄金基线
     pub fn list_snapshot_ids(storage: &dyn StorageProvider) -> (Vec<String>, Option<String>) {
         let idx_list: Vec<String> = Self::load_meta_json(storage, META_SNAP_INDEX)
@@ -737,7 +835,75 @@ impl BodyPerfEngine {
         (idx_list, baseline_id)
     }
 
-    /// 生成 AWR 快照差分报告与 ADDM 瓶颈诊断处方
+    /// 列出全部已保存快照的详细元数据（按时间倒序，过滤旧版 awr-probe 临时项）及黄金基线元数据
+    pub fn list_snapshots_meta(
+        storage: &dyn StorageProvider,
+    ) -> (Vec<AwrSnapshotMeta>, Option<AwrSnapshotMeta>) {
+        let baseline_snap = Self::load_snapshot(storage, "baseline");
+        let baseline_id = baseline_snap.as_ref().map(|s| s.snapshot_id.clone());
+        let baseline_meta = baseline_snap.map(|s| s.to_meta());
+
+        let idx_list: Vec<String> = Self::load_meta_json(storage, META_SNAP_INDEX)
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default();
+
+        let mut metas = Vec::new();
+        for id in idx_list.iter().rev() {
+            if let Some(mut snap) = Self::load_snapshot(storage, id) {
+                if snap.label == "awr-probe" {
+                    continue;
+                }
+                if baseline_id.as_deref() == Some(snap.snapshot_id.as_str()) {
+                    snap.is_baseline = true;
+                }
+                metas.push(snap.to_meta());
+            }
+        }
+        // 确保黄金基线也在列表中可选
+        if let Some(ref bm) = baseline_meta {
+            if !metas.iter().any(|m| m.snapshot_id == bm.snapshot_id) {
+                metas.push(bm.clone());
+            }
+        }
+        (metas, baseline_meta)
+    }
+
+    /// 读取已保存的历史 AWR 差分报告
+    pub fn load_awr_report(storage: &dyn StorageProvider, report_id: &str) -> Option<AwrDiffReport> {
+        let key = if report_id.starts_with("awr:report:") {
+            report_id.to_string()
+        } else {
+            format!("awr:report:{}", report_id)
+        };
+        let val = Self::load_meta_json(storage, &key)?;
+        serde_json::from_value(val).ok()
+    }
+
+    /// 列出已保存的历史 AWR 诊断报告摘要列表（最新在前）
+    pub fn list_awr_reports_meta(storage: &dyn StorageProvider) -> Vec<AwrReportMeta> {
+        let list: Vec<AwrReportMeta> = Self::load_meta_json(storage, META_REPORT_INDEX)
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default();
+        list
+    }
+
+    fn save_awr_report(provider: &dyn StorageProvider, report: &AwrDiffReport) -> Result<()> {
+        let key = format!("awr:report:{}", report.report_id);
+        let val = serde_json::to_value(report)?;
+        Self::save_meta_json(provider, &key, val)?;
+
+        let mut list = Self::list_awr_reports_meta(provider);
+        list.retain(|r| r.report_id != report.report_id);
+        list.insert(0, report.to_meta());
+        if list.len() > MAX_RETAINED_REPORTS {
+            list.truncate(MAX_RETAINED_REPORTS);
+        }
+        let idx_val = serde_json::to_value(&list)?;
+        Self::save_meta_json(provider, META_REPORT_INDEX, idx_val)?;
+        Ok(())
+    }
+
+    /// 生成 AWR 快照差分报告与 ADDM 瓶颈诊断处方（自动持久化保存至历史报告库）
     pub fn generate_awr_report(
         storage: &Storage,
         snap_a_opt: Option<&str>,
@@ -745,25 +911,50 @@ impl BodyPerfEngine {
         vs_baseline: bool,
     ) -> Result<AwrDiffReport> {
         let provider = storage.provider();
-        let current_live = Self::capture_snapshot(storage, Some("awr-probe"), false)?;
+        let current_live = Self::sample_transient_snapshot(storage, "实时当前态");
 
-        let (mode, base_snap, target_snap) = if let (Some(a), Some(b)) = (snap_a_opt, snap_b_opt) {
-            let sa = Self::load_snapshot(provider.as_ref(), a).unwrap_or_else(|| current_live.clone());
-            let sb = Self::load_snapshot(provider.as_ref(), b).unwrap_or_else(|| current_live.clone());
-            ("snap_a_vs_snap_b".to_string(), sa, sb)
-        } else if vs_baseline {
-            if let Some(base) = Self::load_snapshot(provider.as_ref(), "baseline") {
-                ("baseline_vs_current".to_string(), base, current_live)
-            } else {
-                ("single_snapshot".to_string(), current_live.clone(), current_live)
+        let a_clean = snap_a_opt.map(str::trim).filter(|s| !s.is_empty());
+        let b_clean = snap_b_opt.map(str::trim).filter(|s| !s.is_empty());
+
+        let (mode, base_snap, target_snap) = match (a_clean, b_clean) {
+            (Some(a), Some(b)) => {
+                let sa = if a == "live" {
+                    current_live.clone()
+                } else {
+                    Self::load_snapshot(provider.as_ref(), a).unwrap_or_else(|| current_live.clone())
+                };
+                let sb = if b == "live" {
+                    current_live.clone()
+                } else {
+                    Self::load_snapshot(provider.as_ref(), b).unwrap_or_else(|| current_live.clone())
+                };
+                ("snap_a_vs_snap_b".to_string(), sa, sb)
             }
-        } else if let Some(a) = snap_a_opt {
-            let sa = Self::load_snapshot(provider.as_ref(), a).unwrap_or_else(|| current_live.clone());
-            ("snap_a_vs_snap_b".to_string(), sa, current_live)
-        } else if let Some(base) = Self::load_snapshot(provider.as_ref(), "baseline") {
-            ("baseline_vs_current".to_string(), base, current_live)
-        } else {
-            ("single_snapshot".to_string(), current_live.clone(), current_live)
+            (Some(a), None) => {
+                let sa = Self::load_snapshot(provider.as_ref(), a).unwrap_or_else(|| current_live.clone());
+                ("snap_a_vs_snap_b".to_string(), sa, current_live)
+            }
+            (None, Some(b)) => {
+                let base = Self::load_snapshot(provider.as_ref(), "baseline")
+                    .unwrap_or_else(|| current_live.clone());
+                let sb = if b == "live" {
+                    current_live.clone()
+                } else {
+                    Self::load_snapshot(provider.as_ref(), b).unwrap_or(current_live)
+                };
+                ("baseline_vs_target".to_string(), base, sb)
+            }
+            (None, None) => {
+                if vs_baseline {
+                    if let Some(base) = Self::load_snapshot(provider.as_ref(), "baseline") {
+                        ("baseline_vs_current".to_string(), base, current_live)
+                    } else {
+                        ("single_snapshot".to_string(), current_live.clone(), current_live)
+                    }
+                } else {
+                    ("single_snapshot".to_string(), current_live.clone(), current_live)
+                }
+            }
         };
 
         // 计算等待事件差分（若同一进程周期内 target >= base 则取增量，否则取 target 绝对值）
@@ -856,30 +1047,40 @@ impl BodyPerfEngine {
         let top_slow_operations: Vec<OperationStatRow> =
             target_snap.top_operations.into_iter().take(6).collect();
 
-        let report_id = format!("awr-{}", Local::now().format("%Y%m%d-%H%M%S"));
+        let report_id = format!("awr-{}", Local::now().format("%Y%m%d-%H%M%S-%3f"));
         let generated_at = Local::now().format("%Y-%m-%dT%H:%M:%S+08:00").to_string();
 
         let mut md = String::new();
         writeln!(md, "# 📈 Agent Body 内生 AWR 性能诊断报告 ({})\n", report_id)?;
         writeln!(
             md,
-            "- **对比模式**: `{}` (`{}` → `{}`) · **退化门禁**: {}",
+            "- **起始快照 (Begin Snap A)**: `{}` (`{}` · `{}`)",
+            base_snap.snapshot_id, base_snap.label, base_snap.captured_at
+        )?;
+        writeln!(
+            md,
+            "- **结束快照 (End Snap B)**: `{}` (`{}` · `{}`)",
+            target_snap.snapshot_id, target_snap.label, target_snap.captured_at
+        )?;
+        writeln!(
+            md,
+            "- **对比模式**: `{}` · **退化门禁**: {}",
             mode,
-            base_snap.snapshot_id,
-            target_snap.snapshot_id,
             if regression_detected { "⚠️ 检测到性能/资源水位退化" } else { "✅ 健康稳态 (0 退化)" }
         )?;
         writeln!(
             md,
-            "- **内核 `/proc/self` 遥测**: RSS `{} KB` ({:+.1}%) · HWM `{} KB` · 句柄 `{} FDs` ({:+}) · 主动切换 `{}` ({:+}) · 被动抢占 `{}` ({:+}) · SQLite WAL `{} KB`",
+            "- **内核 `/proc/self` 差分**: VmRSS `{} → {} KB` ({:+} KB / {:+.1}%) · VmHWM `{} → {} KB` · 句柄 `{} → {} FDs` ({:+}) · 主动切换 `{:+}` · 被动抢占 `{:+}` · SQLite WAL `{} KB`",
+            base_snap.kernel_telemetry.rss_kb,
             target_snap.kernel_telemetry.rss_kb,
+            rss_delta_kb,
             rss_drift_pct,
+            base_snap.kernel_telemetry.hwm_kb,
             target_snap.kernel_telemetry.hwm_kb,
+            base_snap.kernel_telemetry.open_fds,
             target_snap.kernel_telemetry.open_fds,
             fd_delta,
-            target_snap.kernel_telemetry.voluntary_ctxt_switches,
             voluntary_cs_delta,
-            target_snap.kernel_telemetry.nonvoluntary_ctxt_switches,
             nonvoluntary_cs_delta,
             target_snap.kernel_telemetry.sqlite_wal_bytes / 1024
         )?;
@@ -921,12 +1122,16 @@ impl BodyPerfEngine {
             )?;
         }
 
-        Ok(AwrDiffReport {
+        let report = AwrDiffReport {
             report_id,
             body_id: compute_body_id(),
             mode,
             base_snapshot_id: base_snap.snapshot_id,
+            base_label: base_snap.label,
+            base_captured_at: base_snap.captured_at,
             target_snapshot_id: target_snap.snapshot_id,
+            target_label: target_snap.label,
+            target_captured_at: target_snap.captured_at,
             generated_at,
             regression_detected,
             rss_delta_kb,
@@ -939,9 +1144,15 @@ impl BodyPerfEngine {
             top_wait_events,
             top_slow_operations,
             addm_findings,
+            base_kernel: base_snap.kernel_telemetry,
             target_kernel: target_snap.kernel_telemetry,
             markdown_summary: md,
-        })
+        };
+        if let Err(e) = Self::save_awr_report(provider.as_ref(), &report) {
+            eprintln!("[AWR][WARN] 保存历史 AWR 报告失败: {}", e);
+        }
+
+        Ok(report)
     }
 
     /// ADDM 5 大确定性瓶颈诊断规则引擎

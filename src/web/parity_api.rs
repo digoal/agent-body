@@ -1476,19 +1476,60 @@ pub fn handle_body_perf_snapshot(req: &HttpRequest, storage: Arc<dyn StorageProv
 
 pub fn handle_body_perf_awr(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
     let t0 = std::time::Instant::now();
-    let snap_a = req.query_params.get("snap_a").map(|s| s.as_str()).filter(|s| !s.trim().is_empty());
-    let snap_b = req.query_params.get("snap_b").map(|s| s.as_str()).filter(|s| !s.trim().is_empty());
+    let report_id = req
+        .query_params
+        .get("report_id")
+        .map(|s| s.as_str())
+        .filter(|s| !s.trim().is_empty());
+    let snap_a = req
+        .query_params
+        .get("snap_a")
+        .map(|s| s.as_str())
+        .filter(|s| !s.trim().is_empty());
+    let snap_b = req
+        .query_params
+        .get("snap_b")
+        .map(|s| s.as_str())
+        .filter(|s| !s.trim().is_empty());
     let vs_baseline = req
         .query_params
         .get("vs_baseline")
         .map(|s| s != "false" && s != "0")
         .unwrap_or(true);
+    let view_only = req
+        .query_params
+        .get("view_only")
+        .map(|s| s == "true" || s == "1")
+        .unwrap_or(false);
+
     let storage_ref = storage.clone();
     let st = Storage::new(storage);
-    match crate::body::BodyPerfEngine::generate_awr_report(&st, snap_a, snap_b, vs_baseline) {
+
+    // 1. 若指定了 report_id，直接加载该历史报告；若 view_only=true 且已有历史报告，默认加载最新一份历史报告而不重复新建
+    let rep_res = if let Some(rid) = report_id {
+        crate::body::BodyPerfEngine::load_awr_report(storage_ref.as_ref(), rid)
+            .ok_or_else(|| anyhow::anyhow!("未找到历史 AWR 报告: {}", rid))
+    } else if view_only {
+        let existing_reports = crate::body::BodyPerfEngine::list_awr_reports_meta(storage_ref.as_ref());
+        if let Some(first) = existing_reports.first() {
+            crate::body::BodyPerfEngine::load_awr_report(storage_ref.as_ref(), &first.report_id)
+                .ok_or_else(|| anyhow::anyhow!("加载最新历史 AWR 报告失败"))
+        } else {
+            crate::body::BodyPerfEngine::generate_awr_report(&st, snap_a, snap_b, vs_baseline)
+        }
+    } else {
+        crate::body::BodyPerfEngine::generate_awr_report(&st, snap_a, snap_b, vs_baseline)
+    };
+
+    match rep_res {
         Ok(rep) => {
-            let (snapshots, baseline_id) =
-                crate::body::BodyPerfEngine::list_snapshot_ids(storage_ref.as_ref());
+            let (snapshots_meta, baseline_meta) =
+                crate::body::BodyPerfEngine::list_snapshots_meta(storage_ref.as_ref());
+            let reports_meta =
+                crate::body::BodyPerfEngine::list_awr_reports_meta(storage_ref.as_ref());
+            let snapshot_ids: Vec<String> =
+                snapshots_meta.iter().map(|m| m.snapshot_id.clone()).collect();
+            let baseline_id = baseline_meta.as_ref().map(|m| m.snapshot_id.clone());
             crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
                 storage_ref.as_ref(),
                 "web",
@@ -1498,8 +1539,11 @@ pub fn handle_body_perf_awr(req: &HttpRequest, storage: Arc<dyn StorageProvider>
             );
             WebResponse::success(serde_json::json!({
                 "report": rep,
-                "snapshots": snapshots,
+                "snapshots": snapshot_ids,
+                "snapshots_meta": snapshots_meta,
                 "baseline_id": baseline_id,
+                "baseline_meta": baseline_meta,
+                "reports_meta": reports_meta,
             }))
         }
         Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
