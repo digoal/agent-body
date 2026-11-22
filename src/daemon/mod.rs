@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -54,20 +53,28 @@ impl StewardDaemon {
             }
         }
 
-        // 1. 初始化文件监听目录
+        // 1. 初始化文件监听目录（默认优先监听核心工作区 work 与 shared_proj，避免误监听庞大第三方 src/ 与镜像目录）
         let mut watch_paths = self.config.assets.auto_scan_dirs.clone();
         if watch_paths.is_empty() {
-            // 默认监听核心工作目录
-            let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
-            let default_work = PathBuf::from(&home).join("new").join("work");
-            let default_proj = PathBuf::from(&home).join("new").join("shared_proj");
-            if default_work.exists() { watch_paths.push(default_work); }
-            if default_proj.exists() { watch_paths.push(default_proj); }
+            let base = self.config.effective_workspace_base();
+            for sub in ["work", "shared_proj"] {
+                let p = base.join(sub);
+                if p.exists() && !watch_paths.contains(&p) {
+                    watch_paths.push(p);
+                }
+            }
+            if watch_paths.is_empty() {
+                for p in self.config.effective_workspace_roots() {
+                    if p.exists() && !watch_paths.contains(&p) {
+                        watch_paths.push(p);
+                    }
+                }
+            }
         }
 
         println!("实时监听目录:   {:?}", watch_paths);
 
-        let watcher = match FileWatcher::new(&watch_paths) {
+        let watcher = match FileWatcher::with_ignore_patterns(&watch_paths, &self.config.assets.ignore_patterns) {
             Ok(w) => {
                 println!("✅ inotify 文件系统实时监听就绪 (300ms 防抖)");
                 Some(w)
@@ -80,9 +87,52 @@ impl StewardDaemon {
 
         let event_bus = crate::hooks::EventBus::new();
         let event_bus_handle = event_bus.handle();
-        let handler = ChangeHandler::with_event_bus(self.storage.clone(), event_bus_handle)?;
+        let handler = ChangeHandler::with_options(
+            self.storage.clone(),
+            Some(event_bus_handle),
+            self.config.assets.ignore_patterns.clone(),
+            self.config.effective_default_owner(),
+        )?;
         let env_collector = EnvCollector::new(self.storage.clone());
         let bg_scheduler = BackgroundScheduler::new(self.storage.clone());
+
+        // 1b. 挂载配置驱动的 [[hooks]] 分发器与 [[pipelines]] 编排引擎至 EventBus
+        {
+            let hook_dispatcher = crate::hooks::HookDispatcher::new(
+                self.config.hooks.clone(),
+                self.config.assets.ignore_patterns.clone(),
+            );
+            let pipeline_engine = crate::hooks::HookPipelineEngine::new(
+                self.config.pipelines.clone(),
+                Some(self.storage.clone()),
+            );
+            let has_hooks = !self.config.hooks.is_empty();
+            let has_pipelines = !self.config.pipelines.is_empty();
+            println!(
+                "✅ 事件驱动 Hook 分发器与编排流水线就绪 (hooks: {}, pipelines: {})",
+                self.config.hooks.len(),
+                self.config.pipelines.len()
+            );
+            let mut hook_rx = event_bus.subscribe();
+            tokio::spawn(async move {
+                loop {
+                    match hook_rx.recv().await {
+                        Ok(ev) => {
+                            if has_hooks {
+                                let _hook_actions = hook_dispatcher.dispatch(Arc::clone(&ev)).await;
+                            }
+                            if has_pipelines {
+                                let _pipe_audits = pipeline_engine.execute(ev).await;
+                            }
+                        }
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                            eprintln!("[Hooks][WARN] EventBus 消费滞后，跳过 {} 条历史事件", skipped);
+                        }
+                        Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                    }
+                }
+            });
+        }
 
         // 2. 按需拉起后台 Web 监控大屏，并桥接 EventBus -> SSE 实时事件流
         let sse_broadcaster = if self.config.web.enabled {

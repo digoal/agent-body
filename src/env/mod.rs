@@ -109,6 +109,7 @@ impl EnvCollector {
             }
         }
 
+        let default_owner = crate::config::Config::load_effective_or_default().effective_default_owner();
         let mut active_procs = Vec::new();
 
         for (pid, proc) in sys.processes() {
@@ -140,7 +141,7 @@ impl EnvCollector {
                 pid: pid_u32,
                 name: name.clone(),
                 command,
-                owner: infer_process_owner(&name, &cmd_parts),
+                owner: infer_process_owner(&name, &cmd_parts, &default_owner),
                 associated_path,
                 listening_ports,
                 status: "running".to_string(),
@@ -230,13 +231,13 @@ fn is_noise_process(name: &str, command: &str) -> bool {
     false
 }
 
-fn infer_process_owner(_name: &str, cmd_parts: &[String]) -> String {
+fn infer_process_owner(_name: &str, cmd_parts: &[String], default_owner: &str) -> String {
     for arg in cmd_parts {
         if arg.contains("hermes") || arg.contains("cron") {
             return "agent:hermes_cron".to_string();
         }
     }
-    "user:digoal".to_string()
+    default_owner.to_string()
 }
 
 fn extract_associated_script_path(cmd_parts: &[String]) -> Option<String> {

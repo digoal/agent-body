@@ -99,7 +99,7 @@ pub fn all_tool_schemas() -> Vec<Value> {
                             "enum": ["directory", "project", "script", "document", "dataset", "config", "media", "other"],
                             "description": "资产类型"
                         },
-                        "owner": { "type": "string", "default": "user:digoal", "description": "归属主体" },
+                        "owner": { "type": "string", "description": "归属主体（默认使用 [placement].default_owner 配置）" },
                         "security_level": {
                             "type": "string",
                             "enum": ["public", "internal", "confidential", "secret"],
@@ -270,7 +270,7 @@ pub fn all_tool_schemas() -> Vec<Value> {
                     "type": "object",
                     "properties": {
                         "session_id": { "type": "string", "description": "当前会话的唯一标识" },
-                        "clean_temp": { "type": "boolean", "default": true, "description": "是否清理 /root/new/tmp/ 下属于本会话的临时文件" }
+                        "clean_temp": { "type": "boolean", "default": true, "description": "是否清理配置临时目录 ([workspace].temp_dir) 下属于本会话的临时文件" }
                     },
                     "required": ["session_id"]
                 }
@@ -298,11 +298,11 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_env_gc",
-                "description": "宿主资源垃圾回收与孤儿进程诊断：安全扫描 /root/new/tmp/ 超期孤儿临时文件与后台僵尸测试进程，支持预览与清理。",
+                "description": "宿主资源垃圾回收与孤儿进程诊断：安全扫描受管临时目录超期孤儿临时文件与后台僵尸测试进程，支持预览与清理。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "tmp_dir": { "type": "string", "default": "/root/new/tmp", "description": "待清理的临时目录路径 (强制安全白名单)" },
+                        "tmp_dir": { "type": "string", "description": "待清理的临时目录路径 (默认使用 [workspace].temp_dir，强制安全白名单)" },
                         "max_age_hours": { "type": "integer", "default": 72, "description": "文件超期阈值 (小时)" },
                         "apply": { "type": "boolean", "default": false, "description": "是否直接执行清理删除 (默认仅 dry-run 预览)" }
                     }
@@ -453,7 +453,7 @@ pub fn all_tool_schemas() -> Vec<Value> {
                         },
                         "output_path": {
                             "type": "string",
-                            "description": "输出的目标 Parquet 文件绝对路径（例如 '/root/new/tmp/assets.parquet'）"
+                            "description": "输出的目标 Parquet 文件绝对路径（需位于受信任临时目录下，如 '/tmp/assets.parquet'）"
                         }
                     },
                     "required": ["table", "output_path"]
@@ -713,7 +713,7 @@ pub fn all_tool_schemas() -> Vec<Value> {
                         "days": { "type": "integer", "default": 7 },
                         "limit": { "type": "integer", "default": 30 },
                         "auto_feedback": { "type": "boolean", "default": false, "description": "action=evolve 时是否将高频摩擦热点自动沉淀至 user_feedback.md" },
-                        "output_path": { "type": "string", "default": "/root/new/tmp/audit_events_export.csv", "description": "action=export 时输出路径（仅允许 /root/new/tmp/ 或 /tmp/）" }
+                        "output_path": { "type": "string", "description": "action=export 时输出路径（仅允许受信任临时目录，如 [workspace].temp_dir 或 /tmp/）" }
                     }
                 }
             }),

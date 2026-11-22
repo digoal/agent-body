@@ -14,6 +14,8 @@ pub struct ScanStateMachine {
     matcher: PolicyMatcher,
     noise_filter: NoiseFilter,
     checkpoint_batch_size: usize,
+    ignore_patterns: Vec<String>,
+    default_owner: String,
 }
 
 impl ScanStateMachine {
@@ -22,15 +24,25 @@ impl ScanStateMachine {
     }
 
     pub fn with_batch_size(storage: Storage, batch_size: usize) -> Result<Self> {
+        let cfg = crate::config::Config::load_effective_or_default();
+        let default_owner = cfg.effective_default_owner();
         let policies = storage.get_scan_policies()?;
         let matcher = PolicyMatcher::from_policies(&policies)?;
-        let noise_filter = NoiseFilter::default();
+        let noise_filter = NoiseFilter::with_ignore_patterns(cfg.assets.ignore_patterns.clone());
         Ok(Self {
             storage,
             matcher,
             noise_filter,
             checkpoint_batch_size: batch_size.max(1),
+            ignore_patterns: cfg.assets.ignore_patterns,
+            default_owner,
         })
+    }
+
+    fn matches_configured_ignore(&self, path: &Path) -> bool {
+        self.ignore_patterns
+            .iter()
+            .any(|pat| crate::scanner::importance::path_matches_ignore_pattern(path, pat))
     }
 
     /// 创建一个新的扫描任务（初始状态为 pending）
@@ -150,7 +162,7 @@ impl ScanStateMachine {
             // 正式扫描新节点
             if is_dir {
                 job.scanned_dirs += 1;
-                if tier == "shallow" {
+                if tier == "shallow" || self.matches_configured_ignore(path) {
                     it.skip_current_dir();
 
                     let metadata = entry.metadata().ok();
@@ -221,7 +233,7 @@ impl ScanStateMachine {
                         id: uuid::Uuid::new_v4().to_string(),
                         path: path_str.clone(),
                         asset_type,
-                        owner: "user:digoal".to_string(),
+                        owner: self.default_owner.clone(),
                         security_level: extracted.security_level,
                         scan_tier: tier.clone(),
                         description: Some(extracted.description),

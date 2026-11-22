@@ -408,12 +408,29 @@ impl KernelSelfTelemetry {
             t.open_fds = entries.count();
         }
 
+        // 非 Linux（macOS / Windows）或受限无 /proc 容器场景回退到 sysinfo 采集 RSS/VM/IO
+        if t.rss_kb == 0 {
+            let sys_t = Self::collect_via_sysinfo_raw();
+            if t.rss_kb == 0 {
+                t.rss_kb = sys_t.rss_kb;
+            }
+            if t.hwm_kb == 0 {
+                t.hwm_kb = sys_t.hwm_kb;
+            }
+            if t.vm_size_kb == 0 {
+                t.vm_size_kb = sys_t.vm_size_kb;
+            }
+            if t.io_read_bytes == 0 {
+                t.io_read_bytes = sys_t.io_read_bytes;
+            }
+            if t.io_write_bytes == 0 {
+                t.io_write_bytes = sys_t.io_write_bytes;
+            }
+        }
+
         let resolved_db = db_path_opt
             .map(|p| p.to_path_buf())
-            .unwrap_or_else(|| {
-                let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
-                Path::new(&home).join(".agent-body").join("body.db")
-            });
+            .unwrap_or_else(crate::config::default_db_path);
         if let Ok(m) = std::fs::metadata(&resolved_db) {
             t.sqlite_db_bytes = m.len();
         }
@@ -422,6 +439,27 @@ impl KernelSelfTelemetry {
             t.sqlite_wal_bytes = m.len();
         }
 
+        t
+    }
+
+    /// 跨平台 `sysinfo` 内核状态回退采集（供 macOS / Windows 或无 `/proc/self` 容器环境复用）
+    pub fn collect_via_sysinfo_raw() -> Self {
+        let mut t = Self {
+            pid: std::process::id(),
+            ..Default::default()
+        };
+        if let Ok(pid) = sysinfo::get_current_pid() {
+            let mut sys = sysinfo::System::new();
+            sys.refresh_process(pid);
+            if let Some(proc_info) = sys.process(pid) {
+                t.rss_kb = proc_info.memory() / 1024;
+                t.hwm_kb = t.rss_kb;
+                t.vm_size_kb = proc_info.virtual_memory() / 1024;
+                let disk = proc_info.disk_usage();
+                t.io_read_bytes = disk.total_read_bytes;
+                t.io_write_bytes = disk.total_written_bytes;
+            }
+        }
         t
     }
 }
@@ -1458,7 +1496,7 @@ impl BodyPerfEngine {
                 eprintln!("[PerfTune][WARN] 二次收缩 SQLite 内存失败: {}", e);
             }
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(all(target_os = "linux", target_env = "gnu"))]
         {
             unsafe extern "C" {
                 fn malloc_trim(pad: usize) -> i32;
@@ -1467,6 +1505,10 @@ impl BodyPerfEngine {
                 let _ = malloc_trim(0);
             }
             actions.push("调用 Linux glibc malloc_trim(0) 向内核归还空闲堆内存页".to_string());
+        }
+        #[cfg(not(all(target_os = "linux", target_env = "gnu")))]
+        {
+            actions.push("当前平台非 Linux glibc，跳过 malloc_trim(0)".to_string());
         }
 
         let after_kernel = KernelSelfTelemetry::collect(None);
@@ -1675,5 +1717,12 @@ mod tests {
             .0
             .iter()
             .all(|id| id != &snap.snapshot_id));
+    }
+
+    #[test]
+    fn test_kernel_self_telemetry_sysinfo_fallback() {
+        let t = KernelSelfTelemetry::collect_via_sysinfo_raw();
+        assert_eq!(t.pid, std::process::id());
+        assert!(t.rss_kb > 0, "sysinfo 回退必须采集到当前进程 RSS > 0");
     }
 }

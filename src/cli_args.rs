@@ -87,7 +87,7 @@ pub(crate) enum Commands {
         #[arg(help = "当前会话的唯一标识 (Session ID)")]
         session_id: String,
 
-        #[arg(long, default_value_t = true, action = clap::ArgAction::Set, num_args = 0..=1, default_missing_value = "true", help = "是否清理 /root/new/tmp/ 下属于本会话的临时文件")]
+        #[arg(long, default_value_t = true, action = clap::ArgAction::Set, num_args = 0..=1, default_missing_value = "true", help = "是否清理受管临时目录下属于本会话的临时文件")]
         clean_temp: bool,
 
         #[arg(long, default_value_t = false, help = "仅预览待清理临时文件与归档摘要，不物理删除")]
@@ -96,8 +96,8 @@ pub(crate) enum Commands {
 
     #[command(about = "宿主机孤儿进程与临时垃圾资源安全扫描与回收")]
     Gc {
-        #[arg(long, default_value = "/root/new/tmp", help = "待清理的临时目录路径 (强制安全白名单)")]
-        tmp_dir: PathBuf,
+        #[arg(long, help = "待清理的临时目录路径 (缺省使用 [workspace].temp_dir，强制安全白名单)")]
+        tmp_dir: Option<PathBuf>,
 
         #[arg(long, default_value_t = 72, help = "文件超期阈值 (小时)")]
         max_age_hours: u64,
@@ -376,8 +376,8 @@ pub(crate) enum AuditCommands {
     },
     #[command(about = "导出 audit_events 审计账本至 Parquet/CSV (安全白名单路径)")]
     Export {
-        #[arg(long, default_value = "/root/new/tmp/audit_events_export.csv")]
-        output_path: String,
+        #[arg(long, help = "导出路径 (缺省导出到 [workspace].temp_dir/audit_events_export.csv)")]
+        output_path: Option<String>,
         #[arg(long, default_value_t = false)]
         json: bool,
     },
@@ -733,7 +733,7 @@ pub(crate) enum CoordinationCommands {
         #[arg(short = 't', long, help = "资源类型: port, directory, service, file, custom")]
         resource_type: String,
 
-        #[arg(short = 'i', long, help = "资源标识 (例如 8080, /root/new/work)")]
+        #[arg(short = 'i', long, help = "资源标识 (例如 8080, /path/to/workspace)")]
         resource_id: String,
 
         #[arg(short, long, default_value = "exclusive", help = "锁模式: exclusive 或 shared")]
@@ -951,8 +951,8 @@ pub(crate) enum AssetCommands {
         #[arg(short = 't', long, default_value = "other", help = "资产类型 (directory/project/script/document/dataset/config/media/other)")]
         r#type: String,
 
-        #[arg(short, long, default_value = "user:digoal", help = "归属主体")]
-        owner: String,
+        #[arg(short, long, help = "归属主体 (缺省使用 [placement].default_owner 配置)")]
+        owner: Option<String>,
 
         #[arg(short, long, default_value = "internal", help = "安全分级 (public/internal/confidential/secret)")]
         security_level: String,

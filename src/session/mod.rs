@@ -1,5 +1,4 @@
 use std::fs;
-use std::path::Path;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
@@ -62,7 +61,8 @@ impl SessionManager {
         let mut cleaned_paths = Vec::new();
 
         if clean_temp {
-            let tmp_dir = Path::new("/root/new/tmp");
+            let tmp_dir_buf = crate::config::Config::load_effective_or_default().effective_temp_dir();
+            let tmp_dir = tmp_dir_buf.as_path();
             if tmp_dir.exists() && tmp_dir.is_dir() {
                 if let Ok(entries) = fs::read_dir(tmp_dir) {
                     for entry in entries.flatten() {

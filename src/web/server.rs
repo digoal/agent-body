@@ -183,16 +183,52 @@ impl WebServer {
         auth_token: Option<String>,
         enforce_token_for_writes: bool,
     ) -> anyhow::Result<()> {
+        const MAX_HEADER_BYTES: usize = 32 * 1024;
         let mut buffer = [0u8; 4096];
-        let bytes_read = stream.read(&mut buffer).await?;
-        if bytes_read == 0 {
-            return Ok(());
+        let mut raw: Vec<u8> = Vec::with_capacity(4096);
+
+        // 循环读取直到发现完整 HTTP Header 结束标记 `\r\n\r\n`（兼容分包头与 <= 32KB 大请求头）
+        let mut header_end_opt = None;
+        loop {
+            let timeout_dur = if raw.is_empty() {
+                std::time::Duration::from_millis(2000)
+            } else {
+                std::time::Duration::from_millis(500)
+            };
+            match tokio::time::timeout(timeout_dur, stream.read(&mut buffer)).await {
+                Ok(Ok(0)) => {
+                    if raw.is_empty() {
+                        return Ok(());
+                    }
+                    break;
+                }
+                Ok(Ok(n)) => {
+                    raw.extend_from_slice(&buffer[..n]);
+                    if let Some(pos) = raw.windows(4).position(|w| w == b"\r\n\r\n") {
+                        header_end_opt = Some(pos);
+                        break;
+                    }
+                    if raw.len() > MAX_HEADER_BYTES {
+                        let resp = HttpResponse::bad_request("Request headers exceed 32KB limit");
+                        stream.write_all(&resp.to_bytes()).await?;
+                        stream.flush().await?;
+                        return Ok(());
+                    }
+                }
+                Ok(Err(e)) => return Err(e.into()),
+                Err(_) => break,
+            }
         }
-        let mut raw: Vec<u8> = buffer[..bytes_read].to_vec();
 
         // 若请求体分包到达 (如 reqwest 先发头后发体)，按 Content-Length 补读剩余请求体
         // 安全边界: 仅 /api/v1/mesh/transfer 放宽至 15MB (承载 10MB + Base64 信封)，其余一律限制 64KB 防 DoS
-        if let Some(header_end) = raw.windows(4).position(|w| w == b"\r\n\r\n") {
+        if let Some(header_end) = header_end_opt {
+            if header_end > MAX_HEADER_BYTES {
+                let resp = HttpResponse::bad_request("Request headers exceed 32KB limit");
+                stream.write_all(&resp.to_bytes()).await?;
+                stream.flush().await?;
+                return Ok(());
+            }
             let header_text = String::from_utf8_lossy(&raw[..header_end]).to_lowercase();
             let is_mesh_transfer = header_text.starts_with("post /api/v1/mesh/transfer");
             let max_body_limit = if is_mesh_transfer { 15 * 1024 * 1024 } else { 65536 };

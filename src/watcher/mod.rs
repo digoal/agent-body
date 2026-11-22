@@ -22,11 +22,18 @@ pub struct FileChangeEvent {
 pub struct FileWatcher {
     watcher: std::sync::Mutex<RecommendedWatcher>,
     rx: Receiver<notify::Result<Event>>,
+    ignore_patterns: Vec<String>,
 }
 
 impl FileWatcher {
-    /// 创建文件监听器并绑定待监听目录（跳过 target/.git/node_modules 等黑名单目录，避免数千个无效 inotify 句柄）
+    /// 创建文件监听器并绑定待监听目录（使用配置中的 `assets.ignore_patterns` 剪枝黑名单目录）
     pub fn new(watch_paths: &[PathBuf]) -> Result<Self> {
+        let cfg = crate::config::Config::load_effective_or_default();
+        Self::with_ignore_patterns(watch_paths, &cfg.assets.ignore_patterns)
+    }
+
+    /// 创建带显式忽略模式列表的文件监听器
+    pub fn with_ignore_patterns(watch_paths: &[PathBuf], ignore_patterns: &[String]) -> Result<Self> {
         let (tx, rx) = channel();
 
         let mut watcher = RecommendedWatcher::new(tx, NotifyConfig::default().with_poll_interval(Duration::from_millis(500)))
@@ -34,13 +41,14 @@ impl FileWatcher {
 
         for p in watch_paths {
             if p.exists() {
-                watch_dir_pruned(&mut watcher, p)?;
+                watch_dir_pruned(&mut watcher, p, ignore_patterns)?;
             }
         }
 
         Ok(Self {
             watcher: std::sync::Mutex::new(watcher),
             rx,
+            ignore_patterns: ignore_patterns.to_vec(),
         })
     }
 
@@ -59,14 +67,16 @@ impl FileWatcher {
                 };
 
                 for path in event.paths {
-                    // 忽略隐藏文件、临时交换文件、target 目录
-                    if should_ignore_path(&path) {
+                    // 忽略隐藏文件、临时交换文件、黑名单及配置 ignore_patterns
+                    if should_ignore_path_with(&path, &self.ignore_patterns) {
                         continue;
                     }
                     // 若新创建了非黑名单子目录，动态补挂非递归监听
                     if kind == FileChangeKind::Created && path.is_dir() {
                         if let Ok(mut w) = self.watcher.lock() {
-                            let _ = watch_dir_pruned(&mut w, &path);
+                            if let Err(e) = watch_dir_pruned(&mut w, &path, &self.ignore_patterns) {
+                                eprintln!("[Watcher][WARN] 动态补挂子目录监听失败 ({:?}): {}", path, e);
+                            }
                         }
                     }
                     events.push(FileChangeEvent { path, kind: kind.clone() });
@@ -79,18 +89,20 @@ impl FileWatcher {
     }
 }
 
-fn is_ignored_dir_name(name: &str) -> bool {
+fn is_ignored_dir_with(path: &Path, name: &str, ignore_patterns: &[String]) -> bool {
     matches!(
         name,
         "target" | ".git" | ".agent-body" | ".state" | "__pycache__" | ".codegraph" | ".venv" | "node_modules" | ".cache"
-    )
+    ) || ignore_patterns
+        .iter()
+        .any(|pat| crate::scanner::importance::path_matches_ignore_pattern(path, pat))
 }
 
-fn watch_dir_pruned(watcher: &mut RecommendedWatcher, root: &Path) -> Result<()> {
+fn watch_dir_pruned(watcher: &mut RecommendedWatcher, root: &Path, ignore_patterns: &[String]) -> Result<()> {
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
         if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-            if is_ignored_dir_name(name) {
+            if is_ignored_dir_with(&dir, name, ignore_patterns) {
                 continue;
             }
         }
@@ -100,7 +112,7 @@ fn watch_dir_pruned(watcher: &mut RecommendedWatcher, root: &Path) -> Result<()>
                 let p = entry.path();
                 if p.is_dir() && !p.is_symlink() {
                     if let Some(name) = p.file_name().and_then(|s| s.to_str()) {
-                        if !is_ignored_dir_name(name) {
+                        if !is_ignored_dir_with(&p, name, ignore_patterns) {
                             stack.push(p);
                         }
                     }
@@ -111,7 +123,7 @@ fn watch_dir_pruned(watcher: &mut RecommendedWatcher, root: &Path) -> Result<()>
     Ok(())
 }
 
-fn should_ignore_path(path: &Path) -> bool {
+fn should_ignore_path_with(path: &Path, ignore_patterns: &[String]) -> bool {
     let s = path.to_string_lossy();
     if s.ends_with('~')
         || s.ends_with(".tmp")
@@ -135,7 +147,9 @@ fn should_ignore_path(path: &Path) -> bool {
     {
         return true;
     }
-    false
+    ignore_patterns
+        .iter()
+        .any(|pat| crate::scanner::importance::path_matches_ignore_pattern(path, pat))
 }
 
 fn dedup_events(events: Vec<FileChangeEvent>) -> Vec<FileChangeEvent> {

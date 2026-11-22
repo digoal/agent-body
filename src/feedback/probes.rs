@@ -239,7 +239,7 @@ impl FreshnessReconciler {
         drop(active_memories);
         drop(fact_nodes);
         let _ = storage.provider().get_benchmark_run("awr:pragma_optimize");
-        #[cfg(target_os = "linux")]
+        #[cfg(all(target_os = "linux", target_env = "gnu"))]
         {
             unsafe extern "C" {
                 fn malloc_trim(pad: usize) -> i32;

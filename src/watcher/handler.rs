@@ -9,26 +9,43 @@ pub struct ChangeHandler {
     scanner: Scanner,
     noise_filter: crate::scanner::NoiseFilter,
     event_bus: Option<crate::hooks::EventBusHandle>,
+    default_owner: String,
 }
 
 impl ChangeHandler {
     pub fn new(storage: Storage) -> Result<Self> {
-        let scanner = Scanner::new(storage.clone())?;
-        Ok(Self {
+        let cfg = crate::config::Config::load_effective_or_default();
+        Self::with_options(
             storage,
-            scanner,
-            noise_filter: crate::scanner::NoiseFilter::default(),
-            event_bus: None,
-        })
+            None,
+            cfg.assets.ignore_patterns.clone(),
+            cfg.effective_default_owner(),
+        )
     }
 
     pub fn with_event_bus(storage: Storage, event_bus: crate::hooks::EventBusHandle) -> Result<Self> {
-        let scanner = Scanner::new(storage.clone())?;
+        let cfg = crate::config::Config::load_effective_or_default();
+        Self::with_options(
+            storage,
+            Some(event_bus),
+            cfg.assets.ignore_patterns.clone(),
+            cfg.effective_default_owner(),
+        )
+    }
+
+    pub fn with_options(
+        storage: Storage,
+        event_bus: Option<crate::hooks::EventBusHandle>,
+        ignore_patterns: Vec<String>,
+        default_owner: String,
+    ) -> Result<Self> {
+        let scanner = Scanner::with_options(storage.clone(), ignore_patterns.clone(), default_owner.clone())?;
         Ok(Self {
             storage,
             scanner,
-            noise_filter: crate::scanner::NoiseFilter::default(),
-            event_bus: Some(event_bus),
+            noise_filter: crate::scanner::NoiseFilter::with_ignore_patterns(ignore_patterns),
+            event_bus,
+            default_owner,
         })
     }
 
@@ -113,7 +130,7 @@ impl ChangeHandler {
                             id: uuid::Uuid::new_v4().to_string(),
                             path: path_str.clone(),
                             asset_type: asset_type.to_string(),
-                            owner: "user:digoal".to_string(),
+                            owner: self.default_owner.clone(),
                             security_level: extracted.security_level,
                             scan_tier: tier.clone(),
                             description: Some(extracted.description),

@@ -161,6 +161,42 @@ impl StorageProvider for SqliteStorageProvider {
         let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_edges_target ON fact_edges(target_id)", []);
         let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_edges_relation ON fact_edges(relation)", []);
         let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_edges_tier ON fact_edges(evidence_tier)", []);
+
+        let base = crate::config::default_workspace_base();
+        let home = crate::config::home_dir();
+        for r in crate::storage::default_seed_placement_rules(&base) {
+            conn.execute(
+                "INSERT OR IGNORE INTO placement_rules (id, rule_name, pattern_type, target_base_dir, naming_pattern, description, guideline, priority)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                params![
+                    r.id,
+                    r.rule_name,
+                    r.pattern_type,
+                    r.target_base_dir,
+                    r.naming_pattern,
+                    r.description,
+                    r.guideline,
+                    r.priority,
+                ],
+            )?;
+        }
+        for p in crate::storage::default_seed_scan_policies(&base, &home) {
+            conn.execute(
+                "INSERT OR IGNORE INTO scan_policies (id, path_pattern, tier, max_depth, enable_fts, enable_vec, enable_graph, notes)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                params![
+                    p.id,
+                    p.path_pattern,
+                    p.tier,
+                    p.max_depth,
+                    if p.enable_fts { 1 } else { 0 },
+                    if p.enable_vec { 1 } else { 0 },
+                    if p.enable_graph { 1 } else { 0 },
+                    p.notes,
+                ],
+            )?;
+        }
+
         Ok(())
     }
 

@@ -156,7 +156,7 @@ impl ConcurrencyPolicyClassifier {
             if is_sandbox_tmp_path(path_str) {
                 return ConcurrencyClassification {
                     mode: ActionConcurrencyMode::Optimistic,
-                    reason: "位于临时验证沙盒 (/root/new/tmp/ 或 /tmp/)，采用乐观直写 (OPTIMISTIC)"
+                    reason: "位于受控临时验证沙盒目录，采用乐观直写 (OPTIMISTIC)"
                         .to_string(),
                 };
             }
@@ -549,10 +549,15 @@ fn is_critical_system_path(path_str: &str) -> bool {
 
 fn is_sandbox_tmp_path(path_str: &str) -> bool {
     let norm = path_str.replace('\\', "/");
-    norm.starts_with("/root/new/tmp/")
-        || norm == "/root/new/tmp"
-        || norm.starts_with("/tmp/")
-        || norm.starts_with("/var/tmp/")
+    if norm.starts_with("/tmp/") || norm == "/tmp" || norm.starts_with("/var/tmp/") {
+        return true;
+    }
+    let allowed = crate::config::Config::load_effective_or_default().allowed_temp_roots();
+    allowed.iter().any(|root| {
+        let r = root.to_string_lossy().replace('\\', "/");
+        let r_trimmed = r.trim_end_matches('/');
+        !r_trimmed.is_empty() && (norm == r_trimmed || norm.starts_with(&format!("{}/", r_trimmed)))
+    })
 }
 
 fn contains_destructive_pattern(norm: &str) -> bool {

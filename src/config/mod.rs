@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use anyhow::{Context, Result};
 
@@ -10,11 +11,11 @@ pub struct Config {
     #[serde(default = "default_db_path")]
     pub db_path: PathBuf,
 
-    #[serde(default = "default_api_port")]
-    pub api_port: u16,
+    #[serde(default)]
+    pub workspace: WorkspaceConfig,
 
-    #[serde(default = "default_api_bind")]
-    pub api_bind: String,
+    #[serde(default)]
+    pub memory: MemoryConfig,
 
     #[serde(default)]
     pub embedding: EmbeddingConfig,
@@ -39,6 +40,106 @@ pub struct Config {
 
     #[serde(default)]
     pub hooks: Vec<crate::hooks::HookRule>,
+
+    #[serde(default)]
+    pub pipelines: Vec<crate::hooks::HookPipeline>,
+}
+
+/// 可移植宿主机工作区与规范目录配置 (Phase 55)
+/// 若宿主机存在 `~/new`（历史约定工作台），自动将其作为默认基准目录以保持零回归；
+/// 在全新开源宿主机上自动采用便携式 `~/agent-body-workspace` 与系统临时目录。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceConfig {
+    /// 宿主机工作区根目录 (默认: $AGENT_BODY_WORKSPACE_BASE 或 ~/new 或 ~/agent-body-workspace)
+    #[serde(default = "default_workspace_base")]
+    pub base_dir: PathBuf,
+
+    /// 代码仓库与工程根目录列表 (用于 Fact 编目、Daemon 默认监听与拓扑深度归一化)
+    #[serde(default = "default_workspace_roots")]
+    pub workspace_roots: Vec<PathBuf>,
+
+    /// 受管临时验证与导出安全目录 (默认: $AGENT_BODY_TMP_DIR 或 {base_dir}/tmp 或 OS temp_dir)
+    #[serde(default = "default_temp_dir")]
+    pub temp_dir: PathBuf,
+
+    /// SKILL 生态扫描目录列表
+    #[serde(default = "default_skills_dirs")]
+    pub skills_dirs: Vec<PathBuf>,
+
+    /// 笔记与权威资料目录列表
+    #[serde(default = "default_notes_dirs")]
+    pub notes_dirs: Vec<PathBuf>,
+
+    /// 对外开源/镜像 Git 仓库目录列表 (供 GC 冗余缓存扫描)
+    #[serde(default = "default_shared_git_dirs")]
+    pub shared_git_dirs: Vec<PathBuf>,
+}
+
+impl Default for WorkspaceConfig {
+    fn default() -> Self {
+        Self {
+            base_dir: default_workspace_base(),
+            workspace_roots: default_workspace_roots(),
+            temp_dir: default_temp_dir(),
+            skills_dirs: default_skills_dirs(),
+            notes_dirs: default_notes_dirs(),
+            shared_git_dirs: default_shared_git_dirs(),
+        }
+    }
+}
+
+/// 长期记忆引擎提供者配置 (`[memory]`, 驱动 MemoryFactory)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryConfig {
+    /// 提供者类型: "builtin" | "powercontext" | "mem0" | "letta"
+    #[serde(default = "default_memory_provider")]
+    pub provider: String,
+
+    #[serde(default)]
+    pub powercontext_url: Option<String>,
+
+    #[serde(default)]
+    pub powercontext_scope_id: Option<String>,
+
+    #[serde(default)]
+    pub mem0_url: Option<String>,
+
+    /// 仅填环境变量名 (例如 "MEM0_API_KEY")，不在 config.toml 中明文落盘凭据
+    #[serde(default)]
+    pub mem0_api_key_env: Option<String>,
+
+    #[serde(default)]
+    pub mem0_user_id: Option<String>,
+
+    #[serde(default)]
+    pub letta_url: Option<String>,
+
+    #[serde(default)]
+    pub letta_agent_id: Option<String>,
+
+    /// 仅填环境变量名 (例如 "LETTA_API_TOKEN")
+    #[serde(default)]
+    pub letta_token_env: Option<String>,
+}
+
+fn default_memory_provider() -> String {
+    "builtin".to_string()
+}
+
+impl Default for MemoryConfig {
+    fn default() -> Self {
+        Self {
+            provider: default_memory_provider(),
+            powercontext_url: None,
+            powercontext_scope_id: None,
+            mem0_url: None,
+            mem0_api_key_env: None,
+            mem0_user_id: None,
+            letta_url: None,
+            letta_agent_id: None,
+            letta_token_env: None,
+        }
+    }
 }
 
 /// 资产语义元数据 Ollama 自动标注配置 (Phase 23)
@@ -310,21 +411,95 @@ impl Default for PlacementConfig {
     }
 }
 
-fn default_data_dir() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
-    PathBuf::from(home).join(".agent-body")
+/// 跨平台读取当前用户 Home 目录
+pub fn home_dir() -> PathBuf {
+    if let Ok(h) = std::env::var("HOME") {
+        if !h.trim().is_empty() {
+            return PathBuf::from(h);
+        }
+    }
+    if let Ok(h) = std::env::var("USERPROFILE") {
+        if !h.trim().is_empty() {
+            return PathBuf::from(h);
+        }
+    }
+    std::env::temp_dir()
 }
 
-fn default_db_path() -> PathBuf {
+pub fn default_data_dir() -> PathBuf {
+    home_dir().join(".agent-body")
+}
+
+pub fn default_db_path() -> PathBuf {
     default_data_dir().join("body.db")
 }
 
-fn default_api_port() -> u16 {
-    9527
+/// 宿主机默认工作区基准目录：优先 `$AGENT_BODY_WORKSPACE_BASE` -> `$HOME/new` (若存在) -> `$HOME/agent-body-workspace`
+pub fn default_workspace_base() -> PathBuf {
+    if let Ok(v) = std::env::var("AGENT_BODY_WORKSPACE_BASE") {
+        let t = v.trim();
+        if !t.is_empty() {
+            return PathBuf::from(t);
+        }
+    }
+    let home = home_dir();
+    let legacy_new = home.join("new");
+    if legacy_new.is_dir() {
+        legacy_new
+    } else {
+        home.join("agent-body-workspace")
+    }
 }
 
-fn default_api_bind() -> String {
-    "127.0.0.1".to_string()
+/// 宿主机默认安全临时目录：优先 `$AGENT_BODY_TMP_DIR` -> `{base}/tmp` (若存在) -> OS temp_dir/agent-body
+pub fn default_temp_dir() -> PathBuf {
+    if let Ok(v) = std::env::var("AGENT_BODY_TMP_DIR") {
+        let t = v.trim();
+        if !t.is_empty() {
+            return PathBuf::from(t);
+        }
+    }
+    let base_tmp = default_workspace_base().join("tmp");
+    if base_tmp.is_dir() {
+        base_tmp
+    } else {
+        std::env::temp_dir().join("agent-body")
+    }
+}
+
+pub fn default_workspace_roots() -> Vec<PathBuf> {
+    let base = default_workspace_base();
+    vec![
+        base.join("work"),
+        base.join("shared_proj"),
+        base.join("src"),
+        base.join("shared_git"),
+    ]
+}
+
+pub fn default_skills_dirs() -> Vec<PathBuf> {
+    let home = home_dir();
+    let candidates = [
+        default_workspace_base().join("skills"),
+        home.join(".agent-body").join("skills"),
+        home.join(".gemini/antigravity-cli/skills"),
+        home.join(".gemini/antigravity-cli/builtin/skills"),
+    ];
+    let mut out = Vec::new();
+    for c in candidates {
+        if !out.contains(&c) {
+            out.push(c);
+        }
+    }
+    out
+}
+
+pub fn default_notes_dirs() -> Vec<PathBuf> {
+    vec![default_workspace_base().join("note")]
+}
+
+pub fn default_shared_git_dirs() -> Vec<PathBuf> {
+    vec![default_workspace_base().join("shared_git")]
 }
 
 fn default_ollama_url() -> String {
@@ -343,8 +518,21 @@ fn default_fallback_fts_only() -> bool {
     true
 }
 
-fn default_owner() -> String {
-    "user:digoal".to_string()
+/// 从当前环境变量推导可移植默认归属主体 (`user:<username>`，缺省 `user:local`)
+pub fn default_owner() -> String {
+    if let Ok(u) = std::env::var("USER") {
+        let t = u.trim();
+        if !t.is_empty() {
+            return format!("user:{}", t);
+        }
+    }
+    if let Ok(u) = std::env::var("USERNAME") {
+        let t = u.trim();
+        if !t.is_empty() {
+            return format!("user:{}", t);
+        }
+    }
+    "user:local".to_string()
 }
 
 fn default_security_level() -> String {
@@ -367,8 +555,8 @@ impl Default for Config {
         Self {
             data_dir: default_data_dir(),
             db_path: default_db_path(),
-            api_port: default_api_port(),
-            api_bind: default_api_bind(),
+            workspace: WorkspaceConfig::default(),
+            memory: MemoryConfig::default(),
             embedding: EmbeddingConfig::default(),
             assets: AssetsConfig::default(),
             placement: PlacementConfig::default(),
@@ -377,23 +565,39 @@ impl Default for Config {
             mesh: MeshConfig::default(),
             annotation: AnnotationConfig::default(),
             hooks: vec![],
+            pipelines: vec![],
         }
     }
+}
+
+/// 纯函数解析配置文件查找优先级：`custom_path` > `AGENT_BODY_CONFIG` > `STEWARD_CONFIG` > `~/.agent-body/config.toml`
+pub fn resolve_config_path_with(
+    custom_path: Option<&Path>,
+    agent_body_env: Option<&str>,
+    steward_env: Option<&str>,
+) -> PathBuf {
+    if let Some(p) = custom_path {
+        return p.to_path_buf();
+    }
+    if let Some(v) = agent_body_env.map(str::trim).filter(|s| !s.is_empty()) {
+        return PathBuf::from(v);
+    }
+    if let Some(v) = steward_env.map(str::trim).filter(|s| !s.is_empty()) {
+        return PathBuf::from(v);
+    }
+    default_data_dir().join("config.toml")
 }
 
 impl Config {
     /// 加载配置，若不存在则创建默认配置
     pub fn load_or_default(custom_path: Option<&Path>) -> Result<Self> {
-        let config_path = match custom_path {
-            Some(p) => p.to_path_buf(),
-            None => {
-                if let Ok(env_path) = std::env::var("STEWARD_CONFIG") {
-                    PathBuf::from(env_path)
-                } else {
-                    default_data_dir().join("config.toml")
-                }
-            }
-        };
+        let ab_env = std::env::var("AGENT_BODY_CONFIG").ok();
+        let st_env = std::env::var("STEWARD_CONFIG").ok();
+        let config_path = resolve_config_path_with(
+            custom_path,
+            ab_env.as_deref(),
+            st_env.as_deref(),
+        );
 
         if config_path.exists() {
             let content = std::fs::read_to_string(&config_path)
@@ -420,11 +624,165 @@ impl Config {
         }
     }
 
+    /// 无异常读取当前生效配置；若加载失败则安全回退到 `Config::default()`
+    pub fn load_effective_or_default() -> Self {
+        Self::load_or_default(None).unwrap_or_default()
+    }
+
+    /// 获取有效工作区基准目录
+    pub fn effective_workspace_base(&self) -> PathBuf {
+        self.workspace.base_dir.clone()
+    }
+
+    /// 获取有效工作区代码根目录列表
+    pub fn effective_workspace_roots(&self) -> Vec<PathBuf> {
+        if self.workspace.workspace_roots.is_empty() {
+            default_workspace_roots()
+        } else {
+            self.workspace.workspace_roots.clone()
+        }
+    }
+
+    /// 获取有效临时工作目录
+    pub fn effective_temp_dir(&self) -> PathBuf {
+        self.workspace.temp_dir.clone()
+    }
+
+    /// 获取有效 SKILL 目录列表
+    pub fn effective_skills_dirs(&self) -> Vec<PathBuf> {
+        if self.workspace.skills_dirs.is_empty() {
+            default_skills_dirs()
+        } else {
+            self.workspace.skills_dirs.clone()
+        }
+    }
+
+    /// 获取有效笔记资料目录列表
+    pub fn effective_notes_dirs(&self) -> Vec<PathBuf> {
+        if self.workspace.notes_dirs.is_empty() {
+            default_notes_dirs()
+        } else {
+            self.workspace.notes_dirs.clone()
+        }
+    }
+
+    /// 获取有效共享/开源仓库目录列表
+    pub fn effective_shared_git_dirs(&self) -> Vec<PathBuf> {
+        if self.workspace.shared_git_dirs.is_empty() {
+            default_shared_git_dirs()
+        } else {
+            self.workspace.shared_git_dirs.clone()
+        }
+    }
+
+    /// 获取有效默认归属主体
+    pub fn effective_default_owner(&self) -> String {
+        let trimmed = self.placement.default_owner.trim();
+        if trimmed.is_empty() {
+            default_owner()
+        } else {
+            trimmed.to_string()
+        }
+    }
+
+    /// 返回允许导出/GC/沙盒直写的安全临时根目录白名单
+    pub fn allowed_temp_roots(&self) -> Vec<PathBuf> {
+        let mut roots = Vec::new();
+        for cand in [
+            self.effective_temp_dir(),
+            PathBuf::from("/tmp"),
+            std::env::temp_dir(),
+        ] {
+            if !roots.contains(&cand) {
+                roots.push(cand);
+            }
+        }
+        roots
+    }
+
+    /// 校验路径是否安全位于受允许临时目录白名单内（拦截目录穿越与软链接逃逸）
+    pub fn is_allowed_temp_path(&self, path: &Path) -> bool {
+        if !path.is_absolute() {
+            return false;
+        }
+        if path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+            return false;
+        }
+        let allowed = self.allowed_temp_roots();
+        if !allowed.iter().any(|r| path.starts_with(r)) {
+            return false;
+        }
+        if let Some(parent) = path.parent() {
+            if parent.exists() {
+                if let Ok(canon_parent) = std::fs::canonicalize(parent) {
+                    return allowed.iter().any(|r| {
+                        std::fs::canonicalize(r)
+                            .map(|cr| canon_parent.starts_with(&cr))
+                            .unwrap_or_else(|_| canon_parent.starts_with(r))
+                    });
+                }
+                return false;
+            }
+        }
+        true
+    }
+
+    /// 根据 `[memory]` 配置经由 `MemoryFactory` 构建 `MemoryProvider`（外部适配器失败时安全降级）
+    pub fn build_memory_provider(
+        &self,
+        storage: crate::storage::Storage,
+    ) -> Arc<dyn crate::memory::MemoryProvider> {
+        let provider_name = self.memory.provider.trim();
+        if provider_name.is_empty() || provider_name.eq_ignore_ascii_case("builtin") {
+            return Arc::new(crate::memory::builtin_provider::BuiltinMemoryProvider::new(
+                storage,
+            ));
+        }
+
+        let mem0_api_key = self
+            .memory
+            .mem0_api_key_env
+            .as_deref()
+            .and_then(|env_name| std::env::var(env_name.trim()).ok())
+            .unwrap_or_default();
+        let letta_token = self
+            .memory
+            .letta_token_env
+            .as_deref()
+            .and_then(|env_name| std::env::var(env_name.trim()).ok())
+            .unwrap_or_default();
+
+        let adapter_cfg = crate::memory::adapters::AdapterConfig {
+            powercontext_url: self.memory.powercontext_url.clone().unwrap_or_default(),
+            powercontext_scope_id: self.memory.powercontext_scope_id.clone().unwrap_or_default(),
+            mem0_url: self.memory.mem0_url.clone().unwrap_or_default(),
+            mem0_api_key,
+            mem0_user_id: self.memory.mem0_user_id.clone().unwrap_or_default(),
+            letta_url: self.memory.letta_url.clone().unwrap_or_default(),
+            letta_agent_id: self.memory.letta_agent_id.clone().unwrap_or_default(),
+            letta_token,
+        };
+
+        match crate::memory::adapters::MemoryFactory::create(
+            provider_name,
+            &adapter_cfg,
+            storage.clone(),
+        ) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!(
+                    "[Config][WARN] 构建记忆后端 '{}' 失败，安全降级为内置 SQLite 引擎: {}",
+                    provider_name, e
+                );
+                Arc::new(crate::memory::builtin_provider::BuiltinMemoryProvider::new(
+                    storage,
+                ))
+            }
+        }
+    }
+
     /// 校验配置参数合法性与依赖关系
     pub fn validate(&self) -> Result<()> {
-        if self.api_port < 1024 {
-            anyhow::bail!("api_port ({}) 不能小于 1024 (特权端口限制)", self.api_port);
-        }
         if self.web.enabled && self.web.port < 1024 {
             anyhow::bail!("web.port ({}) 不能小于 1024 (特权端口限制)", self.web.port);
         }
@@ -433,24 +791,75 @@ impl Config {
         }
         match self.storage.provider.as_str() {
             "sqlite" | "postgres" | "duckdb" => {}
-            other => anyhow::bail!("未知存储后端: '{}'，仅支持 'sqlite' / 'postgres' / 'duckdb'", other),
+            other => anyhow::bail!(
+                "未知存储后端: '{}'，仅支持 'sqlite' / 'postgres' / 'duckdb'",
+                other
+            ),
         }
         if self.storage.provider == "postgres" && self.storage.pg_url.is_none() {
             anyhow::bail!("当 storage.provider 设置为 'postgres' 时，必须配置 storage.pg_url 连接串");
+        }
+        match self.memory.provider.trim() {
+            "builtin" | "powercontext" | "mem0" | "letta" => {}
+            other => anyhow::bail!(
+                "未知 memory.provider: '{}'，仅支持 'builtin' / 'powercontext' / 'mem0' / 'letta'",
+                other
+            ),
         }
         for peer in &self.mesh.peers {
             if !(peer.starts_with("http://") || peer.starts_with("https://")) {
                 anyhow::bail!("mesh.peers 中的 '{}' 必须以 http:// 或 https:// 开头", peer);
             }
         }
-        if self.mesh.enabled && !self.mesh.peers.is_empty() && self.web.auth_token.is_none() {
-            anyhow::bail!("启用 mesh 联邦且配置了 peers 时，必须设置 [web].auth_token 作为集群共享密钥");
+        if self.mesh.enabled {
+            if self.mesh.timeout_ms < 100 || self.mesh.timeout_ms > 60_000 {
+                anyhow::bail!(
+                    "mesh.timeout_ms ({}) 必须位于 100..=60000 毫秒之间",
+                    self.mesh.timeout_ms
+                );
+            }
+            if self.mesh.replay_window_secs == 0 || self.mesh.replay_window_secs > 3600 {
+                anyhow::bail!(
+                    "mesh.replay_window_secs ({}) 必须位于 1..=3600 秒之间",
+                    self.mesh.replay_window_secs
+                );
+            }
+            if self.mesh.max_transfer_bytes == 0 || self.mesh.max_transfer_bytes > 50 * 1024 * 1024 {
+                anyhow::bail!(
+                    "mesh.max_transfer_bytes ({}) 必须位于 1..=52428800 (50MB) 之间",
+                    self.mesh.max_transfer_bytes
+                );
+            }
+            let has_web_token = self
+                .web
+                .auth_token
+                .as_deref()
+                .map(|s| !s.trim().is_empty())
+                .unwrap_or(false);
+            let has_shared_secret = self
+                .mesh
+                .shared_secret
+                .as_deref()
+                .map(|s| !s.trim().is_empty())
+                .unwrap_or(false);
+            let has_peer_keys = !self.mesh.peer_keys.is_empty();
+            if !self.mesh.peers.is_empty() && !has_web_token && !has_shared_secret && !has_peer_keys {
+                anyhow::bail!(
+                    "启用 mesh 联邦且配置了 peers 时，必须设置 [mesh].shared_secret、[mesh.peer_keys] 或 [web].auth_token 作为签名密钥"
+                );
+            }
         }
         if self.annotation.enabled && self.annotation.timeout_ms < 500 {
-            anyhow::bail!("annotation.timeout_ms ({}) 不能小于 500ms", self.annotation.timeout_ms);
+            anyhow::bail!(
+                "annotation.timeout_ms ({}) 不能小于 500ms",
+                self.annotation.timeout_ms
+            );
         }
         if self.annotation.enabled && self.annotation.max_snippet_chars < 200 {
-            anyhow::bail!("annotation.max_snippet_chars ({}) 不能小于 200", self.annotation.max_snippet_chars);
+            anyhow::bail!(
+                "annotation.max_snippet_chars ({}) 不能小于 200",
+                self.annotation.max_snippet_chars
+            );
         }
         Ok(())
     }
@@ -483,10 +892,12 @@ mod tests {
     #[test]
     fn test_default_config() {
         let cfg = Config::default();
-        assert_eq!(cfg.api_port, 9527);
-        assert_eq!(cfg.placement.default_owner, "user:digoal");
+        assert_eq!(cfg.web.port, 8765);
+        assert!(cfg.placement.default_owner.starts_with("user:"));
         assert_eq!(cfg.placement.default_security_level, "internal");
         assert!(cfg.embedding.fallback_fts_only);
+        assert_eq!(cfg.memory.provider, "builtin");
+        assert!(!cfg.workspace.workspace_roots.is_empty());
     }
 
     #[test]
@@ -494,7 +905,45 @@ mod tests {
         let cfg = Config::default();
         let toml_str = toml::to_string(&cfg).expect("to_string");
         let parsed: Config = toml::from_str(&toml_str).expect("from_str");
-        assert_eq!(parsed.api_port, cfg.api_port);
+        assert_eq!(parsed.web.port, cfg.web.port);
+        assert_eq!(parsed.workspace.temp_dir, cfg.workspace.temp_dir);
+    }
+
+    #[test]
+    fn test_legacy_config_ignores_removed_api_port_bind() {
+        let legacy_toml = r#"
+data_dir = "/tmp/ab-data"
+db_path = "/tmp/ab-data/body.db"
+api_port = 9527
+api_bind = "127.0.0.1"
+
+[placement]
+default_owner = "user:digoal"
+"#;
+        let parsed: Config = toml::from_str(legacy_toml).expect("legacy toml parse");
+        parsed.validate().expect("legacy validate");
+        assert_eq!(parsed.placement.default_owner, "user:digoal");
+    }
+
+    #[test]
+    fn test_agent_body_config_env_takes_precedence() {
+        let explicit = Path::new("/tmp/explicit.toml");
+        assert_eq!(
+            resolve_config_path_with(Some(explicit), Some("/tmp/ab.toml"), Some("/tmp/st.toml")),
+            explicit
+        );
+        assert_eq!(
+            resolve_config_path_with(None, Some("/tmp/ab.toml"), Some("/tmp/st.toml")),
+            PathBuf::from("/tmp/ab.toml")
+        );
+        assert_eq!(
+            resolve_config_path_with(None, Some(""), Some("/tmp/st.toml")),
+            PathBuf::from("/tmp/st.toml")
+        );
+        assert_eq!(
+            resolve_config_path_with(None, None, None),
+            default_data_dir().join("config.toml")
+        );
     }
 
     #[test]
@@ -502,10 +951,10 @@ mod tests {
         let mut cfg = Config::default();
         assert!(cfg.validate().is_ok());
 
-        cfg.api_port = 80;
+        cfg.web.port = 80;
         assert!(cfg.validate().is_err());
 
-        cfg.api_port = 9527;
+        cfg.web.port = 8765;
         cfg.embedding.dimensions = 0;
         assert!(cfg.validate().is_err());
 
@@ -520,6 +969,11 @@ mod tests {
         cfg.storage.pg_url = Some("host=localhost dbname=steward".to_string());
         assert!(cfg.validate().is_ok());
 
+        cfg.memory.provider = "unknown_mem".to_string();
+        assert!(cfg.validate().is_err());
+        cfg.memory.provider = "powercontext".to_string();
+        assert!(cfg.validate().is_ok());
+
         cfg.annotation.timeout_ms = 100;
         assert!(cfg.validate().is_err());
         cfg.annotation.timeout_ms = 8000;
@@ -527,5 +981,66 @@ mod tests {
         assert!(cfg.validate().is_err());
         cfg.annotation.max_snippet_chars = 1200;
         assert!(cfg.validate().is_ok());
+    }
+
+    #[test]
+    fn test_mesh_validation_accepts_shared_secret_and_checks_bounds() {
+        let mut cfg = Config::default();
+        cfg.mesh.enabled = true;
+        cfg.mesh.peers = vec!["http://127.0.0.1:8765".to_string()];
+        // 未配置任何密钥应报错
+        assert!(cfg.validate().is_err());
+
+        // 仅配置 mesh.shared_secret 应通过
+        cfg.mesh.shared_secret = Some("mesh-secret-xyz".to_string());
+        assert!(cfg.validate().is_ok());
+
+        // replay_window 越界检查
+        cfg.mesh.replay_window_secs = 0;
+        assert!(cfg.validate().is_err());
+        cfg.mesh.replay_window_secs = 300;
+
+        // timeout_ms 越界检查
+        cfg.mesh.timeout_ms = 20;
+        assert!(cfg.validate().is_err());
+        cfg.mesh.timeout_ms = 1500;
+
+        // max_transfer_bytes 越界检查 (>50MB)
+        cfg.mesh.max_transfer_bytes = 60 * 1024 * 1024;
+        assert!(cfg.validate().is_err());
+        cfg.mesh.max_transfer_bytes = 10 * 1024 * 1024;
+        assert!(cfg.validate().is_ok());
+    }
+
+    #[test]
+    fn test_memory_config_provider_validation_and_factory() {
+        let mut cfg = Config::default();
+        cfg.memory.provider = "powercontext".to_string();
+        cfg.memory.powercontext_url = Some("http://127.0.0.1:19999".to_string());
+        let st = crate::storage::Storage::open_in_memory().expect("open_in_memory");
+        let p = cfg.build_memory_provider(st);
+        // PowerContext 不可达时应安全降级至 builtin
+        assert_eq!(p.provider_name(), "builtin");
+    }
+
+    #[test]
+    fn test_pipelines_config_deserialization() {
+        let toml_str = r#"
+[[pipelines]]
+id = "pipe-1"
+name = "测试编排"
+event_pattern = "on_file_created"
+debounce_ms = 250
+
+[[pipelines.steps]]
+name = "step-1"
+action = { action = "exec", command = "echo ok" }
+on_failure = "continue"
+timeout_ms = 1000
+"#;
+        let parsed: Config = toml::from_str(toml_str).expect("parse pipelines");
+        assert_eq!(parsed.pipelines.len(), 1);
+        assert_eq!(parsed.pipelines[0].id, "pipe-1");
+        assert_eq!(parsed.pipelines[0].steps.len(), 1);
     }
 }

@@ -215,12 +215,7 @@ impl SkillCatalogScanner {
 
     /// 扫描默认宿主机 SKILL 目录集合
     pub fn scan_default_roots(&self) -> Result<(usize, usize)> {
-        let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
-        let roots = vec![
-            PathBuf::from("/root/new/skills"),
-            PathBuf::from(&home).join(".gemini/antigravity-cli/skills"),
-            PathBuf::from(&home).join(".gemini/antigravity-cli/builtin/skills"),
-        ];
+        let roots = crate::config::Config::load_effective_or_default().effective_skills_dirs();
         self.scan_roots(&roots)
     }
 

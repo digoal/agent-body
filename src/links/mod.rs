@@ -10,6 +10,7 @@ pub mod repair;
 
 pub struct LinksEngine {
     storage: Arc<Storage>,
+    workspace_bases: Vec<String>,
 }
 
 /// 判断路径是否为动态格式化模板、示例占位符或临时日志路径（避免产生假阳性依赖边）
@@ -46,11 +47,21 @@ pub(crate) fn is_non_static_link_target(target: &str, trailing_char: Option<char
 }
 
 pub(crate) fn is_ephemeral_or_log_path(target: &str) -> bool {
-    target.starts_with("/tmp/")
-        || target.starts_with("/root/new/tmp/")
+    if target.starts_with("/tmp/")
+        || target.starts_with("/var/tmp/")
+        || target.contains("/tmp/")
         || target.contains("/_scratch/")
         || target.ends_with(".log")
         || target.ends_with(".tmp")
+    {
+        return true;
+    }
+    let allowed = crate::config::Config::load_effective_or_default().allowed_temp_roots();
+    allowed.iter().any(|root| {
+        let r = root.to_string_lossy().replace('\\', "/");
+        let rt = r.trim_end_matches('/');
+        !rt.is_empty() && target.starts_with(&format!("{}/", rt))
+    })
 }
 
 pub(crate) fn is_pure_data_file(path: &str) -> bool {
@@ -61,10 +72,10 @@ pub(crate) fn is_pure_data_file(path: &str) -> bool {
         || lower.ends_with(".log")
 }
 
-/// 判断是否为显式 Markdown 文件链接 (`[text](/root/new/...)` 或 `[text](file:///root/new/...)`)
+/// 判断是否为显式 Markdown 文件链接 (`[text](/abs/...)` 或 `[text](file:///abs/...)`)
 pub(crate) fn is_explicit_markdown_link(snippet: Option<&str>) -> bool {
     match snippet {
-        Some(s) => s.contains("](/root/new/") || s.contains("](file:///root/new/"),
+        Some(s) => s.contains("](/") || s.contains("](file:///"),
         None => false,
     }
 }
@@ -134,7 +145,44 @@ pub(crate) fn is_test_or_example_link(
 
 impl LinksEngine {
     pub fn new(storage: Arc<Storage>) -> Self {
-        Self { storage }
+        let cfg = crate::config::Config::load_effective_or_default();
+        let base = cfg
+            .effective_workspace_base()
+            .to_string_lossy()
+            .replace('\\', "/")
+            .trim_end_matches('/')
+            .to_string();
+        let mut bases = Vec::new();
+        if !base.is_empty() {
+            bases.push(base);
+        }
+        Self {
+            storage,
+            workspace_bases: bases,
+        }
+    }
+
+    pub fn with_workspace_bases(storage: Arc<Storage>, workspace_bases: Vec<String>) -> Self {
+        Self {
+            storage,
+            workspace_bases,
+        }
+    }
+
+    fn effective_bases_for_asset(&self, asset_path: &str) -> Vec<String> {
+        let mut bases = self.workspace_bases.clone();
+        let norm = asset_path.replace('\\', "/");
+        for marker in ["/work/", "/shared_proj/", "/src/", "/note/", "/shared_git/", "/skills/", "/cron/", "/tmp/"] {
+            if let Some(idx) = norm.find(marker) {
+                let candidate = norm[..idx].trim_end_matches('/').to_string();
+                if candidate.starts_with('/') && !candidate.is_empty() && !bases.contains(&candidate) {
+                    bases.push(candidate);
+                }
+            }
+        }
+        bases.sort_by_key(|b| std::cmp::Reverse(b.len()));
+        bases.dedup();
+        bases
     }
 
     /// 手动建立关联
@@ -224,7 +272,18 @@ impl LinksEngine {
 
         // 编译常用提取正则
         use anyhow::Context;
-        let path_re = Regex::new(r#"(/root/new/[a-zA-Z0-9_\-\./]+)"#).context("编译 path_re 失败")?;
+        let effective_bases = self.effective_bases_for_asset(asset_path);
+        let base_prefixes: Vec<String> = effective_bases
+            .iter()
+            .map(|b| format!("{}/", b.trim_end_matches('/')))
+            .collect();
+        let path_re = if effective_bases.is_empty() {
+            None
+        } else {
+            let escaped: Vec<String> = effective_bases.iter().map(|b| regex::escape(b)).collect();
+            let pattern = format!(r#"((?:{})/[a-zA-Z0-9_\-\./]+)"#, escaped.join("|"));
+            Some(Regex::new(&pattern).context("编译 path_re 失败")?)
+        };
         let py_import_re = Regex::new(r#"^(?:from\s+([a-zA-Z0-9_\.]+)\s+import|import\s+([a-zA-Z0-9_\.]+))"#).context("编译 py_import_re 失败")?;
         let sh_source_re = Regex::new(r#"^(?:source|\.)\s+["']?([^"'\s]+)"#).context("编译 sh_source_re 失败")?;
         let sh_exec_re = Regex::new(r#"^(?:bash|sh|python3|python)\s+["']?([^"'\s]+)"#).context("编译 sh_exec_re 失败")?;
@@ -274,7 +333,7 @@ impl LinksEngine {
                             | "openai" | "anthropic" | "PIL" | "cv2" | "matplotlib" | "__future__"
                     );
                     if !mod_name.is_empty() && !is_stdlib_or_3p {
-                        let target_candidate = resolve_python_import_target(asset_path, mod_name);
+                        let target_candidate = resolve_python_import_target(asset_path, mod_name, &effective_bases);
                         if let Some(target_id) = target_candidate {
                             let link = LinkRecord {
                                 id: None,
@@ -303,7 +362,8 @@ impl LinksEngine {
             if is_shell {
                 if let Some(cap) = sh_source_re.captures(trimmed).or_else(|| sh_exec_re.captures(trimmed)) {
                 let script_target = cap[1].to_string();
-                if script_target.starts_with("/root/new/") || script_target.ends_with(".sh") || script_target.ends_with(".py") {
+                let in_workspace = base_prefixes.iter().any(|p| script_target.starts_with(p));
+                if in_workspace || script_target.ends_with(".sh") || script_target.ends_with(".py") {
                     let link = LinkRecord {
                         id: None,
                         source_type: "asset".to_string(),
@@ -330,7 +390,8 @@ impl LinksEngine {
             if is_js {
                 if let Some(cap) = js_import_re.captures(trimmed) {
                 let js_target = cap[1].to_string();
-                if js_target.starts_with("/root/new/") || js_target.starts_with('.') {
+                let in_workspace = base_prefixes.iter().any(|p| js_target.starts_with(p));
+                if in_workspace || js_target.starts_with('.') {
                     let link = LinkRecord {
                         id: None,
                         source_type: "asset".to_string(),
@@ -353,8 +414,9 @@ impl LinksEngine {
                 }
             }
 
-            // 4. 绝对路径正则探测 (/root/new/...)，严格过滤模板截断、占位符与临时输出路径
-            for m in path_re.find_iter(line) {
+            // 4. 绝对路径正则探测 (工作区基准路径下...)，严格过滤模板截断、占位符与临时输出路径
+            if let Some(ref re) = path_re {
+                for m in re.find_iter(line) {
                 let matched_path = m.as_str();
                 let trailing_char = line[m.end()..].chars().next();
                 if is_non_static_link_target(matched_path, trailing_char) {
@@ -385,6 +447,7 @@ impl LinksEngine {
                         eprintln!("[Links][WARN] 写入依赖边失败 ({} -> {}): {}", link.source_id, link.target_id, e);
                     }
                     count += 1;
+                }
                 }
             }
 
@@ -485,14 +548,22 @@ impl LinksEngine {
     }
 }
 
-fn resolve_python_import_target(asset_path: &str, mod_name: &str) -> Option<String> {
+fn resolve_python_import_target(asset_path: &str, mod_name: &str, bases: &[String]) -> Option<String> {
     if mod_name.starts_with("shared_proj") {
         let rel = mod_name.replace('.', "/");
-        let py_file = format!("/root/new/{}.py", rel);
-        if std::path::Path::new(&py_file).exists() {
-            return Some(py_file);
+        for b in bases {
+            let py_file = format!("{}/{}.py", b, rel);
+            if std::path::Path::new(&py_file).exists() {
+                return Some(py_file);
+            }
+            let dir_path = format!("{}/{}", b, rel);
+            if std::path::Path::new(&dir_path).exists() {
+                return Some(dir_path);
+            }
         }
-        return Some(format!("/root/new/{}", rel));
+        if let Some(first_base) = bases.first() {
+            return Some(format!("{}/{}", first_base, rel));
+        }
     }
     let mod_rel = mod_name.replace('.', "/");
     // 1. 优先检查脚本所在同级目录是否存在 <mod>.py 或 <mod>/__init__.py
@@ -506,14 +577,16 @@ fn resolve_python_import_target(asset_path: &str, mod_name: &str) -> Option<Stri
             return Some(sibling_pkg.to_string_lossy().to_string());
         }
     }
-    // 2. 其次检查 /root/new/shared_proj/ 下是否存在对应模块
-    let shared_py = format!("/root/new/shared_proj/{}.py", mod_rel);
-    if std::path::Path::new(&shared_py).exists() {
-        return Some(shared_py);
-    }
-    let shared_dir = format!("/root/new/shared_proj/{}", mod_rel);
-    if std::path::Path::new(&shared_dir).exists() {
-        return Some(shared_dir);
+    // 2. 其次检查工作区 shared_proj/ 下是否存在对应模块
+    for b in bases {
+        let shared_py = format!("{}/shared_proj/{}.py", b, mod_rel);
+        if std::path::Path::new(&shared_py).exists() {
+            return Some(shared_py);
+        }
+        let shared_dir = format!("{}/shared_proj/{}", b, mod_rel);
+        if std::path::Path::new(&shared_dir).exists() {
+            return Some(shared_dir);
+        }
     }
     None
 }

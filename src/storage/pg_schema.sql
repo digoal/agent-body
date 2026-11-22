@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS assets (
     id              TEXT PRIMARY KEY,
     path            TEXT NOT NULL UNIQUE,
     type            TEXT NOT NULL CHECK (type IN ('directory','project','script','document','dataset','config','media','other')),
-    owner           TEXT DEFAULT 'user:digoal',
+    owner           TEXT DEFAULT 'user:local',
     security_level  TEXT DEFAULT 'internal' CHECK (security_level IN ('public','internal','confidential','secret')),
     scan_tier       TEXT DEFAULT 'deep' CHECK (scan_tier IN ('deep','shallow','restricted')),
     description     TEXT,

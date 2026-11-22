@@ -40,28 +40,67 @@ pub struct Scanner {
     storage: Storage,
     matcher: PolicyMatcher,
     noise_filter: NoiseFilter,
+    ignore_patterns: Vec<String>,
+    default_owner: String,
 }
 
 impl Scanner {
     pub fn new(storage: Storage) -> Result<Self> {
+        let cfg = crate::config::Config::load_effective_or_default();
+        Self::with_options(storage, cfg.assets.ignore_patterns.clone(), cfg.effective_default_owner())
+    }
+
+    pub fn with_options(
+        storage: Storage,
+        ignore_patterns: Vec<String>,
+        default_owner: String,
+    ) -> Result<Self> {
         let policies = storage.get_scan_policies()?;
         let matcher = PolicyMatcher::from_policies(&policies)?;
-        let noise_filter = NoiseFilter::default();
-        Ok(Self { storage, matcher, noise_filter })
+        let noise_filter = NoiseFilter::with_ignore_patterns(ignore_patterns.clone());
+        Ok(Self {
+            storage,
+            matcher,
+            noise_filter,
+            ignore_patterns,
+            default_owner,
+        })
     }
 
     pub fn with_noise_filter(storage: Storage, noise_filter: NoiseFilter) -> Result<Self> {
+        let cfg = crate::config::Config::load_effective_or_default();
+        let default_owner = cfg.effective_default_owner();
         let policies = storage.get_scan_policies()?;
         let matcher = PolicyMatcher::from_policies(&policies)?;
-        Ok(Self { storage, matcher, noise_filter })
+        Ok(Self {
+            storage,
+            matcher,
+            noise_filter,
+            ignore_patterns: cfg.assets.ignore_patterns,
+            default_owner,
+        })
     }
 
     pub fn with_policies(storage: Storage, extra_policies: &[crate::storage::models::ScanPolicy]) -> Result<Self> {
+        let cfg = crate::config::Config::load_effective_or_default();
+        let default_owner = cfg.effective_default_owner();
         let mut policies = storage.get_scan_policies()?;
         policies.extend_from_slice(extra_policies);
         let matcher = PolicyMatcher::from_policies(&policies)?;
-        let noise_filter = NoiseFilter::default();
-        Ok(Self { storage, matcher, noise_filter })
+        let noise_filter = NoiseFilter::with_ignore_patterns(cfg.assets.ignore_patterns.clone());
+        Ok(Self {
+            storage,
+            matcher,
+            noise_filter,
+            ignore_patterns: cfg.assets.ignore_patterns,
+            default_owner,
+        })
+    }
+
+    fn matches_configured_ignore(&self, path: &Path) -> bool {
+        self.ignore_patterns
+            .iter()
+            .any(|pat| crate::scanner::importance::path_matches_ignore_pattern(path, pat))
     }
 
     /// 执行高性能分级颗粒度扫描
@@ -86,8 +125,8 @@ impl Scanner {
                 report.scanned_dirs += 1;
                 let tier = self.determine_tier(path);
 
-                if tier == "shallow" {
-                    // ★ 黑名单规则：止于当前目录层级，不再深入递归！
+                if tier == "shallow" || self.matches_configured_ignore(path) {
+                    // ★ 黑名单 / 配置 ignore_patterns 规则：止于当前目录层级，不再深入递归！
                     it.skip_current_dir();
 
                     let metadata = entry.metadata().ok();
@@ -166,7 +205,7 @@ impl Scanner {
                     id: uuid::Uuid::new_v4().to_string(),
                     path: path_str,
                     asset_type,
-                    owner: "user:digoal".to_string(),
+                    owner: self.default_owner.clone(),
                     security_level: extracted.security_level,
                     scan_tier: tier.clone(),
                     description: Some(extracted.description),

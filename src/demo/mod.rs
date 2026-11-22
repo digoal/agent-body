@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -18,7 +17,6 @@ use crate::links::audit::LinkAuditor;
 use crate::links::codegraph_bridge::CodeGraphBridge;
 use crate::links::impact::ImpactAnalyzer;
 use crate::links::repair::LinkRepairer;
-use crate::memory::builtin_provider::BuiltinMemoryProvider;
 use crate::memory::lifecycle::MemoryLifecycleManager;
 use crate::placement::{PlacementEngine, PlacementRequest};
 use crate::storage::{Storage, StorageProvider};
@@ -420,10 +418,25 @@ impl DemoEngine {
                 let arc_st = Arc::new(st);
                 let audit = LinkAuditor::new(arc_st.clone()).audit_links(false)?;
                 let impact = ImpactAnalyzer::new(arc_st).analyze_impact("agent-body", 3)?;
-                let cg = CodeGraphBridge::inspect_project(Path::new("/root/new/work/agent-body"))
+                let mut cg = std::env::current_dir()
                     .ok()
-                    .flatten()
-                    .or_else(|| CodeGraphBridge::inspect_project(Path::new("/root/new/src/postgres")).ok().flatten());
+                    .and_then(|cwd| CodeGraphBridge::inspect_project(&cwd).ok().flatten());
+                if cg.is_none() {
+                    let cfg = crate::config::Config::load_effective_or_default();
+                    'cg_search: for root in cfg.effective_workspace_roots() {
+                        if let Ok(rd) = std::fs::read_dir(&root) {
+                            for entry in rd.flatten() {
+                                let p = entry.path();
+                                if p.is_dir() && p.join(".codegraph").exists() {
+                                    if let Ok(Some(found)) = CodeGraphBridge::inspect_project(&p) {
+                                        cg = Some(found);
+                                        break 'cg_search;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 let svcs = AutomationTopology::scan_systemd_services().unwrap_or_default();
                 let crons = AutomationTopology::scan_cron_jobs().unwrap_or_default();
@@ -661,14 +674,16 @@ impl DemoEngine {
             }
 
             "scene-6" => {
-                let provider = Arc::new(BuiltinMemoryProvider::new(st.clone()));
+                let cfg = crate::config::Config::load_effective_or_default();
+                let provider = cfg.build_memory_provider(st.clone());
                 let brief = BriefAssembler::new(st.clone(), Some(provider)).assemble(&BriefRequest {
                     query: "宿主机全局态势与近期变更".into(),
                     session_id: "demo-roadshow".into(),
                     budget_tokens: 1500,
                 })?;
                 let mem_audit = MemoryLifecycleManager::new(&st).audit_memories()?;
-                let gc_preview = HostGarbageCollector::run_gc(Path::new("/root/new/tmp"), 72, true)?;
+                let tmp_dir = cfg.effective_temp_dir();
+                let gc_preview = HostGarbageCollector::run_gc(&tmp_dir, 72, true)?;
 
                 Ok(DemoExecutionResult {
                     scenario_id: "scene-6".into(),
@@ -684,10 +699,10 @@ impl DemoEngine {
                     elapsed_us: t0.elapsed().as_micros(),
                     without_steward: serde_json::json!({
                         "action": "会话结束后直接退出不管残局，下一轮新会话从零摸黑重来",
-                        "failure": "/root/new/tmp/ 堆积大量孤儿文件，旧记忆相互矛盾却无人仲裁",
+                        "failure": format!("{}/ 堆积大量孤儿文件，旧记忆相互矛盾却无人仲裁", tmp_dir.display()),
                         "cost": "新人反复踩同一块石头 + 磁盘垃圾越积越多",
                         "command": "exit 0 # 遗留孤儿临时文件 & 腐化记忆",
-                        "symptom": "旧会话在 /root/new/tmp/ 留下大批孤儿文件与过时矛盾记忆；新会话开启时重新踩坑。",
+                        "symptom": format!("旧会话在 {}/ 留下大批孤儿文件与过时矛盾记忆；新会话开启时重新踩坑。", tmp_dir.display()),
                         "risk": "经验流失、临时文件堆积、记忆腐化",
                     }),
                     with_steward: serde_json::json!({
@@ -701,7 +716,7 @@ impl DemoEngine {
                         "gc_dry_run_safe": true,
                         "orphan_files_found": gc_preview.candidate_files_count,
                     }),
-                    speaker_notes: "开局一秒拿到三位一体简报，收工自动对 /root/new/tmp/ 做安全 dry-run 自洁与记忆衰减仲裁，形成真正的工程闭环。".into(),
+                    speaker_notes: format!("开局一秒拿到三位一体简报，收工自动对 {}/ 做安全 dry-run 自洁与记忆衰减仲裁，形成真正的工程闭环。", tmp_dir.display()),
                     black_screen_mirror: DemoBlackScreenMirror {
                         cli_command: "agent-body brief && agent-body gc --max-age-hours 72".into(),
                         mcp_tool: "body_brief".into(),

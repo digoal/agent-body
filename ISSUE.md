@@ -186,8 +186,10 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - 新增 SPI #88 `count_expired_coordination_locks`（SQLite/PG/DuckDB 全实现）修复 `vitals` 过期锁检测，补齐 14/18 未埋点 `WaitEventId`（18/18 全覆盖使 `ADDM-05` 可达），修复 `estimate_percentile_from_buckets` / `run_l1_auto_tune` 缺陷并落地 `daemon-auto` 周期快照与 `delete_snapshot`/`delete_awr_report`；
     - 实现 AWR 报告库 CLI/MCP/Web 删除与查阅对齐、统一 `body_lock_release` 三端标识、修复 `parity/matrix` CLI 映射，升级 Web Benchmark 至 `v3.8` + `DQ1~DQ9` 渲染，扩展 `codex`/`hermes`/Claude `.claude/settings.json` Hook，升级 `src/tui/mod.rs` 并交付 Benchmark `v3.8` (`W18`/`M6`/`DQ9`/`PR-14`)（详见 [roadmap-phase54.md](docs/src_doc/roadmap-phase54.md)）。
 
-39. **`[P1 · Phase 55]` 开源可移植性解耦（去 `/root/new/` 硬编码）、死配置真相化与跨平台/网络硬化** `🗓️ Planned (Phase 55)`:
-    - 抽象 `Config::{workspace_roots, temp_dir, default_owner}`，接通 `AGENT_BODY_CONFIG`/`[memory]`/`[[hooks]]`/`[[pipelines]]`/`assets.ignore_patterns` 清理废弃 `api_port`，完善 musl/macOS/Windows 与 HTTP 头循环解析。
+39. **`[P1 · Phase 55]` 开源可移植性解耦（去 `/root/new/` 硬编码）、死配置真相化与跨平台/网络硬化** `✅ 已全量落地 (Phase 55)`:
+    - 抽象 `[workspace]` (`WorkspaceConfig`) 与宿主自适应默认路径、`$USER` 动态 `default_owner` 及 SQLite/PG/DuckDB 动态种子，彻底清除生产代码 `/root/new/` 与 `user:digoal` 硬编码；
+    - 清理失效 `api_port`/`api_bind` 并保持旧 `config.toml` 兼容，正式接通 `AGENT_BODY_CONFIG`、`[memory]` (`MemoryFactory`)、`[[hooks]]`/`[[pipelines]]` (`EventBus` 消费)、`assets.ignore_patterns`、`embedding.fallback_fts_only=false` 与 `[mesh]` 完整校验；
+    - 完成 `malloc_trim` GNU glibc 限定、非 Linux `KernelSelfTelemetry` `sysinfo` 回退、Windows 多语言本地化 `netstat` 状态支持及 Web 32KB 有界 HTTP 头循环读取（详见 [roadmap-phase55.md](docs/src_doc/roadmap-phase55.md)）。
 
 40. **`[P2 · Phase 56]` God File 模块化拆分（`>1500L` 清零）、吞错清零、集成测试补盲与五重门禁升级** `🗓️ Planned (Phase 56)`:
     - 拆分 `web/assets/mod.rs`、三存储 Provider、`main.rs`、`parity_api.rs`；收紧 `let _ =` 预算；补全 `mesh`/`audit`/`body`/`hooks`/`cli_e2e` 集成测试，门禁新增断链、硬编码路径与 WaitEvent 埋点检测。
@@ -196,3 +198,5 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - 全量更新 `docs/manual/01~10`、`docs/arch/01~03`、`docs/design_doc/18`、`INSTALL.md`、`README.md`、`docs/markdown/` 与 `presentation/01~06`；去重并归档历史手册/Phase 日志；升级 `Cargo.toml` 至 `1.0.0` 并发布 [docs/releases/README.md](docs/releases/README.md)。
 
 42. 多模态对象的理解和元数据KV对的增强。
+
+43. 要有一个配置项目，3种配置模式，作用是：旁路 agent-body，该实时搜文件还是实时搜索文件就好像 agent-body 不存在；同时使用实时搜索和 agent-body，这个模式用于真实使用过程中的A/B测试的数据收集存储和未来分析，看看 agent-body 到底效果怎么样，是不是在帮倒忙？最后一种是默认的仅使用 agent-body。

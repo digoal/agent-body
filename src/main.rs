@@ -91,9 +91,7 @@ fn main() -> Result<()> {
                 }
                 buf
             } else {
-                let provider = std::sync::Arc::new(
-                    agent_body::memory::builtin_provider::BuiltinMemoryProvider::new(storage.clone()),
-                );
+                let provider = cfg.build_memory_provider(storage.clone());
                 let assembler = BriefAssembler::new(storage.clone(), Some(provider));
                 let output = assembler.assemble(&BriefRequest {
                     query,
@@ -225,6 +223,7 @@ fn main() -> Result<()> {
                 AssetCommands::Register { path, r#type, owner, security_level, description, desc_kv } => {
                     let parsed_kv: serde_json::Value = serde_json::from_str(&desc_kv)
                         .unwrap_or_else(|_| serde_json::json!({}));
+                    let owner = owner.unwrap_or_else(|| cfg.effective_default_owner());
                     let record = agent_body::storage::models::AssetRecord {
                         id: uuid::Uuid::new_v4().to_string(),
                         path: path.clone(),
@@ -553,9 +552,10 @@ fn main() -> Result<()> {
 
         Commands::Gc { tmp_dir, max_age_hours, apply } => {
             let dry_run = !apply;
+            let resolved_tmp_dir = tmp_dir.unwrap_or_else(|| cfg.effective_temp_dir());
             println!("正在扫描宿主垃圾资源 (目录: {:?}, 超期阈值: {} 小时, 模式: {})...",
-                tmp_dir, max_age_hours, if dry_run { "预览模式 (dry-run)" } else { "执行清理 (apply)" });
-            let rep = agent_body::env::gc::HostGarbageCollector::run_gc_audited(&storage, &tmp_dir, max_age_hours, dry_run)?;
+                resolved_tmp_dir, max_age_hours, if dry_run { "预览模式 (dry-run)" } else { "执行清理 (apply)" });
+            let rep = agent_body::env::gc::HostGarbageCollector::run_gc_audited(&storage, &resolved_tmp_dir, max_age_hours, dry_run)?;
             println!("\n🧹 临时文件清理结果:");
             println!("  - 扫描临时目录:   {}", rep.tmp_dir_scanned);
             println!("  - 发现超期候选:   {} 个文件 ({:.2} MB)", rep.candidate_files_count, rep.candidate_bytes_reclaimed as f64 / (1024.0 * 1024.0));
@@ -1442,8 +1442,14 @@ fn main() -> Result<()> {
                     }
                 }
                 AuditCommands::Export { output_path, json } => {
+                    let resolved_out = output_path.unwrap_or_else(|| {
+                        cfg.effective_temp_dir()
+                            .join("audit_events_export.csv")
+                            .to_string_lossy()
+                            .to_string()
+                    });
                     let eng = DuckDbAnalyticsEngine::from_synced_audit_events(storage.provider().clone())?;
-                    let exp = eng.export_to_parquet("audit_events", &output_path)?;
+                    let exp = eng.export_to_parquet("audit_events", &resolved_out)?;
                     if json {
                         println!("{}", serde_json::to_string_pretty(&exp)?);
                     } else {

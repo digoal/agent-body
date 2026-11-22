@@ -480,16 +480,17 @@ pub fn validate_safe_export_path(output_path: &str) -> Result<std::path::PathBuf
         anyhow::bail!("安全拦截：导出路径禁止包含 '..' 目录穿越组件: {}", trimmed);
     }
 
-    let allowed_roots = [
-        std::path::PathBuf::from("/root/new/tmp"),
-        std::path::PathBuf::from("/tmp"),
-        std::env::temp_dir(),
-    ];
+    let allowed_roots = crate::config::Config::load_effective_or_default().allowed_temp_roots();
 
     let in_allowed_lexical = allowed_roots.iter().any(|root| path.starts_with(root));
     if !in_allowed_lexical {
+        let roots_desc: Vec<String> = allowed_roots
+            .iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
         anyhow::bail!(
-            "安全拦截：导出路径仅允许位于 /root/new/tmp/ 或系统临时目录下: {}",
+            "安全拦截：导出路径仅允许位于受信任临时目录 ({}) 下: {}",
+            roots_desc.join(", "),
             trimmed
         );
     }

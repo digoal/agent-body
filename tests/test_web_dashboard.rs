@@ -379,3 +379,63 @@ Content-Length: 75\r\n\r\n\
     assert!(sse_event.contains("test_alert"));
     assert!(sse_event.contains("Host port scan complete"));
 }
+
+#[tokio::test]
+async fn test_web_server_fragmented_and_large_headers() {
+    let storage = Arc::new(SqliteStorageProvider::open_in_memory().expect("open memory db"));
+    storage.init().expect("init storage");
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind free port");
+    let bound_port = listener.local_addr().expect("local addr").port();
+    drop(listener);
+
+    let config = WebConfig {
+        host: "127.0.0.1".to_string(),
+        port: bound_port,
+        auth_token: None,
+    };
+    let server = WebServer::new(config, storage);
+    tokio::spawn(async move {
+        let _ = server.run().await;
+    });
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // 1. 分包发送 HTTP 请求头（两次独立 TCP write）
+    let mut s1 = TcpStream::connect(format!("127.0.0.1:{}", bound_port)).await.expect("connect s1");
+    s1.write_all(b"GET /api/v1/health HTTP/1.1\r\nHo").await.expect("write part 1");
+    s1.flush().await.expect("flush 1");
+    tokio::time::sleep(Duration::from_millis(30)).await;
+    s1.write_all(b"st: 127.0.0.1\r\n\r\n").await.expect("write part 2");
+    s1.flush().await.expect("flush 2");
+
+    let mut resp1 = Vec::new();
+    s1.read_to_end(&mut resp1).await.expect("read resp1");
+    let text1 = String::from_utf8_lossy(&resp1);
+    assert!(text1.contains("HTTP/1.1 200 OK"), "分包头应正常解析并返回 200 OK: {}", text1);
+
+    // 2. 发送 >4KB (5KB) 自定义请求头
+    let mut s2 = TcpStream::connect(format!("127.0.0.1:{}", bound_port)).await.expect("connect s2");
+    let padding = "x".repeat(5120);
+    let large_hdr_req = format!(
+        "GET /api/v1/health HTTP/1.1\r\nHost: 127.0.0.1\r\nX-Padding: {}\r\n\r\n",
+        padding
+    );
+    s2.write_all(large_hdr_req.as_bytes()).await.expect("write large header");
+    s2.flush().await.expect("flush s2");
+
+    let mut resp2 = Vec::new();
+    s2.read_to_end(&mut resp2).await.expect("read resp2");
+    let text2 = String::from_utf8_lossy(&resp2);
+    assert!(text2.contains("HTTP/1.1 200 OK"), "5KB 大请求头应正常解析: {}", text2);
+
+    // 3. 发送 >32KB 无结束符超限请求头，应返回 400 Bad Request
+    let mut s3 = TcpStream::connect(format!("127.0.0.1:{}", bound_port)).await.expect("connect s3");
+    let oversized = format!("GET /api/v1/health HTTP/1.1\r\nX-Huge: {}", "a".repeat(34 * 1024));
+    let _ = s3.write_all(oversized.as_bytes()).await;
+    let _ = s3.flush().await;
+
+    let mut resp3 = Vec::new();
+    let _ = s3.read_to_end(&mut resp3).await;
+    let text3 = String::from_utf8_lossy(&resp3);
+    assert!(text3.contains("400 Bad Request"), "超 32KB 头必须返回 400: {}", text3);
+}

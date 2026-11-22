@@ -71,7 +71,8 @@ impl McpToolRegistry {
     fn call_tool_inner(&self, name: &str, args: Value) -> Result<String> {
         match name {
             "body_brief" => {
-                let provider = Arc::new(crate::memory::builtin_provider::BuiltinMemoryProvider::new(self.storage.clone()));
+                let cfg = crate::config::Config::load_effective_or_default();
+                let provider = cfg.build_memory_provider(self.storage.clone());
                 let assembler = BriefAssembler::new(self.storage.clone(), Some(provider));
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let session_id = args.get("session_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -147,7 +148,8 @@ impl McpToolRegistry {
             "body_asset_register" => {
                 let path = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
                 let asset_type = args.get("type").and_then(|v| v.as_str()).unwrap_or("other");
-                let owner = args.get("owner").and_then(|v| v.as_str()).unwrap_or("user:digoal");
+                let default_owner = crate::config::Config::load_effective_or_default().effective_default_owner();
+                let owner = args.get("owner").and_then(|v| v.as_str()).unwrap_or(&default_owner);
                 let security_level = args.get("security_level").and_then(|v| v.as_str()).unwrap_or("internal");
                 let description = args.get("description").and_then(|v| v.as_str()).map(|s| s.to_string());
                 let desc_kv = args.get("desc_kv").cloned().unwrap_or(serde_json::json!({}));
@@ -420,11 +422,15 @@ impl McpToolRegistry {
             }
 
             "body_env_gc" => {
-                let tmp_dir_str = args.get("tmp_dir").and_then(|v| v.as_str()).unwrap_or("/root/new/tmp");
+                let default_tmp = crate::config::Config::load_effective_or_default().effective_temp_dir();
+                let tmp_dir_buf = args
+                    .get("tmp_dir")
+                    .and_then(|v| v.as_str())
+                    .map(PathBuf::from)
+                    .unwrap_or(default_tmp);
                 let max_age_hours = args.get("max_age_hours").and_then(|v| v.as_u64()).unwrap_or(72);
                 let apply = args.get("apply").and_then(|v| v.as_bool()).unwrap_or(false);
-                let p = std::path::Path::new(tmp_dir_str);
-                let res = crate::env::gc::HostGarbageCollector::run_gc(p, max_age_hours, !apply)?;
+                let res = crate::env::gc::HostGarbageCollector::run_gc(&tmp_dir_buf, max_age_hours, !apply)?;
                 Ok(serde_json::to_string_pretty(&res)?)
             }
 
@@ -500,7 +506,11 @@ impl McpToolRegistry {
             "body_analytics_export" => {
                 use crate::storage::AnalyticsProvider;
                 let table = args.get("table").and_then(|v| v.as_str()).unwrap_or("assets");
-                let output_path = args.get("output_path").and_then(|v| v.as_str()).unwrap_or("/root/new/tmp/export.parquet");
+                let default_out = crate::config::Config::load_effective_or_default()
+                    .effective_temp_dir()
+                    .join("export.parquet");
+                let default_out_str = default_out.to_string_lossy().to_string();
+                let output_path = args.get("output_path").and_then(|v| v.as_str()).unwrap_or(&default_out_str);
                 let engine = crate::storage::DuckDbAnalyticsEngine::from_synced_storage(self.storage.provider().clone())?;
                 let summary = engine.export_to_parquet(table, output_path)?;
                 Ok(serde_json::to_string_pretty(&summary)?)
@@ -796,11 +806,18 @@ impl McpToolRegistry {
                     }
                     "transfer_accept" => {
                         let tid = args.get("transfer_id").and_then(|v| v.as_str()).unwrap_or("");
-                        let dest_dir = args.get("dest_dir").and_then(|v| v.as_str()).unwrap_or("/root/new/tmp/mesh_accepted");
+                        let default_dest = crate::config::Config::load_effective_or_default()
+                            .effective_temp_dir()
+                            .join("mesh_accepted");
+                        let dest_buf = args
+                            .get("dest_dir")
+                            .and_then(|v| v.as_str())
+                            .map(PathBuf::from)
+                            .unwrap_or(default_dest);
                         let rec = crate::mesh::transfer::accept_transfer_to_dir(
                             self.storage.provider().as_ref(),
                             tid,
-                            std::path::Path::new(dest_dir),
+                            &dest_buf,
                         )?;
                         Ok(serde_json::to_string_pretty(&rec)?)
                     }
@@ -1039,10 +1056,14 @@ impl McpToolRegistry {
                         Ok(serde_json::to_string_pretty(&rep)?)
                     }
                     "export" => {
+                        let default_out = crate::config::Config::load_effective_or_default()
+                            .effective_temp_dir()
+                            .join("audit_events_export.csv");
+                        let default_out_str = default_out.to_string_lossy().to_string();
                         let out_path = args
                             .get("output_path")
                             .and_then(|v| v.as_str())
-                            .unwrap_or("/root/new/tmp/audit_events_export.csv");
+                            .unwrap_or(&default_out_str);
                         let engine = DuckDbAnalyticsEngine::from_synced_audit_events(self.storage.provider().clone())?;
                         let exp = engine.export_to_parquet("audit_events", out_path)?;
                         Ok(serde_json::to_string_pretty(&exp)?)

@@ -389,7 +389,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                 <option value="memories">memories</option>
                 <option value="fact_nodes">fact_nodes</option>
               </select>
-              <button id="btn-ana-export" class="btn btn-ghost">📦 导出 Parquet 至 /root/new/tmp/</button>
+              <button id="btn-ana-export" class="btn btn-ghost">📦 导出 Parquet 至临时沙盒</button>
               <span id="ana-export-msg" class="muted-text"></span>
             </div>
             <div class="grid-2 mt-12">
@@ -410,7 +410,7 @@ pub static INDEX_HTML: &str = r##"<!DOCTYPE html>
                 <div class="card-header">
                   <h3>🧹 宿主 GC 与会话完工结清预览 (Dry-Run)</h3>
                   <div class="toolbar-right">
-                    <button id="btn-gc-preview" class="btn btn-primary btn-xs">🧹 扫描 /root/new/tmp/</button>
+                    <button id="btn-gc-preview" class="btn btn-primary btn-xs">🧹 扫描受管临时目录</button>
                     <button id="btn-session-close" class="btn btn-ghost btn-xs">📋 结清预览</button>
                   </div>
                 </div>
@@ -1784,13 +1784,14 @@ function normalizePathStr(p) {
 function getEffectiveDepthAndAncestor(canonPath, maxDepth) {
   if (!canonPath || !canonPath.startsWith("/")) return { depth: 1, ancestor: null };
   const norm = normalizePathStr(canonPath);
-  if (norm.startsWith("/root/new/")) {
-    const rel = norm.slice("/root/new/".length);
+  const wsMatch = norm.match(/^(\/[^/]+\/[^/]+)\/(work|shared_proj|src|shared_git|skills|note|cron|tmp)(?:\/(.*))?$/);
+  if (wsMatch) {
+    const base = wsMatch[1];
+    const rel = wsMatch[3] ? `${wsMatch[2]}/${wsMatch[3]}` : wsMatch[2];
     const segs = rel.split("/").filter(Boolean);
     const depth = Math.max(1, segs.length);
     if (depth <= maxDepth) return { depth, ancestor: null };
-    const ancSegs = segs.slice(0, maxDepth);
-    return { depth, ancestor: "/root/new/" + ancSegs.join("/") };
+    return { depth, ancestor: `${base}/${segs.slice(0, maxDepth).join("/")}` };
   }
   const segs = norm.split("/").filter(Boolean);
   const depth = Math.max(1, segs.length);
@@ -2751,7 +2752,7 @@ function showNodeDrawer(node) {
   drawer.classList.remove("hidden");
   title.innerText = `${node.label}`;
   const meta = node.metadata || {};
-  const cgPath = node.canonical_path || meta.abs_path || meta.path || (node.id.startsWith("/") ? node.id : "/root/new/work/agent-body");
+  const cgPath = node.canonical_path || meta.abs_path || meta.path || (node.id.startsWith("/") ? node.id : ".");
   const desc = meta.description || meta.purpose || "";
   const domain = meta.domain || "";
   const category = meta.category || meta.asset_type || "";
@@ -2974,14 +2975,14 @@ function renderFactsTab() {
           <option value="full">full</option>
         </select>
         <button id="btn-asset-search" class="btn btn-primary btn-xs">🔍 检索资产</button>
-        <input id="asset-scan-path" class="input" style="width:200px;" type="text" value="/root/new/work/agent-body" placeholder="待扫描目录路径" />
+        <input id="asset-scan-path" class="input" style="width:200px;" type="text" value="" placeholder="待扫描工作区或项目目录绝对路径" />
         <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
           <input id="asset-scan-enrich" type="checkbox" /> 🤖 Ollama精炼
         </label>
         <button id="btn-asset-scan" class="btn btn-ghost btn-xs">📂 分级扫描</button>
       </div>
       <div class="inline-bar">
-        <input id="asset-reg-path" class="input flex-1" type="text" placeholder="新资产路径 (如 /root/new/shared_proj/my_script.py)" />
+        <input id="asset-reg-path" class="input flex-1" type="text" placeholder="新资产绝对路径 (如 <workspace>/shared_proj/my_script.py)" />
         <select id="asset-reg-type" class="input input-sm" style="width:95px;">
           <option value="script">script</option><option value="project">project</option><option value="doc">doc</option><option value="other">other</option>
         </select>
@@ -3552,12 +3553,12 @@ async function loadAnalytics() {
 
 async function runAnalyticsExport() {
   const table = document.getElementById("ana-export-table")?.value || "assets";
-  const output_path = `/root/new/tmp/agent_body_${table}.parquet`;
   const msgEl = document.getElementById("ana-export-msg");
   try {
-    const res = await apiPost("/api/v1/analytics/export", { table, output_path });
-    mirrorBlackScreen(`agent-body analytics export --table ${table} --output-path ${output_path}`, "body_analytics_export", { table, output_path });
-    if (msgEl) msgEl.innerText = `✅ 已导出 ${res.rows_exported ?? ""} 行至 ${output_path}`;
+    const res = await apiPost("/api/v1/analytics/export", { table });
+    const actualOut = res.output_path || `<temp_dir>/agent_body_${table}.parquet`;
+    mirrorBlackScreen(`agent-body analytics export --table ${table} --output-path ${actualOut}`, "body_analytics_export", { table, output_path: actualOut });
+    if (msgEl) msgEl.innerText = `✅ 已导出 ${res.rows_exported ?? ""} 行至 ${actualOut}`;
   } catch (e) {
     if (msgEl) msgEl.innerText = `导出失败: ${e.message}`;
   }
@@ -3570,8 +3571,9 @@ async function runGcPreview() {
     mirrorBlackScreen("agent-body gc --max-age-hours 72", "body_env_gc", { max_age_hours: 72, apply: false });
     if (out) {
       const mb = ((res.candidate_bytes_reclaimed || 0) / 1048576).toFixed(1);
+      const scanned = res.tmp_dir_scanned || "temp_dir";
       out.innerHTML = `
-        <div class="item-top"><strong>🧹 /root/new/tmp/ 扫描结果</strong><span class="badge badge-ok">Dry-Run 安全预览</span></div>
+        <div class="item-top"><strong>🧹 ${esc(scanned)} 扫描结果</strong><span class="badge badge-ok">Dry-Run 安全预览</span></div>
         <div class="summary-kpi-row mt-8">
           <div class="summary-kpi"><span class="sk-label">待清理文件数</span><span class="sk-val c-orange">${res.candidate_files_count ?? 0}</span></div>
           <div class="summary-kpi"><span class="sk-label">可释放空间</span><span class="sk-val">${mb} MB</span></div>
@@ -3795,7 +3797,7 @@ function renderDemoSceneWidget(res) {
             <strong>绿灯自动改道推荐</strong>
             <div class="pill-wrap mt-8">
               ${freePorts.map((p) => `<span class="badge badge-ok">可用端口 :${p}</span>`).join("")}
-              <span class="badge">规范路径: ${esc(place.suggested_path || roi.suggested_path || "/root/new/shared_proj/")}</span>
+              <span class="badge">规范路径: ${esc(place.suggested_path || roi.suggested_path || "<workspace>/shared_proj/")}</span>
             </div>
           </div>
         </div>
@@ -3825,8 +3827,8 @@ function renderDemoSceneWidget(res) {
       <div class="widget-panel">
         <div class="widget-title"><span>🩹 断链自愈补丁 &amp; 🔬 CodeGraph 微观联邦</span><span class="badge">${cg ? `已联邦 ${cg.node_count} 符号` : "按需下钻"}</span></div>
         <div class="item-box" style="margin-bottom:0;">
-          <div class="muted-text" style="text-decoration:line-through;color:var(--red);">${esc(repair.broken_ref || "/root/new/shared_proj/sec_crawler_v1.py")}</div>
-          <div class="mono" style="color:var(--green);margin-top:4px;font-weight:700;">→ 自动修复为: ${esc(repair.repaired_ref || "/root/new/shared_proj/sec_crawler.py")} (相似度 ${repair.similarity ?? 0.94})</div>
+          <div class="muted-text" style="text-decoration:line-through;color:var(--red);">${esc(repair.broken_ref || "<workspace>/shared_proj/sec_crawler_v1.py")}</div>
+          <div class="mono" style="color:var(--green);margin-top:4px;font-weight:700;">→ 自动修复为: ${esc(repair.repaired_ref || "<workspace>/shared_proj/sec_crawler.py")} (相似度 ${repair.similarity ?? 0.94})</div>
         </div>
       </div>
     `;
@@ -4497,11 +4499,12 @@ async function triggerAuditEvolve() {
 
 async function triggerAuditExport() {
   const box = document.getElementById("audit-evolve-box");
-  mirrorBlackScreen("agent-body audit export --output-path /root/new/tmp/audit_events_export.csv", "body_audit_query", { action: "export", output_path: "/root/new/tmp/audit_events_export.csv" });
   try {
-    const exp = await apiPost("/api/v1/audit/export", { output_path: "/root/new/tmp/audit_events_export.csv" });
+    const exp = await apiPost("/api/v1/audit/export", {});
+    const actualOut = exp.output_path || "<temp_dir>/audit_events_export.csv";
+    mirrorBlackScreen(`agent-body audit export --output-path ${actualOut}`, "body_audit_query", { action: "export", output_path: actualOut });
     if (box) {
-      box.innerHTML = `<div class="badge badge-ok">📦 已导出 ${exp.row_count ?? 0} 条记录 (${exp.file_size_bytes ?? 0} B) 至 ${esc(exp.output_path || "")}</div>`;
+      box.innerHTML = `<div class="badge badge-ok">📦 已导出 ${exp.row_count ?? 0} 条记录 (${exp.file_size_bytes ?? 0} B) 至 ${esc(actualOut)}</div>`;
     }
   } catch (e) {
     if (box) box.innerHTML = `<div class="empty">导出失败: ${esc(e.message)}</div>`;

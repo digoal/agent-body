@@ -112,6 +112,204 @@ impl Storage {
     pub fn init_schema(&self) -> Result<()> {
         self.provider.init()
     }
+}
+
+/// 生成宿主机可移植默认放置规则种子（基于 workspace_base 自动适配本机 `~/new` 或便携目录）
+pub(crate) fn default_seed_placement_rules(base_dir: &Path) -> Vec<PlacementRule> {
+    let b = base_dir.to_string_lossy().trim_end_matches('/').to_string();
+    vec![
+        PlacementRule {
+            id: "rule-1".into(),
+            rule_name: "shared_tools".into(),
+            pattern_type: "script".into(),
+            target_base_dir: format!("{}/shared_proj/", b),
+            naming_pattern: Some("{name}/".into()),
+            description: Some("长期沉淀的可复用脚本与程序库".into()),
+            guideline: Some("建立独立子目录，配备 README.md 与入口脚本，严禁硬编码敏感信息".into()),
+            priority: 10,
+        },
+        PlacementRule {
+            id: "rule-2".into(),
+            rule_name: "work_projects".into(),
+            pattern_type: "project".into(),
+            target_base_dir: format!("{}/work/", b),
+            naming_pattern: Some("{name}/".into()),
+            description: Some("常规立项的工作工程与开发目录".into()),
+            guideline: Some("每个工程独立版本控制，优先采用设计文档闭环验证".into()),
+            priority: 20,
+        },
+        PlacementRule {
+            id: "rule-3".into(),
+            rule_name: "ai_skills".into(),
+            pattern_type: "skill".into(),
+            target_base_dir: format!("{}/skills/", b),
+            naming_pattern: Some("{name}/".into()),
+            description: Some("沉淀的通用高频高质量 AI 技能".into()),
+            guideline: Some("必须包含标准 SKILL.md，保障被高频调用的稳定性".into()),
+            priority: 30,
+        },
+        PlacementRule {
+            id: "rule-4".into(),
+            rule_name: "open_source_src".into(),
+            pattern_type: "src".into(),
+            target_base_dir: format!("{}/src/", b),
+            naming_pattern: Some("{name}/".into()),
+            description: Some("浅克隆的开源项目源码库".into()),
+            guideline: Some("克隆后进入根目录优先使用 codegraph init 生成代码地图".into()),
+            priority: 40,
+        },
+        PlacementRule {
+            id: "rule-5".into(),
+            rule_name: "notes_and_lists".into(),
+            pattern_type: "note".into(),
+            target_base_dir: format!("{}/note/", b),
+            naming_pattern: Some("{name}.md".into()),
+            description: Some("重要笔记、知识点与权威网站清单".into()),
+            guideline: Some("好记性不如烂笔头，用于跨周期翻阅沉淀".into()),
+            priority: 50,
+        },
+        PlacementRule {
+            id: "rule-6".into(),
+            rule_name: "cron_jobs".into(),
+            pattern_type: "other".into(),
+            target_base_dir: format!("{}/cron/", b),
+            naming_pattern: Some("{name}/".into()),
+            description: Some("定时任务的 prompt 与输出产物".into()),
+            guideline: Some("多 cron 必须先查撞点表错峰，粒度至少 30 分钟".into()),
+            priority: 60,
+        },
+        PlacementRule {
+            id: "rule-7".into(),
+            rule_name: "temp_files".into(),
+            pattern_type: "tmp".into(),
+            target_base_dir: format!("{}/tmp/", b),
+            naming_pattern: Some("{name}".into()),
+            description: Some("可随时删除的临时文件与调试日志".into()),
+            guideline: Some("明确生命周期，定期巡检清理".into()),
+            priority: 70,
+        },
+        PlacementRule {
+            id: "rule-8".into(),
+            rule_name: "open_source_shared".into(),
+            pattern_type: "other".into(),
+            target_base_dir: format!("{}/shared_git/", b),
+            naming_pattern: Some("{name}/".into()),
+            description: Some("沉淀的可对外开源精品项目".into()),
+            guideline: Some("高质量开源工程，结构规整文档齐全".into()),
+            priority: 80,
+        },
+    ]
+}
+
+/// 生成宿主机可移植默认扫描颗粒度策略种子
+pub(crate) fn default_seed_scan_policies(base_dir: &Path, home_dir: &Path) -> Vec<ScanPolicy> {
+    let b = base_dir.to_string_lossy().trim_end_matches('/').to_string();
+    let h = home_dir.to_string_lossy().trim_end_matches('/').to_string();
+    vec![
+        ScanPolicy {
+            id: "policy-1".into(),
+            path_pattern: format!("{}/shared_proj/**", b),
+            tier: "deep".into(),
+            max_depth: -1,
+            enable_fts: true,
+            enable_vec: true,
+            enable_graph: true,
+            notes: Some("白名单: 核心工具库，深度递归到底".into()),
+        },
+        ScanPolicy {
+            id: "policy-2".into(),
+            path_pattern: format!("{}/work/**", b),
+            tier: "deep".into(),
+            max_depth: -1,
+            enable_fts: true,
+            enable_vec: true,
+            enable_graph: true,
+            notes: Some("白名单: 核心工作区，深度递归到底".into()),
+        },
+        ScanPolicy {
+            id: "policy-3".into(),
+            path_pattern: format!("{}/skills/**", b),
+            tier: "deep".into(),
+            max_depth: -1,
+            enable_fts: true,
+            enable_vec: true,
+            enable_graph: true,
+            notes: Some("白名单: 技能库，全量递归".into()),
+        },
+        ScanPolicy {
+            id: "policy-4".into(),
+            path_pattern: "**/node_modules/**".into(),
+            tier: "shallow".into(),
+            max_depth: 0,
+            enable_fts: false,
+            enable_vec: false,
+            enable_graph: false,
+            notes: Some("黑名单: 仅记录当前目录实体本身标量，严禁递归下钻".into()),
+        },
+        ScanPolicy {
+            id: "policy-5".into(),
+            path_pattern: "**/.cache/**".into(),
+            tier: "shallow".into(),
+            max_depth: 0,
+            enable_fts: false,
+            enable_vec: false,
+            enable_graph: false,
+            notes: Some("黑名单: 缓存目录，仅记录当前目录标量，不下钻".into()),
+        },
+        ScanPolicy {
+            id: "policy-6".into(),
+            path_pattern: "**/.git/**".into(),
+            tier: "shallow".into(),
+            max_depth: 0,
+            enable_fts: false,
+            enable_vec: false,
+            enable_graph: false,
+            notes: Some("黑名单: Git 内部目录，仅记录当前目录标量，不下钻".into()),
+        },
+        ScanPolicy {
+            id: "policy-7".into(),
+            path_pattern: format!("{}/.ssh/**", h),
+            tier: "shallow".into(),
+            max_depth: 0,
+            enable_fts: false,
+            enable_vec: false,
+            enable_graph: false,
+            notes: Some("黑名单: 私密目录，仅记录目录存在，严禁提取内容".into()),
+        },
+        ScanPolicy {
+            id: "policy-8".into(),
+            path_pattern: "/proc/**".into(),
+            tier: "shallow".into(),
+            max_depth: 0,
+            enable_fts: false,
+            enable_vec: false,
+            enable_graph: false,
+            notes: Some("黑名单: 系统虚拟文件系统，仅记录根目录，严禁递归".into()),
+        },
+        ScanPolicy {
+            id: "policy-9".into(),
+            path_pattern: format!("{}/src/**", b),
+            tier: "restricted".into(),
+            max_depth: 2,
+            enable_fts: true,
+            enable_vec: false,
+            enable_graph: false,
+            notes: Some("受限区: 开源项目库，仅索引项目入口与 README".into()),
+        },
+        ScanPolicy {
+            id: "policy-10".into(),
+            path_pattern: format!("{}/tmp/**", b),
+            tier: "restricted".into(),
+            max_depth: 1,
+            enable_fts: false,
+            enable_vec: false,
+            enable_graph: false,
+            notes: Some("受限区: 临时目录，仅记录浅层文件".into()),
+        },
+    ]
+}
+
+impl Storage {
 
     // ─── Placement Rules ─────────────────────────────────────────────
 

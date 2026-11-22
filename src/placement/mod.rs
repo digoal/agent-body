@@ -97,12 +97,16 @@ impl PlacementEngine {
                     .map(|r| format!("{}: {}", r.pattern_type, r.target_base_dir))
                     .collect();
                 if parts.is_empty() {
-                    "工程目录规范: /root/new/{work,shared_proj,skills,note,src,tmp}".to_string()
+                    let b = crate::config::Config::load_effective_or_default().effective_workspace_base();
+                    format!("工程目录规范: {}/{{work,shared_proj,skills,note,src,tmp}}", b.display())
                 } else {
                     parts.join(" | ")
                 }
             }
-            Err(_) => "工程目录规范: /root/new/{work,shared_proj,skills,note,src,tmp}".to_string(),
+            Err(_) => {
+                let b = crate::config::Config::load_effective_or_default().effective_workspace_base();
+                format!("工程目录规范: {}/{{work,shared_proj,skills,note,src,tmp}}", b.display())
+            }
         }
     }
 

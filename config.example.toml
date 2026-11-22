@@ -3,8 +3,8 @@
 # ==============================================================================
 #
 # 配置文件默认查找路径:
-#   1. 环境变量: AGENT_BODY_CONFIG / STEWARD_CONFIG (最高优先级)
-#   2. 命令行参数: agent-body --config <path> ...
+#   1. 命令行参数: agent-body --config <path> ... (最高优先级)
+#   2. 环境变量: AGENT_BODY_CONFIG (首选) 或 STEWARD_CONFIG (兼容别名)
 #   3. 用户家目录: ~/.agent-body/config.toml (默认路径)
 #
 # 首次运行任何 agent-body 命令时，若上述路径均不存在配置文件，
@@ -13,22 +13,41 @@
 
 # 基础数据存储目录 (SQLite 数据库、本地缓存、备份文件均存放于此)
 # 依赖: 该目录必须具备当前运行用户的读写权限，且磁盘剩余空间建议 >= 100MB
-# 默认: "/root/.agent-body" (或 "$HOME/.agent-body")
-data_dir = "/root/.agent-body"
+# 默认: "$HOME/.agent-body"
+# data_dir = "~/.agent-body"
 
 # SQLite 主存储数据库文件绝对路径
 # 默认: "{data_dir}/body.db"
-db_path = "/root/.agent-body/body.db"
+# db_path = "~/.agent-body/body.db"
 
-# HTTP API 监听端口 (仅当启动独立的 HTTP/Web 服务模式时生效，stdio MCP 模式不占用端口)
-# 取值范围: 1024 ~ 65535 (禁止使用低于 1024 的特权端口)
-# 默认: 9527
-api_port = 9527
+# ==============================================================================
+# [workspace] 可移植工作区与安全临时目录配置 (Phase 55)
+# ==============================================================================
+# 说明:
+#   - 默认自动适应宿主机: 若 $HOME/new 存在则沿用；否则自动采用 $HOME/agent-body-workspace
+#     与系统临时目录 (std::env::temp_dir()/agent-body)，无需手动修改即可跨主机开箱运行。
+[workspace]
+# base_dir = "~/agent-body-workspace"
+# workspace_roots = ["~/agent-body-workspace/work", "~/agent-body-workspace/shared_proj", "~/agent-body-workspace/src", "~/agent-body-workspace/shared_git"]
+# temp_dir = "/tmp/agent-body"
+# skills_dirs = ["~/.agent-body/skills", "~/.gemini/antigravity-cli/skills"]
+# notes_dirs = ["~/agent-body-workspace/note"]
+# shared_git_dirs = ["~/agent-body-workspace/shared_git"]
 
-# HTTP API 绑定网络地址
-# 安全建议: 生产与单机环境保持 "127.0.0.1"；若多机 Agent 访问请配置内网 IP
-# 默认: "127.0.0.1"
-api_bind = "127.0.0.1"
+# ==============================================================================
+# [memory] 长期记忆引擎适配器配置 (由 MemoryFactory 真实加载)
+# ==============================================================================
+[memory]
+# 可选值: "builtin" (默认, 内置 SQLite FTS5+向量) | "powercontext" | "mem0" | "letta"
+provider = "builtin"
+# powercontext_url = "http://127.0.0.1:8000"
+# powercontext_scope_id = "default"
+# mem0_url = "https://api.mem0.ai"
+# mem0_api_key_env = "MEM0_API_KEY"
+# mem0_user_id = "agent-body"
+# letta_url = "http://127.0.0.1:8283"
+# letta_agent_id = ""
+# letta_token_env = "LETTA_API_TOKEN"
 
 # ==============================================================================
 # [storage] 多存储引擎与后端配置
@@ -51,7 +70,7 @@ provider = "sqlite"
 # pg_url = "host=localhost port=5432 user=steward dbname=steward"
 
 # DuckDB 数据库文件路径 (若不填则默认为 {data_dir}/steward.duckdb)
-# duckdb_path = "/root/.agent-body/steward.duckdb"
+# duckdb_path = "~/.agent-body/steward.duckdb"
 
 # ==============================================================================
 # [embedding] 语义向量嵌入服务配置 (可选，与下方 [annotation] 职责严格分离)
@@ -102,10 +121,10 @@ fallback_fts_only = true
 [assets]
 # 后台常驻守护进程 (daemon) 启动时自动递归扫描与监听的核心目录列表
 # 建议: 仅配置日常存放代码、脚本、资料的工作目录；切勿配置根目录 "/" 或超大目录
-# 默认: 空数组 (启动时自动查找并纳管 ~/new/work 与 ~/new/shared_proj)
+# 默认: 空数组 (启动时自动根据 [workspace].workspace_roots 查找并纳管存在的工程目录)
 auto_scan_dirs = [
-    # "/root/new/work",
-    # "/root/new/shared_proj"
+    # "~/agent-body-workspace/work",
+    # "~/agent-body-workspace/shared_proj"
 ]
 
 # 扫描与监听时全局忽略的文件与目录模式 (Glob 表达式)
@@ -127,9 +146,8 @@ ignore_patterns = [
 # [placement] 新对象放置建议与命名规范配置
 # ==============================================================================
 [placement]
-# 默认新建资产的属主标识
-# 默认: "user:digoal"
-default_owner = "user:digoal"
+# 默认新建资产的属主标识 (不配置时自动推导为 "user:$USER"，缺省 "user:local")
+# default_owner = "user:local"
 
 # 默认安全分级
 # 可选值: "public" | "internal" | "confidential" | "secret"
@@ -178,7 +196,7 @@ port = 8765
 # 示例 1: 当在核心工作区创建 Markdown 文件时，自动执行本地扫描
 # [[hooks]]
 # event = "on_file_created"
-# filter = { path_prefix = "/root/new/work", extensions = [".md"] }
+# filter = { path_prefix = "/path/to/workspace/work", extensions = [".md"] }
 # action = "exec"
 # command = "agent-body asset scan {path} --depth 1"
 #
@@ -202,7 +220,7 @@ port = 8765
 # [[pipelines.steps]]
 # name = "step-scan-asset"
 # action = { action = "exec", command = "agent-body asset scan {path} --depth 1" }
-# filter = { path_prefix = "/root/new/work", extensions = [".md"] }
+# filter = { path_prefix = "/path/to/workspace/work", extensions = [".md"] }
 # on_failure = "abort"
 # timeout_ms = 3000
 # [[pipelines.steps]]
@@ -213,11 +231,11 @@ port = 8765
 # ==============================================================================
 # 9. 生态目录 (MCP / SKILL / 外部服务通讯录) 与 Context 防爆路由 (Phase 16)
 # ==============================================================================
-# 默认扫描路径:
+# 默认扫描路径 (可在 [workspace].skills_dirs 中覆盖):
 #   - MCP 配置: ~/.hermes/config.yaml, ~/.gemini/antigravity-cli/mcp_config.json,
 #               ~/.config/claude/claude_desktop_config.json, ~/.cursor/mcp.json
-#   - SKILL 目录: /root/new/skills, ~/.gemini/antigravity-cli/skills,
-#                 ~/.gemini/antigravity-cli/builtin/skills
+#   - SKILL 目录: {workspace.base_dir}/skills, ~/.agent-body/skills,
+#                 ~/.gemini/antigravity-cli/skills, ~/.gemini/antigravity-cli/builtin/skills
 # 安全约束:
 #   - 扫描 MCP 配置时强制剥离 env 明文密钥，仅保留变量名；
 #   - external_services 严禁存储任何明文 API Key/Token/Password。

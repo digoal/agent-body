@@ -133,17 +133,26 @@ fn extract_path_from_id_or_meta(id: &str, metadata: &serde_json::Value) -> Optio
     None
 }
 
-fn compute_effective_path_depth(path: &str) -> usize {
+fn compute_effective_path_depth_with_base(path: &str, base_dir: &std::path::Path) -> usize {
     let norm = normalize_path_str(path);
-    if let Some(rel) = norm.strip_prefix("/root/new/") {
-        let count = rel.split('/').filter(|s| !s.is_empty()).count();
-        return count.max(1);
-    }
-    if norm == "/root/new" {
-        return 1;
+    let base_norm = normalize_path_str(&base_dir.to_string_lossy());
+    if !base_norm.is_empty() && base_norm != "/" {
+        let prefix = format!("{}/", base_norm);
+        if let Some(rel) = norm.strip_prefix(&prefix) {
+            let count = rel.split('/').filter(|s| !s.is_empty()).count();
+            return count.max(1);
+        }
+        if norm == base_norm {
+            return 1;
+        }
     }
     let count = norm.trim_matches('/').split('/').filter(|s| !s.is_empty()).count();
     count.max(1)
+}
+
+fn compute_effective_path_depth(path: &str) -> usize {
+    let base = crate::config::Config::load_effective_or_default().effective_workspace_base();
+    compute_effective_path_depth_with_base(path, &base)
 }
 
 fn canonicalize_node_id(raw_id: &str, raw_type: &str) -> String {
@@ -890,11 +899,24 @@ mod tests {
             canonicalize_node_id("file:/root/new/tmp", "file"),
             "file:/root/new/tmp"
         );
-        assert_eq!(compute_effective_path_depth("/root/new/work"), 1);
-        assert_eq!(compute_effective_path_depth("/root/new/work/agent-body"), 2);
-        assert_eq!(compute_effective_path_depth("/root/new/work/agent-body/src"), 3);
+        let portable_base = std::path::Path::new("/home/alice/workspace");
         assert_eq!(
-            compute_effective_path_depth("/root/new/work/agent-body/src/web/mod.rs"),
+            compute_effective_path_depth_with_base("/home/alice/workspace/work", portable_base),
+            1
+        );
+        assert_eq!(
+            compute_effective_path_depth_with_base("/home/alice/workspace/work/agent-body", portable_base),
+            2
+        );
+        assert_eq!(
+            compute_effective_path_depth_with_base("/home/alice/workspace/work/agent-body/src", portable_base),
+            3
+        );
+        assert_eq!(
+            compute_effective_path_depth_with_base(
+                "/home/alice/workspace/work/agent-body/src/web/mod.rs",
+                portable_base
+            ),
             5
         );
     }

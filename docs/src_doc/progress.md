@@ -1,9 +1,9 @@
 # Agent Body (Rust 版) — 研发与测试进度表（断点续传）
 
 > 创建时间: 2026-11-15T12:50:00+08:00  
-> 最新更新: 2026-11-22T23:09:00+08:00  
+> 最新更新: 2026-11-22T23:55:00+08:00  
 > 技术栈: Rust 1.99.0 + SQLite 3 / PostgreSQL / DuckDB + Tokio + Clap  
-> 当前状态: **Phase 1~54 全部完成（方案 A `v1.0.0 GA` Stage 3 · ISSUE #38 交付，#39~#41 规划推进中）**；项目已完成 Phase 54 Telemetry 18/18 WaitEvent 闭环、过期锁 SPI #88、AWR 报告库 CLI/MCP/Web 1:1:1、Web `v3.8`/DQ 渲染、`codex`/`hermes`/Claude Hooks、`AGENT BODY` 全维 TUI 升级与 Benchmark `v3.8`；43 个原生 MCP 工具（`body_*` 黑白屏 100% 同步），27 个 `src/lib.rs` 模块，88 个 SPI 方法，27 张 SQLite 表，295 项测试全绿，Benchmark `v3.8` 37/37 项 100% 全绿基线
+> 当前状态: **Phase 1~55 全部完成（方案 A `v1.0.0 GA` Stage 4 · ISSUE #39 交付，#40~#41 规划推进中）**；项目已完成 Phase 55 开源可移植性解耦（`[workspace]` 便携工作区与三后端动态种子、全生产路径与属主去硬编码）、死配置真相化（`AGENT_BODY_CONFIG` / `[memory]` `MemoryFactory` / `[[hooks]]`+`[[pipelines]]` / `ignore_patterns` / `fallback_fts_only` / `[mesh]` 校验）与跨平台/网络加固（`gnu` 条件编译、`sysinfo` 回退、多语言 Windows `netstat`、32KB HTTP 头循环读取）；43 个原生 MCP 工具（`body_*` 黑白屏 100% 同步），27 个 `src/lib.rs` 模块，88 个 SPI 方法，27 张 SQLite 表，Benchmark `v3.8` 体系就绪
 
 ---
 
@@ -134,8 +134,10 @@
 | **Phase 51** | **根目录核心文件自文档化、规约深化与旗舰双演说 HTML 推翻重写**：`README.md` 15 项根文件逐一建档 + 防漂移校验、规约 `#13/#14/#17/#20` 升级、Decks-as-Code 推翻重写 `presentation.html` (16 页) 与 `agent-body-deck.html` (24 页) | [roadmap-phase51.md](roadmap-phase51.md) / ISSUE #34 #35 | ✅ **已完成** | 2026-11-22 |
 | **Phase 52** | **方案 A Stage 1 — P0 安全止血、容器构建修复、运行时排雷与损毁文档/SKILL 急救**：修复 `Dockerfile`/`docker-compose`/`build.rs`、MCP `spawn_blocking` 与 `contacts`/`embedding` 防 Panic、`body_bridge.py` 破坏命令与 Web `GET` 写库鉴权、`ledger` 死锁误报/拒锁、`cli_args` 布尔 `false` 与 `04`/`17`/`SKILL` 12 处断链（`281/281` 测试全绿） | [roadmap-phase52.md](roadmap-phase52.md) / ISSUE #36 | ✅ **已完成** | 2026-11-22 |
 | **Phase 53** | **方案 A Stage 2 — 存储三后端（SQLite/PG/DuckDB）语义对齐、AWR 孤儿清理、20 实体迁移与 OLAP 管道真修复**：SPI `82 → 87`，修复冲突与时间戳瞬间对比、移除 PG `vector` 强依赖、`memories.sensitive` 对齐、`awr:%` 隔离与淘汰删行、`StorageMigrator` 20 实体幂等迁移、`SyncPipeline` 10 表+真实时间、`DuckDbAnalyticsEngine` 时间窗/衰减账龄/`QUANTILE_CONT` 与 `Preflight` 后端探活（DuckDB `8/8` + 真实 PG `5/5` 全绿） | [roadmap-phase53.md](roadmap-phase53.md) / ISSUE #37 | ✅ **已完成** | 2026-11-22 |
+| **Phase 54** | **方案 A Stage 3 — Telemetry 18/18 WaitEvent 闭环、黑白屏动作级真 Parity、`codex`/`hermes` Hook 扩展、全维本体 TUI 与 Benchmark `v3.8`**：新增 SPI #88 修复过期锁检测、18/18 WaitEvent 全埋点 (`ADDM-05` 可达)、AWR 报告库删除/检索全端 1:1:1、Web DQ1~9、`AGENT BODY` 全维 TUI 与 `W18`/`M6`/`DQ9`/`PR-14` | [roadmap-phase54.md](roadmap-phase54.md) / ISSUE #38 | ✅ **已完成** | 2026-11-22 |
+| **Phase 55** | **方案 A Stage 4 — 开源可移植性解耦、死配置真相化与跨平台/网络加固**：抽象 `[workspace]` 与宿主自适应默认值、三后端动态种子与全生产路径/属主去硬编码，清理 `api_port`/`api_bind`（兼容旧 TOML），接通 `AGENT_BODY_CONFIG` / `[memory]` `MemoryFactory` / `[[hooks]]`+`[[pipelines]]` / `ignore_patterns` / `fallback_fts_only` / `[mesh]` 校验，加固 `gnu` 条件编译、`sysinfo` 回退、多语言 Windows `netstat` 与 32KB 有界 HTTP 头循环读取 | [roadmap-phase55.md](roadmap-phase55.md) / ISSUE #39 | ✅ **已完成** | 2026-11-22 |
 
-> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md)、[progress-phase27.md](progress-phase27.md)、[roadmap-phase29.md](roadmap-phase29.md)、[roadmap-phase30.md](roadmap-phase30.md)、[progress-phase30.md](progress-phase30.md)、[roadmap-phase32.md](roadmap-phase32.md)、[roadmap-phase34-35.md](roadmap-phase34-35.md)、[roadmap-phase36.md](roadmap-phase36.md)、[roadmap-phase37.md](roadmap-phase37.md)、[roadmap-phase38-39.md](roadmap-phase38-39.md)、[roadmap-phase40-41.md](roadmap-phase40-41.md)、[roadmap-phase42.md](roadmap-phase42.md)、[roadmap-phase43.md](roadmap-phase43.md)、[roadmap-phase44-45.md](roadmap-phase44-45.md)、[roadmap-phase46.md](roadmap-phase46.md)、[roadmap-phase48.md](roadmap-phase48.md)、[roadmap-phase49.md](roadmap-phase49.md)、[roadmap-phase50.md](roadmap-phase50.md)、[roadmap-phase51.md](roadmap-phase51.md)、[roadmap-phase52.md](roadmap-phase52.md) 与 [roadmap-phase53.md](roadmap-phase53.md)
+> 详见 [roadmap-phase10-11.md](roadmap-phase10-11.md)、[roadmap-phase12.md](roadmap-phase12.md)、[roadmap-phase13.md](roadmap-phase13.md)、[roadmap-phase14.md](roadmap-phase14.md)、[progress-phase14.md](progress-phase14.md)、[roadmap-phase15-18.md](roadmap-phase15-18.md)、[roadmap-phase15.md](roadmap-phase15.md)、[progress-phase15.md](progress-phase15.md)、[roadmap-phase17.md](roadmap-phase17.md)、[progress-phase17.md](progress-phase17.md)、[roadmap-phase18.md](roadmap-phase18.md)、[progress-phase18.md](progress-phase18.md)、[roadmap-phase19-20.md](roadmap-phase19-20.md)、[progress-phase19.md](progress-phase19.md)、[roadmap-phase21-22.md](roadmap-phase21-22.md)、[progress-phase21.md](progress-phase21.md)、[roadmap-phase26.md](roadmap-phase26.md)、[progress-phase26.md](progress-phase26.md)、[roadmap-phase27-28.md](roadmap-phase27-28.md)、[progress-phase27.md](progress-phase27.md)、[roadmap-phase29.md](roadmap-phase29.md)、[roadmap-phase30.md](roadmap-phase30.md)、[progress-phase30.md](progress-phase30.md)、[roadmap-phase32.md](roadmap-phase32.md)、[roadmap-phase34-35.md](roadmap-phase34-35.md)、[roadmap-phase36.md](roadmap-phase36.md)、[roadmap-phase37.md](roadmap-phase37.md)、[roadmap-phase38-39.md](roadmap-phase38-39.md)、[roadmap-phase40-41.md](roadmap-phase40-41.md)、[roadmap-phase42.md](roadmap-phase42.md)、[roadmap-phase43.md](roadmap-phase43.md)、[roadmap-phase44-45.md](roadmap-phase44-45.md)、[roadmap-phase46.md](roadmap-phase46.md)、[roadmap-phase48.md](roadmap-phase48.md)、[roadmap-phase49.md](roadmap-phase49.md)、[roadmap-phase50.md](roadmap-phase50.md)、[roadmap-phase51.md](roadmap-phase51.md)、[roadmap-phase52.md](roadmap-phase52.md)、[roadmap-phase53.md](roadmap-phase53.md)、[roadmap-phase54.md](roadmap-phase54.md) 与 [roadmap-phase55.md](roadmap-phase55.md)
 
 ---
 
@@ -181,9 +183,9 @@
 
 ## 断点恢复指引
 如果任务中断，重新启动时只需：
-1. 读取根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase54.md](roadmap-phase54.md)；
+1. 读取根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase55.md](roadmap-phase55.md)；
 2. 查看子任务断点状态表并接续下一未完成原子任务；
-3. 当前已完成 **Phase 1~54**（方案 A `v1.0.0 GA` Stage 3 收官，下一步启动 Phase 55 开源可移植性解耦/配置真相化/跨平台与网络硬化），后续续传与阶段验收请严格对齐 `EVOLUTION_GUIDE.md` 并通过 `make quality-gate && make verify-decks` 校验。
+3. 当前已完成 **Phase 1~55**（方案 A `v1.0.0 GA` Stage 4 收官，下一步启动 Phase 56 `ISSUE #40` God File 模块化拆分、集成测试补盲与五重门禁升级），后续续传与阶段验收请严格对齐 `EVOLUTION_GUIDE.md` 并通过 `make quality-gate && make verify-decks` 校验。
 
 🎉 **Phase 12（运行依赖显式化与可移植部署）已 100% 全量串行交付**：
 - 严格对齐 README.md ISSUE #10 四层贯通要求；

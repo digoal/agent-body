@@ -16,7 +16,6 @@ use crate::links::audit::LinkAuditor;
 use crate::links::codegraph_bridge::CodeGraphBridge;
 use crate::links::repair::LinkRepairer;
 use crate::links::LinksEngine;
-use crate::memory::builtin_provider::BuiltinMemoryProvider;
 use crate::memory::hybrid::HybridSearchEngine;
 use crate::memory::lifecycle::MemoryLifecycleManager;
 use crate::memory::MemoryManager;
@@ -63,7 +62,7 @@ pub fn handle_brief(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> Htt
 
     let storage_ref = storage.clone();
     let st = Storage::new(storage);
-    let provider = Arc::new(BuiltinMemoryProvider::new(st.clone()));
+    let provider = Config::load_effective_or_default().build_memory_provider(st.clone());
     let assembler = BriefAssembler::new(st, Some(provider));
     let brief_req = BriefRequest {
         query,
@@ -194,11 +193,12 @@ pub fn handle_assets_register(req: &HttpRequest, storage: &dyn StorageProvider) 
     if body.path.trim().is_empty() {
         return WebResponse::error(StatusCode::BAD_REQUEST, "path must not be empty");
     }
+    let default_owner = Config::load_effective_or_default().effective_default_owner();
     let rec = AssetRecord {
         id: uuid::Uuid::new_v4().to_string(),
         path: body.path.trim().to_string(),
         asset_type: body.asset_type.unwrap_or_else(|| "other".to_string()),
-        owner: body.owner.unwrap_or_else(|| "user:digoal".to_string()),
+        owner: body.owner.unwrap_or(default_owner),
         security_level: body.security_level.unwrap_or_else(|| "internal".to_string()),
         scan_tier: "deep".to_string(),
         description: body.description,
@@ -525,13 +525,21 @@ pub fn handle_analytics_export(req: &HttpRequest, storage: Arc<dyn StorageProvid
             output_path: None,
         },
     };
+    let cfg = Config::load_effective_or_default();
     let table = body.table.unwrap_or_else(|| "assets".to_string());
-    let default_path = format!("/root/new/tmp/steward_{}.parquet", table);
-    let output_path = body.output_path.unwrap_or(default_path);
-    if !output_path.starts_with("/root/new/tmp/") || output_path.contains("..") {
+    let default_path = cfg
+        .effective_temp_dir()
+        .join(format!("agent_body_{}.parquet", table))
+        .to_string_lossy()
+        .to_string();
+    let output_path = body
+        .output_path
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or(default_path);
+    if !cfg.is_allowed_temp_path(Path::new(&output_path)) {
         return WebResponse::error(
             StatusCode::FORBIDDEN,
-            "Export path must reside inside /root/new/tmp/",
+            "Export path must reside inside configured temporary directory or /tmp",
         );
     }
     let engine = match DuckDbAnalyticsEngine::from_synced_storage(storage) {
@@ -662,8 +670,9 @@ pub fn handle_env_gc(req: &HttpRequest) -> HttpResponse {
         .parse::<u64>()
         .unwrap_or(72)
         .clamp(1, 8760);
+    let tmp_dir = Config::load_effective_or_default().effective_temp_dir();
     // Web 端默认强制 dry_run=true，绝不静默硬删除
-    match HostGarbageCollector::run_gc(Path::new("/root/new/tmp"), max_age_hours, true) {
+    match HostGarbageCollector::run_gc(&tmp_dir, max_age_hours, true) {
         Ok(rep) => WebResponse::success(rep),
         Err(e) => WebResponse::error(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -1287,9 +1296,15 @@ pub struct AuditExportBody {
 pub fn handle_audit_export(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
     use crate::storage::duckdb_analytics::{AnalyticsProvider, DuckDbAnalyticsEngine};
     let body: AuditExportBody = req.json().unwrap_or(AuditExportBody { output_path: None });
+    let default_out = Config::load_effective_or_default()
+        .effective_temp_dir()
+        .join("audit_events_export.csv")
+        .to_string_lossy()
+        .to_string();
     let out_path = body
         .output_path
-        .unwrap_or_else(|| "/root/new/tmp/audit_events_export.csv".to_string());
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or(default_out);
     match DuckDbAnalyticsEngine::from_synced_audit_events(storage)
         .and_then(|eng| eng.export_to_parquet("audit_events", &out_path))
     {

@@ -207,22 +207,19 @@ impl PropertyGraphOrganizer {
 
                     // 若 cwd 包含工程路径，关联 service -> project (depends_on)
                     if let Some(ref cwd) = p.cwd {
-                        for prefix in &["/root/new/work/", "/root/new/shared_proj/"] {
-                            if cwd.starts_with(prefix) {
-                                let sub = &cwd[prefix.len()..];
-                                let proj_name = sub.split('/').next().unwrap_or("");
-                                if !proj_name.is_empty() {
-                                    let proj_id = format!("project:{}", proj_name);
-                                    let proj_edge = FactEdgeRecord::new_explicit(
-                                        service_id.clone(),
-                                        proj_id,
-                                        "depends_on",
-                                        serde_json::json!({"path": cwd}),
-                                        0.95,
-                                    );
-                                    let _ = self.storage.upsert_fact_edge(&proj_edge);
-                                    edge_count += 1;
-                                }
+                        if let Some(proj_name) = extract_project_from_path(cwd) {
+                            let proj_id = format!("project:{}", proj_name);
+                            let proj_edge = FactEdgeRecord::new_explicit(
+                                service_id.clone(),
+                                proj_id,
+                                "depends_on",
+                                serde_json::json!({"path": cwd}),
+                                0.95,
+                            );
+                            if let Err(e) = self.storage.upsert_fact_edge(&proj_edge) {
+                                eprintln!("[PropertyGraph][WARN] 写入 service->project 依赖边失败: {}", e);
+                            } else {
+                                edge_count += 1;
                             }
                         }
                     }
@@ -753,13 +750,16 @@ fn sanitize_mermaid_id(raw: &str) -> String {
 }
 
 fn infer_placement_zone(abs_path: &str) -> &'static str {
-    if abs_path.starts_with("/root/new/shared_proj/") {
+    let base = crate::config::default_workspace_base();
+    let b = base.to_string_lossy().trim_end_matches('/').to_string();
+    let norm = abs_path.replace('\\', "/");
+    if norm.starts_with(&format!("{}/shared_proj/", b)) || norm.contains("/shared_proj/") {
         "shared_proj"
-    } else if abs_path.starts_with("/root/new/shared_git/") {
+    } else if norm.starts_with(&format!("{}/shared_git/", b)) || norm.contains("/shared_git/") {
         "shared_git"
-    } else if abs_path.starts_with("/root/new/src/") {
+    } else if norm.starts_with(&format!("{}/src/", b)) || norm.contains("/src/") {
         "src"
-    } else if abs_path.starts_with("/root/new/work/") {
+    } else if norm.starts_with(&format!("{}/work/", b)) || norm.contains("/work/") {
         "work"
     } else {
         "other"
@@ -767,8 +767,27 @@ fn infer_placement_zone(abs_path: &str) -> &'static str {
 }
 
 fn extract_project_from_path(path: &str) -> Option<String> {
-    for prefix in &["/root/new/work/", "/root/new/shared_proj/", "/root/new/src/", "/root/new/shared_git/"] {
-        if let Some(rest) = path.strip_prefix(prefix) {
+    let norm = path.replace('\\', "/");
+    let cfg = crate::config::Config::load_effective_or_default();
+    for root in cfg.effective_workspace_roots() {
+        let r_norm = root.to_string_lossy().replace('\\', "/");
+        let r_prefix = format!("{}/", r_norm.trim_end_matches('/'));
+        if let Some(rest) = norm.strip_prefix(&r_prefix) {
+            let name = rest.split('/').next().unwrap_or("");
+            if !name.is_empty() {
+                return Some(name.to_string());
+            }
+        }
+    }
+    let b = cfg
+        .effective_workspace_base()
+        .to_string_lossy()
+        .replace('\\', "/")
+        .trim_end_matches('/')
+        .to_string();
+    for sub in ["work", "shared_proj", "src", "shared_git"] {
+        let prefix = format!("{}/{}/", b, sub);
+        if let Some(rest) = norm.strip_prefix(&prefix) {
             let name = rest.split('/').next().unwrap_or("");
             if !name.is_empty() {
                 return Some(name.to_string());

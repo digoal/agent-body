@@ -17,28 +17,33 @@ pub struct HybridSearchEngine {
     storage: Arc<Storage>,
     ollama_endpoint: String,
     model_name: String,
+    fallback_fts_only: bool,
 }
 
 impl HybridSearchEngine {
-    /// 从全局配置文件 `[embedding]` 段加载 Ollama 端点与模型（配置缺失时回退为 `EmbeddingConfig::default()`）
+    /// 从全局配置文件 `[embedding]` 段加载 Ollama 端点、模型与降级策略（配置缺失时回退为 `EmbeddingConfig::default()`）
     pub fn new(storage: Arc<Storage>) -> Self {
-        let cfg = crate::config::Config::load_or_default(None)
-            .map(|c| c.embedding)
-            .unwrap_or_default();
+        let cfg = crate::config::Config::load_effective_or_default().embedding;
         Self::from_config(storage, &cfg)
     }
 
     /// 使用指定的 `EmbeddingConfig` 构造混合检索引擎
     pub fn from_config(storage: Arc<Storage>, cfg: &crate::config::EmbeddingConfig) -> Self {
-        Self::with_endpoint(storage, &cfg.ollama_url, &cfg.model)
+        Self {
+            storage,
+            ollama_endpoint: cfg.ollama_url.trim_end_matches('/').to_string(),
+            model_name: cfg.model.clone(),
+            fallback_fts_only: cfg.fallback_fts_only,
+        }
     }
 
-    /// 使用显式指定的 Ollama 端点与模型名称构造混合检索引擎
+    /// 使用显式指定的 Ollama 端点与模型名称构造混合检索引擎（默认允许 FTS 降级）
     pub fn with_endpoint(storage: Arc<Storage>, ollama_endpoint: &str, model_name: &str) -> Self {
         Self {
             storage,
             ollama_endpoint: ollama_endpoint.trim_end_matches('/').to_string(),
             model_name: model_name.to_string(),
+            fallback_fts_only: true,
         }
     }
 
@@ -92,6 +97,13 @@ impl HybridSearchEngine {
 
         // 2. 尝试获取 Query 的向量进行语义计算
         let query_vec = self.fetch_embedding(query).await;
+        if query_vec.is_none() && !self.fallback_fts_only {
+            anyhow::bail!(
+                "Ollama embedding 服务不可用 ({}, model={}) 且配置 [embedding].fallback_fts_only=false，拒绝静默降级为纯 FTS 检索",
+                self.ollama_endpoint,
+                self.model_name
+            );
+        }
         let mut vec_ranks: HashMap<String, usize> = HashMap::new();
         let mut cos_sims: HashMap<String, f32> = HashMap::new();
 
@@ -226,5 +238,22 @@ mod tests {
         let engine = HybridSearchEngine::from_config(storage, &cfg);
         assert_eq!(engine.ollama_endpoint(), "http://192.168.1.100:11434");
         assert_eq!(engine.model_name(), "qwen3-embedding:0.6b");
+    }
+
+    #[tokio::test]
+    async fn test_fallback_fts_only_false_returns_error_when_embed_unavailable() {
+        let storage = Arc::new(Storage::open_in_memory().expect("open_in_memory"));
+        let cfg = crate::config::EmbeddingConfig {
+            ollama_url: "http://127.0.0.1:1".to_string(),
+            model: "nomic-embed-text".to_string(),
+            dimensions: 768,
+            fallback_fts_only: false,
+        };
+        let engine = HybridSearchEngine::from_config(storage, &cfg);
+        let err = engine
+            .search_hybrid("pool", 5)
+            .await
+            .expect_err("fallback_fts_only=false 且 embedding 不可用时必须显式报错");
+        assert!(err.to_string().contains("fallback_fts_only=false"));
     }
 }

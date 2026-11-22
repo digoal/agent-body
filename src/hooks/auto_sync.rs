@@ -19,11 +19,13 @@ pub struct AutoSyncEngine {
     storage: Storage,
     scorer: Box<dyn ImportanceScorer>,
     blacklist_patterns: Vec<String>,
+    default_owner: String,
 }
 
 impl AutoSyncEngine {
     pub fn new(storage: Storage) -> Self {
-        let blacklist_patterns = vec![
+        let cfg = crate::config::Config::load_effective_or_default();
+        let mut blacklist_patterns = vec![
             ".git".to_string(),
             "node_modules".to_string(),
             "__pycache__".to_string(),
@@ -32,10 +34,20 @@ impl AutoSyncEngine {
             ".venv".to_string(),
             ".cache".to_string(),
         ];
+        for p in cfg.assets.ignore_patterns.iter() {
+            if !blacklist_patterns.contains(p) {
+                blacklist_patterns.push(p.clone());
+            }
+        }
+        let default_owner = cfg.effective_default_owner();
         Self {
             storage,
-            scorer: Box::new(RuleBasedImportanceScorer::default_scorer()),
+            scorer: Box::new(RuleBasedImportanceScorer::with_ignore_patterns(
+                0.35,
+                cfg.assets.ignore_patterns,
+            )),
             blacklist_patterns,
+            default_owner,
         }
     }
 
@@ -112,7 +124,7 @@ impl AutoSyncEngine {
             id: uuid::Uuid::new_v4().to_string(),
             path: path_str.to_string(),
             asset_type: asset_type.to_string(),
-            owner: "user:digoal".to_string(),
+            owner: self.default_owner.clone(),
             security_level: extracted.security_level,
             scan_tier: "deep".to_string(),
             description: Some(extracted.description),

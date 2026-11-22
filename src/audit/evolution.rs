@@ -132,6 +132,7 @@ impl AuditEvolutionAnalyzer {
         // 3. 常规工作区文件写目录聚合，用于未覆盖放置规则聚类
         let mut dir_counts: HashMap<(String, String), Vec<String>> = HashMap::new();
 
+        let tmp_roots = crate::config::Config::load_effective_or_default().allowed_temp_roots();
         for r in &rows {
             if r.domain == "IN_AGENT" && !r.target_id.trim().is_empty() {
                 by_target
@@ -146,11 +147,15 @@ impl AuditEvolutionAnalyzer {
                 entry.0 += 1;
             }
 
+            let in_tmp = tmp_roots.iter().any(|root| {
+                let rs = root.to_string_lossy();
+                let rt = rs.trim_end_matches('/');
+                !rt.is_empty() && r.target_id.starts_with(rt)
+            });
             if (r.category == "hook_post_exec" || r.category == "fs_watch_sync")
                 && r.target_type == "file"
                 && r.target_id.starts_with('/')
-                && !r.target_id.starts_with("/root/new/tmp")
-                && !r.target_id.starts_with("/tmp")
+                && !in_tmp
             {
                 let p = Path::new(&r.target_id);
                 if let (Some(parent), Some(ext)) = (

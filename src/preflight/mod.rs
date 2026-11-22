@@ -570,7 +570,7 @@ impl PreflightChecker {
                     category: CheckCategory::Optional,
                     status: CheckStatus::Warn,
                     message: "未在 PATH 中检测到 codegraph 命令，微观代码符号穿透将降级为文件级依赖".to_string(),
-                    remedy: Some("如需函数级代码联邦调用分析，请安装 codegraph (https://github.com/digoal)".to_string()),
+                    remedy: Some("如需函数级代码联邦调用分析，请安装 codegraph 索引工具并加入 PATH".to_string()),
                 });
             }
         }
@@ -578,11 +578,7 @@ impl PreflightChecker {
 
     /// 检查宿主机 SKILL 目录可用性 (Phase 16 生态目录)
     pub fn check_ecosystem_skills(report: &mut PreflightReport) {
-        let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_string());
-        let candidates = [
-            std::path::PathBuf::from("/root/new/skills"),
-            std::path::PathBuf::from(&home).join(".gemini/antigravity-cli/skills"),
-        ];
+        let candidates = crate::config::Config::load_effective_or_default().effective_skills_dirs();
         let existing: Vec<String> = candidates
             .iter()
             .filter(|p| p.is_dir())
@@ -595,7 +591,7 @@ impl PreflightChecker {
                 category: CheckCategory::Optional,
                 status: CheckStatus::Warn,
                 message: "未发现默认 SKILL 目录，Context 按需路由器将保持空闲".to_string(),
-                remedy: Some("可将常用技能放入 /root/new/skills/ 并执行 agent-body skill scan".to_string()),
+                remedy: Some("可将常用技能放入 [workspace].skills_dirs 配置目录并执行 agent-body skill scan".to_string()),
             });
         } else {
             report.add(CheckItem {
@@ -890,9 +886,9 @@ impl PreflightChecker {
                 break;
             }
         }
-        let redundant = crate::env::gc::HostGarbageCollector::scan_redundant_build_caches(&[
-            Path::new("/root/new/shared_git"),
-        ]);
+        let shared_git_dirs = crate::config::Config::load_effective_or_default().effective_shared_git_dirs();
+        let shared_git_refs: Vec<&Path> = shared_git_dirs.iter().map(|p| p.as_path()).collect();
+        let redundant = crate::env::gc::HostGarbageCollector::scan_redundant_build_caches(&shared_git_refs);
         let redundant_mb: u64 = redundant.iter().map(|c| c.size_mb).sum();
 
         match root_used_pct {

@@ -187,7 +187,7 @@ impl BackgroundScheduler {
         );
 
         // 巡检结束后主动归还 glibc 空闲堆页，保障常驻守护进程 RSS 稳定 < 90MB（规约 #9）
-        #[cfg(target_os = "linux")]
+        #[cfg(all(target_os = "linux", target_env = "gnu"))]
         {
             unsafe extern "C" {
                 fn malloc_trim(pad: usize) -> i32;

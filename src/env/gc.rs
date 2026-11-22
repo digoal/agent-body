@@ -139,7 +139,9 @@ impl HostGarbageCollector {
         // 诊断孤儿进程 (PPID == 1 或 PPID 不在活跃列表中的 Agent Worker)
         let orphan_processes = Self::diagnose_orphan_processes();
         // 只读巡检镜像仓库中的冗余构建缓存（target/、node_modules/），绝不自动删除
-        let build_caches = Self::scan_redundant_build_caches(&[Path::new("/root/new/shared_git")]);
+        let shared_git_dirs = crate::config::Config::load_effective_or_default().effective_shared_git_dirs();
+        let shared_git_refs: Vec<&Path> = shared_git_dirs.iter().map(|p| p.as_path()).collect();
+        let build_caches = Self::scan_redundant_build_caches(&shared_git_refs);
 
         let candidate_files_count = candidate_files.len();
         Ok(HostGcReport {

@@ -728,10 +728,10 @@ impl ClientHookGenerator {
 # 1. Host Awareness & Safety
 - Before starting services or tests, verify ports using agent-body:
   Command: `agent-body env port <port>` (or `agent-body fact "<port>"`) or check MCP `body_port_check`.
-- Always respect the directory hierarchy:
-  - Code/Projects: `/root/new/work/` or `/root/new/src/`
-  - Shared Tools: `/root/new/shared_proj/`
-  - Temporary files: `/root/new/tmp/` (auto-cleaned)
+- Always respect the workspace directory hierarchy (`agent-body place rules`):
+  - Code/Projects: `<workspace_base>/work/` or `<workspace_base>/src/`
+  - Shared Tools: `<workspace_base>/shared_proj/`
+  - Temporary files: `<temp_dir>/` (auto-cleaned)
 
 # 2. Automated Hook Integration
 - When writing significant architecture/design files, ensure you invoke agent-body's hook:
@@ -751,7 +751,7 @@ impl ClientHookGenerator {
 - **Pre-Hook & Post-Hook Discipline**:
   - Run `body_hook_pre` before major workspace modifications to verify locks.
   - Run `body_hook_post` after creating key artifacts to automatically index assets and register long-term memory.
-- **Temporary Files**: Put throwaway files in `/root/new/tmp/`. Never pollute root project directories with ad-hoc logs.
+- **Temporary Files**: Put throwaway files in your configured temp sandbox (`agent-body place suggest --type tmp` or `/tmp/`). Never pollute root project directories with ad-hoc logs.
 "#,
                 false,
             ),
@@ -763,7 +763,7 @@ impl ClientHookGenerator {
 - **Port & Concurrency Safety**: Before starting listeners or background daemons, check ports with `agent-body env port <port>` / `agent-body locks list` (or MCP `body_port_check` / `body_lock_acquire`).
 - **Write Guards & Post-Hooks**: Run `agent-body hooks pre --tool-name write_file --args '{"path":"<path>"}'` before risky writes, and `agent-body hooks post --tool-name write_file --args '{"path":"<path>"}'` afterwards so write-through invalidation stays current.
 - **Cross-Brain Handoff**: Save/resume continuity capsules across brain switches via `agent-body body handoff` and `agent-body body resume`.
-- **Code & Placement Discipline**: Check `.codegraph/` with `codegraph explore` first; verify target directories with `agent-body place suggest`; keep temporary artifacts in `/root/new/tmp/`.
+- **Code & Placement Discipline**: Check `.codegraph/` with `codegraph explore` first; verify target directories with `agent-body place suggest`; keep temporary artifacts in your configured temp sandbox (`agent-body gc --max-age-hours 72`).
 "#,
                 false,
             ),
@@ -787,7 +787,7 @@ impl ClientHookGenerator {
 
 set -e
 
-BODY_BIN=$(which agent-body 2>/dev/null || echo "/root/.cargo/bin/agent-body")
+BODY_BIN=$(which agent-body 2>/dev/null || echo "$HOME/.cargo/bin/agent-body")
 
 if [ -x "$BODY_BIN" ]; then
     # Trigger lightweight scan on current repo root without blocking commit flow

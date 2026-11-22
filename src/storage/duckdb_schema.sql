@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS assets (
     id              VARCHAR PRIMARY KEY,
     path            VARCHAR NOT NULL UNIQUE,
     type            VARCHAR NOT NULL,
-    owner           VARCHAR DEFAULT 'user:digoal',
+    owner           VARCHAR DEFAULT 'user:local',
     security_level  VARCHAR DEFAULT 'internal',
     scan_tier       VARCHAR DEFAULT 'deep',
     description     VARCHAR,

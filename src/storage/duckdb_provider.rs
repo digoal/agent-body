@@ -86,48 +86,46 @@ impl StorageProvider for DuckDbStorageProvider {
         .context("执行 DuckDB 增量列迁移失败")?;
 
         let now = chrono::Utc::now().to_rfc3339();
+        let base = crate::config::default_workspace_base();
+        let home = crate::config::home_dir();
 
         // 预置放置规则（使用 ON CONFLICT DO NOTHING 避免覆写用户自定义规则）
-        let presets = [
-            ("rule-1", "shared_tools", "script", "/root/new/shared_proj/", "{name}/", "长期沉淀的可复用脚本与程序库", "建立独立子目录，配备 README.md 与入口脚本，严禁硬编码敏感信息", 10),
-            ("rule-2", "work_projects", "project", "/root/new/work/", "{name}/", "常规立项的工作工程与开发目录", "每个工程独立版本控制，优先采用设计文档闭环验证", 20),
-            ("rule-3", "ai_skills", "skill", "/root/new/skills/", "{name}/", "沉淀的通用高频高质量 AI 技能", "必须包含标准 SKILL.md，保障被高频调用的稳定性", 30),
-            ("rule-4", "open_source_src", "src", "/root/new/src/", "{name}/", "浅克隆的开源项目源码库", "克隆后进入根目录优先使用 codegraph init 生成代码地图", 40),
-            ("rule-5", "notes_and_lists", "note", "/root/new/note/", "{name}.md", "重要笔记、知识点与权威网站清单", "好记性不如烂笔头，用于跨周期翻阅沉淀", 50),
-            ("rule-6", "cron_jobs", "other", "/root/new/cron/", "{name}/", "定时任务的 prompt 与输出产物", "多 cron 必须先查撞点表错峰，粒度至少 30 分钟", 60),
-            ("rule-7", "temp_files", "tmp", "/root/new/tmp/", "{name}", "可随时删除的临时文件与调试日志", "明确生命周期，定期巡检清理", 70),
-            ("rule-8", "open_source_shared", "other", "/root/new/shared_git/", "{name}/", "沉淀的可对外开源精品项目", "高质量开源工程，结构规整文档齐全", 80),
-        ];
-
-        for (id, name, ptype, base, pat, desc, guide, prio) in presets {
+        for r in crate::storage::default_seed_placement_rules(&base) {
             conn.execute(
                 "INSERT INTO placement_rules (id, rule_name, pattern_type, target_base_dir, naming_pattern, description, guideline, priority, created_at, updated_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
                  ON CONFLICT DO NOTHING",
-                params![id, name, ptype, base, pat, desc, guide, prio, now],
+                params![
+                    r.id,
+                    r.rule_name,
+                    r.pattern_type,
+                    r.target_base_dir,
+                    r.naming_pattern,
+                    r.description,
+                    r.guideline,
+                    r.priority,
+                    now
+                ],
             )?;
         }
 
         // 预置扫描策略（同样仅缺失时补齐，绝不覆盖用户策略）
-        let scan_policies = [
-            ("policy-1", "/root/new/shared_proj/**", "deep", -1, true, true, true, "白名单: 核心工具库，深度递归到底"),
-            ("policy-2", "/root/new/work/**", "deep", -1, true, true, true, "白名单: 核心工作区，深度递归到底"),
-            ("policy-3", "/root/new/skills/**", "deep", -1, true, true, true, "白名单: 技能库，全量递归"),
-            ("policy-4", "**/node_modules/**", "shallow", 0, false, false, false, "黑名单: 仅记录当前目录实体本身标量，严禁递归下钻"),
-            ("policy-5", "**/.cache/**", "shallow", 0, false, false, false, "黑名单: 缓存目录，仅记录当前目录标量，不下钻"),
-            ("policy-6", "**/.git/**", "shallow", 0, false, false, false, "黑名单: Git 内部目录，仅记录当前目录标量，不下钻"),
-            ("policy-7", "/root/.ssh/**", "shallow", 0, false, false, false, "黑名单: 私密目录，仅记录目录存在，严禁提取内容"),
-            ("policy-8", "/proc/**", "shallow", 0, false, false, false, "黑名单: 系统虚拟文件系统，仅记录根目录，严禁递归"),
-            ("policy-9", "/root/new/src/**", "restricted", 2, true, false, false, "受限区: 开源项目库，仅索引项目入口与 README"),
-            ("policy-10", "/root/new/tmp/**", "restricted", 1, false, false, false, "受限区: 临时目录，仅记录浅层文件"),
-        ];
-
-        for (id, pat, tier, depth, fts, vec, graph, notes) in scan_policies {
+        for p in crate::storage::default_seed_scan_policies(&base, &home) {
             conn.execute(
                 "INSERT INTO scan_policies (id, path_pattern, tier, max_depth, enable_fts, enable_vec, enable_graph, notes, created_at)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
                  ON CONFLICT DO NOTHING",
-                params![id, pat, tier, depth, fts, vec, graph, notes, now],
+                params![
+                    p.id,
+                    p.path_pattern,
+                    p.tier,
+                    p.max_depth,
+                    p.enable_fts,
+                    p.enable_vec,
+                    p.enable_graph,
+                    p.notes,
+                    now
+                ],
             )?;
         }
 

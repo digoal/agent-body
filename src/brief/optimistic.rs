@@ -138,15 +138,18 @@ impl OptimisticLeaseEngine {
         }
 
         // 2. 临时验证沙盒租约 (temp_sandbox)
-        let sandbox_downgraded = downgraded_targets.contains("sandbox:/root/new/tmp/")
-            || downgraded_targets.contains("/root/new/tmp/");
+        let tmp_dir = crate::config::Config::load_effective_or_default().effective_temp_dir();
+        let tmp_prefix = format!("{}/", tmp_dir.to_string_lossy().trim_end_matches('/'));
+        let sandbox_key = format!("sandbox:{}", tmp_prefix);
+        let sandbox_downgraded = downgraded_targets.contains(&sandbox_key)
+            || downgraded_targets.contains(&tmp_prefix);
         candidates.push(OptimisticLease {
             lease_id: "lease-tmp-sandbox".to_string(),
             category: "temp_sandbox".to_string(),
-            target: "/root/new/tmp/".to_string(),
+            target: tmp_prefix.clone(),
             confidence: if sandbox_downgraded { 0.55 } else { 0.99 },
             epoch_hash: epoch_hash.clone(),
-            direct_hint: "临时验证直写 /root/new/tmp/ 免前置放置查询".to_string(),
+            direct_hint: format!("临时验证直写 {} 免前置放置查询", tmp_prefix),
             fallback_hint: "若写入正式产物，交由 Pre-Hook 静默规约校正直达规范目录".to_string(),
         });
 

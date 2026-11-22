@@ -260,7 +260,8 @@ impl PlacementEngineV2 {
             guidelines.push("🔍 真实性门禁: 撰写技术长文与分析报告严禁凭空捏造数据，必须给出真实可查的来源出处。".to_string());
             guidelines.push("🕒 时区标准: 默认强制采用北京时间 (Asia/Shanghai) 标注产生时间。".to_string());
         } else if req.object_type == "tmp" {
-            guidelines.push("⏳ 生命周期管束: /root/new/tmp/ 下文件受大管家 TTL 守护纳管，会话结清后将自动回收。".to_string());
+            let tmp_dir = crate::config::Config::load_effective_or_default().effective_temp_dir();
+            guidelines.push(format!("⏳ 生命周期管束: {}/ 下文件受大管家 TTL 守护纳管，会话结清后将自动回收。", tmp_dir.display()));
         }
     }
 }

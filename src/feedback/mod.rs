@@ -28,9 +28,16 @@ impl FeedbackEngine {
         if cwd_path.exists() {
             return cwd_path;
         }
-        let repo_path = PathBuf::from("/root/new/work/agent-body/user_feedback.md");
-        if repo_path.exists() {
-            return repo_path;
+        let cfg = crate::config::Config::load_effective_or_default();
+        for root in cfg.effective_workspace_roots() {
+            let candidate = root.join("agent-body").join("user_feedback.md");
+            if candidate.exists() {
+                return candidate;
+            }
+        }
+        let base_candidate = cfg.effective_workspace_base().join("work/agent-body/user_feedback.md");
+        if base_candidate.exists() {
+            return base_candidate;
         }
         cwd_path
     }

@@ -6,9 +6,19 @@ use super::{finalize_ports, make_port_fact, PlatformProbe, PlatformServiceFact};
 
 /// Windows 探针：`netstat -ano` + `tasklist` + `schtasks`
 ///
-/// 已知限制：`netstat` 的 `LISTENING` 关键字在非英文本地化系统中可能不同，
-/// 此时返回空列表（不会捏造数据）。
+/// 支持英文与常见多语言本地化 Windows `netstat` 监听状态关键词（如 `LISTENING` / `侦听` / `ABHÖREN` / `ÉCOUTE` 等）。
 pub struct WindowsProbe;
+
+/// 判断 `netstat -ano` 状态列是否表示监听态（兼容英/简中/繁中/日/德/法/西/意/葡/韩 Windows 系统）
+fn is_listening_state(state: &str) -> bool {
+    let trimmed = state.trim();
+    trimmed.eq_ignore_ascii_case("LISTENING")
+        || trimmed.eq_ignore_ascii_case("LISTEN")
+        || matches!(
+            trimmed,
+            "侦听" | "接听" | "リッスン" | "ABHÖREN" | "Abhören" | "ÉCOUTE" | "Écoute" | "ESCUCHANDO" | "ASCOLTO" | "OUVINDO" | "수신 대기"
+        )
+}
 
 impl PlatformProbe for WindowsProbe {
     fn name(&self) -> &'static str {
@@ -42,7 +52,7 @@ pub fn parse_netstat_ano(text: &str, pid_names: &HashMap<u32, String>) -> Vec<Li
     let mut ports = Vec::new();
     for line in text.lines() {
         let t: Vec<&str> = line.split_whitespace().collect();
-        if t.len() < 5 || !t[0].eq_ignore_ascii_case("TCP") || !t[3].eq_ignore_ascii_case("LISTENING") {
+        if t.len() < 5 || !t[0].eq_ignore_ascii_case("TCP") || !is_listening_state(t[3]) {
             continue;
         }
         let (ip_raw, port_str) = match t[1].rsplit_once(':') {
@@ -167,9 +177,16 @@ Active Connections
     }
 
     #[test]
-    fn test_parse_netstat_empty_on_localized_output() {
-        // 非英文本地化时不会误报/捏造
-        let localized = "  TCP    0.0.0.0:135    0.0.0.0:0    侦听    1048\n";
-        assert!(parse_netstat_ano(localized, &HashMap::new()).is_empty());
+    fn test_parse_netstat_localized_listening_and_filters_established() {
+        let localized = "\
+  TCP    0.0.0.0:135            0.0.0.0:0              侦听           1048\n\
+  TCP    192.168.1.5:50234      142.250.1.1:443        已建立         7788\n\
+  TCP    [::]:8765              [::]:0                 Écoute         4412\n\
+  TCP    10.0.0.2:443           10.0.0.9:51234         ESTABLISHED    9901\n";
+        let ports = parse_netstat_ano(localized, &HashMap::new());
+        assert_eq!(ports.len(), 2);
+        assert!(ports.iter().any(|p| p.port == 135 && p.pid == Some(1048)));
+        assert!(ports.iter().any(|p| p.port == 8765 && p.pid == Some(4412)));
+        assert!(ports.iter().all(|p| p.port != 50234 && p.port != 443));
     }
 }

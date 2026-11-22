@@ -21,18 +21,63 @@ pub trait ImportanceScorer: Send + Sync {
 /// 默认内置规则重要性评分引擎（纯规则，0 LLM 开销，纳秒级响应）
 pub struct RuleBasedImportanceScorer {
     threshold: f32,
+    extra_ignore_patterns: Vec<String>,
 }
 
 impl RuleBasedImportanceScorer {
     pub fn new(threshold: f32) -> Self {
         Self {
             threshold: threshold.clamp(0.0, 1.0),
+            extra_ignore_patterns: Vec::new(),
+        }
+    }
+
+    pub fn with_ignore_patterns(threshold: f32, patterns: Vec<String>) -> Self {
+        Self {
+            threshold: threshold.clamp(0.0, 1.0),
+            extra_ignore_patterns: patterns,
         }
     }
 
     pub fn default_scorer() -> Self {
         Self::new(0.35)
     }
+}
+
+/// 评估路径是否命中 `[assets].ignore_patterns` 忽略规则
+pub fn path_matches_ignore_pattern(path: &Path, pattern: &str) -> bool {
+    let raw = pattern.trim();
+    if raw.is_empty() {
+        return false;
+    }
+    let norm_path = path.to_string_lossy().replace('\\', "/");
+    let lower_path = norm_path.to_lowercase();
+    let lower_pat = raw.replace('\\', "/").to_lowercase();
+
+    // 文件扩展通配: *.log / *.tmp / *.bak
+    if let Some(ext_suffix) = lower_pat.strip_prefix('*') {
+        if !ext_suffix.is_empty() && !ext_suffix.contains('/') {
+            return lower_path.ends_with(ext_suffix);
+        }
+    }
+
+    // 剥离前后 glob 通配符进行目录组件或子路径匹配
+    let cleaned = lower_pat.trim_matches('*').trim_matches('/');
+    if cleaned.is_empty() {
+        return false;
+    }
+    if !cleaned.contains('/') {
+        for comp in path.components() {
+            let cs = comp.as_os_str().to_string_lossy().to_lowercase();
+            if cs == cleaned {
+                return true;
+            }
+        }
+        return false;
+    }
+    lower_path.contains(&format!("/{}/", cleaned))
+        || lower_path.ends_with(&format!("/{}", cleaned))
+        || lower_path == cleaned
 }
 
 impl ImportanceScorer for RuleBasedImportanceScorer {
@@ -85,6 +130,18 @@ impl ImportanceScorer for RuleBasedImportanceScorer {
             return ImportanceScore {
                 score: 0.05,
                 reason: "确定性阻断: 编译缓存/临时交换/日志/PG数据块/黑名单路径噪声".to_string(),
+                is_noise: true,
+            };
+        }
+
+        if self
+            .extra_ignore_patterns
+            .iter()
+            .any(|pat| path_matches_ignore_pattern(path, pat))
+        {
+            return ImportanceScore {
+                score: 0.05,
+                reason: "命中配置 assets.ignore_patterns 忽略规则".to_string(),
                 is_noise: true,
             };
         }
@@ -194,6 +251,12 @@ impl NoiseFilter {
         }
     }
 
+    pub fn with_ignore_patterns(patterns: Vec<String>) -> Self {
+        Self {
+            scorer: Box::new(RuleBasedImportanceScorer::with_ignore_patterns(0.35, patterns)),
+        }
+    }
+
     /// 判定是否应当入库录入资产
     pub fn should_record(
         &self,
@@ -250,5 +313,46 @@ mod tests {
         let path4 = Path::new("/root/new/tmp/empty.tmp");
         let (record4, _) = filter.should_record(path4, "other", Some(0), None);
         assert!(!record4, "0 字节临时文件必须被过滤");
+    }
+
+    #[test]
+    fn test_custom_ignore_patterns_block_assets() {
+        let filter = NoiseFilter::with_ignore_patterns(vec![
+            "vendor_cache".to_string(),
+            "*.bak".to_string(),
+            "build/generated/**".to_string(),
+        ]);
+
+        let (rec_ok, _) = filter.should_record(
+            Path::new("/tmp/myproj/src/lib.rs"),
+            "script",
+            Some(512),
+            None,
+        );
+        assert!(rec_ok, "正常源码不应被误拦");
+
+        let (rec_dir, s_dir) = filter.should_record(
+            Path::new("/tmp/myproj/vendor_cache/mod.rs"),
+            "script",
+            Some(512),
+            None,
+        );
+        assert!(!rec_dir && s_dir.is_noise, "自定义忽略目录应被阻断");
+
+        let (rec_ext, _) = filter.should_record(
+            Path::new("/tmp/myproj/notes/draft.bak"),
+            "other",
+            Some(512),
+            None,
+        );
+        assert!(!rec_ext, "自定义后缀通配 *.bak 应被阻断");
+
+        let (rec_sub, _) = filter.should_record(
+            Path::new("/tmp/myproj/build/generated/out.rs"),
+            "script",
+            Some(512),
+            None,
+        );
+        assert!(!rec_sub, "自定义子路径 build/generated/** 应被阻断");
     }
 }

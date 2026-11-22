@@ -394,7 +394,7 @@ flowchart LR
 | **`REQ-19`** | **方案 A·Stage 1：P0 安全止血、容器构建修复、Tokio/边界 Panic 排雷与 P0 文档/SKILL 急救** | 消除全仓审计发现的 Dockerfile 编不过、MCP async blocking panic、无端口破坏命令绕过、GET 写库免鉴权、ledger 误报、04/17 损毁与 SKILL 12 处断链（ISSUE #36） | P0 | Phase 52 | `✅ Verified` |
 | **`REQ-20`** | **方案 A·Stage 2：存储三后端真一致性（SQLite/PG/DuckDB）、迁移与 OLAP 管道修复** | 修复 SQLite/PG/DuckDB 冲突与时间戳语义分裂、`awr:%` 泄漏、`StorageMigrator` 漏表与 `SyncPipeline` 时间戳抹平（ISSUE #37） | P0 | Phase 53 | `✅ Verified (Phase 53)` |
 | **`REQ-21`** | **方案 A·Stage 3：Phase 50 18/18 WaitEvent 闭环、黑白屏真 Parity、TUI 升级与 Benchmark `v3.8`** | 补齐 14/18 WaitEvent 埋点、周期 AWR 快照、AWR 报告库全端对齐、Web DQ 渲染、扩展 `codex`/`hermes`、升级 TUI 与 `v3.8`（ISSUE #38） | P1 | Phase 54 | `✅ Verified (Phase 54)` |
-| **`REQ-22`** | **方案 A·Stage 4：开源可移植性解耦（去 `/root/new/` 硬编码）、配置真相化与跨平台/网络硬化** | 抽象 `Config::{workspace_roots, temp_dir, default_owner}`，接通 `[memory]`/`[[hooks]]`/`[[pipelines]]`/`AGENT_BODY_CONFIG`，完善 musl/macOS/Windows 与 HTTP 头解析（ISSUE #39） | P1 | Phase 55 | `🗓️ Planned` |
+| **`REQ-22`** | **方案 A·Stage 4：开源可移植性解耦（去 `/root/new/` 硬编码）、配置真相化与跨平台/网络硬化** | 抽象 `Config::{workspace_roots, temp_dir, default_owner}`，接通 `[memory]`/`[[hooks]]`/`[[pipelines]]`/`AGENT_BODY_CONFIG`，完善 musl/macOS/Windows 与 HTTP 头解析（ISSUE #39） | P1 | Phase 55 | `✅ Verified (Phase 55)` |
 | **`REQ-23`** | **方案 A·Stage 5：God File 拆分、关键路径吞错清零、集成测试补盲与五重门禁升级** | 拆解 6 个 `>1500L` 生产文件、收紧 `let _ =` 预算、补全 `mesh`/`audit`/`body`/`hooks`/`cli_e2e` 集成测试并升级门禁检测断链/硬编码（ISSUE #40） | P2 | Phase 56 | `🗓️ Planned` |
 | **`REQ-24`** | **方案 A·Stage 6：全文档/手册/SKILL/演说大一统、历史归档与 `v1.0.0 GA` 正式发布** | 统一刷新 `docs/manual/01~10`、`arch/01~03`、`markdown/` 与 `01~06` 演说，去重归档历史文档，升级 `1.0.0` 正式发版（ISSUE #41） | P1 | Phase 57 | `🗓️ Planned` |
 

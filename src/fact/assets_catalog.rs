@@ -55,11 +55,18 @@ pub struct AssetsCatalogEngine;
 impl AssetsCatalogEngine {
     /// 扫描宿主机核心源码目录，编目所有源码工程及其 CodeGraph 状态
     pub fn scan_repos(custom_roots: Option<&[&str]>) -> Result<Vec<RepoFact>> {
-        let default_roots = ["/root/new/src", "/root/new/work", "/root/new/shared_git"];
-        let roots: &[&str] = custom_roots.unwrap_or(&default_roots);
+        let cfg_roots: Vec<String> = crate::config::Config::load_effective_or_default()
+            .effective_workspace_roots()
+            .into_iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
+        let owned_roots: Vec<String> = match custom_roots {
+            Some(r) => r.iter().map(|s| (*s).to_string()).collect(),
+            None => cfg_roots,
+        };
         let mut repos = Vec::new();
 
-        for root in roots {
+        for root in &owned_roots {
             let root_path = Path::new(root);
             if !root_path.exists() || !root_path.is_dir() {
                 continue;
@@ -112,11 +119,18 @@ impl AssetsCatalogEngine {
 
     /// 扫描宿主机核心资料目录，编目权威网站清单与重要技术沉淀
     pub fn scan_documents(custom_roots: Option<&[&str]>) -> Result<Vec<DocFact>> {
-        let default_roots = ["/root/new/note"];
-        let roots: &[&str] = custom_roots.unwrap_or(&default_roots);
+        let cfg_roots: Vec<String> = crate::config::Config::load_effective_or_default()
+            .effective_notes_dirs()
+            .into_iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
+        let owned_roots: Vec<String> = match custom_roots {
+            Some(r) => r.iter().map(|s| (*s).to_string()).collect(),
+            None => cfg_roots,
+        };
         let mut docs = Vec::new();
 
-        for root in roots {
+        for root in &owned_roots {
             let root_path = Path::new(root);
             if !root_path.exists() || !root_path.is_dir() {
                 continue;
