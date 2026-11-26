@@ -141,6 +141,7 @@ impl PreflightChecker {
         Self::check_codegraph(&mut report);
         Self::check_ecosystem_skills(&mut report);
         Self::check_disk_watermark(&mut report);
+        Self::check_multimodal_tools(&mut report);
         Self::check_security_posture(&mut report, data_dir, config);
 
         if let Some(cfg) = config {
@@ -162,6 +163,43 @@ impl PreflightChecker {
         Self::collect_sys_info(&mut report);
 
         report
+    }
+
+    /// 检查宿主机只读多模态解析工具 (pdfinfo / pdftotext / ffprobe)
+    pub fn check_multimodal_tools(report: &mut PreflightReport) {
+        let probes = ["pdfinfo", "pdftotext", "ffprobe"];
+        let found: Vec<&str> = probes
+            .iter()
+            .copied()
+            .filter(|p| Self::resolve_binary_path(p).is_some())
+            .collect();
+        let missing: Vec<&str> = probes
+            .iter()
+            .copied()
+            .filter(|p| !found.contains(p))
+            .collect();
+        let message = if missing.is_empty() {
+            format!("多模态辅助探针就绪: {}", found.join(", "))
+        } else if found.is_empty() {
+            "未检测到 pdfinfo/pdftotext/ffprobe，自动降级为纯 Rust L1A 多模态解析".to_string()
+        } else {
+            format!(
+                "已就绪 [{}]，缺失 [{}] (自动回退纯 Rust 解析)",
+                found.join(", "),
+                missing.join(", ")
+            )
+        };
+        report.add(CheckItem {
+            name: "多模态只读探针工具".to_string(),
+            category: CheckCategory::Optional,
+            status: CheckStatus::Pass,
+            message,
+            remedy: if missing.is_empty() {
+                None
+            } else {
+                Some("如需 PDF 深层正文与音视频流精确探测，可安装 poppler 与 ffmpeg".to_string())
+            },
+        });
     }
 
     /// 检查本地存储最小权限 (0700/0600) 与接口暴露安全基线

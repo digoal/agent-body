@@ -316,6 +316,10 @@ vision_model = "qwen3.5:0.8b"
 # 送入本地视觉模型的单张图片最大字节数 (默认 4MB)
 # 默认: 4194304
 vision_max_image_bytes = 4194304
+# 是否允许按有界超时调用宿主机只读工具 (pdfinfo/pdftotext/ffprobe，默认 true；关闭时纯 Rust 解析)
+multimodal_tools_enabled = true
+# 多模态外部工具探针单次超时上限 (ms，默认 500)
+multimodal_tool_timeout_ms = 500
 
 # ==============================================================================
 # 12. 三态运行模式、真实世界 A/B 对照与 MCP 工具档位配置 (Phase 58 - ISSUE #43)
@@ -344,6 +348,9 @@ shadow_max_live_ms = 800
 
 # shadow_ab 采样率 (0.0..=1.0)
 ab_sample_rate = 1.0
+
+# shadow_ab 检测到 H1 漏召回 / H2 幽灵陈旧命中时是否写穿自愈索引 (默认 true)
+auto_heal_on_hindering = true
 
 # ==============================================================================
 # 13. 行业 Know-How 知识网络与 Omni-RRF 多路融合检索配置 (Phase 61 - ISSUE #44)

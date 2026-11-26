@@ -159,9 +159,11 @@ impl McpToolRegistry {
                 );
                 let mut search_opts = crate::scanner::AssetSearchOptions::new(query, limit);
                 search_opts.modality = args.get("modality").and_then(|v| v.as_str()).map(str::to_string);
+                search_opts.asset_type = args.get("asset_type").and_then(|v| v.as_str()).map(str::to_string);
                 search_opts.domain = args.get("domain").and_then(|v| v.as_str()).map(str::to_string);
                 search_opts.kv_key = args.get("kv_key").and_then(|v| v.as_str()).map(str::to_string);
                 search_opts.kv_value = args.get("kv_value").and_then(|v| v.as_str()).map(str::to_string);
+                search_opts.kv_filter = args.get("kv_filter").and_then(|v| v.as_str()).map(str::to_string);
                 if let Some(hops) = args.get("graph_hops").and_then(|v| v.as_u64()) {
                     search_opts.graph_hops = (hops as usize).min(2);
                 }
@@ -259,6 +261,7 @@ impl McpToolRegistry {
                 let enrich = args.get("enrich_with_ollama").and_then(|v| v.as_bool()).unwrap_or(false);
                 let mine_kg = args.get("mine_knowledge").and_then(|v| v.as_bool()).unwrap_or(false);
                 let extract_kh = args.get("extract_knowhow").and_then(|v| v.as_bool()).unwrap_or(false);
+                let backfill_mm = args.get("backfill_multimodal").and_then(|v| v.as_bool()).unwrap_or(false);
                 let enrich_limit = args.get("enrich_limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
 
                 let scanner = Scanner::new(self.storage.clone())?;
@@ -291,6 +294,10 @@ impl McpToolRegistry {
                     let cfg = crate::config::Config::load_effective_or_default();
                     let kh = crate::fact::KnowHowExtractor::extract_from_storage(&self.storage, &cfg.annotation, &cfg.knowledge_graph, enrich_limit.clamp(1, 20), Some(path_str))?;
                     out.push_str(&format!("  - L2 Know-How 抽取: model={} 章节={} 原文锚定={}/{} 幻觉拦截={} 新增边={}\n", kh.model_used, kh.sections_scanned, kh.triples_grounded, kh.triples_extracted, kh.hallucinations_rejected, kh.edges_created));
+                }
+                if backfill_mm {
+                    let bf = crate::scanner::backfill_multimodal_assets(&self.storage, 200, Some(path_str))?;
+                    out.push_str(&format!("  - 多模态增量回填: scanned={} upgraded={} skipped={}\n", bf.scanned, bf.upgraded, bf.skipped_existing));
                 }
                 Ok(out)
             }

@@ -24,6 +24,8 @@ pub struct FreshnessReconcileReport {
     pub drifted_assets_refreshed: usize,
     pub ghost_fact_nodes_pruned: usize,
     pub duplicate_memories_archived: usize,
+    #[serde(default)]
+    pub multimodal_assets_backfilled: usize,
     pub stale_codegraph_repos: Vec<String>,
     pub elapsed_us: u128,
 }
@@ -251,6 +253,11 @@ impl FreshnessReconciler {
             }
         }
 
+        match crate::scanner::multimodal_ext::backfill_multimodal_assets(storage, 25, None) {
+            Ok(bf) => rep.multimodal_assets_backfilled = bf.upgraded,
+            Err(e) => eprintln!("[Reconcile][WARN] 多模态增量回填失败: {}", e),
+        }
+
         rep.elapsed_us = t0.elapsed().as_micros();
         crate::audit::AuditLogger::record_best_effort(
             storage,
@@ -269,6 +276,7 @@ impl FreshnessReconciler {
                 "drifted_assets_refreshed": rep.drifted_assets_refreshed,
                 "ghost_fact_nodes_pruned": rep.ghost_fact_nodes_pruned,
                 "duplicate_memories_archived": rep.duplicate_memories_archived,
+                "multimodal_assets_backfilled": rep.multimodal_assets_backfilled,
                 "stale_codegraph_repos": rep.stale_codegraph_repos,
             })),
         );

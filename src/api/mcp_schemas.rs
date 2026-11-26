@@ -164,6 +164,10 @@ pub fn all_tool_schemas() -> Vec<Value> {
                             "enum": ["image", "audio", "video", "pdf", "office", "dataset", "code", "document", "config", "media", "other"],
                             "description": "按多模态类别过滤 (image/audio/video/pdf/office/dataset/code 等)"
                         },
+                        "asset_type": {
+                            "type": "string",
+                            "description": "按资产类型过滤 (script/document/dataset/config/media/other)"
+                        },
                         "domain": {
                             "type": "string",
                             "description": "按业务领域过滤 (如 web_dashboard, storage_engine, asset_scanner)"
@@ -175,6 +179,10 @@ pub fn all_tool_schemas() -> Vec<Value> {
                         "kv_value": {
                             "type": "string",
                             "description": "要求 desc_kv（或 kv_key 对应值）包含指定关键词子串"
+                        },
+                        "kv_filter": {
+                            "type": "string",
+                            "description": "多谓词结构化过滤表达式 (如 \"importance_score>=0.7,modality=document;has:doc_title\")"
                         },
                         "graph_hops": {
                             "type": "integer",
@@ -245,6 +253,11 @@ pub fn all_tool_schemas() -> Vec<Value> {
                             "type": "boolean",
                             "default": false,
                             "description": "扫描后是否调用本地小模型 (think=false + 原文锚定) 抽取章节级 L2 Know-How 因果与边界边"
+                        },
+                        "backfill_multimodal": {
+                            "type": "boolean",
+                            "default": false,
+                            "description": "扫描后是否幂等回填升级存量 other 或旧版 schema 多模态资产"
                         }
                     },
                     "required": ["path"]

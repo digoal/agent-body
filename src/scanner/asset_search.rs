@@ -20,9 +20,11 @@ pub struct AssetSearchOptions {
     pub query: String,
     pub limit: usize,
     pub modality: Option<String>,
+    pub asset_type: Option<String>,
     pub domain: Option<String>,
     pub kv_key: Option<String>,
     pub kv_value: Option<String>,
+    pub kv_filter: Option<String>,
     pub hybrid: bool,
     pub fuzzy: bool,
     pub graph_hops: usize,
@@ -37,9 +39,11 @@ impl AssetSearchOptions {
             query: query.into(),
             limit: limit.clamp(1, 200),
             modality: None,
+            asset_type: None,
             domain: None,
             kv_key: None,
             kv_value: None,
+            kv_filter: None,
             hybrid: true,
             fuzzy: true,
             graph_hops: 1,
@@ -51,9 +55,11 @@ impl AssetSearchOptions {
 
     pub fn has_filters(&self) -> bool {
         self.modality.as_deref().is_some_and(|s| !s.trim().is_empty())
+            || self.asset_type.as_deref().is_some_and(|s| !s.trim().is_empty())
             || self.domain.as_deref().is_some_and(|s| !s.trim().is_empty())
             || self.kv_key.as_deref().is_some_and(|s| !s.trim().is_empty())
             || self.kv_value.as_deref().is_some_and(|s| !s.trim().is_empty())
+            || self.kv_filter.as_deref().is_some_and(|s| !s.trim().is_empty())
     }
 }
 
@@ -265,8 +271,14 @@ impl AssetSearchEngine {
         }
     }
 
-    /// 结构化事实标量过滤校验（`modality` / `domain` / `kv_key` / `kv_value`）
+    /// 结构化事实标量过滤校验（`modality` / `asset_type` / `domain` / `kv_key` / `kv_value` / `kv_filter`）
     pub fn matches_filters(asset: &AssetRecord, opts: &AssetSearchOptions) -> bool {
+        if let Some(ref at) = opts.asset_type {
+            let want = at.trim();
+            if !want.is_empty() && !asset.asset_type.eq_ignore_ascii_case(want) {
+                return false;
+            }
+        }
         if let Some(ref m) = opts.modality {
             let want = m.trim().to_ascii_lowercase();
             if !want.is_empty() && Self::effective_modality(asset) != want {
@@ -317,6 +329,16 @@ impl AssetSearchEngine {
                 }
             }
             (None, None) => {}
+        }
+
+        if let Some(ref expr) = opts.kv_filter {
+            let trimmed = expr.trim();
+            if !trimmed.is_empty() {
+                let preds = crate::scanner::multimodal_ext::parse_kv_filters(trimmed);
+                if !crate::scanner::multimodal_ext::matches_kv_filters(asset, &preds) {
+                    return false;
+                }
+            }
         }
 
         true

@@ -163,6 +163,7 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                     enrich_limit,
                     mine_knowledge,
                     extract_knowhow,
+                    backfill_multimodal,
                 } => {
                     println!("正在执行分级颗粒度扫描: {:?}", path);
                     let scanner = Scanner::new(storage.clone())?;
@@ -225,15 +226,29 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                             kh_rep.elapsed_ms
                         );
                     }
+                    if backfill_multimodal {
+                        let prefix = path.to_string_lossy().to_string();
+                        let bf = agent_body::scanner::backfill_multimodal_assets(
+                            &storage,
+                            200,
+                            Some(&prefix),
+                        )?;
+                        println!(
+                            "🎨 多模态元数据回填完成: scanned={} | upgraded={} | skipped={} | missing={} | 耗时={}ms",
+                            bf.scanned, bf.upgraded, bf.skipped_existing, bf.skipped_missing_on_disk, bf.duration_ms
+                        );
+                    }
                 }
                 AssetCommands::Search {
                     query,
                     limit,
                     detail,
                     modality,
+                    asset_type,
                     domain,
                     kv_key,
                     kv_value,
+                    kv_filter,
                     no_hybrid,
                     graph_hops,
                     no_fuzzy,
@@ -243,9 +258,11 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                     let level = agent_body::scanner::DetailLevel::from_str_opt(Some(&detail));
                     let mut opts = agent_body::scanner::AssetSearchOptions::new(&query, limit);
                     opts.modality = modality;
+                    opts.asset_type = asset_type;
                     opts.domain = domain;
                     opts.kv_key = kv_key;
                     opts.kv_value = kv_value;
+                    opts.kv_filter = kv_filter;
                     opts.hybrid = !no_hybrid;
                     opts.graph_hops = graph_hops.min(2);
                     opts.fuzzy = !no_fuzzy;

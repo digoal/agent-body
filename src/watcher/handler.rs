@@ -97,13 +97,8 @@ impl ChangeHandler {
                             .and_then(|m| m.modified().ok())
                             .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                             .map(|d| d.as_secs());
-                        let ext = event.path.extension().and_then(|s| s.to_str()).unwrap_or("");
-                        let asset_type = match ext {
-                            "rs" | "py" | "sh" | "js" | "ts" | "go" => "script",
-                            "md" | "txt" => "document",
-                            "toml" | "json" | "yaml" | "yml" | "sql" | "service" | "conf" => "config",
-                            _ => "other",
-                        };
+                        let cls = crate::scanner::multimodal_ext::classify_asset_path(&event.path);
+                        let asset_type = cls.asset_type;
 
                         let (should_record, imp_score) =
                             self.noise_filter.should_record(&event.path, asset_type, size_bytes, mtime_secs);
@@ -119,7 +114,7 @@ impl ChangeHandler {
                             Some(&imp_score),
                             size_bytes,
                         );
-                        let mut tags = if ext.is_empty() { vec![] } else { vec![ext.to_string()] };
+                        let mut tags = cls.tags;
                         for t in extracted.extra_tags {
                             if !tags.contains(&t) {
                                 tags.push(t);

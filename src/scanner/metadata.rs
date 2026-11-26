@@ -688,11 +688,11 @@ impl HeuristicMetadataExtractor {
         if let Some(ref mtime) = last_modified_at {
             kv.insert("last_modified_at".to_string(), json!(mtime));
         }
+        let cls = crate::scanner::multimodal_ext::classify_asset_path(path);
         kv.insert("domain".to_string(), json!(domain));
-        kv.insert(
-            "modality".to_string(),
-            json!(crate::scanner::multimodal::infer_modality(asset_type, &ext)),
-        );
+        kv.insert("modality".to_string(), json!(cls.modality));
+        kv.insert("schema_version".to_string(), json!("2.0"));
+        kv.insert("mime_type".to_string(), json!(cls.mime_type));
         kv.insert("content_hash".to_string(), json!(content_hash));
         kv.insert("annotation_status".to_string(), json!("heuristic_only"));
         kv.insert("annotation_model".to_string(), json!("heuristic-v1"));
@@ -707,22 +707,11 @@ impl HeuristicMetadataExtractor {
             "script" => Self::extract_script(&snippet, &ext, &file_name, loc, &mut kv, &mut extra_tags),
             "document" => {
                 if ext == "pdf" {
-                    crate::scanner::multimodal::extract_pdf_metadata(
-                        path,
-                        &file_name,
-                        actual_size,
-                        &mut kv,
-                        &mut extra_tags,
-                    )
+                    crate::scanner::multimodal::extract_pdf_metadata(path, &file_name, actual_size, &mut kv, &mut extra_tags)
                 } else if matches!(ext.as_str(), "docx" | "pptx" | "xlsx") {
-                    crate::scanner::multimodal::extract_office_metadata(
-                        path,
-                        &ext,
-                        &file_name,
-                        actual_size,
-                        &mut kv,
-                        &mut extra_tags,
-                    )
+                    crate::scanner::multimodal::extract_office_metadata(path, &ext, &file_name, actual_size, &mut kv, &mut extra_tags)
+                } else if matches!(ext.as_str(), "html" | "htm" | "xhtml") || cls.mime_type == "text/html" {
+                    crate::scanner::multimodal_ext::extract_html_facets(path, &snippet, &file_name, actual_size, &mut kv, &mut extra_tags)
                 } else {
                     Self::extract_document(path, &snippet, &file_name, &mut kv, &mut extra_tags)
                 }
@@ -730,14 +719,11 @@ impl HeuristicMetadataExtractor {
             "config" => Self::extract_config(&snippet, &ext, &file_name, &mut kv, &mut extra_tags),
             "dataset" => {
                 if matches!(ext.as_str(), "sqlite" | "sqlite3" | "db" | "parquet" | "duckdb") {
-                    crate::scanner::multimodal::extract_binary_dataset_metadata(
-                        path,
-                        &ext,
-                        &file_name,
-                        actual_size,
-                        &mut kv,
-                        &mut extra_tags,
-                    )
+                    crate::scanner::multimodal::extract_binary_dataset_metadata(path, &ext, &file_name, actual_size, &mut kv, &mut extra_tags)
+                } else if matches!(ext.as_str(), "csv" | "tsv") {
+                    crate::scanner::multimodal_ext::extract_delimited_facets(path, &snippet, &ext, &file_name, actual_size, &mut kv, &mut extra_tags)
+                } else if matches!(ext.as_str(), "jsonl" | "ndjson") {
+                    crate::scanner::multimodal_ext::extract_jsonl_facets(path, &snippet, &ext, &file_name, actual_size, &mut kv, &mut extra_tags)
                 } else {
                     Self::extract_dataset(&snippet, &ext, &file_name, actual_size, &mut kv, &mut extra_tags)
                 }

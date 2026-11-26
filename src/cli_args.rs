@@ -972,6 +972,9 @@ pub(crate) enum AssetCommands {
 
         #[arg(long, help = "调用本地 Ollama 小模型 (think=false) 抽取章节级 L2 Know-How 因果与边界边（带原文锚定防幻觉）")]
         extract_knowhow: bool,
+
+        #[arg(long, help = "幂等升级存量 other 误判或旧版 schema 资产的多模态元数据")]
+        backfill_multimodal: bool,
     },
 
     #[command(about = "全文与语义搜索资产（支持多模态、领域与 KV 过滤及 Omni-RRF 多路融合检索）")]
@@ -988,6 +991,9 @@ pub(crate) enum AssetCommands {
         #[arg(long, help = "按多模态类型过滤: image | audio | video | pdf | office | dataset | code | document | config")]
         modality: Option<String>,
 
+        #[arg(long, help = "按资产类别过滤: script | document | dataset | config | media | other")]
+        asset_type: Option<String>,
+
         #[arg(long, help = "按业务领域过滤 (如 web_dashboard, storage_engine)")]
         domain: Option<String>,
 
@@ -996,6 +1002,9 @@ pub(crate) enum AssetCommands {
 
         #[arg(long, help = "要求 desc_kv（或 --kv-key 对应值）匹配子串")]
         kv_value: Option<String>,
+
+        #[arg(long, help = "多谓词结构化过滤表达式 (如 \"importance_score>=0.7,modality=document;has:doc_title\")")]
+        kv_filter: Option<String>,
 
         #[arg(long, help = "禁用 Ollama 向量 RRF 混合检索，仅使用确定性 Omni-RRF 与结构化过滤")]
         no_hybrid: bool,

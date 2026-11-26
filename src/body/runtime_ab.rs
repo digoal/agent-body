@@ -18,7 +18,11 @@ use crate::audit::{AuditEventInput, AuditLogger};
 use crate::benchmark::provenance::estimate_tokens;
 use crate::config::{Config, McpToolProfile};
 use crate::scanner::importance::path_matches_ignore_pattern;
-use crate::scanner::metadata::{format_asset_line, is_sensitive_file, read_head_utf8, DetailLevel, SecretRedactor};
+use crate::scanner::metadata::{
+    format_asset_line, is_sensitive_file, merge_with_existing_asset, read_head_utf8,
+    DetailLevel, HeuristicMetadataExtractor, SecretRedactor,
+};
+use crate::scanner::multimodal_ext::classify_asset_path;
 use crate::storage::models::{AssetRecord, AuditQueryFilter};
 use crate::storage::Storage;
 
@@ -56,6 +60,12 @@ pub struct ShadowAbComparison {
     pub reason: String,
     pub live_sample_paths: Vec<String>,
     pub body_sample_paths: Vec<String>,
+    /// H1..H5 帮倒忙维度标签 (`H1_RECALL_MISS`, `H2_GHOST_OR_STALE_HIT`, `H3_LATENCY_DRAG`, `H4_TOKEN_INFLATION`, `H5_LEASE_MISLEAD`)
+    #[serde(default)]
+    pub hindering_flags: Vec<String>,
+    /// shadow_ab 自动写穿自愈的条数 (H1 补采入库 + H2 陈旧幽灵失活清理)
+    #[serde(default)]
+    pub auto_healed_count: usize,
 }
 
 /// 按观测类别分组统计
@@ -316,10 +326,12 @@ impl ShadowAbEngine {
         let overlap_count = live_set.intersection(&body_set).count();
         let body_missed_count = live_set.difference(&body_set).count();
         let body_extra_count = body_set.difference(&live_set).count();
-        let body_stale_count = body_hits
+        let stale_paths: HashSet<String> = body_hits
             .iter()
             .filter(|a| !Path::new(&a.path).exists())
-            .count();
+            .map(|a| a.path.clone())
+            .collect();
+        let body_stale_count = stale_paths.len();
 
         let recall_vs_live_pct = if live_set.is_empty() {
             100.0
@@ -332,12 +344,94 @@ impl ShadowAbEngine {
             0.0
         };
 
+        // 诊断 H1~H4 帮倒忙维度
+        let mut hindering_flags: Vec<String> = Vec::new();
+        if body_missed_count > 0 {
+            hindering_flags.push("H1_RECALL_MISS".to_string());
+        }
+        if body_stale_count > 0 {
+            hindering_flags.push("H2_GHOST_OR_STALE_HIT".to_string());
+        }
+        if !live_hits.is_empty() && body_us > live_us + 20_000 {
+            hindering_flags.push("H3_LATENCY_DRAG".to_string());
+        }
+        if body_tokens > live_tokens + 120 && overlap_count == 0 && body_extra_count == 0 {
+            hindering_flags.push("H4_TOKEN_INFLATION".to_string());
+        }
+
+        // 受配置控制的 H1/H2 写穿自愈（无零回退合流结果）
+        let mut auto_healed_count = 0usize;
+        let mut healed_hits: Vec<AssetRecord> = if body_stale_count > 0 {
+            body_hits
+                .iter()
+                .filter(|a| !stale_paths.contains(&a.path))
+                .cloned()
+                .collect()
+        } else {
+            body_hits.clone()
+        };
+        if cfg.runtime.auto_heal_on_hindering && (body_stale_count > 0 || body_missed_count > 0) {
+            for a in body_hits.iter().filter(|a| stale_paths.contains(&a.path)).take(8) {
+                let mut missing_rec = a.clone();
+                missing_rec.status = "missing".to_string();
+                if storage.upsert_asset(&missing_rec).is_ok() {
+                    drop(crate::fact::KnowledgeGraphBuilder::invalidate_source_path(
+                        storage.provider().as_ref(),
+                        &a.path,
+                    ));
+                    auto_healed_count += 1;
+                }
+            }
+            for lh in live_hits
+                .iter()
+                .filter(|lh| !body_set.contains(&lh.path))
+                .take(8)
+            {
+                let p = Path::new(&lh.path);
+                if !p.is_file() {
+                    continue;
+                }
+                let cls = classify_asset_path(p);
+                let sz = p.metadata().ok().map(|m| m.len() as i64);
+                let extracted =
+                    HeuristicMetadataExtractor::extract(p, cls.asset_type, "deep", None, sz);
+                let existing = storage.get_asset_by_path(&lh.path).ok().flatten();
+                let mut rec = AssetRecord {
+                    id: existing
+                        .as_ref()
+                        .map(|e| e.id.clone())
+                        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
+                    path: lh.path.clone(),
+                    asset_type: cls.asset_type.to_string(),
+                    owner: cfg.effective_default_owner(),
+                    security_level: extracted.security_level,
+                    scan_tier: "deep".to_string(),
+                    description: Some(extracted.description),
+                    desc_kv: extracted.desc_kv,
+                    usage: extracted.usage,
+                    size_bytes: sz,
+                    file_count: None,
+                    tags: cls.tags,
+                    status: "active".to_string(),
+                };
+                if let Some(ref old) = existing {
+                    rec = merge_with_existing_asset(rec, Some(old));
+                }
+                if storage.upsert_asset(&rec).is_ok() {
+                    auto_healed_count += 1;
+                    if !healed_hits.iter().any(|h| h.path == rec.path) && healed_hits.len() < limit {
+                        healed_hits.push(rec);
+                    }
+                }
+            }
+        }
+
         let (verdict, reason, audit_outcome) = if body_stale_count > 0 {
             (
                 "body_stale".to_string(),
                 format!(
-                    "agent-body 返回了 {} 条磁盘已不存在的陈旧路径 (stale hits)",
-                    body_stale_count
+                    "agent-body 返回了 {} 条磁盘已不存在的陈旧路径 (H2, auto_healed={})",
+                    body_stale_count, auto_healed_count
                 ),
                 "failed",
             )
@@ -345,15 +439,16 @@ impl ShadowAbEngine {
             (
                 "body_regression".to_string(),
                 format!(
-                    "实时搜索命中 {} 条，但 agent-body FTS 返回 0 条（索引缺失或未同步）",
-                    live_hits.len()
+                    "实时搜索命中 {} 条，但 agent-body 索引返回 0 条 (H1, auto_healed={})",
+                    live_hits.len(),
+                    auto_healed_count
                 ),
                 "warn",
             )
-        } else if body_tokens > live_tokens + 60 && overlap_count == 0 && body_extra_count == 0 {
+        } else if !hindering_flags.is_empty() && hindering_flags.iter().any(|f| f == "H4_TOKEN_INFLATION") {
             (
                 "body_regression".to_string(),
-                "agent-body 输出消耗更高 Token 且未产生有效重叠命中".to_string(),
+                "agent-body 输出消耗更高 Token 且未产生有效重叠命中 (H4)".to_string(),
                 "warn",
             )
         } else if !body_hits.is_empty()
@@ -403,6 +498,8 @@ impl ShadowAbEngine {
             reason,
             live_sample_paths: live_hits.iter().take(5).map(|h| h.path.clone()).collect(),
             body_sample_paths: body_hits.iter().take(5).map(|a| a.path.clone()).collect(),
+            hindering_flags,
+            auto_healed_count,
         };
 
         let delta_json = serde_json::to_value(&cmp).unwrap_or_else(|_| serde_json::json!({}));
@@ -418,7 +515,7 @@ impl ShadowAbEngine {
                 .with_delta(delta_json),
         );
 
-        Ok((cmp, live_hits, body_hits))
+        Ok((cmp, live_hits, healed_hits))
     }
 
     /// 记录一次 bypass 旁路直通事件，便于跨会话对照
@@ -491,6 +588,8 @@ impl ShadowAbEngine {
             } else {
                 vec![SecretRedactor::redact_single_line(target)]
             },
+            hindering_flags: vec![],
+            auto_healed_count: 0,
         };
         let delta_json = serde_json::to_value(&cmp).unwrap_or_else(|_| serde_json::json!({}));
         AuditLogger::record_best_effort(
@@ -501,6 +600,45 @@ impl ShadowAbEngine {
                 .with_concurrency_mode("shadow_ab")
                 .with_outcome(if would_block { "warn" } else { "success" })
                 .with_elapsed_us(elapsed_us)
+                .with_delta(delta_json),
+        );
+    }
+
+    /// 记录 H5 乐观租约误导事件（复用 `audit_events`，无需新建表或 SPI）
+    pub fn record_lease_mislead_h5(storage: &Storage, target: &str, reason: &str, session_id: &str) {
+        let cmp = ShadowAbComparison {
+            query: SecretRedactor::redact_single_line(target),
+            kind: "lease_mislead".to_string(),
+            mode: "shadow_ab".to_string(),
+            primary_served: "body".to_string(),
+            live_elapsed_us: 0,
+            body_elapsed_us: 0,
+            live_tokens: 0,
+            body_tokens: 0,
+            live_hit_count: 0,
+            body_hit_count: 1,
+            overlap_count: 0,
+            body_missed_count: 0,
+            body_extra_count: 0,
+            body_stale_count: 1,
+            recall_vs_live_pct: 100.0,
+            token_savings_pct: 0.0,
+            verdict: "body_stale".to_string(),
+            reason: SecretRedactor::redact_single_line(reason),
+            live_sample_paths: vec![],
+            body_sample_paths: vec![SecretRedactor::redact_single_line(target)],
+            hindering_flags: vec!["H5_LEASE_MISLEAD".to_string()],
+            auto_healed_count: 0,
+        };
+        let delta_json = serde_json::to_value(&cmp).unwrap_or_else(|_| serde_json::json!({}));
+        AuditLogger::record_best_effort(
+            storage,
+            AuditEventInput::in_agent("ab_shadow", "ab_shadow", "shadow_compare")
+                .with_session(session_id)
+                .with_actor("shadow_ab_lease")
+                .with_target("lease_h5", target)
+                .with_concurrency_mode("shadow_ab")
+                .with_outcome("warn")
                 .with_delta(delta_json),
         );
     }
@@ -786,5 +924,41 @@ mod tests {
         assert_eq!(rep.body_stale_incidents, 1);
         assert_eq!(rep.verdict, "HURTING_INVESTIGATE");
         assert!(rep.recommendations.iter().any(|r| r.contains("reconcile")));
+    }
+
+    #[test]
+    fn test_shadow_ab_h1_h2_auto_heal_and_union_merge() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let work_dir = tmp.path().join("work");
+        std::fs::create_dir_all(&work_dir).expect("mkdir");
+
+        let missed_live = work_dir.join("missed_l1_notes.md");
+        std::fs::write(&missed_live, "# Unique Phase63 AutoHeal Token\n")
+            .expect("write missed");
+
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let cfg = test_config_with_root(&work_dir);
+
+        // 1. 首次查询触发 H1 漏召回 + 写穿自愈 + 返回并集结果
+        let (cmp1, _, healed_hits1) =
+            ShadowAbEngine::compare_asset_search(&storage, &cfg, "Phase63 AutoHeal", 5, "sess-heal")
+                .expect("cmp1");
+        assert!(cmp1.hindering_flags.contains(&"H1_RECALL_MISS".to_string()));
+        assert_eq!(cmp1.auto_healed_count, 1);
+        assert!(healed_hits1
+            .iter()
+            .any(|a| a.path == missed_live.to_string_lossy().as_ref()));
+
+        // 2. 紧接着二次查询应直接 body 命中、0 missed、0 H1
+        let (cmp2, _, _) =
+            ShadowAbEngine::compare_asset_search(&storage, &cfg, "Phase63 AutoHeal", 5, "sess-heal")
+                .expect("cmp2");
+        assert_eq!(cmp2.body_missed_count, 0);
+        assert!(!cmp2.hindering_flags.contains(&"H1_RECALL_MISS".to_string()));
+
+        // 3. 记录 H5 租约误导
+        ShadowAbEngine::record_lease_mislead_h5(&storage, "/tmp/stale_lease.rs", "stale sha256", "sess-heal");
+        let rep = ShadowAbEngine::build_ab_report(&storage, &cfg, "7d", 50).expect("report");
+        assert!(rep.shadow_comparisons >= 3);
     }
 }

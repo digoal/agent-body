@@ -462,9 +462,29 @@ def handle_post_tool() -> None:
     emit({})
 
 
+def _is_bypass_mode() -> bool:
+    env_mode = os.environ.get("AGENT_BODY_MODE", "").strip().lower()
+    if env_mode in ("bypass", "off", "passthrough"):
+        return True
+    if env_mode in ("body_only", "body", "shadow_ab", "shadow"):
+        return False
+    for name in ("runtime_mode.override", "execution_mode.override"):
+        p = os.path.expanduser(f"~/.agent-body/{name}")
+        if os.path.exists(p):
+            try:
+                raw = open(p, "r", encoding="utf-8").read().strip().lower()
+                if raw in ("bypass", "off", "passthrough"):
+                    return True
+                if raw in ("body_only", "body", "shadow_ab", "shadow"):
+                    return False
+            except Exception:
+                pass
+    return False
+
+
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
-    if os.environ.get("AGENT_BODY_MODE", "").strip().lower() in ("bypass", "off", "passthrough"):
+    if _is_bypass_mode():
         emit({"decision": "allow"} if mode == "pre_tool" else {})
         return
     if mode == "session_start":
@@ -551,9 +571,29 @@ def emit(obj: Dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
+def _is_bypass_mode() -> bool:
+    env_mode = os.environ.get("AGENT_BODY_MODE", "").strip().lower()
+    if env_mode in ("bypass", "off", "passthrough"):
+        return True
+    if env_mode in ("body_only", "body", "shadow_ab", "shadow"):
+        return False
+    for name in ("runtime_mode.override", "execution_mode.override"):
+        p = os.path.expanduser(f"~/.agent-body/{name}")
+        if os.path.exists(p):
+            try:
+                raw = open(p, "r", encoding="utf-8").read().strip().lower()
+                if raw in ("bypass", "off", "passthrough"):
+                    return True
+                if raw in ("body_only", "body", "shadow_ab", "shadow"):
+                    return False
+            except Exception:
+                pass
+    return False
+
+
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
-    if os.environ.get("AGENT_BODY_MODE", "").strip().lower() in ("bypass", "off", "passthrough"):
+    if _is_bypass_mode():
         emit({})
         return
     if not os.path.exists(BODY_BIN):
@@ -663,9 +703,29 @@ def run_cli(args):
     return (proc.stdout or "").strip() or "{}"
 
 
+def _is_bypass_mode() -> bool:
+    env_mode = os.environ.get("AGENT_BODY_MODE", "").strip().lower()
+    if env_mode in ("bypass", "off", "passthrough"):
+        return True
+    if env_mode in ("body_only", "body", "shadow_ab", "shadow"):
+        return False
+    for name in ("runtime_mode.override", "execution_mode.override"):
+        p = os.path.expanduser(f"~/.agent-body/{name}")
+        if os.path.exists(p):
+            try:
+                raw = open(p, "r", encoding="utf-8").read().strip().lower()
+                if raw in ("bypass", "off", "passthrough"):
+                    return True
+                if raw in ("body_only", "body", "shadow_ab", "shadow"):
+                    return False
+            except Exception:
+                pass
+    return False
+
+
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else "brief"
-    if os.environ.get("AGENT_BODY_MODE", "").strip().lower() in ("bypass", "off", "passthrough"):
+    if _is_bypass_mode():
         print("{}")
         return
     if mode == "brief":

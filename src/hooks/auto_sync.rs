@@ -91,12 +91,8 @@ impl AutoSyncEngine {
 
         // 2. 自动资产注册 (Asset Catalog Ingestion)
         let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
-        let asset_type = match ext {
-            "rs" | "py" | "sh" | "js" | "ts" => "script",
-            "md" | "txt" => "document",
-            "toml" | "json" | "yaml" | "sql" => "config",
-            _ => "other",
-        };
+        let cls = crate::scanner::multimodal_ext::classify_asset_path(path);
+        let asset_type = cls.asset_type;
 
         let metadata = path.metadata().ok();
         let size_bytes = metadata.map(|m| m.len() as i64);
@@ -109,7 +105,10 @@ impl AutoSyncEngine {
             None,
             size_bytes,
         );
-        let mut tags = vec![ext.to_string(), "agent_output".to_string()];
+        let mut tags = cls.tags;
+        if !tags.iter().any(|t| t == "agent_output") {
+            tags.push("agent_output".to_string());
+        }
         for t in extracted.extra_tags {
             if !tags.contains(&t) {
                 tags.push(t);

@@ -1,9 +1,11 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use std::process::Command;
 use serde_json::{json, Map, Value};
 use crate::scanner::metadata::{truncate_chars, PromptInjectionScanner, SecretRedactor};
+use crate::scanner::multimodal_ext::{
+    effective_multimodal_tool_policy, parse_audio_l1a, parse_parquet_footer_l1a, run_command_bounded,
+};
 
 /// 根据资产类别与扩展名推导统一多模态类型 (`modality`)
 pub fn infer_modality(asset_type: &str, ext: &str) -> &'static str {
@@ -436,21 +438,22 @@ fn parse_mp4_mvhd_duration(bytes: &[u8]) -> Option<f64> {
     None
 }
 
-fn try_ffprobe_metadata(path: &Path) -> Option<Value> {
-    let out = Command::new("ffprobe")
-        .arg("-v")
-        .arg("quiet")
-        .arg("-print_format")
-        .arg("json")
-        .arg("-show_format")
-        .arg("-show_streams")
-        .arg(path)
-        .output()
-        .ok()?;
-    if !out.status.success() {
-        return None;
-    }
-    serde_json::from_slice(&out.stdout).ok()
+fn try_ffprobe_metadata(path: &Path, timeout_ms: u64) -> Option<Value> {
+    let p_str = path.to_str()?;
+    let out = run_command_bounded(
+        "ffprobe",
+        &[
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
+            "-show_format",
+            "-show_streams",
+            p_str,
+        ],
+        timeout_ms,
+    )?;
+    serde_json::from_str(&out).ok()
 }
 
 /// 音视频与媒体资产统一入口（图片委托至 `extract_image_metadata`）
@@ -486,15 +489,18 @@ pub fn extract_media_metadata(
                 kv.insert("duration_secs".to_string(), json!((dur * 100.0).round() / 100.0));
             }
         }
+    } else if matches!(fmt, "mp3" | "flac" | "ogg" | "oga" | "opus") {
+        parse_audio_l1a(&head, fmt, size_bytes.unwrap_or(0).max(0) as u64, kv);
     } else if matches!(fmt, "mp4" | "mov" | "m4a") {
         if let Some(dur) = parse_mp4_mvhd_duration(&head) {
             kv.insert("duration_secs".to_string(), json!((dur * 100.0).round() / 100.0));
         }
     }
 
-    // 若宿主机存在 ffprobe，补充精确编解码器/分辨率/时长
-    if !kv.contains_key("codec") || (modality == "video" && !kv.contains_key("dimensions")) {
-        if let Some(probe) = try_ffprobe_metadata(path) {
+    // 若配置允许且宿主机存在 ffprobe，则有界超时补充精确编解码器/分辨率/时长
+    let (tools_enabled, tool_timeout_ms) = effective_multimodal_tool_policy();
+    if tools_enabled && (!kv.contains_key("codec") || (modality == "video" && !kv.contains_key("dimensions"))) {
+        if let Some(probe) = try_ffprobe_metadata(path, tool_timeout_ms) {
             if let Some(dur_s) = probe
                 .get("format")
                 .and_then(|f| f.get("duration"))
@@ -569,50 +575,40 @@ pub fn extract_pdf_metadata(
         }
     }
 
-    // 自适应调用 pdfinfo / pdftotext
-    if let Ok(out) = Command::new("pdfinfo").arg(path).output() {
-        if out.status.success() {
-            let txt = String::from_utf8_lossy(&out.stdout);
-            for line in txt.lines() {
-                if let Some((k, v)) = line.split_once(':') {
-                    let key = k.trim();
-                    let val = v.trim();
-                    match key {
-                        "Pages" => {
-                            if let Ok(p) = val.parse::<usize>() {
-                                kv.insert("page_count".to_string(), json!(p));
+    // 受有界超时与配置开关控制的 pdfinfo / pdftotext 探针
+    let (tools_enabled, tool_timeout_ms) = effective_multimodal_tool_policy();
+    if tools_enabled {
+        if let Some(p_str) = path.to_str() {
+            if let Some(txt) = run_command_bounded("pdfinfo", &[p_str], tool_timeout_ms) {
+                for line in txt.lines() {
+                    if let Some((k, v)) = line.split_once(':') {
+                        let key = k.trim();
+                        let val = v.trim();
+                        match key {
+                            "Pages" => {
+                                if let Ok(p) = val.parse::<usize>() {
+                                    kv.insert("page_count".to_string(), json!(p));
+                                }
                             }
+                            "Title" if !val.is_empty() => {
+                                let clean = record_injection_if_any(&SecretRedactor::redact(val), kv, extra_tags);
+                                kv.insert("pdf_title".to_string(), json!(truncate_chars(&clean, 80)));
+                            }
+                            "Author" if !val.is_empty() => {
+                                kv.insert("pdf_author".to_string(), json!(truncate_chars(val, 40)));
+                            }
+                            _ => {}
                         }
-                        "Title" if !val.is_empty() => {
-                            let clean = record_injection_if_any(&SecretRedactor::redact(val), kv, extra_tags);
-                            kv.insert("pdf_title".to_string(), json!(truncate_chars(&clean, 80)));
-                        }
-                        "Author" if !val.is_empty() => {
-                            kv.insert("pdf_author".to_string(), json!(truncate_chars(val, 40)));
-                        }
-                        _ => {}
                     }
                 }
             }
-        }
-    }
-
-    if let Ok(out) = Command::new("pdftotext")
-        .arg("-f")
-        .arg("1")
-        .arg("-l")
-        .arg("3")
-        .arg(path)
-        .arg("-")
-        .output()
-    {
-        if out.status.success() {
-            let txt = String::from_utf8_lossy(&out.stdout);
-            let compact = txt.split_whitespace().collect::<Vec<_>>().join(" ");
-            if !compact.is_empty() {
-                let redacted = SecretRedactor::redact(&compact);
-                let safe = record_injection_if_any(&redacted, kv, extra_tags);
-                kv.insert("pdf_excerpt".to_string(), json!(truncate_chars(&safe, 400)));
+            if let Some(txt) = run_command_bounded("pdftotext", &["-f", "1", "-l", "3", p_str, "-"], tool_timeout_ms) {
+                let compact = txt.split_whitespace().collect::<Vec<_>>().join(" ");
+                if !compact.is_empty() {
+                    let redacted = SecretRedactor::redact(&compact);
+                    let safe = record_injection_if_any(&redacted, kv, extra_tags);
+                    kv.insert("pdf_excerpt".to_string(), json!(truncate_chars(&safe, 400)));
+                }
             }
         }
     }
@@ -724,15 +720,17 @@ pub fn extract_office_metadata(
         kv.insert("embedded_media_count".to_string(), json!(media_count));
     }
 
-    if let Ok(out) = Command::new("unzip").arg("-p").arg(path).arg("docProps/core.xml").output() {
-        if out.status.success() {
-            let xml = String::from_utf8_lossy(&out.stdout);
-            if let Some(title) = extract_xml_tag_value(&xml, "dc:title") {
-                let safe = record_injection_if_any(&SecretRedactor::redact(&title), kv, extra_tags);
-                kv.insert("doc_title".to_string(), json!(truncate_chars(&safe, 80)));
-            }
-            if let Some(creator) = extract_xml_tag_value(&xml, "dc:creator") {
-                kv.insert("doc_author".to_string(), json!(truncate_chars(&creator, 40)));
+    let (tools_enabled, tool_timeout_ms) = effective_multimodal_tool_policy();
+    if tools_enabled {
+        if let Some(p_str) = path.to_str() {
+            if let Some(xml) = run_command_bounded("unzip", &["-p", p_str, "docProps/core.xml"], tool_timeout_ms) {
+                if let Some(title) = extract_xml_tag_value(&xml, "dc:title") {
+                    let safe = record_injection_if_any(&SecretRedactor::redact(&title), kv, extra_tags);
+                    kv.insert("doc_title".to_string(), json!(truncate_chars(&safe, 80)));
+                }
+                if let Some(creator) = extract_xml_tag_value(&xml, "dc:creator") {
+                    kv.insert("doc_author".to_string(), json!(truncate_chars(&creator, 40)));
+                }
             }
         }
     }
@@ -815,26 +813,38 @@ pub fn extract_binary_dataset_metadata(
             }
         }
     } else if fmt == "parquet" {
-        let head = read_head_bytes(path, 8).unwrap_or_default();
-        if head.starts_with(b"PAR1") {
-            if let Ok(conn) = duckdb::Connection::open_in_memory() {
-                let p_str = path.to_string_lossy().to_string();
-                if let Ok(mut stmt) = conn.prepare("DESCRIBE SELECT * FROM read_parquet(?)") {
-                    if let Ok(rows) = stmt.query_map([&p_str], |r| r.get::<_, String>(0)) {
-                        for c in rows.flatten() {
-                            if columns.len() < 24 && !columns.contains(&c) {
-                                columns.push(c);
+        let sz_u64 = size_bytes.unwrap_or(0).max(0) as u64;
+        if let Some((nr, cols, ctypes)) = parse_parquet_footer_l1a(path, sz_u64) {
+            row_count_estimate = nr;
+            columns = cols;
+            if !ctypes.is_empty() {
+                kv.insert("column_types".to_string(), json!(ctypes));
+            }
+        }
+        if columns.is_empty() || row_count_estimate.is_none() {
+            let head = read_head_bytes(path, 8).unwrap_or_default();
+            if head.starts_with(b"PAR1") {
+                if let Ok(conn) = duckdb::Connection::open_in_memory() {
+                    let p_str = path.to_string_lossy().to_string();
+                    if columns.is_empty() {
+                        if let Ok(mut stmt) = conn.prepare("DESCRIBE SELECT * FROM read_parquet(?)") {
+                            if let Ok(rows) = stmt.query_map([&p_str], |r| r.get::<_, String>(0)) {
+                                for c in rows.flatten() {
+                                    if columns.len() < 24 && !columns.contains(&c) {
+                                        columns.push(c);
+                                    }
+                                }
                             }
                         }
                     }
-                }
-                if size_bytes.unwrap_or(0) <= 64 * 1024 * 1024 {
-                    if let Ok(cnt) = conn.query_row(
-                        "SELECT COUNT(*) FROM read_parquet(?)",
-                        [&p_str],
-                        |r| r.get::<_, i64>(0),
-                    ) {
-                        row_count_estimate = Some(cnt);
+                    if row_count_estimate.is_none() && size_bytes.unwrap_or(0) <= 64 * 1024 * 1024 {
+                        if let Ok(cnt) = conn.query_row(
+                            "SELECT COUNT(*) FROM read_parquet(?)",
+                            [&p_str],
+                            |r| r.get::<_, i64>(0),
+                        ) {
+                            row_count_estimate = Some(cnt);
+                        }
                     }
                 }
             }

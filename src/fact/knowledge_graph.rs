@@ -902,7 +902,7 @@ impl KnowledgeGraphBuilder {
         let mut nodes_to_delete: HashSet<String> = HashSet::new();
 
         for anchor in &candidate_anchors {
-            if let Ok(sub) = storage.traverse_fact_graph(anchor, 2) {
+            if let Ok(sub) = storage.traverse_fact_graph(anchor, 4) {
                 for n in sub.nodes {
                     let same_source = n
                         .properties

@@ -186,6 +186,14 @@ pub struct AnnotationConfig {
     /// 送入本地视觉模型的单张图片最大字节数（默认 4MB，防止大图 OOM/超时）
     #[serde(default = "default_annotation_vision_max_image_bytes")]
     pub vision_max_image_bytes: usize,
+
+    /// 是否允许多模态元数据提取按有界超时调用宿主机只读工具 (pdfinfo/pdftotext/ffprobe)
+    #[serde(default = "default_true_flag")]
+    pub multimodal_tools_enabled: bool,
+
+    /// 宿主机多模态只读工具探针超时上限 (ms，默认 500ms)
+    #[serde(default = "default_multimodal_tool_timeout_ms")]
+    pub multimodal_tool_timeout_ms: u64,
 }
 
 /// 三态运行模式 (ISSUE #43): 默认仅用本体 / 旁路直通 / 真实使用 A/B 对照
@@ -269,6 +277,10 @@ pub struct RuntimeConfig {
     /// shadow_ab 采样率 (0.0..=1.0，默认 1.0 全量采集)
     #[serde(default = "default_ab_sample_rate")]
     pub ab_sample_rate: f64,
+
+    /// shadow_ab 检测到 H1 漏召回 / H2 幽灵陈旧命中时是否写穿自愈索引 (Phase 63)
+    #[serde(default = "default_true_flag")]
+    pub auto_heal_on_hindering: bool,
 }
 
 /// 行业 Know-How 知识网络与 Omni-RRF 多路融合检索配置 (`[knowledge_graph]`, Phase 61 / ISSUE #44)
@@ -375,6 +387,14 @@ fn default_ab_sample_rate() -> f64 {
     1.0
 }
 
+fn default_true_flag() -> bool {
+    true
+}
+
+fn default_multimodal_tool_timeout_ms() -> u64 {
+    500
+}
+
 impl Default for RuntimeConfig {
     fn default() -> Self {
         Self {
@@ -383,6 +403,7 @@ impl Default for RuntimeConfig {
             shadow_primary: default_shadow_primary(),
             shadow_max_live_ms: default_shadow_max_live_ms(),
             ab_sample_rate: default_ab_sample_rate(),
+            auto_heal_on_hindering: default_true_flag(),
         }
     }
 }
@@ -431,6 +452,8 @@ impl Default for AnnotationConfig {
             vision_enabled: default_annotation_vision_enabled(),
             vision_model: default_annotation_vision_model(),
             vision_max_image_bytes: default_annotation_vision_max_image_bytes(),
+            multimodal_tools_enabled: default_true_flag(),
+            multimodal_tool_timeout_ms: default_multimodal_tool_timeout_ms(),
         }
     }
 }
@@ -889,14 +912,30 @@ impl Config {
         self.workspace.temp_dir.clone()
     }
 
-    /// 解析当前生效的运行模式（环境变量 `AGENT_BODY_MODE` 优先于 `[runtime].mode`）
+    /// 解析当前生效的运行模式（`AGENT_BODY_MODE` > override 文件 > `[runtime].mode`）
     pub fn effective_runtime_mode(&self) -> RuntimeMode {
         if let Ok(env_mode) = std::env::var("AGENT_BODY_MODE") {
             if let Some(m) = RuntimeMode::parse_str(&env_mode) {
                 return m;
             }
         }
+        if !cfg!(test) {
+            if let Some(m) = Self::read_mode_override_in(&self.data_dir) {
+                return m;
+            }
+        }
         RuntimeMode::parse_str(&self.runtime.mode).unwrap_or(RuntimeMode::BodyOnly)
+    }
+
+    pub fn read_mode_override_in(dir: &Path) -> Option<RuntimeMode> {
+        for name in ["runtime_mode.override", "execution_mode.override"] {
+            if let Ok(raw) = std::fs::read_to_string(dir.join(name)) {
+                if let Some(m) = RuntimeMode::parse_str(&raw) {
+                    return Some(m);
+                }
+            }
+        }
+        None
     }
 
     /// 解析当前生效的 MCP 工具暴露档位（环境变量 `AGENT_BODY_MCP_PROFILE` 优先于 `[runtime].mcp_profile`）

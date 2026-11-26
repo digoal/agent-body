@@ -126,9 +126,11 @@ pub fn handle_assets_search(req: &HttpRequest, storage: &dyn StorageProvider) ->
 
     let mut opts = crate::scanner::AssetSearchOptions::new(q.trim(), limit);
     opts.modality = opt_param("modality");
+    opts.asset_type = opt_param("asset_type");
     opts.domain = opt_param("domain");
     opts.kv_key = opt_param("kv_key");
     opts.kv_value = opt_param("kv_value");
+    opts.kv_filter = opt_param("kv_filter");
     opts.hybrid = hybrid;
     opts.graph_hops = query_str(req, "graph_hops", "1")
         .parse::<usize>()
@@ -241,6 +243,8 @@ pub struct AssetScanBody {
     pub mine_knowledge: bool,
     #[serde(default)]
     pub extract_knowhow: bool,
+    #[serde(default)]
+    pub backfill_multimodal: bool,
 }
 
 fn default_enrich_limit() -> usize {
@@ -293,11 +297,17 @@ pub fn handle_assets_scan(req: &HttpRequest, storage: Arc<dyn StorageProvider>) 
             } else {
                 None
             };
+            let backfill_report = if body.backfill_multimodal {
+                crate::scanner::backfill_multimodal_assets(&st, 200, Some(body.path.trim())).ok()
+            } else {
+                None
+            };
             WebResponse::success(serde_json::json!({
                 "scan_report": report,
                 "enrich_report": enrich_report,
                 "knowledge_report": knowledge_report,
                 "knowhow_report": knowhow_report,
+                "backfill_report": backfill_report,
             }))
         }
         Err(e) => WebResponse::error(
