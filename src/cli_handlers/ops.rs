@@ -208,7 +208,7 @@ pub fn handle_ops(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> {
         }
 
         Commands::Preflight { json } => {
-            let report = agent_body::preflight::PreflightChecker::run_all(&cfg.data_dir, Some(&cfg));
+            let report = agent_body::preflight::PreflightChecker::run_all(&cfg.data_dir, Some(cfg));
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             } else {
@@ -480,7 +480,7 @@ pub fn handle_ops(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&rep)?);
                 }
                 ServiceCommands::Bootstrap => {
-                    let cnt = mgr.bootstrap_from_config(&cfg)?;
+                    let cnt = mgr.bootstrap_from_config(cfg)?;
                     println!("✅ 已从配置自动推导 {} 条外部服务联系人", cnt);
                 }
             }

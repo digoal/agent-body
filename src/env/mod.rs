@@ -225,10 +225,7 @@ fn is_noise_process(name: &str, command: &str) -> bool {
         "rpcd_lsad",
         "sleep",
     ];
-    if NOISE_EXACT.iter().any(|&exact| lower == exact) {
-        return true;
-    }
-    false
+    NOISE_EXACT.iter().any(|&exact| lower == exact)
 }
 
 fn infer_process_owner(_name: &str, cmd_parts: &[String], default_owner: &str) -> String {

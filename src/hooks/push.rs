@@ -141,22 +141,17 @@ impl UdsBroadcaster {
         let tx = self.event_tx.clone();
 
         tokio::spawn(async move {
-            loop {
-                match listener.accept().await {
-                    Ok((mut stream, _)) => {
-                        use tokio::io::AsyncWriteExt;
-                        let mut rx = tx.subscribe();
-                        tokio::spawn(async move {
-                            while let Ok(msg) = rx.recv().await {
-                                let line = format!("{}\n", msg);
-                                if stream.write_all(line.as_bytes()).await.is_err() {
-                                    break;
-                                }
-                            }
-                        });
+            while let Ok((mut stream, _)) = listener.accept().await {
+                use tokio::io::AsyncWriteExt;
+                let mut rx = tx.subscribe();
+                tokio::spawn(async move {
+                    while let Ok(msg) = rx.recv().await {
+                        let line = format!("{}\n", msg);
+                        if stream.write_all(line.as_bytes()).await.is_err() {
+                            break;
+                        }
                     }
-                    Err(_) => break,
-                }
+                });
             }
         });
 

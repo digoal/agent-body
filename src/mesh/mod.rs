@@ -690,10 +690,12 @@ mod tests {
 
         let storage = SqliteStorageProvider::open_in_memory().expect("mem");
         let tmp = tempfile::tempdir().expect("tmpdir");
-        let mut cfg = MeshConfig::default();
-        cfg.node_id = Some("node-b".into());
-        cfg.shared_secret = Some("s3cr3t-mesh".into());
-        cfg.inbox_dir = Some(tmp.path().join("inbox").to_string_lossy().to_string());
+        let cfg = MeshConfig {
+            node_id: Some("node-b".into()),
+            shared_secret: Some("s3cr3t-mesh".into()),
+            inbox_dir: Some(tmp.path().join("inbox").to_string_lossy().to_string()),
+            ..Default::default()
+        };
 
         // 1. 测试签名对话 + 脱敏落库
         let dlg_env = MeshEnvelope::build_signed(

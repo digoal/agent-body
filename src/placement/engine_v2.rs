@@ -212,11 +212,10 @@ impl PlacementEngineV2 {
                         score += 0.4;
                     }
                 }
-                "note" => {
-                    if intent.contains("笔记") || intent.contains("资料") || intent.contains("清单") || intent.contains("总结") {
+                "note"
+                    if (intent.contains("笔记") || intent.contains("资料") || intent.contains("清单") || intent.contains("总结")) => {
                         score += 0.4;
                     }
-                }
                 _ => {}
             }
 
@@ -275,12 +274,11 @@ pub fn sanitize_name_v2(name: &str) -> String {
         if c.is_ascii_alphanumeric() {
             out.push(c.to_ascii_lowercase());
             prev_is_sep = false;
-        } else if c == '-' || c == '_' || c.is_whitespace() || c == '.' || c == '/' {
-            if !prev_is_sep && !out.is_empty() {
+        } else if (c == '-' || c == '_' || c.is_whitespace() || c == '.' || c == '/')
+            && !prev_is_sep && !out.is_empty() {
                 out.push('_');
                 prev_is_sep = true;
             }
-        }
     }
 
     let trimmed = out.trim_matches('_');

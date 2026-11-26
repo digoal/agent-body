@@ -172,15 +172,12 @@ impl PgStorageProvider {
     pub(super) fn impl_upsert_scan_policy(&self, policy: &ScanPolicy) -> Result<()> {
         let mut client = self.lock_client()?;
         client.execute(
+            "DELETE FROM scan_policies WHERE id = $1 OR path_pattern = $2",
+            &[&policy.id, &policy.path_pattern],
+        )?;
+        client.execute(
             "INSERT INTO scan_policies (id, path_pattern, tier, max_depth, enable_fts, enable_vec, enable_graph, notes)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             ON CONFLICT (path_pattern) DO UPDATE SET
-                tier = EXCLUDED.tier,
-                max_depth = EXCLUDED.max_depth,
-                enable_fts = EXCLUDED.enable_fts,
-                enable_vec = EXCLUDED.enable_vec,
-                enable_graph = EXCLUDED.enable_graph,
-                notes = EXCLUDED.notes",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
             &[
                 &policy.id,
                 &policy.path_pattern,

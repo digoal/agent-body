@@ -115,9 +115,7 @@ impl SqliteStorageProvider {
             ) {
                 if let Ok(rows) = stmt.query_map(params![fts_expr, limit as i64], Self::map_skill_row) {
                     let mut out = Vec::new();
-                    for r in rows {
-                        if let Ok(item) = r { out.push(item); }
-                    }
+                    for item in rows.flatten() { out.push(item); }
                     if !out.is_empty() {
                         return Ok(out);
                     }

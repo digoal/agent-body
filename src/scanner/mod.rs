@@ -492,8 +492,8 @@ mod tests {
         assert!(report.deep_indexed_files >= 1);
         assert!(report.noise_skipped_files >= 1, "临时 log 文件应当被统计为跳过噪声");
 
-        let app_asset = storage.get_asset_by_path(&work_dir.join("app.rs").to_string_lossy().to_string()).unwrap();
-        let log_asset = storage.get_asset_by_path(&tmp_dir.join("debug.log").to_string_lossy().to_string()).unwrap();
+        let app_asset = storage.get_asset_by_path(work_dir.join("app.rs").to_string_lossy().as_ref()).unwrap();
+        let log_asset = storage.get_asset_by_path(tmp_dir.join("debug.log").to_string_lossy().as_ref()).unwrap();
 
         assert!(app_asset.is_some(), "有效代码资产必须已入库");
         assert!(log_asset.is_none(), "垃圾日志文件绝不应该被入库");

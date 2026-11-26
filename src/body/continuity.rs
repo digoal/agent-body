@@ -312,7 +312,7 @@ impl ContinuityManager {
         }
         let max_chars = max_tokens.saturating_mul(2).max(80);
         let mut cut: String = joined.chars().take(max_chars).collect();
-        cut.push_str("\n");
+        cut.push('\n');
         cut
     }
 }

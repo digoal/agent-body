@@ -667,7 +667,7 @@ impl PropertyGraphOrganizer {
         for n in &subgraph.nodes {
             out.push_str(&format!("| `{}` | `{}` | `{}` | {} |\n", n.id, n.node_type, n.name, n.label));
         }
-        out.push_str("\n");
+        out.push('\n');
 
         if !subgraph.edges.is_empty() {
             out.push_str("### 🔗 关系依赖拓扑 (含证据层级与权重)\n\n");
@@ -679,7 +679,7 @@ impl PropertyGraphOrganizer {
                     e.source_id, e.relation, e.target_id, e.evidence_tier, e.weight, e.direction_kind
                 ));
             }
-            out.push_str("\n");
+            out.push('\n');
         }
 
         out.push_str("### 📊 可视化拓扑关系图 (Mermaid)\n\n");
@@ -698,7 +698,7 @@ impl PropertyGraphOrganizer {
         // 节点声明与样式
         for n in &subgraph.nodes {
             let clean_id = sanitize_mermaid_id(&n.id);
-            let clean_label = n.name.replace('"', "").replace('(', "").replace(')', "");
+            let clean_label = n.name.replace(['"', '(', ')'], "");
             let shape = match n.node_type.as_str() {
                 "project" => format!("[\"📦 {}\"]", clean_label),
                 "service" => format!("([\"⚙️ {}\"])", clean_label),
@@ -742,11 +742,7 @@ impl PropertyGraphOrganizer {
 }
 
 fn sanitize_mermaid_id(raw: &str) -> String {
-    raw.replace(':', "_")
-        .replace('.', "_")
-        .replace('/', "_")
-        .replace('-', "_")
-        .replace('@', "_")
+    raw.replace([':', '.', '/', '-', '@'], "_")
 }
 
 fn infer_placement_zone(abs_path: &str) -> &'static str {

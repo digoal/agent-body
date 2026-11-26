@@ -712,8 +712,10 @@ mod tests {
         let png_path = dir.path().join("bin.png");
         std::fs::write(&png_path, b"\x89PNG\r\n\x1a\n\x00\x00\x00").expect("write png");
         let storage = Storage::open_in_memory().expect("mem");
-        let mut cfg = AnnotationConfig::default();
-        cfg.vision_enabled = false;
+        let cfg = AnnotationConfig {
+            vision_enabled: false,
+            ..AnnotationConfig::default()
+        };
         let annotator = OllamaAnnotator::new(storage, cfg);
         let asset = AssetRecord {
             id: uuid::Uuid::new_v4().to_string(),

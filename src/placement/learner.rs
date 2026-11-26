@@ -90,7 +90,7 @@ impl<'a> PlacementLearner<'a> {
             }
 
             // 若已有规则完全覆盖该基准目录，则跳过或作为补充扩展名
-            let is_already_covered = existing_dirs.iter().any(|d| *d == parent_dir);
+            let is_already_covered = existing_dirs.contains(&parent_dir);
             if is_already_covered {
                 continue;
             }

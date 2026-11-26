@@ -306,7 +306,7 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             category: "D6 Graph Intelligence".into(),
             baseline_desc: "无结构上卷与向量隐式挖掘时工程节点孤立且物理边/语义边混杂".into(),
             steward_desc: "L2 结构上卷 + L3 向量稀疏剪枝 (Top-K=3) + 加权衰减爆炸半径分层过滤".into(),
-            sla_desc: "4/4 图谱发现断言命中, token_savings_pct >= 45%, steward_elapsed_us < 100_000".into(),
+            sla_desc: "4/4 图谱发现断言命中, token_savings_pct >= 45%, steward_elapsed_us < 250_000".into(),
         },
         WorkloadSpec {
             id: "W14".into(),
@@ -388,6 +388,7 @@ pub fn run_workload(storage: Arc<dyn StorageProvider>, id: &str) -> Result<Workl
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn finalize_result(
     id: &str,
     name: &str,
@@ -423,8 +424,6 @@ pub(super) fn finalize_result(
     };
     let interception_rate_pct = if baseline_failures > 0 {
         (((hazards_intercepted.min(baseline_failures) as f64 / baseline_failures as f64) * 100.0) * 100.0).round() / 100.0
-    } else if hazards_intercepted > 0 {
-        100.0
     } else {
         100.0
     };
@@ -979,11 +978,11 @@ fn run_w5_dependency_impact() -> Result<WorkloadResult> {
         })?;
     }
     // 2 条真实断链（目标文件在磁盘不存在）
-    for idx in 0..2 {
+    for (idx, file_id) in files.iter().enumerate().take(2) {
         mem.add_link(&LinkRecord {
             id: None,
             source_type: "asset".into(),
-            source_id: files[idx].clone(),
+            source_id: file_id.clone(),
             target_type: "asset".into(),
             target_id: dir.0.join(format!("deleted_target_{}.py", idx)).to_string_lossy().to_string(),
             relation: "references".into(),

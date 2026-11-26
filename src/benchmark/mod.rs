@@ -84,13 +84,15 @@ impl BenchmarkEngine {
     ) -> Result<BenchmarkReportPayload> {
         let t0 = Instant::now();
         let suite_norm = suite.trim();
-        let (workloads, micro_benchmarks, data_quality, competitors, competitor_matrix): (
+        type BenchmarkSuiteOutput = (
             Vec<WorkloadResult>,
             Vec<MicroBenchResult>,
             Vec<DataQualityResult>,
             Vec<CompetitorComparisonResult>,
             Vec<CompetitorCapabilityRow>,
-        ) = if suite_norm.eq_ignore_ascii_case("full") || suite_norm.is_empty() {
+        );
+        let (workloads, micro_benchmarks, data_quality, competitors, competitor_matrix): BenchmarkSuiteOutput =
+            if suite_norm.eq_ignore_ascii_case("full") || suite_norm.is_empty() {
             (
                 run_all_workloads(storage.clone())?,
                 run_all_micro_benchmarks()?,

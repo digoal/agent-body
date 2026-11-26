@@ -46,6 +46,7 @@ pub struct MeshAck {
 
 impl MeshEnvelope {
     /// 构造并签名一个新的 MeshEnvelope
+    #[allow(clippy::too_many_arguments)]
     pub fn build_signed(
         msg_type: &str,
         from_node: &str,

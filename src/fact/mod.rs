@@ -71,7 +71,7 @@ impl FactFacade {
                     for s in report.impacted_services {
                         out.push_str(&format!("* `{}` (启动命令: `{}`)\n", s.service_name, s.exec_start));
                     }
-                    out.push_str("\n");
+                    out.push('\n');
                 }
                 if !report.impacted_cron_jobs.is_empty() {
                     out.push_str("#### 受影响的 Cron 定时调度:\n");

@@ -217,7 +217,7 @@ fn fact_record_to_topology_node(gn: FactNodeRecord) -> TopologyNode {
     let canon_id = canonicalize_node_id(&gn.id, &gn.node_type);
     let label = if gn.name.trim().is_empty() || gn.name.ends_with('/') {
         let norm = normalize_path_str(&gn.name);
-        norm.split('/').last().filter(|s| !s.is_empty()).unwrap_or(&norm).to_string()
+        norm.split('/').next_back().filter(|s| !s.is_empty()).unwrap_or(&norm).to_string()
     } else {
         gn.name
     };
@@ -298,7 +298,7 @@ pub fn build_full_topology(storage: &dyn StorageProvider) -> TopologyGraph {
             let inferred_label = cid.split(':').nth(1).unwrap_or(&cid);
             let label = normalize_path_str(inferred_label)
                 .split('/')
-                .last()
+                .next_back()
                 .filter(|s| !s.is_empty())
                 .unwrap_or(inferred_label)
                 .to_string();
@@ -327,7 +327,7 @@ pub fn build_full_topology(storage: &dyn StorageProvider) -> TopologyGraph {
             let inferred_label = cid.split(':').nth(1).unwrap_or(&cid);
             let label = normalize_path_str(inferred_label)
                 .split('/')
-                .last()
+                .next_back()
                 .filter(|s| !s.is_empty())
                 .unwrap_or(inferred_label)
                 .to_string();
@@ -439,7 +439,7 @@ pub fn build_full_topology(storage: &dyn StorageProvider) -> TopologyGraph {
             if let Some(ref script_path) = p.associated_path {
                 let norm_path = normalize_path_str(script_path);
                 let file_id = format!("file:{}", norm_path);
-                let file_label = norm_path.split('/').last().unwrap_or(&norm_path).to_string();
+                let file_label = norm_path.split('/').next_back().unwrap_or(&norm_path).to_string();
                 push_node_unique(
                     &mut nodes,
                     &mut seen_nodes,
@@ -475,8 +475,8 @@ pub fn build_full_topology(storage: &dyn StorageProvider) -> TopologyGraph {
             let src_norm = normalize_path_str(&l.source_id);
             let dst_norm = normalize_path_str(&l.target_id);
 
-            let src_label = src_norm.split('/').last().filter(|s| !s.is_empty()).unwrap_or(&src_norm).to_string();
-            let dst_label = dst_norm.split('/').last().filter(|s| !s.is_empty()).unwrap_or(&dst_norm).to_string();
+            let src_label = src_norm.split('/').next_back().filter(|s| !s.is_empty()).unwrap_or(&src_norm).to_string();
+            let dst_label = dst_norm.split('/').next_back().filter(|s| !s.is_empty()).unwrap_or(&dst_norm).to_string();
 
             push_node_unique(
                 &mut nodes,
@@ -520,7 +520,7 @@ pub fn build_full_topology(storage: &dyn StorageProvider) -> TopologyGraph {
         for a in assets {
             let norm_path = normalize_path_str(&a.path);
             let file_id = format!("file:{}", norm_path);
-            let label = norm_path.split('/').last().filter(|s| !s.is_empty()).unwrap_or(&norm_path).to_string();
+            let label = norm_path.split('/').next_back().filter(|s| !s.is_empty()).unwrap_or(&norm_path).to_string();
             let mut meta = serde_json::Map::new();
             if let Some(obj) = a.desc_kv.as_object() {
                 for (k, v) in obj {
@@ -663,7 +663,7 @@ pub fn build_impact_topology(target: &str, storage: &dyn StorageProvider) -> Top
             &mut seen_nodes,
             make_topology_node(
                 id.clone(),
-                norm.split('/').last().filter(|s| !s.is_empty()).unwrap_or(&norm).to_string(),
+                norm.split('/').next_back().filter(|s| !s.is_empty()).unwrap_or(&norm).to_string(),
                 NodeType::File,
                 "target".to_string(),
                 serde_json::json!({ "path": norm }),
@@ -694,7 +694,7 @@ pub fn build_impact_topology(target: &str, storage: &dyn StorageProvider) -> Top
                 &mut seen_nodes,
                 make_topology_node(
                     dep_id.clone(),
-                    norm_other.split('/').last().filter(|s| !s.is_empty()).unwrap_or(&norm_other).to_string(),
+                    norm_other.split('/').next_back().filter(|s| !s.is_empty()).unwrap_or(&norm_other).to_string(),
                     NodeType::File,
                     "impacted".to_string(),
                     serde_json::json!({ "path": norm_other, "relation": link.relation }),

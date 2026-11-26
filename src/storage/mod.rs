@@ -334,7 +334,7 @@ impl Storage {
     // ─── Assets ──────────────────────────────────────────────────────
 
     pub fn upsert_asset(&self, asset: &AssetRecord) -> Result<()> {
-        let res = self.provider.upsert_asset(asset)?;
+        self.provider.upsert_asset(asset)?;
         if let Some(ref bus) = self.event_bus {
             let _delivered = bus.emit(crate::hooks::StewardEvent::AssetRegistered {
                 path: asset.path.clone(),
@@ -344,7 +344,7 @@ impl Storage {
                 timestamp: chrono::Local::now().to_rfc3339(),
             });
         }
-        Ok(res)
+        Ok(())
     }
 
     pub fn get_asset_by_path(&self, path: &str) -> Result<Option<AssetRecord>> {
@@ -372,7 +372,7 @@ impl Storage {
     // ─── Memories ────────────────────────────────────────────────────
 
     pub fn insert_memory(&self, mem: &MemoryRecord) -> Result<()> {
-        let res = self.provider.insert_memory(mem)?;
+        self.provider.insert_memory(mem)?;
         if let Some(ref bus) = self.event_bus {
             let _delivered = bus.emit(crate::hooks::StewardEvent::MemoryAdded {
                 memory_id: mem.id.clone(),
@@ -382,7 +382,7 @@ impl Storage {
                 timestamp: chrono::Local::now().to_rfc3339(),
             });
         }
-        Ok(res)
+        Ok(())
     }
 
     pub fn search_memories_fts(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {

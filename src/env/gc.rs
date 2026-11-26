@@ -121,12 +121,11 @@ impl HostGarbageCollector {
                         });
                         candidate_bytes += size;
 
-                        if !dry_run && !is_dir {
-                            if fs::remove_file(path).is_ok() {
+                        if !dry_run && !is_dir
+                            && fs::remove_file(path).is_ok() {
                                 deleted_files_count += 1;
                                 deleted_bytes_reclaimed += size;
                             }
-                        }
                     }
                 }
             }

@@ -197,7 +197,7 @@ impl AuditEvolutionAnalyzer {
                 last_outcome: last_out,
             })
             .collect();
-        friction_hotspots.sort_by(|a, b| b.hit_count.cmp(&a.hit_count));
+        friction_hotspots.sort_by_key(|a| std::cmp::Reverse(a.hit_count));
 
         let mut feedback_items_created = Vec::new();
         if auto_feedback {

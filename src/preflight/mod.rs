@@ -116,6 +116,12 @@ impl PreflightReport {
     }
 }
 
+impl Default for PreflightReport {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct PreflightChecker;
 
 impl PreflightChecker {
@@ -442,7 +448,7 @@ impl PreflightChecker {
             Ok(conn) => {
                 let test_query: duckdb::Result<i64> = conn.query_row("SELECT 1 + 1", [], |row| row.get(0));
                 match test_query {
-                    Ok(val) if val == 2 => {
+                    Ok(2) => {
                         report.add(CheckItem {
                             name: "DuckDB 列存分析引擎".to_string(),
                             category: CheckCategory::Optional,
@@ -958,9 +964,13 @@ mod tests {
         PreflightChecker::check_sqlite(&mut report);
 
         assert!(!report.items.is_empty());
-        // 在常规 Linux 环境下应通过
-        let procfs_item = report.items.iter().find(|i| i.name.contains("/proc")).unwrap();
-        assert_eq!(procfs_item.category, CheckCategory::Required);
+        if std::env::consts::OS == "linux" {
+            let procfs_item = report.items.iter().find(|i| i.name.contains("/proc")).unwrap();
+            assert_eq!(procfs_item.category, CheckCategory::Required);
+        } else {
+            let probe_item = report.items.iter().find(|i| i.name.contains("平台原生探针")).unwrap();
+            assert_eq!(probe_item.status, CheckStatus::Pass);
+        }
 
         let sqlite_item = report.items.iter().find(|i| i.name.contains("SQLite3")).unwrap();
         assert_eq!(sqlite_item.status, CheckStatus::Pass);

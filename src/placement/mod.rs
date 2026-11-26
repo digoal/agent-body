@@ -174,7 +174,12 @@ mod tests {
 
         let suggestion = engine.suggest(&req).expect("suggest");
         assert_eq!(suggestion.rule_matched, "shared_tools");
-        assert!(suggestion.suggested_path.to_string_lossy().contains("/root/new/shared_proj/sec_scraper"));
+        let expected_script_dir = crate::config::default_workspace_base()
+            .join("shared_proj")
+            .join("sec_scraper");
+        assert!(suggestion
+            .suggested_path
+            .starts_with(&expected_script_dir));
         assert!(!suggestion.conflict_detected);
     }
 
@@ -193,7 +198,10 @@ mod tests {
 
         let suggestion = engine.suggest(&req).expect("suggest");
         assert_eq!(suggestion.rule_matched, "temp_files");
-        assert!(suggestion.suggested_path.to_string_lossy().contains("/root/new/tmp/test_output"));
+        let expected_tmp_dir = crate::config::default_workspace_base()
+            .join("tmp")
+            .join("test_output");
+        assert!(suggestion.suggested_path.starts_with(&expected_tmp_dir));
     }
 
     #[test]

@@ -327,7 +327,7 @@ fn run_comp_c1_memory() -> Result<CompetitorComparisonResult> {
         }
     }
     let comp_text = comp_hits.join("\n");
-    let comp_tok = estimate_tokens(&comp_text) as i64;
+    let comp_tok = estimate_tokens(&comp_text);
     let comp_us = t_comp.elapsed().as_micros().max(1);
 
     // Steward 组: SecretRedactor + SqliteStorageProvider (FTS5)
@@ -367,7 +367,7 @@ fn run_comp_c1_memory() -> Result<CompetitorComparisonResult> {
         .map(|m| format!("{}: {}", m.id, m.summary.as_deref().unwrap_or(&m.content)))
         .collect::<Vec<_>>()
         .join("\n");
-    let stew_tok = estimate_tokens(&stew_text) as i64;
+    let stew_tok = estimate_tokens(&stew_text);
     let stew_us = t_stew.elapsed().as_micros().max(1);
 
     let speedup = round2(comp_us as f64 / stew_us as f64);
@@ -487,7 +487,7 @@ fn run_comp_c2_context_db(storage: Arc<dyn StorageProvider>) -> Result<Competito
         comp_buf.push('\n');
     }
     let static_skill_tokens: i64 = skills.iter().map(|s| s.est_tokens as i64).sum();
-    let comp_tok = estimate_tokens(&comp_buf) as i64 + static_skill_tokens;
+    let comp_tok = estimate_tokens(&comp_buf) + static_skill_tokens;
     let comp_us = t_comp.elapsed().as_micros().max(1);
 
     // Steward 组: 原位零搬迁 L1 结构化提取 + ContextBudgetRouter Top-K 预算路由
@@ -513,7 +513,7 @@ fn run_comp_c2_context_db(storage: Arc<dyn StorageProvider>) -> Result<Competito
         },
     )?;
     let _ = storage.delete_bench_sandbox_records();
-    let stew_tok = estimate_tokens(&stew_meta_buf) as i64 + routed.route_tokens_used as i64;
+    let stew_tok = estimate_tokens(&stew_meta_buf) + routed.route_tokens_used as i64;
     let stew_us = t_stew.elapsed().as_micros().max(1);
 
     let speedup = round2(comp_us as f64 / stew_us as f64);
@@ -784,7 +784,7 @@ fn run_comp_c4_host_cli(storage: Arc<dyn StorageProvider>) -> Result<CompetitorC
         child_procs += 1;
         comp_out.push_str(&String::from_utf8_lossy(&out.stdout));
     }
-    let comp_tok = estimate_tokens(&comp_out).max(600) as i64;
+    let comp_tok = estimate_tokens(&comp_out).max(600);
     let comp_us = t_comp.elapsed().as_micros().max(1);
 
     // Steward 组: BriefAssembler (Index-First) + LinksEngine 3 跳爆炸半径

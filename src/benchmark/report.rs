@@ -69,6 +69,7 @@ pub struct BenchmarkReportPayload {
 
 impl BenchmarkReportPayload {
     /// 基于规范化 payload 摘要生成防篡改 SHA-256 指纹（完整覆盖 spec_version / workloads / micro / data_quality / competitors）
+    #[allow(clippy::too_many_arguments)]
     pub fn compute_canonical_sha256(
         spec_version: &str,
         run_id: &str,
@@ -398,7 +399,7 @@ mod tests {
             "abc123",
             &[],
             &[],
-            &[base_dq.clone()],
+            std::slice::from_ref(&base_dq),
             &[],
         );
         let h_spec = BenchmarkReportPayload::compute_canonical_sha256(

@@ -296,7 +296,7 @@ impl BodyPerfEngine {
                 fail_count,
             });
         }
-        rows.sort_by(|a, b| b.total_us.cmp(&a.total_us));
+        rows.sort_by_key(|a| std::cmp::Reverse(a.total_us));
         rows.truncate(limit);
         rows
     }
@@ -496,16 +496,14 @@ impl BodyPerfEngine {
         };
 
         let mut deleted = provider.delete_benchmark_run(&format!("awr:snap:{}", resolved_id))?;
-        if raw == "baseline"
+        if (raw == "baseline"
             || baseline_snap
                 .as_ref()
                 .map(|b| b.snapshot_id == resolved_id)
-                .unwrap_or(false)
-        {
-            if provider.delete_benchmark_run(META_BASELINE_KEY)? {
+                .unwrap_or(false))
+            && provider.delete_benchmark_run(META_BASELINE_KEY)? {
                 deleted = true;
             }
-        }
 
         let mut idx_list: Vec<String> = Self::load_meta_json(provider.as_ref(), META_SNAP_INDEX)
             .and_then(|v| serde_json::from_value(v).ok())
@@ -763,7 +761,7 @@ impl BodyPerfEngine {
             }
             tm
         };
-        delta_waits.sort_by(|a, b| b.total_us.cmp(&a.total_us));
+        delta_waits.sort_by_key(|a| std::cmp::Reverse(a.total_us));
 
         let rss_delta_kb = target_snap.kernel_telemetry.rss_kb as i64 - base_snap.kernel_telemetry.rss_kb as i64;
         let rss_drift_pct = if base_snap.kernel_telemetry.rss_kb == 0 {

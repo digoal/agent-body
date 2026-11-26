@@ -719,15 +719,18 @@ mod tests {
         );
         assert_eq!(client_psql.mode, ActionConcurrencyMode::Optimistic);
 
+        let cfg = crate::config::Config::load_effective_or_default();
+        let probe_sql = cfg.effective_temp_dir().join("probe.sql");
         let tmp_write = ConcurrencyPolicyClassifier::classify(
             "write_file",
-            &serde_json::json!({"path": "/root/new/tmp/probe.sql"}),
+            &serde_json::json!({"path": probe_sql.to_string_lossy()}),
         );
         assert_eq!(tmp_write.mode, ActionConcurrencyMode::Optimistic);
 
+        let work_main = cfg.effective_workspace_base().join("work/app/main.rs");
         let work_write = ConcurrencyPolicyClassifier::classify(
             "write_file",
-            &serde_json::json!({"path": "/root/new/work/app/main.rs"}),
+            &serde_json::json!({"path": work_main.to_string_lossy()}),
         );
         assert_eq!(work_write.mode, ActionConcurrencyMode::CautiousCas);
 

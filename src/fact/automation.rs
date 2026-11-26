@@ -351,7 +351,7 @@ impl AutomationTopology {
                     s.service_name, desc, cmd_trunc, s.referenced_files.len()
                 ));
             }
-            out.push_str("\n");
+            out.push('\n');
         }
 
         out.push_str(&format!("### 2. 后台定时自动化调度 (Cron Jobs 共 {} 个)\n\n", cron_jobs.len()));
@@ -386,9 +386,9 @@ mod tests {
     #[test]
     fn test_scan_systemd_services_real_host() {
         let services = AutomationTopology::scan_systemd_services().expect("扫描 systemd 应该成功");
-        assert!(!services.is_empty(), "宿主机上应该至少存在 systemd 单元");
-        
-        // 验证 agent-body.service 或 ollama.service 等真实单元是否被捕获
+        if cfg!(target_os = "linux") && std::path::Path::new("/run/systemd/system").exists() {
+            assert!(!services.is_empty(), "systemd 宿主机上应该至少存在 systemd 单元");
+        }
         let found_steward = services.iter().any(|s| s.service_name.contains("steward"));
         println!("扫描到 systemd 服务数: {}, 是否包含 steward: {}", services.len(), found_steward);
     }

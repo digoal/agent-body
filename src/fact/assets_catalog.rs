@@ -92,11 +92,11 @@ impl AssetsCatalogEngine {
                         let primary_lang = Self::detect_primary_language(&path);
 
                         let recommendation = if codegraph_ready {
-                            format!("✨ 该仓库已构建 CodeGraph 代码语义地图！探索源码时【必须优先调用 codegraph mcp 工具】，禁止盲目使用全局 grep。")
+                            "✨ 该仓库已构建 CodeGraph 代码语义地图！探索源码时【必须优先调用 codegraph mcp 工具】，禁止盲目使用全局 grep。".to_string()
                         } else if is_git {
-                            format!("该仓库已就绪 Git。若需深入研读架构，建议在根目录下执行 `codegraph init` 构建代码地图。")
+                            "该仓库已就绪 Git。若需深入研读架构，建议在根目录下执行 `codegraph init` 构建代码地图。".to_string()
                         } else {
-                            format!("普通源码工程目录。")
+                            "普通源码工程目录。".to_string()
                         };
 
                         repos.push(RepoFact {
@@ -113,7 +113,7 @@ impl AssetsCatalogEngine {
             }
         }
 
-        repos.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        repos.sort_by_key(|a| a.name.to_lowercase());
         Ok(repos)
     }
 
@@ -295,7 +295,7 @@ impl AssetsCatalogEngine {
             if repos.len() > 20 {
                 out.push_str(&format!("*... 另有 {} 个本地仓库已建立索引*\n\n", repos.len() - 20));
             } else {
-                out.push_str("\n");
+                out.push('\n');
             }
         }
 
@@ -344,22 +344,49 @@ mod tests {
 
     #[test]
     fn test_scan_documents_real_host() {
-        let docs = AssetsCatalogEngine::scan_documents(None).expect("扫描本地笔记应该成功");
-        assert!(!docs.is_empty(), "宿主机 /root/new/note 应该存在笔记文档");
-        println!("扫描到本地重要文档数量: {}", docs.len());
-
-        // 验证是否优先排布权威网站清单
+        let dir = tempfile::tempdir().expect("tempdir");
+        let note_dir = dir.path();
+        fs::write(
+            note_dir.join("权威网站.md"),
+            "# 权威网站清单\nPostgreSQL 与 DuckDB 官方站点汇总。\n",
+        )
+        .expect("write authority doc");
+        fs::write(note_dir.join("research-notes.md"), "# 调研笔记\n测试摘要\n")
+            .expect("write note");
+        let note_str = note_dir.to_string_lossy().to_string();
+        let docs = AssetsCatalogEngine::scan_documents(Some(&[note_str.as_str()]))
+            .expect("扫描沙盒笔记应该成功");
+        assert_eq!(docs.len(), 2, "沙盒笔记目录应扫描到 2 份文档");
         let has_authority = docs.iter().any(|d| d.title.contains("权威网站"));
         assert!(has_authority, "应该包含权威网站清单");
+        assert_eq!(docs[0].category, "authority_list", "权威清单应排在最前面");
     }
 
     #[test]
     fn test_query_repos_and_documents() {
-        let matched_repos = AssetsCatalogEngine::query_repos("steward", None).expect("查询仓库成功");
-        assert!(!matched_repos.is_empty());
+        let dir = tempfile::tempdir().expect("tempdir");
+        let repos_root = dir.path().join("src");
+        let repo_a = repos_root.join("agent-steward-demo");
+        fs::create_dir_all(repo_a.join(".git")).expect("mkdir git");
+        fs::write(repo_a.join(".git/HEAD"), "ref: refs/heads/main\n").expect("head");
+        fs::write(repo_a.join("Cargo.toml"), "[package]\nname = \"demo\"\n").expect("cargo");
 
-        let matched_docs = AssetsCatalogEngine::query_documents("权威网站", None).expect("查询文档成功");
-        assert!(!matched_docs.is_empty());
+        let notes_root = dir.path().join("note");
+        fs::create_dir_all(&notes_root).expect("mkdir note");
+        fs::write(notes_root.join("权威网站.md"), "# 权威网站清单\nRust 官网\n").expect("doc");
+
+        let repos_str = repos_root.to_string_lossy().to_string();
+        let matched_repos = AssetsCatalogEngine::query_repos("steward", Some(&[repos_str.as_str()]))
+            .expect("查询仓库成功");
+        assert_eq!(matched_repos.len(), 1);
+        assert_eq!(matched_repos[0].primary_lang.as_deref(), Some("Rust"));
+        assert_eq!(matched_repos[0].current_branch.as_deref(), Some("main"));
+
+        let notes_str = notes_root.to_string_lossy().to_string();
+        let matched_docs =
+            AssetsCatalogEngine::query_documents("权威网站", Some(&[notes_str.as_str()]))
+                .expect("查询文档成功");
+        assert_eq!(matched_docs.len(), 1);
     }
 
     #[test]

@@ -267,7 +267,7 @@ impl BriefAssembler {
                     (hits, *n)
                 })
                 .collect();
-            scored_tools.sort_by(|a, b| b.0.cmp(&a.0));
+            scored_tools.sort_by_key(|a| std::cmp::Reverse(a.0));
             let tool_line = scored_tools
                 .iter()
                 .take(5)
@@ -370,7 +370,7 @@ impl BriefAssembler {
                     (hits, *n)
                 })
                 .collect();
-            scored_proj.sort_by(|a, b| b.0.cmp(&a.0));
+            scored_proj.sort_by_key(|a| std::cmp::Reverse(a.0));
             let repo_line = scored_proj
                 .iter()
                 .take(3)

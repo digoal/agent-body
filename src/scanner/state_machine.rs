@@ -341,7 +341,8 @@ mod tests {
         let sm = ScanStateMachine::with_batch_size(storage.clone(), 2).expect("new sm");
 
         let tmp = tempdir().expect("tempdir");
-        let root = tmp.path();
+        let root_buf = tmp.path().canonicalize().unwrap_or_else(|_| tmp.path().to_path_buf());
+        let root = root_buf.as_path();
 
         // 构造测试目录结构：
         // root/
@@ -388,8 +389,8 @@ mod tests {
         assert!(completed_job.completed_at.is_some());
 
         // 5. 校验资产表中资产完整性
-        let f1_asset = storage.get_asset_by_path(&root.join("a_dir/f1.py").to_string_lossy().to_string()).unwrap();
-        let f4_asset = storage.get_asset_by_path(&root.join("b_dir/f4.toml").to_string_lossy().to_string()).unwrap();
+        let f1_asset = storage.get_asset_by_path(root.join("a_dir/f1.py").to_string_lossy().as_ref()).unwrap();
+        let f4_asset = storage.get_asset_by_path(root.join("b_dir/f4.toml").to_string_lossy().as_ref()).unwrap();
         assert!(f1_asset.is_some(), "断点前的资产必须存在");
         assert!(f4_asset.is_some(), "断点后恢复扫描的资产必须存在");
 
@@ -404,7 +405,8 @@ mod tests {
         let sm = ScanStateMachine::with_batch_size(storage.clone(), 1).expect("new sm");
 
         let tmp = tempdir().expect("tempdir");
-        let root = tmp.path();
+        let root_buf = tmp.path().canonicalize().unwrap_or_else(|_| tmp.path().to_path_buf());
+        let root = root_buf.as_path();
         File::create(root.join("a.py")).unwrap().write_all(b"a=1").unwrap();
         File::create(root.join("b.py")).unwrap().write_all(b"b=2").unwrap();
         File::create(root.join("c.py")).unwrap().write_all(b"c=3").unwrap();

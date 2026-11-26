@@ -69,7 +69,7 @@ fn test_audit_evolution_cycle_detects_friction_hotspots() {
         AuditLogger::record(
             &storage,
             AuditEventInput::in_agent("mcp", "hook_pre_guard", "pre_tool_call")
-                .with_session(&format!("s-{}", idx))
+                .with_session(format!("s-{}", idx))
                 .with_target("port", "port:5432")
                 .with_outcome("blocked"),
         )

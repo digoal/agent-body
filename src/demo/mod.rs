@@ -250,20 +250,18 @@ impl DemoEngine {
         let mut cleaned = 0usize;
         if let Ok(locks) = storage.list_coordination_locks(None) {
             for lock in locks {
-                if lock.holder_agent.starts_with("demo-") || lock.resource_id.contains("demo:") || lock.resource_id.contains("/work/demo_app") {
-                    if storage.delete_coordination_lock(&lock.lock_id).unwrap_or(false) {
+                if (lock.holder_agent.starts_with("demo-") || lock.resource_id.contains("demo:") || lock.resource_id.contains("/work/demo_app"))
+                    && storage.delete_coordination_lock(&lock.lock_id).unwrap_or(false) {
                         cleaned += 1;
                     }
-                }
             }
         }
         if let Ok(waits) = storage.list_lock_wait_queue(None, None) {
             for w in waits {
-                if w.waiting_agent.starts_with("demo-") || w.resource_id.contains("demo:") || w.resource_id.contains("/work/demo_app") {
-                    if storage.update_lock_wait_status(&w.wait_id, "cancelled").unwrap_or(false) {
+                if (w.waiting_agent.starts_with("demo-") || w.resource_id.contains("demo:") || w.resource_id.contains("/work/demo_app"))
+                    && storage.update_lock_wait_status(&w.wait_id, "cancelled").unwrap_or(false) {
                         cleaned += 1;
                     }
-                }
             }
         }
         Ok(cleaned)

@@ -190,11 +190,10 @@ impl FreshnessReconciler {
                 }
                 "file" => {
                     if let Some(p) = node.id.strip_prefix("file:") {
-                        if p.starts_with('/') && !Path::new(p).exists() {
-                            if storage.delete_fact_node(&node.id).unwrap_or(0) > 0 {
+                        if p.starts_with('/') && !Path::new(p).exists()
+                            && storage.delete_fact_node(&node.id).unwrap_or(0) > 0 {
                                 rep.ghost_fact_nodes_pruned += 1;
                             }
-                        }
                     }
                 }
                 "project" => {
@@ -203,11 +202,10 @@ impl FreshnessReconciler {
                         .get("canonical_path")
                         .and_then(|v| v.as_str())
                         .unwrap_or("");
-                    if canon.starts_with('/') && !Path::new(canon).exists() {
-                        if storage.delete_fact_node(&node.id).unwrap_or(0) > 0 {
+                    if canon.starts_with('/') && !Path::new(canon).exists()
+                        && storage.delete_fact_node(&node.id).unwrap_or(0) > 0 {
                             rep.ghost_fact_nodes_pruned += 1;
                         }
-                    }
                     // 检查 .codegraph/codegraph.db 是否滞后于源码修改时间
                     if !canon.is_empty() && is_codegraph_stale(Path::new(canon)) {
                         rep.stale_codegraph_repos.push(canon.to_string());
@@ -224,15 +222,14 @@ impl FreshnessReconciler {
                 continue;
             }
             if let Some(file_path) = extract_auto_sync_path(&m.content) {
-                if !Path::new(&file_path).exists() || !seen_auto_paths.insert(file_path) {
-                    if archived_mem_ids.insert(m.id.clone()) {
+                if (!Path::new(&file_path).exists() || !seen_auto_paths.insert(file_path))
+                    && archived_mem_ids.insert(m.id.clone()) {
                         if let Err(e) = storage.update_memory_status(&m.id, "archived") {
                             eprintln!("[Reconcile][WARN] 归档重复记忆失败 ({}): {}", m.id, e);
                         } else {
                             rep.duplicate_memories_archived += 1;
                         }
                     }
-                }
             }
         }
 
@@ -457,7 +454,7 @@ impl SelfEvolutionProbeEngine {
             .map(|r| r.stale_codegraph_repos.len())
             .unwrap_or(0);
         let bench_delta = compare_latest_two_benchmarks(storage);
-        let p5_healthy = post_stats.ghost_port_count == 0 && bench_delta.regressed == false;
+        let p5_healthy = post_stats.ghost_port_count == 0 && !bench_delta.regressed;
         probes.push(ComparativeProbeReading {
             probe_id: "P5".into(),
             hook_stage: "Periodic(Regression)".into(),

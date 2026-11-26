@@ -425,7 +425,7 @@ fn collect_project_prefixes(nodes: &[FactNodeRecord]) -> Vec<(String, String)> {
         }
     }
     // 最长路径优先，避免子目录误匹配父前缀
-    out.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    out.sort_by_key(|a| std::cmp::Reverse(a.0.len()));
     out
 }
 

@@ -350,7 +350,7 @@ impl SkillCatalogScanner {
 
     fn extract_trigger_keywords(name: &str, description: &str) -> Vec<String> {
         let mut kws = Vec::new();
-        for part in name.split(|c: char| c == '-' || c == '_') {
+        for part in name.split(['-', '_']) {
             let p = part.trim().to_lowercase();
             if p.len() >= 2 && !kws.contains(&p) {
                 kws.push(p);

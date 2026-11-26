@@ -12,6 +12,7 @@ pub enum Method {
 }
 
 impl Method {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         match s.to_uppercase().as_str() {
             "GET" => Method::Get,

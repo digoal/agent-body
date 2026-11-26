@@ -152,7 +152,8 @@ impl HybridSearchEngine {
         candidate_ids.sort();
         candidate_ids.dedup();
 
-        let mut rrf_scored: Vec<(String, f32, Option<usize>, Option<usize>, Option<f32>)> = Vec::new();
+        type RrfScoreRow = (String, f32, Option<usize>, Option<usize>, Option<f32>);
+        let mut rrf_scored: Vec<RrfScoreRow> = Vec::new();
         let k = 60.0f32;
 
         for id in candidate_ids {

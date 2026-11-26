@@ -169,15 +169,12 @@ impl DuckDbStorageProvider {
         let conn = self.lock_conn()?;
         let now = chrono::Utc::now().to_rfc3339();
         conn.execute(
+            "DELETE FROM scan_policies WHERE id = ?1 OR path_pattern = ?2",
+            params![policy.id, policy.path_pattern],
+        )?;
+        conn.execute(
             "INSERT INTO scan_policies (id, path_pattern, tier, max_depth, enable_fts, enable_vec, enable_graph, notes, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-             ON CONFLICT(path_pattern) DO UPDATE SET
-                tier = excluded.tier,
-                max_depth = excluded.max_depth,
-                enable_fts = excluded.enable_fts,
-                enable_vec = excluded.enable_vec,
-                enable_graph = excluded.enable_graph,
-                notes = excluded.notes",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 policy.id,
                 policy.path_pattern,

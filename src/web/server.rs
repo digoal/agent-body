@@ -536,20 +536,20 @@ Connection: keep-alive\r\n\
                 // 监听广播事件
                 Ok(msg) = rx.recv() => {
                     let sse_line = format!("data: {}\n\n", msg);
-                    if let Err(_) = stream.write_all(sse_line.as_bytes()).await {
+                    if stream.write_all(sse_line.as_bytes()).await.is_err() {
                         break;
                     }
-                    if let Err(_) = stream.flush().await {
+                    if stream.flush().await.is_err() {
                         break;
                     }
                 }
                 // 定时保活心跳
                 _ = interval.tick() => {
                     let ping = ": keepalive-ping\n\n";
-                    if let Err(_) = stream.write_all(ping.as_bytes()).await {
+                    if stream.write_all(ping.as_bytes()).await.is_err() {
                         break;
                     }
-                    if let Err(_) = stream.flush().await {
+                    if stream.flush().await.is_err() {
                         break;
                     }
                 }

@@ -168,11 +168,10 @@ impl MemoryProvider for BuiltinMemoryProvider {
         let mut count = 0;
 
         for cand in audit.decay_candidates {
-            if criteria.archive_instead_of_delete {
-                if lifecycle.archive_memory(&cand.memory_id).is_ok() {
+            if criteria.archive_instead_of_delete
+                && lifecycle.archive_memory(&cand.memory_id).is_ok() {
                     count += 1;
                 }
-            }
         }
 
         Ok(count)

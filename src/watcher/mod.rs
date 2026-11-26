@@ -174,21 +174,24 @@ mod tests {
     #[test]
     fn test_file_watcher_create() {
         let dir = tempdir().expect("tempdir");
-        let path = dir.path().to_path_buf();
+        let path = dir.path().canonicalize().unwrap_or_else(|_| dir.path().to_path_buf());
 
-        let watcher = FileWatcher::new(&[path.clone()]).expect("new watcher");
-        
+        let watcher = FileWatcher::new(std::slice::from_ref(&path)).expect("new watcher");
+
         // 创建一个文件触发事件
         let file_path = path.join("test_watch.txt");
         let mut f = File::create(&file_path).expect("create file");
         writeln!(f, "hello watcher").expect("write");
         drop(f);
 
-        // 等待 inotify 事件捕获
-        sleep(Duration::from_millis(600));
+        // 等待 inotify/FSEvents 事件捕获
+        sleep(Duration::from_millis(800));
 
         let events = watcher.poll_events();
         assert!(!events.is_empty(), "必须能捕获到文件创建/修改事件");
-        assert!(events.iter().any(|e| e.path == file_path));
+        assert!(events.iter().any(|e| {
+            let ev_p = e.path.canonicalize().unwrap_or_else(|_| e.path.clone());
+            ev_p == file_path || e.path == file_path
+        }));
     }
 }

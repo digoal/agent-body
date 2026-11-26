@@ -311,7 +311,7 @@ impl WaitEventRegistry {
                 histogram_buckets: buckets,
             });
         }
-        rows.sort_by(|a, b| b.total_us.cmp(&a.total_us));
+        rows.sort_by_key(|a| std::cmp::Reverse(a.total_us));
         rows
     }
 }

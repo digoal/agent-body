@@ -54,7 +54,7 @@ impl McpToolRegistry {
                 .or_else(|| args_preview.get("id"))
                 .or_else(|| args_preview.get("query"))
                 .or_else(|| args_preview.get("resource_id"))
-                .or_else(|| args_preview.get("port").map(|v| v))
+                .or_else(|| args_preview.get("port"))
                 .map(|v| v.as_str().map(|s| s.to_string()).unwrap_or_else(|| v.to_string()))
                 .unwrap_or_default();
             crate::audit::AuditLogger::record_best_effort(

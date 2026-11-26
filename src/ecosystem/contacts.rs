@@ -167,7 +167,7 @@ impl ExternalContactsManager {
                 .trim_start_matches("postgresql://")
                 .trim_start_matches("redis://")
                 .split('@')
-                .last()
+                .next_back()
                 .unwrap_or(probe_target)
                 .split('/')
                 .next()

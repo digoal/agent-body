@@ -98,7 +98,8 @@ fn bench_placement_engine_decision() {
             current_workspace: None,
         };
         let res = engine.suggest(&req).expect("suggest");
-        assert!(res.suggested_path.starts_with("/root/new/shared_proj"));
+        let expected_prefix = agent_body::config::default_workspace_base().join("shared_proj");
+        assert!(res.suggested_path.starts_with(&expected_prefix));
     }
     let total_elapsed = start.elapsed();
     let avg_us = total_elapsed.as_micros() / iters as u128;

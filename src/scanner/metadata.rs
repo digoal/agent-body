@@ -313,10 +313,7 @@ impl SecretRedactor {
 
     fn redact_private_keys(input: &str) -> String {
         let mut result = input.to_string();
-        loop {
-            let Some(begin_idx) = result.find("-----BEGIN ") else {
-                break;
-            };
+        while let Some(begin_idx) = result.find("-----BEGIN ") {
             let rest = &result[begin_idx..];
             let Some(header_end_rel) = rest.find("PRIVATE KEY-----") else {
                 break;
@@ -838,14 +835,13 @@ impl HeuristicMetadataExtractor {
             }
 
             // 提取依赖
-            if deps.len() < 6 {
-                if (t.starts_with("use ") || t.starts_with("import ") || t.starts_with("from ")) && t.len() < 80 {
+            if deps.len() < 6
+                && (t.starts_with("use ") || t.starts_with("import ") || t.starts_with("from ")) && t.len() < 80 {
                     let dep = t.trim_end_matches(';').to_string();
                     if !deps.contains(&dep) {
                         deps.push(dep);
                     }
                 }
-            }
         }
 
         // 启发式副作用识别
@@ -1016,11 +1012,9 @@ impl HeuristicMetadataExtractor {
                     if word.len() >= 4
                         && word.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
                         && (word.contains("KEY") || word.contains("TOKEN") || word.contains("URL") || word.contains("STEWARD") || word.contains("PATH"))
-                    {
-                        if !env_vars.contains(&word.to_string()) {
+                        && !env_vars.contains(&word.to_string()) {
                             env_vars.push(word.to_string());
                         }
-                    }
                 }
             }
         }

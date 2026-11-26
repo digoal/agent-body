@@ -31,6 +31,27 @@ pub struct LinkAuditor {
     storage: Arc<Storage>,
 }
 
+fn is_in_sys_temp(path: &str) -> bool {
+    let norm = path.replace('\\', "/");
+    if norm.starts_with("/tmp/") || norm.starts_with("/private/tmp/") {
+        return true;
+    }
+    let tmp_dir = std::env::temp_dir();
+    let tmp_raw = tmp_dir.to_string_lossy().replace('\\', "/");
+    let tmp_raw_trimmed = tmp_raw.trim_end_matches('/');
+    if !tmp_raw_trimmed.is_empty() && norm.starts_with(&format!("{}/", tmp_raw_trimmed)) {
+        return true;
+    }
+    if let Ok(canon) = tmp_dir.canonicalize() {
+        let canon_str = canon.to_string_lossy().replace('\\', "/");
+        let canon_trimmed = canon_str.trim_end_matches('/');
+        if !canon_trimmed.is_empty() && norm.starts_with(&format!("{}/", canon_trimmed)) {
+            return true;
+        }
+    }
+    false
+}
+
 impl LinkAuditor {
     pub fn new(storage: Arc<Storage>) -> Self {
         Self { storage }
@@ -46,18 +67,20 @@ impl LinkAuditor {
 
         for link in &all_links {
             // 过滤早期版本遗留的模板/占位符/临时日志/纯数据 JSON 端口等假阳性边
-            // 注意：当 source 与 target 同处于 /tmp/ 测试沙盒目录时保留审计（供 TempDir 单元测试与 W5 基准使用）
-            let both_in_sys_tmp = link.source_id.starts_with("/tmp/") && link.target_id.starts_with("/tmp/");
+            // 注意：当 source 与 target 同处于系统临时沙盒目录 (/tmp 或 temp_dir) 时保留审计（供 TempDir 单元测试与 W5 基准使用）
+            let both_in_sys_tmp = is_in_sys_temp(&link.source_id) && is_in_sys_temp(&link.target_id);
             let is_false_positive = if link.target_type == "asset" {
                 (!both_in_sys_tmp && crate::links::is_non_static_link_target(&link.target_id, None))
-                    || (both_in_sys_tmp && crate::links::is_non_static_link_target(&link.target_id, None) && !link.target_id.starts_with("/tmp/"))
+                    || (both_in_sys_tmp
+                        && crate::links::is_non_static_link_target(&link.target_id, None)
+                        && !is_in_sys_temp(&link.target_id))
                     || (!both_in_sys_tmp
                         && crate::links::is_test_or_example_link(
                             &link.source_id,
                             &link.target_id,
                             link.snippet.as_deref(),
                         ))
-                    || (!link.source_id.starts_with("/tmp/")
+                    || (!is_in_sys_temp(&link.source_id)
                         && link.source_id.ends_with(".md")
                         && !Path::new(&link.target_id).exists()
                         && !crate::links::is_explicit_markdown_link(link.snippet.as_deref()))
@@ -119,7 +142,7 @@ impl LinkAuditor {
                 }
             } else if link.target_type == "service" {
                 // 例如 "postgresql:5432" 或 "ollama:11434"
-                if let Some(port_str) = link.target_id.split(':').last() {
+                if let Some(port_str) = link.target_id.split(':').next_back() {
                     if let Ok(port) = port_str.parse::<u16>() {
                         // 端口探测检查
                         if let Ok(port_res) = PortChecker::check_port(port, 1) {
@@ -152,7 +175,7 @@ impl LinkAuditor {
                 _ => penalty += 2,
             }
         }
-        let health_score = if penalty >= 100 { 0 } else { 100 - penalty };
+        let health_score = 100_u32.saturating_sub(penalty);
 
         let summary = if dangling_count == 0 {
             format!("✅ 全局依赖拓扑健康！共审计 {} 条关系，无任何悬空断链 (Health: 100/100)。", total_links)

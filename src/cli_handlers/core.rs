@@ -320,7 +320,7 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                 EnvCommands::Processes => {
                     let procs = collector.collect_and_sync_processes()?;
                     println!("活跃动态任务进程 (共 {} 个):", procs.len());
-                    println!("{:<8} {:<10} {:<6} {:<10} {:<18} {}", "PID", "NAME", "CPU%", "MEM(MB)", "OWNER", "COMMAND");
+                    println!("{:<8} {:<10} {:<6} {:<10} {:<18} COMMAND", "PID", "NAME", "CPU%", "MEM(MB)", "OWNER");
                     for p in procs {
                         let mem_mb = p.mem_bytes as f64 / (1024.0 * 1024.0);
                         let cmd_trunc = if p.command.chars().count() > 60 {

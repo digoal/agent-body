@@ -49,11 +49,11 @@ impl LinkRepairer {
         }
 
         let mut matrix = vec![vec![0usize; len2 + 1]; len1 + 1];
-        for i in 0..=len1 {
-            matrix[i][0] = i;
+        for (i, row) in matrix.iter_mut().enumerate() {
+            row[0] = i;
         }
-        for j in 0..=len2 {
-            matrix[0][j] = j;
+        for (j, cell) in matrix[0].iter_mut().enumerate() {
+            *cell = j;
         }
 
         let s1_chars: Vec<char> = s1.chars().collect();
@@ -176,13 +176,12 @@ impl LinkRepairer {
                                 new_content = content.replace(missing_name, candidate_name);
                             }
 
-                            if new_content != content {
-                                if fs::write(source_path, new_content).is_ok() {
+                            if new_content != content
+                                && fs::write(source_path, new_content).is_ok() {
                                     applied_count += 1;
                                     // 同步更新 links 表
                                     let _ = self.storage.update_link_target(&issue.source, &issue.target, &candidate);
                                 }
-                            }
                         }
                     }
                 }
