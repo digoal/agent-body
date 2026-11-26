@@ -26,7 +26,7 @@ fn main() -> Result<()> {
     let cli_cmd_name = cli_command_label(&cli.command);
     let skip_cli_audit = matches!(
         cli.command,
-        Commands::Mcp
+        Commands::Mcp { .. }
             | Commands::Daemon
             | Commands::Web { .. }
             | Commands::Tui { .. }
@@ -71,7 +71,7 @@ fn cli_command_label(cmd: &Commands) -> &'static str {
         Commands::Changes { .. } => "changes",
         Commands::Close { .. } => "close",
         Commands::Gc { .. } => "gc",
-        Commands::Mcp => "mcp",
+        Commands::Mcp { .. } => "mcp",
         Commands::Daemon => "daemon",
         Commands::Preflight { .. } => "preflight",
         Commands::Web { .. } => "web",

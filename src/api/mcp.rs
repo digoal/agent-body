@@ -41,7 +41,11 @@ pub struct McpServer {
 
 impl McpServer {
     pub fn new(storage: Storage) -> Self {
-        let tools = McpToolRegistry::new(storage.clone());
+        Self::with_profile(storage, crate::config::McpToolProfile::Full)
+    }
+
+    pub fn with_profile(storage: Storage, profile: crate::config::McpToolProfile) -> Self {
+        let tools = McpToolRegistry::with_profile(storage.clone(), profile);
         Self { storage, tools }
     }
 
@@ -647,5 +651,58 @@ mod tests {
             .expect("spawn_blocking memory_add");
         let v3: Value = serde_json::from_str(&r3.expect("resp")).expect("json");
         assert_eq!(v3["result"]["isError"], false);
+    }
+
+    #[test]
+    fn test_mcp_core_profile_reduces_tools_and_supports_runtime_ab_actions() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let full_server = McpServer::new(storage.clone());
+        let core_server = McpServer::with_profile(storage, crate::config::McpToolProfile::Core);
+
+        let full_resp = full_server
+            .handle_message(r#"{"jsonrpc":"2.0","id":401,"method":"tools/list"}"#)
+            .expect("full list");
+        let core_resp = core_server
+            .handle_message(r#"{"jsonrpc":"2.0","id":402,"method":"tools/list"}"#)
+            .expect("core list");
+
+        let full_v: Value = serde_json::from_str(&full_resp).expect("parse full");
+        let core_v: Value = serde_json::from_str(&core_resp).expect("parse core");
+        let full_tools = full_v["result"]["tools"].as_array().expect("full array");
+        let core_tools = core_v["result"]["tools"].as_array().expect("core array");
+
+        assert_eq!(full_tools.len(), 43);
+        assert_eq!(core_tools.len(), 10);
+        assert!(core_resp.len() < 12 * 1024, "Core tools/list payload 应小于 12KB, 实测 {}", core_resp.len());
+        assert!(core_tools.iter().any(|t| t["name"] == "body_state"));
+
+        // 通过 body_state 查询 runtime_mode 与 ab_report
+        let rt_req = r#"{
+            "jsonrpc": "2.0",
+            "id": 403,
+            "method": "tools/call",
+            "params": {
+                "name": "body_state",
+                "arguments": { "action": "runtime_mode" }
+            }
+        }"#;
+        let rt_resp = core_server.handle_message(rt_req).expect("runtime_mode");
+        let rt_v: Value = serde_json::from_str(&rt_resp).expect("parse rt");
+        assert_eq!(rt_v["result"]["isError"], false);
+        assert!(rt_v["result"]["content"][0]["text"].as_str().expect("txt").contains("schema_reduction_pct"));
+
+        let ab_req = r#"{
+            "jsonrpc": "2.0",
+            "id": 404,
+            "method": "tools/call",
+            "params": {
+                "name": "body_state",
+                "arguments": { "action": "ab_report", "window": "7d" }
+            }
+        }"#;
+        let ab_resp = core_server.handle_message(ab_req).expect("ab_report");
+        let ab_v: Value = serde_json::from_str(&ab_resp).expect("parse ab");
+        assert_eq!(ab_v["result"]["isError"], false);
+        assert!(ab_v["result"]["content"][0]["text"].as_str().expect("txt").contains("shadow_comparisons"));
     }
 }

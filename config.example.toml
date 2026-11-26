@@ -307,6 +307,35 @@ max_snippet_chars = 1200
 # 默认: 10
 auto_enrich_batch_size = 10
 
+# ==============================================================================
+# 12. 三态运行模式、真实世界 A/B 对照与 MCP 工具档位配置 (Phase 58 - ISSUE #43)
+# ==============================================================================
+[runtime]
+# 运行模式 (亦可通过环境变量 AGENT_BODY_MODE 临时热覆盖):
+#   - "body_only": 默认模式，仅使用 agent-body 索引与稳态防撞能力
+#   - "bypass":    完全旁路 agent-body（Hook/Brief/Search 零拦截直通原生命令，用于基线对照）
+#   - "shadow_ab": 真实运行期双轨对照（同时执行原生实时搜索与 agent-body 索引查询，
+#                  异步落盘延时/Token/命中差异/陈旧率至 audit_events 供 DuckDB 分析）
+mode = "body_only"
+
+# MCP tools/list 工具暴露档位 (亦可通过环境变量 AGENT_BODY_MCP_PROFILE 覆盖):
+#   - "full": 暴露全部 43 个原生 MCP 工具（默认，向后兼容）
+#   - "core": 仅暴露 10 个高频核心工具（Schema 体积压降 ~78%，大幅减少每轮上下文工具税）
+#   - "dev":  研发常用 18 个工具
+#   - "ops":  运维/治理常用 20 个工具
+mcp_profile = "full"
+
+# shadow_ab 模式下返回给 Agent 的主结果侧 ("live" | "body")
+# 默认 "live"：以实时搜索为主响应保证零陈旧风险，同时在后台收集 body 对比数据
+shadow_primary = "live"
+
+# shadow_ab / bypass 模式下实时工作区扫描的时间预算上限（毫秒）
+shadow_max_live_ms = 800
+
+# shadow_ab 采样率 (0.0..=1.0)
+ab_sample_rate = 1.0
+
+
 
 
 

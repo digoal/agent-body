@@ -623,3 +623,109 @@ pub fn handle_body_perf_delete(req: &HttpRequest, storage: Arc<dyn StorageProvid
         Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }
 }
+
+/* ─── Phase 58: 三态运行模式与真实 Shadow A/B 对照 API ─────────────────── */
+
+pub fn handle_body_runtime_mode_get() -> HttpResponse {
+    let cfg = Config::load_effective_or_default();
+    WebResponse::success(crate::body::ShadowAbEngine::build_runtime_status(&cfg))
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct BodyRuntimeModeBody {
+    pub mode: Option<String>,
+    pub shadow_primary: Option<String>,
+    pub mcp_profile: Option<String>,
+}
+
+pub fn handle_body_runtime_mode_post(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let t0 = std::time::Instant::now();
+    let body: BodyRuntimeModeBody = match req.json() {
+        Ok(b) => b,
+        Err(e) => return WebResponse::error(StatusCode::BAD_REQUEST, &format!("Invalid JSON: {}", e)),
+    };
+    let cur = Config::load_effective_or_default();
+    let next_mode = match body.mode.as_deref() {
+        Some(m) => match crate::config::RuntimeMode::parse_str(m) {
+            Some(v) => v,
+            None => return WebResponse::error(StatusCode::BAD_REQUEST, &format!("未知 mode: {}", m)),
+        },
+        None => crate::config::RuntimeMode::parse_str(&cur.runtime.mode)
+            .unwrap_or(crate::config::RuntimeMode::BodyOnly),
+    };
+    let next_prof = match body.mcp_profile.as_deref() {
+        Some(p) => match crate::config::McpToolProfile::parse_str(p) {
+            Some(v) => Some(v),
+            None => return WebResponse::error(StatusCode::BAD_REQUEST, &format!("未知 mcp_profile: {}", p)),
+        },
+        None => None,
+    };
+    match Config::update_runtime_mode(None, next_mode, body.shadow_primary.as_deref(), next_prof) {
+        Ok((cfg_path, updated)) => {
+            let mut payload = crate::body::ShadowAbEngine::build_runtime_status(&updated);
+            if let Some(obj) = payload.as_object_mut() {
+                obj.insert("config_path".to_string(), serde_json::json!(cfg_path.to_string_lossy()));
+            }
+            crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage.as_ref(),
+                "web",
+                "body_state",
+                next_mode.as_str(),
+                t0.elapsed().as_micros() as i64,
+            );
+            WebResponse::success(payload)
+        }
+        Err(e) => WebResponse::error(StatusCode::BAD_REQUEST, &e.to_string()),
+    }
+}
+
+pub fn handle_body_ab_report(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let cfg = Config::load_effective_or_default();
+    let window = query_str(req, "window", "7d");
+    let limit = query_str(req, "limit", "200")
+        .parse::<usize>()
+        .unwrap_or(200)
+        .clamp(20, 2000);
+    let st = Storage::new(storage);
+    match crate::body::ShadowAbEngine::build_ab_report(&st, &cfg, &window, limit) {
+        Ok(rep) => WebResponse::success(rep),
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct BodyAbCompareBody {
+    pub query: Option<String>,
+    pub limit: Option<usize>,
+}
+
+pub fn handle_body_ab_compare(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let t0 = std::time::Instant::now();
+    let body: BodyAbCompareBody = req.json().unwrap_or_default();
+    let q = body
+        .query
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| query_str(req, "query", ""));
+    if q.trim().is_empty() {
+        return WebResponse::error(StatusCode::BAD_REQUEST, "缺少对照检索参数 query");
+    }
+    let limit = body.limit.unwrap_or(10).clamp(1, 50);
+    let cfg = Config::load_effective_or_default();
+    let st = Storage::new(storage.clone());
+    match crate::body::ShadowAbEngine::compare_asset_search(&st, &cfg, &q, limit, "web-ab") {
+        Ok((cmp, _, _)) => {
+            crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                storage.as_ref(),
+                "web",
+                "body_state",
+                &cmp.verdict,
+                t0.elapsed().as_micros() as i64,
+            );
+            WebResponse::success(cmp)
+        }
+        Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}

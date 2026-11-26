@@ -39,9 +39,46 @@ impl AgentHookEngine {
         Self { storage }
     }
 
-    /// 前置校验：Agent 执行工具调用前的安全性、端口冲突、文件放置违规诊断（集成 AOPCC 三态路由）
+    /// 前置校验：Agent 执行工具调用前的安全性、端口冲突、文件放置违规诊断（集成 AOPCC 三态路由与 RuntimeMode 旁路/影子对照）
     pub fn pre_tool_call(&self, tool_name: &str, args: &Value) -> PreHookResult {
+        let cfg = crate::config::Config::load_effective_or_default();
+        self.pre_tool_call_with_runtime(
+            tool_name,
+            args,
+            cfg.effective_runtime_mode(),
+            &cfg.runtime.shadow_primary,
+        )
+    }
+
+    /// 显式指定 `RuntimeMode` 执行前置校验（用于零全局环境变量竞争的单元测试与内部调度）
+    pub fn pre_tool_call_with_runtime(
+        &self,
+        tool_name: &str,
+        args: &Value,
+        runtime_mode: crate::config::RuntimeMode,
+        shadow_primary: &str,
+    ) -> PreHookResult {
+        use crate::config::RuntimeMode;
         use crate::hooks::{ActionConcurrencyMode, ConcurrencyPolicyClassifier};
+
+        let t0 = std::time::Instant::now();
+        if runtime_mode == RuntimeMode::Bypass {
+            crate::body::ShadowAbEngine::record_bypass_event(
+                &self.storage,
+                "hook",
+                "hook_pre",
+                "hook-live",
+                tool_name,
+            );
+            return PreHookResult {
+                allowed: true,
+                has_warnings: false,
+                warnings: Vec::new(),
+                suggestions: Vec::new(),
+                concurrency_mode: "BYPASS".to_string(),
+                concurrency_reason: "runtime.mode=bypass 已旁路前置门禁".to_string(),
+            };
+        }
 
         let mut class = ConcurrencyPolicyClassifier::classify(tool_name, args);
         let mut warnings = Vec::new();
@@ -191,7 +228,29 @@ impl AgentHookEngine {
                     .map(|c| c.chars().take(120).collect())
             })
             .unwrap_or_default();
-        let outcome = if warnings.iter().any(|w| w.contains("CRITICAL")) {
+        let is_critical = warnings.iter().any(|w| w.contains("CRITICAL"));
+        if runtime_mode == RuntimeMode::ShadowAb {
+            let elapsed_us = t0.elapsed().as_micros() as i64;
+            crate::body::ShadowAbEngine::record_hook_shadow(
+                &self.storage,
+                tool_name,
+                &target_id,
+                is_critical,
+                has_warnings,
+                elapsed_us,
+            );
+            if shadow_primary == "live" && !is_critical {
+                return PreHookResult {
+                    allowed: true,
+                    has_warnings: false,
+                    warnings: Vec::new(),
+                    suggestions: Vec::new(),
+                    concurrency_mode: "SHADOW_AB".to_string(),
+                    concurrency_reason: "shadow_ab(live主导): 已记录影子预警但不阻断执行".to_string(),
+                };
+            }
+        }
+        let outcome = if is_critical {
             "blocked"
         } else if has_warnings {
             "warn"
@@ -575,5 +634,22 @@ mod tests {
         let rx = post_rx.recovery_prescription.expect("应返回碰壁自愈处方");
         assert_eq!(rx.failure_kind, "CONNECTION_REFUSED");
         assert!(rx.lease_downgraded);
+    }
+
+    #[test]
+    fn test_agent_pre_hook_respects_runtime_bypass_env() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let hook_engine = AgentHookEngine::new(storage.clone());
+
+        let res = hook_engine.pre_tool_call_with_runtime(
+            "bind_port",
+            &serde_json::json!({"port": 8080}),
+            crate::config::RuntimeMode::Bypass,
+            "live",
+        );
+
+        assert!(res.allowed);
+        assert!(!res.has_warnings);
+        assert_eq!(res.concurrency_mode, "BYPASS");
     }
 }

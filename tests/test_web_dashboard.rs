@@ -364,18 +364,83 @@ Content-Length: 75\r\n\r\n\
     sse_stream.write_all(sse_req.as_bytes()).await.expect("write sse req");
     sse_stream.flush().await.expect("flush sse");
 
-    let mut sse_buf = vec![0u8; 1024];
-    let n = sse_stream.read(&mut sse_buf).await.expect("read sse welcome");
-    let sse_welcome = String::from_utf8_lossy(&sse_buf[..n]);
+    let mut sse_buf = vec![0u8; 2048];
+    let mut sse_welcome = String::new();
+    for _ in 0..8 {
+        let n = tokio::time::timeout(Duration::from_secs(2), sse_stream.read(&mut sse_buf))
+            .await
+            .expect("sse welcome timeout")
+            .expect("read sse welcome");
+        if n == 0 {
+            break;
+        }
+        sse_welcome.push_str(&String::from_utf8_lossy(&sse_buf[..n]));
+        if sse_welcome.contains("Connected to Agent Body Event Stream") {
+            break;
+        }
+    }
     assert!(sse_welcome.contains("HTTP/1.1 200 OK"));
     assert!(sse_welcome.contains("Content-Type: text/event-stream"));
-    assert!(sse_welcome.contains("Connected to Agent Steward Event Stream"));
+    assert!(sse_welcome.contains("Connected to Agent Body Event Stream"));
+
+    // 5.1 验证 CORS 白名单安全收口（外部恶意 Origin 不得返回 Access-Control-Allow-Origin，回环 Origin 正常回显）
+    let resp_evil_cors = send_http_request(
+        "127.0.0.1",
+        bound_port,
+        "GET /api/v1/health HTTP/1.1\r\nHost: 127.0.0.1\r\nOrigin: https://evil.example.com\r\n\r\n",
+    )
+    .await;
+    assert!(resp_evil_cors.contains("HTTP/1.1 200 OK"));
+    assert!(!resp_evil_cors.contains("Access-Control-Allow-Origin"), "外部 Origin 绝不允许跨域读取");
+
+    let resp_local_cors = send_http_request(
+        "127.0.0.1",
+        bound_port,
+        "GET /api/v1/health HTTP/1.1\r\nHost: 127.0.0.1\r\nOrigin: http://127.0.0.1:8765\r\n\r\n",
+    )
+    .await;
+    assert!(resp_local_cors.contains("Access-Control-Allow-Origin: http://127.0.0.1:8765"));
+
+    // 5.2 验证 Phase 58 /api/v1/body/runtime-mode 与 /api/v1/body/ab-report
+    let resp_rt = send_http_request(
+        "127.0.0.1",
+        bound_port,
+        "GET /api/v1/body/runtime-mode HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
+    )
+    .await;
+    assert!(resp_rt.contains("HTTP/1.1 200 OK"));
+    assert!(resp_rt.contains("\"schema_bytes_full\""));
+
+    let resp_ab = send_http_request(
+        "127.0.0.1",
+        bound_port,
+        "GET /api/v1/body/ab-report?window=7d HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n",
+    )
+    .await;
+    assert!(resp_ab.contains("HTTP/1.1 200 OK"));
+    assert!(resp_ab.contains("\"shadow_comparisons\""));
+
+    let ab_cmp_unauth = "POST /api/v1/body/ab-compare HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: 17\r\n\r\n{\"query\":\"Cargo\"}";
+    let resp_ab_cmp_unauth = send_http_request("127.0.0.1", bound_port, ab_cmp_unauth).await;
+    assert!(resp_ab_cmp_unauth.contains("HTTP/1.1 401 Unauthorized"));
 
     // 通过广播通道触发一次外部事件
     broadcaster.send("{\"event\":\"test_alert\",\"detail\":\"Host port scan complete\"}".to_string()).expect("send broadcast");
 
-    let n2 = sse_stream.read(&mut sse_buf).await.expect("read sse broadcast");
-    let sse_event = String::from_utf8_lossy(&sse_buf[..n2]);
+    let mut sse_event = String::new();
+    for _ in 0..8 {
+        let n2 = tokio::time::timeout(Duration::from_secs(2), sse_stream.read(&mut sse_buf))
+            .await
+            .expect("sse event timeout")
+            .expect("read sse broadcast");
+        if n2 == 0 {
+            break;
+        }
+        sse_event.push_str(&String::from_utf8_lossy(&sse_buf[..n2]));
+        if sse_event.contains("test_alert") {
+            break;
+        }
+    }
     assert!(sse_event.contains("test_alert"));
     assert!(sse_event.contains("Host port scan complete"));
 }

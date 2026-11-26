@@ -39,6 +39,9 @@ pub struct Config {
     pub annotation: AnnotationConfig,
 
     #[serde(default)]
+    pub runtime: RuntimeConfig,
+
+    #[serde(default)]
     pub hooks: Vec<crate::hooks::HookRule>,
 
     #[serde(default)]
@@ -168,6 +171,121 @@ pub struct AnnotationConfig {
     /// 守护进程每次巡检自动精炼的待标注资产批量上限
     #[serde(default = "default_auto_enrich_batch_size")]
     pub auto_enrich_batch_size: usize,
+}
+
+/// 三态运行模式 (ISSUE #43): 默认仅用本体 / 旁路直通 / 真实使用 A/B 对照
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RuntimeMode {
+    BodyOnly,
+    Bypass,
+    ShadowAb,
+}
+
+impl RuntimeMode {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::BodyOnly => "body_only",
+            Self::Bypass => "bypass",
+            Self::ShadowAb => "shadow_ab",
+        }
+    }
+
+    pub fn parse_str(s: &str) -> Option<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "body_only" | "body" | "default" => Some(Self::BodyOnly),
+            "bypass" | "off" | "passthrough" => Some(Self::Bypass),
+            "shadow_ab" | "shadow" | "ab" | "both" => Some(Self::ShadowAb),
+            _ => None,
+        }
+    }
+}
+
+/// MCP 工具暴露档位：按场景裁剪 tools/list Schema，大幅压降每轮上下文工具税
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum McpToolProfile {
+    Core,
+    Dev,
+    Ops,
+    Full,
+}
+
+impl McpToolProfile {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Core => "core",
+            Self::Dev => "dev",
+            Self::Ops => "ops",
+            Self::Full => "full",
+        }
+    }
+
+    pub fn parse_str(s: &str) -> Option<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "core" | "minimal" => Some(Self::Core),
+            "dev" | "developer" => Some(Self::Dev),
+            "ops" | "governance" => Some(Self::Ops),
+            "full" | "all" => Some(Self::Full),
+            _ => None,
+        }
+    }
+}
+
+/// 运行模式与真实 A/B 对照配置 (`[runtime]`, Phase 58 / ISSUE #43)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuntimeConfig {
+    /// 运行模式: "body_only" (默认) | "bypass" (旁路直通) | "shadow_ab" (实时搜索与本体双轨对照)
+    #[serde(default = "default_runtime_mode")]
+    pub mode: String,
+
+    /// MCP tools/list 工具暴露档位: "full" (默认43工具) | "core" (10核心工具) | "dev" (18工具) | "ops" (20工具)
+    #[serde(default = "default_mcp_profile")]
+    pub mcp_profile: String,
+
+    /// shadow_ab 模式下优先返回给 Agent 的结果侧: "live" (默认，真实对照基准) | "body"
+    #[serde(default = "default_shadow_primary")]
+    pub shadow_primary: String,
+
+    /// shadow_ab / bypass 模式下实时工作区扫描的时间预算上限（毫秒，默认 800ms）
+    #[serde(default = "default_shadow_max_live_ms")]
+    pub shadow_max_live_ms: u64,
+
+    /// shadow_ab 采样率 (0.0..=1.0，默认 1.0 全量采集)
+    #[serde(default = "default_ab_sample_rate")]
+    pub ab_sample_rate: f64,
+}
+
+fn default_runtime_mode() -> String {
+    "body_only".to_string()
+}
+
+fn default_mcp_profile() -> String {
+    "full".to_string()
+}
+
+fn default_shadow_primary() -> String {
+    "live".to_string()
+}
+
+fn default_shadow_max_live_ms() -> u64 {
+    800
+}
+
+fn default_ab_sample_rate() -> f64 {
+    1.0
+}
+
+impl Default for RuntimeConfig {
+    fn default() -> Self {
+        Self {
+            mode: default_runtime_mode(),
+            mcp_profile: default_mcp_profile(),
+            shadow_primary: default_shadow_primary(),
+            shadow_max_live_ms: default_shadow_max_live_ms(),
+            ab_sample_rate: default_ab_sample_rate(),
+        }
+    }
 }
 
 fn default_annotation_enabled() -> bool {
@@ -564,6 +682,7 @@ impl Default for Config {
             web: WebConfig::default(),
             mesh: MeshConfig::default(),
             annotation: AnnotationConfig::default(),
+            runtime: RuntimeConfig::default(),
             hooks: vec![],
             pipelines: vec![],
         }
@@ -646,6 +765,61 @@ impl Config {
     /// 获取有效临时工作目录
     pub fn effective_temp_dir(&self) -> PathBuf {
         self.workspace.temp_dir.clone()
+    }
+
+    /// 解析当前生效的运行模式（环境变量 `AGENT_BODY_MODE` 优先于 `[runtime].mode`）
+    pub fn effective_runtime_mode(&self) -> RuntimeMode {
+        if let Ok(env_mode) = std::env::var("AGENT_BODY_MODE") {
+            if let Some(m) = RuntimeMode::parse_str(&env_mode) {
+                return m;
+            }
+        }
+        RuntimeMode::parse_str(&self.runtime.mode).unwrap_or(RuntimeMode::BodyOnly)
+    }
+
+    /// 解析当前生效的 MCP 工具暴露档位（环境变量 `AGENT_BODY_MCP_PROFILE` 优先于 `[runtime].mcp_profile`）
+    pub fn effective_mcp_profile(&self) -> McpToolProfile {
+        if let Ok(env_prof) = std::env::var("AGENT_BODY_MCP_PROFILE") {
+            if let Some(p) = McpToolProfile::parse_str(&env_prof) {
+                return p;
+            }
+        }
+        McpToolProfile::parse_str(&self.runtime.mcp_profile).unwrap_or(McpToolProfile::Full)
+    }
+
+    /// 持久化更新 `[runtime]` 配置并写回配置文件（保持 0600 安全权限）
+    pub fn update_runtime_mode(
+        custom_path: Option<&Path>,
+        mode: RuntimeMode,
+        shadow_primary: Option<&str>,
+        mcp_profile: Option<McpToolProfile>,
+    ) -> Result<(PathBuf, Self)> {
+        let ab_env = std::env::var("AGENT_BODY_CONFIG").ok();
+        let st_env = std::env::var("STEWARD_CONFIG").ok();
+        let config_path = resolve_config_path_with(
+            custom_path,
+            ab_env.as_deref(),
+            st_env.as_deref(),
+        );
+        let mut cfg = Self::load_or_default(custom_path)?;
+        cfg.runtime.mode = mode.as_str().to_string();
+        if let Some(primary) = shadow_primary {
+            cfg.runtime.shadow_primary = primary.trim().to_ascii_lowercase();
+        }
+        if let Some(profile) = mcp_profile {
+            cfg.runtime.mcp_profile = profile.as_str().to_string();
+        }
+        cfg.validate()?;
+        if let Some(parent) = config_path.parent() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("创建配置目录失败: {:?}", parent))?;
+            restrict_private_permissions(parent, true);
+        }
+        let toml_str = toml::to_string_pretty(&cfg).context("序列化配置失败")?;
+        std::fs::write(&config_path, toml_str)
+            .with_context(|| format!("写入配置文件失败: {:?}", config_path))?;
+        restrict_private_permissions(&config_path, false);
+        Ok((config_path, cfg))
     }
 
     /// 获取有效 SKILL 目录列表
@@ -861,6 +1035,36 @@ impl Config {
                 self.annotation.max_snippet_chars
             );
         }
+        if RuntimeMode::parse_str(&self.runtime.mode).is_none() {
+            anyhow::bail!(
+                "未知 runtime.mode: '{}'，仅支持 'body_only' / 'bypass' / 'shadow_ab'",
+                self.runtime.mode
+            );
+        }
+        if McpToolProfile::parse_str(&self.runtime.mcp_profile).is_none() {
+            anyhow::bail!(
+                "未知 runtime.mcp_profile: '{}'，仅支持 'core' / 'dev' / 'ops' / 'full'",
+                self.runtime.mcp_profile
+            );
+        }
+        if !matches!(self.runtime.shadow_primary.trim(), "live" | "body") {
+            anyhow::bail!(
+                "未知 runtime.shadow_primary: '{}'，仅支持 'live' / 'body'",
+                self.runtime.shadow_primary
+            );
+        }
+        if self.runtime.shadow_max_live_ms < 50 || self.runtime.shadow_max_live_ms > 30_000 {
+            anyhow::bail!(
+                "runtime.shadow_max_live_ms ({}) 必须位于 50..=30000 毫秒之间",
+                self.runtime.shadow_max_live_ms
+            );
+        }
+        if !(0.0..=1.0).contains(&self.runtime.ab_sample_rate) || self.runtime.ab_sample_rate.is_nan() {
+            anyhow::bail!(
+                "runtime.ab_sample_rate ({}) 必须位于 0.0..=1.0 之间",
+                self.runtime.ab_sample_rate
+            );
+        }
         Ok(())
     }
 }
@@ -1042,5 +1246,46 @@ timeout_ms = 1000
         assert_eq!(parsed.pipelines.len(), 1);
         assert_eq!(parsed.pipelines[0].id, "pipe-1");
         assert_eq!(parsed.pipelines[0].steps.len(), 1);
+    }
+
+    #[test]
+    fn test_runtime_config_modes_profiles_and_persist() {
+        let mut cfg = Config::default();
+        assert_eq!(cfg.effective_runtime_mode(), RuntimeMode::BodyOnly);
+        assert_eq!(cfg.effective_mcp_profile(), McpToolProfile::Full);
+
+        cfg.runtime.mode = "shadow_ab".to_string();
+        cfg.runtime.mcp_profile = "core".to_string();
+        cfg.runtime.shadow_primary = "live".to_string();
+        assert!(cfg.validate().is_ok());
+
+        cfg.runtime.mode = "invalid_mode".to_string();
+        assert!(cfg.validate().is_err());
+        cfg.runtime.mode = "bypass".to_string();
+        cfg.runtime.mcp_profile = "unknown".to_string();
+        assert!(cfg.validate().is_err());
+        cfg.runtime.mcp_profile = "dev".to_string();
+        cfg.runtime.shadow_primary = "other".to_string();
+        assert!(cfg.validate().is_err());
+        cfg.runtime.shadow_primary = "body".to_string();
+        assert!(cfg.validate().is_ok());
+
+        let tmp_dir = tempfile::tempdir().expect("tempdir");
+        let cfg_path = tmp_dir.path().join("config.toml");
+        let (written, updated) = Config::update_runtime_mode(
+            Some(&cfg_path),
+            RuntimeMode::ShadowAb,
+            Some("live"),
+            Some(McpToolProfile::Core),
+        )
+        .expect("update_runtime_mode");
+        assert_eq!(written, cfg_path);
+        assert_eq!(updated.runtime.mode, "shadow_ab");
+        assert_eq!(updated.runtime.mcp_profile, "core");
+
+        let reloaded = Config::load_or_default(Some(&cfg_path)).expect("reload");
+        assert_eq!(reloaded.runtime.mode, "shadow_ab");
+        assert_eq!(reloaded.runtime.mcp_profile, "core");
+        assert_eq!(reloaded.runtime.shadow_primary, "live");
     }
 }

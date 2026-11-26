@@ -199,4 +199,6 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 
 42. 多模态对象的理解和元数据KV对的增强。
 
-43. 要有一个配置项目，3种配置模式，作用是：旁路 agent-body，该实时搜文件还是实时搜索文件就好像 agent-body 不存在；同时使用实时搜索和 agent-body，这个模式用于真实使用过程中的A/B测试的数据收集存储和未来分析，看看 agent-body 到底效果怎么样，是不是在帮倒忙？最后一种是默认的仅使用 agent-body。
+43. **三态运行模式（`bypass` / `shadow_ab` / `body_only`）与真实世界 A/B 数据收集分析** `✅ Phase 58 已全量落地`:
+    - 原始需求：要有一个配置项目，3种配置模式，作用是：旁路 agent-body，该实时搜文件还是实时搜索文件就好像 agent-body 不存在；同时使用实时搜索和 agent-body，这个模式用于真实使用过程中的A/B测试的数据收集存储和未来分析，看看 agent-body 到底效果怎么样，是不是在帮倒忙？最后一种是默认的仅使用 agent-body。
+    - 已落地交付：新增 `[runtime]` 配置（`mode` / `mcp_profile` / `shadow_primary` / `shadow_max_live_ms`）与 `AGENT_BODY_MODE` 热覆盖；落地 `ShadowAbEngine`（实时工作区扫描 vs FTS 索引双轨对照、陈旧命中检测、漏召回/帮倒忙率分析并持久化至 `audit_events` `category="ab_shadow"`）；同步落地 MCP `core`/`dev`/`ops`/`full` Schema 减税档位、原生 `agent-body hooks bridge` 及 CLI/MCP/Web 1:1:1 入口（详见 [roadmap-phase58.md](docs/src_doc/roadmap-phase58.md)）。

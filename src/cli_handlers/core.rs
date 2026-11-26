@@ -40,6 +40,17 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
 
         Commands::Brief { query, session_id, budget_tokens, legacy } => {
             let t0 = std::time::Instant::now();
+            if cfg.effective_runtime_mode() == agent_body::config::RuntimeMode::Bypass {
+                agent_body::body::ShadowAbEngine::record_bypass_event(
+                    &storage,
+                    "cli",
+                    "body_brief",
+                    &session_id,
+                    &query,
+                );
+                println!("[agent-body runtime.mode=bypass] 已旁路开工上下文注入，请按原生方式直接探索宿主机。");
+                return Ok(());
+            }
             let out = if legacy {
                 let env_collector = EnvCollector::new(storage.clone());
                 let summary = env_collector.collect_system_summary();
@@ -378,10 +389,15 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
             }
         }
 
-        Commands::Mcp => {
+        Commands::Mcp { profile } => {
+            let resolved_profile = match profile.as_deref() {
+                Some(p) => agent_body::config::McpToolProfile::parse_str(p)
+                    .ok_or_else(|| anyhow::anyhow!("未知 --profile '{}'，支持: core | dev | ops | full", p))?,
+                None => cfg.effective_mcp_profile(),
+            };
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-                let server = agent_body::api::mcp::McpServer::new(storage);
+                let server = agent_body::api::mcp::McpServer::with_profile(storage, resolved_profile);
                 server.run_stdio().await
             })?;
         }

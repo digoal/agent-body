@@ -47,9 +47,17 @@ pub struct HttpRequest {
 }
 
 impl HttpRequest {
-    /// 从原始字节流解析 HTTP/1.1 请求
+    /// 从原始字节流解析 HTTP/1.1 请求（仅对 Header 段做 UTF-8 解码，Body 保留原始字节以支持二进制负载）
     pub fn parse(raw: &[u8]) -> Result<Self, String> {
-        let text = match std::str::from_utf8(raw) {
+        let (header_bytes, body_offset) = if let Some(pos) = raw.windows(4).position(|w| w == b"\r\n\r\n") {
+            (&raw[..pos], pos + 4)
+        } else if let Some(pos) = raw.windows(2).position(|w| w == b"\n\n") {
+            (&raw[..pos], pos + 2)
+        } else {
+            (raw, raw.len())
+        };
+
+        let text = match std::str::from_utf8(header_bytes) {
             Ok(s) => s,
             Err(_) => return Err("Invalid UTF-8 in HTTP header".to_string()),
         };
@@ -95,15 +103,6 @@ impl HttpRequest {
                 headers.insert(key, value);
             }
         }
-
-        // 寻找 body 分隔符 \r\n\r\n 或 \n\n
-        let body_offset = if let Some(pos) = raw.windows(4).position(|w| w == b"\r\n\r\n") {
-            pos + 4
-        } else if let Some(pos) = raw.windows(2).position(|w| w == b"\n\n") {
-            pos + 2
-        } else {
-            raw.len()
-        };
 
         let body = if body_offset < raw.len() {
             raw[body_offset..].to_vec()
@@ -158,20 +157,54 @@ pub struct HttpResponse {
     pub body: Vec<u8>,
 }
 
+/// 校验 Origin 是否属于受信任的本机回环源（防止外部恶意网页跨域窃取只读事实/记忆）
+pub fn is_loopback_origin(origin: &str) -> bool {
+    let trimmed = origin.trim();
+    let Some(rest) = trimmed
+        .strip_prefix("http://")
+        .or_else(|| trimmed.strip_prefix("https://"))
+    else {
+        return false;
+    };
+    if rest.contains('/') || rest.contains('@') || rest.contains('?') || rest.contains('#') {
+        return false;
+    }
+    if rest == "localhost" || rest.starts_with("localhost:") {
+        return true;
+    }
+    if rest == "127.0.0.1" || rest.starts_with("127.0.0.1:") {
+        return true;
+    }
+    if rest == "[::1]" || rest.starts_with("[::1]:") {
+        return true;
+    }
+    false
+}
+
 impl HttpResponse {
     pub fn new(status: StatusCode) -> Self {
         let mut headers = HashMap::new();
         headers.insert(
             "Server".to_string(),
-            format!("AgentSteward-Web/{}", env!("CARGO_PKG_VERSION")),
+            format!("AgentBody-Web/{}", env!("CARGO_PKG_VERSION")),
         );
-        headers.insert("Access-Control-Allow-Origin".to_string(), "*".to_string());
-        headers.insert("Access-Control-Allow-Methods".to_string(), "GET, POST, OPTIONS".to_string());
+        headers.insert("Vary".to_string(), "Origin".to_string());
+        headers.insert("Access-Control-Allow-Methods".to_string(), "GET, POST, DELETE, OPTIONS".to_string());
         headers.insert("Access-Control-Allow-Headers".to_string(), "Content-Type, Authorization".to_string());
         Self {
             status,
             headers,
             body: Vec::new(),
+        }
+    }
+
+    /// 仅当请求携带受信任的本机回环 Origin 时回显 `Access-Control-Allow-Origin`
+    pub fn apply_cors_for_origin(&mut self, origin: Option<&str>) {
+        if let Some(orig) = origin.map(str::trim).filter(|s| !s.is_empty()) {
+            if is_loopback_origin(orig) {
+                self.headers
+                    .insert("Access-Control-Allow-Origin".to_string(), orig.to_string());
+            }
         }
     }
 

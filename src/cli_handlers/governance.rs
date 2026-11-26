@@ -712,6 +712,130 @@ pub fn handle_governance(cmd: Commands, cfg: &Config, storage: Storage) -> Resul
                         }
                     }
                 }
+                BodyCommands::RuntimeMode { set, shadow_primary, mcp_profile, json } => {
+                    let payload = if set.is_some() || shadow_primary.is_some() || mcp_profile.is_some() {
+                        let next_mode = match set.as_deref() {
+                            Some(m) => agent_body::config::RuntimeMode::parse_str(m)
+                                .ok_or_else(|| anyhow::anyhow!("未知 mode '{}'，支持: body_only | bypass | shadow_ab", m))?,
+                            None => agent_body::config::RuntimeMode::parse_str(&cfg.runtime.mode)
+                                .unwrap_or(agent_body::config::RuntimeMode::BodyOnly),
+                        };
+                        let next_prof = match mcp_profile.as_deref() {
+                            Some(p) => Some(
+                                agent_body::config::McpToolProfile::parse_str(p)
+                                    .ok_or_else(|| anyhow::anyhow!("未知 mcp_profile '{}'，支持: core | dev | ops | full", p))?,
+                            ),
+                            None => None,
+                        };
+                        let (cfg_path, updated) = Config::update_runtime_mode(
+                            None,
+                            next_mode,
+                            shadow_primary.as_deref(),
+                            next_prof,
+                        )?;
+                        let mut v = agent_body::body::ShadowAbEngine::build_runtime_status(&updated);
+                        if let Some(obj) = v.as_object_mut() {
+                            obj.insert("config_path".to_string(), serde_json::json!(cfg_path.to_string_lossy()));
+                        }
+                        v
+                    } else {
+                        agent_body::body::ShadowAbEngine::build_runtime_status(cfg)
+                    };
+                    let out = serde_json::to_string_pretty(&payload)?;
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else {
+                        println!(
+                            "🎛️ Agent Body 运行模式: mode={} | shadow_primary={} | mcp_profile={} ({}/{} 工具, Schema {} B, 减税 {:.1}%)",
+                            payload["mode"].as_str().unwrap_or("body_only"),
+                            payload["shadow_primary"].as_str().unwrap_or("live"),
+                            payload["mcp_profile"].as_str().unwrap_or("full"),
+                            payload["mcp_tools_active_count"].as_u64().unwrap_or(43),
+                            payload["mcp_tools_full_count"].as_u64().unwrap_or(43),
+                            payload["schema_bytes_active"].as_u64().unwrap_or(0),
+                            payload["schema_reduction_pct"].as_f64().unwrap_or(0.0),
+                        );
+                    }
+                }
+                BodyCommands::AbReport { window, limit, json } => {
+                    let rep = agent_body::body::ShadowAbEngine::build_ab_report(
+                        &storage,
+                        cfg,
+                        &window,
+                        limit,
+                    )?;
+                    let out = serde_json::to_string_pretty(&rep)?;
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else {
+                        println!(
+                            "🧪 真实世界 Shadow A/B 对照报告 [window={}, mode={}]: {}",
+                            rep.window, rep.current_mode, rep.verdict
+                        );
+                        println!("  摘要: {}", rep.verdict_summary);
+                        println!(
+                            "  样本: 对照={} (胜={}, 平={}, 回退={}, 陈旧={}) | bypass={}",
+                            rep.shadow_comparisons,
+                            rep.body_wins,
+                            rep.ties,
+                            rep.body_regressions,
+                            rep.body_stale_incidents,
+                            rep.bypass_events
+                        );
+                        for r in &rep.recommendations {
+                            println!("  💡 {}", r);
+                        }
+                    }
+                }
+                BodyCommands::AbCompare { query, limit, json } => {
+                    let (cmp, _, _) = agent_body::body::ShadowAbEngine::compare_asset_search(
+                        &storage,
+                        cfg,
+                        &query,
+                        limit,
+                        "cli-ab",
+                    )?;
+                    let out = serde_json::to_string_pretty(&cmp)?;
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if json {
+                        println!("{}", out);
+                    } else {
+                        println!(
+                            "⚖️ Shadow A/B 单次实测 (`{}`): verdict={} | live={}μs/{}hits/{}tok vs body={}μs/{}hits/{}tok | recall={:.1}% | stale={}",
+                            cmp.query,
+                            cmp.verdict,
+                            cmp.live_elapsed_us,
+                            cmp.live_hit_count,
+                            cmp.live_tokens,
+                            cmp.body_elapsed_us,
+                            cmp.body_hit_count,
+                            cmp.body_tokens,
+                            cmp.recall_vs_live_pct,
+                            cmp.body_stale_count
+                        );
+                        println!("  结论: {}", cmp.reason);
+                    }
+                }
             }
         }
         _ => unreachable!(),

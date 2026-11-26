@@ -72,9 +72,14 @@ impl HostGarbageCollector {
                 false
             }
         });
-        if has_unsafe_parent || !is_valid_tmp_component {
+        let os_tmp = std::env::temp_dir();
+        let os_tmp_canon = std::fs::canonicalize(&os_tmp).unwrap_or_else(|_| os_tmp.clone());
+        let tmp_canon = std::fs::canonicalize(tmp_dir).unwrap_or_else(|_| tmp_dir.to_path_buf());
+        let is_under_os_temp_dir = (tmp_dir.starts_with(&os_tmp) && tmp_dir != os_tmp)
+            || (tmp_canon.starts_with(&os_tmp_canon) && tmp_canon != os_tmp_canon);
+        if has_unsafe_parent || (!is_valid_tmp_component && !is_under_os_temp_dir) {
             bail!(
-                "安全红线阻断: GC 目标路径必须包含独立 'tmp'/'temp' 目录组件且禁止 '..'，严禁扫描生产工作目录: {}",
+                "安全红线阻断: GC 目标路径必须包含独立 'tmp'/'temp' 目录组件或位于 OS 临时子目录下且禁止 '..'，严禁扫描生产工作目录: {}",
                 tmp_str
             );
         }

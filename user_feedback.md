@@ -1,7 +1,7 @@
-# Agent Host Steward — 实际使用反馈总账 (`user_feedback.md`)
+# Agent Body — 实际使用反馈总账 (`user_feedback.md`)
 
-> **文档定位**: 主理人（Human）与智能体（AI Agent）在真实生产环境中高频使用 `agent-steward` 后沉淀的一手反馈权威总账。  
-> **首次建立**: 2026-11-19 (基于现网 `v0.4.0` + Phase 29 状态实测盘点)  
+> **文档定位**: 主理人（Human）与智能体（AI Agent）在真实生产环境中高频使用 `agent-body` 后沉淀的一手反馈权威总账。  
+> **首次建立**: 2026-11-19 (基于现网基线实测盘点，随 `v1.0.0 GA` 演进持续对齐)  
 > **关联路线图**: [roadmap-phase30.md](docs/src_doc/archive/roadmap-phase30.md) · [progress-phase30.md](docs/src_doc/archive/progress-phase30.md) · [10-benchmark-spec.md](docs/design_doc/10-benchmark-spec.md)
 
 ---
@@ -278,7 +278,7 @@ flowchart LR
 - **修复目标**: Phase 52 (`P52-05` & `P52-06`) 全部修正并同步全局 SKILL 镜像。
 
 ### `CON-24` `[P1 · 多后端/遥测/可移植性/文档系统性技术债]` PG/DuckDB 语义分裂、14/18 WaitEvent 未埋点、`/root/new/` 耦合与三套手册冲突
-- **状态**: `🗓️ Planned (Phase 53 ~ Phase 57)` · **首次记录**: 2026-11-22 · **发现渠道**: 全仓深度审计（方案 A）
+- **状态**: `✅ Verified (Phase 53 ~ Phase 57)` · **首次记录**: 2026-11-22 · **发现渠道**: 全仓深度审计（方案 A）
 - **现象与复现证据**:
   - 存储：SQLite `insert_memory` 缺 `ON CONFLICT` 阻断 `backfill_missing_embeddings`、PG 锁时间戳 RFC3339 vs `NOW()::text` 当日永不过期、PG/DuckDB `list_benchmark_runs` 泄漏 `awr:%`、迁移与同步管道漏表/抹平时间戳；
   - 遥测与 Parity：14/18 `WaitEventId` 未埋点（`ADDM-05` 不可达）、AWR 报告库缺 CLI/Schema 对齐、Web Benchmark 停在 v3.5 且漏渲染 `data_quality`、TUI 停在 `v0.3.0`；

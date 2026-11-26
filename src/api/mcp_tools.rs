@@ -15,16 +15,21 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct McpToolRegistry {
     storage: Storage,
+    profile: crate::config::McpToolProfile,
 }
 
 impl McpToolRegistry {
     pub fn new(storage: Storage) -> Self {
-        Self { storage }
+        Self::with_profile(storage, crate::config::McpToolProfile::Full)
     }
 
-    /// 列出所有注册的 MCP 工具及其标准 JSON Schema
+    pub fn with_profile(storage: Storage, profile: crate::config::McpToolProfile) -> Self {
+        Self { storage, profile }
+    }
+
+    /// 列出所有按当前 Profile 暴露的 MCP 工具及其标准 JSON Schema
     pub fn list_tools(&self) -> Vec<Value> {
-        crate::api::mcp_schemas::all_tool_schemas()
+        crate::api::mcp_schemas::tool_schemas_for_profile(self.profile)
     }
 
 
@@ -72,18 +77,35 @@ impl McpToolRegistry {
         match name {
             "body_brief" => {
                 let cfg = crate::config::Config::load_effective_or_default();
-                let provider = cfg.build_memory_provider(self.storage.clone());
-                let assembler = BriefAssembler::new(self.storage.clone(), Some(provider));
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let session_id = args.get("session_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let budget_tokens = args.get("budget_tokens").and_then(|v| v.as_u64()).unwrap_or(1500) as usize;
+                let mode = cfg.effective_runtime_mode();
+                if mode == crate::config::RuntimeMode::Bypass {
+                    crate::body::ShadowAbEngine::record_bypass_event(
+                        &self.storage,
+                        "mcp",
+                        "body_brief",
+                        &session_id,
+                        &query,
+                    );
+                    return Ok("[agent-body runtime.mode=bypass] 已旁路开工上下文注入，请按原生方式直接探索宿主机。".to_string());
+                }
 
+                let provider = cfg.build_memory_provider(self.storage.clone());
+                let assembler = BriefAssembler::new(self.storage.clone(), Some(provider));
                 let req = BriefRequest {
                     query,
                     session_id,
                     budget_tokens,
                 };
                 let output = assembler.assemble(&req)?;
+                if mode == crate::config::RuntimeMode::ShadowAb && cfg.runtime.shadow_primary == "live" {
+                    return Ok(format!(
+                        "[agent-body runtime.mode=shadow_ab | shadow_primary=live] 本次简报已旁路注入（后台已采集 {} tokens 对比快照）。",
+                        output.tokens_used
+                    ));
+                }
                 Ok(output.markdown)
             }
 
@@ -135,14 +157,61 @@ impl McpToolRegistry {
                 let detail = crate::scanner::DetailLevel::from_str_opt(
                     args.get("detail_level").and_then(|v| v.as_str()),
                 );
-
-                let results = self.storage.search_assets_fts(query, limit)?;
-                let mut out = format!("资产搜索匹配结果 (共 {} 条, detail={:?}):\n", results.len(), detail);
-                for a in results {
-                    out.push_str(&crate::scanner::format_asset_line(&a, detail));
-                    out.push('\n');
+                let cfg = crate::config::Config::load_effective_or_default();
+                match cfg.effective_runtime_mode() {
+                    crate::config::RuntimeMode::Bypass => {
+                        let roots = cfg.effective_workspace_roots();
+                        let (hits, _, _) = crate::body::ShadowAbEngine::run_live_workspace_search(
+                            &roots,
+                            &cfg.assets.ignore_patterns,
+                            query,
+                            limit,
+                            cfg.runtime.shadow_max_live_ms,
+                        );
+                        crate::body::ShadowAbEngine::record_bypass_event(
+                            &self.storage,
+                            "mcp",
+                            "body_asset_search",
+                            "mcp-live",
+                            query,
+                        );
+                        Ok(crate::body::ShadowAbEngine::format_live_hits_text(&hits, query))
+                    }
+                    crate::config::RuntimeMode::ShadowAb => {
+                        let (cmp, live_hits, body_hits) =
+                            crate::body::ShadowAbEngine::compare_asset_search(
+                                &self.storage,
+                                &cfg,
+                                query,
+                                limit,
+                                "mcp-live",
+                            )?;
+                        let mut out = if cfg.runtime.shadow_primary == "live" {
+                            crate::body::ShadowAbEngine::format_live_hits_text(&live_hits, query)
+                        } else {
+                            let mut buf = format!("资产搜索匹配结果 (共 {} 条, detail={:?}):\n", body_hits.len(), detail);
+                            for a in body_hits {
+                                buf.push_str(&crate::scanner::format_asset_line(&a, detail));
+                                buf.push('\n');
+                            }
+                            buf
+                        };
+                        out.push_str(&format!(
+                            "[shadow_ab: verdict={}, live={}μs/{}hits, body={}μs/{}hits, recall={:.1}%]\n",
+                            cmp.verdict, cmp.live_elapsed_us, cmp.live_hit_count, cmp.body_elapsed_us, cmp.body_hit_count, cmp.recall_vs_live_pct
+                        ));
+                        Ok(out)
+                    }
+                    crate::config::RuntimeMode::BodyOnly => {
+                        let results = self.storage.search_assets_fts(query, limit)?;
+                        let mut out = format!("资产搜索匹配结果 (共 {} 条, detail={:?}):\n", results.len(), detail);
+                        for a in results {
+                            out.push_str(&crate::scanner::format_asset_line(&a, detail));
+                            out.push('\n');
+                        }
+                        Ok(out)
+                    }
                 }
-                Ok(out)
             }
 
             "body_asset_register" => {
@@ -1192,6 +1261,73 @@ impl McpToolRegistry {
                             "configured_peers": client.peers(),
                             "results": peers,
                         }))?)
+                    }
+                    "runtime_mode" => {
+                        let mode_arg = args.get("mode").and_then(|v| v.as_str());
+                        let primary_arg = args.get("shadow_primary").and_then(|v| v.as_str());
+                        let profile_arg = args.get("mcp_profile").and_then(|v| v.as_str());
+                        if mode_arg.is_some() || primary_arg.is_some() || profile_arg.is_some() {
+                            let cur = crate::config::Config::load_effective_or_default();
+                            let next_mode = match mode_arg {
+                                Some(m) => crate::config::RuntimeMode::parse_str(m)
+                                    .ok_or_else(|| anyhow::anyhow!("未知 mode: {}", m))?,
+                                None => crate::config::RuntimeMode::parse_str(&cur.runtime.mode)
+                                    .unwrap_or(crate::config::RuntimeMode::BodyOnly),
+                            };
+                            let next_profile = match profile_arg {
+                                Some(p) => Some(
+                                    crate::config::McpToolProfile::parse_str(p)
+                                        .ok_or_else(|| anyhow::anyhow!("未知 mcp_profile: {}", p))?,
+                                ),
+                                None => None,
+                            };
+                            let (cfg_path, updated) = crate::config::Config::update_runtime_mode(
+                                None,
+                                next_mode,
+                                primary_arg,
+                                next_profile,
+                            )?;
+                            let mut payload = crate::body::ShadowAbEngine::build_runtime_status(&updated);
+                            if let Some(obj) = payload.as_object_mut() {
+                                obj.insert("config_path".to_string(), serde_json::json!(cfg_path.to_string_lossy()));
+                            }
+                            Ok(serde_json::to_string_pretty(&payload)?)
+                        } else {
+                            let cur = crate::config::Config::load_effective_or_default();
+                            Ok(serde_json::to_string_pretty(
+                                &crate::body::ShadowAbEngine::build_runtime_status(&cur),
+                            )?)
+                        }
+                    }
+                    "ab_report" => {
+                        let cur = crate::config::Config::load_effective_or_default();
+                        let window = args.get("window").and_then(|v| v.as_str()).unwrap_or("7d");
+                        let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(200) as usize;
+                        let rep = crate::body::ShadowAbEngine::build_ab_report(
+                            &self.storage,
+                            &cur,
+                            window,
+                            limit,
+                        )?;
+                        Ok(serde_json::to_string_pretty(&rep)?)
+                    }
+                    "ab_compare" => {
+                        let query = args
+                            .get("query")
+                            .and_then(|v| v.as_str())
+                            .map(str::trim)
+                            .filter(|s| !s.is_empty())
+                            .ok_or_else(|| anyhow::anyhow!("action=ab_compare 必须提供 query"))?;
+                        let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
+                        let cur = crate::config::Config::load_effective_or_default();
+                        let (cmp, _, _) = crate::body::ShadowAbEngine::compare_asset_search(
+                            &self.storage,
+                            &cur,
+                            query,
+                            limit,
+                            "mcp-ab",
+                        )?;
+                        Ok(serde_json::to_string_pretty(&cmp)?)
                     }
                     "perf_snapshot" => {
                         let label = args.get("label").and_then(|v| v.as_str());

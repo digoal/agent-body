@@ -18,6 +18,14 @@ pub struct HybridSearchEngine {
     ollama_endpoint: String,
     model_name: String,
     fallback_fts_only: bool,
+    http_client: reqwest::Client,
+}
+
+fn build_embedding_http_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .timeout(std::time::Duration::from_millis(1500))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new())
 }
 
 impl HybridSearchEngine {
@@ -34,6 +42,7 @@ impl HybridSearchEngine {
             ollama_endpoint: cfg.ollama_url.trim_end_matches('/').to_string(),
             model_name: cfg.model.clone(),
             fallback_fts_only: cfg.fallback_fts_only,
+            http_client: build_embedding_http_client(),
         }
     }
 
@@ -44,6 +53,7 @@ impl HybridSearchEngine {
             ollama_endpoint: ollama_endpoint.trim_end_matches('/').to_string(),
             model_name: model_name.to_string(),
             fallback_fts_only: true,
+            http_client: build_embedding_http_client(),
         }
     }
 
@@ -57,17 +67,14 @@ impl HybridSearchEngine {
 
     /// 尝试调用本地 Ollama 获取文本的 embedding 向量（端点与模型由 `[embedding]` 配置决定）
     pub async fn fetch_embedding(&self, text: &str) -> Option<Vec<f32>> {
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_millis(1500))
-            .build()
-            .ok()?;
-
         let body = serde_json::json!({
             "model": self.model_name,
             "prompt": text,
         });
 
-        let resp = client.post(format!("{}/api/embeddings", self.ollama_endpoint))
+        let resp = self
+            .http_client
+            .post(format!("{}/api/embeddings", self.ollama_endpoint))
             .json(&body)
             .send()
             .await
@@ -107,17 +114,24 @@ impl HybridSearchEngine {
         let mut vec_ranks: HashMap<String, usize> = HashMap::new();
         let mut cos_sims: HashMap<String, f32> = HashMap::new();
 
+        // 单次查库加载活跃记忆（提升上限至 2000，消除重复全表查询）
+        let all_memories = self.storage.list_all_active_memories(2000)?;
+        let mut all_memories_map: HashMap<String, MemoryRecord> =
+            HashMap::with_capacity(all_memories.len().saturating_add(fts_results.len()));
+        for fts_m in fts_results {
+            all_memories_map.insert(fts_m.id.clone(), fts_m);
+        }
+
         if let Some(ref q_emb) = query_vec {
             let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::CpuVectorCosine);
-            // 获取数据库中所有带 embedding 的活跃记忆
-            let all_memories = self.storage.list_all_active_memories(500).unwrap_or_default();
             let mut scored_memories: Vec<(String, f32)> = Vec::new();
 
             for m in all_memories {
                 if !m.embedding.is_empty() && m.embedding.len() == q_emb.len() {
                     let sim = cosine_similarity(q_emb, &m.embedding);
-                    scored_memories.push((m.id, sim));
+                    scored_memories.push((m.id.clone(), sim));
                 }
+                all_memories_map.insert(m.id.clone(), m);
             }
 
             // 按余弦相似度倒序排序
@@ -126,6 +140,10 @@ impl HybridSearchEngine {
             for (idx, (m_id, sim)) in scored_memories.into_iter().take(limit * 2).enumerate() {
                 vec_ranks.insert(m_id.clone(), idx + 1);
                 cos_sims.insert(m_id, sim);
+            }
+        } else {
+            for m in all_memories {
+                all_memories_map.insert(m.id.clone(), m);
             }
         }
 
@@ -153,12 +171,6 @@ impl HybridSearchEngine {
         rrf_scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         let mut final_results = Vec::new();
-        let all_memories_map: HashMap<String, MemoryRecord> = self.storage
-            .list_all_active_memories(500)?
-            .into_iter()
-            .map(|m| (m.id.clone(), m))
-            .collect();
-
         for (id, rrf_score, fts_rank, vec_rank, cosine_similarity) in rrf_scored.into_iter().take(limit) {
             if let Some(mem) = all_memories_map.get(&id) {
                 final_results.push(HybridSearchResult {

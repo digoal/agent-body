@@ -464,6 +464,9 @@ def handle_post_tool() -> None:
 
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    if os.environ.get("AGENT_BODY_MODE", "").strip().lower() in ("bypass", "off", "passthrough"):
+        emit({"decision": "allow"} if mode == "pre_tool" else {})
+        return
     if mode == "session_start":
         handle_session_start()
     elif mode == "pre_tool":
@@ -550,6 +553,9 @@ def emit(obj: Dict[str, Any]) -> None:
 
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    if os.environ.get("AGENT_BODY_MODE", "").strip().lower() in ("bypass", "off", "passthrough"):
+        emit({})
+        return
     if not os.path.exists(BODY_BIN):
         emit({})
         return
@@ -659,6 +665,9 @@ def run_cli(args):
 
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else "brief"
+    if os.environ.get("AGENT_BODY_MODE", "").strip().lower() in ("bypass", "off", "passthrough"):
+        print("{}")
+        return
     if mode == "brief":
         print(run_cli(["brief"]))
     elif mode == "pre":

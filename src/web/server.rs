@@ -257,9 +257,12 @@ impl WebServer {
             }
         };
 
+        let origin_hdr = req.headers.get("origin").cloned();
+
         // 处理 CORS OPTIONS preflight
         if req.method == Method::Options {
-            let resp = HttpResponse::new(StatusCode::NO_CONTENT);
+            let mut resp = HttpResponse::new(StatusCode::NO_CONTENT);
+            resp.apply_cors_for_origin(origin_hdr.as_deref());
             stream.write_all(&resp.to_bytes()).await?;
             stream.flush().await?;
             return Ok(());
@@ -267,14 +270,14 @@ impl WebServer {
 
         // 处理 SSE 实时流
         if req.method == Method::Get && req.path == "/api/v1/stream" {
-            return Self::handle_sse_stream(stream, event_tx).await;
+            return Self::handle_sse_stream(stream, event_tx, origin_hdr.as_deref()).await;
         }
 
         // 统一路由分发 (在 spawn_blocking 中执行，避免阻塞 Tokio worker 并兼容同步预检/DB调用)
         let is_demo_run = req.method == Method::Post && req.path == "/api/v1/demo/run";
         let is_bench_run = req.method == Method::Post && req.path == "/api/v1/benchmark/run";
         let demo_path = req.path.clone();
-        let resp = tokio::task::spawn_blocking(move || {
+        let mut resp = tokio::task::spawn_blocking(move || {
             Self::route_request_arc_with_policy(
                 &req,
                 storage,
@@ -284,6 +287,7 @@ impl WebServer {
             )
         })
         .await?;
+        resp.apply_cors_for_origin(origin_hdr.as_deref());
         if (is_demo_run || is_bench_run) && resp.status == StatusCode::OK {
             let _ = event_tx.send(
                 serde_json::json!({
@@ -412,6 +416,10 @@ impl WebServer {
             (Method::Post, "/api/v1/body/perf/delete") => parity_api::handle_body_perf_delete(req, storage.clone()),
             (Method::Delete, "/api/v1/body/perf/delete") => parity_api::handle_body_perf_delete(req, storage.clone()),
             (Method::Post, "/api/v1/body/perf/tune") => parity_api::handle_body_perf_tune(storage.clone()),
+            (Method::Get, "/api/v1/body/runtime-mode") => parity_api::handle_body_runtime_mode_get(),
+            (Method::Post, "/api/v1/body/runtime-mode") => parity_api::handle_body_runtime_mode_post(req, storage.clone()),
+            (Method::Get, "/api/v1/body/ab-report") => parity_api::handle_body_ab_report(req, storage.clone()),
+            (Method::Post, "/api/v1/body/ab-compare") => parity_api::handle_body_ab_compare(req, storage.clone()),
             (Method::Post, "/api/v1/mesh/locks/acquire") => crate::mesh::handle_mesh_lock_acquire(req, storage, auth_token),
             _ => Self::route_request(req, storage.as_ref(), start_time, auth_token),
         };
@@ -493,12 +501,20 @@ impl WebServer {
     async fn handle_sse_stream(
         mut stream: TcpStream,
         event_tx: broadcast::Sender<String>,
+        origin: Option<&str>,
     ) -> anyhow::Result<()> {
-        let headers = "HTTP/1.1 200 OK\r\n\
+        let cors_line = match origin.map(str::trim).filter(|s| crate::web::http::is_loopback_origin(s)) {
+            Some(orig) => format!("Access-Control-Allow-Origin: {}\r\nVary: Origin\r\n", orig),
+            None => "Vary: Origin\r\n".to_string(),
+        };
+        let headers = format!(
+            "HTTP/1.1 200 OK\r\n\
 Content-Type: text/event-stream\r\n\
 Cache-Control: no-cache\r\n\
 Connection: keep-alive\r\n\
-Access-Control-Allow-Origin: *\r\n\r\n";
+{}\r\n",
+            cors_line
+        );
 
         stream.write_all(headers.as_bytes()).await?;
         stream.flush().await?;
@@ -506,7 +522,7 @@ Access-Control-Allow-Origin: *\r\n\r\n";
         // 先发送连接成功欢迎消息
         let welcome = format!("data: {}\n\n", serde_json::json!({
             "type": "welcome",
-            "message": "Connected to Agent Steward Event Stream",
+            "message": "Connected to Agent Body Event Stream",
             "timestamp": chrono::Utc::now().to_rfc3339()
         }));
         stream.write_all(welcome.as_bytes()).await?;

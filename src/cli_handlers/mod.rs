@@ -16,7 +16,7 @@ pub fn dispatch(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> {
         | Commands::Asset { .. }
         | Commands::Env { .. }
         | Commands::Memory { .. }
-        | Commands::Mcp
+        | Commands::Mcp { .. }
         | Commands::Daemon
         | Commands::Links { .. }
         | Commands::Changes { .. }

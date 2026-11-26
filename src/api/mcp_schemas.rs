@@ -1,4 +1,80 @@
 use serde_json::Value;
+use crate::config::McpToolProfile;
+
+/// Core 档位（10 个高频核心工具）：将 tools/list Schema 体积压减 ~78%，大幅降低每轮上下文工具税
+pub const CORE_TOOL_NAMES: &[&str] = &[
+    "body_brief",
+    "body_fact_query",
+    "body_asset_search",
+    "body_placement_suggest",
+    "body_port_check",
+    "body_links_impact",
+    "body_memory_search",
+    "body_memory_add",
+    "body_hook_pre",
+    "body_state",
+];
+
+/// Dev 档位追加工具（+8 研发工具，共 18 个）
+pub const DEV_EXTRA_TOOL_NAMES: &[&str] = &[
+    "body_asset_register",
+    "body_asset_scan",
+    "body_links_query",
+    "body_links_audit",
+    "body_links_repair",
+    "body_codegraph_bridge",
+    "body_hook_post",
+    "body_session_close",
+];
+
+/// Ops 档位追加工具（+10 运维治理工具，共 20 个）
+pub const OPS_EXTRA_TOOL_NAMES: &[&str] = &[
+    "body_env_processes",
+    "body_env_show",
+    "body_env_gc",
+    "body_lock_acquire",
+    "body_lock_release",
+    "body_lock_list",
+    "body_changes_since",
+    "body_audit_query",
+    "body_feedback",
+    "body_benchmark",
+];
+
+/// 按 MCP Profile 过滤暴露给客户端的工具 Schema（默认 Full 保持全部 43 工具）
+pub fn tool_schemas_for_profile(profile: McpToolProfile) -> Vec<Value> {
+    let all = all_tool_schemas();
+    match profile {
+        McpToolProfile::Full => all,
+        McpToolProfile::Core => all
+            .into_iter()
+            .filter(|v| {
+                v.get("name")
+                    .and_then(|n| n.as_str())
+                    .map(|name| CORE_TOOL_NAMES.contains(&name))
+                    .unwrap_or(false)
+            })
+            .collect(),
+        McpToolProfile::Dev => all
+            .into_iter()
+            .filter(|v| {
+                v.get("name")
+                    .and_then(|n| n.as_str())
+                    .map(|name| CORE_TOOL_NAMES.contains(&name) || DEV_EXTRA_TOOL_NAMES.contains(&name))
+                    .unwrap_or(false)
+            })
+            .collect(),
+        McpToolProfile::Ops => all
+            .into_iter()
+            .filter(|v| {
+                v.get("name")
+                    .and_then(|n| n.as_str())
+                    .map(|name| CORE_TOOL_NAMES.contains(&name) || OPS_EXTRA_TOOL_NAMES.contains(&name))
+                    .unwrap_or(false)
+            })
+            .collect(),
+    }
+}
 
 /// 返回 43 个原生 MCP 工具的完整 JSON Schema 定义（从 mcp_tools.rs 拆分以遵守规约 #28 复杂度红线）
 pub fn all_tool_schemas() -> Vec<Value> {
@@ -719,16 +795,21 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_state",
-                "description": "Agent 本体中枢（宿主机具身底座，第 43 原生工具）：提供本体身份证与六器官自省 (manifest)、五维稳态生命体征 (vitals)、四级自治权限包络评估 (envelope)、跨大脑工作态接力胶囊保存与恢复 (handoff_save/handoff_resume)、L1 稳态反射自愈 (heal)、多本体联邦名片发现 (peers) 以及内生等待事件与 AWR 快照/报告库管理与 ADDM 自调优 (perf_snapshot/perf_awr/perf_snapshots/perf_reports/perf_delete/perf_tune)。",
+                "description": "Agent 本体中枢（宿主机具身底座，第 43 原生工具）：提供本体身份证与六器官自省 (manifest)、五维稳态生命体征 (vitals)、四级自治权限包络评估 (envelope)、跨大脑工作态接力胶囊保存与恢复 (handoff_save/handoff_resume)、L1 稳态反射自愈 (heal)、多本体联邦名片发现 (peers)、三态运行模式与真实 A/B 对照 (runtime_mode/ab_report/ab_compare) 以及内生等待事件与 AWR 快照/报告库管理与 ADDM 自调优 (perf_snapshot/perf_awr/perf_snapshots/perf_reports/perf_delete/perf_tune)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "action": {
                             "type": "string",
-                            "enum": ["manifest", "vitals", "envelope", "handoff_save", "handoff_resume", "heal", "peers", "perf_snapshot", "perf_awr", "perf_snapshots", "perf_reports", "perf_delete", "perf_tune"],
+                            "enum": ["manifest", "vitals", "envelope", "handoff_save", "handoff_resume", "heal", "peers", "runtime_mode", "ab_report", "ab_compare", "perf_snapshot", "perf_awr", "perf_snapshots", "perf_reports", "perf_delete", "perf_tune"],
                             "default": "manifest",
                             "description": "操作类型"
                         },
+                        "mode": { "type": "string", "enum": ["body_only", "bypass", "shadow_ab"], "description": "action=runtime_mode 时设置运行模式" },
+                        "shadow_primary": { "type": "string", "enum": ["live", "body"], "description": "action=runtime_mode 时设置 shadow_ab 主响应侧" },
+                        "mcp_profile": { "type": "string", "enum": ["core", "dev", "ops", "full"], "description": "action=runtime_mode 时设置 MCP Schema 暴露档位" },
+                        "query": { "type": "string", "description": "action=ab_compare 时待对照的检索查询词" },
+                        "window": { "type": "string", "enum": ["24h", "7d", "30d", "all"], "default": "7d", "description": "action=ab_report 时回溯统计窗口" },
                         "from_brain": { "type": "string", "description": "发起接力的大脑标识 (如 antigravity / claude-code / codex)" },
                         "session_id": { "type": "string", "description": "当前会话 ID" },
                         "goal_summary": { "type": "string", "description": "handoff_save 必填：当前核心目标摘要" },

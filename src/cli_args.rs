@@ -62,7 +62,10 @@ pub(crate) enum Commands {
     },
 
     #[command(about = "启动 MCP (Model Context Protocol) stdio 服务端供 Agent 接入")]
-    Mcp,
+    Mcp {
+        #[arg(long, help = "MCP 工具暴露档位: core (10工具省78% Token) | dev | ops | full")]
+        profile: Option<String>,
+    },
 
     #[command(about = "启动 Agent 本体常驻后台守护进程 (含 inotify 监听、定时进程巡检与稳态自愈)")]
     Daemon,
@@ -322,6 +325,35 @@ pub(crate) enum BodyCommands {
     },
     #[command(about = "在 L1_AUTONOMIC 包络内执行一键性能与内存自优化 (PRAGMA optimize + WAL + malloc_trim)")]
     PerfTune {
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "查看或切换三态运行模式 (body_only / bypass / shadow_ab) 与 MCP 工具档位 (core / dev / ops / full)")]
+    RuntimeMode {
+        #[arg(long, help = "设置并持久化运行模式: body_only | bypass | shadow_ab")]
+        set: Option<String>,
+        #[arg(long, help = "设置 shadow_ab 主响应侧: live | body")]
+        shadow_primary: Option<String>,
+        #[arg(long, help = "设置 MCP Schema 暴露档位: core | dev | ops | full")]
+        mcp_profile: Option<String>,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "查看真实世界 Shadow A/B 对照收益与回退诊断报告 (ISSUE #43)")]
+    AbReport {
+        #[arg(long, default_value = "7d")]
+        window: String,
+        #[arg(long, default_value_t = 200)]
+        limit: usize,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+    #[command(about = "立即执行一次原生实时搜索 vs agent-body 索引 A/B 对照并入库")]
+    AbCompare {
+        #[arg(help = "检索查询词")]
+        query: String,
+        #[arg(short, long, default_value_t = 10)]
+        limit: usize,
         #[arg(long, default_value_t = false)]
         json: bool,
     },
@@ -723,6 +755,11 @@ pub(crate) enum HooksCommands {
 
         #[arg(short = 'e', long, help = "可选失败错误输出（触发 AOPCC 秒级自愈处方）")]
         error_output: Option<String>,
+    },
+    #[command(about = "原生 Rust Hook 桥接器（替代 Python 桥接，读取 stdin JSON 并输出客户端协议）")]
+    Bridge {
+        #[arg(help = "Hook 事件名: session_start | pre_tool | post_tool")]
+        event: String,
     },
 }
 
