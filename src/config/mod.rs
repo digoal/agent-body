@@ -176,7 +176,7 @@ pub struct AnnotationConfig {
     #[serde(default = "default_annotation_vision_enabled")]
     pub vision_enabled: bool,
 
-    /// 本地视觉理解模型名称 (推荐 qwen2.5vl:3b)
+    /// 本地视觉理解模型名称 (推荐轻量多模态模型 qwen3.5:0.8b，与文本标注共享常驻模型)
     #[serde(default = "default_annotation_vision_model")]
     pub vision_model: String,
 
@@ -325,7 +325,7 @@ fn default_annotation_vision_enabled() -> bool {
 }
 
 fn default_annotation_vision_model() -> String {
-    "qwen2.5vl:3b".to_string()
+    "qwen3.5:0.8b".to_string()
 }
 
 fn default_annotation_vision_max_image_bytes() -> usize {

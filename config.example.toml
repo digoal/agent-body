@@ -310,9 +310,9 @@ auto_enrich_batch_size = 10
 # 关闭或未拉取视觉模型时，仍保留 L1 纯 Rust 图片宽高/色彩/SVG 文本提取能力
 # 默认: false
 vision_enabled = false
-# 本地视觉理解模型名称 (启用 vision_enabled 前需执行 `ollama pull <vision_model>`)
-# 默认: "qwen2.5vl:3b"
-vision_model = "qwen2.5vl:3b"
+# 本地视觉理解模型名称 (推荐 qwen3.5:0.8b，原生支持视觉且与文本标注共享同一模型，零额外换页开销；需先 `ollama pull <vision_model>`)
+# 默认: "qwen3.5:0.8b"
+vision_model = "qwen3.5:0.8b"
 # 送入本地视觉模型的单张图片最大字节数 (默认 4MB)
 # 默认: 4194304
 vision_max_image_bytes = 4194304

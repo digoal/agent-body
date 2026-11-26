@@ -5,7 +5,9 @@ use chrono::Local;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use crate::config::AnnotationConfig;
-use crate::scanner::metadata::{is_sensitive_file, read_head_utf8, SecretRedactor};
+use crate::scanner::metadata::{
+    is_sensitive_file, read_head_utf8, PromptInjectionScanner, SecretRedactor,
+};
 use crate::storage::models::AssetRecord;
 use crate::storage::Storage;
 
@@ -291,24 +293,27 @@ impl OllamaAnnotator {
                         asset.path, dims, domain_hint
                     );
                     let generated = self.call_ollama_vision_json(&vprompt, &img_b64)?;
-                    let visual_summary = generated
+                    let raw_visual_summary = generated
                         .get("visual_summary")
                         .or_else(|| generated.get("purpose"))
                         .and_then(|v| v.as_str())
                         .map(|s| s.trim().to_string())
-                        .filter(|s| !s.is_empty())
+                        .filter(|s| !is_placeholder_value(s))
                         .ok_or_else(|| anyhow!("Ollama Vision 返回的 visual_summary/purpose 为空"))?;
-                    let purpose = generated
+                    let visual_summary =
+                        PromptInjectionScanner::scan_and_sanitize(&raw_visual_summary).sanitized;
+                    let raw_purpose = generated
                         .get("purpose")
                         .and_then(|v| v.as_str())
                         .map(|s| s.trim().to_string())
-                        .filter(|s| !s.is_empty())
+                        .filter(|s| !is_placeholder_value(s))
                         .unwrap_or_else(|| visual_summary.clone());
+                    let purpose = PromptInjectionScanner::scan_and_sanitize(&raw_purpose).sanitized;
                     let domain = generated
                         .get("domain")
                         .and_then(|v| v.as_str())
                         .map(|s| s.trim().to_string())
-                        .filter(|s| !s.is_empty())
+                        .filter(|s| !is_placeholder_value(s))
                         .unwrap_or_else(|| domain_hint.to_string());
                     let ocr_keywords: Vec<String> = generated
                         .get("ocr_keywords")
@@ -316,7 +321,8 @@ impl OllamaAnnotator {
                         .map(|arr| {
                             arr.iter()
                                 .filter_map(|x| x.as_str().map(|s| s.trim().to_string()))
-                                .filter(|s| !s.is_empty())
+                                .filter(|s| !is_placeholder_value(s))
+                                .map(|s| PromptInjectionScanner::scan_and_sanitize(&s).sanitized)
                                 .take(5)
                                 .collect()
                         })
@@ -529,6 +535,7 @@ impl OllamaAnnotator {
             "prompt": prompt,
             "images": [image_base64],
             "stream": false,
+            "think": false,
             "options": {
                 "temperature": 0.0,
                 "num_predict": 256
@@ -558,6 +565,15 @@ impl OllamaAnnotator {
         let parsed: Value = serde_json::from_str(raw_text)?;
         Ok(parsed)
     }
+}
+
+fn is_placeholder_value(s: &str) -> bool {
+    let t = s.trim();
+    t.is_empty()
+        || matches!(
+            t.to_ascii_lowercase().as_str(),
+            "none" | "n/a" | "na" | "null" | "unknown" | "-" | "无" | "未知" | "暂无"
+        )
 }
 
 /// 抽取 L1/L2 多模态关键 KV 为紧凑语义文本（供 L2 摘要与 Embedding 共享）
@@ -716,5 +732,10 @@ mod tests {
         };
         let res = annotator.enrich_single_asset(&asset).expect("no panic on binary png");
         assert!(res.is_none());
+
+        assert!(is_placeholder_value("无"));
+        assert!(is_placeholder_value(" N/A "));
+        assert!(!is_placeholder_value("架构拓扑图"));
+        assert_eq!(AnnotationConfig::default().vision_model, "qwen3.5:0.8b");
     }
 }
