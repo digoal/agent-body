@@ -205,3 +205,9 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 43. **三态运行模式（`bypass` / `shadow_ab` / `body_only`）与真实世界 A/B 数据收集分析** `✅ Phase 58 已全量落地`:
     - 原始需求：要有一个配置项目，3种配置模式，作用是：旁路 agent-body，该实时搜文件还是实时搜索文件就好像 agent-body 不存在；同时使用实时搜索和 agent-body，这个模式用于真实使用过程中的A/B测试的数据收集存储和未来分析，看看 agent-body 到底效果怎么样，是不是在帮倒忙？最后一种是默认的仅使用 agent-body。
     - 已落地交付：新增 `[runtime]` 配置（`mode` / `mcp_profile` / `shadow_primary` / `shadow_max_live_ms`）与 `AGENT_BODY_MODE` 热覆盖；落地 `ShadowAbEngine`（实时工作区扫描 vs FTS 索引双轨对照、陈旧命中检测、漏召回/帮倒忙率分析并持久化至 `audit_events` `category="ab_shadow"`）；同步落地 MCP `core`/`dev`/`ops`/`full` Schema 减税档位、原生 `agent-body hooks bridge` 及 CLI/MCP/Web 1:1:1 入口（详见 [roadmap-phase58.md](docs/src_doc/roadmap-phase58.md)）。
+
+44. **弱向量补偿、行业 Know-How 知识网络与全信号 Omni-RRF 多路融合召回 (`待实施 · 已出规格 Phase 61~62`)**:
+    > 原始需求：不知道项目是否已经考虑过这个场景，我本地的llm模型参数量太小，实际上生成embedding可能也不好，召回率不一定高。或者支持的文本长度有限，未切分的文本或者即使切分，也容易在语义上失真，所以语义可能不够，还需要更多图的支持，把知识变成网络，变成行业know how.
+    > 补充要求：如果是文本，应该结合语义、模糊查询、事实标量、bm25、全文检索、属性图关联片段、层级、文档之间的联系等的RRF融合查询。
+    - **现网实证 GAP**：当前 `EmbeddingClient` 对输入文本 `chars().take(2000)` 硬截断、`fact_nodes`/`fact_edges`（SQLite `CHECK`）仅限于 7 类物理/工程拓扑、`L3_SEMANTIC` 语义边反过来强依赖小模型余弦 `>= 0.78`，且 `HybridSearchEngine`/`AssetSearchEngine` 仍停留在 0-hop 默认排序 FTS + 单向量（缺少 `bm25` 加权、模糊查询、事实标量调制、层级回溯与文档互链融合）；同时 `shadow_ab` 本机实测暴露代码驼峰标识符 FTS 漏召回问题。
+    - **架构方案（方案 B · Omni-RRF）**：保持 27 表与 43 MCP 工具零膨胀，采用 **L1 确定性骨架（Heading-Aware 章节切片 + 别名归一 + SVG/标题术语提取 + PMI 共现）+ L2 小模型原子 Know-How 抽取（`qwen3.5:0.8b` `"think": false` + 原文锚定校验防幻觉）+ 全信号 Omni-RRF 融合召回**（整合 **BM25 全文 + Fuzzy 模糊 n-gram/编辑距离 + 可选 Semantic 向量 + 属性图 1~2 跳关联片段 + 章节/目录层级 Hierarchy + `links` 文档间联系 + 事实标量 `Phi_scalar` 过滤与时效/重要度调制**，输出 `matched_channels`/`reasoning_paths`），配套毛线球剪枝与写穿级联失效，分 Phase 61 与 Phase 62 实施（详见 [19-knowledge-network-and-graph-recall-spec.md](docs/design_doc/19-knowledge-network-and-graph-recall-spec.md)）。
