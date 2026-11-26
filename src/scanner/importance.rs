@@ -167,7 +167,7 @@ impl ImportanceScorer for RuleBasedImportanceScorer {
                 score += 0.20;
                 reasons.push("核心源码工程脚本 (+0.20)");
             }
-            "md" | "org" | "txt" | "pdf" | "html" | "rst" => {
+            "md" | "org" | "txt" | "pdf" | "html" | "rst" | "docx" | "pptx" | "xlsx" => {
                 score += 0.15;
                 reasons.push("知识文档资料 (+0.15)");
             }
@@ -175,7 +175,10 @@ impl ImportanceScorer for RuleBasedImportanceScorer {
                 score += 0.10;
                 reasons.push("关键系统/工程配置 (+0.10)");
             }
-            "csv" | "jsonl" | "parquet" | "svg" | "png" => {
+            "csv" | "tsv" | "jsonl" | "ndjson" | "parquet" | "db" | "sqlite" | "sqlite3"
+            | "duckdb" | "svg" | "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "wav"
+            | "mp3" | "ogg" | "flac" | "m4a" | "aac" | "mp4" | "webm" | "mov" | "mkv"
+            | "avi" => {
                 score += 0.08;
                 reasons.push("结构化数据/媒体资产 (+0.08)");
             }

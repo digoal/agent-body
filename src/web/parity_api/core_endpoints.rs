@@ -117,17 +117,35 @@ pub fn handle_assets_search(req: &HttpRequest, storage: &dyn StorageProvider) ->
         .clamp(1, 200);
     let detail_param = query_str(req, "detail", "standard");
     let level = crate::scanner::DetailLevel::from_str_opt(Some(&detail_param));
-
-    let res = if q.trim().is_empty() {
-        storage.list_assets(limit)
-    } else {
-        storage.search_assets_fts(q.trim(), limit)
+    let opt_param = |key: &str| -> Option<String> {
+        let v = query_str(req, key, "");
+        if v.trim().is_empty() { None } else { Some(v) }
     };
-    match res {
-        Ok(list) => {
-            let projected: Vec<serde_json::Value> = list
+    let hybrid_raw = query_str(req, "hybrid", "false");
+    let hybrid = matches!(hybrid_raw.trim().to_ascii_lowercase().as_str(), "true" | "1" | "yes");
+
+    let mut opts = crate::scanner::AssetSearchOptions::new(q.trim(), limit);
+    opts.modality = opt_param("modality");
+    opts.domain = opt_param("domain");
+    opts.kv_key = opt_param("kv_key");
+    opts.kv_value = opt_param("kv_value");
+    opts.hybrid = hybrid;
+
+    match crate::scanner::AssetSearchEngine::search(storage, &opts) {
+        Ok(hits) => {
+            let projected: Vec<serde_json::Value> = hits
                 .iter()
-                .map(|a| crate::scanner::project_asset_view(a, level))
+                .map(|h| {
+                    let mut view = crate::scanner::project_asset_view(&h.asset, level);
+                    if let Some(obj) = view.as_object_mut() {
+                        obj.insert("search_score".to_string(), serde_json::json!(h.score));
+                        obj.insert(
+                            "matched_channels".to_string(),
+                            serde_json::json!(h.matched_channels),
+                        );
+                    }
+                    view
+                })
                 .collect();
             let summary_txt = serde_json::to_string(&projected).unwrap_or_default();
             crate::benchmark::ledger::EffectivenessLedger::record_channel_call(

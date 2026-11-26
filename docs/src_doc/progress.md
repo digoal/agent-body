@@ -29,11 +29,12 @@
 | **Phase 56** | 架构治理 — 拆 God File、压吞错、补集成测试与升级门禁 | `>1500L` 生产文件 `7→0` (`assets`/`parity_api`/`perf_awr`/`cli_handlers`/`sqlite|pg|duckdb_provider`)；`let _ =` 降为 `43/50`（核心自治模块 `0`）+ `RunningFlagGuard`；新增 5 组跨模块集成测试；五重确定性门禁升级 | `#40` | [roadmap-phase56.md](roadmap-phase56.md) | ✅ **已完成** |
 | **Phase 57** | **全物料大一统与 `v1.0.0 GA` 正式发版** | 损毁规格修复、3 SKILL + 10 卷手册 + 架构文档刷新、历史文档归档、9/9 演说对齐与公众长文重写、`Cargo.toml` 升 `1.0.0` + `v1.0.0.md` 发布验收 | `#41` | [roadmap-phase57.md](roadmap-phase57.md) | ✅ **已完成** |
 | **Phase 58** | **三态运行模式与真实 A/B 证伪 + MCP Profile 减税** | `[runtime]` 三态模式 (`body_only`/`bypass`/`shadow_ab`)、`ShadowAbEngine` 真实对照与帮倒忙率诊断、MCP `core` 10 工具档位省 ~78% Schema 税、原生 `hooks bridge`、Web CORS 收敛与 `HybridSearch` 单次查库 | `#43` | [roadmap-phase58.md](roadmap-phase58.md) | ✅ **已完成** |
+| **Phase 59** | **多模态对象理解深化与资产 RRF+KV 混合检索** | `multimodal.rs` 三层级多模态 L1/L2 提取、`vision_enabled` 可选图像视觉理解、解除 `3000/5000` 后台截断、`AssetSearchEngine` FTS5+Vector RRF+`modality/domain/kv` 1:1:1 对齐 CLI/MCP/Web | `#42` | [roadmap-phase59.md](roadmap-phase59.md) | ✅ **已完成** |
 
 ---
 
 ## 三、断点恢复指引
 
-1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与最近活跃路线图 [roadmap-phase58.md](roadmap-phase58.md)；
+1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与最近活跃路线图 [roadmap-phase59.md](roadmap-phase59.md)；
 2. 严禁全仓扫描 `docs/src_doc/archive/` 内已冻结的历史路线图；
 3. 每次代码/文档改动收口前执行 `make quality-gate && make test && make verify-decks` 与 `make sync-mirror` 校验零漂移。

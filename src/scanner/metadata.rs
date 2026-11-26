@@ -139,10 +139,16 @@ pub fn format_asset_line(asset: &AssetRecord, level: DetailLevel) -> String {
                         .join(", ")
                 })
                 .unwrap_or_default();
+            let modality_spec = kv
+                .map(crate::scanner::multimodal::format_modality_spec)
+                .unwrap_or_default();
             let mut line = format!(
                 "  - [{}|{}] {}\n    用途: {}",
                 asset.asset_type, domain, asset.path, purpose
             );
+            if !modality_spec.is_empty() {
+                line.push_str(&format!(" | 多模态: [{}]", modality_spec));
+            }
             if !caps.is_empty() {
                 line.push_str(&format!(" | 能力: [{}]", caps));
             }
@@ -686,6 +692,10 @@ impl HeuristicMetadataExtractor {
             kv.insert("last_modified_at".to_string(), json!(mtime));
         }
         kv.insert("domain".to_string(), json!(domain));
+        kv.insert(
+            "modality".to_string(),
+            json!(crate::scanner::multimodal::infer_modality(asset_type, &ext)),
+        );
         kv.insert("content_hash".to_string(), json!(content_hash));
         kv.insert("annotation_status".to_string(), json!("heuristic_only"));
         kv.insert("annotation_model".to_string(), json!("heuristic-v1"));
@@ -698,10 +708,52 @@ impl HeuristicMetadataExtractor {
         let mut extra_tags = Vec::new();
         let (raw_purpose, entry_point, usage_hint) = match asset_type {
             "script" => Self::extract_script(&snippet, &ext, &file_name, loc, &mut kv, &mut extra_tags),
-            "document" => Self::extract_document(path, &snippet, &file_name, &mut kv, &mut extra_tags),
+            "document" => {
+                if ext == "pdf" {
+                    crate::scanner::multimodal::extract_pdf_metadata(
+                        path,
+                        &file_name,
+                        actual_size,
+                        &mut kv,
+                        &mut extra_tags,
+                    )
+                } else if matches!(ext.as_str(), "docx" | "pptx" | "xlsx") {
+                    crate::scanner::multimodal::extract_office_metadata(
+                        path,
+                        &ext,
+                        &file_name,
+                        actual_size,
+                        &mut kv,
+                        &mut extra_tags,
+                    )
+                } else {
+                    Self::extract_document(path, &snippet, &file_name, &mut kv, &mut extra_tags)
+                }
+            }
             "config" => Self::extract_config(&snippet, &ext, &file_name, &mut kv, &mut extra_tags),
-            "dataset" => Self::extract_dataset(&snippet, &ext, &file_name, actual_size, &mut kv, &mut extra_tags),
-            "media" => Self::extract_media(path, &snippet, &ext, &file_name, actual_size, &mut kv, &mut extra_tags),
+            "dataset" => {
+                if matches!(ext.as_str(), "sqlite" | "sqlite3" | "db" | "parquet" | "duckdb") {
+                    crate::scanner::multimodal::extract_binary_dataset_metadata(
+                        path,
+                        &ext,
+                        &file_name,
+                        actual_size,
+                        &mut kv,
+                        &mut extra_tags,
+                    )
+                } else {
+                    Self::extract_dataset(&snippet, &ext, &file_name, actual_size, &mut kv, &mut extra_tags)
+                }
+            }
+            "media" => crate::scanner::multimodal::extract_media_metadata(
+                path,
+                &snippet,
+                &ext,
+                &file_name,
+                actual_size,
+                &mut kv,
+                &mut extra_tags,
+            ),
             _ => Self::extract_other(&snippet, &ext, &file_name, loc, actual_size, &mut kv),
         };
 
@@ -1037,42 +1089,6 @@ impl HeuristicMetadataExtractor {
         (purpose, file_name.to_string(), Some(format!("数据检索/DuckDB分析: {}", file_name)))
     }
 
-    fn extract_media(
-        _path: &Path,
-        snippet: &str,
-        ext: &str,
-        file_name: &str,
-        size_bytes: Option<i64>,
-        kv: &mut Map<String, Value>,
-        extra_tags: &mut Vec<String>,
-    ) -> (String, String, Option<String>) {
-        let fmt = if ext.is_empty() { "media" } else { ext };
-        let mut dimensions: Option<String> = None;
-
-        if fmt == "svg" {
-            if let Some(idx) = snippet.find("viewBox=\"") {
-                let rest = &snippet[idx + 9..];
-                if let Some(end) = rest.find('"') {
-                    dimensions = Some(rest[..end].to_string());
-                }
-            }
-        }
-
-        let purpose = match dimensions {
-            Some(ref d) => format!("{} 矢量图形 ({}, viewBox: {})", fmt.to_uppercase(), file_name, d),
-            None => format!("{} 媒体资源 ({}, {} bytes)", fmt.to_uppercase(), file_name, size_bytes.unwrap_or(0)),
-        };
-
-        kv.insert("media_format".to_string(), json!(fmt));
-        if let Some(ref d) = dimensions {
-            kv.insert("viewbox".to_string(), json!(d));
-        }
-        kv.insert("capabilities".to_string(), json!(vec![format!("{} 媒体资产", fmt)]));
-        extra_tags.push(fmt.to_string());
-
-        (purpose, file_name.to_string(), None)
-    }
-
     fn extract_other(
         snippet: &str,
         ext: &str,
@@ -1269,7 +1285,7 @@ fn extract_symbol_name(line: &str, lang: &str) -> Option<String> {
     }
 }
 
-fn truncate_chars(s: &str, max_chars: usize) -> String {
+pub(crate) fn truncate_chars(s: &str, max_chars: usize) -> String {
     if s.chars().count() <= max_chars {
         s.to_string()
     } else {

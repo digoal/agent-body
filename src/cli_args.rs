@@ -968,9 +968,9 @@ pub(crate) enum AssetCommands {
         enrich_limit: usize,
     },
 
-    #[command(about = "全文与语义搜索资产")]
+    #[command(about = "全文与语义搜索资产（支持多模态、领域与 KV 过滤及 FTS+向量混合 RRF 检索）")]
     Search {
-        #[arg(help = "搜索关键词")]
+        #[arg(help = "搜索关键词（传空字符串时可纯按过滤器检索）")]
         query: String,
 
         #[arg(short, long, default_value_t = 10)]
@@ -978,6 +978,21 @@ pub(crate) enum AssetCommands {
 
         #[arg(long, default_value = "standard", help = "披露粒度: micro | standard | full")]
         detail: String,
+
+        #[arg(long, help = "按多模态类型过滤: image | audio | video | pdf | office | dataset | code | document | config")]
+        modality: Option<String>,
+
+        #[arg(long, help = "按业务领域过滤 (如 web_dashboard, storage_engine)")]
+        domain: Option<String>,
+
+        #[arg(long, help = "要求 desc_kv 中存在指定键 (如 table_names, columns, dimensions)")]
+        kv_key: Option<String>,
+
+        #[arg(long, help = "要求 desc_kv（或 --kv-key 对应值）匹配子串")]
+        kv_value: Option<String>,
+
+        #[arg(long, help = "禁用 Ollama 向量 RRF 混合检索，仅使用确定性 FTS5 与结构化过滤")]
+        no_hybrid: bool,
     },
 
     #[command(about = "手动向大管家登记一个文件或目录资产")]

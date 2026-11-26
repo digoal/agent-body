@@ -197,7 +197,10 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 41. **`[P1 · Phase 57]` 全文档/手册/SKILL/演说矩阵大一统、历史归档与 `v1.0.0 GA` 正式发布** `✅ 已全量落地 (Phase 57 · v1.0.0 GA)`:
     - 全量更新 `docs/manual/01~10`、`docs/arch/01~03`、`docs/design_doc/07,17,18`、`INSTALL.md`、`README.md`、`skills/agent-body-*`、`docs/markdown/`（含 5 张更新 SVG）与 `presentation/01~06`+双旗舰路演；去重重定向旧手册并归档 55 份历史 Phase 日志至 `docs/src_doc/archive/`；升级 `Cargo.toml` 至 `1.0.0` 并发布 [docs/releases/v1.0.0.md](docs/releases/v1.0.0.md)。
 
-42. 多模态对象的理解和元数据KV对的增强。
+42. **多模态对象的理解和元数据 KV 对的增强 (`v1.2 · Phase 59`)** `✅ Phase 59 已全量落地`:
+    - 落地三层级多模态理解 (`src/scanner/multimodal.rs`)：统一注入 `desc_kv["modality"]`，支持图片（PNG/JPEG/WebP/GIF/BMP 宽高色深 + SVG 文本关键词）、音视频（WAV/MP4/ffprobe）、PDF（页数/标题/文本摘录）、Office（docx/pptx/xlsx 幻灯片/工作表数与核心属性）及二进制数据库/列存（SQLite/Parquet/DuckDB 真实库表列 Schema）；
+    - 新增 `[annotation]` 可选 `vision_enabled`/`vision_model`/`vision_max_image_bytes`，解除 `OllamaAnnotator` `3000/5000` 截断并打通多模态向量化文本拼接；
+    - 新建 `AssetSearchEngine` (`src/scanner/asset_search.rs`) 实现 FTS5 + `assets.embedding` 余弦 RRF 混合检索及 `modality`/`domain`/`kv_key`/`kv_value` 过滤，1:1:1 透出至 MCP `body_asset_search`、CLI `asset search` 与 Web `/api/v1/assets/search`（详见 [roadmap-phase59.md](docs/src_doc/roadmap-phase59.md)）。
 
 43. **三态运行模式（`bypass` / `shadow_ab` / `body_only`）与真实世界 A/B 数据收集分析** `✅ Phase 58 已全量落地`:
     - 原始需求：要有一个配置项目，3种配置模式，作用是：旁路 agent-body，该实时搜文件还是实时搜索文件就好像 agent-body 不存在；同时使用实时搜索和 agent-body，这个模式用于真实使用过程中的A/B测试的数据收集存储和未来分析，看看 agent-body 到底效果怎么样，是不是在帮倒忙？最后一种是默认的仅使用 agent-body。

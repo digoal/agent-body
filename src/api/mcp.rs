@@ -705,4 +705,74 @@ mod tests {
         assert_eq!(ab_v["result"]["isError"], false);
         assert!(ab_v["result"]["content"][0]["text"].as_str().expect("txt").contains("shadow_comparisons"));
     }
+
+    #[test]
+    fn test_mcp_body_asset_search_multimodal_and_kv_filters() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        storage
+            .upsert_asset(&crate::storage::AssetRecord {
+                id: uuid::Uuid::new_v4().to_string(),
+                path: "/tmp/mm_mcp/orders.db".to_string(),
+                asset_type: "dataset".to_string(),
+                owner: "user:tester".to_string(),
+                security_level: "internal".to_string(),
+                scan_tier: "deep".to_string(),
+                description: Some("[storage_engine] SQLite database".to_string()),
+                desc_kv: serde_json::json!({
+                    "modality": "dataset",
+                    "domain": "storage_engine",
+                    "table_names": ["orders", "line_items"]
+                }),
+                usage: None,
+                size_bytes: Some(4096),
+                file_count: None,
+                tags: vec!["dataset".to_string(), "db".to_string()],
+                status: "active".to_string(),
+            })
+            .expect("upsert db");
+        storage
+            .upsert_asset(&crate::storage::AssetRecord {
+                id: uuid::Uuid::new_v4().to_string(),
+                path: "/tmp/mm_mcp/arch.png".to_string(),
+                asset_type: "media".to_string(),
+                owner: "user:tester".to_string(),
+                security_level: "internal".to_string(),
+                scan_tier: "deep".to_string(),
+                description: Some("[web_dashboard] PNG architecture diagram".to_string()),
+                desc_kv: serde_json::json!({
+                    "modality": "image",
+                    "domain": "web_dashboard",
+                    "dimensions": "1280x720"
+                }),
+                usage: None,
+                size_bytes: Some(2048),
+                file_count: None,
+                tags: vec!["media".to_string(), "image".to_string()],
+                status: "active".to_string(),
+            })
+            .expect("upsert png");
+
+        let server = McpServer::new(storage);
+        let req = r#"{
+            "jsonrpc": "2.0",
+            "id": 501,
+            "method": "tools/call",
+            "params": {
+                "name": "body_asset_search",
+                "arguments": {
+                    "query": "",
+                    "modality": "dataset",
+                    "kv_key": "table_names",
+                    "kv_value": "orders",
+                    "detail_level": "standard"
+                }
+            }
+        }"#;
+        let resp = server.handle_message(req).expect("mcp search");
+        let v: Value = serde_json::from_str(&resp).expect("parse resp");
+        assert_eq!(v["result"]["isError"], false);
+        let txt = v["result"]["content"][0]["text"].as_str().expect("txt");
+        assert!(txt.contains("orders.db"));
+        assert!(!txt.contains("arch.png"));
+    }
 }

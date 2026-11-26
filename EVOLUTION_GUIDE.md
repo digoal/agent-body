@@ -10,7 +10,7 @@
 
 1. **只读 Tier-0 文档（仅 2 份）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构地图 + 变更触点矩阵）；
-   - 当前活跃路线图 [docs/src_doc/roadmap-phase58.md](docs/src_doc/roadmap-phase58.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase57.md](docs/src_doc/roadmap-phase57.md)、[docs/src_doc/roadmap-phase56.md](docs/src_doc/roadmap-phase56.md)、[docs/src_doc/roadmap-phase55.md](docs/src_doc/roadmap-phase55.md)、[docs/src_doc/roadmap-phase54.md](docs/src_doc/roadmap-phase54.md)、[docs/src_doc/roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)、[docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)、[docs/src_doc/roadmap-phase51.md](docs/src_doc/archive/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/archive/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/archive/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/archive/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/archive/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/archive/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/archive/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/archive/roadmap-phase42.md)）。
+   - 当前活跃路线图 [docs/src_doc/roadmap-phase59.md](docs/src_doc/roadmap-phase59.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase58.md](docs/src_doc/roadmap-phase58.md)、[docs/src_doc/roadmap-phase57.md](docs/src_doc/roadmap-phase57.md)、[docs/src_doc/roadmap-phase56.md](docs/src_doc/roadmap-phase56.md)、[docs/src_doc/roadmap-phase55.md](docs/src_doc/roadmap-phase55.md)、[docs/src_doc/roadmap-phase54.md](docs/src_doc/roadmap-phase54.md)、[docs/src_doc/roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)、[docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)、[docs/src_doc/roadmap-phase51.md](docs/src_doc/archive/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/archive/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/archive/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/archive/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/archive/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/archive/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/archive/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/archive/roadmap-phase42.md)）。
 2. **运行 O(1) 实时架构快照（`<100ms`，禁止手动数模块/工具数）**：
    ```bash
    make evolution-check
@@ -71,7 +71,7 @@
 | `src/placement/` | `PlacementEngineV2`, `ConventionChecker`, `PlacementLearner` | 8 大目录放置建议、工程安全规约与搬移纠偏自演化 |
 | `src/platform/` | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` | 跨平台系统探针抽象与纯函数解析 |
 | `src/preflight/` | `PreflightChecker`, `PreflightReport` | 依赖预检、磁盘水位预警与 `0600/0700` 安全基线检查 |
-| `src/scanner/` | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `OllamaAnnotator` | 白黑灰分级扫描、全链路脱敏、抗投毒清洗与三层元数据标注 |
+| `src/scanner/` | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `OllamaAnnotator`, `AssetSearchEngine` | 白黑灰分级扫描、多模态理解与脱敏、RRF+KV 资产混合检索及三层语义标注 |
 | `src/session/` | `SessionManager`, `SessionLifecycleManager` | 会话绑定、完工结清与临时垃圾回收 |
 | `src/storage/` | `Storage`, `StorageProvider`, `Sqlite/Pg/DuckDbStorageProvider`, `DuckDbAnalyticsEngine` | 88 方法 SPI 门面、三后端分域实现、跨库热迁移与 Parquet/CSV 导出 |
 | `src/tui/` | `TuiDashboard` | 终端单屏实时看板 |

@@ -157,6 +157,11 @@ impl McpToolRegistry {
                 let detail = crate::scanner::DetailLevel::from_str_opt(
                     args.get("detail_level").and_then(|v| v.as_str()),
                 );
+                let mut search_opts = crate::scanner::AssetSearchOptions::new(query, limit);
+                search_opts.modality = args.get("modality").and_then(|v| v.as_str()).map(str::to_string);
+                search_opts.domain = args.get("domain").and_then(|v| v.as_str()).map(str::to_string);
+                search_opts.kv_key = args.get("kv_key").and_then(|v| v.as_str()).map(str::to_string);
+                search_opts.kv_value = args.get("kv_value").and_then(|v| v.as_str()).map(str::to_string);
                 let cfg = crate::config::Config::load_effective_or_default();
                 match cfg.effective_runtime_mode() {
                     crate::config::RuntimeMode::Bypass => {
@@ -203,13 +208,11 @@ impl McpToolRegistry {
                         Ok(out)
                     }
                     crate::config::RuntimeMode::BodyOnly => {
-                        let results = self.storage.search_assets_fts(query, limit)?;
-                        let mut out = format!("资产搜索匹配结果 (共 {} 条, detail={:?}):\n", results.len(), detail);
-                        for a in results {
-                            out.push_str(&crate::scanner::format_asset_line(&a, detail));
-                            out.push('\n');
-                        }
-                        Ok(out)
+                        let hits = crate::scanner::AssetSearchEngine::search(
+                            self.storage.provider().as_ref(),
+                            &search_opts,
+                        )?;
+                        Ok(crate::scanner::format_search_results(&hits, detail))
                     }
                 }
             }

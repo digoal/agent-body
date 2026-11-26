@@ -158,6 +158,23 @@ pub fn all_tool_schemas() -> Vec<Value> {
                             "enum": ["micro", "standard", "full"],
                             "default": "standard",
                             "description": "元数据披露粒度: micro(~25 tok) | standard(~85 tok, 剥离管线噪音) | full(~180 tok, 含完整desc_kv)"
+                        },
+                        "modality": {
+                            "type": "string",
+                            "enum": ["image", "audio", "video", "pdf", "office", "dataset", "code", "document", "config", "media", "other"],
+                            "description": "按多模态类别过滤 (image/audio/video/pdf/office/dataset/code 等)"
+                        },
+                        "domain": {
+                            "type": "string",
+                            "description": "按业务领域过滤 (如 web_dashboard, storage_engine, asset_scanner)"
+                        },
+                        "kv_key": {
+                            "type": "string",
+                            "description": "要求 desc_kv 中存在指定结构化键 (如 table_names, columns, dimensions, page_count)"
+                        },
+                        "kv_value": {
+                            "type": "string",
+                            "description": "要求 desc_kv（或 kv_key 对应值）包含指定关键词子串"
                         }
                     },
                     "required": ["query"]

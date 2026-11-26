@@ -2,6 +2,8 @@ pub mod matcher;
 pub mod state_machine;
 pub mod importance;
 pub mod metadata;
+pub mod multimodal;
+pub mod asset_search;
 pub mod ollama_annotator;
 
 pub use state_machine::ScanStateMachine;
@@ -10,6 +12,8 @@ pub use metadata::{
     DetailLevel, ExtractedMetadata, HeuristicMetadataExtractor, SecretRedactor,
     format_asset_line, merge_with_existing_asset, project_asset_view,
 };
+pub use multimodal::infer_modality;
+pub use asset_search::{AssetSearchEngine, AssetSearchHit, AssetSearchOptions, format_search_results};
 pub use ollama_annotator::{EnrichReport, EnrichedSample, OllamaAnnotator};
 
 use std::path::Path;
@@ -366,8 +370,12 @@ pub(crate) fn infer_file_attributes(path: &Path) -> (String, Vec<String>) {
             tags.push(ext.clone());
             "script".to_string()
         }
-        "md" | "markdown" | "txt" | "rst" | "adoc" | "org" | "html" | "htm" | "pdf" => {
+        "md" | "markdown" | "txt" | "rst" | "adoc" | "org" | "html" | "htm" | "pdf" | "docx"
+        | "pptx" | "xlsx" => {
             tags.push("document".to_string());
+            if matches!(ext.as_str(), "docx" | "pptx" | "xlsx") {
+                tags.push("office".to_string());
+            }
             if !ext.is_empty() && ext != "md" && ext != "txt" {
                 tags.push(ext.clone());
             }
@@ -386,9 +394,13 @@ pub(crate) fn infer_file_attributes(path: &Path) -> (String, Vec<String>) {
             tags.push(ext.clone());
             "dataset".to_string()
         }
-        "svg" | "png" | "jpg" | "jpeg" | "webp" | "gif" | "ico" | "mp3" | "wav" | "ogg"
-        | "mp4" | "webm" => {
+        "svg" | "png" | "jpg" | "jpeg" | "webp" | "gif" | "ico" | "bmp" | "mp3" | "wav" | "ogg"
+        | "flac" | "m4a" | "aac" | "mp4" | "webm" | "mov" | "mkv" | "avi" => {
             tags.push("media".to_string());
+            let modality = multimodal::infer_modality("media", &ext);
+            if modality != "media" {
+                tags.push(modality.to_string());
+            }
             tags.push(ext.clone());
             "media".to_string()
         }

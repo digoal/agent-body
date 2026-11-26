@@ -171,6 +171,18 @@ pub struct AnnotationConfig {
     /// 守护进程每次巡检自动精炼的待标注资产批量上限
     #[serde(default = "default_auto_enrich_batch_size")]
     pub auto_enrich_batch_size: usize,
+
+    /// 是否对图片资产启用 Ollama Vision 视觉模型增强理解 (ISSUE #42)
+    #[serde(default = "default_annotation_vision_enabled")]
+    pub vision_enabled: bool,
+
+    /// 本地视觉理解模型名称 (推荐 qwen2.5vl:3b)
+    #[serde(default = "default_annotation_vision_model")]
+    pub vision_model: String,
+
+    /// 送入本地视觉模型的单张图片最大字节数（默认 4MB，防止大图 OOM/超时）
+    #[serde(default = "default_annotation_vision_max_image_bytes")]
+    pub vision_max_image_bytes: usize,
 }
 
 /// 三态运行模式 (ISSUE #43): 默认仅用本体 / 旁路直通 / 真实使用 A/B 对照
@@ -308,6 +320,18 @@ fn default_auto_enrich_batch_size() -> usize {
     10
 }
 
+fn default_annotation_vision_enabled() -> bool {
+    false
+}
+
+fn default_annotation_vision_model() -> String {
+    "qwen2.5vl:3b".to_string()
+}
+
+fn default_annotation_vision_max_image_bytes() -> usize {
+    4 * 1024 * 1024
+}
+
 impl Default for AnnotationConfig {
     fn default() -> Self {
         Self {
@@ -317,6 +341,9 @@ impl Default for AnnotationConfig {
             timeout_ms: default_annotation_timeout_ms(),
             max_snippet_chars: default_annotation_max_snippet_chars(),
             auto_enrich_batch_size: default_auto_enrich_batch_size(),
+            vision_enabled: default_annotation_vision_enabled(),
+            vision_model: default_annotation_vision_model(),
+            vision_max_image_bytes: default_annotation_vision_max_image_bytes(),
         }
     }
 }
@@ -1035,6 +1062,19 @@ impl Config {
                 self.annotation.max_snippet_chars
             );
         }
+        if self.annotation.enabled && self.annotation.vision_enabled {
+            if self.annotation.vision_model.trim().is_empty() {
+                anyhow::bail!("启用 annotation.vision_enabled 时，annotation.vision_model 不能为空");
+            }
+            if self.annotation.vision_max_image_bytes < 1024
+                || self.annotation.vision_max_image_bytes > 50 * 1024 * 1024
+            {
+                anyhow::bail!(
+                    "annotation.vision_max_image_bytes ({}) 必须位于 1024..=52428800 (50MB) 之间",
+                    self.annotation.vision_max_image_bytes
+                );
+            }
+        }
         if RuntimeMode::parse_str(&self.runtime.mode).is_none() {
             anyhow::bail!(
                 "未知 runtime.mode: '{}'，仅支持 'body_only' / 'bypass' / 'shadow_ab'",
@@ -1184,6 +1224,12 @@ default_owner = "user:digoal"
         cfg.annotation.max_snippet_chars = 50;
         assert!(cfg.validate().is_err());
         cfg.annotation.max_snippet_chars = 1200;
+        assert!(cfg.validate().is_ok());
+
+        cfg.annotation.vision_enabled = true;
+        cfg.annotation.vision_max_image_bytes = 512;
+        assert!(cfg.validate().is_err());
+        cfg.annotation.vision_max_image_bytes = 4 * 1024 * 1024;
         assert!(cfg.validate().is_ok());
     }
 

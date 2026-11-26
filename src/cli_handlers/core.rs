@@ -182,15 +182,29 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                         println!("  - Ollama Embedding 向量化完成: {} 个核心资产已生成向量", emb_cnt);
                     }
                 }
-                AssetCommands::Search { query, limit, detail } => {
+                AssetCommands::Search {
+                    query,
+                    limit,
+                    detail,
+                    modality,
+                    domain,
+                    kv_key,
+                    kv_value,
+                    no_hybrid,
+                } => {
                     let t0 = std::time::Instant::now();
                     let level = agent_body::scanner::DetailLevel::from_str_opt(Some(&detail));
-                    let results = storage.search_assets_fts(&query, limit)?;
-                    let mut out = format!("资产搜索匹配结果 (共 {} 条, detail={:?}):\n", results.len(), level);
-                    for a in results {
-                        out.push_str(&agent_body::scanner::format_asset_line(&a, level));
-                        out.push('\n');
-                    }
+                    let mut opts = agent_body::scanner::AssetSearchOptions::new(&query, limit);
+                    opts.modality = modality;
+                    opts.domain = domain;
+                    opts.kv_key = kv_key;
+                    opts.kv_value = kv_value;
+                    opts.hybrid = !no_hybrid;
+                    let hits = agent_body::scanner::AssetSearchEngine::search(
+                        storage.provider().as_ref(),
+                        &opts,
+                    )?;
+                    let out = agent_body::scanner::format_search_results(&hits, level);
                     print!("{}", out);
                     agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         storage.provider().as_ref(),

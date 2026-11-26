@@ -83,7 +83,7 @@ impl OllamaAnnotator {
             return Ok(report);
         }
 
-        let all_assets = self.storage.list_assets(3000)?;
+        let all_assets = self.storage.list_assets(50_000)?;
         let mut candidates: Vec<AssetRecord> = all_assets
             .into_iter()
             .filter(|a| {
@@ -103,7 +103,10 @@ impl OllamaAnnotator {
                     .get("annotation_status")
                     .and_then(|v| v.as_str())
                     .unwrap_or("pending");
-                !matches!(status, "ollama_enriched" | "manual" | "skipped_sensitive")
+                !matches!(
+                    status,
+                    "ollama_enriched" | "ollama_vision_enriched" | "manual" | "skipped_sensitive"
+                )
             })
             .collect();
 
@@ -160,7 +163,7 @@ impl OllamaAnnotator {
             return Ok(0);
         }
 
-        let all_assets = self.storage.list_assets(5000)?;
+        let all_assets = self.storage.list_assets(50_000)?;
         let mut candidates: Vec<AssetRecord> = all_assets
             .into_iter()
             .filter(|a| {
@@ -213,10 +216,23 @@ impl OllamaAnnotator {
                         .join(", ")
                 })
                 .unwrap_or_default();
-            let text = format!(
-                "[{}|{}] {} | {} | {}",
-                asset.asset_type, domain, asset.path, purpose, caps
-            );
+            let modality = asset
+                .desc_kv
+                .get("modality")
+                .and_then(|v| v.as_str())
+                .unwrap_or(&asset.asset_type);
+            let mm_context = build_multimodal_kv_summary(&asset.desc_kv);
+            let text = if mm_context.is_empty() {
+                format!(
+                    "[{}|{}|{}] {} | {} | {}",
+                    asset.asset_type, modality, domain, asset.path, purpose, caps
+                )
+            } else {
+                format!(
+                    "[{}|{}|{}] {} | {} | {} | {}",
+                    asset.asset_type, modality, domain, asset.path, purpose, caps, mm_context
+                )
+            };
             if let Some(vec) = client.embed_text(&text) {
                 self.storage.update_asset_embedding(&asset.path, &vec)?;
                 if let Some(obj) = asset.desc_kv.as_object_mut() {
@@ -233,7 +249,7 @@ impl OllamaAnnotator {
         Ok(updated)
     }
 
-    /// 对单个资产调用本地 Ollama 小模型生成结构化语义 KV 并回写
+    /// 对单个资产调用本地 Ollama 小模型（含可选多模态与 Vision 图片增强）生成结构化语义 KV 并回写
     pub fn enrich_single_asset(&self, asset: &AssetRecord) -> Result<Option<EnrichedSample>> {
         let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::NetOllamaEnrich);
         let path = Path::new(&asset.path);
@@ -241,18 +257,124 @@ impl OllamaAnnotator {
             return Ok(None);
         }
 
-        let raw_head = match read_head_utf8(path, self.config.max_snippet_chars * 2) {
-            Some(s) if !s.trim().is_empty() => s,
-            _ => return Ok(None),
-        };
-        let snippet: String = raw_head.chars().take(self.config.max_snippet_chars).collect();
-        let redacted = SecretRedactor::redact(&snippet);
-
+        let modality = asset
+            .desc_kv
+            .get("modality")
+            .and_then(|v| v.as_str())
+            .unwrap_or(&asset.asset_type);
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
         let domain_hint = asset
             .desc_kv
             .get("domain")
             .and_then(|v| v.as_str())
             .unwrap_or("workspace_general");
+
+        // 路线 A: 图片资产 + 开启 Ollama Vision -> Base64 视觉理解增强
+        let is_raster_image = modality == "image"
+            && matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp");
+        if is_raster_image && self.config.vision_enabled {
+            let meta_len = std::fs::metadata(path).map(|m| m.len() as usize).unwrap_or(0);
+            if meta_len > 0 && meta_len <= self.config.vision_max_image_bytes {
+                if let Ok(bytes) = std::fs::read(path) {
+                    let img_b64 = crate::scanner::multimodal::base64_encode(&bytes);
+                    let dims = asset
+                        .desc_kv
+                        .get("dimensions")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown");
+                    let vprompt = format!(
+                        "[图片资产信息]\npath: {}\ndimensions: {}\ndomain_hint: {}\n\n[任务]\n请用简短中文概括图片核心内容（visual_summary <=40字）、图中可见文字或实体关键词（ocr_keywords 最多5项）、purpose、domain、capabilities：",
+                        asset.path, dims, domain_hint
+                    );
+                    let generated = self.call_ollama_vision_json(&vprompt, &img_b64)?;
+                    let visual_summary = generated
+                        .get("visual_summary")
+                        .or_else(|| generated.get("purpose"))
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .ok_or_else(|| anyhow!("Ollama Vision 返回的 visual_summary/purpose 为空"))?;
+                    let purpose = generated
+                        .get("purpose")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or_else(|| visual_summary.clone());
+                    let domain = generated
+                        .get("domain")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or_else(|| domain_hint.to_string());
+                    let ocr_keywords: Vec<String> = generated
+                        .get("ocr_keywords")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|x| x.as_str().map(|s| s.trim().to_string()))
+                                .filter(|s| !s.is_empty())
+                                .take(5)
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    let capabilities: Vec<String> = generated
+                        .get("capabilities")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|x| x.as_str().map(|s| s.trim().to_string()))
+                                .filter(|s| !s.is_empty())
+                                .take(4)
+                                .collect()
+                        })
+                        .unwrap_or_default();
+
+                    let mut kv_map: Map<String, Value> = asset.desc_kv.as_object().cloned().unwrap_or_default();
+                    kv_map.insert("visual_summary".to_string(), json!(visual_summary));
+                    if !ocr_keywords.is_empty() {
+                        kv_map.insert("ocr_keywords".to_string(), json!(ocr_keywords));
+                    }
+                    kv_map.insert("purpose".to_string(), json!(purpose));
+                    kv_map.insert("domain".to_string(), json!(domain));
+                    if !capabilities.is_empty() {
+                        kv_map.insert("capabilities".to_string(), json!(capabilities));
+                    }
+                    kv_map.insert("annotation_status".to_string(), json!("ollama_vision_enriched"));
+                    kv_map.insert("annotation_model".to_string(), json!(self.config.vision_model));
+                    kv_map.insert("annotated_at".to_string(), json!(Local::now().to_rfc3339()));
+
+                    let mut updated = asset.clone();
+                    updated.description = Some(format!("[{}] {}", domain, purpose));
+                    updated.desc_kv = Value::Object(kv_map);
+                    self.storage.upsert_asset(&updated)?;
+
+                    return Ok(Some(EnrichedSample {
+                        path: asset.path.clone(),
+                        purpose,
+                        domain,
+                        capabilities,
+                        entry_point: "vision_image".to_string(),
+                    }));
+                }
+            }
+        }
+
+        // 路线 B: 文本文件或具备 L1 多模态结构化上下文的二进制文件
+        let raw_head = read_head_utf8(path, self.config.max_snippet_chars * 2).unwrap_or_default();
+        let is_clean_text = !raw_head.trim().is_empty() && !raw_head.contains('\u{FFFD}');
+        let mm_summary = build_multimodal_kv_summary(&asset.desc_kv);
+        let redacted = if is_clean_text {
+            let snippet: String = raw_head.chars().take(self.config.max_snippet_chars).collect();
+            SecretRedactor::redact(&snippet)
+        } else if !mm_summary.is_empty() {
+            format!("[multimodal_l1_summary modality={}] {}", modality, mm_summary)
+        } else {
+            return Ok(None);
+        };
 
         let static_anchors = asset
             .desc_kv
@@ -395,6 +517,88 @@ impl OllamaAnnotator {
         let parsed: Value = serde_json::from_str(raw_text)?;
         Ok(parsed)
     }
+
+    fn call_ollama_vision_json(&self, prompt: &str, image_base64: &str) -> Result<Value> {
+        let url = format!("{}/api/generate", self.config.ollama_url.trim_end_matches('/'));
+        let client = reqwest::blocking::Client::builder()
+            .timeout(Duration::from_millis(self.config.timeout_ms.max(20_000)))
+            .build()?;
+
+        let body = json!({
+            "model": self.config.vision_model,
+            "prompt": prompt,
+            "images": [image_base64],
+            "stream": false,
+            "options": {
+                "temperature": 0.0,
+                "num_predict": 256
+            },
+            "format": {
+                "type": "object",
+                "properties": {
+                    "visual_summary": { "type": "string" },
+                    "ocr_keywords": { "type": "array", "items": { "type": "string" } },
+                    "purpose": { "type": "string" },
+                    "domain": { "type": "string" },
+                    "capabilities": { "type": "array", "items": { "type": "string" } }
+                },
+                "required": ["visual_summary", "purpose", "domain"]
+            }
+        });
+
+        let resp = client.post(&url).json(&body).send()?;
+        if !resp.status().is_success() {
+            return Err(anyhow!("Ollama Vision HTTP 状态异常: {}", resp.status()));
+        }
+        let resp_json: Value = resp.json()?;
+        let raw_text = resp_json
+            .get("response")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow!("Ollama Vision 响应缺少 response 字段"))?;
+        let parsed: Value = serde_json::from_str(raw_text)?;
+        Ok(parsed)
+    }
+}
+
+/// 抽取 L1/L2 多模态关键 KV 为紧凑语义文本（供 L2 摘要与 Embedding 共享）
+pub fn build_multimodal_kv_summary(kv: &Value) -> String {
+    let mut parts = Vec::new();
+    let str_keys = [
+        ("visual_summary", "visual"),
+        ("dimensions", "dim"),
+        ("pdf_title", "pdf_title"),
+        ("pdf_excerpt", "pdf_excerpt"),
+        ("doc_title", "doc_title"),
+        ("codec", "codec"),
+    ];
+    for (k, label) in str_keys {
+        if let Some(s) = kv.get(k).and_then(|v| v.as_str()) {
+            if !s.trim().is_empty() {
+                parts.push(format!("{}:{}", label, s.trim()));
+            }
+        }
+    }
+    let arr_keys = [
+        ("ocr_keywords", "ocr"),
+        ("svg_text_snippets", "svg_text"),
+        ("table_names", "tables"),
+        ("columns", "cols"),
+    ];
+    for (k, label) in arr_keys {
+        if let Some(arr) = kv.get(k).and_then(|v| v.as_array()) {
+            let items: Vec<_> = arr.iter().filter_map(|x| x.as_str()).take(8).collect();
+            if !items.is_empty() {
+                parts.push(format!("{}:[{}]", label, items.join(", ")));
+            }
+        }
+    }
+    if let Some(pg) = kv.get("page_count").and_then(|v| v.as_u64()) {
+        parts.push(format!("pages:{}", pg));
+    }
+    if let Some(dur) = kv.get("duration_secs").and_then(|v| v.as_f64()) {
+        parts.push(format!("duration:{:.1}s", dur));
+    }
+    parts.join(" | ")
 }
 
 /// 构造数据导向、带 L1 静态符号锚定、防止小模型复读元指令的 Prompt
@@ -463,11 +667,54 @@ mod tests {
             timeout_ms: 800,
             max_snippet_chars: 1200,
             auto_enrich_batch_size: 5,
+            ..AnnotationConfig::default()
         };
         let annotator = OllamaAnnotator::new(storage, cfg);
         let report = annotator.enrich_pending_assets(5, None).expect("should gracefully degrade");
         assert!(!report.ollama_available);
         assert_eq!(report.enriched_count, 0);
         assert_eq!(report.total_candidates, 1);
+    }
+
+    #[test]
+    fn test_multimodal_kv_summary_and_vision_safe_fallback() {
+        let kv = json!({
+            "modality": "image",
+            "dimensions": "1280x720",
+            "visual_summary": "架构拓扑",
+            "ocr_keywords": ["SQLite", "DuckDB"],
+            "table_names": ["orders"]
+        });
+        let summary = build_multimodal_kv_summary(&kv);
+        assert!(summary.contains("dim:1280x720"));
+        assert!(summary.contains("visual:架构拓扑"));
+        assert!(summary.contains("ocr:[SQLite, DuckDB]"));
+        assert!(summary.contains("tables:[orders]"));
+
+        // 二进制 PNG 无有效 L1 KV 且 vision_enabled=false 时应安全返回 Ok(None) 不报错
+        let dir = tempfile::tempdir().expect("tempdir");
+        let png_path = dir.path().join("bin.png");
+        std::fs::write(&png_path, b"\x89PNG\r\n\x1a\n\x00\x00\x00").expect("write png");
+        let storage = Storage::open_in_memory().expect("mem");
+        let mut cfg = AnnotationConfig::default();
+        cfg.vision_enabled = false;
+        let annotator = OllamaAnnotator::new(storage, cfg);
+        let asset = AssetRecord {
+            id: uuid::Uuid::new_v4().to_string(),
+            path: png_path.to_string_lossy().to_string(),
+            asset_type: "media".to_string(),
+            owner: "user:tester".to_string(),
+            security_level: "internal".to_string(),
+            scan_tier: "deep".to_string(),
+            description: None,
+            desc_kv: json!({"modality": "image"}),
+            usage: None,
+            size_bytes: Some(11),
+            file_count: None,
+            tags: vec![],
+            status: "active".to_string(),
+        };
+        let res = annotator.enrich_single_asset(&asset).expect("no panic on binary png");
+        assert!(res.is_none());
     }
 }

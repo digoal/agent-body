@@ -399,9 +399,14 @@ impl BriefAssembler {
             lines.push(format!("- **相关仓库**: {}\n", repo_line));
             score = score.saturating_add(15);
         } else if !q_lower.is_empty() {
-            if let Ok(assets) = self.storage.search_assets_fts(query, 3) {
-                let repos: Vec<_> = assets
+            let mut opts = crate::scanner::AssetSearchOptions::new(query, 5);
+            opts.hybrid = false;
+            if let Ok(hits) =
+                crate::scanner::AssetSearchEngine::search(self.storage.provider().as_ref(), &opts)
+            {
+                let repos: Vec<_> = hits
                     .into_iter()
+                    .map(|h| h.asset)
                     .filter(|a| a.asset_type == "project" || a.asset_type == "repo")
                     .collect();
                 if !repos.is_empty() {

@@ -306,6 +306,16 @@ max_snippet_chars = 1200
 # 守护进程每次巡检自动异步精炼的资产批量上限
 # 默认: 10
 auto_enrich_batch_size = 10
+# 是否对图片资产 (png/jpg/webp 等) 启用 Ollama Vision 视觉模型增强理解 (ISSUE #42)
+# 关闭或未拉取视觉模型时，仍保留 L1 纯 Rust 图片宽高/色彩/SVG 文本提取能力
+# 默认: false
+vision_enabled = false
+# 本地视觉理解模型名称 (启用 vision_enabled 前需执行 `ollama pull <vision_model>`)
+# 默认: "qwen2.5vl:3b"
+vision_model = "qwen2.5vl:3b"
+# 送入本地视觉模型的单张图片最大字节数 (默认 4MB)
+# 默认: 4194304
+vision_max_image_bytes = 4194304
 
 # ==============================================================================
 # 12. 三态运行模式、真实世界 A/B 对照与 MCP 工具档位配置 (Phase 58 - ISSUE #43)
