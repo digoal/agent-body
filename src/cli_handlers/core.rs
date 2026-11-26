@@ -157,7 +157,7 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
 
         Commands::Asset { action } => {
             match action {
-                AssetCommands::Scan { path, enrich, enrich_limit } => {
+                AssetCommands::Scan { path, enrich, enrich_limit, mine_knowledge } => {
                     println!("正在执行分级颗粒度扫描: {:?}", path);
                     let scanner = Scanner::new(storage.clone())?;
                     let report = scanner.scan_path(&path)?;
@@ -171,7 +171,7 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                     if enrich {
                         let prefix = path.to_string_lossy().to_string();
                         println!("\n🤖 正在调用本地 Ollama 小模型进行 L2 语义标注精炼 (limit={})...", enrich_limit);
-                        let annotator = agent_body::scanner::OllamaAnnotator::with_default_config(storage);
+                        let annotator = agent_body::scanner::OllamaAnnotator::with_default_config(storage.clone());
                         let er = annotator.enrich_pending_assets(enrich_limit, Some(&prefix))?;
                         println!("  - 模型: {} | 在线: {} | 候选: {} | 成功: {} | 跳过: {} | 失败: {} | 耗时: {}ms",
                             er.model_used, er.ollama_available, er.total_candidates, er.enriched_count, er.skipped_count, er.failed_count, er.elapsed_ms);
@@ -180,6 +180,22 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                         }
                         let emb_cnt = annotator.embed_pending_assets(enrich_limit, Some(&prefix)).unwrap_or(0);
                         println!("  - Ollama Embedding 向量化完成: {} 个核心资产已生成向量", emb_cnt);
+                    }
+                    if mine_knowledge {
+                        let kg_rep = agent_body::fact::KnowledgeGraphBuilder::mine_from_storage(
+                            &storage,
+                            &cfg.knowledge_graph,
+                        )?;
+                        println!(
+                            "\n🧠 L1 Know-How 知识网络构建完成: 文档={} | 章节={} | 记忆={} | 概念={} | 层级边={} | 引用边={} | PMI边={}",
+                            kg_rep.docs_indexed,
+                            kg_rep.sections_created,
+                            kg_rep.memories_indexed,
+                            kg_rep.terms_created,
+                            kg_rep.hierarchy_edges,
+                            kg_rep.mention_edges,
+                            kg_rep.pmi_edges
+                        );
                     }
                 }
                 AssetCommands::Search {
@@ -191,6 +207,9 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                     kv_key,
                     kv_value,
                     no_hybrid,
+                    graph_hops,
+                    no_fuzzy,
+                    no_links,
                 } => {
                     let t0 = std::time::Instant::now();
                     let level = agent_body::scanner::DetailLevel::from_str_opt(Some(&detail));
@@ -200,6 +219,9 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                     opts.kv_key = kv_key;
                     opts.kv_value = kv_value;
                     opts.hybrid = !no_hybrid;
+                    opts.graph_hops = graph_hops.min(2);
+                    opts.fuzzy = !no_fuzzy;
+                    opts.include_links = !no_links;
                     let hits = agent_body::scanner::AssetSearchEngine::search(
                         storage.provider().as_ref(),
                         &opts,

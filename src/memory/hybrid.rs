@@ -93,9 +93,9 @@ impl HybridSearchEngine {
         None
     }
 
-    /// 混合检索核心方法：FTS5 + 向量余弦相似度 + RRF 融合重排
+    /// 混合检索核心方法：Omni-RRF (BM25/FTS5 + Fuzzy + 向量余弦 + Know-How 图谱扩散 + 标量调制)
     pub async fn search_hybrid(&self, query: &str, limit: usize) -> Result<Vec<HybridSearchResult>> {
-        // 1. 获取 FTS5 关键词排序列表
+        // 1. 获取 BM25 / FTS5 关键词排序列表
         let fts_results = self.storage.search_memories_fts(query, limit * 2).unwrap_or_default();
         let mut fts_ranks: HashMap<String, usize> = HashMap::new();
         for (idx, m) in fts_results.iter().enumerate() {
@@ -120,6 +120,40 @@ impl HybridSearchEngine {
             HashMap::with_capacity(all_memories.len().saturating_add(fts_results.len()));
         for fts_m in fts_results {
             all_memories_map.insert(fts_m.id.clone(), fts_m);
+        }
+
+        // 2.5 Pure-Rust Fuzzy 模糊通道 + Know-How 知识图扩散通道（无向量时重点补偿语义断层）
+        let mut fuzzy_scored: Vec<(String, f64)> = Vec::new();
+        for m in &all_memories {
+            let hay = format!(
+                "{} {} {}",
+                m.summary.as_deref().unwrap_or(""),
+                m.content,
+                m.tags.join(" ")
+            );
+            let fz = crate::scanner::asset_search::fuzzy_text_score(query, &hay);
+            if fz >= 0.30 {
+                fuzzy_scored.push((m.id.clone(), fz));
+            }
+        }
+        fuzzy_scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        let mut fuzzy_ranks: HashMap<String, usize> = HashMap::new();
+        for (idx, (m_id, _)) in fuzzy_scored.into_iter().take(limit * 3).enumerate() {
+            fuzzy_ranks.insert(m_id, idx + 1);
+        }
+
+        let aliases = crate::fact::AliasCanonicalizer::default();
+        let g_exp = crate::fact::expand_graph_for_query(
+            self.storage.provider().as_ref(),
+            query,
+            1,
+            &aliases,
+        );
+        let mut g_mem_vec: Vec<(String, f64)> = g_exp.memory_scores.into_iter().collect();
+        g_mem_vec.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        let mut graph_ranks: HashMap<String, usize> = HashMap::new();
+        for (idx, (m_id, _)) in g_mem_vec.into_iter().take(limit * 3).enumerate() {
+            graph_ranks.insert(m_id, idx + 1);
         }
 
         if let Some(ref q_emb) = query_vec {
@@ -147,8 +181,14 @@ impl HybridSearchEngine {
             }
         }
 
-        // 3. 计算 RRF 得分: RRF_score = 1/(60 + rank_fts) + 1/(60 + rank_vec)
-        let mut candidate_ids: Vec<String> = fts_ranks.keys().chain(vec_ranks.keys()).cloned().collect();
+        // 3. 计算 Omni-RRF 得分并叠加记忆 weight/pinned 事实标量调制
+        let mut candidate_ids: Vec<String> = fts_ranks
+            .keys()
+            .chain(vec_ranks.keys())
+            .chain(fuzzy_ranks.keys())
+            .chain(graph_ranks.keys())
+            .cloned()
+            .collect();
         candidate_ids.sort();
         candidate_ids.dedup();
 
@@ -159,11 +199,22 @@ impl HybridSearchEngine {
         for id in candidate_ids {
             let fts_r = fts_ranks.get(&id).copied();
             let vec_r = vec_ranks.get(&id).copied();
+            let fuzzy_r = fuzzy_ranks.get(&id).copied();
+            let graph_r = graph_ranks.get(&id).copied();
             let sim = cos_sims.get(&id).copied();
 
-            let score_fts = fts_r.map(|r| 1.0 / (k + r as f32)).unwrap_or(0.0);
+            let score_fts = fts_r.map(|r| 1.2 / (k + r as f32)).unwrap_or(0.0);
             let score_vec = vec_r.map(|r| 1.0 / (k + r as f32)).unwrap_or(0.0);
-            let total_rrf = score_fts + score_vec;
+            let score_fuzzy = fuzzy_r.map(|r| 0.7 / (k + r as f32)).unwrap_or(0.0);
+            let score_graph = graph_r.map(|r| 1.0 / (k + r as f32)).unwrap_or(0.0);
+            let scalar_mod = all_memories_map
+                .get(&id)
+                .map(|m| {
+                    let pin = if m.pinned { 0.15 } else { 0.0 };
+                    (0.85 + 0.15 * m.weight.clamp(0.0, 2.0) + pin).clamp(0.6, 1.4)
+                })
+                .unwrap_or(1.0);
+            let total_rrf = (score_fts + score_vec + score_fuzzy + score_graph) * scalar_mod;
 
             rrf_scored.push((id, total_rrf, fts_r, vec_r, sim));
         }
@@ -268,5 +319,37 @@ mod tests {
             .await
             .expect_err("fallback_fts_only=false 且 embedding 不可用时必须显式报错");
         assert!(err.to_string().contains("fallback_fts_only=false"));
+    }
+
+    #[tokio::test]
+    async fn test_hybrid_search_omni_fuzzy_and_graph_offline() {
+        let storage = Arc::new(Storage::open_in_memory().expect("open_in_memory"));
+        storage
+            .insert_memory(&MemoryRecord {
+                id: "mem-wal-1".to_string(),
+                memory_type: "decision".to_string(),
+                content: "Checkpointer spike causes WAL bloat on OLTP writes".to_string(),
+                summary: Some("Checkpoint WAL bloat diagnosis".to_string()),
+                source_agent: Some("test".to_string()),
+                source_session: None,
+                tags: vec!["postgresql".to_string(), "wal".to_string()],
+                weight: 0.9,
+                pinned: true,
+                status: "active".to_string(),
+                embedding: vec![],
+            })
+            .expect("insert");
+
+        let cfg = crate::config::KnowledgeGraphConfig {
+            pmi_threshold: 0.0,
+            ..Default::default()
+        };
+        crate::fact::KnowledgeGraphBuilder::mine_from_storage(&storage, &cfg).expect("mine kg");
+
+        let engine = HybridSearchEngine::new(storage);
+        // 即使查询词有轻度拼写误差 Checkpont，Fuzzy + Graph 仍应离线召回
+        let results = engine.search_hybrid("Checkpont", 5).await.expect("omni mem search");
+        assert!(!results.is_empty(), "Fuzzy + Know-How 图应支持无向量拼写容错召回");
+        assert_eq!(results[0].memory.id, "mem-wal-1");
     }
 }

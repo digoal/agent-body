@@ -966,9 +966,12 @@ pub(crate) enum AssetCommands {
 
         #[arg(long, default_value_t = 10, help = "Ollama 单次最多精炼资产数")]
         enrich_limit: usize,
+
+        #[arg(long, help = "扫描后同步构建 L1 行业 Know-How 知识网络（章节切片 + 别名归一 + PMI 共现图）")]
+        mine_knowledge: bool,
     },
 
-    #[command(about = "全文与语义搜索资产（支持多模态、领域与 KV 过滤及 FTS+向量混合 RRF 检索）")]
+    #[command(about = "全文与语义搜索资产（支持多模态、领域与 KV 过滤及 Omni-RRF 多路融合检索）")]
     Search {
         #[arg(help = "搜索关键词（传空字符串时可纯按过滤器检索）")]
         query: String,
@@ -991,8 +994,17 @@ pub(crate) enum AssetCommands {
         #[arg(long, help = "要求 desc_kv（或 --kv-key 对应值）匹配子串")]
         kv_value: Option<String>,
 
-        #[arg(long, help = "禁用 Ollama 向量 RRF 混合检索，仅使用确定性 FTS5 与结构化过滤")]
+        #[arg(long, help = "禁用 Ollama 向量 RRF 混合检索，仅使用确定性 Omni-RRF 与结构化过滤")]
         no_hybrid: bool,
+
+        #[arg(long, default_value_t = 1, help = "知识网络扩散跳数 (0 | 1 | 2)")]
+        graph_hops: usize,
+
+        #[arg(long, help = "禁用纯 Rust 模糊容错通道")]
+        no_fuzzy: bool,
+
+        #[arg(long, help = "禁用 links 文档互链扩展通道")]
+        no_links: bool,
     },
 
     #[command(about = "手动向大管家登记一个文件或目录资产")]

@@ -59,6 +59,76 @@ impl SqliteStorageProvider {
     }
 }
 
+/// 将驼峰/蛇形/连字符技术标识拆分为干净词元，生成多组 FTS5 安全查询候选（精确 AND 优先，宽松 OR 兜底）
+pub(super) fn build_fts_query_candidates(raw: &str) -> Vec<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Vec::new();
+    }
+
+    let mut primary_clauses: Vec<String> = Vec::new();
+
+    for word in trimmed.split_whitespace() {
+        let mut sub_parts: Vec<String> = Vec::new();
+        for seg in word.split(|c: char| !c.is_alphanumeric() && c as u32 <= 0x7F) {
+            if seg.is_empty() {
+                continue;
+            }
+            // 识别驼峰切分，例如 ShadowAbEngine -> Shadow, Ab, Engine
+            let chars: Vec<char> = seg.chars().collect();
+            let mut cur = String::new();
+            for i in 0..chars.len() {
+                let ch = chars[i];
+                let prev_lower = i > 0 && chars[i - 1].is_ascii_lowercase();
+                let next_lower = i + 1 < chars.len() && chars[i + 1].is_ascii_lowercase();
+                let is_upper_boundary = ch.is_ascii_uppercase() && (prev_lower || (i > 0 && chars[i - 1].is_ascii_uppercase() && next_lower));
+                let is_digit_boundary = i > 0 && ch.is_ascii_digit() != chars[i - 1].is_ascii_digit();
+                if (is_upper_boundary || is_digit_boundary) && !cur.is_empty() {
+                    sub_parts.push(cur.clone());
+                    cur.clear();
+                }
+                cur.push(ch);
+            }
+            if !cur.is_empty() {
+                sub_parts.push(cur);
+            }
+        }
+
+        let clean_word: String = word
+            .chars()
+            .filter(|c| c.is_alphanumeric() || *c == '_')
+            .collect();
+        if sub_parts.len() > 1 && !clean_word.is_empty() {
+            let clean_parts: Vec<String> = sub_parts
+                .into_iter()
+                .filter(|p| p.chars().count() >= 2)
+                .map(|p| format!("\"{}\"", p.replace('"', "")))
+                .collect();
+            let exact = format!("\"{}\"", clean_word.replace('"', ""));
+            if clean_parts.len() >= 2 {
+                primary_clauses.push(format!("({} OR ({}))", exact, clean_parts.join(" AND ")));
+            } else {
+                primary_clauses.push(exact);
+            }
+        } else if !clean_word.is_empty() {
+            let quoted = format!("\"{}\"", clean_word.replace('"', ""));
+            primary_clauses.push(quoted);
+        }
+    }
+
+    let mut candidates = Vec::new();
+    if !primary_clauses.is_empty() {
+        candidates.push(primary_clauses.join(" "));
+    }
+    // 仅当查询包含多个空格分隔词时启用词级 OR 兜底，避免单个 snake_case 标识符（如 ghost_dead_script）退化为单词素误召回
+    if primary_clauses.len() > 1 {
+        candidates.push(primary_clauses.join(" OR "));
+    } else if candidates.is_empty() && !trimmed.is_empty() {
+        candidates.push(trimmed.to_string());
+    }
+    candidates
+}
+
 mod assets;
 mod audit;
 mod facts;

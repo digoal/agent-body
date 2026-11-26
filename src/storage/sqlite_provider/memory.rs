@@ -44,38 +44,59 @@ impl SqliteStorageProvider {
 
 
     pub(super) fn impl_search_memories_fts(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {
+        let candidates = super::build_fts_query_candidates(query);
+        if candidates.is_empty() || limit == 0 {
+            return Ok(Vec::new());
+        }
         let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT m.id, m.type, m.content, m.summary, m.source_agent, m.source_session, m.tags, m.weight, m.pinned, m.status, m.embedding
              FROM memories_fts f
              JOIN memories m ON f.rowid = m.rowid
              WHERE memories_fts MATCH ?1 AND m.status = 'active'
-             ORDER BY rank
+             ORDER BY bm25(memories_fts, 1.5, 3.0, 2.5)
              LIMIT ?2"
         )?;
 
-        let rows = stmt.query_map(params![query, limit as i64], |row| {
-            let tags_str: String = row.get(6)?;
-            let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
-            let emb_str: String = row.get(10)?;
-            let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+        let mut merged: Vec<MemoryRecord> = Vec::new();
+        let mut seen_ids = std::collections::HashSet::new();
+        for fts_q in &candidates {
+            let Ok(mapped) = stmt.query_map(params![fts_q, limit as i64], |row| {
+                let tags_str: String = row.get(6)?;
+                let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
+                let emb_str: String = row.get(10)?;
+                let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
 
-            Ok(MemoryRecord {
-                id: row.get(0)?,
-                memory_type: row.get(1)?,
-                content: row.get(2)?,
-                summary: row.get(3)?,
-                source_agent: row.get(4)?,
-                source_session: row.get(5)?,
-                tags,
-                weight: row.get(7)?,
-                pinned: row.get(8)?,
-                status: row.get(9)?,
-                embedding,
-            })
-        })?.collect::<Result<Vec<_>, _>>()?;
+                Ok(MemoryRecord {
+                    id: row.get(0)?,
+                    memory_type: row.get(1)?,
+                    content: row.get(2)?,
+                    summary: row.get(3)?,
+                    source_agent: row.get(4)?,
+                    source_session: row.get(5)?,
+                    tags,
+                    weight: row.get(7)?,
+                    pinned: row.get(8)?,
+                    status: row.get(9)?,
+                    embedding,
+                })
+            }) else {
+                continue;
+            };
+            for row in mapped.flatten() {
+                if seen_ids.insert(row.id.clone()) {
+                    merged.push(row);
+                    if merged.len() >= limit {
+                        return Ok(merged);
+                    }
+                }
+            }
+            if !merged.is_empty() {
+                break;
+            }
+        }
 
-        Ok(rows)
+        Ok(merged)
     }
 
 

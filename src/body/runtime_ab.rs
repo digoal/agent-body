@@ -286,7 +286,18 @@ impl ShadowAbEngine {
         );
 
         let t_body = Instant::now();
-        let body_hits = storage.search_assets_fts(query, limit)?;
+        let mut body_opts = crate::scanner::AssetSearchOptions::new(query, limit);
+        body_opts.hybrid = false;
+        body_opts.fuzzy = true;
+        body_opts.graph_hops = cfg.knowledge_graph.default_search_hops.min(2);
+        body_opts.include_links = true;
+        let body_hits: Vec<AssetRecord> = crate::scanner::AssetSearchEngine::search(
+            storage.provider().as_ref(),
+            &body_opts,
+        )?
+        .into_iter()
+        .map(|h| h.asset)
+        .collect();
         let body_us = t_body.elapsed().as_micros() as i64;
 
         let mut body_text = format!("资产搜索匹配结果 (共 {} 条):\n", body_hits.len());

@@ -162,6 +162,15 @@ impl McpToolRegistry {
                 search_opts.domain = args.get("domain").and_then(|v| v.as_str()).map(str::to_string);
                 search_opts.kv_key = args.get("kv_key").and_then(|v| v.as_str()).map(str::to_string);
                 search_opts.kv_value = args.get("kv_value").and_then(|v| v.as_str()).map(str::to_string);
+                if let Some(hops) = args.get("graph_hops").and_then(|v| v.as_u64()) {
+                    search_opts.graph_hops = (hops as usize).min(2);
+                }
+                if let Some(fz) = args.get("fuzzy").and_then(|v| v.as_bool()) {
+                    search_opts.fuzzy = fz;
+                }
+                if let Some(lk) = args.get("include_links").and_then(|v| v.as_bool()) {
+                    search_opts.include_links = lk;
+                }
                 let cfg = crate::config::Config::load_effective_or_default();
                 match cfg.effective_runtime_mode() {
                     crate::config::RuntimeMode::Bypass => {

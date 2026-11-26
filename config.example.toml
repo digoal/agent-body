@@ -345,6 +345,46 @@ shadow_max_live_ms = 800
 # shadow_ab 采样率 (0.0..=1.0)
 ab_sample_rate = 1.0
 
+# ==============================================================================
+# 13. 行业 Know-How 知识网络与 Omni-RRF 多路融合检索配置 (Phase 61 - ISSUE #44)
+# ==============================================================================
+[knowledge_graph]
+# 是否启用 L1 确定性知识网络与图扩展检索
+# 默认: true
+enabled = true
+
+# Heading-Aware 章节语义切片的最大字符数
+# 默认: 900
+max_section_chars = 900
+
+# 跨章节 PMI 点互信息共现边阈值（越大越严格，防止毛线球连接）
+# 默认: 1.2
+pmi_threshold = 1.2
+
+# 是否在 Omni-RRF 中启用纯 Rust Fuzzy 模糊检索通道
+# 默认: true
+fuzzy_enabled = true
+
+# 层级结构通道（文档章节父/兄 + 目录局部性）基础权重
+# 默认: 0.60
+hierarchy_boost = 0.60
+
+# 文档间互链通道（links 表 + documented_by）基础权重
+# 默认: 0.65
+doc_link_boost = 0.65
+
+# 是否允许后台批处理使用本地 Ollama (qwen3.5:0.8b) 进行章节级因果 Know-How 抽取 (Phase 62)
+# 默认: false
+l2_extract_enabled = false
+
+# 检索时默认图谱扩展跳数 (0 | 1 | 2)
+# 默认: 1
+default_search_hops = 1
+
+# 自定义行业术语别名归一化映射（自动与内置 PG/FTS5/SQLite/DuckDB 等合并）
+[knowledge_graph.aliases]
+# "pgvector" = "pgvector"
+
 
 
 

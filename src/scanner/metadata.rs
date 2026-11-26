@@ -809,7 +809,7 @@ impl HeuristicMetadataExtractor {
         let mut deps: Vec<String> = Vec::new();
         let mut doc_comment: Option<String> = None;
 
-        for line in snippet.lines().take(120) {
+        for line in snippet.lines() {
             let t = line.trim();
             if doc_comment.is_none() {
                 if let Some(c) = t.strip_prefix("//!").or_else(|| t.strip_prefix("///")) {
@@ -825,8 +825,8 @@ impl HeuristicMetadataExtractor {
                 }
             }
 
-            // 提取符号
-            if symbols.len() < 8 {
+            // 提取符号（覆盖完整 8KB 头部并容纳最多 24 个关键符号）
+            if symbols.len() < 24 {
                 if let Some(sym) = extract_symbol_name(t, lang) {
                     if !symbols.contains(&sym) {
                         symbols.push(sym);

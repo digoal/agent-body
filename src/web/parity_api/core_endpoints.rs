@@ -130,6 +130,18 @@ pub fn handle_assets_search(req: &HttpRequest, storage: &dyn StorageProvider) ->
     opts.kv_key = opt_param("kv_key");
     opts.kv_value = opt_param("kv_value");
     opts.hybrid = hybrid;
+    opts.graph_hops = query_str(req, "graph_hops", "1")
+        .parse::<usize>()
+        .unwrap_or(1)
+        .min(2);
+    opts.fuzzy = !matches!(
+        query_str(req, "fuzzy", "true").trim().to_ascii_lowercase().as_str(),
+        "false" | "0" | "no"
+    );
+    opts.include_links = !matches!(
+        query_str(req, "include_links", "true").trim().to_ascii_lowercase().as_str(),
+        "false" | "0" | "no"
+    );
 
     match crate::scanner::AssetSearchEngine::search(storage, &opts) {
         Ok(hits) => {
@@ -143,6 +155,18 @@ pub fn handle_assets_search(req: &HttpRequest, storage: &dyn StorageProvider) ->
                             "matched_channels".to_string(),
                             serde_json::json!(h.matched_channels),
                         );
+                        if !h.matched_sections.is_empty() {
+                            obj.insert(
+                                "matched_sections".to_string(),
+                                serde_json::json!(h.matched_sections),
+                            );
+                        }
+                        if !h.reasoning_paths.is_empty() {
+                            obj.insert(
+                                "reasoning_paths".to_string(),
+                                serde_json::json!(h.reasoning_paths),
+                            );
+                        }
                     }
                     view
                 })

@@ -401,6 +401,7 @@ impl BriefAssembler {
         } else if !q_lower.is_empty() {
             let mut opts = crate::scanner::AssetSearchOptions::new(query, 5);
             opts.hybrid = false;
+            opts.include_links = false;
             if let Ok(hits) =
                 crate::scanner::AssetSearchEngine::search(self.storage.provider().as_ref(), &opts)
             {

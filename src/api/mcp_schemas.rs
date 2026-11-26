@@ -175,6 +175,21 @@ pub fn all_tool_schemas() -> Vec<Value> {
                         "kv_value": {
                             "type": "string",
                             "description": "要求 desc_kv（或 kv_key 对应值）包含指定关键词子串"
+                        },
+                        "graph_hops": {
+                            "type": "integer",
+                            "default": 1,
+                            "description": "Omni-RRF 知识网络扩散跳数 (0 关闭 | 1 | 2)"
+                        },
+                        "fuzzy": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "是否启用纯 Rust 模糊容错匹配通道"
+                        },
+                        "include_links": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "是否包含 links 文档互链扩展通道"
                         }
                     },
                     "required": ["query"]

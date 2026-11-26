@@ -229,7 +229,7 @@ CREATE INDEX IF NOT EXISTS idx_scan_jobs_status ON scan_jobs(status);
 
 CREATE TABLE IF NOT EXISTS fact_nodes (
     id          TEXT PRIMARY KEY,
-    node_type   TEXT NOT NULL CHECK (node_type IN ('project','tool','port','service','cron','file','authoritative_site')),
+    node_type   TEXT NOT NULL CHECK (node_type IN ('project','tool','port','service','cron','file','authoritative_site','section','domain_term','knowhow')),
     name        TEXT NOT NULL,
     label       TEXT NOT NULL,
     properties  TEXT DEFAULT '{}',
@@ -244,7 +244,7 @@ CREATE TABLE IF NOT EXISTS fact_edges (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     source_id      TEXT NOT NULL,
     target_id      TEXT NOT NULL,
-    relation       TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains','uses_tool','runs_as','documented_by','semantically_related')),
+    relation       TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains','uses_tool','runs_as','documented_by','semantically_related','mentions','co_occurs_with','causes','mitigates','contrasts_with','applies_when','supersedes')),
     properties     TEXT DEFAULT '{}',
     confidence     REAL DEFAULT 1.0,
     evidence_tier  TEXT NOT NULL DEFAULT 'L1_EXPLICIT',

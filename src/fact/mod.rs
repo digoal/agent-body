@@ -4,6 +4,7 @@ pub mod automation;
 pub mod assets_catalog;
 pub mod property_graph;
 pub mod semantic_discovery;
+pub mod knowledge_graph;
 
 pub use capability::{CapabilityEngine, ToolCapability, CapabilityQueryResult};
 pub use process_net::{ProcessNetTopology, ListeningPortFact, PortQueryFactResult};
@@ -11,6 +12,10 @@ pub use automation::{AutomationTopology, SystemdServiceFact, CronJobFact, FileIm
 pub use assets_catalog::{AssetsCatalogEngine, RepoFact, DocFact, CatalogOverview};
 pub use property_graph::PropertyGraphOrganizer;
 pub use semantic_discovery::{GraphRelationshipMiner, MiningReport};
+pub use knowledge_graph::{
+    expand_graph_for_query, tokenize_terms, AliasCanonicalizer, GraphExpansionResult,
+    HeadingChunk, HeadingChunker, KnowledgeGraphBuilder, KnowledgeMiningReport,
+};
 
 use anyhow::Result;
 
@@ -109,6 +114,47 @@ impl FactFacade {
 
                 let sub = organizer.query_subgraph(trimmed_query, 2)?;
                 Ok(organizer.format_graph_report(&sub))
+            }
+            "knowledge" | "knowhow" | "mine-knowledge" => {
+                let cfg = crate::config::Config::load_effective_or_default();
+                let storage = crate::storage::Storage::open(&cfg.db_path)?;
+                if resolved_type == "mine-knowledge" || trimmed_query == "mine" {
+                    let rep = KnowledgeGraphBuilder::mine_from_storage(&storage, &cfg.knowledge_graph)?;
+                    return Ok(format!(
+                        "🧠 **行业 Know-How 知识网络构建完成**\n- 文档: {} | 章节切片: {} | 记忆节点: {} | 术语概念: {} | 层级边: {} | 引用边: {} | PMI 共现边: {}\n",
+                        rep.docs_indexed,
+                        rep.sections_created,
+                        rep.memories_indexed,
+                        rep.terms_created,
+                        rep.hierarchy_edges,
+                        rep.mention_edges,
+                        rep.pmi_edges
+                    ));
+                }
+                let aliases = AliasCanonicalizer::new(&cfg.knowledge_graph.aliases);
+                let exp = expand_graph_for_query(
+                    storage.provider().as_ref(),
+                    trimmed_query,
+                    cfg.knowledge_graph.default_search_hops.max(1),
+                    &aliases,
+                );
+                let mut docs: Vec<(&String, &f64)> = exp.doc_scores.iter().collect();
+                docs.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
+                let mut out = format!("🧠 **知识网络扩散召回 (query='{}', 命中 {} 篇)**\n\n", trimmed_query, docs.len());
+                for (path, score) in docs.into_iter().take(10) {
+                    out.push_str(&format!("- `{}` (graph_score={:.3})\n", path, score));
+                    if let Some(secs) = exp.matched_sections.get(path) {
+                        for s in secs {
+                            out.push_str(&format!("  - 关联片段: {}\n", s));
+                        }
+                    }
+                    if let Some(paths) = exp.reasoning_paths.get(path) {
+                        for rp in paths {
+                            out.push_str(&format!("  - 推理路径: `{}`\n", rp));
+                        }
+                    }
+                }
+                Ok(out)
             }
             "all" | "overview" => {
                 let mut out = String::new();

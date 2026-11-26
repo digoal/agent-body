@@ -31,11 +31,12 @@
 | **Phase 58** | **三态运行模式与真实 A/B 证伪 + MCP Profile 减税** | `[runtime]` 三态模式 (`body_only`/`bypass`/`shadow_ab`)、`ShadowAbEngine` 真实对照与帮倒忙率诊断、MCP `core` 10 工具档位省 ~78% Schema 税、原生 `hooks bridge`、Web CORS 收敛与 `HybridSearch` 单次查库 | `#43` | [roadmap-phase58.md](roadmap-phase58.md) | ✅ **已完成** |
 | **Phase 59** | **多模态对象理解深化与资产 RRF+KV 混合检索** | `multimodal.rs` 三层级多模态 L1/L2 提取、`vision_enabled` 可选图像视觉理解、解除 `3000/5000` 后台截断、`AssetSearchEngine` FTS5+Vector RRF+`modality/domain/kv` 1:1:1 对齐 CLI/MCP/Web | `#42` | [roadmap-phase59.md](roadmap-phase59.md) | ✅ **已完成** |
 | **Phase 60** | **跨平台 100% 全绿测试基线与 Clippy 零告警收口** | 修复 `links/audit` 临时目录、`upsert_scan_policy` 三后端幂等、`W15`/`diagnoser`/`placement`/`state_machine`/`watcher`/`fact` 等 14+2 项非 Linux 测试失败、清理 `thiserror`/`glob` 死依赖并达成 `clippy --all-targets -D warnings` 零告警 | `v1.3` | [roadmap-phase60.md](roadmap-phase60.md) | ✅ **已完成** |
+| **Phase 61** | **Know-How 知识网络 (Stage 1) 与 Omni-RRF 多路融合召回** | 扩展 `fact_nodes`/`fact_edges` 知识节点与 SQLite 热迁移、`HeadingChunker` + 别名归一 + PMI 共现图、加权 `bm25` + 驼峰拆词 + Pure-Rust `fuzzy` + 图 1~2 跳 + 层级 + 互链 + 标量调制 Omni-RRF，修复 `ShadowAbEngine` 0 命中回退 | `#44` | [roadmap-phase61.md](roadmap-phase61.md) | ✅ **已完成** |
 
 ---
 
 ## 三、断点恢复指引
 
-1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与最近活跃路线图 [roadmap-phase60.md](roadmap-phase60.md)；
+1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与最近活跃路线图 [roadmap-phase61.md](roadmap-phase61.md)；
 2. 严禁全仓扫描 `docs/src_doc/archive/` 内已冻结的历史路线图；
 3. 每次代码/文档改动收口前执行 `make quality-gate && make test && make verify-decks` 与 `make sync-mirror` 校验零漂移。

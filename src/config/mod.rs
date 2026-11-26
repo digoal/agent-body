@@ -42,6 +42,9 @@ pub struct Config {
     pub runtime: RuntimeConfig,
 
     #[serde(default)]
+    pub knowledge_graph: KnowledgeGraphConfig,
+
+    #[serde(default)]
     pub hooks: Vec<crate::hooks::HookRule>,
 
     #[serde(default)]
@@ -266,6 +269,90 @@ pub struct RuntimeConfig {
     /// shadow_ab 采样率 (0.0..=1.0，默认 1.0 全量采集)
     #[serde(default = "default_ab_sample_rate")]
     pub ab_sample_rate: f64,
+}
+
+/// 行业 Know-How 知识网络与 Omni-RRF 多路融合检索配置 (`[knowledge_graph]`, Phase 61 / ISSUE #44)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnowledgeGraphConfig {
+    /// 是否启用 L1 确定性知识网络与图扩展检索
+    #[serde(default = "default_kg_enabled")]
+    pub enabled: bool,
+
+    /// Heading-Aware 章节语义切片的最大字符数
+    #[serde(default = "default_kg_max_section_chars")]
+    pub max_section_chars: usize,
+
+    /// 跨章节 PMI 点互信息共现边阈值
+    #[serde(default = "default_kg_pmi_threshold")]
+    pub pmi_threshold: f64,
+
+    /// 是否在 Omni-RRF 中启用纯 Rust Fuzzy 模糊查询通道
+    #[serde(default = "default_kg_fuzzy_enabled")]
+    pub fuzzy_enabled: bool,
+
+    /// 层级结构通道基础权重
+    #[serde(default = "default_kg_hierarchy_boost")]
+    pub hierarchy_boost: f64,
+
+    /// 文档间互链通道基础权重
+    #[serde(default = "default_kg_doc_link_boost")]
+    pub doc_link_boost: f64,
+
+    /// 是否允许本地 Ollama 进行章节级原子 Know-How 因果抽取 (Phase 62)
+    #[serde(default)]
+    pub l2_extract_enabled: bool,
+
+    /// 检索默认图扩展跳数 (0 | 1 | 2)
+    #[serde(default = "default_kg_default_search_hops")]
+    pub default_search_hops: usize,
+
+    /// 自定义行业术语别名归一化映射
+    #[serde(default)]
+    pub aliases: std::collections::HashMap<String, String>,
+}
+
+fn default_kg_enabled() -> bool {
+    true
+}
+
+fn default_kg_max_section_chars() -> usize {
+    900
+}
+
+fn default_kg_pmi_threshold() -> f64 {
+    1.2
+}
+
+fn default_kg_fuzzy_enabled() -> bool {
+    true
+}
+
+fn default_kg_hierarchy_boost() -> f64 {
+    0.60
+}
+
+fn default_kg_doc_link_boost() -> f64 {
+    0.65
+}
+
+fn default_kg_default_search_hops() -> usize {
+    1
+}
+
+impl Default for KnowledgeGraphConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_kg_enabled(),
+            max_section_chars: default_kg_max_section_chars(),
+            pmi_threshold: default_kg_pmi_threshold(),
+            fuzzy_enabled: default_kg_fuzzy_enabled(),
+            hierarchy_boost: default_kg_hierarchy_boost(),
+            doc_link_boost: default_kg_doc_link_boost(),
+            l2_extract_enabled: false,
+            default_search_hops: default_kg_default_search_hops(),
+            aliases: std::collections::HashMap::new(),
+        }
+    }
 }
 
 fn default_runtime_mode() -> String {
@@ -710,6 +797,7 @@ impl Default for Config {
             mesh: MeshConfig::default(),
             annotation: AnnotationConfig::default(),
             runtime: RuntimeConfig::default(),
+            knowledge_graph: KnowledgeGraphConfig::default(),
             hooks: vec![],
             pipelines: vec![],
         }
@@ -771,7 +859,14 @@ impl Config {
     }
 
     /// 无异常读取当前生效配置；若加载失败则安全回退到 `Config::default()`
+    /// 单元测试模式下除非显式指定 `AGENT_BODY_CONFIG`/`STEWARD_CONFIG`，否则隔离宿主机真实配置以保持零外部污染
     pub fn load_effective_or_default() -> Self {
+        if cfg!(test)
+            && std::env::var_os("AGENT_BODY_CONFIG").is_none()
+            && std::env::var_os("STEWARD_CONFIG").is_none()
+        {
+            return Self::default();
+        }
         Self::load_or_default(None).unwrap_or_default()
     }
 
@@ -1105,6 +1200,24 @@ impl Config {
                 self.runtime.ab_sample_rate
             );
         }
+        if self.knowledge_graph.max_section_chars < 200 || self.knowledge_graph.max_section_chars > 8000 {
+            anyhow::bail!(
+                "knowledge_graph.max_section_chars ({}) 必须位于 200..=8000 之间",
+                self.knowledge_graph.max_section_chars
+            );
+        }
+        if self.knowledge_graph.default_search_hops > 2 {
+            anyhow::bail!(
+                "knowledge_graph.default_search_hops ({}) 必须位于 0..=2 之间",
+                self.knowledge_graph.default_search_hops
+            );
+        }
+        if self.knowledge_graph.pmi_threshold < 0.0 || self.knowledge_graph.pmi_threshold.is_nan() {
+            anyhow::bail!(
+                "knowledge_graph.pmi_threshold ({}) 不能为负数",
+                self.knowledge_graph.pmi_threshold
+            );
+        }
         Ok(())
     }
 }
@@ -1230,6 +1343,14 @@ default_owner = "user:digoal"
         cfg.annotation.vision_max_image_bytes = 512;
         assert!(cfg.validate().is_err());
         cfg.annotation.vision_max_image_bytes = 4 * 1024 * 1024;
+        assert!(cfg.validate().is_ok());
+
+        cfg.knowledge_graph.max_section_chars = 100;
+        assert!(cfg.validate().is_err());
+        cfg.knowledge_graph.max_section_chars = 900;
+        cfg.knowledge_graph.default_search_hops = 3;
+        assert!(cfg.validate().is_err());
+        cfg.knowledge_graph.default_search_hops = 1;
         assert!(cfg.validate().is_ok());
     }
 

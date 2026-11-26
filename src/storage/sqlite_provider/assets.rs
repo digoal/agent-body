@@ -44,20 +44,54 @@ impl SqliteStorageProvider {
 
         conn.execute("CREATE TABLE IF NOT EXISTS fact_nodes (
             id          TEXT PRIMARY KEY,
-            node_type   TEXT NOT NULL CHECK (node_type IN ('project','tool','port','service','cron','file','authoritative_site')),
+            node_type   TEXT NOT NULL CHECK (node_type IN ('project','tool','port','service','cron','file','authoritative_site','section','domain_term','knowhow')),
             name        TEXT NOT NULL,
             label       TEXT NOT NULL,
             properties  TEXT DEFAULT '{}',
+            embedding   TEXT DEFAULT '[]',
             updated_at  TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
         )", [])?;
         conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_nodes_type ON fact_nodes(node_type)", [])?;
         conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_nodes_name ON fact_nodes(name)", [])?;
 
+        let existing_node_ddl: String = conn
+            .query_row(
+                "SELECT COALESCE(sql, '') FROM sqlite_master WHERE type='table' AND name='fact_nodes'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or_default();
+        if !existing_node_ddl.is_empty() && !existing_node_ddl.contains("domain_term") {
+            if let Err(e) = conn.execute_batch(
+                "PRAGMA foreign_keys = OFF;
+                 BEGIN IMMEDIATE;
+                 CREATE TABLE fact_nodes_v61 (
+                     id          TEXT PRIMARY KEY,
+                     node_type   TEXT NOT NULL CHECK (node_type IN ('project','tool','port','service','cron','file','authoritative_site','section','domain_term','knowhow')),
+                     name        TEXT NOT NULL,
+                     label       TEXT NOT NULL,
+                     properties  TEXT DEFAULT '{}',
+                     embedding   TEXT DEFAULT '[]',
+                     updated_at  TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now'))
+                 );
+                 INSERT OR IGNORE INTO fact_nodes_v61 (id, node_type, name, label, properties, embedding, updated_at)
+                 SELECT id, node_type, name, label, properties, COALESCE(embedding, '[]'), updated_at FROM fact_nodes;
+                 DROP TABLE fact_nodes;
+                 ALTER TABLE fact_nodes_v61 RENAME TO fact_nodes;
+                 CREATE INDEX IF NOT EXISTS idx_fact_nodes_type ON fact_nodes(node_type);
+                 CREATE INDEX IF NOT EXISTS idx_fact_nodes_name ON fact_nodes(name);
+                 COMMIT;
+                 PRAGMA foreign_keys = ON;",
+            ) {
+                eprintln!("[SQLite][WARN] fact_nodes 表结构升级跳过: {}", e);
+            }
+        }
+
         conn.execute("CREATE TABLE IF NOT EXISTS fact_edges (
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
             source_id      TEXT NOT NULL,
             target_id      TEXT NOT NULL,
-            relation       TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains','uses_tool','runs_as','documented_by','semantically_related')),
+            relation       TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains','uses_tool','runs_as','documented_by','semantically_related','mentions','co_occurs_with','causes','mitigates','contrasts_with','applies_when','supersedes')),
             properties     TEXT DEFAULT '{}',
             confidence     REAL DEFAULT 1.0,
             evidence_tier  TEXT NOT NULL DEFAULT 'L1_EXPLICIT',
@@ -69,7 +103,7 @@ impl SqliteStorageProvider {
             FOREIGN KEY(target_id) REFERENCES fact_nodes(id) ON DELETE CASCADE
         )", [])?;
 
-        // 幂等热迁移老库 fact_edges（补充 evidence_tier/weight/direction_kind 并放开新关系 CHECK 约束）
+        // 幂等热迁移老库 fact_edges（补充 evidence_tier/weight/direction_kind 并放开 Phase 61 知识网络关系 CHECK 约束）
         let existing_ddl: String = conn
             .query_row(
                 "SELECT COALESCE(sql, '') FROM sqlite_master WHERE type='table' AND name='fact_edges'",
@@ -78,17 +112,28 @@ impl SqliteStorageProvider {
             )
             .unwrap_or_default();
         if !existing_ddl.is_empty()
-            && (!existing_ddl.contains("evidence_tier") || !existing_ddl.contains("semantically_related"))
+            && (!existing_ddl.contains("evidence_tier")
+                || !existing_ddl.contains("semantically_related")
+                || !existing_ddl.contains("co_occurs_with"))
         {
-            if let Err(e) = conn.execute_batch(
+            let has_tier_col = existing_ddl.contains("evidence_tier");
+            let copy_sql = if has_tier_col {
+                "SELECT id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at FROM fact_edges"
+            } else {
+                "SELECT id, source_id, target_id, relation, properties, confidence, 'L1_EXPLICIT', confidence,
+                        CASE relation WHEN 'scheduled_by' THEN 'reverse_schedule' WHEN 'part_of' THEN 'derivation_flow' WHEN 'contains' THEN 'derivation_flow' ELSE 'forward_dependency' END,
+                        updated_at
+                 FROM fact_edges"
+            };
+            let migration_sql = format!(
                 "PRAGMA foreign_keys = OFF;
                  BEGIN IMMEDIATE;
-                 CREATE TABLE fact_edges_v40 (
+                 CREATE TABLE fact_edges_v61 (
                      id             INTEGER PRIMARY KEY AUTOINCREMENT,
                      source_id      TEXT NOT NULL,
                      target_id      TEXT NOT NULL,
-                     relation       TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains','uses_tool','runs_as','documented_by','semantically_related')),
-                     properties     TEXT DEFAULT '{}',
+                     relation       TEXT NOT NULL CHECK (relation IN ('depends_on','listens_on','scheduled_by','reads','writes','part_of','calls','contains','uses_tool','runs_as','documented_by','semantically_related','mentions','co_occurs_with','causes','mitigates','contrasts_with','applies_when','supersedes')),
+                     properties     TEXT DEFAULT '{{}}',
                      confidence     REAL DEFAULT 1.0,
                      evidence_tier  TEXT NOT NULL DEFAULT 'L1_EXPLICIT',
                      weight         REAL NOT NULL DEFAULT 1.0,
@@ -98,16 +143,17 @@ impl SqliteStorageProvider {
                      FOREIGN KEY(source_id) REFERENCES fact_nodes(id) ON DELETE CASCADE,
                      FOREIGN KEY(target_id) REFERENCES fact_nodes(id) ON DELETE CASCADE
                  );
-                 INSERT OR IGNORE INTO fact_edges_v40 (id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at)
-                 SELECT id, source_id, target_id, relation, properties, confidence, 'L1_EXPLICIT', confidence,
-                        CASE relation WHEN 'scheduled_by' THEN 'reverse_schedule' WHEN 'part_of' THEN 'derivation_flow' WHEN 'contains' THEN 'derivation_flow' ELSE 'forward_dependency' END,
-                        updated_at
-                 FROM fact_edges;
+                 INSERT OR IGNORE INTO fact_edges_v61 (id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at)
+                 {};
                  DROP TABLE fact_edges;
-                 ALTER TABLE fact_edges_v40 RENAME TO fact_edges;
+                 ALTER TABLE fact_edges_v61 RENAME TO fact_edges;
                  COMMIT;
                  PRAGMA foreign_keys = ON;",
-            ) { eprintln!("[SQLite][WARN] fact_edges 表结构升级跳过: {}", e); }
+                copy_sql
+            );
+            if let Err(e) = conn.execute_batch(&migration_sql) {
+                eprintln!("[SQLite][WARN] fact_edges 表结构升级跳过: {}", e);
+            }
         }
 
         conn.execute("CREATE INDEX IF NOT EXISTS idx_fact_edges_source ON fact_edges(source_id)", [])?;
@@ -367,40 +413,61 @@ impl SqliteStorageProvider {
 
 
     pub(super) fn impl_search_assets_fts(&self, query: &str, limit: usize) -> Result<Vec<AssetRecord>> {
+        let candidates = super::build_fts_query_candidates(query);
+        if candidates.is_empty() || limit == 0 {
+            return Ok(Vec::new());
+        }
         let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT a.id, a.path, a.type, a.owner, a.security_level, a.scan_tier, a.description, a.desc_kv, a.usage, a.size_bytes, a.file_count, a.tags, a.status
              FROM assets_fts f
              JOIN assets a ON f.rowid = a.rowid
              WHERE assets_fts MATCH ?1 AND a.status = 'active'
-             ORDER BY rank
+             ORDER BY bm25(assets_fts, 4.0, 2.5, 2.0, 1.5, 2.0)
              LIMIT ?2"
         )?;
 
-        let rows = stmt.query_map(params![query, limit as i64], |row| {
-            let desc_kv_str: String = row.get(7)?;
-            let tags_str: String = row.get(11)?;
-            let desc_kv: serde_json::Value = serde_json::from_str(&desc_kv_str).unwrap_or(serde_json::json!({}));
-            let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
+        let mut merged: Vec<AssetRecord> = Vec::new();
+        let mut seen_paths = std::collections::HashSet::new();
+        for fts_q in &candidates {
+            let Ok(mapped) = stmt.query_map(params![fts_q, limit as i64], |row| {
+                let desc_kv_str: String = row.get(7)?;
+                let tags_str: String = row.get(11)?;
+                let desc_kv: serde_json::Value = serde_json::from_str(&desc_kv_str).unwrap_or(serde_json::json!({}));
+                let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
 
-            Ok(AssetRecord {
-                id: row.get(0)?,
-                path: row.get(1)?,
-                asset_type: row.get(2)?,
-                owner: row.get(3)?,
-                security_level: row.get(4)?,
-                scan_tier: row.get(5)?,
-                description: row.get(6)?,
-                desc_kv,
-                usage: row.get(8)?,
-                size_bytes: row.get(9)?,
-                file_count: row.get(10)?,
-                tags,
-                status: row.get(12)?,
-            })
-        })?.collect::<Result<Vec<_>, _>>()?;
+                Ok(AssetRecord {
+                    id: row.get(0)?,
+                    path: row.get(1)?,
+                    asset_type: row.get(2)?,
+                    owner: row.get(3)?,
+                    security_level: row.get(4)?,
+                    scan_tier: row.get(5)?,
+                    description: row.get(6)?,
+                    desc_kv,
+                    usage: row.get(8)?,
+                    size_bytes: row.get(9)?,
+                    file_count: row.get(10)?,
+                    tags,
+                    status: row.get(12)?,
+                })
+            }) else {
+                continue;
+            };
+            for row in mapped.flatten() {
+                if seen_paths.insert(row.path.clone()) {
+                    merged.push(row);
+                    if merged.len() >= limit {
+                        return Ok(merged);
+                    }
+                }
+            }
+            if !merged.is_empty() {
+                break;
+            }
+        }
 
-        Ok(rows)
+        Ok(merged)
     }
 
 
