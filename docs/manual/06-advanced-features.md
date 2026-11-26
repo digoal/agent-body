@@ -1,6 +1,6 @@
 # 06 — 进阶特性指南（Advanced Features）
 
-> **章节目标**: 详细介绍 Agent Body (`v1.0.0`) 的核心进阶能力：端口防撞预警、变更爆炸半径推演、混合 RRF 检索、会话自洁、CodeGraph 联邦、三层语义元数据、WFG 死锁检测、跨机联邦 Mesh、内生 Wait Events/AWR 与可移植配置（`AGENT_BODY_CONFIG` / `[workspace]`）。
+> **章节目标**: 详细介绍 Agent Body (`v1.1.0`) 的核心进阶能力：端口防撞预警、变更爆炸半径推演、全信号 Omni-RRF 与知识网络检索、三态运行模式与 Shadow A/B 证伪自愈、纯 Rust 多模态 L1A (`schema_version=2.0`)、会话自洁、CodeGraph 联邦、WFG 死锁检测、跨机联邦 Mesh、内生 Wait Events/AWR 与可移植配置（`AGENT_BODY_CONFIG` / `[workspace]`）。
 
 ---
 
@@ -147,4 +147,5 @@ flowchart TD
 - **五点对比探针 (`agent-body feedback probes`)**：在 `P1 开工 Brief` / `P2 事前 Pre-Hook` / `P3 检索效用` / `P4 事后漂移` / `P5 周期回归` 以物理真值量化 Before/After/Delta 差值并自动自愈或去重写入 `user_feedback.md`；
 - **AOPCC 悲观-乐观自适应并发控制**：`body_brief` 在开工时签发 `<= 120 tok` 乐观直通租约（如本机 `:5432` PostgreSQL、已装 CLI、`<temp_dir>`）；高危端口绑定与共享资源写维持悲观前置拦截；若乐观直连碰壁失败，`body_hook_post(success=false)` 在 `< 2ms` 内注入宿主机替代处方并自适应降级租约；
 - **内生 Wait Events、`/proc/self` 与 AWR/ADDM 自调优**：覆盖 6 大类 `18/18` 标准等待事件、AWR 快照黄金基线差分与 `L1_AUTONOMIC` 一键自调优（`perf-snapshot`/`perf-awr`/`perf-tune`/`perf-delete`）；
-- **实证 Benchmark 与存证账本**：关于 A/B 对照负载（`W1`~`W18`）、内核微基准 SLA（`M1`~`M6`）、质量门禁（`DQ1`~`DQ9`）、竞品对标（`COMP-C1`~`C4`）及 `PR-01`~`PR-14` 生产效能存证流水，请直接阅读专题章节 [10-benchmark-and-roi.md](10-benchmark-and-roi.md)。
+- **实证 Benchmark 与存证账本 (`v3.9`)**：关于 A/B 对照负载（`W1`~`W19`）、内核微基准 SLA（`M1`~`M6`）、质量与 Shadow A/B 稳态门禁（`DQ1`~`DQ10`）、竞品对标（`COMP-C1`~`C4`）及 `PR-01`~`PR-14` 生产效能存证流水，请直接阅读专题章节 [10-benchmark-and-roi.md](10-benchmark-and-roi.md)。
+- **三态运行模式、纯 Rust 多模态 L1A (`schema_version=2.0`) 与全信号 Omni-RRF 知识网络 (Phase 58~63)**：支持 `bypass`/`shadow_ab`/`body_only` 三态动态切换与 `H1~H5` Shadow A/B 自主自愈、MCP `core`/`dev`/`ops`/`full` Schema 减税档位、纯 Rust 多模态解析与 `asset_chunk` 分块，以及 BM25 + Fuzzy + Semantic + 属性图 + 层级 + `links` + 标量调制的 7 路 Omni-RRF 召回。

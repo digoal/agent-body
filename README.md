@@ -4,7 +4,7 @@
 > **三位一体内核：宿主机事实感官 × 规约脊柱与小脑反射 × 可插拔海马体与连续性接力（Rust Edition · 单二进制交付）**
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/Rust-1.99.0-orange.svg)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/Rust-1.100.0-orange.svg)](https://www.rust-lang.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-FTS5_Bundled-green.svg)](https://sqlite.org/)
 [![MCP](https://img.shields.io/badge/Protocol-MCP_stdio-purple.svg)](https://modelcontextprotocol.io/)
 
@@ -102,6 +102,7 @@
 - 📜 **[16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md)**：双域全链路行为审计、因果溯源与数据驱动自进化规格说明书（`IN_AGENT` + `OUT_OF_AGENT` 双域审计、`Watcher` 60s 折叠防洪、`before_after_delta` + `evidence_sha256`、DuckDB OLAP 分析与 AOPCC 租约/规则自进化飞轮）
 - 🧬 **[17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)**：Agent 本体（宿主机具身底座）、跨大脑连续性接力、五维稳态生命体征与四级自治包络规格说明书（`BodyManifest`、`ContinuityCapsule` `<=300 tok`、`HomeostasisVitals`、`L0~L3` 权限边界与三层命名兼容契约）
 - 📈 **[18-wait-events-and-awr-perf-diagnostics-spec.md](docs/design_doc/18-wait-events-and-awr-perf-diagnostics-spec.md)**：本体内生等待事件（Wait Events）、`/proc/self` 零特权内核遥测、AWR 快照黄金基线差分与 ADDM 自优化设计规格说明书（6 大类 18 事件、`Body Time` 分解、8 档对数分位桶与 `L1` 内存/锁自调优）
+- 🧠 **[19-knowledge-network-and-graph-recall-spec.md](docs/design_doc/19-knowledge-network-and-graph-recall-spec.md)**：弱向量补偿、行业 Know-How 知识网络与全信号 Omni-RRF 多路融合召回规格说明书（Heading-Aware 切片 + 别名归一 + PMI 共现 + `qwen3.5:0.8b` 原文锚定因果抽取 + BM25/Fuzzy/Vector/Graph/Hierarchy/Links/Scalar 融合）
 
 ---
 
@@ -141,7 +142,7 @@
 - 🌐 **[08-web-dashboard.md](docs/manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级大管家拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
 - 🪝 **[09-hooks-integration.md](docs/manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
 - 🧪 **五重确定性质量门禁与 320+ 自动化测试**：`make quality-gate`（`evolution-check` 全仓防漂移/活跃文档 0 断链 + `0` `unwrap`/`expect` + `>1500L` 文件清零 + `18/18` `WaitEventId` 全埋点 + 非基准 `/root/new` 硬编码清零 + `-D warnings` 严格编译）+ `cargo test` 全绿；
-- 📊 **[10-benchmark-and-roi.md](docs/manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.8 与生产效能存证账本（`W1~W18` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ9` + `COMP-C1~C4` 竞品对标 + `PR-01~14` 溯源流水）
+- 📊 **[10-benchmark-and-roi.md](docs/manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.9 与生产效能存证账本（`W1~W19` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ10` + `COMP-C1~C4` 竞品对标 + `PR-01~14` 溯源流水）
 
 ---
 
@@ -182,8 +183,8 @@ cargo build --release
 # 6. 本次会话完成？清理 /root/new/tmp/ 临时测试文件并沉淀工单纪要进长期记忆
 ./target/release/agent-body close session-20261115-01 --clean-temp
 
-# 7. 启动基于浏览器的可视化监控大屏 (事实拓扑 + 多 Agent 协作锁 + 本体稳态 AWR 看板，默认 8756 端口)
-./target/release/agent-body web --port 8756
+# 7. 启动基于浏览器的可视化监控大屏 (事实拓扑 + 多 Agent 协作锁 + 本体稳态 AWR & Shadow A/B 看板，默认 8765 端口)
+./target/release/agent-body web --port 8765
 ```
 
 ### 3. Agent MCP 挂载配置

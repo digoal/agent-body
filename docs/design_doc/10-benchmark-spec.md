@@ -1,7 +1,7 @@
 # 10 — 实证 Benchmark 对照评测与生产效能存证账本规格说明书 (Benchmark & Verifiable ROI Spec)
 
 > **Agent Body 产品设计 · 交付件 10**  
-> **版本**: v0.4.0 → Phase 27~44 演进基线（当前 Spec **`v3.7`**） · **编制**: Antigravity · **日期**: 2026-11-22  
+> **版本**: v0.4.0 → Phase 27~64 演进基线（当前 Spec **`v3.9`** · `v1.1.0`） · **编制**: Antigravity · **日期**: 2026-11-27  
 > **对齐约束**: [README.md 规约 #1、#5、#9、#12、#13、#16、#17、#18](../../README.md#L234-L311) · [ISSUE.md #13](../../ISSUE.md#L73)
 
 ---
@@ -309,3 +309,16 @@ $$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\
    - **`W17 (cross_brain_continuity_and_body_proprioception)`**：模拟大脑 A (`antigravity`) 写入含敏感凭据与间接注入文本的接力胶囊，大脑 B (`claude-code`) 接入本体恢复；考核 6 器官 `BodyManifest` 自省、`<300 tok` 零泄露接力、`L3_FORBIDDEN` 包络拦截及 `rounds_saved >= 2` / `+ΔQ > 0`；
    - **`DQ8 (body_homeostasis_and_envelope_hygiene)`**：校验五维本体生命体征分值合法性、`AutonomyEnvelope` 对 `/etc/shadow` 拦截率 100% 与 `body_checkpoints` 零泄露/预算合规；
    - **`PR-13 (CrossBrainContinuitySaved)`**：记录 `body_state` 在跨大脑连续性接力与器官自省中节省的冷重探 Token 与轮次。
+
+---
+
+## 十五、Benchmark `v3.8 ~ v3.9` 内生 AWR 稳态、纯 Rust 多模态回填与 Shadow A/B 证伪门禁（Phase 50~63 · `v1.1.0`）
+
+1. **Benchmark `v3.8` (`W18` + `M6` + `DQ9` + `PR-14`)**：
+   - **`W18 (wait_events_awr_and_addm_tune)`**：实测 6 大类 `18/18` 内生 `WaitEventId` 无锁埋点、AWR 黄金基线快照差分报告与 `L1` ADDM 自调优；
+   - **`M6 (wait_event_probe_latency)`**：考核亚微秒级 `WaitEventGuard` 探针开销微基准 SLA；
+   - **`DQ9 (kernel_telemetry_and_awr_integrity)`**：考核现网内核内存/锁水位与 `18/18` 等待事件全量覆盖健康度；
+   - **`PR-14 (BodyPerfAwrAnalyzed)`**：记录内生 AWR 快照与调优分析节省的排障轮次存证。
+2. **Benchmark `v3.9` (`W19` + `DQ10` · Phase 63 · `v1.1.0`)**：
+   - **`W19 (multimodal_metadata_and_knowhow_backfill)`**：验证纯 Rust 多模态 L1A (`schema_version=2.0`) 提取、`asset_chunk` 章节切片、Know-How 知识网络边与 7 路 `Omni-RRF` 混合检索的端到端命中质量与帕累托净胜；
+   - **`DQ10 (shadow_ab_falsification_and_zero_panic_probe)`**：验证多模态扫描/回填全格式零 Panic、`Shadow A/B` 帮倒忙率审计及 `H1~H5` 自动自愈机制现网稳态合规度。

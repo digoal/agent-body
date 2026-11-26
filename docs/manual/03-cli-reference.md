@@ -38,7 +38,7 @@ agent-body [OPTIONS] <COMMAND>
 | `mesh` | 轻量多机联邦 `MeshEnvelope v1.0`：跨机图谱、HMAC 签名对话与沙盒文件投递 | 多机集群联动 |
 | `platform` | 跨平台原生探针查看本机硬件、端口与自动化任务 | Linux/macOS/Windows 探测 |
 | `demo` | 真引擎路演场景演示、ROI 核算与 43 工具黑白屏对齐自检 | 产品路演与一致性验证 |
-| `bench` | 运行 `v3.8` 实证 Benchmark（`W1~W18` / `M1~M6` / `DQ1~DQ9` / `COMP-C1~C4`）与 `PR-01~14` 账本 | 实证效能评测与回归对比 |
+| `bench` | 运行 `v3.9` 实证 Benchmark（`W1~W19` / `M1~M6` / `DQ1~DQ10` / `COMP-C1~C4`）与 `PR-01~14` 账本 | 实证效能评测与回归对比 |
 | `feedback` | `user_feedback.md` 双向管理、`reconcile` 新鲜度对账与 `P1~P5` 五点自进化探针 | 反馈闭环与自进化体检 |
 | `audit` | 双域全链路行为审计 (`IN_AGENT` + `OUT_OF_AGENT`)、DuckDB OLAP 与自进化 | 行为溯源与数据驱动进化 |
 | `body` | Agent 本体中枢：`manifest` / `vitals` / `envelope` / `handoff` / `resume` / `heal` / `peers` / `perf-*` | 跨大脑连续性、稳态治理与 AWR 诊断 |
@@ -58,7 +58,7 @@ agent-body [OPTIONS] <COMMAND>
   ╔═══════════════════════════════════════════════════════╗
   ║      Agent Body (Rust 版) — 系统状态          ║
   ╚═══════════════════════════════════════════════════════╝
-  版本:           v1.0.0 (<git-commit>, linux/x86_64)
+  版本:           v1.1.0 (<git-commit>, linux/x86_64)
   数据目录:       "<user_home>/.agent-body"
   数据库文件:     "<user_home>/.agent-body/body.db"
   已纳管资产数:   26091
@@ -429,12 +429,15 @@ agent-body [OPTIONS] <COMMAND>
     - `-a, --args <JSON>`: 工具入参 JSON 字符串
     - `--success <true|false>`: 调用是否成功（默认 `true`，兼容 `--success=false`）
     - `-e, --error-output <TEXT>`: 可选失败错误输出（触发 `OptimisticFailureDiagnoser` `<2ms` 自愈处方注入）
+  - `bridge` (Phase 58 · Claude Code / Codex / Hermes 原生 Hook stdin JSON 协议桥接):
+    - 从标准输入读取 `{ "hook_event_name", "tool_name", "tool_input", "tool_response" }` 并遵循 `[runtime].mode`（`bypass` / `shadow_ab` / `body_only`），输出符合客户端协议的 Pre/Post Hook JSON 响应。
 - **示例**:
   ```bash
   agent-body hooks generate --client agy --dry-run
   agent-body hooks pre --tool-name run_command --args '{"command":"psql -p 5432"}'
   agent-body hooks post --tool-name write_file --args '{"path":"/root/new/work/demo.rs"}'
   agent-body hooks post --tool-name run_command --args '{"command":"psql -p 9999"}' --success=false --error-output "Connection refused"
+  echo '{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"Cargo.toml"}}' | agent-body hooks bridge
   ```
 
 ---
@@ -456,6 +459,8 @@ agent-body [OPTIONS] <COMMAND>
 
 ### 2.18 补充子命令速查（1:1 映射补齐）
 - `agent-body asset register --path <PATH> --type <TYPE> [--description <DESC>]`：手动向大管家登记单个文件或目录资产（对应 `body_asset_register`）。
+- `agent-body asset search <QUERY> [--limit 20] [--detail-level micro|standard|full] [--asset-type <TYPE>] [--modality <MOD>] [--kv-filter key=val] [--graph-hops 1] [--no-fuzzy] [--no-links]`：全信号 Omni-RRF + 知识网络检索纳管资产（对应 `body_asset_search`）。
+- `agent-body asset scan <PATH> [--enrich-with-ollama] [--enrich-limit 50] [--mine-knowledge] [--extract-knowhow] [--backfill-multimodal]`：白黑名单分级扫描目录，提取纯 Rust 多模态 L1A v2.0 元数据并可选执行存量回填与原子 Know-How 抽取（对应 `body_asset_scan`）。
 - `agent-body coordination acquire -t <TYPE> -i <ID> [-s exclusive|shared] [-a <AGENT>] [--ttl-seconds 300]`：申请资源协作锁（对应 `body_lock_acquire`）。
 - `agent-body coordination wait -t <TYPE> -i <ID> [--wait-timeout-ms 5000]`：排队等待并唤醒获取协作锁，内置 WFG 死锁环路拦截（对应 `body_lock_wait`）。
 - `agent-body coordination deadlock`：执行 Wait-For Graph 全局死锁与等待队列检测（对应 `body_lock_deadlock_check`）。
@@ -502,12 +507,12 @@ agent-body [OPTIONS] <COMMAND>
 
 ---
 
-### 2.23 `bench` — 实证 Benchmark v3.8 对照评测与生产效能存证账本 (Phase 27~56)
+### 2.23 `bench` — 实证 Benchmark v3.9 对照评测与生产效能存证账本 (Phase 27~63)
 - **这是什么**: 在真实宿主机上运行「Without Agent Body 裸奔基线 vs With Agent Body 本体引擎」A/B 对照测试套件，运行竞品横向对标，并审计日常每次 MCP/CLI/Web/Hook 调用自动记录的生产效能存证流水（对应 `body_benchmark`）。
 - **为什么需要**: 用同机实跑数据与 SHA-256 防篡改指纹证明 Token 节省率、上下文质量净胜（$\Delta Q$）、延迟加速比与冲突拦截率，杜绝“拍脑袋宣传数字”（规约 #18）。
 - **子命令与参数**:
-  - `workloads`: 列出 18 大标准 A/B 负载（`W1`~`W18`）、`M1`~`M6`、`DQ1`~`DQ9` 与 `PR-01`~`PR-14` 归因推导规则字典。
-  - `run [--suite full|macro|micro|dq|competitors|W1~W18|COMP-C1~C4] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
+  - `workloads`: 列出 19 大标准 A/B 负载（`W1`~`W19`）、`M1`~`M6`、`DQ1`~`DQ10` 与 `PR-01`~`PR-14` 归因推导规则字典。
+  - `run [--suite full|macro|micro|dq|competitors|W1~W19|COMP-C1~C4] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
   - `competitors [--track all|C1|C2|C3|C4] [--format markdown|json]`: 运行四大赛道热门开源竞品横向实证对标。
   - `report [--run-id <ID>] [--format table|json|csv]`: 查看指定批次或最近一次跑批报告。
   - `ledger [--window 24h|7d|30d|all] [--tool <NAME>] [--limit 20]`: 审计生产运行态按 PR 规则聚合的效能存证账本。
@@ -525,7 +530,7 @@ agent-body [OPTIONS] <COMMAND>
   ```markdown
   # Agent Body 实证基准评测报告 (run-ef911f10-cb74-4733-8908-7744f190e75a)
 
-  - **版本 / Commit**: `v1.0.0`
+  - **版本 / Commit**: `v1.1.0`
   - **评测套件**: `full` · **总耗时**: `~2s`
   - **报告 SHA-256 存证指纹**: `19e4777aefde296b80bb36e2b1099905442c4f7d3bf797dd3630411113b8bbea`
   - **SLA 总检门禁**: ✅ PASS
@@ -536,7 +541,7 @@ agent-body [OPTIONS] <COMMAND>
   | **事前拦截风险数** | - | - | **16 次** |
   | **阻断垃圾噪音文件** | - | - | **379 个** |
   ```
-  > 💡 **指标解读**: 当前 Benchmark 已演进至 **`v3.8`**，覆盖 `W1~W18`（含分层图谱 `W13`、Mesh 防重放 `W14`、AOPCC 自适应并发 `W15`、双域审计 `W16`、跨大脑连续性 `W17`、AWR/ADDM 诊断 `W18`）、6 项微基准（`M1~M6`）、9 项质量与稳态门禁（`DQ1~DQ9`）及 `COMP-C1~C4` 竞品同机对标，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁。
+  > 💡 **指标解读**: 当前 Benchmark 已演进至 **`v3.9`**，覆盖 `W1~W19`（含分层图谱 `W13`、Mesh 防重放 `W14`、AOPCC 自适应并发 `W15`、双域审计 `W16`、跨大脑连续性 `W17`、AWR/ADDM 诊断 `W18`、多模态/Know-How 回填 `W19`）、6 项微基准（`M1~M6`）、10 项质量/AWR/Shadow A/B 稳态门禁（`DQ1~DQ10`）及 `COMP-C1~C4` 竞品同机对标，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁。
 
 ---
 
@@ -588,6 +593,10 @@ agent-body [OPTIONS] <COMMAND>
   - `perf-awr [--snap-a <ID>] [--snap-b <ID>] [--vs-baseline true|false] [--json]`: 生成 AWR 快照/黄金基线差分性能报告与 ADDM 瓶颈诊断处方。
   - `perf-tune [--json]`: 在 `L1_AUTONOMIC` 包络内执行一键性能与内存自优化（`PRAGMA optimize` + `wal_checkpoint` + `shrink_memory` + `malloc_trim(0)`）。
   - `perf-delete --kind snapshot|report --id <ID>`: 从 `system_meta` 安全删除指定 AWR 快照或诊断报告（对齐 `body_state` 的 `delete_snapshot`/`delete_awr_report`）。
+  - `runtime-status [--json]`: 查看当前生效的三态运行模式（`bypass`/`shadow_ab`/`body_only`）、`AGENT_BODY_MODE` 热覆盖状态、`mcp_profile` 减税档位与 `shadow_primary` 配置。
+  - `runtime-mode --mode <bypass|shadow_ab|body_only> [--mcp-profile <core|dev|ops|full>] [--shadow-primary <body|live>] [--persist]`: 切换三态运行模式与 MCP 减税档位（`--persist` 写回 `config.toml`）。
+  - `ab-compare <QUERY> [--limit 10] [--window 7d]`: 在当前工作区执行一次实时 Live 文件扫描 vs Body 索引的 Shadow A/B 对照，统计遗漏/陈旧条目与 `H1~H5` 自动自愈数。
+  - `ab-report [--window 24h|7d|30d|all] [--json]`: 汇总历史 `category="ab_shadow"` 真实使用数据，计算帮倒忙率、漏召回率与自愈统计。
 - **调用示例**:
   ```bash
   agent-body body manifest
@@ -595,6 +604,10 @@ agent-body [OPTIONS] <COMMAND>
   agent-body body envelope --action write_file --target /etc/shadow
   agent-body body handoff --from-brain antigravity --goal "完成 PG WAL 调优验证" --next-step "跑 pgbench 对比"
   agent-body body resume --by-brain claude-code
+  agent-body body runtime-status
+  agent-body body runtime-mode --mode shadow_ab --mcp-profile dev
+  agent-body body ab-compare "MultimodalExtractor" --limit 10
+  agent-body body ab-report --window 7d
   agent-body body perf-snapshot --label golden-v1 --set-baseline
   agent-body body perf-awr --vs-baseline true
   agent-body body perf-tune

@@ -64,12 +64,12 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/preflight/` | 运行时环境与依赖完整性预检引擎 | 严格保障可移植部署与优雅降级 |
 | ├── `src/storage/` | SQLite/PG/DuckDB 三引擎、88 方法 SPI 抽象、27 张表与分域子模块 (`{assets,facts,memory,locks,audit}.rs`) | 任何表变更必须同步 schema |
 | ├── `src/audit/` | 双域行为审计（`IN_AGENT`/`OUT_OF_AGENT`）、脱敏防洪与 AOPCC 自进化 | 写入严禁 Panic，强制脱敏 |
-| ├── `src/body/` | Agent 本体中枢（`BodyManifest`、`<300 tok` 接力胶囊、五维稳态、`L0~L3` 包络、`perf_awr/{mod,wait_events,awr_engine}.rs` 18/18 AWR/ADDM） | 严守脑体分离不内置 LLM 循环 |
+| ├── `src/body/` | Agent 本体中枢（`BodyManifest`、`<300 tok` 接力胶囊、五维稳态、`L0~L3` 包络、`ShadowAbEngine` `H1~H5` 自愈、`perf_awr/*`） | 严守脑体分离不内置 LLM 循环 |
 | ├── `src/coordination/` | 多 Agent 协作锁中枢 (Port/Dir/File 互斥、TTL、WFG 死锁、Advisory Lock) | 跨 Agent 资源互斥保证 |
-| ├── `src/fact/` | 宿主机客观事实图谱 (工具能力/端口/Systemd/Cron/资料编目/L1~L3 属性图) | 客观图谱抽取与语义查询 |
+| ├── `src/fact/` | 宿主机客观事实图谱 (`KnowledgeGraphBuilder` 知识网络 + `KnowHowExtractor` L2 抽取 + 端口/Systemd/Cron) | 客观图谱抽取、原文锚定防幻觉与语义查询 |
 | ├── `src/brief/` | 自适应情境组装引擎 (`BriefAssembler` + `OptimisticLeaseEngine`) | 意图驱动自适应情境裁剪与 AOPCC 租约 |
 | ├── `src/placement/` | 8 大规范放置引擎与建议逻辑 (自演化学习) | 严格对齐 README 与放置规则 |
-| ├── `src/scanner/` | 分级扫描器、`SecretRedactor`、`PromptInjectionScanner` 与 `OllamaAnnotator` | 深度递归、全链路脱敏与阻断的核心 |
+| ├── `src/scanner/` | 分级扫描器、纯 Rust 多模态 L1A (`multimodal`/`multimodal_ext`)、三通道魔数统一分类、`AssetSearchEngine` (Omni-RRF + `kv_filter`) | 深度递归、全链路脱敏、0 Panic 与阻断的核心 |
 | ├── `src/env/` | 系统硬件规格、端口防撞、`/proc` 进程采集与白名单 GC | 过滤系统级底噪与端口冲突检测 |
 | ├── `src/memory/` | 跨会话长期记忆与多适配器体系 (内置/PowerContext/Mem0/Letta) | 降级机制保障 |
 | ├── `src/watcher/` | inotify 监听器与变更同步流水线 | 300ms 防抖，同步 `changes` 表与写穿失效 |
@@ -79,7 +79,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/session/` | 会话绑定、完工结清与临时垃圾回收 | 会话生命周期自洁 |
 | ├── `src/hooks/` | 事件总线、`AutoSyncEngine`、客户端生成器与 `OptimisticFailureDiagnoser` | POSIX 转义防注入与碰壁自愈 |
 | ├── `src/api/` | 43 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI/Web 1:1:1 映射 |
-| ├── `src/benchmark/` | 双轨/三轨实证 Benchmark 引擎（`W1~W18` + `M1~M6` + `DQ1~DQ9` + `COMP-C1~C4` + `PR-01~14` 账本） | 必须真机实测与 SHA-256 存证 |
+| ├── `src/benchmark/` | 双轨/三轨实证 Benchmark `v3.9` 引擎（`W1~W19` + `M1~M6` + `DQ1~DQ10` + `COMP-C1~C4` + `PR-01~14` 账本） | 必须真机实测与 SHA-256 存证 |
 | ├── `src/demo/` | 路演沙盒引擎（7 大黄金剧目、ROI 核算、`demo:*` 隔离） | 严禁假数据，必须真引擎实跑 |
 | ├── `src/feedback/` | `user_feedback.md` 双向总账、`FreshnessReconciler` 与 `P1~P5` 五点对比自进化探针 | 探针自愈与反馈沉淀闭环 |
 | ├── `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | 解析函数纯函数跨平台编译 |
@@ -93,7 +93,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | `user_feedback.md` | 主理人与 Agent 实际使用体验与探针自上报总账 | `body_feedback` 双向读写目标 |
 | `docs/manual/` | 面向使用者与架构师的分卷深度技术手册 (01~10) | 保持与代码演进实时同步 |
 | `docs/src_doc/` | 开发者指南、产品边界治理、活跃演进路线图与历史 `archive/` | 任务流转枢纽，统一 kebab-case |
-| `docs/design_doc/` | 架构设计文档闭环交付件 (01~18) | 顶层架构事实依据，统一 kebab-case |
+| `docs/design_doc/` | 架构设计文档闭环交付件 (01~19) | 顶层架构事实依据，统一 kebab-case |
 | `docs/idea_doc/` | 初始思考、方案推导与设计全过程长文 | 原始产品哲学思考沉淀 |
 | `docs/markdown/` | 面向公众传播的技术长文与高保真 SVG 架构图 | 宣传与技术分享沉淀 |
 | `skills/` | 本项目内置技能库 (`developer`, `doc-writer`, `guide`) | 指导 Agent 认知与自闭环自进化 |

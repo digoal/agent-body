@@ -1,6 +1,6 @@
 # Agent Body 演进进度总表 (Progress Tracker)
 
-> **当前版本**：`v1.0.0 GA` | **演进策略**：Phase 1~51 历史规划与进度明细已归档至 [docs/src_doc/archive/](archive/)，本表聚焦主线里程碑、近期 Phase 52~57 交付台账与断点恢复入口。
+> **当前版本**：`v1.1.0` | **演进策略**：Phase 1~51 历史规划与进度明细已归档至 [docs/src_doc/archive/](archive/)，本表聚焦主线里程碑、近期 Phase 52~64 交付台账与断点恢复入口。
 
 ---
 
@@ -34,11 +34,12 @@
 | **Phase 61** | **Know-How 知识网络 (Stage 1) 与 Omni-RRF 多路融合召回** | 扩展 `fact_nodes`/`fact_edges` 知识节点与 SQLite 热迁移、`HeadingChunker` + 别名归一 + PMI 共现图、加权 `bm25` + 驼峰拆词 + Pure-Rust `fuzzy` + 图 1~2 跳 + 层级 + 互链 + 标量调制 Omni-RRF，修复 `ShadowAbEngine` 0 命中回退 | `#44` | [roadmap-phase61.md](roadmap-phase61.md) | ✅ **已完成** |
 | **Phase 62** | **Know-How 知识网络 (Stage 2)：索引子图下沉、小模型 L2 抽取与 `v3.9` 基准** | 索引下沉定向 1~2 跳子图与枢纽阻尼、写穿级联清理 (`FreshnessReconciler`)、`qwen3.5:0.8b` (`think=false`) 章节 L2 Know-How 原文锚定抽取、Web 通道/推理可视化与 Benchmark `v3.9` (`W19`/`DQ10`) | `#44` | [roadmap-phase62.md](roadmap-phase62.md) | ✅ **已完成** |
 | **Phase 63** | **多模态解析深化、三通道统一与 Shadow A/B `H1~H5` 自愈 (`v1.6`)** | `multimodal_ext.rs` 纯 Rust HTML/Parquet/CSV/JSONL/音频 L1A、`run_command_bounded` 有界探针、三大入口统一魔数分类与 `schema_version=2.0`、`kv_filter`+无损回填全端 1:1:1、运行模式 `.override` 热切与 `ShadowAbEngine` `H1~H5` 自动写穿自愈 | `v1.6` | [roadmap-phase63.md](roadmap-phase63.md) | ✅ **已完成** |
+| **Phase 64** | **`v1.1.0` 一等公民大一统对齐 (Web UI / SKILL / 手册 / 门禁)** | 升级 `evolution_manifest.py` 防漂移门禁、`Cargo.toml` 升至 `1.1.0`、Web UI 补齐三态 `shadow_ab`/`H1~H5`/`kv_filter`/`backfill` Action-level 1:1:1 交互、同步 3 套 SKILL / 10 卷手册 / `arch` / `design_doc/{06,10}` / `README` / `INSTALL` / `v1.1.0` 发版说明 | `#46` | [roadmap-phase64.md](roadmap-phase64.md) | ✅ **已完成** |
 
 ---
 
 ## 三、断点恢复指引
 
-1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与最近活跃路线图 [roadmap-phase63.md](roadmap-phase63.md)；
+1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与最近活跃路线图 [roadmap-phase64.md](roadmap-phase64.md)；
 2. 严禁全仓扫描 `docs/src_doc/archive/` 内已冻结的历史路线图；
 3. 每次代码/文档改动收口前执行 `make quality-gate && make test && make verify-decks` 与 `make sync-mirror` 校验零漂移。

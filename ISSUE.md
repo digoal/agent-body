@@ -211,3 +211,13 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     > 补充要求：如果是文本，应该结合语义、模糊查询、事实标量、bm25、全文检索、属性图关联片段、层级、文档之间的联系等的RRF融合查询。
     - **现网实证 GAP**：当前 `EmbeddingClient` 对输入文本 `chars().take(2000)` 硬截断、`fact_nodes`/`fact_edges`（SQLite `CHECK`）仅限于 7 类物理/工程拓扑、`L3_SEMANTIC` 语义边反过来强依赖小模型余弦 `>= 0.78`，且 `HybridSearchEngine`/`AssetSearchEngine` 仍停留在 0-hop 默认排序 FTS + 单向量（缺少 `bm25` 加权、模糊查询、事实标量调制、层级回溯与文档互链融合）；同时 `shadow_ab` 本机实测暴露代码驼峰标识符 FTS 漏召回问题。
     - **架构方案（方案 B · Omni-RRF）**：保持 27 表与 43 MCP 工具零膨胀，采用 **L1 确定性骨架（Heading-Aware 章节切片 + 别名归一 + SVG/标题术语提取 + PMI 共现）+ L2 小模型原子 Know-How 抽取（`qwen3.5:0.8b` `"think": false` + 原文锚定校验防幻觉）+ 全信号 Omni-RRF 融合召回**（整合 **BM25 全文 + Fuzzy 模糊 n-gram/编辑距离 + 可选 Semantic 向量 + 属性图 1~2 跳关联片段 + 章节/目录层级 Hierarchy + `links` 文档间联系 + 事实标量 `Phi_scalar` 过滤与时效/重要度调制**，输出 `matched_channels`/`reasoning_paths`），配套毛线球剪枝与写穿级联失效，分 Phase 61 与 Phase 62 实施（详见 [19-knowledge-network-and-graph-recall-spec.md](docs/design_doc/19-knowledge-network-and-graph-recall-spec.md)）。
+
+45. **`[P1 · Phase 63]` 多模态零外依纯 Rust L1A 升级、`schema_version=2.0`、`W19/DQ10` Benchmark v3.9 与 `H1~H5` Shadow A/B 自主自愈** `✅ 已全量落地`:
+    - 升级 `src/scanner/multimodal_ext.rs` 实现 SVG/PNG/JPEG/WebP/GIF/PDF/Office(OOXML) 与 7+3 二进制/文本格式纯 Rust 零外依解析，统一注入 `schema_version="2.0"`、12 项多模态指标、全链 `asset_chunk` 分块与 `backfill-multimodal` 存量回填；
+    - `BenchmarkEngine` 升级至 **`v3.9`**（新增 **`W19` Multimodal Metadata & Know-How Backfill** 与 **`DQ10` Shadow A/B Falsification & Zero-Panic Probe**，门禁扩大至 `W:19, M:6, DQ:10, COMP:4, PR:14`）；
+    - `ShadowAbEngine` 落地 `H1~H5` 自愈分类引擎，在 `ab_compare`/`ab_report` 中直接统计与触发驼峰切词/索引追平/记忆权重校准自愈（详见 [roadmap-phase63.md](docs/src_doc/roadmap-phase63.md)）。
+
+46. **`[P0 · Phase 64 · v1.1.0]` 一等公民全景齐步走、Web UI 交互补全与版本对齐** `🚧 收口验证中`:
+    - `Cargo.toml` 正式升版为 **`1.1.0`**，发布 [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md) 与 [roadmap-phase64.md](docs/src_doc/roadmap-phase64.md)；
+    - 补齐 Web UI 2.0（`index.html`、`02_topology_facts.js`、`05_body.js`）Phase 58~63 三态模式切换、`mcp_profile` 减税档位、Shadow A/B 对照面板及资产多维过滤（`modality`/`asset_type`/`kv_filter`/`fuzzy`/`include_links`/`backfill_multimodal`），统一默认端口 `8765`；
+    - 升级 `scripts/evolution_manifest.py --check` 对活跃文档强制拦截过时 `Benchmark v3.8` / `W1~W18` / `DQ1~DQ9` 与错位 `docs/README.md` 指针，并完成 3 SKILL + 全量 `docs/manual/` + `docs/arch/` + `docs/design_doc/{06,10}*` + `INSTALL.md` + `EVOLUTION_GUIDE.md` + `README.md` 同步。

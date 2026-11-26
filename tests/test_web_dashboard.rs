@@ -81,6 +81,8 @@ async fn test_web_dashboard_e2e_lifecycle() {
     assert!(resp_index.contains("43/43 对齐"));
     assert!(resp_index.contains("view-audit"));
     assert!(resp_index.contains("view-body"));
+    assert!(resp_index.contains("body-ab-query"));
+    assert!(resp_index.contains("body-runtime-mode-select"));
 
     // 3.2 静态 CSS (验证包含白天与夜间双色调语义变量)
     let resp_css = send_http_request("127.0.0.1", bound_port, "GET /app.css HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await;
@@ -96,6 +98,8 @@ async fn test_web_dashboard_e2e_lifecycle() {
     assert!(!resp_js.contains("drawMockGraph"));
     assert!(resp_js.contains("toggleTheme"));
     assert!(resp_js.contains("renderDemoSceneWidget"));
+    assert!(resp_js.contains("asset-kv-filter"));
+    assert!(resp_js.contains("loadBodyRuntimeAndAb"));
 
     // 4. 验证 REST API
     // 4.1 GET /api/v1/health
@@ -188,6 +192,9 @@ Content-Length: 75\r\n\r\n\
         "/api/v1/body/vitals",
         "/api/v1/body/envelope",
         "/api/v1/body/checkpoints",
+        "/api/v1/body/runtime-mode",
+        "/api/v1/body/ab-report?window=7d",
+        "/api/v1/assets/search?q=&kv_filter=schema_version%3D2.0&limit=5",
         "/deck",
         "/presentation",
     ] {

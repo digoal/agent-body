@@ -14,6 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("btn-body-perf-copy-md")?.addEventListener("click", copyBodyPerfMarkdown);
   document.getElementById("btn-body-perf-del-report")?.addEventListener("click", deleteSelectedBodyPerfReport);
+  document.getElementById("btn-body-runtime-save")?.addEventListener("click", saveBodyRuntimeMode);
+  document.getElementById("btn-body-ab-compare")?.addEventListener("click", runBodyAbCompare);
+  document.getElementById("btn-body-ab-refresh")?.addEventListener("click", loadBodyRuntimeAndAb);
 });
 
 async function loadBodyWorkbench() {
@@ -91,6 +94,7 @@ async function loadBodyWorkbench() {
       `).join("");
     }
     loadBodyPerfAwr(true);
+    loadBodyRuntimeAndAb();
   } catch (e) {
     const orgBox = document.getElementById("body-organs-box");
     if (orgBox) orgBox.innerHTML = `<div class="empty">加载本体中枢失败: ${esc(e.message)}</div>`;
@@ -476,6 +480,102 @@ async function triggerBodyPerfTune() {
     showToast(`L1 性能自调优失败: ${e.message}`, true);
   } finally {
     if (btn) { btn.disabled = false; btn.innerText = oldText; }
+  }
+}
+
+/* ─── Phase 58/63: 三态运行模式、MCP 档位与 Shadow A/B H1~H5 面板 ───── */
+async function loadBodyRuntimeAndAb() {
+  const statusBox = document.getElementById("body-runtime-status-box");
+  const reportBox = document.getElementById("body-ab-report-box");
+  const win = document.getElementById("body-ab-window")?.value || "7d";
+  try {
+    const [rt, rep] = await Promise.all([
+      apiGet("/api/v1/body/runtime-mode"),
+      apiGet(`/api/v1/body/ab-report?window=${encodeURIComponent(win)}`),
+    ]);
+    const modeSel = document.getElementById("body-runtime-mode-select");
+    const profSel = document.getElementById("body-mcp-profile-select");
+    const primSel = document.getElementById("body-shadow-primary-select");
+    if (modeSel && rt.effective_mode) modeSel.value = rt.effective_mode;
+    if (profSel && rt.effective_mcp_profile) profSel.value = rt.effective_mcp_profile;
+    if (primSel && rt.shadow_primary) primSel.value = rt.shadow_primary;
+
+    if (statusBox) {
+      statusBox.innerHTML = `<div class="summary-kpi-row">
+        <div class="summary-kpi"><span class="sk-label">生效运行模式</span><span class="sk-val c-cyan">${esc(rt.effective_mode || "-")}</span></div>
+        <div class="summary-kpi"><span class="sk-label">MCP 暴露档位</span><span class="sk-val c-green">${esc(rt.effective_mcp_profile || "-")} (${rt.exposed_mcp_tools ?? "-"} / 43 工具)</span></div>
+        <div class="summary-kpi"><span class="sk-label">主响应侧</span><span class="sk-val">${esc(rt.shadow_primary || "live")}</span></div>
+        <div class="summary-kpi"><span class="sk-label">H1/H2 自动自愈</span><span class="sk-val">${rt.auto_heal_on_hindering === false ? "关闭" : "开启"}</span></div>
+      </div>`;
+    }
+
+    if (reportBox) {
+      const verdictBadge = rep.verdict === "NET_POSITIVE" ? "badge-ok" : (rep.verdict === "HURTING_INVESTIGATE" ? "badge-err" : "badge-warn");
+      const recs = (rep.recommendations || []).map((r) => `<li>${esc(r)}</li>`).join("");
+      const worst = (rep.worst_regressions || []).slice(0, 5).map((w) => {
+        const flags = (w.hindering_flags || []).map((f) => `<span class="badge badge-warn" style="margin-right:4px;">${esc(f)}</span>`).join("");
+        return `<div class="list-item"><div class="item-top"><strong class="mono">${esc(w.query)}</strong><span class="badge">${esc(w.verdict)} (auto_healed=${w.auto_healed_count ?? 0})</span></div><div>${flags}<span class="muted-text">${esc(w.reason || "")}</span></div></div>`;
+      }).join("");
+      reportBox.innerHTML = `<div class="item-box">
+        <div class="item-top"><strong>📊 Shadow A/B 实证总评 (${esc(rep.window || win)})</strong><span class="badge ${verdictBadge}">${esc(rep.verdict || "-")}</span></div>
+        <div class="summary-kpi-row mt-8">
+          <div class="summary-kpi"><span class="sk-label">双轨对照样本</span><span class="sk-val">${rep.shadow_comparisons ?? 0}</span></div>
+          <div class="summary-kpi"><span class="sk-label">本体胜率</span><span class="sk-val c-green">${Number(rep.win_rate_pct || 0).toFixed(1)}%</span></div>
+          <div class="summary-kpi"><span class="sk-label">负面回退+陈旧率</span><span class="sk-val c-orange">${Number(rep.regression_rate_pct || 0).toFixed(1)}%</span></div>
+          <div class="summary-kpi"><span class="sk-label">平均相对召回</span><span class="sk-val">${Number(rep.avg_recall_vs_live_pct || 0).toFixed(1)}%</span></div>
+        </div>
+        <div class="muted-text mt-8">${esc(rep.verdict_summary || "")}</div>
+        ${recs ? `<ul class="mt-8" style="margin-left:18px;font-size:12px;">${recs}</ul>` : ""}
+        ${worst ? `<div class="mt-8"><strong>最近负向/自愈明细 (H1~H5)</strong>${worst}</div>` : ""}
+      </div>`;
+    }
+  } catch (e) {
+    if (statusBox) statusBox.innerHTML = `<div class="empty">读取运行模式失败: ${esc(e.message)}</div>`;
+  }
+}
+
+async function saveBodyRuntimeMode() {
+  const mode = document.getElementById("body-runtime-mode-select")?.value || "body_only";
+  const mcp_profile = document.getElementById("body-mcp-profile-select")?.value || "full";
+  const shadow_primary = document.getElementById("body-shadow-primary-select")?.value || "live";
+  mirrorBlackScreen(
+    `agent-body body runtime-mode --mode ${mode} --mcp-profile ${mcp_profile} --shadow-primary ${shadow_primary}`,
+    "body_state",
+    { action: "runtime_mode", mode, mcp_profile, shadow_primary }
+  );
+  try {
+    await apiPost("/api/v1/body/runtime-mode", { mode, mcp_profile, shadow_primary });
+    showToast(`⚖️ 已保存运行模式: ${mode} (mcp_profile=${mcp_profile})`);
+    await loadBodyRuntimeAndAb();
+  } catch (e) {
+    showToast(`切换运行模式失败: ${e.message}`, true);
+  }
+}
+
+async function runBodyAbCompare() {
+  const query = document.getElementById("body-ab-query")?.value?.trim() || "";
+  const cmpBox = document.getElementById("body-ab-compare-box");
+  if (!query) {
+    showToast("请输入对照检索词 query", true);
+    return;
+  }
+  mirrorBlackScreen(`agent-body body ab-compare "${query}" --limit 10`, "body_state", { action: "ab_compare", query, limit: 10 });
+  try {
+    const cmp = await apiPost("/api/v1/body/ab-compare", { query, limit: 10 });
+    if (cmpBox) {
+      const flags = (cmp.hindering_flags || []).length
+        ? cmp.hindering_flags.map((f) => `<span class="badge badge-warn" style="margin-right:4px;">${esc(f)}</span>`).join("")
+        : '<span class="badge badge-ok">无 H1~H5 帮倒忙</span>';
+      cmpBox.innerHTML = `<div class="item-box">
+        <div class="item-top"><strong>⚔️ 单次 A/B 实测: <span class="mono">${esc(cmp.query)}</span></strong><span class="badge">${esc(cmp.verdict)} (healed=${cmp.auto_healed_count ?? 0})</span></div>
+        <div class="mt-8">${flags} · live=${cmp.live_elapsed_us}μs/${cmp.live_hit_count}hits vs body=${cmp.body_elapsed_us}μs/${cmp.body_hit_count}hits · recall=${cmp.recall_vs_live_pct}% · stale=${cmp.body_stale_count}</div>
+        <div class="muted-text mt-4">${esc(cmp.reason || "")}</div>
+      </div>`;
+    }
+    await loadBodyRuntimeAndAb();
+  } catch (e) {
+    if (cmpBox) cmpBox.innerHTML = `<div class="empty">对照失败: ${esc(e.message)}</div>`;
+    showToast(`A/B 对照失败: ${e.message}`, true);
   }
 }
 

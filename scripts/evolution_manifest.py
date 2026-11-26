@@ -205,7 +205,7 @@ def check_drift(manifest: dict) -> list[str]:
         if p.exists() and "Agent 本体" not in p.read_text(encoding="utf-8"):
             errors.append(f"{doc_rel} 缺少 Tier-1 定位表达「Agent 本体」")
 
-    # 校验 EVOLUTION_GUIDE.md 指向的活跃 roadmap-phase*.md 为最新阶段
+    # 校验 docs/README.md 与 EVOLUTION_GUIDE.md 均指向最新活跃路线图
     roadmap_files = sorted(
         (ROOT / "docs/src_doc").glob("roadmap-phase*.md"),
         key=lambda p: max([int(n) for n in re.findall(r"\d+", p.stem)] or [0]),
@@ -217,6 +217,40 @@ def check_drift(manifest: dict) -> list[str]:
             errors.append(
                 f"EVOLUTION_GUIDE.md 活跃路线图漂移: 最新路线图为 {latest_roadmap}，但未在 Tier-0 入口登记"
             )
+        docs_readme = ROOT / "docs/README.md"
+        if docs_readme.exists() and latest_roadmap not in docs_readme.read_text(encoding="utf-8"):
+            errors.append(
+                f"docs/README.md 活跃路线图漂移: 最新路线图为 {latest_roadmap}，但未更新指向"
+            )
+
+    # 校验核心活跃非演说文档同步最新 Benchmark 版本、W1~W19/DQ1~DQ10 计数与规格书登记
+    bench_ver = manifest["bench_spec_version"]
+    dq_cnt = counts["dq"]
+    bench_docs = [p for p in active_docs if p.parent.name != "presentation"] + [
+        ROOT / "INSTALL.md",
+        ROOT / "docs/design_doc/10-benchmark-spec.md",
+    ]
+    bench_stale = [
+        (re.compile(r"Benchmark\s*v3\.8|Bench\s*v3\.8"), f"过时 Benchmark 版本 (当前 v{bench_ver})"),
+        (re.compile(r"\bW1~W18\b"), f"过时负载范围 (当前 W1~W{counts['workloads']})"),
+        (re.compile(r"\bDQ1~DQ9\b"), f"过时 DQ 范围 (当前 DQ1~DQ{dq_cnt})"),
+    ]
+    for bdoc in bench_docs:
+        if not bdoc.exists():
+            continue
+        btxt = bdoc.read_text(encoding="utf-8")
+        for pat, desc in bench_stale:
+            for m in pat.finditer(btxt):
+                ctx = btxt[max(0, m.start() - 40) : min(len(btxt), m.end() + 40)]
+                if any(tok in ctx for tok in ("→", "Phase 5", "历史", "演进", "早期", "v3.8`")):
+                    continue
+                errors.append(f"{bdoc.relative_to(ROOT)} 存在{desc}: '{m.group(0)}'")
+
+    readme_file = ROOT / "README.md"
+    if readme_file.exists():
+        rtxt = readme_file.read_text(encoding="utf-8")
+        if "19-knowledge-network-and-graph-recall-spec.md" not in rtxt:
+            errors.append("README.md 缺少最新规格书 19-knowledge-network-and-graph-recall-spec.md 登记")
 
     # 校验 CLI --help (src/cli_args.rs / src/main.rs) 中不再残留过时的 Benchmark 计数
     cli_help_text = (

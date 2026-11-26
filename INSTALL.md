@@ -1,7 +1,7 @@
 # Agent Body — 生产安装与可移植部署指南 (INSTALL.md)
 
-> **适用版本**: v1.0.0 GA  
-> **更新时间**: 2026-11-23  
+> **适用版本**: v1.1.0  
+> **更新时间**: 2026-11-27  
 > **文档目标**: 本文档全面说明 Agent Body 在不同操作系统与容器环境下的**编译依赖**、**运行时依赖**、**可选增强服务**与**一键部署流程**，防止因环境差异导致部署或运行失败。
 
 ---
@@ -18,7 +18,8 @@
 | **Rust 工具链** | *编译期* | >= 1.75.0 (推荐 1.82+) | 从源码编译 Rust 二进制 | 若使用预编译发布二进制包，则**无需安装** |
 | **C/C++ 编译器** | *编译期* | gcc / g++ >= 9 或 clang | 编译 `rusqlite` 与 `duckdb` 内置 C/C++ 引擎 | 源码编译失败 |
 | **CMake & Make** | *编译期* | CMake >= 3.15, GNU Make | DuckDB Bundled 静态构建支持 | 源码编译构建阶段报错退出 |
-| **Agent Body 软件包版本** | **INFO** | — | 以 `agent-body --version` 实测为准（`v1.0.0` GA 支持 `AGENT_BODY_CONFIG` 与可移植 `[workspace]` 配置） | 仅信息提示 |
+| **Agent Body 软件包版本** | **INFO** | — | 以 `agent-body --version` 实测为准（`v1.1.0` 支持 `AGENT_BODY_CONFIG`、热切换 `runtime_mode.override` 与纯 Rust 多模态 L1A） | 仅信息提示 |
+| **多模态外部探针 (`poppler`/`ffmpeg`)** | OPTIONAL | `pdfinfo`, `pdftotext`, `ffprobe` | PDF 页数/正文深层提取与音视频精确流探测（`<= 500ms` 有界超时） | **自动降级**为纯 Rust L1A 内置头/Thrift Footer 解析，0 阻断 |
 | **Ollama 向量服务** | OPTIONAL | >= 0.1.20 (`nomic-embed-text` / `bge-m3`) | 长期记忆双路向量混合检索 (RRF) | **自动降级**为内置 SQLite FTS5 纯全文检索（或 `[embedding].fallback_fts_only=false` 显式报错） |
 | **Ollama 元数据标注模型** | OPTIONAL | >= 0.1.20 (`qwen3.5:0.8b`) | 资产 L2 本地异步脱敏语义标注精炼 | **自动降级**为纯 L1 Rust 确定性语法提取，零云端 Token |
 | **PostgreSQL** | OPTIONAL | >= 14 (`pgvector` 可选) | 跨机多 Agent 高并发共享存储后端（向量余弦默认应用层计算，无须强制安装 pgvector） | 默认采用内置嵌入式 SQLite，无需安装外部数据库 |
@@ -183,6 +184,20 @@ systemctl status agent-body.service
 journalctl -u agent-body.service -f
 ```
 
+### 3. macOS 常驻 LaunchAgent 托管 (macOS 原生平台)
+在 macOS 宿主机可通过 `~/Library/LaunchAgents/com.digoal.agent-body.plist` 托管常驻 `daemon` 与内置 Web UI (`http://127.0.0.1:8765`)：
+
+```bash
+mkdir -p ~/.agent-body/logs && chmod 700 ~/.agent-body/logs
+plutil -lint ~/Library/LaunchAgents/com.digoal.agent-body.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.digoal.agent-body.plist
+
+# 日常查看状态 / 重启 / 卸载
+launchctl print gui/$(id -u)/com.digoal.agent-body
+launchctl kickstart -k gui/$(id -u)/com.digoal.agent-body
+launchctl bootout gui/$(id -u)/com.digoal.agent-body
+```
+
 ---
 
 ## 六、Docker 容器化部署
@@ -261,4 +276,4 @@ docker run -d \
 | `/proc/net/tcp 不存在` | 运行在非 Linux 环境或极端受限容器内 | 在 Linux 物理机/虚拟机运行（非 Linux 自动使用跨平台 `sysinfo`/本地探测回退） |
 | `max_user_watches 耗尽` | 监控目录下的文件树极大，超出了内核 inotify 上限 | 执行 `sudo sysctl -w fs.inotify.max_user_watches=524288` |
 | `Ollama 连接失败警告` | 本地未安装 Ollama 或服务未启动 | 系统默认 `fallback_fts_only=true` 自动安全降级为纯 FTS5；若需严格校验请设 `false` |
-| `web.port 不能小于 1024` | 非 root 用户无权监听特权端口或非回环绑定缺少 `auth_token` | 修改 `~/.agent-body/config.toml` 中的 `[web].port` 为 `1024~65535`（默认 `8756`），非 `127.0.0.1` 绑定须配置 `auth_token` |
+| `web.port 不能小于 1024` | 非 root 用户无权监听特权端口或非回环绑定缺少 `auth_token` | 修改 `~/.agent-body/config.toml` 中的 `[web].port` 为 `1024~65535`（默认 `8765`），非 `127.0.0.1` 绑定须配置 `auth_token` |

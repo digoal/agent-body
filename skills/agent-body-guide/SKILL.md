@@ -76,7 +76,7 @@ sudo make install
 # 或: sudo install -m 755 target/release/agent-body /usr/local/bin/agent-body
 
 agent-body --version
-# 输出: agent-body 1.0.0 (git-hash, linux/x86_64)
+# 输出: agent-body 1.1.0 (git-hash, macos/x86_64 | linux/x86_64)
 ```
 
 ### 2.3 配置文件与初始化存储
@@ -112,6 +112,15 @@ fallback_fts_only = true
 [annotation]
 enabled = true
 model = "qwen3.5:0.8b"
+multimodal_tools_enabled = true
+multimodal_tool_timeout_ms = 500
+
+[runtime]
+# 运行模式: body_only | bypass | shadow_ab (支持 ~/.agent-body/runtime_mode.override 热切换)
+mode = "shadow_ab"
+mcp_profile = "core"
+shadow_primary = "live"
+auto_heal_on_hindering = true
 ```
 
 ### 2.4 Systemd 后台常驻守护服务（生产托管）
@@ -219,13 +228,26 @@ agent-body feedback probes
 agent-body feedback reconcile
 ```
 
-#### 场景 9: 实证 Benchmark 与竞品横向对标（v3.8）
+#### 场景 9: 实证 Benchmark 与竞品横向对标（v3.9）
 ```bash
-# 真机运行全量套件 (W1~W18 + M1~M6 + DQ1~DQ9 + COMP-C1~C4)
+# 真机运行全量套件 (W1~W19 + M1~M6 + DQ1~DQ10 + COMP-C1~C4)
 agent-body bench run --suite full --save false
 
 # 查看生产运行态效能存证账本 (PR-01~PR-14)
 agent-body bench ledger --window 7d --limit 20
+
+# 运行 Shadow A/B 实测对照与帮倒忙诊断 (H1~H5 + 自动写穿自愈)
+agent-body body ab-compare "ShadowAbEngine" --limit 10
+agent-body body ab-report --window 7d
+```
+
+#### 场景 9.5: 多模态资产深度检索 (`kv_filter`) 与 Know-How 知识建网
+```bash
+# 按多模态类别 + 多谓词结构化过滤 + Omni-RRF 8 维融合检索
+agent-body asset search "" --asset-type document --kv-filter "schema_version=2.0,importance_score>=0.7,has:doc_title" --limit 10
+
+# 分级扫描 + 知识网络构建 + 小模型 L2 Know-How 抽取 + 存量多模态无损回填
+agent-body asset scan /path/to/repo --mine-knowledge --extract-knowhow --backfill-multimodal
 ```
 
 #### 场景 10: 会话结束完工结算与环境自洁
@@ -262,9 +284,9 @@ agent-body close session-20261115-01 --clean-temp
 | **规范放置** | `body_placement_suggest` | 咨询新文件/工程的规范存放路径与命名建议 |
 | | `body_placement_rules` | 查看生效的 8 大目录放置规则清单 |
 | | `body_placement_learn` | 放置规范自演化：聚类挖掘新规则候选与持久化 |
-| **资产纳管** | `body_asset_search` | FTS5 全文与前缀模糊混合检索已知资产 (支持 `micro/standard/full`) |
+| **资产纳管** | `body_asset_search` | Omni-RRF 多路融合 + 多模态/领域/`asset_type`/`kv_filter` 多谓词精确过滤检索 |
 | | `body_asset_register` | 手动纳管或标记特定路径资产 |
-| | `body_asset_scan` | 触发指定目录白黑名单三级分级扫描 (含 L1 提取与可选 L2 标注) |
+| | `body_asset_scan` | 触发指定目录白黑名单三级分级扫描（支持 `mine_knowledge`/`extract_knowhow`/`backfill_multimodal`） |
 | **客观事实图谱**| `body_fact_query` | 宿主机事实图谱语义只读查询 (工具能力/端口/Systemd/Cron/资料) |
 | **生命周期门禁**| `body_hook_pre` | AOPCC 三态并发路由与防撞门禁 (端口绑定/高爆炸半径/敏路径/锁冲突校验) |
 | | `body_hook_post` | 操作后状态同步；当 `success=false` 且含 `error_output` 时 `<2ms` 注入碰壁自愈处方 |
@@ -297,10 +319,10 @@ agent-body close session-20261115-01 --clean-temp
 | | `body_service_contact` | 管理外部可用服务通讯录与轻量健康探活（严禁存明文密钥） |
 | **多机联邦 Mesh** | `body_mesh_query` | `MeshEnvelope v1.0` HMAC 防重放联邦协同：ping/facts/locks/port/acquire/跨机图谱/脱敏对话/<=10MB 沙盒投递 |
 | **路演与对齐** | `body_demo_scenario` | Web/黑屏同源 7 大路演剧目真引擎实跑、ROI 核算、43/43 Parity 对齐与沙盒复位 |
-| **实证基准与账本** | `body_benchmark` | `v3.8` 基准评测：`W1~W18` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ9` + `COMP-C1~C4` 竞品对标与 `PR-01~14` 账本 |
-| **反馈与自进化** | `body_feedback` | `user_feedback.md` 双向总账读写、已验证反馈沉淀记忆、`reconcile` 新鲜度对账与 `P1~P5` 自进化探针 |
+| **实证基准与账本** | `body_benchmark` | `v3.9` 基准评测：`W1~W19` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ10` + `COMP-C1~C4` 竞品对标与 `PR-01~14` 账本 |
+| **反馈与自进化** | `body_feedback` | `user_feedback.md` 双向总账读写、已验证反馈沉淀记忆、`reconcile` 新鲜度对账（含多模态回填）与 `P1~P5` 探针 |
 | **双域行为审计** | `body_audit_query` | `IN_AGENT` + `OUT_OF_AGENT` 双域审计查询、因果钻取、DuckDB OLAP 导出与租约滑窗自进化 |
-| **Agent 本体中枢** | `body_state` | 六器官自省 (`manifest`)、五维稳态 (`vitals`)、`L0~L3` 自治包络 (`envelope`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`)、多本体名片 (`peers`) 与内生 AWR 诊断 (`perf_snapshot`/`perf_awr`/`perf_tune`/`delete_snapshot`/`delete_awr_report`) |
+| **Agent 本体中枢** | `body_state` | 六器官自省 (`manifest`)、五维稳态 (`vitals`)、三态模式 (`runtime_status`/`runtime_mode`/`ab_compare`/`ab_report`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`) 与 AWR 诊断 (`perf_*`) |
 
 ---
 

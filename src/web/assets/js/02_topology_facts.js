@@ -1204,22 +1204,58 @@ function renderFactsTab() {
       </tr>`).join("") + `</tbody></table>`;
   } else {
     el.innerHTML = `
-      <div class="inline-bar">
-        <input id="asset-search-q" class="input flex-1" type="text" value="${esc(q)}" placeholder="Omni-RRF 检索纳管资产 (BM25/模糊/图谱/层级/互链)..." />
-        <select id="asset-detail-level" class="input input-sm" style="width:104px;" title="Token 披露粒度">
+      <div class="inline-bar" style="flex-wrap:wrap;gap:6px;">
+        <input id="asset-search-q" class="input flex-1" style="min-width:200px;" type="text" value="${esc(q)}" placeholder="Omni-RRF 检索纳管资产 (BM25/模糊/图谱/层级/互链)..." />
+        <select id="asset-modality" class="input input-sm" style="width:105px;" title="按多模态过滤">
+          <option value="">全模态</option>
+          <option value="document">document</option>
+          <option value="code">code</option>
+          <option value="config">config</option>
+          <option value="dataset">dataset</option>
+          <option value="image">image</option>
+          <option value="pdf">pdf</option>
+          <option value="office">office</option>
+          <option value="audio">audio</option>
+          <option value="video">video</option>
+        </select>
+        <select id="asset-type-filter" class="input input-sm" style="width:100px;" title="按资产类别过滤">
+          <option value="">全类别</option>
+          <option value="document">document</option>
+          <option value="script">script</option>
+          <option value="dataset">dataset</option>
+          <option value="config">config</option>
+          <option value="media">media</option>
+          <option value="other">other</option>
+        </select>
+        <input id="asset-kv-filter" class="input input-sm" style="width:210px;" type="text" placeholder="KV过滤 (如 schema_version=2.0,has:doc_title)" />
+        <select id="asset-detail-level" class="input input-sm" style="width:100px;" title="Token 披露粒度">
           <option value="standard">standard</option>
           <option value="micro">micro</option>
           <option value="full">full</option>
         </select>
-        <select id="asset-graph-hops" class="input input-sm" style="width:94px;" title="知识图扩散跳数">
+        <select id="asset-graph-hops" class="input input-sm" style="width:90px;" title="知识图扩散跳数">
           <option value="1">1-hop 图</option>
           <option value="2">2-hop 图</option>
           <option value="0">0-hop 图</option>
         </select>
-        <button id="btn-asset-search" class="btn btn-primary btn-xs">🔍 检索资产</button>
-        <input id="asset-scan-path" class="input" style="width:180px;" type="text" value="" placeholder="待扫描目录绝对路径" />
         <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
-          <input id="asset-scan-mine-kg" type="checkbox" checked /> 🧠 知识建网
+          <input id="asset-fuzzy" type="checkbox" checked /> Fuzzy
+        </label>
+        <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
+          <input id="asset-include-links" type="checkbox" checked /> Links
+        </label>
+        <button id="btn-asset-search" class="btn btn-primary btn-xs">🔍 检索资产</button>
+      </div>
+      <div class="inline-bar" style="flex-wrap:wrap;gap:6px;">
+        <input id="asset-scan-path" class="input flex-1" style="min-width:200px;" type="text" value="" placeholder="待扫描目录绝对路径" />
+        <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
+          <input id="asset-scan-mine-kg" type="checkbox" checked /> 🧠 L1知识建网
+        </label>
+        <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
+          <input id="asset-scan-extract-kh" type="checkbox" /> 🔬 L2 Know-How
+        </label>
+        <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
+          <input id="asset-scan-backfill-mm" type="checkbox" /> 🎨 多模态回填
         </label>
         <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
           <input id="asset-scan-enrich" type="checkbox" /> 🤖 Ollama精炼
@@ -1245,13 +1281,35 @@ function renderFactsTab() {
 
 async function loadAssetsPanel() {
   const q = document.getElementById("asset-search-q")?.value || "";
+  const modality = document.getElementById("asset-modality")?.value || "";
+  const assetType = document.getElementById("asset-type-filter")?.value || "";
+  const kvFilter = document.getElementById("asset-kv-filter")?.value || "";
   const detail = document.getElementById("asset-detail-level")?.value || "standard";
   const graphHops = document.getElementById("asset-graph-hops")?.value || "1";
+  const fuzzy = document.getElementById("asset-fuzzy")?.checked !== false;
+  const includeLinks = document.getElementById("asset-include-links")?.checked !== false;
   const out = document.getElementById("asset-panel-out");
   if (!out) return;
   try {
-    const list = await apiGet(`/api/v1/assets/search?q=${encodeURIComponent(q)}&limit=50&detail=${encodeURIComponent(detail)}&graph_hops=${encodeURIComponent(graphHops)}`);
-    mirrorBlackScreen(`agent-body asset search "${q}" --detail ${detail} --graph-hops ${graphHops}`, "body_asset_search", { query: q, limit: 50, detail_level: detail, graph_hops: Number(graphHops) });
+    const params = new URLSearchParams({
+      q, limit: "50", detail, graph_hops: graphHops,
+      fuzzy: String(fuzzy), include_links: String(includeLinks),
+    });
+    if (modality) params.set("modality", modality);
+    if (assetType) params.set("asset_type", assetType);
+    if (kvFilter) params.set("kv_filter", kvFilter);
+    const list = await apiGet(`/api/v1/assets/search?${params.toString()}`);
+    const cliParts = [`agent-body asset search "${q}" --detail ${detail} --graph-hops ${graphHops}`];
+    if (modality) cliParts.push(`--modality ${modality}`);
+    if (assetType) cliParts.push(`--asset-type ${assetType}`);
+    if (kvFilter) cliParts.push(`--kv-filter "${kvFilter}"`);
+    if (!fuzzy) cliParts.push("--no-fuzzy");
+    if (!includeLinks) cliParts.push("--no-links");
+    const mcpArgs = { query: q, limit: 50, detail_level: detail, graph_hops: Number(graphHops), fuzzy, include_links: includeLinks };
+    if (modality) mcpArgs.modality = modality;
+    if (assetType) mcpArgs.asset_type = assetType;
+    if (kvFilter) mcpArgs.kv_filter = kvFilter;
+    mirrorBlackScreen(cliParts.join(" "), "body_asset_search", mcpArgs);
     out.innerHTML = `<table class="data-table"><thead><tr><th>类型 / 域 / 通道</th><th>路径</th><th>核心用途、匹配章节与推理路径</th></tr></thead><tbody>` +
       (list || []).map((a) => {
         const typ = a.type || a.asset_type || "other";
@@ -1289,18 +1347,25 @@ async function scanAssetFromWeb() {
   const path = document.getElementById("asset-scan-path")?.value || "";
   const enrich = Boolean(document.getElementById("asset-scan-enrich")?.checked);
   const mine_knowledge = Boolean(document.getElementById("asset-scan-mine-kg")?.checked);
+  const extract_knowhow = Boolean(document.getElementById("asset-scan-extract-kh")?.checked);
+  const backfill_multimodal = Boolean(document.getElementById("asset-scan-backfill-mm")?.checked);
   const out = document.getElementById("asset-panel-out");
   try {
-    const rep = await apiPost("/api/v1/assets/scan", { path, enrich_with_ollama: enrich, enrich_limit: 5, mine_knowledge });
-    const cliCmd = `agent-body asset scan "${path}"${mine_knowledge ? " --mine-knowledge" : ""}${enrich ? " --enrich --enrich-limit 5" : ""}`;
-    mirrorBlackScreen(cliCmd, "body_asset_scan", { path, enrich_with_ollama: enrich, enrich_limit: 5, mine_knowledge });
+    const payload = { path, enrich_with_ollama: enrich, enrich_limit: 5, mine_knowledge, extract_knowhow, backfill_multimodal };
+    const rep = await apiPost("/api/v1/assets/scan", payload);
+    const cliCmd = `agent-body asset scan "${path}"${mine_knowledge ? " --mine-knowledge" : ""}${extract_knowhow ? " --extract-knowhow" : ""}${backfill_multimodal ? " --backfill-multimodal" : ""}${enrich ? " --enrich --enrich-limit 5" : ""}`;
+    mirrorBlackScreen(cliCmd, "body_asset_scan", payload);
     if (out) {
+      const sr = rep.scan_report || rep;
+      const bf = rep.backfill_report || {};
+      const er = rep.enrich_report || {};
       out.innerHTML = `<div class="item-box">
-        <div class="item-top"><strong>📂 分级扫描 &amp; 元数据标注完成</strong><span class="badge badge-ok">${esc(path)}</span></div>
+        <div class="item-top"><strong>📂 分级扫描 &amp; 多模态/知识建网完成</strong><span class="badge badge-ok">${esc(path)}</span></div>
         <div class="summary-kpi-row mt-8">
-          <div class="summary-kpi"><span class="sk-label">扫描总数</span><span class="sk-val">${rep.scanned_count ?? rep.total_scanned ?? "-"}</span></div>
-          <div class="summary-kpi"><span class="sk-label">黑名单浅层阻断</span><span class="sk-val c-orange">${rep.shallow_blocked ?? rep.skipped_count ?? 0}</span></div>
-          <div class="summary-kpi"><span class="sk-label">Ollama 精炼</span><span class="sk-val c-green">${rep.ollama_enriched ?? 0}</span></div>
+          <div class="summary-kpi"><span class="sk-label">深层索引文件</span><span class="sk-val">${sr.deep_indexed_files ?? sr.scanned_count ?? "-"}</span></div>
+          <div class="summary-kpi"><span class="sk-label">黑名单浅层阻断</span><span class="sk-val c-orange">${Array.isArray(sr.shallow_blocked_dirs) ? sr.shallow_blocked_dirs.length : (sr.shallow_blocked ?? 0)}</span></div>
+          <div class="summary-kpi"><span class="sk-label">多模态回填升级</span><span class="sk-val c-cyan">${bf.upgraded ?? 0}</span></div>
+          <div class="summary-kpi"><span class="sk-label">Ollama 精炼</span><span class="sk-val c-green">${er.enriched_count ?? rep.ollama_enriched ?? 0}</span></div>
         </div>
         ${rawJsonDrawer(rep, "查看扫描明细 JSON")}
       </div>`;
@@ -1327,7 +1392,7 @@ async function runFactQuery() {
 }
 
 async function runPortCheck() {
-  const port = Number(document.getElementById("pc-port")?.value || 8756);
+  const port = Number(document.getElementById("pc-port")?.value || 8765);
   const box = document.getElementById("facts-qa-result");
   if (!box) return;
   box.classList.remove("hidden");

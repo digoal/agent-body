@@ -26,7 +26,7 @@ graph TD
             LINKS["src/links/ (分层加权依赖拓扑/断链修复/CodeGraph联动)"]
             SCAN["src/scanner/ (分级扫描/全链路脱敏/抗投毒/三层元数据)"]
             ENV["src/env/ (内核proc采集/端口防撞/安全GC)"]
-            BENCH["src/benchmark/ (三轨 Benchmark v3.8 / PR-01~14 账本)"]
+            BENCH["src/benchmark/ (三轨 Benchmark v3.9 / PR-01~14 账本)"]
             FB["src/feedback/ (使用反馈总账 / 新鲜度对账 / P1~P5 探针)"]
             BODY["src/body/ (Agent 本体中枢: 身份证/接力胶囊/五维稳态/L0~L3/18 AWR)"]
         end
@@ -50,16 +50,16 @@ graph TD
 | 目录/模块 | 核心职责 | 关键数据类型 / 入口结构 |
 |:---|:---|:---|
 | `src/storage/` | 存储中枢与多后端分域 SPI 抽象 (88 方法，27 张表，`{assets,facts,memory,locks,audit}.rs`) | `StorageProvider`, `SqliteStorageProvider`, `PgStorageProvider`, `DuckDbStorageProvider` |
-| `src/body/` | Agent 本体中枢（身份证、跨大脑接力胶囊、五维稳态、`L0~L3` 包络、18/18 Wait Events AWR/ADDM） | `BodyManifestEngine`, `ContinuityManager`, `HomeostasisVitalsEngine`, `AutonomyEnvelope`, `BodyPerfEngine` |
+| `src/body/` | Agent 本体中枢（身份证、跨大脑接力胶囊、五维稳态、`L0~L3` 包络、三态运行模式与 Shadow A/B 证伪、`18/18` Wait Events AWR/ADDM） | `BodyManifestEngine`, `ContinuityManager`, `HomeostasisVitalsEngine`, `AutonomyEnvelope`, `BodyPerfEngine`, `ShadowAbEngine` |
 | `src/audit/` | 双域全链路行为审计（`IN_AGENT`/`OUT_OF_AGENT`）、60s 折叠与自进化 | `AuditLogger`, `AuditEvolutionAnalyzer` |
-| `src/fact/` | 宿主机只读物理事实采集与 L1~L3 属性图 | `FactFacade`, `CapabilityAnnotation`, `AutomationScanner`, `PropertyGraphOrganizer` |
+| `src/fact/` | 宿主机只读物理事实采集、L1~L3 属性图与行业 Know-How/Hierarchy 知识网络 | `FactFacade`, `CapabilityAnnotation`, `AutomationScanner`, `PropertyGraphOrganizer`, `KnowledgeNetworkEngine` |
 | `src/coordination/`| 多 Agent 协作锁、排队唤醒与 WFG 死锁检测 | `CoordinationEngine`, `CoordinationLock`, `DeadlockDetector` |
 | `src/placement/` | 资产规范放置与行为聚类学习 | `PlacementEngine`, `PlacementLearner`, `ConventionChecker` |
-| `src/memory/` | 跨会话长期记忆与三方适配 | `MemoryManager`, `BuiltinLocalProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
+| `src/memory/` | 跨会话长期记忆、三方适配与 Omni-RRF 多路融合检索 | `MemoryManager`, `BuiltinLocalProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
 | `src/links/` | 分层加权依赖关系网与爆炸半径推演 | `LinksEngine`, `CodeGraphBridge`, `LinkRepairer` |
-| `src/scanner/` | 资产扫描、全链路脱敏、抗投毒与三层元数据 | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `OllamaAnnotator` |
-| `src/api/` | 43 个原生 MCP 工具服务端 | `McpServer`, `AgentHookEngine`, `StewardResponse` |
-| `src/benchmark/` | 三轨实证 Benchmark v3.8 (`W1~W18`/`M1~M6`/`DQ1~DQ9`/`PR-01~14`) | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
+| `src/scanner/` | 资产扫描、全链路脱敏、抗投毒、多模态深度解析（L1A+L2）、原子 Know-How 抽取与 Omni-RRF 检索 | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `MultimodalExtractor`, `KnowHowExtractor`, `AssetSearchEngine`, `OllamaAnnotator` |
+| `src/api/` | 43 个原生 MCP 工具服务端（含 `core`/`dev`/`ops`/`full` Schema 减税档位） | `McpServer`, `AgentHookEngine`, `StewardResponse` |
+| `src/benchmark/` | 三轨实证 Benchmark v3.9 (`W1~W19`/`M1~M6`/`DQ1~DQ10`/`PR-01~14`) | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
 | `src/feedback/` | 使用反馈总账、新鲜度对账与五点对比自进化探针 | `FeedbackEngine`, `FreshnessReconciler`, `SelfEvolutionProbeEngine` |
 | `src/demo/` | 路演沙盒引擎与 ROI 核算 | `DemoEngine`, `DemoExecutionResult`, `RoiReport` |
 | `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` |

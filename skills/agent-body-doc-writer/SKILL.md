@@ -86,7 +86,7 @@ flowchart TD
 - `src/brief/optimistic.rs` & `src/hooks/diagnoser.rs`：AOPCC 开工乐观直通租约、三态并发分类器与 `<2ms` 碰壁处方自愈；
 - `src/mesh/`：`MeshEnvelope v1.0` HMAC-SHA256 签名防重放、跨机图谱、双向脱敏对话与沙盒收件箱投递；
 - `src/feedback/` & `src/audit/`：`user_feedback.md` 双向同步、`FreshnessReconciler`、`P1~P5` 自进化探针与双域审计流水；
-- `src/benchmark/`：`v3.8` 实证评测引擎（`W1~W18` + `M1~M6` + `DQ1~DQ9` + `COMP-C1~C4` + `PR-01~14`）。
+- `src/benchmark/`：`v3.9` 实证评测引擎（`W1~W19` + `M1~M6` + `DQ1~DQ10` + `COMP-C1~C4` + `PR-01~14`）。
 
 ### 步骤 2: 实操命令获取真实输出
 针对文档中需要出现的示例，在终端中以 release 二进制执行捕获：
@@ -112,7 +112,7 @@ flowchart TD
   - 错误写法: `A[客户端(Agent)]`
   - 正确写法: `A["客户端 (Agent)"]`
 - **SVG 图表规范**：矢量图保存为独立 `.svg` 文件置于 `docs/markdown/svg/`，保证自适应与文字高对比度无遮挡；
-- **死链检查与防漂移门禁**：运行 `make evolution-check` 校验 27 模块 / 43 工具 / 88 SPI / 27 表 / Benchmark v3.8 计数零漂移与全仓活跃 `.md` 0 死链，确保文档与代码事实 100% 同步。
+- **死链检查与防漂移门禁**：运行 `make evolution-check` 校验 27 模块 / 43 工具 / 88 SPI / 27 表 / Benchmark v3.9 (`W1~W19`/`DQ1~DQ10`) 计数零漂移与全仓活跃 `.md` 0 死链，确保文档与代码事实 100% 同步。
 
 ### 步骤 5: 交付检查与 Commit
 - 检查 `README.md`、`docs/manual/` 与 `docs/src_doc/` 是否无缝互引；

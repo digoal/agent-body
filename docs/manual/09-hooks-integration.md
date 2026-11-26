@@ -1,6 +1,6 @@
 # docs/manual/09-hooks-integration.md — Agent Body HOOK 机制与自动化接入指南
 
-> **版本**: v1.0.0 GA (Phase 14 ~ 56 · 支持 Antigravity / Claude Code `.claude/settings.json` / Cursor / Codex / Hermes / Git)  
+> **版本**: v1.1.0 (Phase 14 ~ 64 · 支持 Antigravity / Claude Code `.claude/settings.json` / Cursor / Codex / Hermes / Git + `hooks bridge`)  
 > **适用对象**: 所有接入 Agent Body 的智能体框架、定时脚本与宿主运维体系
 
 ---
@@ -116,6 +116,11 @@ agent-body hooks generate --client claude --out-dir .
   }
 }
 ```
+
+### 3. 原生 `hooks bridge` 与三态运行模式旁路 (Phase 58)
+对于支持 stdin/stdout Hook JSON 协议的客户端（Claude Code / Codex / Hermes），可直接将回调指向原生二进制命令 `agent-body hooks bridge`：
+- 读取标准输入 `{ "hook_event_name", "tool_name", "tool_input", "tool_response" }`；
+- 自动遵循 `[runtime].mode` 与 `AGENT_BODY_MODE` 环境变量覆盖：`bypass` 模式下直接零阻塞透传放行；`shadow_ab` 模式下同步采集对比样本并落库 `audit_events` (`category="ab_shadow"`)；`body_only`（默认）执行完整 AOPCC 前/后置检查与 `<2ms` 碰壁自愈处方注入。
 
 ---
 

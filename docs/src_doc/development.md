@@ -2,7 +2,7 @@
 
 > **版本**: v1.0.0 (Rust Edition)  
 > **更新时间**: 2026-11-23  
-> **架构基线**: 脑体分离 Agent 本体（三位一体感官/脊柱/海马体 + `src/body/` 本体中枢）+ 多存储引擎 (88 SPI / 27 表) + 协作锁 + 分层加权图谱 + MeshEnvelope v1.0 + AOPCC 并发自适应 + 双域审计自进化 + Benchmark v3.8 (W18/M6/DQ9/PR-14) + `>1500L` 文件清零
+> **架构基线**: 脑体分离 Agent 本体（三位一体感官/脊柱/海马体 + `src/body/` 本体中枢）+ 多存储引擎 (88 SPI / 27 表) + 协作锁 + 分层加权图谱 + MeshEnvelope v1.0 + AOPCC 并发自适应 + 双域审计自进化 + Benchmark v3.9 (W19/M6/DQ10/PR-14) + `>1500L` 文件清零
 
 ---
 
@@ -96,7 +96,7 @@ agent-body/
     ├── platform/            # 跨平台原生探针 (Linux/macOS/Windows)
     ├── mesh/                # 轻量多机联邦 HTTP Peer Mesh & MeshEnvelope v1.0 (含 body_manifest 名片交换)
     ├── demo/                # 路演沙盒引擎（7 大剧目、ROI 核算）
-    ├── benchmark/           # 三轨实证 Benchmark v3.8（W1~W18 + M1~M6 + DQ1~DQ9 + COMP-C1~C4 + PR-01~14）
+    ├── benchmark/           # 三轨实证 Benchmark v3.9（W1~W19 + M1~M6 + DQ1~DQ10 + COMP-C1~C4 + PR-01~14）
     ├── feedback/            # 使用反馈总账 (user_feedback.md)、新鲜度对账与 P1~P5 对比自进化探针
     └── api/                 # 43 个原生 MCP 工具端点与 AOPCC Hook 门禁
 ```

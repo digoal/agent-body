@@ -10,7 +10,7 @@
 
 1. **只读 Tier-0 文档（仅 2 份）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构地图 + 变更触点矩阵）；
-   - 当前活跃路线图 [docs/src_doc/roadmap-phase63.md](docs/src_doc/roadmap-phase63.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase62.md](docs/src_doc/roadmap-phase62.md)、[docs/src_doc/roadmap-phase61.md](docs/src_doc/roadmap-phase61.md)、[docs/src_doc/roadmap-phase60.md](docs/src_doc/roadmap-phase60.md)、[docs/src_doc/roadmap-phase59.md](docs/src_doc/roadmap-phase59.md)、[docs/src_doc/roadmap-phase58.md](docs/src_doc/roadmap-phase58.md)、[docs/src_doc/roadmap-phase57.md](docs/src_doc/roadmap-phase57.md)、[docs/src_doc/roadmap-phase56.md](docs/src_doc/roadmap-phase56.md)、[docs/src_doc/roadmap-phase55.md](docs/src_doc/roadmap-phase55.md)、[docs/src_doc/roadmap-phase54.md](docs/src_doc/roadmap-phase54.md)、[docs/src_doc/roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)、[docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)、[docs/src_doc/roadmap-phase51.md](docs/src_doc/archive/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/archive/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/archive/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/archive/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/archive/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/archive/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/archive/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/archive/roadmap-phase42.md)）。
+   - 当前活跃路线图 [docs/src_doc/roadmap-phase64.md](docs/src_doc/roadmap-phase64.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase63.md](docs/src_doc/roadmap-phase63.md)、[docs/src_doc/roadmap-phase62.md](docs/src_doc/roadmap-phase62.md)、[docs/src_doc/roadmap-phase61.md](docs/src_doc/roadmap-phase61.md)、[docs/src_doc/roadmap-phase60.md](docs/src_doc/roadmap-phase60.md)、[docs/src_doc/roadmap-phase59.md](docs/src_doc/roadmap-phase59.md)、[docs/src_doc/roadmap-phase58.md](docs/src_doc/roadmap-phase58.md)、[docs/src_doc/roadmap-phase57.md](docs/src_doc/roadmap-phase57.md)、[docs/src_doc/roadmap-phase56.md](docs/src_doc/roadmap-phase56.md)、[docs/src_doc/roadmap-phase55.md](docs/src_doc/roadmap-phase55.md)、[docs/src_doc/roadmap-phase54.md](docs/src_doc/roadmap-phase54.md)、[docs/src_doc/roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)、[docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)、[docs/src_doc/roadmap-phase51.md](docs/src_doc/archive/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/archive/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/archive/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/archive/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/archive/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/archive/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/archive/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/archive/roadmap-phase42.md)）。
 2. **运行 O(1) 实时架构快照（`<100ms`，禁止手动数模块/工具数）**：
    ```bash
    make evolution-check
@@ -53,7 +53,7 @@
 | `src/api/` | `McpToolRegistry`, `AgentHookEngine`, `McpServer` | 43 个原生 MCP stdio 工具注册与 Hook 门禁（不写业务逻辑） |
 | `src/audit/` | `AuditLogger`, `AuditEvolutionAnalyzer`, `AuditOlapReport` | `IN_AGENT`/`OUT_OF_AGENT` 双域行为审计、脱敏防洪、AOPCC 滑窗自进化与 DuckDB OLAP |
 | `src/benchmark/` | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` | 双轨/三轨实证评测、Micro/DQ/竞品对标与 `PR-01~14` 存证 |
-| `src/body/` | `BodyManifestEngine`, `ContinuityManager`, `HomeostasisVitalsEngine`, `AutonomyEnvelope` | Agent 本体身份证、`<300 tok` 跨大脑接力胶囊、五维稳态自愈与 `L0~L3` 自治权限包络 |
+| `src/body/` | `BodyManifestEngine`, `ContinuityManager`, `HomeostasisVitalsEngine`, `AutonomyEnvelope`, `ShadowAbEngine` | Agent 本体身份证、`<300 tok` 跨大脑接力胶囊、五维稳态自愈、`L0~L3` 自治权限包络与三态 Shadow A/B `H1~H5` 自愈 |
 | `src/brief/` | `BriefAssembler`, `BriefRequest`, `OptimisticLeaseEngine` | 索引优先自适应情境组装（`<10ms`，40% 记忆预算，AOPCC 乐观租约） |
 | `src/changes/` | `ChangesEngine` | 宿主变更审计流与开工回溯摘要（含脱敏） |
 | `src/config/` | `Config`, `WebConfig`, `StorageConfig` | TOML 配置加载、校验与 `~/.agent-body/` 权限收敛 |
@@ -62,7 +62,7 @@
 | `src/demo/` | `DemoEngine`, `RoiReport` | 6 大路演沙盒剧目（`demo:*` 隔离，真引擎实跑） |
 | `src/ecosystem/` | `McpConfigScanner`, `SkillCatalogScanner`, `ContextBudgetRouter` | MCP/SKILL 目录、外部服务通讯录与 Token 防爆路由 |
 | `src/env/` | `EnvCollector`, `PortChecker`, `HostGarbageCollector` | `/proc` 任务采集（脱敏+去噪）、端口防撞与白名单 `dry-run` GC |
-| `src/fact/` | `FactFacade`, `CapabilityEngine`, `ProcessNetTopology`, `AutomationScanner`, `PropertyGraphOrganizer` | 宿主机客观事实图谱（工具/端口/Systemd/Cron/资料编目/L1~L3 属性图） |
+| `src/fact/` | `FactFacade`, `CapabilityEngine`, `ProcessNetTopology`, `AutomationScanner`, `PropertyGraphOrganizer`, `KnowledgeGraphBuilder`, `KnowHowExtractor` | 宿主机客观事实图谱（工具/端口/Systemd/Cron/资料编目/L1~L3 属性图与 Know-How 知识网络） |
 | `src/feedback/` | `FeedbackEngine`, `FreshnessReconciler`, `SelfEvolutionProbeEngine` | `user_feedback.md` 双向读写、新鲜度对账与 `P1~P5` 自进化探针 |
 | `src/hooks/` | `EventBus`, `HookDispatcher`, `ClientHookGenerator`, `HookPipelineEngine`, `OptimisticFailureDiagnoser` | 事件总线、POSIX 转义防注入、客户端生成与 `<2ms` 碰壁自愈 |
 | `src/links/` | `LinksEngine`, `ImpactAnalyzer`, `LinkAuditor`, `LinkRepairer`, `CodeGraphBridge` | 宏观依赖拓扑、加权 3 跳爆炸半径、假阳性过滤与 CodeGraph 桥接 |
@@ -71,7 +71,7 @@
 | `src/placement/` | `PlacementEngineV2`, `ConventionChecker`, `PlacementLearner` | 8 大目录放置建议、工程安全规约与搬移纠偏自演化 |
 | `src/platform/` | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` | 跨平台系统探针抽象与纯函数解析 |
 | `src/preflight/` | `PreflightChecker`, `PreflightReport` | 依赖预检、磁盘水位预警与 `0600/0700` 安全基线检查 |
-| `src/scanner/` | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `OllamaAnnotator`, `AssetSearchEngine` | 白黑灰分级扫描、多模态理解与脱敏、RRF+KV 资产混合检索及三层语义标注 |
+| `src/scanner/` | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `OllamaAnnotator`, `AssetSearchEngine`, `multimodal`, `multimodal_ext` | 白黑灰分级扫描、纯 Rust 多模态 L1A & 魔数统一分类、Omni-RRF + `kv_filter` 检索及三层语义标注 |
 | `src/session/` | `SessionManager`, `SessionLifecycleManager` | 会话绑定、完工结清与临时垃圾回收 |
 | `src/storage/` | `Storage`, `StorageProvider`, `Sqlite/Pg/DuckDbStorageProvider`, `DuckDbAnalyticsEngine` | 88 方法 SPI 门面、三后端分域实现、跨库热迁移与 Parquet/CSV 导出 |
 | `src/tui/` | `TuiDashboard` | 终端单屏实时看板 |

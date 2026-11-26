@@ -9,20 +9,20 @@
 Agent Body 是脑体分离架构下驻留宿主机的 **Agent 本体（宿主机具身底座）**，采用 Rust 语言编写，底层基于嵌入式 SQLite 与 Linux 内核机制，具备单二进制、零重型运行时依赖的特点。
 
 ### 1.1 系统需求
-- **操作系统**: Linux（内核版本 >= 4.18，支持 inotify 与 `/proc` 文件系统）
-- **CPU 架构**: x86_64 / aarch64
+- **操作系统**: Linux（内核版本 >= 4.18，支持 inotify 与 `/proc`）或 macOS（支持 Apple Silicon/x86_64 与 `launchd`）或 Windows
+- **CPU 架构**: x86_64 / arm64
 - **内存要求**: 基础运行仅需 20MB ~ 50MB 内存；构建期推荐 >= 2GB 可用内存。
 
 ### 1.2 依赖检查
 在编译前，请确保环境中已具备 Rust 与 Cargo 工具链：
 
 ```bash
-# 检查 Rust 编译器版本 (要求 >= 1.75，推荐 1.99.0)
+# 检查 Rust 编译器版本 (要求 >= 1.75，推荐 1.100.0)
 rustc --version
-# 输出示例: rustc 1.99.0-nightly (...)
+# 输出示例: rustc 1.100.0 (...)
 
 # 若提示命令未找到，请加载环境变量
-export PATH="/root/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
 ```
 
 > [!NOTE]
@@ -72,7 +72,7 @@ chmod +x /usr/local/bin/agent-body
 ╔═══════════════════════════════════════════════════════╗
 ║      Agent Body (Rust 版) — 系统状态          ║
 ╚═══════════════════════════════════════════════════════╝
-版本:           v1.0.0 (<git-commit>, linux/x86_64)
+版本:           v1.1.0 (<git-commit>, linux/x86_64)
 数据目录:       "<user_home>/.agent-body"
 数据库文件:     "<user_home>/.agent-body/body.db"
 已纳管资产数:   26091

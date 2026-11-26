@@ -449,29 +449,28 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.10 body_asset_search — 搜索资产
+### 2.10 body_asset_search — 搜索资产 (Phase 59~63 Omni-RRF)
 
 ```json
 {
   "query": {"type": "string", "required": true, "description": "自然语言或关键词查询"},
-  "type": {"type": "string", "description": "按资产类型过滤 (如 directory/script/project)"},
-  "owner": {"type": "string", "description": "按归属者过滤"},
-  "max_security_level": {
-    "type": "string",
-    "enum": ["public", "internal", "confidential", "secret"],
-    "description": "最高可见密级过滤（用于安全脱敏检索）"
-  },
-  "tags": {"type": "array", "items": {"type": "string"}},
-  "limit": {"type": "integer", "default": 20}
+  "limit": {"type": "integer", "default": 20},
+  "detail_level": {"type": "string", "enum": ["micro", "standard", "full"], "default": "standard"},
+  "asset_type": {"type": "string", "description": "按资产类型过滤 (如 directory/script/project)"},
+  "modality": {"type": "string", "description": "按模态过滤 (code/doc/image/pdf/office/db/audio/video)"},
+  "kv_filter": {"type": "string", "description": "desc_kv 元数据过滤 (如 schema_version=2.0 或 format=svg)"},
+  "graph_hops": {"type": "integer", "default": 1, "description": "属性图拓展跳数 (0~2)"},
+  "fuzzy": {"type": "boolean", "default": true, "description": "是否启用模糊 n-gram/编辑距离通道"},
+  "include_links": {"type": "boolean", "default": true, "description": "是否融合 links 文档/代码互链"}
 }
 ```
 
 ---
 
-### 2.11 body_asset_scan — 目录扫描与分级颗粒度建档
+### 2.11 body_asset_scan — 目录扫描与分级颗粒度建档 (Phase 59~63)
 
 依据宿主机 `scan_policies` 策略自动执行分级扫描，**杜绝一股脑全量生成**：
-- 白名单目录：深入递归到最深层，提取完整标量 + 全文 FTS5 + 向量 Embedding + 关联 Links；
+- 白名单目录：深入递归到最深层，提取纯 Rust 多模态 L1A (`schema_version=2.0`) + `asset_chunk` 切片 + 全文 FTS5 + 向量 Embedding + 关联 Links；
 - 黑名单目录：**止于当前目录层级**，仅建档该目录实体本身标量，绝不深入递归子文件，严禁文本切块与向量；
 - 受限目录：仅浅层索引主要入口与 README，跳过大文件向量化。
 
@@ -482,17 +481,11 @@ steward 对外提供三套等价接口，功能完全一致：
     "required": true,
     "description": "要扫描的目录路径"
   },
-  "force_tier": {
-    "type": "string",
-    "enum": ["auto", "deep", "shallow", "restricted"],
-    "default": "auto",
-    "description": "强制指定颗粒度层级。默认为 auto，自动匹配预设 scan_policies"
-  },
-  "auto_register": {
-    "type": "boolean",
-    "default": false,
-    "description": "自动注册发现的项目目录与独立脚本"
-  }
+  "enrich_with_ollama": {"type": "boolean", "default": false, "description": "是否调用本地 Ollama 进行 L2 语义/视觉增强标注"},
+  "enrich_limit": {"type": "integer", "default": 50, "description": "单批增强最大条目数"},
+  "mine_knowledge": {"type": "boolean", "default": false, "description": "是否同步从章节切片挖掘实体属性图与 PMI 术语共现"},
+  "extract_knowhow": {"type": "boolean", "default": false, "description": "是否使用 L2 模型抽取带原文锚定校验的原子 Know-How"},
+  "backfill_multimodal": {"type": "boolean", "default": false, "description": "是否仅回填存量缺失 schema_version=2.0 的多模态资产"}
 }
 ```
 
@@ -982,5 +975,18 @@ url = "http://localhost:8080/notify"
   ```
 
 ---
+
+### 7.3 Web UI 2.0 (`8765`) & Phase 58~63 增量契约
+
+1. **`body_state` 新增三态运行模式与 Shadow A/B Action**：
+   - `runtime_status`：查看当前 `mode`（`bypass` / `shadow_ab` / `body_only`）、`AGENT_BODY_MODE` 覆盖状态、`mcp_profile`（`core`/`dev`/`ops`/`full`）与 `shadow_primary`；
+   - `runtime_mode`：运行时切换 `mode` / `mcp_profile` / `shadow_primary`；
+   - `ab_compare`：同机执行 Live 扫描 vs Body FTS 索引对照，记录漏召回/陈旧条目与 `H1~H5` 自动自愈计数（持久化 `audit_events` `category="ab_shadow"`）；
+   - `ab_report`：按时间窗聚合 `H1~H5` 自愈率与帮倒忙率。
+2. **Web REST 新增/对齐端点（默认监听 `127.0.0.1:8765`）**：
+   - `GET /api/v1/body/runtime-mode` / `POST /api/v1/body/runtime-mode`
+   - `POST /api/v1/body/ab-compare` / `GET /api/v1/body/ab-report?window=7d`
+   - `GET /api/v1/assets/search?q=...&asset_type=...&modality=...&kv_filter=...&graph_hops=...&fuzzy=...&include_links=...`
+   - `POST /api/v1/assets/scan`（支持 `enrich_with_ollama`/`mine_knowledge`/`extract_knowhow`/`backfill_multimodal`）
 
 *下一步: 07-data-model.md — 核心数据模型*

@@ -19,7 +19,7 @@
       <div class="brand">
         <span class="pulse-dot"></span>
         <div>
-          <h1>Agent Body <span class="ver-badge">v1.0.0 · Agent 本体</span></h1>
+          <h1>Agent Body <span class="ver-badge">v1.1.0 · Agent 本体</span></h1>
           <p class="subtitle">脑体分离具身底座 · 宿主机感官 × 小脑反射 × 海马体接力 × 五维稳态</p>
         </div>
       </div>
@@ -172,7 +172,7 @@
               <option value="doc">doc (权威资料)</option>
             </select>
             <button id="btn-fq-run" class="btn btn-primary">🔍 事实问答</button>
-            <input id="pc-port" class="input input-sm" style="width:95px;" type="number" value="8756" min="1" max="65535" />
+            <input id="pc-port" class="input input-sm" style="width:95px;" type="number" value="8765" min="1" max="65535" />
             <button id="btn-pc-run" class="btn btn-ghost">🛡️ 端口防撞诊断</button>
           </div>
           <div id="facts-qa-result" class="qa-box hidden"></div>
@@ -269,7 +269,7 @@
               </div>
               <div class="sandbox-controls">
                 <input id="hook-tool-name" class="input" style="width:150px;" type="text" value="run_command" placeholder="工具名 (run_command / write_file)" />
-                <input id="hook-tool-args" class="input flex-1 mono" type="text" value='{"command": "psql -h 127.0.0.1 -p 5432"}' placeholder='入参 JSON (如 {"port": 8756})' />
+                <input id="hook-tool-args" class="input flex-1 mono" type="text" value='{"command": "psql -h 127.0.0.1 -p 5432"}' placeholder='入参 JSON (如 {"port": 8765})' />
                 <input id="hook-error-output" class="input flex-1 mono" type="text" value="" placeholder="可选 Post-Hook 报错文本 (如 Connection refused)" />
                 <button id="btn-hook-pre" class="btn btn-primary">🛡️ Pre-Hook 预检</button>
                 <button id="btn-hook-post" class="btn btn-ghost">📝 Post-Hook 通知/自愈</button>
@@ -705,6 +705,43 @@
 
               <div id="body-perf-action-banner" class="mt-8" style="display:none;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:600;"></div>
               <div id="body-perf-awr-box" class="mt-8"><div class="empty">正在加载快照库与历史 AWR 诊断报告...</div></div>
+            </div>
+
+            <div class="card mt-12">
+              <div class="item-top" style="flex-wrap:wrap;gap:8px;">
+                <strong>⚖️ 三态运行模式、MCP 减税档位与 Shadow A/B 证伪自愈 (Phase 58/63)</strong>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                  <select id="body-runtime-mode-select" class="input input-xs" style="width:125px;" title="运行模式">
+                    <option value="body_only">body_only</option>
+                    <option value="shadow_ab">shadow_ab</option>
+                    <option value="bypass">bypass</option>
+                  </select>
+                  <select id="body-mcp-profile-select" class="input input-xs" style="width:110px;" title="MCP 工具暴露档位">
+                    <option value="full">full (43)</option>
+                    <option value="core">core (10)</option>
+                    <option value="dev">dev (18)</option>
+                    <option value="ops">ops (20)</option>
+                  </select>
+                  <select id="body-shadow-primary-select" class="input input-xs" style="width:115px;" title="shadow_ab 主响应侧">
+                    <option value="live">live 主响应</option>
+                    <option value="body">body 主响应</option>
+                  </select>
+                  <button id="btn-body-runtime-save" class="btn btn-primary btn-xs">💾 应用模式/档位</button>
+                </div>
+              </div>
+              <div id="body-runtime-status-box" class="mt-8"><div class="empty">正在读取运行模式与 MCP Profile 状态...</div></div>
+              <div class="mt-8" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <input id="body-ab-query" class="input input-xs flex-1" type="text" placeholder="输入检索词执行单次 Shadow A/B 实时对照 (含 H1~H5 帮倒忙诊断与写穿自愈)..." value="ShadowAbEngine" />
+                <button id="btn-body-ab-compare" class="btn btn-primary btn-xs">⚔️ 单次 A/B 实测</button>
+                <select id="body-ab-window" class="input input-xs" style="width:88px;">
+                  <option value="24h">24h</option>
+                  <option value="7d" selected>7d</option>
+                  <option value="30d">30d</option>
+                </select>
+                <button id="btn-body-ab-refresh" class="btn btn-ghost btn-xs">📊 刷新 A/B 报表</button>
+              </div>
+              <div id="body-ab-compare-box" class="mt-8"></div>
+              <div id="body-ab-report-box" class="mt-8"><div class="empty">正在加载 Shadow A/B 汇总统计...</div></div>
             </div>
 
             <div class="panel-grid-2 mt-12">

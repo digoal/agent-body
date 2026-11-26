@@ -106,3 +106,26 @@ systemctl status agent-body
 # 设置开机自动启动
 systemctl enable agent-body
 ```
+
+---
+
+## 5. macOS LaunchAgent 常驻守护与 Web UI 2.0 (Phase 64 · `v1.1.0`)
+
+在 macOS 上可通过用户级 `LaunchAgent` 托管 `agent-body daemon`（同时拉起内嵌 Web UI `http://127.0.0.1:8765`）：
+
+```xml
+<!-- ~/Library/LaunchAgents/com.digoal.agent-body.plist -->
+<key>Label</key><string>com.digoal.agent-body</string>
+<key>ProgramArguments</key>
+<array>
+  <string>/Users/<your_user>/.local/bin/agent-body</string>
+  <string>daemon</string>
+</array>
+<key>RunAtLoad</key><true/>
+<key>KeepAlive</key><true/>
+```
+
+```bash
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.digoal.agent-body.plist
+launchctl kickstart -k gui/$(id -u)/com.digoal.agent-body
+```

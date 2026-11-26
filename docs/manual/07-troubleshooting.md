@@ -81,7 +81,7 @@
 
 ---
 
-## 5. 环境预检、Ollama 元数据标注与沙盒清理 (v1.0.0 GA)
+## 5. 环境预检、多模态元数据标注、运行模式与沙盒清理 (v1.1.0)
 
 ### Q8: 部署到新机器或 CI/CD 后如何快速排查缺少哪项系统依赖？
 - **排查与解决**:
@@ -104,3 +104,14 @@
   agent-body demo reset
   agent-body bench reset
   ```
+
+### Q11: 本地开启了 `shadow_ab` 后想临时退回原生搜索怎么办？遇到驼峰标识符漏召回怎么办？
+- **说明**:
+  1. 可在不修改配置文件的情况下随时通过环境变量 `AGENT_BODY_MODE=bypass` 或命令 `agent-body body runtime-mode --mode bypass` 一键旁路（`shadow_ab` 恢复对照，默认 `body_only`）；
+  2. 遇到代码驼峰标识符或旧格式资产 `schema_version` 漏召回时，可执行：
+     ```bash
+     # 查看 Shadow A/B 证伪报告（含 H1~H5 自动自愈次数）
+     agent-body body ab-report --window 7d
+     # 对存量资产执行纯 Rust 多模态 L1A v2.0 与 Know-How 增量回填
+     agent-body asset scan <your_path> --backfill-multimodal --extract-knowhow
+     ```
