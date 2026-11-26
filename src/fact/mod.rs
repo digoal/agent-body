@@ -5,6 +5,7 @@ pub mod assets_catalog;
 pub mod property_graph;
 pub mod semantic_discovery;
 pub mod knowledge_graph;
+pub mod knowhow_extractor;
 
 pub use capability::{CapabilityEngine, ToolCapability, CapabilityQueryResult};
 pub use process_net::{ProcessNetTopology, ListeningPortFact, PortQueryFactResult};
@@ -15,6 +16,9 @@ pub use semantic_discovery::{GraphRelationshipMiner, MiningReport};
 pub use knowledge_graph::{
     expand_graph_for_query, tokenize_terms, AliasCanonicalizer, GraphExpansionResult,
     HeadingChunk, HeadingChunker, KnowledgeGraphBuilder, KnowledgeMiningReport,
+};
+pub use knowhow_extractor::{
+    verify_grounding_quote, KnowHowExtractionReport, KnowHowExtractor, KnowHowTriple,
 };
 
 use anyhow::Result;
@@ -115,9 +119,30 @@ impl FactFacade {
                 let sub = organizer.query_subgraph(trimmed_query, 2)?;
                 Ok(organizer.format_graph_report(&sub))
             }
-            "knowledge" | "knowhow" | "mine-knowledge" => {
+            "knowledge" | "knowhow" | "mine-knowledge" | "extract-knowhow" | "extract_knowhow" => {
                 let cfg = crate::config::Config::load_effective_or_default();
                 let storage = crate::storage::Storage::open(&cfg.db_path)?;
+                if resolved_type == "extract-knowhow" || resolved_type == "extract_knowhow" {
+                    let rep = KnowHowExtractor::extract_from_storage(
+                        &storage,
+                        &cfg.annotation,
+                        &cfg.knowledge_graph,
+                        10,
+                        None,
+                    )?;
+                    return Ok(format!(
+                        "🧠 **L2 Know-How 因果与边界抽取完成** (model={}, ollama_online={})\n- 扫描章节: {} | 抽取三元组: {} | 原文锚定通过: {} | 幻觉拦截: {} | 新增 Know-How 节点: {} | 新增边: {} | 耗时: {}ms\n",
+                        rep.model_used,
+                        rep.ollama_available,
+                        rep.sections_scanned,
+                        rep.triples_extracted,
+                        rep.triples_grounded,
+                        rep.hallucinations_rejected,
+                        rep.knowhow_nodes_created,
+                        rep.edges_created,
+                        rep.elapsed_ms
+                    ));
+                }
                 if resolved_type == "mine-knowledge" || trimmed_query == "mine" {
                     let rep = KnowledgeGraphBuilder::mine_from_storage(&storage, &cfg.knowledge_graph)?;
                     return Ok(format!(

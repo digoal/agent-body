@@ -512,7 +512,7 @@ function renderBenchmarkReportPayload(rep) {
   }
   if (dqbox) {
     if (dqs.length === 0) {
-      dqbox.innerHTML = `<div class="empty">该批次未运行 DQ 数据质量门禁（请选择全量套件 v3.8 或 DQ1~DQ9）</div>`;
+      dqbox.innerHTML = `<div class="empty">该批次未运行 DQ 数据质量门禁（请选择全量套件 v3.9 或 DQ1~DQ10）</div>`;
     } else {
       dqbox.innerHTML = dqs.map((dq) => `
         <div class="list-item" style="padding:8px 10px;">

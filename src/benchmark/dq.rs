@@ -1,9 +1,9 @@
 use crate::benchmark::report::DataQualityResult;
 use crate::storage::StorageProvider;
 
-/// 运行宿主机数据质量与 D6 准确率/新鲜度/图谱/遥测健康门禁 (DQ1~DQ9)
+/// 运行宿主机数据质量与 D6 准确率/新鲜度/图谱/遥测健康门禁 (DQ1~DQ10)
 pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQualityResult> {
-    let mut results = Vec::with_capacity(9);
+    let mut results = Vec::with_capacity(10);
 
     // DQ1: 资产描述覆盖率 (采样最近 1,000 条资产)
     let assets = storage.list_assets(1000).unwrap_or_default();
@@ -338,8 +338,15 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
     };
     results.push(dq5);
 
-    // DQ6: 图谱多维连通度与证据分层合规度 (Phase 40 / ISSUE #23)
-    let valid_tiers = ["L1_EXPLICIT", "L2_STRUCTURAL", "L3_SEMANTIC"];
+    // DQ6: 图谱多维连通度与证据分层合规度 (Phase 40 / ISSUE #23 + Phase 61~62 Know-How 扩展)
+    let valid_tiers = [
+        "L1_EXPLICIT",
+        "L2_STRUCTURAL",
+        "L3_SEMANTIC",
+        "L1_KNOWLEDGE",
+        "L2_KNOWLEDGE_PMI",
+        "L2_KNOWHOW",
+    ];
     let dq_edges = storage.list_all_fact_edges(5000).unwrap_or_default();
     let dq_projects: Vec<_> = all_nodes
         .iter()
@@ -536,6 +543,78 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
         ),
     });
 
+    // DQ10: 知识网络防毛线球度数上限 (co_occurs_with <= 32)、L2 Know-How 原文锚定与零缺失资产幽灵节点 (Phase 62)
+    let all_kg_nodes = storage.list_all_fact_nodes(5000).unwrap_or_default();
+    let all_kg_edges = storage.list_all_fact_edges(8000).unwrap_or_default();
+    let mut co_degree_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for e in &all_kg_edges {
+        if e.relation == "co_occurs_with" {
+            *co_degree_map.entry(e.source_id.clone()).or_insert(0) += 1;
+            *co_degree_map.entry(e.target_id.clone()).or_insert(0) += 1;
+        }
+    }
+    let max_co_deg = co_degree_map.values().copied().max().unwrap_or(0);
+    let hairball_violations = co_degree_map.values().filter(|&&d| d > 32).count();
+
+    let all_assets_status = storage.list_assets(5000).unwrap_or_default();
+    let missing_paths: std::collections::HashSet<&str> = all_assets_status
+        .iter()
+        .filter(|a| a.status == "missing")
+        .map(|a| a.path.as_str())
+        .collect();
+
+    let mut knowhow_extracted_total = 0usize;
+    let mut ungrounded_knowhow = 0usize;
+    let mut ghost_derived_nodes = 0usize;
+    for n in &all_kg_nodes {
+        let src = n
+            .properties
+            .get("source_path")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if matches!(n.node_type.as_str(), "section" | "knowhow") && missing_paths.contains(src) {
+            ghost_derived_nodes += 1;
+        }
+        if n.node_type == "knowhow"
+            && n.properties
+                .get("extractor")
+                .and_then(|v| v.as_str())
+                .is_some_and(|s| !s.trim().is_empty())
+        {
+            knowhow_extracted_total += 1;
+            let quote_ok = n
+                .properties
+                .get("evidence_quote")
+                .and_then(|v| v.as_str())
+                .is_some_and(|s| !s.trim().is_empty());
+            if !quote_ok || src.trim().is_empty() {
+                ungrounded_knowhow += 1;
+            }
+        }
+    }
+
+    let dq10_ok = [
+        hairball_violations == 0,
+        ungrounded_knowhow == 0,
+        ghost_derived_nodes == 0,
+    ]
+    .into_iter()
+    .filter(|ok| *ok)
+    .count();
+    let dq10_pct = ((dq10_ok as f64 / 3.0) * 100.0 * 100.0).round() / 100.0;
+    results.push(DataQualityResult {
+        id: "DQ10".into(),
+        name: "knowledge_graph_anti_hairball_and_grounding".into(),
+        title: "知识网络防毛线球度数、原文锚定与零幽灵章节门禁".into(),
+        measured_pct: dq10_pct,
+        target_pct: 100.0,
+        passed: dq10_ok == 3,
+        detail: format!(
+            "max_co_deg={}/32 (violations={}) | knowhow_extracted={} (ungrounded={}) | ghost_derived={}",
+            max_co_deg, hairball_violations, knowhow_extracted_total, ungrounded_knowhow, ghost_derived_nodes
+        ),
+    });
+
     results
 }
 
@@ -593,9 +672,34 @@ mod tests {
     fn test_dq9_telemetry_and_awr_integrity_check() {
         let storage = SqliteStorageProvider::open_in_memory().expect("sqlite");
         let results = run_data_quality_checks(&storage);
-        assert_eq!(results.len(), 9);
+        assert_eq!(results.len(), 10);
         let dq9 = results.iter().find(|r| r.id == "DQ9").expect("DQ9");
         assert!(dq9.passed, "空库下 DQ9 应全通过: {}", dq9.detail);
         assert_eq!(dq9.measured_pct, 100.0);
+        let dq10 = results.iter().find(|r| r.id == "DQ10").expect("DQ10");
+        assert!(dq10.passed, "空库下 DQ10 应全通过: {}", dq10.detail);
+    }
+
+    #[test]
+    fn test_dq10_detects_ungrounded_knowhow_and_hairball() {
+        let storage = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        storage
+            .upsert_fact_node(&crate::storage::models::FactNodeRecord {
+                id: "kh:bad-ungrounded".into(),
+                node_type: "knowhow".into(),
+                name: "bad_claim".into(),
+                label: "bad_claim".into(),
+                properties: serde_json::json!({
+                    "claim": "bad_claim",
+                    "extractor": "qwen3.5:0.8b",
+                    "evidence_quote": "",
+                    "source_path": "/tmp/a.md"
+                }),
+                updated_at: None,
+            })
+            .expect("upsert");
+        let results = run_data_quality_checks(&storage);
+        let dq10 = results.iter().find(|r| r.id == "DQ10").expect("DQ10");
+        assert!(!dq10.passed, "无 evidence_quote 的 Know-How 节点应被 DQ10 拦下");
     }
 }

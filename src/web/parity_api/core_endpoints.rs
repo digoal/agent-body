@@ -237,6 +237,10 @@ pub struct AssetScanBody {
     pub enrich_with_ollama: bool,
     #[serde(default = "default_enrich_limit")]
     pub enrich_limit: usize,
+    #[serde(default)]
+    pub mine_knowledge: bool,
+    #[serde(default)]
+    pub extract_knowhow: bool,
 }
 
 fn default_enrich_limit() -> usize {
@@ -264,16 +268,36 @@ pub fn handle_assets_scan(req: &HttpRequest, storage: Arc<dyn StorageProvider>) 
     match scanner.scan_path(&PathBuf::from(body.path.trim())) {
         Ok(report) => {
             let enrich_report = if body.enrich_with_ollama {
-                let annotator = crate::scanner::OllamaAnnotator::with_default_config(st);
+                let annotator = crate::scanner::OllamaAnnotator::with_default_config(st.clone());
                 annotator
                     .enrich_pending_assets(body.enrich_limit.clamp(1, 50), Some(body.path.trim()))
                     .ok()
             } else {
                 None
             };
+            let cfg = Config::load_effective_or_default();
+            let knowledge_report = if body.mine_knowledge {
+                crate::fact::KnowledgeGraphBuilder::mine_from_storage(&st, &cfg.knowledge_graph).ok()
+            } else {
+                None
+            };
+            let knowhow_report = if body.extract_knowhow {
+                crate::fact::KnowHowExtractor::extract_from_storage(
+                    &st,
+                    &cfg.annotation,
+                    &cfg.knowledge_graph,
+                    body.enrich_limit.clamp(1, 20),
+                    Some(body.path.trim()),
+                )
+                .ok()
+            } else {
+                None
+            };
             WebResponse::success(serde_json::json!({
                 "scan_report": report,
                 "enrich_report": enrich_report,
+                "knowledge_report": knowledge_report,
+                "knowhow_report": knowhow_report,
             }))
         }
         Err(e) => WebResponse::error(

@@ -206,7 +206,7 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - 原始需求：要有一个配置项目，3种配置模式，作用是：旁路 agent-body，该实时搜文件还是实时搜索文件就好像 agent-body 不存在；同时使用实时搜索和 agent-body，这个模式用于真实使用过程中的A/B测试的数据收集存储和未来分析，看看 agent-body 到底效果怎么样，是不是在帮倒忙？最后一种是默认的仅使用 agent-body。
     - 已落地交付：新增 `[runtime]` 配置（`mode` / `mcp_profile` / `shadow_primary` / `shadow_max_live_ms`）与 `AGENT_BODY_MODE` 热覆盖；落地 `ShadowAbEngine`（实时工作区扫描 vs FTS 索引双轨对照、陈旧命中检测、漏召回/帮倒忙率分析并持久化至 `audit_events` `category="ab_shadow"`）；同步落地 MCP `core`/`dev`/`ops`/`full` Schema 减税档位、原生 `agent-body hooks bridge` 及 CLI/MCP/Web 1:1:1 入口（详见 [roadmap-phase58.md](docs/src_doc/roadmap-phase58.md)）。
 
-44. **弱向量补偿、行业 Know-How 知识网络与全信号 Omni-RRF 多路融合召回 (`✅ Stage 1 · Phase 61 已落地` · `⏳ Stage 2 · Phase 62 待实施`)**:
+44. **弱向量补偿、行业 Know-How 知识网络与全信号 Omni-RRF 多路融合召回 (`✅ Phase 61~62 Stage 1 & Stage 2 已全量落地`)**:
     > 原始需求：不知道项目是否已经考虑过这个场景，我本地的llm模型参数量太小，实际上生成embedding可能也不好，召回率不一定高。或者支持的文本长度有限，未切分的文本或者即使切分，也容易在语义上失真，所以语义可能不够，还需要更多图的支持，把知识变成网络，变成行业know how.
     > 补充要求：如果是文本，应该结合语义、模糊查询、事实标量、bm25、全文检索、属性图关联片段、层级、文档之间的联系等的RRF融合查询。
     - **现网实证 GAP**：当前 `EmbeddingClient` 对输入文本 `chars().take(2000)` 硬截断、`fact_nodes`/`fact_edges`（SQLite `CHECK`）仅限于 7 类物理/工程拓扑、`L3_SEMANTIC` 语义边反过来强依赖小模型余弦 `>= 0.78`，且 `HybridSearchEngine`/`AssetSearchEngine` 仍停留在 0-hop 默认排序 FTS + 单向量（缺少 `bm25` 加权、模糊查询、事实标量调制、层级回溯与文档互链融合）；同时 `shadow_ab` 本机实测暴露代码驼峰标识符 FTS 漏召回问题。

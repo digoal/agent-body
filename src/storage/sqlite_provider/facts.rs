@@ -200,13 +200,15 @@ impl SqliteStorageProvider {
 
     pub(super) fn impl_find_fact_nodes_by_name(&self, name: &str) -> Result<Vec<FactNodeRecord>> {
         let conn = self.lock_conn()?;
-        let mut stmt = conn.prepare(
-            "SELECT id, node_type, name, label, properties, updated_at FROM fact_nodes 
-             WHERE name LIKE ?1 OR label LIKE ?1 LIMIT 50"
-        )?;
+        let mut results = Vec::new();
+        let mut seen = std::collections::HashSet::new();
 
-        let pattern = format!("%{}%", name);
-        let nodes = stmt.query_map(params![pattern], |row| {
+        // 先走 idx_fact_nodes_name 等值/大小写无关前缀命中，避免高基数全表 LIKE 退化
+        let mut exact_stmt = conn.prepare(
+            "SELECT id, node_type, name, label, properties, updated_at FROM fact_nodes
+             WHERE name = ?1 LIMIT 24"
+        )?;
+        let exact_rows = exact_stmt.query_map(params![name], |row| {
             let props_str: String = row.get(4)?;
             let properties: serde_json::Value = serde_json::from_str(&props_str).unwrap_or(serde_json::json!({}));
             Ok(FactNodeRecord {
@@ -218,8 +220,39 @@ impl SqliteStorageProvider {
                 updated_at: row.get(5)?,
             })
         })?.collect::<Result<Vec<_>, _>>()?;
+        for n in exact_rows {
+            if seen.insert(n.id.clone()) {
+                results.push(n);
+            }
+        }
 
-        Ok(nodes)
+        if results.len() < 24 {
+            let rem = (36usize.saturating_sub(results.len())).max(12) as i64;
+            let mut stmt = conn.prepare(
+                "SELECT id, node_type, name, label, properties, updated_at FROM fact_nodes 
+                 WHERE name LIKE ?1 OR label LIKE ?1 LIMIT ?2"
+            )?;
+            let pattern = format!("%{}%", name);
+            let nodes = stmt.query_map(params![pattern, rem], |row| {
+                let props_str: String = row.get(4)?;
+                let properties: serde_json::Value = serde_json::from_str(&props_str).unwrap_or(serde_json::json!({}));
+                Ok(FactNodeRecord {
+                    id: row.get(0)?,
+                    node_type: row.get(1)?,
+                    name: row.get(2)?,
+                    label: row.get(3)?,
+                    properties,
+                    updated_at: row.get(5)?,
+                })
+            })?.collect::<Result<Vec<_>, _>>()?;
+            for n in nodes {
+                if seen.insert(n.id.clone()) {
+                    results.push(n);
+                }
+            }
+        }
+
+        Ok(results)
     }
 
 
@@ -235,21 +268,25 @@ impl SqliteStorageProvider {
 
         let mut current_frontier = vec![root_id.to_string()];
         let mut collected_edges = Vec::new();
+        let mut edge_stmt = conn.prepare(
+            "SELECT id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at
+             FROM fact_edges
+             WHERE source_id = ?1 OR target_id = ?1
+             ORDER BY weight DESC, confidence DESC
+             LIMIT 128"
+        )?;
 
         for _ in 0..max_hops {
-            if current_frontier.is_empty() {
+            if current_frontier.is_empty() || visited_node_ids.len() >= 384 {
                 break;
             }
             let mut next_frontier = Vec::new();
 
             for node_id in &current_frontier {
-                let mut stmt = conn.prepare(
-                    "SELECT id, source_id, target_id, relation, properties, confidence, evidence_tier, weight, direction_kind, updated_at
-                     FROM fact_edges
-                     WHERE source_id = ?1 OR target_id = ?1"
-                )?;
-
-                let edges = stmt.query_map(params![node_id], |row| {
+                if visited_node_ids.len() >= 384 {
+                    break;
+                }
+                let edges = edge_stmt.query_map(params![node_id], |row| {
                     let props_str: String = row.get(4)?;
                     let props = serde_json::from_str(&props_str).unwrap_or(serde_json::json!({}));
                     Ok(FactEdgeRecord {
@@ -273,7 +310,7 @@ impl SqliteStorageProvider {
                         &e.source_id
                     };
 
-                    if !visited_node_ids.contains(other_id) {
+                    if visited_node_ids.len() < 384 && !visited_node_ids.contains(other_id) {
                         visited_node_ids.insert(other_id.clone());
                         next_frontier.push(other_id.clone());
                     }
@@ -288,11 +325,11 @@ impl SqliteStorageProvider {
         }
 
         let mut collected_nodes = Vec::new();
+        let mut node_stmt = conn.prepare(
+            "SELECT id, node_type, name, label, properties, updated_at FROM fact_nodes WHERE id = ?1"
+        )?;
         for nid in &visited_node_ids {
-            let mut stmt = conn.prepare(
-                "SELECT id, node_type, name, label, properties, updated_at FROM fact_nodes WHERE id = ?1"
-            )?;
-            let mut rows = stmt.query(params![nid])?;
+            let mut rows = node_stmt.query(params![nid])?;
             if let Some(row) = rows.next()? {
                 let props_str: String = row.get(4)?;
                 let properties: serde_json::Value = serde_json::from_str(&props_str).unwrap_or(serde_json::json!({}));

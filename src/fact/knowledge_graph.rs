@@ -176,7 +176,7 @@ impl HeadingChunker {
     }
 }
 
-fn sha256_prefix_hex(input: &str, bytes_len: usize) -> String {
+pub(crate) fn sha256_prefix_hex(input: &str, bytes_len: usize) -> String {
     let mut hasher = Sha256::new();
     hasher.update(input.as_bytes());
     let digest = hasher.finalize();
@@ -482,11 +482,11 @@ pub fn tokenize_terms(text: &str, aliases: &AliasCanonicalizer) -> Vec<String> {
     out
 }
 
-fn term_node_id(canonical_term: &str) -> String {
+pub(crate) fn term_node_id(canonical_term: &str) -> String {
     format!("term:{}", sha256_prefix_hex(canonical_term, 6))
 }
 
-fn file_anchor_id(path: &str) -> String {
+pub(crate) fn file_anchor_id(path: &str) -> String {
     format!("file:{}", sha256_prefix_hex(path, 8))
 }
 
@@ -804,49 +804,68 @@ impl KnowledgeGraphBuilder {
                     } else {
                         (filtered[j].clone(), filtered[i].clone())
                     };
-                    if a != b {
+                    if a != b && !a.contains(&b) && !b.contains(&a) {
                         *co_counts.entry((a, b)).or_insert(0) += 1;
                     }
                 }
             }
         }
 
-        // 计算 PMI 点互信息并按单节点 Top-5 剪枝写入 co_occurs_with
+        // 计算 PMI 点互信息并按单节点 Top-5 剪枝写入 co_occurs_with（兼顾跨文档桥接词，抑制罕见词偏差）
         let min_co = if total_units >= 12 { 2usize } else { 1usize };
-        let mut per_term_candidates: HashMap<String, Vec<(String, f32, usize)>> = HashMap::new();
+        let mut per_term_candidates: HashMap<String, Vec<(String, f32, usize, f32)>> = HashMap::new();
         let n_f = total_units as f64;
         for ((a, b), co) in co_counts {
             if co < min_co {
                 continue;
             }
-            let ca = term_unit_freq.get(&a).copied().unwrap_or(1) as f64;
-            let cb = term_unit_freq.get(&b).copied().unwrap_or(1) as f64;
+            let ca_u = term_unit_freq.get(&a).copied().unwrap_or(1);
+            let cb_u = term_unit_freq.get(&b).copied().unwrap_or(1);
+            let ca = ca_u as f64;
+            let cb = cb_u as f64;
             let pmi = ((co as f64 * n_f) / (ca * cb)).log2();
             if pmi >= cfg.pmi_threshold {
                 let weight = (0.55 + (pmi / 5.0).clamp(0.0, 0.35)) as f32;
+                let co_bonus = if co >= 2 { 0.25 } else { 0.0 };
+                let score_to_b = weight + co_bonus + if cb_u >= 2 { 0.30 } else { 0.0 };
+                let score_to_a = weight + co_bonus + if ca_u >= 2 { 0.30 } else { 0.0 };
                 per_term_candidates
                     .entry(a.clone())
                     .or_default()
-                    .push((b.clone(), weight, co));
+                    .push((b.clone(), weight, co, score_to_b));
                 per_term_candidates
                     .entry(b)
                     .or_default()
-                    .push((a, weight, co));
+                    .push((a, weight, co, score_to_a));
             }
         }
 
         let mut inserted_pairs: HashSet<(String, String)> = HashSet::new();
-        for (src_term, mut nbrs) in per_term_candidates {
-            nbrs.sort_by(|x, y| y.1.partial_cmp(&x.1).unwrap_or(std::cmp::Ordering::Equal));
-            for (dst_term, w, co) in nbrs.into_iter().take(5) {
+        let mut co_degree: HashMap<String, usize> = HashMap::new();
+        let mut sorted_src_terms: Vec<_> = per_term_candidates.into_iter().collect();
+        sorted_src_terms.sort_by(|a, b| a.0.cmp(&b.0));
+        for (src_term, mut nbrs) in sorted_src_terms {
+            nbrs.sort_by(|x, y| {
+                y.3.partial_cmp(&x.3)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .then_with(|| x.0.cmp(&y.0))
+            });
+            for (dst_term, w, co, _) in nbrs.into_iter().take(5) {
                 let (u, v) = if src_term <= dst_term {
                     (src_term.clone(), dst_term.clone())
                 } else {
                     (dst_term.clone(), src_term.clone())
                 };
+                if co_degree.get(&u).copied().unwrap_or(0) >= 32
+                    || co_degree.get(&v).copied().unwrap_or(0) >= 32
+                {
+                    continue;
+                }
                 if !inserted_pairs.insert((u.clone(), v.clone())) {
                     continue;
                 }
+                *co_degree.entry(u.clone()).or_insert(0) += 1;
+                *co_degree.entry(v.clone()).or_insert(0) += 1;
                 storage.upsert_fact_edge(&FactEdgeRecord {
                     id: None,
                     source_id: term_node_id(&u),
@@ -865,6 +884,62 @@ impl KnowledgeGraphBuilder {
 
         Ok(report)
     }
+
+    /// 写穿级联清理指定源文件派生的全部 `section` / `knowhow` 节点、文件锚点及其关联边
+    pub fn invalidate_source_path(
+        storage: &dyn StorageProvider,
+        source_path: &str,
+    ) -> Result<usize> {
+        let mut candidate_anchors = Vec::new();
+        let fid = file_anchor_id(source_path);
+        candidate_anchors.push(fid);
+        let legacy_fid = format!("file:{}", source_path);
+        if !candidate_anchors.contains(&legacy_fid) {
+            candidate_anchors.push(legacy_fid);
+        }
+
+        let mut deleted = 0usize;
+        let mut nodes_to_delete: HashSet<String> = HashSet::new();
+
+        for anchor in &candidate_anchors {
+            if let Ok(sub) = storage.traverse_fact_graph(anchor, 2) {
+                for n in sub.nodes {
+                    let same_source = n
+                        .properties
+                        .get("source_path")
+                        .and_then(|v| v.as_str())
+                        == Some(source_path);
+                    if n.id == *anchor
+                        || (matches!(n.node_type.as_str(), "section" | "knowhow") && same_source)
+                    {
+                        nodes_to_delete.insert(n.id);
+                    }
+                }
+            } else if storage.get_fact_node(anchor)?.is_some() {
+                nodes_to_delete.insert(anchor.clone());
+            }
+        }
+
+        if let Some(fname) = Path::new(source_path).file_name().and_then(|s| s.to_str()) {
+            if let Ok(by_name) = storage.find_fact_nodes_by_name(fname) {
+                for n in by_name {
+                    if matches!(n.node_type.as_str(), "section" | "knowhow")
+                        && n.properties
+                            .get("source_path")
+                            .and_then(|v| v.as_str())
+                            == Some(source_path)
+                    {
+                        nodes_to_delete.insert(n.id);
+                    }
+                }
+            }
+        }
+
+        for nid in nodes_to_delete {
+            deleted += storage.delete_fact_node(&nid).unwrap_or(0);
+        }
+        Ok(deleted)
+    }
 }
 
 /// 知识图扩散召回结果
@@ -876,7 +951,7 @@ pub struct GraphExpansionResult {
     pub reasoning_paths: HashMap<String, Vec<String>>,
 }
 
-/// 基于 `fact_nodes`/`fact_edges` 执行 1~2 跳加权扩散，补偿弱向量语义与跨词因果断层
+/// 基于 `fact_nodes`/`fact_edges` 执行索引下沉定向子图 1~2 跳加权扩散，补偿弱向量语义与跨词因果断层
 pub fn expand_graph_for_query(
     storage: &dyn StorageProvider,
     query: &str,
@@ -894,21 +969,63 @@ pub fn expand_graph_for_query(
         return res;
     }
 
-    let Ok(nodes) = storage.list_all_fact_nodes(4000) else {
-        return res;
-    };
-    if nodes.is_empty() {
+    // 1. 索引下沉定向种子定位（O(log N) PK + 名称索引查找，避免全表扫 4w+ 节点导致 300ms 延迟与 4000 截断）
+    let mut node_map: HashMap<String, FactNodeRecord> = HashMap::new();
+    let mut all_edges_map: HashMap<(String, String, String), FactEdgeRecord> = HashMap::new();
+    let mut seed_scores: HashMap<String, f64> = HashMap::new();
+
+    for qt in q_terms.iter().take(8) {
+        let tid = term_node_id(qt);
+        if let Ok(Some(exact_node)) = storage.get_fact_node(&tid) {
+            seed_scores
+                .entry(exact_node.id.clone())
+                .and_modify(|s| *s = s.max(1.0))
+                .or_insert(1.0);
+            node_map.insert(exact_node.id.clone(), exact_node);
+        }
+        if let Ok(matched) = storage.find_fact_nodes_by_name(qt) {
+            for n in matched
+                .into_iter()
+                .filter(|n| matches!(n.node_type.as_str(), "domain_term" | "knowhow" | "section"))
+                .take(8)
+            {
+                let name_lower = n.name.to_ascii_lowercase();
+                let sc = if name_lower == *qt { 1.0 } else { 0.65 };
+                seed_scores
+                    .entry(n.id.clone())
+                    .and_modify(|s| *s = s.max(sc))
+                    .or_insert(sc);
+                node_map.entry(n.id.clone()).or_insert(n);
+            }
+        }
+    }
+
+    if seed_scores.is_empty() {
         return res;
     }
-    let Ok(edges) = storage.list_all_fact_edges(8000) else {
-        return res;
-    };
 
-    let node_map: HashMap<String, &FactNodeRecord> = nodes.iter().map(|n| (n.id.clone(), n)).collect();
+    let mut ranked_seeds: Vec<(String, f64)> = seed_scores.into_iter().collect();
+    ranked_seeds.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    ranked_seeds.truncate(12);
+
+    let hops = max_hops.min(2);
+    for (seed_id, _) in &ranked_seeds {
+        if let Ok(sub) = storage.traverse_fact_graph(seed_id, hops) {
+            for n in sub.nodes {
+                node_map.entry(n.id.clone()).or_insert(n);
+            }
+            for e in sub.edges {
+                all_edges_map
+                    .entry((e.source_id.clone(), e.target_id.clone(), e.relation.clone()))
+                    .or_insert(e);
+            }
+        }
+    }
+
     let mut adj: HashMap<String, Vec<(String, String, f64)>> = HashMap::new();
     let mut suppressed_targets: HashSet<String> = HashSet::new();
 
-    for e in &edges {
+    for e in all_edges_map.values() {
         if e.relation == "supersedes" {
             suppressed_targets.insert(e.target_id.clone());
             continue;
@@ -931,34 +1048,18 @@ pub fn expand_graph_for_query(
         ));
     }
 
-    // 1. 种子定位
     let mut frontier: Vec<(String, f64, String)> = Vec::new();
     let mut best_node_score: HashMap<String, f64> = HashMap::new();
-    for n in &nodes {
-        if !matches!(n.node_type.as_str(), "domain_term" | "knowhow" | "section") {
-            continue;
+    for (sid, mut seed_score) in ranked_seeds {
+        if suppressed_targets.contains(&sid) {
+            seed_score *= 0.15;
         }
-        let name_lower = n.name.to_ascii_lowercase();
-        let label_lower = n.label.to_ascii_lowercase();
-        let mut seed_score = 0.0f64;
-        for qt in &q_terms {
-            if name_lower == *qt {
-                seed_score = seed_score.max(1.0);
-            } else if label_lower.contains(qt) || name_lower.contains(qt) {
-                seed_score = seed_score.max(0.65);
-            }
-        }
-        if seed_score > 0.0 {
-            if suppressed_targets.contains(&n.id) {
-                seed_score *= 0.15;
-            }
-            best_node_score.insert(n.id.clone(), seed_score);
-            frontier.push((n.id.clone(), seed_score, n.label.clone()));
-        }
-    }
-
-    if frontier.is_empty() {
-        return res;
+        let lbl = node_map
+            .get(&sid)
+            .map(|n| n.label.clone())
+            .unwrap_or_else(|| sid.clone());
+        best_node_score.insert(sid.clone(), seed_score);
+        frontier.push((sid, seed_score, lbl));
     }
 
     // 记录命中源文档 / 记忆的工具闭包
@@ -987,6 +1088,24 @@ pub fn expand_graph_for_query(
                         secs.push(short);
                     }
                 }
+            } else if node.node_type == "knowhow" {
+                if let Some(claim) = node.properties.get("claim").and_then(|v| v.as_str()) {
+                    let secs = res.matched_sections.entry(src_path.to_string()).or_default();
+                    let bcond = node
+                        .properties
+                        .get("boundary_condition")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    let formatted = if bcond.trim().is_empty() {
+                        format!("[Know-How] {}", claim)
+                    } else {
+                        format!("[Know-How] {} (边界: {})", claim, bcond)
+                    };
+                    let short: String = formatted.chars().take(120).collect();
+                    if secs.len() < 3 && !secs.contains(&short) {
+                        secs.push(short);
+                    }
+                }
             }
             let rpaths = res.reasoning_paths.entry(src_path.to_string()).or_default();
             if rpaths.len() < 2 && !path_str.is_empty() && !rpaths.contains(&path_str.to_string()) {
@@ -999,16 +1118,16 @@ pub fn expand_graph_for_query(
         record_hit(nid, *sc, lbl);
     }
 
-    // 2. 最多 2 跳扩散 (decay = 0.65)
-    let hops = max_hops.min(2);
+    // 2. 最多 2 跳扩散 (decay = 0.65，带枢纽度数适度阻尼)
     for _hop in 0..hops {
         let mut next_frontier: Vec<(String, f64, String)> = Vec::new();
         for (uid, u_score, u_trace) in &frontier {
             let Some(nbrs) = adj.get(uid) else {
                 continue;
             };
+            let hub_damp = 1.0 / (1.0 + ((nbrs.len().saturating_sub(6)) as f64).ln_1p() * 0.25);
             for (vid, rel, edge_w) in nbrs {
-                let mut prop_score = u_score * 0.65 * edge_w;
+                let mut prop_score = u_score * 0.65 * edge_w * hub_damp;
                 if suppressed_targets.contains(vid) {
                     prop_score *= 0.15;
                 }

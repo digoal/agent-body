@@ -157,7 +157,13 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
 
         Commands::Asset { action } => {
             match action {
-                AssetCommands::Scan { path, enrich, enrich_limit, mine_knowledge } => {
+                AssetCommands::Scan {
+                    path,
+                    enrich,
+                    enrich_limit,
+                    mine_knowledge,
+                    extract_knowhow,
+                } => {
                     println!("正在执行分级颗粒度扫描: {:?}", path);
                     let scanner = Scanner::new(storage.clone())?;
                     let report = scanner.scan_path(&path)?;
@@ -195,6 +201,28 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                             kg_rep.hierarchy_edges,
                             kg_rep.mention_edges,
                             kg_rep.pmi_edges
+                        );
+                    }
+                    if extract_knowhow || (mine_knowledge && cfg.knowledge_graph.l2_extract_enabled) {
+                        let prefix = path.to_string_lossy().to_string();
+                        let kh_rep = agent_body::fact::KnowHowExtractor::extract_from_storage(
+                            &storage,
+                            &cfg.annotation,
+                            &cfg.knowledge_graph,
+                            enrich_limit.clamp(1, 20),
+                            Some(&prefix),
+                        )?;
+                        println!(
+                            "🔬 L2 Know-How 小模型抽取完成: model={} | ollama在线={} | 扫描章节={} | 原文锚定通过={}/{} | 幻觉拦截={} | 新增Know-How={} | 新增边={} | 耗时={}ms",
+                            kh_rep.model_used,
+                            kh_rep.ollama_available,
+                            kh_rep.sections_scanned,
+                            kh_rep.triples_grounded,
+                            kh_rep.triples_extracted,
+                            kh_rep.hallucinations_rejected,
+                            kh_rep.knowhow_nodes_created,
+                            kh_rep.edges_created,
+                            kh_rep.elapsed_ms
                         );
                     }
                 }

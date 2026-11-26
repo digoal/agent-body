@@ -497,11 +497,11 @@
             <div class="view-toolbar mt-12" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);">
               <div class="toolbar-left">
                 <select id="bench-suite-select" class="input" style="width:260px;">
-                  <option value="full">全量套件 v3.8 (省Token×提质量帕累托 + 竞品 + 图谱/Mesh + AOPCC + AWR)</option>
+                  <option value="full">全量套件 v3.9 (省Token×提质量帕累托 + 竞品 + Know-How图谱 + AOPCC + AWR)</option>
                   <option value="competitors">🏆 热门竞品横向对标 (COMP-C1~C4)</option>
-                  <option value="macro">宏观业务 A/B (W1~W18)</option>
+                  <option value="macro">宏观业务 A/B (W1~W19)</option>
                   <option value="micro">内核微基准 SLA (M1~M6)</option>
-                  <option value="dq">宿主机数据与遥测/图谱质量 (DQ1~DQ9)</option>
+                  <option value="dq">宿主机数据与遥测/图谱质量 (DQ1~DQ10)</option>
                   <option value="W1">W1 · 宿主工具发现</option>
                   <option value="W2">W2 · 端口防撞选址</option>
                   <option value="W3">W3 · 分级扫描阻断</option>
@@ -520,6 +520,7 @@
                   <option value="W16">W16 · 双域行为审计脱敏防洪与租约自进化</option>
                   <option value="W17">W17 · 跨大脑连续性接力与本体器官自省</option>
                   <option value="W18">W18 · 内生等待事件与 AWR/ADDM 自诊断闭环</option>
+                  <option value="W19">W19 · 弱向量 Know-How 网络与 Omni-RRF 融合召回</option>
                 </select>
                 <button id="btn-bench-run" class="btn btn-primary btn-xs">▶ 真机运行 A/B 基准</button>
                 <select id="bench-window-select" class="input" style="width:120px;">
@@ -538,7 +539,7 @@
             <div class="panel-grid-2 mt-12">
               <div class="card">
                 <div class="item-top"><strong>🧪 实验室 A/B 对照实测 (Without vs With Agent Body)</strong><span id="bench-sla-badge" class="badge">-</span></div>
-                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 18 大负载对照实测</div></div>
+                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 19 大负载对照实测</div></div>
               </div>
               <div class="card">
                 <div class="item-top"><strong>⚡ 6 大内核微基准 SLA & 跨版本回归比对</strong></div>
@@ -556,13 +557,13 @@
             </div>
 
             <div class="card mt-12">
-              <div class="item-top"><strong>🛡️ 宿主机数据质量与 D6 准确率门禁 (DQ1~DQ9)</strong><span id="bench-dq-badge" class="badge">-</span></div>
-              <div id="bench-dq-box" class="mt-8"><div class="empty">运行「全量套件 v3.8」或「宿主机数据与遥测/图谱质量 (DQ1~DQ9)」查看 9 项质量门禁实测</div></div>
+              <div class="item-top"><strong>🛡️ 宿主机数据质量与 D6 准确率门禁 (DQ1~DQ10)</strong><span id="bench-dq-badge" class="badge">-</span></div>
+              <div id="bench-dq-box" class="mt-8"><div class="empty">运行「全量套件 v3.9」或「宿主机数据与遥测/图谱质量 (DQ1~DQ10)」查看 10 项质量门禁实测</div></div>
             </div>
 
             <div class="card mt-12">
               <div class="item-top"><strong>🏆 热门开源竞品横向对标 (轨道 C · LIVE_BENCHMARKED + ARCH_VERIFIED)</strong><span class="badge">Mem0 / OpenViking / AgentFS / rg+psutil</span></div>
-              <div id="bench-competitors-box" class="mt-8"><div class="empty">运行「全量套件 v3.8」或「🏆 热门竞品横向对标」查看同机实测结果与 12 维能力矩阵</div></div>
+              <div id="bench-competitors-box" class="mt-8"><div class="empty">运行「全量套件 v3.9」或「🏆 热门竞品横向对标」查看同机实测结果与 12 维能力矩阵</div></div>
             </div>
 
             <div class="card mt-12">

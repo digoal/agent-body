@@ -91,13 +91,12 @@ impl FreshnessReconciler {
                 if let Err(e) = storage.delete_links_for_target(&asset.path) {
                     eprintln!("[Reconcile][WARN] 清理失活资产目标边失败 ({}): {}", asset.path, e);
                 }
-                if storage
-                    .delete_fact_node(&format!("file:{}", asset.path))
-                    .unwrap_or(0)
-                    > 0
-                {
-                    rep.ghost_fact_nodes_pruned += 1;
-                }
+                let pruned = crate::fact::KnowledgeGraphBuilder::invalidate_source_path(
+                    storage.provider().as_ref(),
+                    &asset.path,
+                )
+                .unwrap_or(0);
+                rep.ghost_fact_nodes_pruned += pruned;
 
                 let marker = format!("产出文件 `{}` 摘要:", asset.path);
                 for m in &active_memories {
@@ -165,6 +164,12 @@ impl FreshnessReconciler {
                     if size_drifted || became_stale {
                         if let Err(e) = links_engine.refresh_links_for_asset(path) {
                             eprintln!("[Reconcile][WARN] 刷新漂移资产链接失败 ({}): {}", asset.path, e);
+                        }
+                        if let Err(e) = crate::fact::KnowledgeGraphBuilder::invalidate_source_path(
+                            storage.provider().as_ref(),
+                            &asset.path,
+                        ) {
+                            eprintln!("[Reconcile][WARN] 清理漂移资产衍生知识图节点失败 ({}): {}", asset.path, e);
                         }
                         rep.drifted_assets_refreshed += 1;
                     }

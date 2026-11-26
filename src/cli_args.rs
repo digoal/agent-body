@@ -452,9 +452,9 @@ pub(crate) enum FeedbackCommands {
 
 #[derive(Subcommand)]
 pub(crate) enum BenchCommands {
-    #[command(about = "列出 18 大标准 A/B 负载与 PR-01~14 推导规则")]
+    #[command(about = "列出 19 大标准 A/B 负载与 PR-01~14 推导规则")]
     Workloads,
-    #[command(about = "运行宿主机真机 A/B 对照基准 (full/macro/micro/dq/competitors/W1~W18)")]
+    #[command(about = "运行宿主机真机 A/B 对照基准 (full/macro/micro/dq/competitors/W1~W19)")]
     Run {
         #[arg(long, default_value = "full")]
         suite: String,
@@ -969,6 +969,9 @@ pub(crate) enum AssetCommands {
 
         #[arg(long, help = "扫描后同步构建 L1 行业 Know-How 知识网络（章节切片 + 别名归一 + PMI 共现图）")]
         mine_knowledge: bool,
+
+        #[arg(long, help = "调用本地 Ollama 小模型 (think=false) 抽取章节级 L2 Know-How 因果与边界边（带原文锚定防幻觉）")]
+        extract_knowhow: bool,
     },
 
     #[command(about = "全文与语义搜索资产（支持多模态、领域与 KV 过滤及 Omni-RRF 多路融合检索）")]

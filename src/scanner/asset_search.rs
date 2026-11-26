@@ -144,7 +144,7 @@ pub fn fuzzy_text_score(query: &str, haystack: &str) -> f64 {
     let hay_words: Vec<&str> = hay_lower
         .split(|c: char| !c.is_alphanumeric() && c != '_')
         .filter(|w| w.len() >= 4)
-        .take(64)
+        .take(128)
         .collect();
     for qt in q
         .split(|c: char| !c.is_alphanumeric() && c != '_')
@@ -155,17 +155,18 @@ pub fn fuzzy_text_score(query: &str, haystack: &str) -> f64 {
         let mut best_edit_bonus = 0.0f64;
         for hw in &hay_words {
             if *hw == qt {
-                best_edit_bonus = 0.55;
+                best_edit_bonus = 0.65;
                 break;
             }
             if hw.contains(qt) {
-                best_edit_bonus = best_edit_bonus.max(0.45);
+                best_edit_bonus = best_edit_bonus.max(0.55);
                 continue;
             }
             let hc: Vec<char> = hw.chars().collect();
             if let Some(d) = bounded_levenshtein(&qc, &hc, tol) {
                 let ratio = 1.0 - (d as f64 / qc.len().max(hc.len()) as f64);
-                best_edit_bonus = best_edit_bonus.max(0.48 * ratio);
+                let typo_scale = if qc.len() >= 8 { 1.15 } else { 0.72 };
+                best_edit_bonus = best_edit_bonus.max(typo_scale * ratio);
             }
         }
         score += best_edit_bonus;
@@ -174,12 +175,12 @@ pub fn fuzzy_text_score(query: &str, haystack: &str) -> f64 {
     // 字符 bigram Jaccard（对中英文连写与碎片均有效）
     let qb = char_bigrams(&q);
     if !qb.is_empty() {
-        let hb = char_bigrams(&hay_lower.chars().take(600).collect::<String>());
+        let hb = char_bigrams(&hay_lower.chars().take(800).collect::<String>());
         if !hb.is_empty() {
             let inter = qb.intersection(&hb).count() as f64;
             let jaccard = inter / qb.len().max(1) as f64;
             if jaccard >= 0.35 {
-                score += 0.25 * jaccard.min(1.0);
+                score += 0.30 * jaccard.min(1.0);
             }
         }
     }
@@ -323,6 +324,23 @@ impl AssetSearchEngine {
 
     fn build_searchable_haystack(asset: &AssetRecord) -> String {
         let mut parts = vec![asset.path.clone()];
+        // 将符号、章节与视觉标题前置，确保长描述不会将代码标识符挤出编辑距离窗口
+        for arr_key in [
+            "symbols",
+            "headings",
+            "config_sections",
+            "svg_text_snippets",
+            "ocr_keywords",
+            "table_names",
+            "columns",
+        ] {
+            if let Some(arr) = asset.desc_kv.get(arr_key).and_then(|v| v.as_array()) {
+                let items: Vec<_> = arr.iter().filter_map(|x| x.as_str()).take(20).collect();
+                if !items.is_empty() {
+                    parts.push(items.join(" "));
+                }
+            }
+        }
         if let Some(ref desc) = asset.description {
             parts.push(desc.clone());
         }
@@ -342,22 +360,6 @@ impl AssetSearchEngine {
         ] {
             if let Some(s) = asset.desc_kv.get(key).and_then(|v| v.as_str()) {
                 parts.push(s.to_string());
-            }
-        }
-        for arr_key in [
-            "symbols",
-            "headings",
-            "config_sections",
-            "svg_text_snippets",
-            "ocr_keywords",
-            "table_names",
-            "columns",
-        ] {
-            if let Some(arr) = asset.desc_kv.get(arr_key).and_then(|v| v.as_array()) {
-                let items: Vec<_> = arr.iter().filter_map(|x| x.as_str()).take(16).collect();
-                if !items.is_empty() {
-                    parts.push(items.join(" "));
-                }
             }
         }
         parts.join(" ")
@@ -441,11 +443,15 @@ impl AssetSearchEngine {
 
         // 2. 路 2: Pure-Rust Fuzzy 模糊查询通道
         let mut fuzzy_ranks: HashMap<String, usize> = HashMap::new();
+        let mut fuzzy_strong: HashSet<String> = HashSet::new();
         if opts.fuzzy {
             let mut fz_scored: Vec<(String, f64)> = Vec::new();
             for (p, a) in &by_path {
                 let hay = Self::build_searchable_haystack(a);
                 let sc = fuzzy_text_score(q, &hay);
+                if sc >= 0.70 {
+                    fuzzy_strong.insert(p.clone());
+                }
                 if sc >= 0.30 {
                     fz_scored.push((p.clone(), sc));
                 }
@@ -589,13 +595,14 @@ impl AssetSearchEngine {
             }
         }
 
+        let fuzzy_w = if bm25_ranks.is_empty() { 1.25 } else { 0.75 };
         // 7. 自适应权重重归一化 & Omni-RRF 融合
         let mut active_w = 0.0f64;
         if !bm25_ranks.is_empty() {
             active_w += 1.20;
         }
         if !fuzzy_ranks.is_empty() {
-            active_w += 0.75;
+            active_w += fuzzy_w;
         }
         if !vec_ranks.is_empty() {
             active_w += 1.00;
@@ -638,7 +645,12 @@ impl AssetSearchEngine {
                 channels.push("bm25_fts".to_string());
             }
             if let Some(&r) = fuzzy_ranks.get(&p) {
-                rrf_sum += (0.75 / norm_div) / (k + r as f64);
+                let eff_fuzzy_w = if bm25_ranks.is_empty() && fuzzy_strong.contains(&p) {
+                    fuzzy_w + 1.15
+                } else {
+                    fuzzy_w
+                };
+                rrf_sum += (eff_fuzzy_w / norm_div) / (k + r as f64);
                 channels.push("fuzzy".to_string());
             }
             if let Some(&r) = vec_ranks.get(&p) {

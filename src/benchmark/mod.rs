@@ -22,7 +22,7 @@ use crate::benchmark::workloads::{run_all_workloads, run_workload, WorkloadResul
 use crate::storage::models::BenchmarkRunRecord;
 use crate::storage::StorageProvider;
 
-pub const BENCHMARK_SPEC_VERSION: &str = "3.8";
+pub const BENCHMARK_SPEC_VERSION: &str = "3.9";
 
 pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
     if workloads.is_empty() {
@@ -39,7 +39,7 @@ pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
 pub fn compute_query_guard_speedup(workloads: &[WorkloadResult]) -> f64 {
     let subset: Vec<&WorkloadResult> = workloads
         .iter()
-        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9" | "W11" | "W15" | "W16" | "W17" | "W18"))
+        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9" | "W11" | "W15" | "W16" | "W17" | "W18" | "W19"))
         .collect();
     if subset.is_empty() {
         return 1.0;
@@ -318,12 +318,28 @@ mod tests {
         let report = BenchmarkEngine::run_suite(provider.clone(), "full", true, Some("bench:test"))
             .expect("run full suite");
 
-        assert_eq!(report.workloads.len(), 18);
+        assert_eq!(report.workloads.len(), 19);
         assert_eq!(report.micro_benchmarks.len(), 6);
-        assert_eq!(report.data_quality.len(), 9);
+        assert_eq!(report.data_quality.len(), 10);
         assert_eq!(report.competitors.len(), 4);
-        assert_eq!(report.spec_version, "3.8");
-        assert!(report.quality_non_degraded, "所有负载上下文质量必须不降反升");
+        assert_eq!(report.spec_version, "3.9");
+        let bad_w: Vec<String> = report
+            .workloads
+            .iter()
+            .filter(|w| w.required_facts_total > 0 && (w.steward_quality_score < w.baseline_quality_score || w.steward_facts_hit != w.required_facts_total))
+            .map(|w| format!("{}(hit={}/{}, q={:.1}<{:.1})", w.id, w.steward_facts_hit, w.required_facts_total, w.steward_quality_score, w.baseline_quality_score))
+            .collect();
+        let bad_c: Vec<String> = report
+            .competitors
+            .iter()
+            .filter(|c| c.required_facts_total > 0 && (c.steward_quality_score < c.competitor_quality_score || c.steward_facts_hit != c.required_facts_total))
+            .map(|c| format!("{}(hit={}/{}, q={:.1}<{:.1})", c.id, c.steward_facts_hit, c.required_facts_total, c.steward_quality_score, c.competitor_quality_score))
+            .collect();
+        assert!(
+            report.quality_non_degraded,
+            "所有负载上下文质量必须不降反升; bad_w={:?}, bad_c={:?}",
+            bad_w, bad_c
+        );
         assert!(report.overall_quality_delta > 20.0, "整体上下文质量净提升应 > 20 分，实测: {}", report.overall_quality_delta);
         assert!(report.overall_info_density_gain > 5.0, "有效信息密度应提升 > 5x，实测: {}", report.overall_info_density_gain);
         assert_eq!(report.report_sha256.len(), 64);

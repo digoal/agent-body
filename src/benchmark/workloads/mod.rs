@@ -1,5 +1,7 @@
 mod advanced;
+mod knowledge;
 use advanced::*;
+use knowledge::*;
 
 use std::net::TcpListener;
 use std::path::PathBuf;
@@ -353,11 +355,20 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             steward_desc: "18/18 WaitEventRegistry + AWR 快照差分 + ADDM 根因诊断 + 报告删除闭环 (1 round)".into(),
             sla_desc: "4/4 AWR/ADDM/分位单调性断言命中, token_savings_pct >= 50%, steward_elapsed_us < 250_000".into(),
         },
+        WorkloadSpec {
+            id: "W19".into(),
+            name: "knowhow_graph_and_omni_rrf_recall".into(),
+            title: "弱向量 L1/L2 Know-How 网络与 Omni-RRF 多路融合召回".into(),
+            category: "D6 Know-How Graph & Omni-RRF".into(),
+            baseline_desc: "弱小模型无图谱时纯字面 FTS 漏召回跨词因果、拼写错误与关联图表 (4 rounds)".into(),
+            steward_desc: "L1 章节PMI网 + 原文锚定 L2 Know-How + 8维 Omni-RRF + 写穿级联失效 (1 round)".into(),
+            sla_desc: "4/4 跨词/容错/防幻觉/写穿断言命中, token_savings_pct >= 50%, steward_elapsed_us < 250_000".into(),
+        },
     ]
 }
 
 pub fn run_all_workloads(storage: Arc<dyn StorageProvider>) -> Result<Vec<WorkloadResult>> {
-    let mut results = Vec::with_capacity(18);
+    let mut results = Vec::with_capacity(19);
     for spec in list_workload_specs() {
         results.push(run_workload(storage.clone(), &spec.id)?);
     }
@@ -384,7 +395,8 @@ pub fn run_workload(storage: Arc<dyn StorageProvider>, id: &str) -> Result<Workl
         "W16" => run_w16_dual_domain_audit_and_lease_self_evolution(),
         "W17" => run_w17_cross_brain_continuity_and_body_proprioception(),
         "W18" => run_w18_perf_awr_and_self_diagnostics(),
-        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W18)", id),
+        "W19" => run_w19_knowhow_graph_and_omni_rrf(),
+        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W19)", id),
     }
 }
 

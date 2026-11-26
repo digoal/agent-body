@@ -1205,14 +1205,22 @@ function renderFactsTab() {
   } else {
     el.innerHTML = `
       <div class="inline-bar">
-        <input id="asset-search-q" class="input flex-1" type="text" value="${esc(q)}" placeholder="FTS5 检索纳管资产 (路径/用途/能力/符号)..." />
-        <select id="asset-detail-level" class="input input-sm" style="width:108px;" title="Token 披露粒度">
+        <input id="asset-search-q" class="input flex-1" type="text" value="${esc(q)}" placeholder="Omni-RRF 检索纳管资产 (BM25/模糊/图谱/层级/互链)..." />
+        <select id="asset-detail-level" class="input input-sm" style="width:104px;" title="Token 披露粒度">
           <option value="standard">standard</option>
           <option value="micro">micro</option>
           <option value="full">full</option>
         </select>
+        <select id="asset-graph-hops" class="input input-sm" style="width:94px;" title="知识图扩散跳数">
+          <option value="1">1-hop 图</option>
+          <option value="2">2-hop 图</option>
+          <option value="0">0-hop 图</option>
+        </select>
         <button id="btn-asset-search" class="btn btn-primary btn-xs">🔍 检索资产</button>
-        <input id="asset-scan-path" class="input" style="width:200px;" type="text" value="" placeholder="待扫描工作区或项目目录绝对路径" />
+        <input id="asset-scan-path" class="input" style="width:180px;" type="text" value="" placeholder="待扫描目录绝对路径" />
+        <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
+          <input id="asset-scan-mine-kg" type="checkbox" checked /> 🧠 知识建网
+        </label>
         <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
           <input id="asset-scan-enrich" type="checkbox" /> 🤖 Ollama精炼
         </label>
@@ -1238,22 +1246,26 @@ function renderFactsTab() {
 async function loadAssetsPanel() {
   const q = document.getElementById("asset-search-q")?.value || "";
   const detail = document.getElementById("asset-detail-level")?.value || "standard";
+  const graphHops = document.getElementById("asset-graph-hops")?.value || "1";
   const out = document.getElementById("asset-panel-out");
   if (!out) return;
   try {
-    const list = await apiGet(`/api/v1/assets/search?q=${encodeURIComponent(q)}&limit=50&detail=${encodeURIComponent(detail)}`);
-    mirrorBlackScreen(`agent-body asset search "${q}" --detail ${detail}`, "body_asset_search", { query: q, limit: 50, detail_level: detail });
-    out.innerHTML = `<table class="data-table"><thead><tr><th>类型 / 域</th><th>路径</th><th>核心用途与结构化 KV</th></tr></thead><tbody>` +
+    const list = await apiGet(`/api/v1/assets/search?q=${encodeURIComponent(q)}&limit=50&detail=${encodeURIComponent(detail)}&graph_hops=${encodeURIComponent(graphHops)}`);
+    mirrorBlackScreen(`agent-body asset search "${q}" --detail ${detail} --graph-hops ${graphHops}`, "body_asset_search", { query: q, limit: 50, detail_level: detail, graph_hops: Number(graphHops) });
+    out.innerHTML = `<table class="data-table"><thead><tr><th>类型 / 域 / 通道</th><th>路径</th><th>核心用途、匹配章节与推理路径</th></tr></thead><tbody>` +
       (list || []).map((a) => {
         const typ = a.type || a.asset_type || "other";
         const kv = a.desc_kv || {};
         const domain = a.domain || kv.domain || "-";
         const purpose = a.purpose || kv.purpose || a.description || "-";
         const caps = Array.isArray(kv.capabilities) ? kv.capabilities.map((c) => `<span class="badge badge-ok" style="margin-right:4px;">${esc(c)}</span>`).join("") : "";
+        const channels = Array.isArray(a.matched_channels) ? a.matched_channels.map((ch) => `<span class="badge" style="margin-right:3px;font-size:10px;">${esc(ch)}</span>`).join("") : "";
         const symsArr = kv.symbols || kv.headings || kv.config_sections || [];
         const syms = Array.isArray(symsArr) && symsArr.length ? `<div class="mono" style="font-size:11px;color:var(--muted);margin-top:3px;">符号/章节: ${esc(symsArr.slice(0, 5).join(", "))}</div>` : "";
+        const secs = Array.isArray(a.matched_sections) && a.matched_sections.length ? `<div style="font-size:11px;color:var(--accent);margin-top:3px;">📌 片段: ${esc(a.matched_sections[0])}</div>` : "";
+        const rpaths = Array.isArray(a.reasoning_paths) && a.reasoning_paths.length ? `<div class="mono" style="font-size:11px;color:var(--muted);margin-top:2px;">🕸️ 推理: ${esc(a.reasoning_paths.slice(0, 2).join(" | "))}</div>` : "";
         const modelBadge = kv.annotation_model ? `<span class="badge">${esc(kv.annotation_model)}</span>` : "";
-        return `<tr><td><span class="badge">${esc(typ)}</span> <span class="badge">${esc(domain)}</span> ${modelBadge}</td><td class="mono">${esc(a.path)}</td><td><div>${esc(purpose)}</div><div style="margin-top:3px;">${caps}</div>${syms}</td></tr>`;
+        return `<tr><td><span class="badge">${esc(typ)}</span> <span class="badge">${esc(domain)}</span> ${modelBadge}<div style="margin-top:4px;">${channels}</div></td><td class="mono">${esc(a.path)}</td><td><div>${esc(purpose)}</div><div style="margin-top:3px;">${caps}</div>${syms}${secs}${rpaths}</td></tr>`;
       }).join("") + `</tbody></table>`;
   } catch (e) {
     out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
@@ -1276,11 +1288,12 @@ async function registerAssetFromWeb() {
 async function scanAssetFromWeb() {
   const path = document.getElementById("asset-scan-path")?.value || "";
   const enrich = Boolean(document.getElementById("asset-scan-enrich")?.checked);
+  const mine_knowledge = Boolean(document.getElementById("asset-scan-mine-kg")?.checked);
   const out = document.getElementById("asset-panel-out");
   try {
-    const rep = await apiPost("/api/v1/assets/scan", { path, enrich_with_ollama: enrich, enrich_limit: 5 });
-    const cliCmd = enrich ? `agent-body asset scan "${path}" --enrich --enrich-limit 5` : `agent-body asset scan "${path}"`;
-    mirrorBlackScreen(cliCmd, "body_asset_scan", { path, enrich_with_ollama: enrich, enrich_limit: 5 });
+    const rep = await apiPost("/api/v1/assets/scan", { path, enrich_with_ollama: enrich, enrich_limit: 5, mine_knowledge });
+    const cliCmd = `agent-body asset scan "${path}"${mine_knowledge ? " --mine-knowledge" : ""}${enrich ? " --enrich --enrich-limit 5" : ""}`;
+    mirrorBlackScreen(cliCmd, "body_asset_scan", { path, enrich_with_ollama: enrich, enrich_limit: 5, mine_knowledge });
     if (out) {
       out.innerHTML = `<div class="item-box">
         <div class="item-top"><strong>📂 分级扫描 &amp; 元数据标注完成</strong><span class="badge badge-ok">${esc(path)}</span></div>

@@ -42,6 +42,9 @@ const NODE_COLORS_DARK = {
   git: "#34d399",
   file: "#94a3b8",
   memory: "#fbbf24",
+  domain_term: "#2dd4bf",
+  knowhow: "#f59e0b",
+  section: "#64748b",
 };
 
 const NODE_COLORS_LIGHT = {
@@ -52,6 +55,9 @@ const NODE_COLORS_LIGHT = {
   git: "#2F7A66",
   file: "#64747B",
   memory: "#9A7422",
+  domain_term: "#1E6F68",
+  knowhow: "#B45309",
+  section: "#475569",
 };
 
 function esc(str) {

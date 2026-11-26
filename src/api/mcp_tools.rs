@@ -257,6 +257,8 @@ impl McpToolRegistry {
             "body_asset_scan" => {
                 let path_str = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
                 let enrich = args.get("enrich_with_ollama").and_then(|v| v.as_bool()).unwrap_or(false);
+                let mine_kg = args.get("mine_knowledge").and_then(|v| v.as_bool()).unwrap_or(false);
+                let extract_kh = args.get("extract_knowhow").and_then(|v| v.as_bool()).unwrap_or(false);
                 let enrich_limit = args.get("enrich_limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
 
                 let scanner = Scanner::new(self.storage.clone())?;
@@ -279,6 +281,16 @@ impl McpToolRegistry {
                     for s in er.samples {
                         out.push_str(&format!("    🤖 [{}] {} -> {} (入口: {})\n", s.domain, s.path, s.purpose, s.entry_point));
                     }
+                }
+                if mine_kg {
+                    let cfg = crate::config::Config::load_effective_or_default();
+                    let kg = crate::fact::KnowledgeGraphBuilder::mine_from_storage(&self.storage, &cfg.knowledge_graph)?;
+                    out.push_str(&format!("  - L1 Know-How 建网: 文档={} 章节={} 概念={} PMI边={}\n", kg.docs_indexed, kg.sections_created, kg.terms_created, kg.pmi_edges));
+                }
+                if extract_kh {
+                    let cfg = crate::config::Config::load_effective_or_default();
+                    let kh = crate::fact::KnowHowExtractor::extract_from_storage(&self.storage, &cfg.annotation, &cfg.knowledge_graph, enrich_limit.clamp(1, 20), Some(path_str))?;
+                    out.push_str(&format!("  - L2 Know-How 抽取: model={} 章节={} 原文锚定={}/{} 幻觉拦截={} 新增边={}\n", kh.model_used, kh.sections_scanned, kh.triples_grounded, kh.triples_extracted, kh.hallucinations_rejected, kh.edges_created));
                 }
                 Ok(out)
             }
