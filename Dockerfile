@@ -19,9 +19,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /usr/src/agent-body
 
-# 复制源码树、文档、演说资产与构建脚本
+# 复制源码树、微内核/周边/发行版、文档、演说资产与构建脚本
 COPY Cargo.toml Cargo.lock build.rs ./
 COPY src ./src
+COPY kernel ./kernel
+COPY contrib ./contrib
+COPY distributions ./distributions
 COPY docs ./docs
 COPY tests ./tests
 COPY presentation ./presentation

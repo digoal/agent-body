@@ -39,6 +39,9 @@ CORE_ZERO_SILENT_PREFIXES = (
     "src/fact/",
     "src/audit/",
     "src/config/",
+    "kernel/",
+    "contrib/",
+    "distributions/",
 )
 
 
@@ -59,7 +62,18 @@ def run_checks() -> tuple[list[str], list[str]]:
     errors: list[str] = []
     notes: list[str] = []
 
-    rs_files = sorted(Path(p) for p in glob.glob(str(ROOT / "src/**/*.rs"), recursive=True))
+    rs_files = sorted(
+        {
+            Path(p)
+            for pat in (
+                "src/**/*.rs",
+                "kernel/**/src/**/*.rs",
+                "contrib/**/src/**/*.rs",
+                "distributions/**/src/**/*.rs",
+            )
+            for p in glob.glob(str(ROOT / pat), recursive=True)
+        }
+    )
 
     # 1. 生产代码禁止 env!("CARGO_MANIFEST_DIR") 与非基准硬编码 /root/new/ & user:digoal
     manifest_dir_hits: list[str] = []
@@ -158,7 +172,17 @@ def run_checks() -> tuple[list[str], list[str]]:
     )
     skip_dirs = {".git", "target", ".codegraph", "node_modules", "__pycache__"}
     legacy_hits: list[str] = []
-    for sub in ("src", "tests", "scripts", "skills", "docs", "presentation"):
+    for sub in (
+        "src",
+        "kernel",
+        "contrib",
+        "distributions",
+        "tests",
+        "scripts",
+        "skills",
+        "docs",
+        "presentation",
+    ):
         base = ROOT / sub
         if not base.exists():
             continue

@@ -174,7 +174,10 @@ def main() -> int:
 
     total_issues = 0
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        try:
+            browser = p.chromium.launch()
+        except Exception:
+            browser = p.chromium.launch(channel="chrome")
         for html_path in html_files:
             page = browser.new_page()
             issues = verify_deck(page, html_path)

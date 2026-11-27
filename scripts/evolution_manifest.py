@@ -102,6 +102,16 @@ def extract_manifest() -> dict:
     cmd_block = cli_src_text.split("enum Commands {")[1].split("\n}")[0]
     cli_commands = re.findall(r"^\s{4}([A-Z][A-Za-z0-9_]*)\s*(?:\{|,)", cmd_block, flags=re.MULTILINE)
 
+    kernel_crates = sorted(
+        p.name for p in (ROOT / "kernel").iterdir() if p.is_dir() and (p / "Cargo.toml").exists()
+    ) if (ROOT / "kernel").is_dir() else []
+    contrib_exts = sorted(
+        p.name for p in (ROOT / "contrib").iterdir() if p.is_dir() and (p / "Cargo.toml").exists()
+    ) if (ROOT / "contrib").is_dir() else []
+    distributions = sorted(
+        p.name for p in (ROOT / "distributions").iterdir() if p.is_dir() and (p / "Cargo.toml").exists()
+    ) if (ROOT / "distributions").is_dir() else []
+
     return {
         "app_version": app_version,
         "counts": {
@@ -115,6 +125,9 @@ def extract_manifest() -> dict:
             "dq": len(dq),
             "competitors": len(competitors),
             "pr_rules": len(pr_rules),
+            "kernel_crates": len(kernel_crates),
+            "contrib_exts": len(contrib_exts),
+            "distributions": len(distributions),
         },
         "bench_spec_version": bench_spec_version,
         "modules": modules,
@@ -127,6 +140,9 @@ def extract_manifest() -> dict:
         "dq": dq,
         "competitors": competitors,
         "pr_rules": pr_rules,
+        "kernel_crates": kernel_crates,
+        "contrib_exts": contrib_exts,
+        "distributions": distributions,
     }
 
 
@@ -144,7 +160,19 @@ def check_drift(manifest: dict) -> list[str]:
             errors.append("EVOLUTION_GUIDE.md 缺少 <!-- MANIFEST: ... --> 机器校验锚点")
         else:
             pairs = dict(re.findall(r"([a-z_]+)=([0-9]+)", tag_match.group(1)))
-            for key in ("modules", "mcp_tools", "spi_methods", "tables", "workloads", "micro", "dq", "pr_rules"):
+            for key in (
+                "modules",
+                "mcp_tools",
+                "spi_methods",
+                "tables",
+                "workloads",
+                "micro",
+                "dq",
+                "pr_rules",
+                "kernel_crates",
+                "contrib_exts",
+                "distributions",
+            ):
                 expected = counts[key]
                 actual = int(pairs.get(key, -1))
                 if actual != expected:
@@ -263,6 +291,8 @@ def check_drift(manifest: dict) -> list[str]:
         rtxt = readme_file.read_text(encoding="utf-8")
         if "19-knowledge-network-and-graph-recall-spec.md" not in rtxt:
             errors.append("README.md 缺少最新规格书 19-knowledge-network-and-graph-recall-spec.md 登记")
+        if "20-plugin-microkernel-architecture-spec.md" not in rtxt:
+            errors.append("README.md 缺少最新规格书 20-plugin-microkernel-architecture-spec.md 登记")
 
     # 校验 CLI --help (src/cli_args.rs / src/main.rs) 中不再残留过时的 Benchmark 计数
     cli_help_text = (
@@ -363,7 +393,7 @@ def check_drift(manifest: dict) -> list[str]:
 
     # Check B: 核心活跃文档与 SKILL 中的反引号源码/脚本路径存在性校验
     code_ref_re = re.compile(
-        r"`((?:src|scripts|skills|presentation|tests)/[A-Za-z0-9_./-]+\.(?:rs|py|md|html|svg|sql|toml|js))`"
+        r"`((?:src|kernel|contrib|distributions|scripts|skills|presentation|tests)/[A-Za-z0-9_./-]+\.(?:rs|py|md|html|svg|sql|toml|js))`"
     )
     code_ref_docs = (
         [ROOT / "README.md", ROOT / "EVOLUTION_GUIDE.md", ROOT / "INSTALL.md", ROOT / "docs/README.md"]
@@ -425,6 +455,7 @@ def main() -> int:
     print(
         f"📦 Agent Body v{manifest['app_version']} 架构快照: {c['modules']} 模块 | {c['mcp_tools']} MCP工具 | "
         f"{c['spi_methods']} SPI方法 | {c['tables']} SQLite表 | "
+        f"微内核:{c['kernel_crates']} 周边:{c['contrib_exts']} 发行版:{c['distributions']} | "
         f"Bench v{manifest['bench_spec_version']} (W:{c['workloads']}, M:{c['micro']}, DQ:{c['dq']}, COMP:{c['competitors']}, PR:{c['pr_rules']})"
     )
 

@@ -34,14 +34,17 @@ jobs:
         if: runner.os == 'macOS'
         run: echo "CPLUS_INCLUDE_PATH=$(xcrun --show-sdk-path)/usr/include/c++/v1" >> "$GITHUB_ENV"
 
-      - name: Run quality gate (evolution, panic, hygiene, strict lint)
+      - name: Run quality gate (evolution, arch, panic, hygiene, strict lint)
         run: make quality-gate
 
-      - name: Run clippy with -D warnings
-        run: cargo clippy --all-targets -- -D warnings
+      - name: Run clippy with -D warnings across workspace
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Run unit tests (--lib)
-        run: cargo test --lib
+      - name: Run workspace unit tests (--lib)
+        run: cargo test --workspace --lib
 
-      - name: Run integration tests (--tests)
-        run: cargo test --tests
+      - name: Run workspace integration tests (--tests)
+        run: cargo test --workspace --tests
+
+      - name: Build slim release distributions
+        run: cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
