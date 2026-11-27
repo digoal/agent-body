@@ -51,6 +51,7 @@ APP_VER = _MANIFEST["app_version"]
 BENCH_VER = _MANIFEST["bench_spec_version"]
 MOD_CNT = _COUNTS["modules"]
 TOOL_CNT = _COUNTS["mcp_tools"]
+CLI_CNT = _COUNTS["cli_commands"]
 SPI_CNT = _COUNTS["spi_methods"]
 TABLE_CNT = _COUNTS["tables"]
 WL_CNT = _COUNTS["workloads"]
@@ -61,6 +62,7 @@ PR_CNT = _COUNTS["pr_rules"]
 KERNEL_CNT = _COUNTS["kernel_crates"]
 CONTRIB_CNT = _COUNTS["contrib_exts"]
 DIST_CNT = _COUNTS["distributions"]
+TEST_CNT = _COUNTS["verified_tests"]
 
 ROOT = Path(__file__).resolve().parent.parent
 PRES_DIR = ROOT / "presentation"
@@ -79,21 +81,21 @@ def build_tech_deck() -> None:
                 en_sub=f"{MOD_CNT} Modules · {TOOL_CNT} MCP · {SPI_CNT} SPI · {KERNEL_CNT} Kernel / {CONTRIB_CNT} Contrib / {DIST_CNT} Slim · Bench v{BENCH_VER}",
                 subtitle1="从「比较优势」到「脑体分离」与微内核：面向数据库与 AI 工程师",
                 subtitle2="物理感官 × 分层图谱 × AOPCC × 写穿保鲜 × 内生 AWR × 微内核 SPI/Hook × 四大发行版",
-                spec_line=f"Rust 单二进制 · 387 全工作区测试 · 六重门禁 · 微内核 {KERNEL_CNT} / 插件 {CONTRIB_CNT} / 精简版 {DIST_CNT}",
+                spec_line=f"Rust 单二进制 · {TEST_CNT} 全工作区测试 · 六重门禁 · 微内核 {KERNEL_CNT} / 插件 {CONTRIB_CNT} / 精简版 {DIST_CNT}",
                 strata=[
-                    ("接入与协议层 · Interface", "43 原生 MCP · 30 CLI · Session/Pre/Post Hooks · Web 9 工作台", "#EBF1EE", C_INK),
+                    ("接入与协议层 · Interface", f"{TOOL_CNT} 原生 MCP · {CLI_CNT} CLI · Session/Pre/Post Hooks · Web 9 工作台", "#EBF1EE", C_INK),
                     ("宿主机感官与图谱 · Fact/Links", "/proc · Socket · L1/L2/L3 有向加权图 · CodeGraph 联邦", "#CFE0DC", C_INK),
                     ("小脑并发与锁 · AOPCC/Locks", "MVCC 乐观租约 · 三态分级 · <2ms 自愈 · WFG 锁 · 7 大 Hook", "#A4C4C6", C_INK),
                     ("海马体与接力 · Memory/Body", "FTS5+向量 RRF · 7 大新鲜度漏斗治理 · <=300 tok 接力胶囊", "#74A5AD", C_PAPER),
                     ("安全审计与自进化 · Audit/Probe", "SecretRedactor · 抗投毒 · IN/OUT 双域审计 · P1~P5 探针", "#47808D", C_PAPER),
-                    ("内生性能工程 · Wait/AWR/ADDM", "6 类 18 事件 (<100ns) · /proc/self · 黄金基线 · L1 调优", "#2E6373", C_PAPER),
-                    ("微内核/周边/发行版 · Kernel+Contrib", "8 body_cat_* + 6 Routine + 9 contrib 五件套 + 4 发行版", "#1E4B5A", C_PAPER),
+                    ("内生性能与遥测 · AWR/Metrics", "6 类 18 事件 (<100ns) · /metrics · W3C Trace · L1 调优", "#2E6373", C_PAPER),
+                    ("微内核/周边/发行版 · Kernel+Contrib", f"8 body_cat_* + 6 Routine + {CONTRIB_CNT} contrib + 4 发行版", "#1E4B5A", C_PAPER),
                 ],
                 right_tag="地层剖面 · 工程蓝图 · 深度技术交流版 (25 页)",
             ),
             "script": (
                 "各位技术同行好，这份 25 页的 Deck 是 Agent Body 的完整架构深度交流版，大约 45 到 60 分钟。\n"
-                "与面向路演的 17 页版本不同，今天我们不讲空泛的概念，而是直接下钻到 27 个 Rust 模块、88 个存储 SPI、27 张数据表、AOPCC 期望代价数学边界、内生 Wait Events 与 AWR 性能工程，以及 Phase 70~73 借鉴 PostgreSQL 插件体系完成的微内核 (`kernel/`) 与周边 (`contrib/`) 分离重构。\n"
+                f"与面向路演的 17 页版本不同，今天我们不讲空泛的概念，而是直接下钻到 {MOD_CNT} 个 Rust 模块、{SPI_CNT} 个存储 SPI、{TABLE_CNT} 张数据表、AOPCC 期望代价数学边界、内生 Wait Events / AWR / Prometheus `/metrics` 与 W3C Trace 性能工程，以及 Phase 70~75 借鉴 PostgreSQL 插件体系完成的微内核 (`kernel/`) 与周边 (`contrib/`) 大一统实践。\n"
                 "所有架构指标和实测数据全部直接取自当前代码库与现网验证，欢迎随时打断就任何设计取舍展开硬核讨论。"
             ),
         },
@@ -1136,9 +1138,9 @@ def build_tech_deck() -> None:
                         "accent": C_CLAY,
                         "bg": C_CLAY_L,
                         "lines": [
-                            "旗舰 agent-body (全量)",
-                            "probe 6.5M / dba 6.1M",
-                            "minimal 3.8M · 0 C++",
+                            "旗舰 agent-body (全量 + /metrics)",
+                            "probe 6.7M / dba 6.4M",
+                            "minimal 3.9M · 0 C++",
                         ],
                     },
                 ],
@@ -1148,19 +1150,19 @@ def build_tech_deck() -> None:
                         "accent": C_TEAL_D,
                         "bg": C_PAPER2,
                         "lines": [
-                            "检查 kernel/ 3 crates 单向依赖，禁止回指 contrib/ 或旗舰包",
-                            "扫描 kernel 22 个生产文件：禁止 OS/中间件/行业业务词污染",
-                            ("强制 contrib/ 9 扩展严格具备五件套与 ext_<id>__* SQL 前缀", True),
+                            f"检查 kernel/ {KERNEL_CNT} crates 单向依赖，禁止回指 contrib/ 或旗舰包",
+                            "扫描 kernel 24 个生产文件：禁止 OS/中间件/行业业务词污染",
+                            (f"强制 contrib/ {CONTRIB_CNT} 扩展严格具备五件套与 ext_<id>__* SQL 前缀", True),
                         ],
                     },
                     {
-                        "title": "政务云 AIOps 实证闭环 (aiops_e2e + self-check)",
+                        "title": "政务云 AIOps + 可观测闭环 (aiops_e2e + metrics)",
                         "accent": C_GREEN,
                         "bg": C_GREEN_L,
                         "lines": [
-                            "强制全端读 401 + mTLS CN 多租户 RLS 隔离 + SIEM RFC5424 审计",
-                            "双 Java 8080/8081 长命令与 -D 精准脱敏 + 轨 B 80ms 超时强杀",
-                            ("otool -L 实证 probe 6.5MB 零 libc++/libstdc++/DuckDB 运行时", True),
+                            "强制全端读 401 + mTLS CN 多租户 RLS + SIEM + Prometheus /metrics",
+                            "双 Java 8080/8081 长命令精准脱敏 + 轨 B 80ms 超时强杀",
+                            ("otool -L 实证 probe 6.7MB 零 libc++/libstdc++/DuckDB 运行时", True),
                         ],
                     },
                 ],
@@ -1168,24 +1170,24 @@ def build_tech_deck() -> None:
                 mid="ah_mk",
             ),
             "anim_caps": [
-                "① kernel/ 三个纯机制 crate：目录表、6 大 Routine、7 大 Hook 与 ScopedSql",
+                f"① kernel/ {KERNEL_CNT} 个纯机制 crate：目录表、6 大 Routine、7 大 Hook 与 ScopedSql",
                 "② 双轨加载：轨 A 编译期 body_module_magic! 与轨 B env_clear 超时强杀沙盒",
-                "③ contrib/ 九个标准五件套模块承接全部 OS/中间件/数据库/合规/SIEM 能力",
-                "④ 四大发行版：旗舰版向后兼容 + 3.8~6.5MB 零 C++ 精简二进制",
+                f"③ contrib/ {CONTRIB_CNT} 个标准五件套模块承接 OS/中间件/国产库/安全/SIEM/可观测遥测",
+                "④ 四大发行版：旗舰版向后兼容 + 3.9~6.7MB 零 C++ 精简二进制",
                 "⑤ arch_boundary_check.py + aiops_e2e 锁死边界防腐与端到端实证",
             ],
-            "next": "内核边界拆清后，看这套 50~73 Phase 仓库如何靠机器门禁实现零漂移持续演进。",
+            "next": "内核边界拆清后，看这套经历 75 个 Phase 的仓库如何靠机器门禁实现零漂移持续演进。",
             "script": (
-                "第 22 页是 Phase 70 到 73 最新落地的一场「自我手术」：借鉴 PostgreSQL 插件架构，把微内核和周边能力彻底拆开。\n"
-                "原因很现实：前面做政务云 AIOps 和多数据库兼容时，发现很多具体需求——比如 Java -D 参数精准脱敏、东方通和 Nginx 拓扑解析、mTLS 多租户 RLS、RFC 5424 SIEM 外发、CMDB 工单接口——如果直接塞进主内核，微内核就会迅速腐烂成大泥球，而且还会被 DuckDB 的 C++ 运行时拖到近 80 兆，进不了轻量服务器与政务容器。\n"
-                "于是我们在不改内核业务逻辑的前提下，建起了纯机制的 `kernel/` 三层底座，把全部行业与运维探针、安全脱敏与工单适配器做成 `contrib/` 九个标准五件套扩展，再用 `arch_boundary_check.py` 每天盯死零跨层污染。结果同一套内核既保住了旗舰版，又直接编译出了 6.5 MB、完全零 C++ 依赖的 `agent-body-probe`。"
+                "第 22 页是 Phase 70 到 75 最新落地的一场「自我手术」：借鉴 PostgreSQL 插件架构，把微内核和周边能力彻底拆开，并在第 74~75 期补齐了 Prometheus `/metrics`、W3C Trace 与 `obs_telemetry` 扩展。\n"
+                "原因很现实：前面做政务云 AIOps 和多数据库兼容时，发现很多具体需求——比如 Java -D 参数精准脱敏、东方通和 Nginx 拓扑解析、mTLS 多租户 RLS、RFC 5424 SIEM 外发、CMDB 工单接口及指标可观测诊断——如果直接塞进主内核，微内核就会迅速腐烂成大泥球，而且还会被 DuckDB 的 C++ 运行时拖到近 80 兆，进不了轻量服务器与政务容器。\n"
+                f"于是我们在不改内核业务逻辑的前提下，建起了纯机制的 `kernel/` 三层底座，把全部行业运维探针、安全脱敏、工单适配器与可观测扩展做成 `contrib/` {CONTRIB_CNT} 个标准五件套扩展，再用 `arch_boundary_check.py` 每天盯死零跨层污染。结果同一套内核既保住了旗舰版，又直接编译出了 6.7 MB、完全零 C++ 依赖的 `agent-body-probe`。"
             ),
         },
         # 23 黑白屏同源、零重扫导航与六重质量门禁
         {
-            "eyebrow": "22 · ENGINEERING EXCELLENCE · ZERO-RESCAN & 6-FOLD QUALITY GATE",
-            "title": "工程化实践：43/43 黑白屏同源、零重扫与六重确定性门禁",
-            "lead": "大型项目演进到 Phase 73 最怕「越改越乱」——我们用 <b>EVOLUTION_GUIDE + arch_boundary + 六重硬门禁</b>把纪律写进机器。",
+            "eyebrow": "22 · ENGINEERING EXCELLENCE · ZERO-RESCAN & QUALITY GATE",
+            "title": "工程化实践：43/43 黑白屏同源、零重扫与确定性质量门禁",
+            "lead": "大型项目演进到 Phase 75 最怕「越改越乱」——我们用 <b>EVOLUTION_GUIDE (A~G 交叉核验) + arch_boundary + 六重硬门禁</b>把纪律写进机器。",
             "svg": svg_columns(
                 [
                     {
@@ -1196,7 +1198,7 @@ def build_tech_deck() -> None:
                             "Tier-0 只读 EVOLUTION_GUIDE + 活跃图",
                             "9 大高频场景 O(1) 变更触点矩阵",
                             "自建 .codegraph/ 符号穿透源码",
-                            ("根文件 + 微内核/周边计数自动核验", True),
+                            ("A~G 交叉规则自动核验文档与脚本", True),
                         ],
                         "foot_lbl": "检查命令",
                         "foot_val": "make evolution-check (<100ms)",
@@ -1209,7 +1211,7 @@ def build_tech_deck() -> None:
                             "arch-check: kernel 零污染 / 5件套",
                             "lint-panic & hygiene: 0 unwrap/吞错",
                             "lint-strict: workspace -D warnings",
-                            ("cargo test --workspace: 387 全绿", True),
+                            (f"cargo test --workspace: {TEST_CNT} 全绿", True),
                         ],
                         "foot_lbl": "一键联检",
                         "foot_val": "make quality-gate && make test",
@@ -1254,7 +1256,7 @@ def build_tech_deck() -> None:
                         "bg": C_WHITE,
                         "lines": [
                             "清除生产/基准中全部 CARGO_MANIFEST_DIR",
-                            "仓库改名或容器内运行全工作区 387 测试全绿",
+                            f"仓库改名或容器内运行全工作区 {TEST_CNT} 测试全绿",
                             "模块化治理：单文件 <=1000 行，错误可观测",
                         ],
                     },
@@ -1266,7 +1268,7 @@ def build_tech_deck() -> None:
                         "lines": [
                             "Linux (/proc, inotify, systemd) 为首选深化内核",
                             "macOS (FSEvents, libproc) / Windows 容错适配",
-                            "probe(6.5M)/dba(6.1M)/minimal(3.8M) 零 DuckDB",
+                            "probe(6.7M)/dba(6.4M)/minimal(3.9M) 零 DuckDB",
                         ],
                     },
                     {
@@ -1277,7 +1279,7 @@ def build_tech_deck() -> None:
                         "lines": [
                             "不内置 LLM ReAct 规划循环与业务推理",
                             "不替代 LangGraph / AutoGen / CrewAI 编排",
-                            "严守 43 工具与微内核 0 业务污染红线",
+                            f"严守 {TOOL_CNT} 工具与微内核 0 业务污染红线",
                         ],
                     },
                     {
@@ -1296,8 +1298,8 @@ def build_tech_deck() -> None:
             ),
             "next": "最后一页，总结演进终局，并附上 6 讲 × 30 分钟专题系列与开源协作入口。",
             "script": (
-                "Phase 49 到 73 我们把「位置无关」和「模块化拆分」一以贯之到了全工作区：`src/`、`kernel/`、`contrib/`、`distributions/` 所有生产文件严格控在 1000 行以内、0 处硬编码路径。\n"
-                "同时通过四大发行版把跨平台与容器轻量化真正落地，下探到 3.8~6.5 MB 零 C++ 运行时；并始终守住下面两格的递弱代偿红线——只做最纯粹、最硬核的具身微内核与可插拔扩展底座。"
+                "Phase 49 到 75 我们把「位置无关」和「模块化拆分」一以贯之到了全工作区：`src/`、`kernel/`、`contrib/`、`distributions/` 所有生产文件严格控在 1000 行以内、0 处硬编码路径。\n"
+                "同时通过四大发行版把跨平台与容器轻量化真正落地，下探到 3.9~6.7 MB 零 C++ 运行时；并始终守住下面两格的递弱代偿红线——只做最纯粹、最硬核的具身微内核与可插拔扩展底座。"
             ),
         },
         # 25 终局与专题导航
@@ -1313,13 +1315,13 @@ def build_tech_deck() -> None:
                     ("专题 03~04 · 反射与记忆", "AOPCC 并发控制与锁 · 新鲜度治理与换脑不失忆", "03-cerebellum-aopcc · 04-hippocampus"),
                     ("专题 05~06 · 免疫与实证", "纵深安全/双域审计/Mesh · Bench v3.9 与微内核门禁", "05-security-audit-mesh · 06-benchmark"),
                 ],
-                open_question="欢迎围绕「PostgreSQL 式微内核与 contrib 扩展设计」「内生 AWR 迁移至 AI Infra」「多本体联邦协议」展开深度 Q&A",
+                open_question="欢迎围绕「PostgreSQL 式微内核与 contrib 扩展设计」「内生 AWR / /metrics 迁移至 AI Infra」「多本体联邦协议」展开深度 Q&A",
                 next_talk="返回总览导航：presentation/index.html · 路演精简版：presentation/presentation.html",
             ),
             "script": (
-                "以上就是 Agent Body v1.1.0（Phase 73）的全部 25 页深度技术架构。\n"
-                "回过头看，这个项目其实只回答了一个本质问题：当大模型本身越来越强、切换越来越频繁时，宿主机侧需要沉淀一层怎样的确定性基础设施，才能让每个瞬态大脑一着陆就耳聪目明、不踩坑、不失忆、省 Token、可审计且可裁剪？\n"
-                "我们用 Rust 微内核 3 crate、9 个 `contrib` 扩展、4 大发行版、43 个原生工具、88 个存储 SPI、Benchmark v3.9 和全工作区 387 项测试给出了可复现的工程答卷。下面进入 Q&A，欢迎拍砖！"
+                "以上就是 Agent Body v1.1.0（Phase 75）的全部 25 页深度技术架构。\n"
+                "回过头看，这个项目其实只回答了一个本质问题：当大模型本身越来越强、切换越来越频繁时，宿主机侧需要沉淀一层怎样的确定性基础设施，才能让每个瞬态大脑一着陆就耳聪目明、不踩坑、不失忆、省 Token、可观测且可裁剪？\n"
+                f"我们用 Rust 微内核 {KERNEL_CNT} crate、{CONTRIB_CNT} 个 `contrib` 扩展、4 大发行版、{TOOL_CNT} 个原生工具、{SPI_CNT} 个存储 SPI、Benchmark v{BENCH_VER} 和全工作区 {TEST_CNT} 项测试给出了可复现的工程答卷。下面进入 Q&A，欢迎拍砖！"
             ),
         },
     ]

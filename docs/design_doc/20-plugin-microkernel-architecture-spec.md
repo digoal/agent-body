@@ -2,7 +2,7 @@
 
 > **版本**: v2.0 (`ISSUE #52`)  
 > **作者**: digoal 德哥 & Agent Body Architecture Team  
-> **状态**: 架构设计定稿（待按 `Phase K1 → K4` 严格顺序立项实施）  
+> **状态**: 已全量落地（`Phase 70~73` 完成 `kernel/` 3 crates、`contrib/` 前 9 扩展与 3 精简发行版；`Phase 74` 扩展只读 `ObservabilityProvider` 与第 10 个 `contrib/obs_telemetry` 扩展，详见 [21-observability-and-telemetry-spec.md](21-observability-and-telemetry-spec.md)）  
 > **对齐规约**: 规约 #1 (脑体分离), #2 (递弱代偿与边界防膨胀), #5 (零幻觉物理实证), #8 (四级自治与留痕), #9 (极速轻量化), #11 (向后兼容), #13 (测试与门禁), #15 (宏微联邦), #16 (黑白屏 1:1:1 同步), #18 (实证基准), #19 (纵深防御与全链路脱敏), #20 (零重扫演进), #21 (写穿失效与现实对账), #25 (AOPCC 乐观-悲观并发控制), #28 (模块化复杂度)
 
 ---

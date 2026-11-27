@@ -1,6 +1,6 @@
 # Agent Body — 官方使用手册 (User Manual)
 
-> **版本**: v1.1.0 (Rust Edition · Phase 64~73 · 旗舰版与微内核多发行版)  
+> **版本**: v1.1.0 (Rust Edition · Phase 64~75 · 旗舰版、微内核 10 `contrib/` 多发行版与全栈可观测)  
 > **编写标准**: 遵循项目内置技能 [`skills/agent-body-doc-writer/SKILL.md`](../../skills/agent-body-doc-writer/SKILL.md)  
 > **更新时间**: 2026-11-27
 
@@ -35,5 +35,5 @@
   请直接从 [01-getting-started.md](01-getting-started.md) 开始，花费 3 分钟完成编译并在终端跑通 `agent-body brief`；
 - **如果你想配置 Agent（如 Claude Desktop / Antigravity / Cursor）通过 MCP 自动挂载Agent 本体**：
   请重点阅读 [04-mcp-integration.md](04-mcp-integration.md) 与 [09-hooks-integration.md](09-hooks-integration.md)；
-- **如果你想在浏览器中直观查看宿主机事实拓扑、协作锁与路演演示剧场**：
-  请查阅 [08-web-dashboard.md](08-web-dashboard.md)。
+- **如果你正在生产部署政务云探针、DBA 哨兵或接入 Prometheus/Loki 监控体系**：
+  请结合 [05-daemon-and-watcher.md](05-daemon-and-watcher.md)、[07-troubleshooting.md](07-troubleshooting.md) 与 [08-web-dashboard.md](08-web-dashboard.md) 完成 `/metrics`、W3C `traceparent` 与 `agent-body-probe metrics/diagnose` 配置。

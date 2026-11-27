@@ -45,7 +45,7 @@ Agent 本体采用 **Rust** 编写，原生单二进制交付，依赖极简、�
 |---|---|---|
 | **操作系统** | Linux (Ubuntu / Debian / CentOS / 统信 / 麒麟) | 深度利用 Linux `/proc` 文件系统与 `inotify` 机制 |
 | **C/C++ 工具链 (旗舰版编译期)** | GCC/G++ >= 9, CMake >= 3.15, make | 旗舰版 DuckDB bundled 构建必须；精简发行版（`probe`/`dba`/`kernel-minimal`）无需 CMake/DuckDB |
-| **C++ 运行时 (`libstdc++.so.6`)** | 仅旗舰全功能版必选 | 精简发行版 `agent-body-probe` (6.5M) / `agent-body-dba` (6.1M) / `agent-body-kernel-minimal` (3.8M) **零 C++ 运行时依赖** |
+| **C++ 运行时 (`libstdc++.so.6`)** | 仅旗舰全功能版必选 | 精简发行版 `agent-body-probe` (6.7M) / `agent-body-dba` (6.4M) / `agent-body-kernel-minimal` (3.9M) **零 C++ 运行时依赖** |
 | **Rust 工具链 (编译期)** | Rust >= 1.88 (推荐 1.99+) + Cargo | 源码编译构建工具（`Cargo.lock` 依赖 `edition = "2024"` crate），安装于 `/root/.cargo/bin` |
 | **SQLite3 运行环境** | 内置 Bundled FTS5 (无需外装系统级动态库) | `rusqlite` 以 bundled 特性编译，单二进制自包含 |
 | **本地 Ollama (可选)** | `http://127.0.0.1:11434` (模型推荐 `nomic-embed-text` 或 `bge-m3`) | 提供语义向量混合检索（RRF）。若未安装自动降级为 FTS5 |
@@ -65,8 +65,10 @@ make build
 # 或按需编译精简发行版：
 cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
 ./target/release/agent-body-probe self-check && ./target/release/agent-body-dba self-check
+./target/release/agent-body-probe metrics | head -n 20
+./target/release/agent-body-probe diagnose
 
-# 3. 运行全工作区 387 项自动化测试验证环境
+# 3. 运行全工作区 396 项自动化测试验证环境
 RUST_TEST_THREADS=1 make test
 # 或: RUST_TEST_THREADS=1 cargo test --workspace
 
@@ -324,7 +326,8 @@ agent-body close session-20261115-01 --clean-temp
 | **实证基准与账本** | `body_benchmark` | `v3.9` 基准评测：`W1~W19` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ10` + `COMP-C1~C4` 竞品对标与 `PR-01~14` 账本 |
 | **反馈与自进化** | `body_feedback` | `user_feedback.md` 双向总账读写、已验证反馈沉淀记忆、`reconcile` 新鲜度对账（含多模态回填）与 `P1~P5` 探针 |
 | **双域行为审计** | `body_audit_query` | `IN_AGENT` + `OUT_OF_AGENT` 双域审计查询、因果钻取、DuckDB OLAP 导出与租约滑窗自进化 |
-| **Agent 本体中枢** | `body_state` | 六器官自省 (`manifest`)、五维稳态 (`vitals`)、三态模式 (`runtime_status`/`runtime_mode`/`ab_compare`/`ab_report`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`) 与 AWR 诊断 (`perf_*`) |
+| **Agent 本体中枢** | `body_state` | 六器官自省 (`manifest`)、五维稳态 (`vitals`)、三态模式 (`runtime_status`/`runtime_mode`/`ab_compare`/`ab_report`)、OpenMetrics/JSON 实时指标 (`metrics`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`) 与 AWR 诊断 (`perf_*`) |
+| **可观测与追踪** | `GET /metrics` & `X-Trace-Id` | 旗舰 Web 端暴露 Prometheus `/metrics` 与 W3C `traceparent` 响应头，支持 `AGENT_BODY_LOG_FORMAT=json`；精简发行版挂载第 10 扩展 `contrib/obs_telemetry` 提供 `body_obs_metrics` 与 `body_obs_diagnose` (`OBS-01~05`) |
 
 ---
 

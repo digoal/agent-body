@@ -14,6 +14,8 @@ services:
     environment:
       - RUST_LOG=info
       - AGENT_BODY_CONFIG=/root/.agent-body/config.toml
+      # 可选设置为 json 开启单行 JSONL 结构化日志并透传 W3C traceparent
+      - AGENT_BODY_LOG_FORMAT=${AGENT_BODY_LOG_FORMAT:-text}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://127.0.0.1:8765/api/v1/health"]
       interval: 30s

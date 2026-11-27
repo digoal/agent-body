@@ -1,7 +1,7 @@
 # Agent Body — Agent 本体开发者全景开发指南 (面向开发者)
 
 > **目标受众**：Rust 研发工程师、开源贡献者、智能体插件与 MCP 工具生态开发者  
-> **定位准则**：**脑体分离架构下的 Agent 本体（宿主机具身底座，27 模块 / 43 MCP / 88 SPI / 27 表 · 0 `>1000L` 文件 · 微内核 3 crates / contrib 9 扩展 / 3 精简发行版）**，严守三层命名兼容纪律（对外叙事为 Agent 本体，底层 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容）  
+> **定位准则**：**脑体分离架构下的 Agent 本体（宿主机具身底座，27 模块 / 43 MCP / 88 SPI / 27 表 · 0 `>1000L` 文件 · 微内核 3 crates / contrib 10 扩展 / 3 精简发行版）**，严守三层命名兼容纪律（对外叙事为 Agent 本体，底层 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容）  
 > **工程要求**：严格类型安全 · 零内存泄漏 · 100% 测试全绿门禁 · 工业级可调试性
 
 ---
@@ -10,8 +10,8 @@
 
 Agent Body 采用“微内核 (`kernel/`) + 独立周边 (`contrib/`) + 多发行版 (`distributions/`)”与旗舰主干 (`src/`) 并行兼容的模块化架构：
 
-- `kernel/`：纯机制微内核底座（`body-sdk` / `body-protocol` / `body-kernel`），受 `scripts/arch_boundary_check.py` 强制约束零业务词污染；
-- `contrib/`：9 个按需挂载的标准五件套扩展模块（`idx_fts_fuzzy` / `gov_placement` / `probe_db_engines` / `probe_linux_ops` / `probe_jvm_middleware` / `hook_auth_mtls_rbac` / `hook_gov_compliance` / `hook_audit_siem` / `fdw_cmdb_ticket`）；
+- `kernel/`：纯机制微内核底座（`body-sdk` / `body-protocol` / `body-kernel`，含只读 `ObservabilityProvider` 与 `KernelObservability`），受 `scripts/arch_boundary_check.py` 强制约束零业务/观测协议词污染；
+- `contrib/`：10 个按需挂载的标准五件套扩展模块（`idx_fts_fuzzy` / `gov_placement` / `probe_db_engines` / `probe_linux_ops` / `probe_jvm_middleware` / `hook_auth_mtls_rbac` / `hook_gov_compliance` / `hook_audit_siem` / `fdw_cmdb_ticket` / `obs_telemetry`，详见 [21-observability-and-telemetry-spec.md](../design_doc/21-observability-and-telemetry-spec.md)）；
 - `distributions/`：3 个零 C++/DuckDB 精简发行版装配入口（`kernel-minimal` / `aiops-probe` / `dba-sentinel`）；
 - `src/`：旗舰全功能版核心源码（27 个顶层模块）：
 
@@ -103,7 +103,7 @@ export PATH="/root/.cargo/bin:$PATH"
 # 1. 快速语法与类型检查 (耗时约 2~4 秒)
 cargo check
 
-# 2. 运行全工作区 395 项自动化测试套件（含旗舰版 352 + kernel 26 + contrib 13 + distributions 4）
+# 2. 运行全工作区 396 项自动化测试套件（含旗舰版 353 + kernel 26 + contrib 13 + distributions 4）
 RUST_TEST_THREADS=1 cargo test --workspace
 
 # 2b. 单独校验微内核防腐边界与精简发行版自检

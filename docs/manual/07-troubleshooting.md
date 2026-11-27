@@ -115,3 +115,27 @@
      # 对存量资产执行纯 Rust 多模态 L1A v2.0 与 Know-How 增量回填
      agent-body asset scan <your_path> --backfill-multimodal --extract-knowhow
      ```
+
+---
+
+## 6. 全栈可观测排障、W3C Trace 链路追踪与 `OBS-01~05` 自诊断 (Phase 74)
+
+### Q12: 请求返回 401/403 或 Web/探针响应变慢，如何端到端串联日志与审计记录？
+- **排查步骤**:
+  1. 在调用客户端查看 HTTP 响应头 **`X-Trace-Id`** 与 **`traceparent`**（旗舰 Web 端允许调用方入站透传标准 W3C `traceparent`）；
+  2. 将守护进程开启 `AGENT_BODY_LOG_FORMAT=json` 后，直接用同一 `trace_id` 检索单行 JSONL 日志、`audit_events` 表或 `agent-body-probe` 的 SIEM RFC 5424 `trace_id="..."` 字段；
+  3. 对实时瓶颈执行 `/metrics` 抓取或直接运行自诊断：
+     ```bash
+     curl -sS -i http://127.0.0.1:8765/metrics | head -n 30
+     agent-body body metrics --format json
+     agent-body-probe diagnose --limit 20
+     ```
+
+### Q13: `agent-body-probe diagnose` 报出 `OBS-01` ~ `OBS-05` 异常怎么处置？
+| 规则码 | 级别 | 触发语义 | 推荐处置动作 |
+|---|---|---|---|
+| `OBS-01` | `warn` | 鉴权或 RBAC/RLS 访问拒绝数达标 | 核对 Bearer Token、mTLS 证书 CN 与租户 `host_labels` 映射 |
+| `OBS-02` | `critical` | 外部 FDW 或轨 B 沙盒进程超时 | 检查目标数据源连通性与 `.control.toml` 中 `[sandbox].timeout_ms` |
+| `OBS-03` | `critical` | 算子/探针整体错误率超过 10% | 查看 `recent_slow_or_failed` 中的 `trace_id` 与 `detail` 定位源因 |
+| `OBS-04` | `warn` | 内核等待事件 P95 延迟 `>= 250ms` | 检查锁争用、外部探针阻塞或后台协程频率 |
+| `OBS-05` | `warn` | SIEM 环形缓冲丢弃审计事件 | 调高 `SiemSinkConfig.ring_capacity` 或缩短 flush 间隔 |

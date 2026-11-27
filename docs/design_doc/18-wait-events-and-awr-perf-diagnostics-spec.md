@@ -2,7 +2,7 @@
 
 > **版本**: v1.0.0 (Phase 50~56 · ISSUE #32, #38, #40)  
 > **作者**: digoal 德哥 & Agent Body Architecture Team  
-> **状态**: 已批准并实装 (`src/body/perf_awr/{mod,wait_events,awr_engine}.rs`，`18/18` WaitEventId 全埋点强制门禁守护)  
+> **状态**: 已批准并实装 (`src/body/perf_awr/{mod,wait_events,awr_engine,metrics_export}.rs`，`18/18` WaitEventId 全埋点强制门禁守护；Phase 74 已在此基础上拓展 OpenMetrics `/metrics`、微内核 `ObservabilityProvider` 与 `contrib/obs_telemetry`，详见 [21-observability-and-telemetry-spec.md](21-observability-and-telemetry-spec.md))  
 > **对齐规约**: 规约 #2 (递弱代偿), #8 (四级自治包络), #9 (极速与轻量化), #16 (黑白屏 1:1:1 子动作同步), #18 (实证基准), #26 (双域审计), #27 (Agent 本体稳态), #28 (位置无关与错误可观测性)
 
 ---

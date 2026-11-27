@@ -525,6 +525,29 @@ impl McpToolRegistry {
                         let rep = crate::body::BodyPerfEngine::run_l1_auto_tune(&self.storage)?;
                         Ok(serde_json::to_string_pretty(&rep)?)
                     }
+                    "metrics" => {
+                        let fmt = args
+                            .get("format")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("prometheus");
+                        if fmt.eq_ignore_ascii_case("json") {
+                            let val = crate::body::flagship_metrics_json_value(
+                                self.storage.provider().as_ref(),
+                                0.0,
+                            );
+                            Ok(serde_json::to_string_pretty(&val)?)
+                        } else {
+                            let text = crate::body::render_flagship_prometheus_metrics(
+                                self.storage.provider().as_ref(),
+                                0.0,
+                            );
+                            Ok(serde_json::to_string_pretty(&serde_json::json!({
+                                "format": "prometheus",
+                                "content_type": "text/plain; version=0.0.4; charset=utf-8",
+                                "metrics_text": text,
+                            }))?)
+                        }
+                    }
                     _ => bail!("未知 body_state action: {}", action),
                 }
             }

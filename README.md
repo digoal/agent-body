@@ -120,7 +120,7 @@
 - 🛠️ **[02-for-developers.md](docs/arch/02-for-developers.md)**（面向研发工程师与贡献者）：
   - 源码 27 大模块全景职责与依赖拓扑速查（Phase 67 全量 `<1000L` 模块化，0 `>1000L` God File）；
   - 核心扩展三大 How-To（添加原生 MCP 工具、实现新存储后端 SPI、新增环境预检项）；
-  - **395 项全工作区自动化测试套件**（旗舰版 `352` + `kernel` `26` + `contrib` `13` + `distributions` `4`）与本地开发流；
+  - **396 项全工作区自动化测试套件**（旗舰版 `353` + `kernel` `26` + `contrib` `13` + `distributions` `4`）与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
 - 🧭 **[03-for-users.md](docs/arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
   - Agent 本体核心心智模型与物理世界哨兵定位；
@@ -143,7 +143,7 @@
 - 🛠️ **[07-troubleshooting.md](docs/manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
 - 🌐 **[08-web-dashboard.md](docs/manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级Agent 本体拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
 - 🪝 **[09-hooks-integration.md](docs/manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
-- 🧪 **六重确定性质量门禁与 395 项全工作区测试**：`make quality-gate`（`evolution-check` 全仓一等公民防漂移/活跃文档与源码路径 0 断链 + `arch-check` 微内核/周边隔离边界 + `0` `unwrap`/`expect` + `>1000L` 文件清零 + 静默 `let _ =` 0/15 + 全仓零旧命名残留 + `18/18` `WaitEventId` 全埋点 + `-D warnings` 全工作区严格编译）+ `RUST_TEST_THREADS=1 cargo test --workspace` 全绿；
+- 🧪 **六重确定性质量门禁与 396 项全工作区测试**：`make quality-gate`（`evolution-check` 全仓一等公民防漂移/活跃文档与源码路径 0 断链 + `arch-check` 微内核/周边隔离边界 + `0` `unwrap`/`expect` + `>1000L` 文件清零 + 静默 `let _ =` 0/15 + 全仓零旧命名残留 + `18/18` `WaitEventId` 全埋点 + `-D warnings` 全工作区严格编译）+ `RUST_TEST_THREADS=1 cargo test --workspace` 全绿；
 - 📊 **[10-benchmark-and-roi.md](docs/manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.9 与生产效能存证账本（`W1~W19` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ10` + `COMP-C1~C4` 竞品对标 + `PR-01~14` 溯源流水）
 
 ---
@@ -164,11 +164,13 @@ cargo build --release
 ./target/release/agent-body status
 ```
 
-### 2. 按需编译零 C++ 精简发行版 (Phase 70~73)
+### 2. 按需编译零 C++ 精简发行版与全栈可观测 (Phase 70~74)
 ```bash
-# 纯微内核最小版 (3.8M)、政务云 AIOps 探针 (6.5M)、DBA 哨兵 (6.1M)，零 DuckDB / 零 C++ 运行时
+# 纯微内核最小版 (3.9M)、政务云 AIOps 探针 (6.7M)、DBA 哨兵 (6.4M)，零 DuckDB / 零 C++ 运行时
 cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
 ./target/release/agent-body-probe self-check && ./target/release/agent-body-dba self-check
+./target/release/agent-body-probe metrics | head -n 20
+./target/release/agent-body-probe diagnose
 ```
 
 ### 2. 常用 CLI 命令一览
@@ -236,7 +238,7 @@ cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-
   - `Cargo.toml` : Rust Crate 元数据、生产依赖清单与 Release 编译优化配置
   - `Cargo.lock` : Rust 依赖树精确版本锁定文件，保障跨环境确定性可复现构建
   - `build.rs` : Rust 编译期构建脚本，负责注入 Git Commit Hash、构建时间与目标平台信息至 `--version`
-  - `Makefile` : 一键构建、五重质量门禁（`quality-gate`）、演说验真（`verify-decks`）、服务热重启与开源镜像同步自动化入口
+  - `Makefile` : 一键构建、六重质量门禁（`quality-gate`）、演说验真（`verify-decks`）、服务热重启与开源镜像同步自动化入口
   - `Dockerfile` : 多阶段轻量容器镜像构建文件（编译期 Rust 工具链与运行期精简 Debian 镜像分离）
   - `docker-compose.yml` : 本地及生产容器化一键编排配置（数据卷挂载、端口映射、健康检查与环境变量模板）
   - `config.example.toml` : 带完整参数注释的 `~/.agent-body/config.toml` 配置模板（存储后端、扫描策略、安全鉴权、Web/Mesh 与 Ollama 配置）
@@ -304,8 +306,8 @@ cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-
 12. **零 Panic 原则**：
     - 在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误，保证服务 7×24 稳定运行。
 
-13. **测试驱动、零警告与五重确定性门禁**：
-    - 新增功能必须在 `tests/` 或 `contrib/<ext>/tests/regress.rs` 内提供自动化测试（全工作区持续守卫 **395 项自动化测试**，含 `mesh` / `audit` / `body_awr` / `hooks` / `cli_e2e`、`kernel`、`contrib` 与 `distributions` 端到端集成套件）。
+13. **测试驱动、零警告与六重确定性门禁**：
+    - 新增功能必须在 `tests/` 或 `contrib/<ext>/tests/regress.rs` 内提供自动化测试（全工作区持续守卫 **396 项自动化测试**，含 `mesh` / `audit` / `body_awr` / `hooks` / `cli_e2e`、`kernel`、`contrib` 与 `distributions` 端到端集成套件）。
     - 任何提交前必须通过一键六重确定性门禁 `make quality-gate && make test`：`make evolution-check`（`Cargo.toml` 版本/架构计数/根目录核心文件自文档化/活跃文档与源码路径 0 断链/`parity_api` 43 路由精确命中/演说基准 0 漂移）、`make lint-panic`（生产代码 0 `unwrap`/`expect`）、`make lint-hygiene`（位置无关性、`>1000L` 文件清零、`let _ = <= 15` 且核心自治路径 `= 0`、`18/18` `WaitEventId` 埋点全覆盖、全仓 0 旧命名残留与非基准 `/root/new` 硬编码清零）、`make lint-strict`（本 crate `-D warnings` 严格编译 + 自动联动 `clippy`）及 `cargo test` 全绿；凡修改 `presentation/` 或演说生成脚本时，必须追加通过 `make verify-decks` Playwright 无头视觉与交互门禁。
     - MCP 工具与 CLI 子命令必须保持一一映射（Phase 44 已实现 43/43 同步）。
 

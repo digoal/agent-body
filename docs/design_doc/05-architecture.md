@@ -1,7 +1,7 @@
 # 05 — 架构设计（Architecture）· 三位一体架构体系
 
 > [!NOTE]
-> **历史设计基线说明**：本文档沉淀自项目 v2.0 架构重构期（2026-11-15）。当前 `v0.4.0` 完整 24 模块源码架构、61 方法存储 SPI、双轨实证评测与 Web UI 2.0 权威口径，请以 [docs/arch/01-for-architects.md](../arch/01-for-architects.md) 与 [docs/arch/02-for-developers.md](../arch/02-for-developers.md) 为准。
+> **历史设计基线与当前演进对照**：本文档初稿沉淀自早期重构期（2026-11-15）。当前 **`v1.1.0`** 全量 **27** 顶层模块、**88** 方法存储 SPI、**3** 微内核 Crate + **10** `contrib/` 标准五件套、**4** 大发行版及全栈可观测体系，请以 [docs/arch/01-for-architects.md](../arch/01-for-architects.md)、[docs/arch/02-for-developers.md](../arch/02-for-developers.md)、[20-plugin-microkernel-architecture-spec.md](20-plugin-microkernel-architecture-spec.md) 与 [21-observability-and-telemetry-spec.md](21-observability-and-telemetry-spec.md) 为准。
 
 > Agent Body 产品设计 · 交付件 5/7  
 > 版本: v2.0 (三模块重构版) · 更新: 2026-11-15  

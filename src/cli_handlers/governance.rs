@@ -712,6 +712,33 @@ pub fn handle_governance(cmd: Commands, cfg: &Config, storage: Storage) -> Resul
                         }
                     }
                 }
+                BodyCommands::Metrics { format, json } => {
+                    let is_json = json || format.eq_ignore_ascii_case("json");
+                    let out = if is_json {
+                        let val = agent_body::body::flagship_metrics_json_value(
+                            storage.provider().as_ref(),
+                            0.0,
+                        );
+                        serde_json::to_string_pretty(&val)?
+                    } else {
+                        agent_body::body::render_flagship_prometheus_metrics(
+                            storage.provider().as_ref(),
+                            0.0,
+                        )
+                    };
+                    agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                        storage.provider().as_ref(),
+                        "cli",
+                        "body_state",
+                        &out,
+                        t0.elapsed().as_micros() as i64,
+                    );
+                    if is_json {
+                        println!("{}", out);
+                    } else {
+                        print!("{}", out);
+                    }
+                }
                 BodyCommands::RuntimeMode { set, shadow_primary, mcp_profile, json } => {
                     let payload = if set.is_some() || shadow_primary.is_some() || mcp_profile.is_some() {
                         let next_mode = match set.as_deref() {

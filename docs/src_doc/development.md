@@ -1,8 +1,8 @@
 # Agent Body (Rust 版) — 本地编译、开发与测试指南
 
-> **版本**: v1.0.0 (Rust Edition)  
-> **更新时间**: 2026-11-23  
-> **架构基线**: 脑体分离 Agent 本体（三位一体感官/脊柱/海马体 + `src/body/` 本体中枢）+ 多存储引擎 (88 SPI / 27 表) + 协作锁 + 分层加权图谱 + MeshEnvelope v1.0 + AOPCC 并发自适应 + 双域审计自进化 + Benchmark v3.9 (W19/M6/DQ10/PR-14) + `>1500L` 文件清零
+> **版本**: v1.1.0 (Rust Edition)  
+> **更新时间**: 2026-11-28  
+> **架构基线**: 脑体分离 Agent 本体（三位一体感官/脊柱/海马体 + `src/body/` 本体中枢）+ 多存储引擎 (88 SPI / 27 表) + PostgreSQL 式微内核与扩展体系 (`3 kernel / 10 contrib / 4 distributions`) + 分层加权图谱 + MeshEnvelope v1.0 + AOPCC 并发自适应 + 内生 Wait Events / AWR / Prometheus `/metrics` / W3C Trace 可观测闭环 + Benchmark v3.9 (`W19 / M6 / DQ10 / PR-14`) + `>1000L` 文件清零
 
 ---
 
@@ -50,12 +50,15 @@ agent-body/
 ├── INSTALL.md               # 生产部署与依赖全景排障手册
 ├── docs/releases/                # 历史各版本详细 Release Notes
 │   ├── README.md            # 滚动版本索引与打 Tag 规范
-│   ├── v0.1.0.md ~ v1.0.0.md
+│   └── v0.1.0.md ~ v1.1.0.md
 ├── docs/src_doc/                 # 研发规划与架构文档
 │   ├── progress.md          # 串行任务断点续传总进度表
 │   ├── development.md       # 本开发指南
 │   ├── archive/             # Phase 2~51 历史规划与进度归档
-│   └── roadmap-phase52~57.md# 近期演进路线图
+│   └── roadmap-phase*.md    # 活跃演进路线图 (最新 Phase 75)
+├── kernel/                  # 纯机制微内核 (body-sdk / body-protocol / body-kernel)
+├── contrib/                 # 10 个独立周边标准五件套扩展 (含 obs_telemetry)
+├── distributions/           # 3 个零 C++/DuckDB 精简发行版 (kernel-minimal / aiops-probe / dba-sentinel)
 ├── tests/                   # 独立集成与性能基准测试套件 (11 个测试文件 / 38+ 项集成与基准测试)
 │   ├── coordination_integration.rs  # 多 Agent 协作锁并发集成测试
 │   ├── deadlock_wait_integration.rs # WFG 死锁与唤醒集成测试
@@ -105,9 +108,10 @@ agent-body/
 
 ## 三、常用构建、测试与开发命令
 
-### 1. 快速检查、防漂移与语法校验 (零警告标准)
+### 1. 快速检查、六重门禁与防漂移校验 (零警告标准)
 ```bash
-make evolution-check && make lint-panic && make check
+make quality-gate
+# 等价于串联: make evolution-check arch-check lint-panic lint-hygiene lint-strict
 ```
 
 ### 2. 运行环境与依赖预检
@@ -118,20 +122,9 @@ make preflight
 
 ### 3. 运行测试套件
 ```bash
-# 运行全部库内与集成自动化测试 (252+ 项通过，1 项 doc-test 忽略)
-cargo test --lib
-
-# 运行协作锁并发集成测试 (8 项)
-cargo test --test coordination_integration
-
-# 运行 DuckDB 列存分析集成测试 (5 项)
-cargo test --test duckdb_integration
-
-# 运行性能与实证基准测试 (6 项)
-cargo test --test benchmarks
-
-# 一键运行 Makefile 全量测试
-make test
+# 运行全工作区单元与集成测试（推荐设置 RUST_TEST_THREADS=1 避免微基准 CPU 争抢）
+RUST_TEST_THREADS=1 cargo test --workspace
+# 等价于: make test
 ```
 
 ### 4. 构建与部署发布版

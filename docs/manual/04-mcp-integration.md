@@ -187,7 +187,24 @@ Agent 本体向瞬态大脑暴露 43 个原子级感官、反射、海马体与�
 }
 ```
 
-### (4) 工具调用 (`tools/call`) — 五点对比探针与新鲜度对账 (`body_feedback`)
+### (5) 精简发行版 stdio MCP 与 `obs_telemetry` 算子（Phase 70~74）
+`agent-body-probe mcp` 与 `agent-body-dba mcp` 基于微内核 `KernelDispatcher` 暴露单点派发工具集（含第 10 个扩展 `contrib/obs_telemetry` 提供的 `body_obs_metrics` 与 `body_obs_diagnose`）；旗舰版可通过已有 `body_state` 的 `action="metrics"` 获取同等 OpenMetrics/JSON 遥测（维持 43 个原生工具零膨胀）：
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "tools/call",
+  "params": {
+    "name": "body_state",
+    "arguments": {
+      "action": "metrics",
+      "format": "json"
+    }
+  }
+}
+```
+- 精简探针版 `agent-body-probe mcp` 内置 `body_obs_metrics`（`obs metrics`）、`body_obs_diagnose`（`obs diagnose`，输出 `OBS-01~05` 异常规则与 W3C `traceparent`）及 `body_aiops_evidence_pack`。
 支持 `action`: `"list" | "add" | "sync" | "reconcile" | "probes"`（默认为 `"list"`）。
 
 ```json

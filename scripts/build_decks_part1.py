@@ -30,6 +30,7 @@ PR_CNT = _COUNTS["pr_rules"]
 KERNEL_CNT = _COUNTS["kernel_crates"]
 CONTRIB_CNT = _COUNTS["contrib_exts"]
 DIST_CNT = _COUNTS["distributions"]
+TEST_CNT = _COUNTS["verified_tests"]
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "presentation"
@@ -562,7 +563,7 @@ def build_talk_01() -> None:
                     ["DQ8", "本体五维稳态健康度与自治包络合规", "稳态 99.9/100 · L3 硬拦截", "100.0% (>=99.0%)", "PASS"],
                     ["DQ2", "本地 Ollama Embedding 向量覆盖率", "199 / 200 抽样已生成向量", "99.5% (>=99.0%)", "PASS"],
                     ["scene-7", "Web 路演剧场第 7 幕：换脑不失忆", "独立内存沙箱真引擎实跑", "零宿主污染 · 一键复位", "PASS"],
-                    ["cargo test", "全工作区单元 + 集成测试（0 失败）", "387 项全工作区测试", "387 passed / 0 failed", "PASS"],
+                    ["cargo test", "全工作区单元 + 集成测试（0 失败）", f"{TEST_CNT} 项全工作区测试", f"{TEST_CNT} passed / 0 failed", "PASS"],
                 ],
                 [18, 150, 560, 960, 1290],
                 footnote="Benchmark v3.9 实机 SHA-256 存证 · 覆盖 W1~W19 / M1~M6 / DQ1~DQ10 / PR-01~14",
@@ -623,7 +624,7 @@ def build_talk_01() -> None:
                 pillars=[
                     ("定位清澈", "不是多 Agent 编排器，也不是个人助理", "Agent Embodiment Substrate"),
                     ("边界克制", "严守递弱代偿：只做确定性感知、反射与连续态", "L0~L3 自治包络 · 0 越权"),
-                    ("实证说话", "三层兼容零断层，43/43 同构，387 测试全绿", f"微内核:{KERNEL_CNT} / 周边:{CONTRIB_CNT} / 精简版:{DIST_CNT}"),
+                    ("实证说话", f"三层兼容零断层，{TOOL_CNT}/{TOOL_CNT} 同构，{TEST_CNT} 测试全绿", f"微内核:{KERNEL_CNT} / 周边:{CONTRIB_CNT} / 精简版:{DIST_CNT}"),
                 ],
                 open_question="开放思考：当你的团队同时使用 4 种以上 AI 编程客户端，谁来为它们共享的宿主机状态负责？",
                 next_talk="下一讲预告 → 第 02 讲：宿主机物理感官图谱与零污染扫盘（02-host-reality-graph.html）",
@@ -1090,7 +1091,7 @@ def build_talk_02() -> None:
                     "agent-body fact \"提取 PDF 文本\" -f capability",
                     "",
                     "# 2. 0.2ms 端口查重与空闲推荐",
-                    "agent-body port check 8756",
+                    "agent-body port check 8765",
                     "",
                     "# 3. 分级颗粒度扫盘 + 本地 Ollama L2 语义精炼",
                     "agent-body asset scan /root/new/work/agent-body --enrich",
@@ -1260,7 +1261,7 @@ def build_talk_03() -> None:
                 "④ 乐观路径：凭开工 MVCC 租约直接一步到位",
                 "⑤ 数学判据：整轮对话税 vs 失败回滚期望代价",
             ],
-            "next": "道理通了，怎么让代码自动精准分辨「连 5432 客户端」和「绑 8756 服务端」？",
+            "next": "道理通了，怎么让代码自动精准分辨「连 5432 客户端」和「绑 8765 服务端」？",
             "script": (
                 "这个洞察是我在做 PostgreSQL 验证时突然想明白的。\n"
                 "我明明知道本机 5432 端口默认就跑着一个免密 PG 实例，结果如果规则死板地要求每次动手前先查一遍 Agent Body，虽然 0.2 毫秒就回答了，但大模型被迫多走一整轮对话，白白重发一两万 Token 上下文、干等三四秒。\n"
@@ -1270,7 +1271,7 @@ def build_talk_03() -> None:
         {
             "eyebrow": "02 · 三态分类引擎",
             "title": "AOPCC 三态决策矩阵：精确区分客户端连接与服务端绑定",
-            "lead": "同样出现端口号，<b>`psql -p 5432` 是只读/客户端试探（乐观直通），`uvicorn --port 8756` 是服务端占坑（悲观门禁）</b>。",
+            "lead": "同样出现端口号，<b>`psql -p 5432` 是只读/客户端试探（乐观直通），`uvicorn --port 8765` 是服务端占坑（悲观门禁）</b>。",
             "svg": svg_columns(
                 [
                     {
@@ -1374,7 +1375,7 @@ def build_talk_03() -> None:
                     ("ECONNREFUSED (:5432)", "反复换 localhost/127.0.0.1 重试 3 轮", "反查 /proc 发现 PG 实际跑在 :5433，直接返回正确端口"),
                     ("password auth failed", "瞎猜默认密码或重写连接脚本", "检索服务通讯录提示环境变量名与脱敏认证方式"),
                     ("command not found", "立刻 apt/pip 盲装或放弃方案", "反查 capability 图谱给出本机等价工具及绝对路径"),
-                    ("EADDRINUSE (:8756)", "手动试 8757/8758 碰运气", "指出占用 PID/服务名，并附带实测空闲推荐端口"),
+                    ("EADDRINUSE (:8765)", "手动试 8766/8767 碰运气", "指出占用 PID/服务名，并附带实测空闲推荐端口"),
                 ],
                 ("W15 实测：AOPCC 自适应控制节省 83.9% Token，加速 3.71x，质量从 52.0 升至 100.0。", "Bench v3.9 W15 PASS"),
             ),
@@ -1602,7 +1603,7 @@ def build_talk_03() -> None:
                 [
                     "# 1. 模拟 PreToolUse 检查（区分客户端连 5432 vs 服务端绑端口）",
                     "agent-body hooks pre --tool run_command --command \"psql -p 5432\"",
-                    "agent-body hooks pre --tool run_command --command \"uvicorn --port 8756\"",
+                    "agent-body hooks pre --tool run_command --command \"uvicorn --port 8765\"",
                     "",
                     "# 2. 测试四级自治包络裁决（L0/L1/L2/L3）",
                     "agent-body body envelope --action write_file --target /etc/shadow",
@@ -1625,7 +1626,7 @@ def build_talk_03() -> None:
             ),
             "next": "小脑反射解决了「当下这一步怎么又快又安全」，但长任务跨天、跨模型切换时，大脑还是会失忆。",
             "script": (
-                "把这两条 `hooks pre` 对比着敲一遍特别有意思：敲 `psql -p 5432` 会告诉你乐观直通放行；敲 `uvicorn --port 8756` 会立刻触发悲观门禁并报出 8756 正被 `agent-body` 占用。这种毫秒级的精准区分，就是 AOPCC 的灵魂。"
+                "把这两条 `hooks pre` 对比着敲一遍特别有意思：敲 `psql -p 5432` 会告诉你乐观直通放行；敲 `uvicorn --port 8765` 会立刻触发悲观门禁并报出 8765 正被 `agent-body` 占用。这种毫秒级的精准区分，就是 AOPCC 的灵魂。"
             ),
         },
         {

@@ -174,7 +174,9 @@ host = "127.0.0.1"
 port = 8765
 
 # 管理员受控运维操作鉴权 Token (可选)
-# 若留空，则 Web 看板为只读监控模式；配置后，POST /api/v1/locks/release 需携带该 Bearer Token
+# 若留空，则 Web 看板为只读监控模式；配置后，POST /api/v1/locks/release 等写端点需携带该 Bearer Token
+# 可观测说明 (Phase 74): Web 端内置暴露 GET /metrics (OpenMetrics 0.0.4) 与全响应 X-Trace-Id / traceparent；
+# 设置环境变量 AGENT_BODY_LOG_FORMAT=json 可切换守护进程与 Web 关键事件为单行 JSONL 日志
 # auth_token = "agent-body-admin-secret"
 
 # ==============================================================================
@@ -248,7 +250,7 @@ port = 8765
 # 默认: false
 enabled = false
 # 对等节点 Web 基地址列表（当 enabled = true 且 peers 非空时，各节点必须配置相同的 [web].auth_token 作为共享密钥）
-# 示例: peers = ["http://192.168.31.161:8756"]
+# 示例: peers = ["http://192.168.31.161:8765"]
 peers = []
 # 单次对等节点请求超时（毫秒）
 # 默认: 1500

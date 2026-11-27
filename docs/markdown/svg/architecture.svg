@@ -1,91 +1,90 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 420" width="100%" height="auto">
-  <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#070c18"/>
-      <stop offset="100%" stop-color="#02040a"/>
-    </linearGradient>
-  </defs>
-  <rect width="840" height="420" rx="10" fill="url(#bgGrad)" stroke="#1e293b"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" width="100%" height="auto">
+  <rect width="960" height="520" rx="10" fill="#F7F6F2" stroke="#D9D5CB" stroke-width="1.5"/>
 
-  <!-- Layer 1 -->
-  <rect x="20" y="15" width="800" height="65" rx="6" fill="#0b1b33" stroke="#38bdf8" stroke-width="1.2"/>
-  <text x="35" y="38" fill="#38bdf8" font-size="12" font-weight="bold">Layer 1: 接入与协同层 (Interface, Hooks &amp; Web Console)</text>
-  <text x="35" y="55" fill="#94a3b8" font-size="8.5">黑白屏 1:1:1 同源对齐 · 零门槛接入多客户端大脑</text>
+  <text x="32" y="34" fill="#1B2B33" font-size="16" font-weight="bold" font-family="PingFang SC, Noto Sans CJK SC, sans-serif">Agent Body 全景分层架构 · 旗舰主干 × 纯微内核 (kernel/) × 周边扩展 (contrib/) × 四大发行版</text>
+  <text x="32" y="54" fill="#46585F" font-size="11" font-family="PingFang SC, Noto Sans CJK SC, sans-serif">v1.1.0 · 27 模块 · 43 MCP · 30 CLI · 88 SPI · 微内核 3 Crates · 周边 10 五件套 · 全栈可观测 (/metrics + W3C Trace)</text>
+  <line x1="32" y1="64" x2="928" y2="64" stroke="#D9D5CB" stroke-width="1"/>
 
-  <rect x="355" y="24" width="140" height="45" rx="4" fill="#0f2647" stroke="#0284c7"/>
-  <text x="425" y="44" fill="#e0f2fe" font-size="9" font-weight="bold" text-anchor="middle">🔌 43 原生 MCP</text>
-  <text x="425" y="58" fill="#7dd3fc" font-size="7.5" text-anchor="middle">JSON-RPC stdio + Hook</text>
+  <!-- Layer 1: Interface & Observability -->
+  <rect x="32" y="76" width="896" height="78" rx="6" fill="#EBF1EE" stroke="#74A5AD" stroke-width="1.2"/>
+  <text x="48" y="96" fill="#1E4B5A" font-size="12" font-weight="bold">Layer 1 · 统一接入与可观测面 (黑白屏 1:1:1 · W3C Trace 透传)</text>
 
-  <rect x="505" y="24" width="145" height="45" rx="4" fill="#0f2647" stroke="#0284c7"/>
-  <text x="577" y="44" fill="#e0f2fe" font-size="9" font-weight="bold" text-anchor="middle">💻 30 组 CLI · 9 工作台</text>
-  <text x="577" y="58" fill="#7dd3fc" font-size="7.5" text-anchor="middle">Web 2.0 昼夜蓝图 (:8756)</text>
+  <rect x="48" y="106" width="205" height="38" rx="4" fill="#FFFFFF" stroke="#74A5AD"/>
+  <text x="150" y="122" fill="#1B2B33" font-size="10.5" font-weight="bold" text-anchor="middle">43 原生 MCP · stdio</text>
+  <text x="150" y="136" fill="#46585F" font-size="9" text-anchor="middle">full/core/dev/ops · Hook Bridge</text>
 
-  <rect x="660" y="24" width="145" height="45" rx="4" fill="#0f2647" stroke="#0284c7"/>
-  <text x="732" y="44" fill="#e0f2fe" font-size="9" font-weight="bold" text-anchor="middle">⚙️ 常驻守护本体</text>
-  <text x="732" y="58" fill="#7dd3fc" font-size="7.5" text-anchor="middle">Systemd + 监听 + 60s/1800s</text>
+  <rect x="267" y="106" width="205" height="38" rx="4" fill="#FFFFFF" stroke="#74A5AD"/>
+  <text x="369" y="122" fill="#1B2B33" font-size="10.5" font-weight="bold" text-anchor="middle">30 组 CLI · TUI · Daemon</text>
+  <text x="369" y="136" fill="#46585F" font-size="9" text-anchor="middle">body metrics · 60s/1800s 双频巡检</text>
 
-  <!-- Layer 2 -->
-  <rect x="20" y="95" width="800" height="135" rx="6" fill="#131433" stroke="#818cf8" stroke-width="1.2"/>
-  <text x="35" y="118" fill="#a78bfa" font-size="12" font-weight="bold">Layer 2: 六大生理器官引擎 (Brain-Body Separation Substrate · 27 Modules)</text>
-  <text x="35" y="133" fill="#94a3b8" font-size="8.5">Rust 原生闭环 · 感官图谱 × 小脑反射 AOPCC × 海马体接力 × 规约脊柱 × 内生 AWR 稳态 × Mesh 联邦</text>
+  <rect x="486" y="106" width="215" height="38" rx="4" fill="#FFFFFF" stroke="#74A5AD"/>
+  <text x="593" y="122" fill="#1B2B33" font-size="10.5" font-weight="bold" text-anchor="middle">Web 2.0 大屏 (:8765)</text>
+  <text x="593" y="136" fill="#46585F" font-size="9" text-anchor="middle">9 工作台 · SSE · 7 幕路演 · 拓扑</text>
 
-  <rect x="35" y="145" width="120" height="75" rx="5" fill="#1e1b4b" stroke="#818cf8"/>
-  <text x="95" y="166" fill="#c7d2fe" font-size="9" font-weight="bold" text-anchor="middle">🧭 感官与分级扫盘</text>
-  <text x="95" y="184" fill="#94a3b8" font-size="7.5" text-anchor="middle">/proc 探测 · L1~L3 图</text>
-  <text x="95" y="200" fill="#34d399" font-size="7.5" font-weight="bold" text-anchor="middle">黑名单 Depth=0 阻断</text>
+  <rect x="715" y="106" width="197" height="38" rx="4" fill="#E5EFF0" stroke="#245A6B"/>
+  <text x="813" y="122" fill="#245A6B" font-size="10.5" font-weight="bold" text-anchor="middle">Prometheus + Trace + JSONL</text>
+  <text x="813" y="136" fill="#46585F" font-size="9" text-anchor="middle">/metrics · X-Trace-Id · LOG_FORMAT</text>
 
-  <rect x="165" y="145" width="120" height="75" rx="5" fill="#1e1b4b" stroke="#818cf8"/>
-  <text x="225" y="166" fill="#c7d2fe" font-size="9" font-weight="bold" text-anchor="middle">⚡ 小脑 AOPCC &amp; 锁</text>
-  <text x="225" y="184" fill="#94a3b8" font-size="7.5" text-anchor="middle">乐观租约 + 碰壁自愈</text>
-  <text x="225" y="200" fill="#38bdf8" font-size="7.5" font-weight="bold" text-anchor="middle">WFG 死锁环路破局</text>
+  <!-- Layer 2: 6 Physiological Organs -->
+  <rect x="32" y="166" width="896" height="104" rx="6" fill="#F1EFE9" stroke="#245A6B" stroke-width="1.2"/>
+  <text x="48" y="186" fill="#245A6B" font-size="12" font-weight="bold">Layer 2 · 旗舰六大生理器官 (27 Rust Modules · &lt;1000L/模块)</text>
 
-  <rect x="295" y="145" width="120" height="75" rx="5" fill="#1e1b4b" stroke="#818cf8"/>
-  <text x="355" y="166" fill="#c7d2fe" font-size="9" font-weight="bold" text-anchor="middle">🧠 海马体与接力</text>
-  <text x="355" y="184" fill="#94a3b8" font-size="7.5" text-anchor="middle">FTS5 + RRF 写穿保鲜</text>
-  <text x="355" y="200" fill="#fbbf24" font-size="7.5" font-weight="bold" text-anchor="middle">&lt;=300 tok 跨脑胶囊</text>
+  <rect x="48" y="196" width="138" height="62" rx="4" fill="#FFFFFF" stroke="#A4C4C6"/>
+  <text x="117" y="214" fill="#1E4B5A" font-size="10" font-weight="bold" text-anchor="middle">感官与知识网络</text>
+  <text x="117" y="230" fill="#46585F" font-size="8.5" text-anchor="middle">分级扫盘 · 多模态 L1A</text>
+  <text x="117" y="246" fill="#2F7A66" font-size="8.5" font-weight="bold" text-anchor="middle">Omni-RRF · L1~L3 图谱</text>
 
-  <rect x="425" y="145" width="120" height="75" rx="5" fill="#1e1b4b" stroke="#818cf8"/>
-  <text x="485" y="166" fill="#c7d2fe" font-size="9" font-weight="bold" text-anchor="middle">📐 规约脊柱与路由</text>
-  <text x="485" y="184" fill="#94a3b8" font-size="7.5" text-anchor="middle">放置规则自学习</text>
-  <text x="485" y="200" fill="#818cf8" font-size="7.5" font-weight="bold" text-anchor="middle">Context 防爆渐进披露</text>
+  <rect x="194" y="196" width="138" height="62" rx="4" fill="#FFFFFF" stroke="#A4C4C6"/>
+  <text x="263" y="214" fill="#1E4B5A" font-size="10" font-weight="bold" text-anchor="middle">小脑 AOPCC &amp; 锁</text>
+  <text x="263" y="230" fill="#46585F" font-size="8.5" text-anchor="middle">乐观租约 · &lt;2ms 自愈</text>
+  <text x="263" y="246" fill="#245A6B" font-size="8.5" font-weight="bold" text-anchor="middle">端口防撞 · WFG 死锁</text>
 
-  <rect x="555" y="145" width="120" height="75" rx="5" fill="#1e1b4b" stroke="#818cf8"/>
-  <text x="615" y="166" fill="#c7d2fe" font-size="9" font-weight="bold" text-anchor="middle">🩺 内生 AWR 与免疫</text>
-  <text x="615" y="184" fill="#94a3b8" font-size="7.5" text-anchor="middle">18 等待事件 + ADDM</text>
-  <text x="615" y="200" fill="#f43f5e" font-size="7.5" font-weight="bold" text-anchor="middle">脱敏 / 双域审计 / 探针</text>
+  <rect x="340" y="196" width="138" height="62" rx="4" fill="#FFFFFF" stroke="#A4C4C6"/>
+  <text x="409" y="214" fill="#1E4B5A" font-size="10" font-weight="bold" text-anchor="middle">海马体与连续性</text>
+  <text x="409" y="230" fill="#46585F" font-size="8.5" text-anchor="middle">写穿保鲜 · Mem0/Letta</text>
+  <text x="409" y="246" fill="#BE653B" font-size="8.5" font-weight="bold" text-anchor="middle">&lt;=300 tok 跨脑胶囊</text>
 
-  <rect x="685" y="145" width="120" height="75" rx="5" fill="#1e1b4b" stroke="#818cf8"/>
-  <text x="745" y="166" fill="#c7d2fe" font-size="9" font-weight="bold" text-anchor="middle">🌐 多体 Mesh 联邦</text>
-  <text x="745" y="184" fill="#94a3b8" font-size="7.5" text-anchor="middle">HMAC 防重放信封</text>
-  <text x="745" y="200" fill="#10b981" font-size="7.5" font-weight="bold" text-anchor="middle">跨机名片 / 沙盒协同</text>
+  <rect x="486" y="196" width="138" height="62" rx="4" fill="#FFFFFF" stroke="#A4C4C6"/>
+  <text x="555" y="214" fill="#1E4B5A" font-size="10" font-weight="bold" text-anchor="middle">规约脊柱与自治</text>
+  <text x="555" y="230" fill="#46585F" font-size="8.5" text-anchor="middle">8 大放置规则自演化</text>
+  <text x="555" y="246" fill="#245A6B" font-size="8.5" font-weight="bold" text-anchor="middle">L0~L3 权限包络</text>
 
-  <!-- Layer 3 -->
-  <rect x="20" y="245" width="800" height="95" rx="6" fill="#062e24" stroke="#10b981" stroke-width="1.2"/>
-  <text x="35" y="268" fill="#34d399" font-size="12" font-weight="bold">Layer 3: 三后端 Storage SPI (88 方法 · SQLite / PostgreSQL / DuckDB 热迁移)</text>
-  <text x="35" y="283" fill="#94a3b8" font-size="8.5">默认 ~/.agent-body/body.db (27 表 SQLite WAL + FTS5) · 可零丢失热迁至 PG 集群与 DuckDB OLAP</text>
+  <rect x="632" y="196" width="142" height="62" rx="4" fill="#FFFFFF" stroke="#A4C4C6"/>
+  <text x="703" y="214" fill="#1E4B5A" font-size="10" font-weight="bold" text-anchor="middle">AWR 稳态与免疫</text>
+  <text x="703" y="230" fill="#46585F" font-size="8.5" text-anchor="middle">18 等待事件 · ADDM 调优</text>
+  <text x="703" y="246" fill="#BE653B" font-size="8.5" font-weight="bold" text-anchor="middle">脱敏 · Shadow A/B 自愈</text>
 
-  <rect x="35" y="295" width="145" height="34" rx="4" fill="#04231b" stroke="#059669"/>
-  <text x="107" y="312" fill="#a7f3d0" font-size="8.5" font-weight="bold" text-anchor="middle">memories &amp; assets</text>
-  <text x="107" y="323" fill="#6ee7b7" font-size="7" text-anchor="middle">L1/L2 元数据 + FTS5 + 向量</text>
+  <rect x="782" y="196" width="130" height="62" rx="4" fill="#FFFFFF" stroke="#A4C4C6"/>
+  <text x="847" y="214" fill="#1E4B5A" font-size="10" font-weight="bold" text-anchor="middle">多体 Mesh 联邦</text>
+  <text x="847" y="230" fill="#46585F" font-size="8.5" text-anchor="middle">MeshEnvelope v1.0</text>
+  <text x="847" y="246" fill="#2F7A66" font-size="8.5" font-weight="bold" text-anchor="middle">HMAC 防重放 · 沙盒收件箱</text>
 
-  <rect x="190" y="295" width="145" height="34" rx="4" fill="#04231b" stroke="#059669"/>
-  <text x="262" y="312" fill="#a7f3d0" font-size="8.5" font-weight="bold" text-anchor="middle">fact_nodes / edges</text>
-  <text x="262" y="323" fill="#6ee7b7" font-size="7" text-anchor="middle">L1~L3 分层有向加权图谱</text>
+  <!-- Layer 3: Microkernel & Contrib & Slim Distributions -->
+  <rect x="32" y="282" width="896" height="96" rx="6" fill="#E5EFF0" stroke="#1E4B5A" stroke-width="1.2"/>
+  <text x="48" y="302" fill="#1E4B5A" font-size="12" font-weight="bold">Layer 3 · 微内核 (kernel/) × 10 周边扩展 (contrib/) × 精简发行版 (distributions/)</text>
 
-  <rect x="345" y="295" width="145" height="34" rx="4" fill="#04231b" stroke="#059669"/>
-  <text x="417" y="312" fill="#a7f3d0" font-size="8.5" font-weight="bold" text-anchor="middle">locks &amp; wait_queue</text>
-  <text x="417" y="323" fill="#6ee7b7" font-size="7" text-anchor="middle">多 Agent 协作锁 + WFG 队</text>
+  <rect x="48" y="312" width="276" height="54" rx="4" fill="#FFFFFF" stroke="#245A6B"/>
+  <text x="186" y="330" fill="#245A6B" font-size="10.5" font-weight="bold" text-anchor="middle">纯机制微内核 (3 Crates)</text>
+  <text x="186" y="344" fill="#46585F" font-size="8.5" text-anchor="middle">body-sdk · body-protocol · body-kernel (8Catalog)</text>
+  <text x="186" y="357" fill="#2F7A66" font-size="8.5" font-weight="bold" text-anchor="middle">ObservabilityProvider · Trace 贯通 · 轨 B 沙盒</text>
 
-  <rect x="500" y="295" width="145" height="34" rx="4" fill="#04231b" stroke="#059669"/>
-  <text x="572" y="312" fill="#a7f3d0" font-size="8.5" font-weight="bold" text-anchor="middle">audit &amp; checkpoints</text>
-  <text x="572" y="323" fill="#6ee7b7" font-size="7" text-anchor="middle">双域审计 + 跨脑接力胶囊</text>
+  <rect x="338" y="312" width="318" height="54" rx="4" fill="#FFFFFF" stroke="#2F7A6B"/>
+  <text x="497" y="330" fill="#2F7A6B" font-size="10.5" font-weight="bold" text-anchor="middle">独立周边 (10 个标准五件套 · ext_*__ 前缀隔离)</text>
+  <text x="497" y="344" fill="#46585F" font-size="8.5" text-anchor="middle">Linux/JVM/Nginx · PG/达梦/金仓 · mTLS/RLS · 合规/SIEM</text>
+  <text x="497" y="357" fill="#BE653B" font-size="8.5" font-weight="bold" text-anchor="middle">obs_telemetry (Prometheus/W3C/OBS-01~05) · cmdb_ticket</text>
 
-  <rect x="655" y="295" width="150" height="34" rx="4" fill="#04231b" stroke="#059669"/>
-  <text x="730" y="312" fill="#a7f3d0" font-size="8.5" font-weight="bold" text-anchor="middle">benchmark &amp; ledger</text>
-  <text x="730" y="323" fill="#6ee7b7" font-size="7" text-anchor="middle">v3.8 实证存证 + PR-01~14</text>
+  <rect x="670" y="312" width="242" height="54" rx="4" fill="#FFFFFF" stroke="#BE653B"/>
+  <text x="791" y="330" fill="#BE653B" font-size="10.5" font-weight="bold" text-anchor="middle">三大零 C++ 精简发行版</text>
+  <text x="791" y="344" fill="#46585F" font-size="8.5" text-anchor="middle">kernel-minimal (3.9M · 0 扩展)</text>
+  <text x="791" y="357" fill="#1B2B33" font-size="8.5" font-weight="bold" text-anchor="middle">aiops-probe (6.7M) · dba-sentinel (6.4M)</text>
 
-  <!-- Layer 4 -->
-  <rect x="20" y="352" width="800" height="52" rx="6" fill="#1e293b" stroke="#64748b" stroke-width="1.2"/>
-  <text x="35" y="373" fill="#cbd5e1" font-size="10.5" font-weight="bold">Layer 4: 宿主系统内核、物理工作区与微观联邦 (OS Kernel &amp; CodeGraph)</text>
-  <text x="35" y="390" fill="#94a3b8" font-size="8">直读 /proc/net/tcp · /proc/[pid]/fd · /proc/self · inotify 事件 · 动态 [workspace] 与 .codegraph/ 符号联动</text>
+  <!-- Layer 4: Storage SPI & Benchmark -->
+  <rect x="32" y="390" width="896" height="56" rx="6" fill="#CFE0DC" stroke="#2E6373" stroke-width="1.2"/>
+  <text x="48" y="410" fill="#1E4B5A" font-size="11.5" font-weight="bold">Layer 4 · 存储中枢 88 SPI (27 表) &amp; Benchmark v3.9 三轨实证</text>
+  <text x="48" y="430" fill="#1B2B33" font-size="9.5">SQLite WAL+FTS5 ⇄ PostgreSQL pgvector+Advisory Lock ⇄ DuckDB OLAP+Parquet | W1~W19 + M1~M6 + DQ1~DQ10 + PR-01~14</text>
+
+  <!-- Layer 5: Host OS & CodeGraph -->
+  <rect x="32" y="456" width="896" height="48" rx="6" fill="#1E4B5A" stroke="#1E4B5A" stroke-width="1.2"/>
+  <text x="48" y="476" fill="#F7F6F2" font-size="11" font-weight="bold">Layer 5 · 物理宿主机内核与微观符号联邦 (OS Kernel × CodeGraph)</text>
+  <text x="48" y="493" fill="#CFE0DC" font-size="9">Linux /proc &amp; inotify · macOS libproc &amp; FSEvents · Windows ReadDirectoryChangesW · 进程外沙盒隔离 · .codegraph/ AST 符号穿透</text>
 </svg>

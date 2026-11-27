@@ -41,10 +41,18 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Run workspace unit tests (--lib)
-        run: cargo test --workspace --lib
+        run: RUST_TEST_THREADS=1 cargo test --workspace --lib
 
       - name: Run workspace integration tests (--tests)
-        run: cargo test --workspace --tests
+        run: RUST_TEST_THREADS=1 cargo test --workspace --tests
 
       - name: Build slim release distributions
         run: cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
+
+      - name: Verify slim distributions (self-check / metrics / diagnose)
+        run: |
+          ./target/release/agent-body-kernel-minimal self-check
+          ./target/release/agent-body-probe self-check
+          ./target/release/agent-body-probe metrics | head -n 20
+          ./target/release/agent-body-probe diagnose | head -n 20
+          ./target/release/agent-body-dba self-check

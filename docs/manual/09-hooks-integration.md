@@ -180,3 +180,16 @@ flowchart LR
 1. **零捏造原则**：事件总线仅发射物理存在的客观事件；
 2. **白黑名单深度法则**：黑名单目录（如 `node_modules`、`.git`、`target`）内的文件变化会被 HookDispatcher 自动阻断，绝不下发外部动作；
 3. **非阻塞异步机制**：所有总线广播与钩子分发均在独立 Tokio 任务中异步运行，保障毫秒级系统开销。
+
+---
+
+## 十、微内核 7 大生命周期 Hook 插槽（`kernel/` · Phase 70~74）
+
+在微内核版及精简发行版（`aiops-probe` / `dba-sentinel` / `kernel-minimal`）中，所有扩展遵循统一 `FailClosed`（安全失败即拒止）与 `FailOpen`（旁路审计不阻断）分级策略挂入 7 大插槽：
+1. `ClientAuthHook` (`FailClosed`)：HTTP Bearer Token、mTLS 证书 CN 映射与强制读鉴权；
+2. `ObjectAccessHook` (`FailClosed`)：按 `caller` / `tenant_id` 下推 RLS 行级过滤谓词；
+3. `PlannerRewriteHook` (`FailOpen`)：改写或驳回高危 FDW/检索扫描计划；
+4. `ExecutorStartHook` (`FailClosed`)：AOPCC 权限校验与高危操作二次确认拦截；
+5. `ExecutorEndHook` (`FailOpen`)：算子失败捕获并注入诊断与自愈处方；
+6. `TupleRedactHook` (`FailClosed`)：入站防注入清洗 + 出站凭据/PII 脱敏；
+7. `EmitAuditHook` (`FailOpen`)：复用同一 `trace_id` 将双域 `AuditEnvelope` 送入 SIEM / 审计存储（`trace_id` 与微内核 `SlowOpRing`、RFC 5424 100% 贯通）。

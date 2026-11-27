@@ -106,12 +106,25 @@ make preflight   # 预检依赖
 ```
 
 ### 方案 C：按需编译零 C++ 依赖精简发行版（政务云探针 / DBA 哨兵 / 纯微内核）
-无需 CMake 与 `libstdc++6` / DuckDB 运行时，单二进制仅 `3.8~6.5 MB`：
+无需 CMake 与 `libstdc++6` / DuckDB 运行时，单二进制仅 `3.9~6.7 MB`：
 ```bash
 cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
 ./target/release/agent-body-kernel-minimal self-check
 ./target/release/agent-body-probe self-check
+./target/release/agent-body-probe metrics | head -n 20
+./target/release/agent-body-probe diagnose
 ./target/release/agent-body-dba self-check
+```
+
+### 方案 D：Docker 容器镜像（旗舰版 & `--target probe` 零 C++ 镜像）
+```bash
+# 旗舰版容器（含 DuckDB 与 Web UI）
+docker build -t agent-body:latest .
+# 极简政务云探针镜像（零 libstdc++6）
+docker build --target probe -t agent-body-probe:latest .
+# 开启结构化 JSONL 日志与 /metrics 验证
+AGENT_BODY_LOG_FORMAT=json docker compose up -d
+curl -sS -i http://127.0.0.1:8765/metrics | head -n 25
 ```
 
 ---

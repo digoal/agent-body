@@ -47,7 +47,7 @@ build:
 
 # 运行全量单元与集成测试套件
 test:
-	export PATH="$$HOME/.cargo/bin:$$PATH" && cargo test --workspace
+	export PATH="$$HOME/.cargo/bin:$$PATH" && RUST_TEST_THREADS=1 cargo test --workspace
 
 # 运行宿主环境运行依赖预检
 preflight:

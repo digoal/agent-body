@@ -328,6 +328,13 @@ pub(crate) enum BodyCommands {
         #[arg(long, default_value_t = false)]
         json: bool,
     },
+    #[command(about = "输出 Prometheus / OpenMetrics 0.0.4 或 JSON 格式实时本体指标（含 18 等待事件与进程遥测）")]
+    Metrics {
+        #[arg(long, default_value = "prometheus", help = "输出格式: prometheus | json")]
+        format: String,
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
     #[command(about = "查看或切换三态运行模式 (body_only / bypass / shadow_ab) 与 MCP 工具档位 (core / dev / ops / full)")]
     RuntimeMode {
         #[arg(long, help = "设置并持久化运行模式: body_only | bypass | shadow_ab")]

@@ -38,18 +38,22 @@ jobs:
         run: echo "CPLUS_INCLUDE_PATH=$(xcrun --show-sdk-path)/usr/include/c++/v1" >> "$GITHUB_ENV"
 
       - name: Verify architecture & hygiene gate
-        run: python3 scripts/evolution_manifest.py --check && python3 scripts/code_hygiene.py --check
+        run: python3 scripts/evolution_manifest.py --check && python3 scripts/arch_boundary_check.py --check && python3 scripts/code_hygiene.py --check
 
-      - name: Build release binary
-        run: cargo build --release --bin agent-body
+      - name: Build flagship and slim release binaries
+        run: |
+          cargo build --release --bin agent-body
+          cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
 
-      - name: Package tarball and SHA-256
+      - name: Package tarballs and SHA-256
         shell: bash
         run: |
           mkdir -p dist
-          cp target/release/agent-body dist/agent-body
-          chmod +x dist/agent-body
-          tar -C dist -czf "${{ matrix.asset_name }}" agent-body
+          for bin in agent-body agent-body-probe agent-body-dba agent-body-kernel-minimal; do
+            cp "target/release/${bin}" "dist/${bin}"
+            chmod +x "dist/${bin}"
+          done
+          tar -C dist -czf "${{ matrix.asset_name }}" agent-body agent-body-probe agent-body-dba agent-body-kernel-minimal
           if command -v shasum >/dev/null 2>&1; then
             shasum -a 256 "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
           else

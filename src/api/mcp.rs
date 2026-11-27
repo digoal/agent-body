@@ -775,4 +775,42 @@ mod tests {
         assert!(txt.contains("orders.db"));
         assert!(!txt.contains("arch.png"));
     }
+
+    #[test]
+    fn test_body_state_metrics_action_prometheus_and_json() {
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let server = McpServer::new(storage);
+
+        let prom_req = r#"{
+            "jsonrpc": "2.0",
+            "id": 502,
+            "method": "tools/call",
+            "params": {
+                "name": "body_state",
+                "arguments": { "action": "metrics", "format": "prometheus" }
+            }
+        }"#;
+        let prom_resp = server.handle_message(prom_req).expect("mcp metrics prom");
+        let pv: Value = serde_json::from_str(&prom_resp).expect("parse prom");
+        assert_eq!(pv["result"]["isError"], false);
+        let ptxt = pv["result"]["content"][0]["text"].as_str().expect("ptxt");
+        assert!(ptxt.contains("agent_body_wait_event_duration_seconds_bucket"));
+
+        let json_req = r#"{
+            "jsonrpc": "2.0",
+            "id": 503,
+            "method": "tools/call",
+            "params": {
+                "name": "body_state",
+                "arguments": { "action": "metrics", "format": "json" }
+            }
+        }"#;
+        let json_resp = server.handle_message(json_req).expect("mcp metrics json");
+        let jv: Value = serde_json::from_str(&json_resp).expect("parse json");
+        assert_eq!(jv["result"]["isError"], false);
+        let jtxt = jv["result"]["content"][0]["text"].as_str().expect("jtxt");
+        let parsed: Value = serde_json::from_str(jtxt).expect("inner metrics json");
+        assert_eq!(parsed["format"], "json");
+        assert!(parsed["wait_events"].as_array().map(|a| a.len()).unwrap_or(0) == 18);
+    }
 }

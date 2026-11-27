@@ -592,6 +592,7 @@ agent-body [OPTIONS] <COMMAND>
   - `perf-snapshot [--label <NAME>] [--set-baseline] [--json]`: 抓取本体内生 6 类 18 种等待事件与 `/proc/self` 内核性能快照（可选设为 `Golden Baseline` 黄金性能基准）。
   - `perf-awr [--snap-a <ID>] [--snap-b <ID>] [--vs-baseline true|false] [--json]`: 生成 AWR 快照/黄金基线差分性能报告与 ADDM 瓶颈诊断处方。
   - `perf-tune [--json]`: 在 `L1_AUTONOMIC` 包络内执行一键性能与内存自优化（`PRAGMA optimize` + `wal_checkpoint` + `shrink_memory` + `malloc_trim(0)`）。
+  - `metrics [--format prometheus|json] [--json]`: 导出与 Web `GET /metrics` 同源的 OpenMetrics 0.0.4 或 JSON 格式实时本体指标（含 18 等待事件、RSS/FD/WAL 与 24h 审计汇总）。
   - `perf-delete --kind snapshot|report --id <ID>`: 从 `system_meta` 安全删除指定 AWR 快照或诊断报告（对齐 `body_state` 的 `delete_snapshot`/`delete_awr_report`）。
   - `runtime-status [--json]`: 查看当前生效的三态运行模式（`bypass`/`shadow_ab`/`body_only`）、`AGENT_BODY_MODE` 热覆盖状态、`mcp_profile` 减税档位与 `shadow_primary` 配置。
   - `runtime-mode --mode <bypass|shadow_ab|body_only> [--mcp-profile <core|dev|ops|full>] [--shadow-primary <body|live>] [--persist]`: 切换三态运行模式与 MCP 减税档位（`--persist` 写回 `config.toml`）。
@@ -611,6 +612,24 @@ agent-body [OPTIONS] <COMMAND>
   agent-body body perf-snapshot --label golden-v1 --set-baseline
   agent-body body perf-awr --vs-baseline true
   agent-body body perf-tune
+  agent-body body metrics --format prometheus
   ```
+
+---
+
+### 2.27 精简发行版 CLI（`agent-body-probe` / `agent-body-dba` / `agent-body-kernel-minimal`）
+零 C++/DuckDB 依赖的精简发行版共用内核四端派发器，支持以下专用 CLI 子命令：
+- **`agent-body-probe`**（政务云 AIOps 探针，装配 8 个 `contrib` 扩展）：
+  - `status` / `catalog` / `probe --root <PATH>` / `mcp` / `metrics [--format prometheus|json]` / `diagnose [--limit 20]` / `self-check`
+- **`agent-body-dba`**（PG/达梦/人大金仓哨兵，装配 6 个 `contrib` 扩展）：
+  - `status` / `catalog` / `probe --db-root <PATH> --os-root <PATH>` / `mcp` / `metrics [--format prometheus|json]` / `diagnose [--limit 20]` / `self-check`
+- **`agent-body-kernel-minimal`**（纯微内核，0 `contrib` 扩展）：
+  - `self-check`
+```bash
+agent-body-probe self-check
+agent-body-probe metrics --format prometheus | head -n 20
+agent-body-probe diagnose --limit 10
+agent-body-dba probe --db-root /etc --os-root /proc
+```
 
 

@@ -651,5 +651,23 @@ mod tests {
         let body = std::str::from_utf8(&resp.body).expect("utf8");
         assert!(body.contains("agent_body_wait_event_duration_seconds_bucket"));
         assert!(body.contains("agent_body_process_rss_bytes"));
+
+        // /api/v1/metrics 与 /metrics 语义完全对齐
+        let api_req = HttpRequest {
+            method: Method::Get,
+            path: "/api/v1/metrics".to_string(),
+            raw_query: String::new(),
+            query_params: Default::default(),
+            headers: Default::default(),
+            body: Vec::new(),
+        };
+        let storage2 = std::sync::Arc::new(SqliteStorageProvider::open_in_memory().expect("sqlite mem 2"));
+        storage2.init().expect("init 2");
+        let api_resp = server::WebServer::route_request_arc(&api_req, storage2, &start_time, &None);
+        assert_eq!(api_resp.status, StatusCode::OK);
+        assert!(api_resp.headers.contains_key("X-Trace-Id"));
+        assert!(std::str::from_utf8(&api_resp.body)
+            .expect("utf8 api")
+            .contains("agent_body_homeostasis_score"));
     }
 }

@@ -88,16 +88,17 @@ agent-body close session-20261118-01 --clean-temp
 
 | 发行版 | Release 二进制 | 运行依赖 | 适用场景与快速自检 |
 |---|---|---|---|
-| **个人旗舰版** | `agent-body` | SQLite + DuckDB (`libstdc++6`) + Web UI | 个人开发者 / 本机全功能伴侣（43 MCP + Web 大屏 + Benchmark v3.9） |
-| **政务云 AIOps 探针** | `agent-body-probe` (`6.5 MB`) | **纯 Rust（零 DuckDB / 零 C++）** | 服务器与政务云只读采集、mTLS/RLS、脱敏与 SIEM 审计（`agent-body-probe self-check`） |
-| **DBA 专项哨兵** | `agent-body-dba` (`6.1 MB`) | **纯 Rust（零 DuckDB / 零 C++）** | PostgreSQL / 达梦 / 人大金仓配置诊断与脱敏审计（`agent-body-dba self-check`） |
-| **纯微内核验证版** | `agent-body-kernel-minimal` (`3.8 MB`) | **纯 Rust（0 `contrib`）** | 验证微内核目录表、Hooks 与轨 B 沙盒最小基座（`agent-body-kernel-minimal self-check`） |
+| **个人旗舰版** | `agent-body` | SQLite + DuckDB (`libstdc++6`) + Web UI | 个人开发者 / 本机全功能伴侣（43 MCP + Web 大屏 + `/metrics` + Benchmark v3.9） |
+| **政务云 AIOps 探针** | `agent-body-probe` (`6.7 MB`) | **纯 Rust（零 DuckDB / 零 C++）** | 服务器与政务云只读采集、mTLS/RLS、脱敏、SIEM 与可观测自诊断（`self-check` / `metrics` / `diagnose`） |
+| **DBA 专项哨兵** | `agent-body-dba` (`6.4 MB`) | **纯 Rust（零 DuckDB / 零 C++）** | PostgreSQL / 达梦 / 人大金仓配置诊断、脱敏与指标导出（`self-check` / `metrics` / `diagnose`） |
+| **纯微内核验证版** | `agent-body-kernel-minimal` (`3.9 MB`) | **纯 Rust（0 `contrib`）** | 验证微内核目录表、Hooks 与轨 B 沙盒最小基座（`agent-body-kernel-minimal self-check`） |
 
 ### 方式 1：CLI 命令行终端操作（人类最爱）
 适合日常快速巡检、排障与脚本编写：
 ```bash
 agent-body status       # 查看Agent 本体健康状态
 agent-body tui          # 启动全屏终端 ANSI 实时看板
+agent-body body metrics --format prometheus   # 导出 OpenMetrics 0.0.4 指标
 agent-body memory search "数据库连接池排障" --hybrid # 混合检索记忆
 ```
 
@@ -123,6 +124,7 @@ agent-body web --port 8765
 - 🌐 宿主机物理拓扑（进程、端口、服务连线图）；
 - 🔒 活跃协作锁矩阵、等待队列与 WFG 死锁雷达；
 - 🎬 7 幕真引擎路演演示剧场与 📊 实证基准存证账本（等价黑屏 CLI：`agent-body bench`）；
+- 📡 内置 `/metrics` OpenMetrics 0.0.4 实时抓取（含 Web 工作台预览面板）与全响应 `X-Trace-Id` / W3C `traceparent` 追踪；
 - ⚡ 全链路 SSE 实时事件滚动推流与全局黑屏命令镜像。
 
 ```

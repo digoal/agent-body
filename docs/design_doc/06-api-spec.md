@@ -1,7 +1,7 @@
 # 06 — 接口规范（API Spec）
 
 > [!NOTE]
-> **历史设计基线说明**：本文档沉淀自项目早期 v2.0 接口设计期（覆盖早期 15 个工具）。当前 `v0.4.0` 全部 **43 个原生 MCP 工具**（含 `body_state`）、CLI 子命令与 Web REST API 权威规格，请以 [docs/manual/04-mcp-integration.md](../manual/04-mcp-integration.md)、[docs/manual/08-web-dashboard.md](../manual/08-web-dashboard.md) 及源码 [src/api/mcp_tools/mod.rs](../../src/api/mcp_tools/mod.rs) 为准。
+> **历史设计基线与当前演进对照**：本文档初稿沉淀自早期接口设计期。当前 **`v1.1.0`** 全部 **43 个原生 MCP 工具**（含 `body_state` `action="metrics"`）、**30** 组 CLI 命令、Web REST API（含 `GET /metrics` 与 `X-Trace-Id`/`traceparent`）及精简发行版 CLI/MCP 契约，请以 [04-mcp-integration.md](../manual/04-mcp-integration.md)、[08-web-dashboard.md](../manual/08-web-dashboard.md)、[21-observability-and-telemetry-spec.md](21-observability-and-telemetry-spec.md) 及源码 [src/api/mcp_tools/mod.rs](../../src/api/mcp_tools/mod.rs) 为准。
 
 > Agent Body 产品设计 · 交付件 6/7
 > 版本: v2.0 · 更新: 2026-11-15 (新增端口防撞、混合检索、爆炸半径推演、会话完工结清工具)

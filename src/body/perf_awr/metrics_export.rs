@@ -139,6 +139,25 @@ pub fn render_flagship_prometheus_metrics(storage: &dyn StorageProvider, uptime_
     out
 }
 
+/// 生成与 `/metrics` 同源的结构化 JSON 遥测快照（供 CLI `--format json` 与 MCP `body_state(action="metrics")` 共用）
+pub fn flagship_metrics_json_value(storage: &dyn StorageProvider, uptime_secs: f64) -> serde_json::Value {
+    let telemetry = KernelSelfTelemetry::collect(None);
+    let wait_events = WaitEventRegistry::snapshot_all();
+    let active_locks = storage.list_coordination_locks(None).map(|v| v.len()).unwrap_or(0);
+    let vitals = HomeostasisVitalsEngine::assess_provider(storage);
+    let audit_sum = storage.audit_domain_summary("24h").unwrap_or_default();
+    serde_json::json!({
+        "format": "json",
+        "uptime_secs": uptime_secs.max(0.0),
+        "homeostasis_score": vitals.overall_score,
+        "homeostasis_status": vitals.status,
+        "active_locks": active_locks,
+        "audit_24h": audit_sum,
+        "kernel_telemetry": telemetry,
+        "wait_events": wait_events,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -112,6 +112,19 @@ def extract_manifest() -> dict:
         p.name for p in (ROOT / "distributions").iterdir() if p.is_dir() and (p / "Cargo.toml").exists()
     ) if (ROOT / "distributions").is_dir() else []
 
+    design_specs = sorted(
+        (ROOT / "docs/design_doc").glob("[0-9][0-9]-*.md"),
+        key=lambda sp: int(re.match(r"^(\d+)-", sp.name).group(1)),
+    ) if (ROOT / "docs/design_doc").is_dir() else []
+    latest_design_spec = design_specs[-1].name if design_specs else ""
+
+    verified_test_count = 396
+    guide_p = ROOT / "EVOLUTION_GUIDE.md"
+    if guide_p.exists():
+        gm = re.search(r"verified_tests=(\d+)", guide_p.read_text(encoding="utf-8"))
+        if gm:
+            verified_test_count = int(gm.group(1))
+
     return {
         "app_version": app_version,
         "counts": {
@@ -128,8 +141,10 @@ def extract_manifest() -> dict:
             "kernel_crates": len(kernel_crates),
             "contrib_exts": len(contrib_exts),
             "distributions": len(distributions),
+            "verified_tests": verified_test_count,
         },
         "bench_spec_version": bench_spec_version,
+        "latest_design_spec": latest_design_spec,
         "modules": modules,
         "mcp_tools": mcp_tools,
         "cli_commands": cli_commands,
@@ -201,7 +216,11 @@ def check_drift(manifest: dict) -> list[str]:
         ROOT / "docs/manual/06-advanced-features.md",
         ROOT / "docs/manual/08-web-dashboard.md",
         ROOT / "docs/manual/10-benchmark-and-roi.md",
+        ROOT / "docs/design_doc/05-architecture.md",
         ROOT / "docs/design_doc/06-api-spec.md",
+        ROOT / "INSTALL.md",
+        ROOT / "docs/src_doc/development.md",
+        ROOT / "docs/markdown/why-agent-needs-agent-body.md",
     ] + sorted((ROOT / "presentation").glob("*.html")) + sorted((ROOT / "scripts").glob("build_*.py"))
     stale_checks = [
         (
@@ -293,6 +312,17 @@ def check_drift(manifest: dict) -> list[str]:
             errors.append("README.md 缺少最新规格书 19-knowledge-network-and-graph-recall-spec.md 登记")
         if "20-plugin-microkernel-architecture-spec.md" not in rtxt:
             errors.append("README.md 缺少最新规格书 20-plugin-microkernel-architecture-spec.md 登记")
+        latest_spec = manifest.get("latest_design_spec", "")
+        if latest_spec:
+            for spec_target in (
+                ROOT / "README.md",
+                ROOT / "docs/README.md",
+                ROOT / "skills/agent-body-developer/SKILL.md",
+            ):
+                if spec_target.exists() and latest_spec not in spec_target.read_text(encoding="utf-8"):
+                    errors.append(
+                        f"[Check G] {spec_target.relative_to(ROOT)} 缺少最新设计规格书 {latest_spec} 登记"
+                    )
 
     # 校验 CLI --help (src/cli_args.rs / src/main.rs) 中不再残留过时的 Benchmark 计数
     cli_help_text = (
@@ -436,6 +466,41 @@ def check_drift(manifest: dict) -> list[str]:
                 errors.append(
                     f"parity_api 工具 `{tool_name}` 路由 `{m_ep.group(1)}` 未在 src/web/server.rs 注册"
                 )
+
+    # Check D/E/F: 一等公民交叉防漂移（contrib 数量 / 六重门禁 / 默认端口 8765 / 静态测试计数）
+    contrib_cnt = counts["contrib_exts"]
+    stale_contrib_re = re.compile(
+        r"(?:contrib\s*(?:9|九)\s*(?:个)?(?:扩展|插件)?|(?:9|九)\s*(?:个|套)?\s*(?:`?contrib`?|周边|标准五件套)\s*(?:扩展|模块|插件)?)",
+        re.IGNORECASE,
+    )
+    stale_five_gate_re = re.compile(r"(?:五重|5\s*重)\s*(?:确定性)?(?:工程|质量)?门禁")
+    stale_port_re = re.compile(r"(?:localhost|127\.0\.0\.1|:|--port\s+)8756\b")
+    for doc in active_docs:
+        if not doc.exists():
+            continue
+        rel_doc = doc.relative_to(ROOT).as_posix()
+        txt_doc = doc.read_text(encoding="utf-8")
+        if contrib_cnt >= 10:
+            for m in stale_contrib_re.finditer(txt_doc):
+                ctx = txt_doc[max(0, m.start() - 32) : min(len(txt_doc), m.end() + 32)]
+                if any(tok in ctx for tok in ("Phase 70", "历史", "→", "前 9", "早期")):
+                    continue
+                errors.append(f"[Check D] {rel_doc} 残留过时 contrib 扩展计数 '{m.group(0)}' (实测 {contrib_cnt})")
+        if not rel_doc.startswith("docs/design_doc/0"):
+            for m in stale_five_gate_re.finditer(txt_doc):
+                ctx = txt_doc[max(0, m.start() - 32) : min(len(txt_doc), m.end() + 32)]
+                if any(tok in ctx for tok in ("Phase 4", "Phase 5", "历史", "演进")):
+                    continue
+                errors.append(f"[Check E] {rel_doc} 残留过时「{m.group(0)}」(当前为六重门禁)")
+        for m in stale_port_re.finditer(txt_doc):
+            ctx = txt_doc[max(0, m.start() - 32) : min(len(txt_doc), m.end() + 32)]
+            if "192.168." in ctx or "mesh" in ctx.lower():
+                continue
+            errors.append(f"[Check F] {rel_doc} 残留旧默认端口 8756: '{m.group(0)}' (当前 8765)")
+
+    arch_svg = ROOT / "docs/markdown/svg/architecture.svg"
+    if arch_svg.exists() and "8756" in arch_svg.read_text(encoding="utf-8"):
+        errors.append("[Check F] docs/markdown/svg/architecture.svg 仍残留旧端口 8756")
 
     return errors
 

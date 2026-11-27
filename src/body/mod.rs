@@ -19,9 +19,10 @@ pub use continuity::{ContinuityInput, ContinuityManager};
 pub use envelope::{AutonomyEnvelope, AutonomyLevel, EnvelopeDecision, EnvelopeRuleSpec};
 pub use manifest::{compute_body_id, BodyManifest, BodyManifestEngine, OrganStatus};
 pub use perf_awr::{
-    render_flagship_prometheus_metrics, AddmFinding, AwrDiffReport, AwrReportMeta, AwrSnapshot,
-    AwrSnapshotMeta, BodyPerfEngine, BodyTimeModel, KernelSelfTelemetry, OperationStatRow,
-    PerfTuneReport, WaitEventGuard, WaitEventId, WaitEventRegistry, WaitEventSnapshotRow,
+    flagship_metrics_json_value, render_flagship_prometheus_metrics, AddmFinding, AwrDiffReport,
+    AwrReportMeta, AwrSnapshot, AwrSnapshotMeta, BodyPerfEngine, BodyTimeModel, KernelSelfTelemetry,
+    OperationStatRow, PerfTuneReport, WaitEventGuard, WaitEventId, WaitEventRegistry,
+    WaitEventSnapshotRow,
 };
 pub use runtime_ab::{
     AbAnalysisReport, AbKindStats, LiveAssetHit, ShadowAbComparison, ShadowAbEngine,

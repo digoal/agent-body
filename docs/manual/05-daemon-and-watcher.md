@@ -132,3 +132,19 @@ systemctl enable agent-body
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.digoal.agent-body.plist
 launchctl kickstart -k gui/$(id -u)/com.digoal.agent-body
 ```
+
+---
+
+## 6. 结构化日志 (`AGENT_BODY_LOG_FORMAT=json`) 与 Prometheus `/metrics` 采集 (Phase 74)
+
+- **结构化 JSONL 日志**：默认输出面向终端阅读的文本；在 systemd / LaunchAgent / `docker-compose.yml` 中设置 `AGENT_BODY_LOG_FORMAT=json`（或 `jsonl`）后，`daemon`、`watcher`、`scheduler` 与 `web` 关键日志自动输出带 `timestamp`、`level`、`component`、`trace_id`、`elapsed_us` 的单行 JSONL，可直接接入 Loki / Filebeat / OTel Collector。
+- **Prometheus 抓取配置参考 (`prometheus.yml`)**：
+  ```yaml
+  scrape_configs:
+    - job_name: agent-body
+      scrape_interval: 15s
+      metrics_path: /metrics
+      static_configs:
+        - targets: ["127.0.0.1:8765"]
+  ```
+  > 所有 HTTP 响应自动携带 `X-Trace-Id` 与 W3C `traceparent`；若服务端启用 `AGENT_BODY_LOG_FORMAT=json`，可通过请求响应头的 `trace_id` 精确关联服务端耗时与审计流。

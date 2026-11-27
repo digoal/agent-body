@@ -404,16 +404,17 @@ pub(crate) fn ops_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_state",
-                "description": "Agent 本体中枢（宿主机具身底座，第 43 原生工具）：提供本体身份证与六器官自省 (manifest)、五维稳态生命体征 (vitals)、四级自治权限包络评估 (envelope)、跨大脑工作态接力胶囊保存与恢复 (handoff_save/handoff_resume)、L1 稳态反射自愈 (heal)、多本体联邦名片发现 (peers)、三态运行模式与真实 A/B 对照 (runtime_mode/ab_report/ab_compare) 以及内生等待事件与 AWR 快照/报告库管理与 ADDM 自调优 (perf_snapshot/perf_awr/perf_snapshots/perf_reports/perf_delete/perf_tune)。",
+                "description": "Agent 本体中枢（宿主机具身底座，第 43 原生工具）：提供本体身份证与六器官自省 (manifest)、五维稳态生命体征 (vitals)、四级自治权限包络评估 (envelope)、跨大脑工作态接力胶囊保存与恢复 (handoff_save/handoff_resume)、L1 稳态反射自愈 (heal)、多本体联邦名片发现 (peers)、三态运行模式与真实 A/B 对照 (runtime_mode/ab_report/ab_compare)、OpenMetrics/JSON 实时指标 (metrics) 以及内生等待事件与 AWR 快照/报告库管理与 ADDM 自调优 (perf_snapshot/perf_awr/perf_snapshots/perf_reports/perf_delete/perf_tune)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "action": {
                             "type": "string",
-                            "enum": ["manifest", "vitals", "envelope", "handoff_save", "handoff_resume", "heal", "peers", "runtime_mode", "ab_report", "ab_compare", "perf_snapshot", "perf_awr", "perf_snapshots", "perf_reports", "perf_delete", "perf_tune"],
+                            "enum": ["manifest", "vitals", "envelope", "handoff_save", "handoff_resume", "heal", "peers", "runtime_mode", "ab_report", "ab_compare", "metrics", "perf_snapshot", "perf_awr", "perf_snapshots", "perf_reports", "perf_delete", "perf_tune"],
                             "default": "manifest",
                             "description": "操作类型"
                         },
+                        "format": { "type": "string", "enum": ["prometheus", "json"], "default": "prometheus", "description": "action=metrics 时输出格式" },
                         "mode": { "type": "string", "enum": ["body_only", "bypass", "shadow_ab"], "description": "action=runtime_mode 时设置运行模式" },
                         "shadow_primary": { "type": "string", "enum": ["live", "body"], "description": "action=runtime_mode 时设置 shadow_ab 主响应侧" },
                         "mcp_profile": { "type": "string", "enum": ["core", "dev", "ops", "full"], "description": "action=runtime_mode 时设置 MCP Schema 暴露档位" },
