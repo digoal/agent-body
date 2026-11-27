@@ -58,6 +58,9 @@ MICRO_CNT = _COUNTS["micro"]
 DQ_CNT = _COUNTS["dq"]
 COMP_CNT = _COUNTS["competitors"]
 PR_CNT = _COUNTS["pr_rules"]
+KERNEL_CNT = _COUNTS["kernel_crates"]
+CONTRIB_CNT = _COUNTS["contrib_exts"]
+DIST_CNT = _COUNTS["distributions"]
 
 ROOT = Path(__file__).resolve().parent.parent
 PRES_DIR = ROOT / "presentation"
@@ -73,25 +76,25 @@ def build_tech_deck() -> None:
             "svg": svg_cover(
                 kicker=f"AGENT BODY · DEEP TECHNICAL EXCHANGE · v{APP_VER}",
                 title="Agent 本体技术全景",
-                en_sub="27 Modules · 43 MCP · 88 SPI · 27 Tables · Bench v3.9 · 18 Wait Events",
-                subtitle1="从「比较优势」到「脑体分离」：面向数据库与 AI Infra 工程师的深度拆解",
-                subtitle2="物理感官 × 分层图谱 × AOPCC 并发 × 写穿保鲜 × 纵深安全 × 双域审计 × 内生 AWR",
-                spec_line="Rust 1.99 单二进制 · SQLite / PG / DuckDB 三引擎 · 347+ 测试 · 五重质量门禁",
+                en_sub=f"{MOD_CNT} Modules · {TOOL_CNT} MCP · {SPI_CNT} SPI · {KERNEL_CNT} Kernel / {CONTRIB_CNT} Contrib / {DIST_CNT} Slim · Bench v{BENCH_VER}",
+                subtitle1="从「比较优势」到「脑体分离」与微内核：面向数据库与 AI 工程师",
+                subtitle2="物理感官 × 分层图谱 × AOPCC × 写穿保鲜 × 内生 AWR × 微内核 SPI/Hook × 四大发行版",
+                spec_line=f"Rust 单二进制 · 387 全工作区测试 · 六重门禁 · 微内核 {KERNEL_CNT} / 插件 {CONTRIB_CNT} / 精简版 {DIST_CNT}",
                 strata=[
                     ("接入与协议层 · Interface", "43 原生 MCP · 30 CLI · Session/Pre/Post Hooks · Web 9 工作台", "#EBF1EE", C_INK),
                     ("宿主机感官与图谱 · Fact/Links", "/proc · Socket · L1/L2/L3 有向加权图 · CodeGraph 联邦", "#CFE0DC", C_INK),
-                    ("小脑并发与锁 · AOPCC/Locks", "MVCC 乐观租约 · 三态分级 · <2ms 自愈 · WFG 死锁检测", "#A4C4C6", C_INK),
+                    ("小脑并发与锁 · AOPCC/Locks", "MVCC 乐观租约 · 三态分级 · <2ms 自愈 · WFG 锁 · 7 大 Hook", "#A4C4C6", C_INK),
                     ("海马体与接力 · Memory/Body", "FTS5+向量 RRF · 7 大新鲜度漏斗治理 · <=300 tok 接力胶囊", "#74A5AD", C_PAPER),
                     ("安全审计与自进化 · Audit/Probe", "SecretRedactor · 抗投毒 · IN/OUT 双域审计 · P1~P5 探针", "#47808D", C_PAPER),
-                    ("内生性能工程 · Wait/AWR/ADDM", "6 类 18 事件 (<100ns) · /proc/self · 32 快照黄金基线 · L1 调优", "#2E6373", C_PAPER),
-                    ("存储 SPI 与联邦 · Storage/Mesh", "88 SPI 三后端热迁移 · DuckDB OLAP · MeshEnvelope v1.0", "#1E4B5A", C_PAPER),
+                    ("内生性能工程 · Wait/AWR/ADDM", "6 类 18 事件 (<100ns) · /proc/self · 黄金基线 · L1 调优", "#2E6373", C_PAPER),
+                    ("微内核/周边/发行版 · Kernel+Contrib", "8 body_cat_* + 6 Routine + 9 contrib 五件套 + 4 发行版", "#1E4B5A", C_PAPER),
                 ],
-                right_tag="地层剖面 · 工程蓝图 · 深度技术交流版 (24 页)",
+                right_tag="地层剖面 · 工程蓝图 · 深度技术交流版 (25 页)",
             ),
             "script": (
-                "各位技术同行好，这份 24 页的 Deck 是 Agent Body 的完整架构深度交流版，大约 45 到 60 分钟。\n"
-                "与面向路演的 16 页版本不同，今天我们不讲空泛的概念，而是直接下钻到 27 个 Rust 模块、88 个存储 SPI、27 张数据表、AOPCC 期望代价数学边界、MeshEnvelope 签名防重放协议，以及借鉴 PostgreSQL/Oracle 内核落地的等待事件与 AWR 性能工程。\n"
-                "所有架构指标和实测数据全部直接取自当前代码库和现网宿主机，欢迎随时打断就任何设计取舍展开硬核讨论。"
+                "各位技术同行好，这份 25 页的 Deck 是 Agent Body 的完整架构深度交流版，大约 45 到 60 分钟。\n"
+                "与面向路演的 17 页版本不同，今天我们不讲空泛的概念，而是直接下钻到 27 个 Rust 模块、88 个存储 SPI、27 张数据表、AOPCC 期望代价数学边界、内生 Wait Events 与 AWR 性能工程，以及 Phase 70~73 借鉴 PostgreSQL 插件体系完成的微内核 (`kernel/`) 与周边 (`contrib/`) 分离重构。\n"
+                "所有架构指标和实测数据全部直接取自当前代码库与现网验证，欢迎随时打断就任何设计取舍展开硬核讨论。"
             ),
         },
         # 02 第一性原理：从比较优势到脑体分离
@@ -1059,7 +1062,7 @@ def build_tech_deck() -> None:
             "next": "看完自对照和生产存证账本，再看轨道 C：四大赛道热门开源竞品的同机实测对比与定位差异。",
             "script": (
                 "我们在 Benchmark v3.1 到 v3.7 迭代中最核心的一条修正，就是把「帕累托双门禁」写成了铁律：每个负载必须同时考核事实召回、信噪比、可行动性和安全性，必须保证本体质量分严格大于等于基线且必含事实 100% 命中。\n"
-                "从真机明细表可以看到：18 个业务负载无一例外全部实现「省 Token + 质量大幅跃升」，总体 Token 降了 99.23%，质量分从 35.6 升到 98.0；6 大内核微基准全部达标 SLA；9 项现网数据健康与遥测门禁全维体检。"
+                "从真机明细表可以看到：19 个业务负载无一例外全部实现「省 Token + 质量大幅跃升」，总体 Token 降了 99.23%，质量分从 35.6 升到 98.0；6 大内核微基准全部达标 SLA；10 项现网数据健康与遥测门禁全维体检。"
             ),
         },
         # 21 实证评测② · 四赛道竞品同机对标与生态边界
@@ -1087,11 +1090,102 @@ def build_tech_deck() -> None:
                 "从四个赛道能非常清楚地看到生态分工：Mem0、Letta 专注对话记忆，我们通过 SPI 兼容它；CodeGraph 专注代码符号 AST，我们通过 Bridge 联邦它；而 Agent Body 死磕的「物理宿主机实时感官 + 并发防撞 + 新鲜度对账 + 双域审计 + 内生 AWR」，正是整个开源生态里最稀缺的那块底座。"
             ),
         },
-        # 22 黑白屏同源、零重扫导航与五重质量门禁
+        # 22 微内核与周边分离架构 (Phase 70~73 · ISSUE #52)
         {
-            "eyebrow": "21 · ENGINEERING EXCELLENCE · ZERO-RESCAN & 5-FOLD QUALITY GATE",
-            "title": "工程化实践：43/43 黑白屏同源、零重扫与五重确定性门禁",
-            "lead": "大型项目演进到 50 个 Phase 最怕「越改越乱」——我们用 <b>EVOLUTION_GUIDE + CodeGraph + 五重硬门禁</b>把纪律写进机器。",
+            "eyebrow": "21 · MICROKERNEL & CONTRIB · POSTGRESQL-STYLE PLUGIN ARCHITECTURE",
+            "title": "微内核与周边分离架构：6 Routine × 7 Hook × 双轨沙盒与四大发行版",
+            "lead": "Phase 70~73（ISSUE #52）：<b>kernel/ 零业务词污染，contrib/ 标准五件套隔离，distributions/ 零 C++ 裁剪交付</b>。",
+            "svg": svg_pipeline(
+                steps=[
+                    {
+                        "tag": f"KERNEL/ · {KERNEL_CNT} CRATES",
+                        "title": "纯机制微内核",
+                        "accent": C_TEAL_D,
+                        "bg": C_TEAL_L,
+                        "lines": [
+                            "8 张 body_cat_* 目录表",
+                            "6 Routine + 7 Hook",
+                            "ScopedSql 前缀隔离",
+                        ],
+                    },
+                    {
+                        "tag": "TRACK A & B",
+                        "title": "双轨插件装载",
+                        "accent": C_TEAL_2,
+                        "bg": C_WHITE,
+                        "lines": [
+                            "轨 A: body_module_magic!",
+                            "轨 B: OutOfProcess 沙盒",
+                            "env_clear + 超时强杀",
+                        ],
+                    },
+                    {
+                        "tag": f"CONTRIB/ · {CONTRIB_CNT} 扩展",
+                        "title": "标准五件套周边",
+                        "accent": C_GREEN,
+                        "bg": C_GREEN_L,
+                        "lines": [
+                            "idx_fts / gov / db",
+                            "linux / jvm / mtls·rls",
+                            "脱敏 / SIEM / cmdb·tick",
+                        ],
+                    },
+                    {
+                        "tag": "4 DISTRIBUTIONS",
+                        "title": "多发行版按需装配",
+                        "accent": C_CLAY,
+                        "bg": C_CLAY_L,
+                        "lines": [
+                            "旗舰 agent-body (全量)",
+                            "probe 6.5M / dba 6.1M",
+                            "minimal 3.8M · 0 C++",
+                        ],
+                    },
+                ],
+                bottom_panels=[
+                    {
+                        "title": "架构防腐边界门禁 (arch_boundary_check.py)",
+                        "accent": C_TEAL_D,
+                        "bg": C_PAPER2,
+                        "lines": [
+                            "检查 kernel/ 3 crates 单向依赖，禁止回指 contrib/ 或旗舰包",
+                            "扫描 kernel 22 个生产文件：禁止 OS/中间件/行业业务词污染",
+                            ("强制 contrib/ 9 扩展严格具备五件套与 ext_<id>__* SQL 前缀", True),
+                        ],
+                    },
+                    {
+                        "title": "政务云 AIOps 实证闭环 (aiops_e2e + self-check)",
+                        "accent": C_GREEN,
+                        "bg": C_GREEN_L,
+                        "lines": [
+                            "强制全端读 401 + mTLS CN 多租户 RLS 隔离 + SIEM RFC5424 审计",
+                            "双 Java 8080/8081 长命令与 -D 精准脱敏 + 轨 B 80ms 超时强杀",
+                            ("otool -L 实证 probe 6.5MB 零 libc++/libstdc++/DuckDB 运行时", True),
+                        ],
+                    },
+                ],
+                animated=True,
+                mid="ah_mk",
+            ),
+            "anim_caps": [
+                "① kernel/ 三个纯机制 crate：目录表、6 大 Routine、7 大 Hook 与 ScopedSql",
+                "② 双轨加载：轨 A 编译期 body_module_magic! 与轨 B env_clear 超时强杀沙盒",
+                "③ contrib/ 九个标准五件套模块承接全部 OS/中间件/数据库/合规/SIEM 能力",
+                "④ 四大发行版：旗舰版向后兼容 + 3.8~6.5MB 零 C++ 精简二进制",
+                "⑤ arch_boundary_check.py + aiops_e2e 锁死边界防腐与端到端实证",
+            ],
+            "next": "内核边界拆清后，看这套 50~73 Phase 仓库如何靠机器门禁实现零漂移持续演进。",
+            "script": (
+                "第 22 页是 Phase 70 到 73 最新落地的一场「自我手术」：借鉴 PostgreSQL 插件架构，把微内核和周边能力彻底拆开。\n"
+                "原因很现实：前面做政务云 AIOps 和多数据库兼容时，发现很多具体需求——比如 Java -D 参数精准脱敏、东方通和 Nginx 拓扑解析、mTLS 多租户 RLS、RFC 5424 SIEM 外发、CMDB 工单接口——如果直接塞进主内核，微内核就会迅速腐烂成大泥球，而且还会被 DuckDB 的 C++ 运行时拖到近 80 兆，进不了轻量服务器与政务容器。\n"
+                "于是我们在不改内核业务逻辑的前提下，建起了纯机制的 `kernel/` 三层底座，把全部行业与运维探针、安全脱敏与工单适配器做成 `contrib/` 九个标准五件套扩展，再用 `arch_boundary_check.py` 每天盯死零跨层污染。结果同一套内核既保住了旗舰版，又直接编译出了 6.5 MB、完全零 C++ 依赖的 `agent-body-probe`。"
+            ),
+        },
+        # 23 黑白屏同源、零重扫导航与六重质量门禁
+        {
+            "eyebrow": "22 · ENGINEERING EXCELLENCE · ZERO-RESCAN & 6-FOLD QUALITY GATE",
+            "title": "工程化实践：43/43 黑白屏同源、零重扫与六重确定性门禁",
+            "lead": "大型项目演进到 Phase 73 最怕「越改越乱」——我们用 <b>EVOLUTION_GUIDE + arch_boundary + 六重硬门禁</b>把纪律写进机器。",
             "svg": svg_columns(
                 [
                     {
@@ -1100,22 +1194,22 @@ def build_tech_deck() -> None:
                         "accent": C_TEAL_D,
                         "lines": [
                             "Tier-0 只读 EVOLUTION_GUIDE + 活跃图",
-                            "8 大高频场景 O(1) 变更触点矩阵",
+                            "9 大高频场景 O(1) 变更触点矩阵",
                             "自建 .codegraph/ 符号穿透源码",
-                            ("15 个根目录核心文件自动防漏登", True),
+                            ("根文件 + 微内核/周边计数自动核验", True),
                         ],
                         "foot_lbl": "检查命令",
                         "foot_val": "make evolution-check (<100ms)",
                     },
                     {
-                        "tag": "QUALITY GATE · 五重门禁",
+                        "tag": "QUALITY GATE · 六重门禁",
                         "title": "把质量纪律固化为代码",
                         "accent": C_GREEN,
                         "lines": [
-                            "lint-panic: 0 处生产 unwrap/expect",
-                            "lint-hygiene: 0 处硬编码路径/控吞错",
-                            "lint-strict: -D warnings + clippy",
-                            ("cargo test: 347+ 自动化测试全绿", True),
+                            "arch-check: kernel 零污染 / 5件套",
+                            "lint-panic & hygiene: 0 unwrap/吞错",
+                            "lint-strict: workspace -D warnings",
+                            ("cargo test --workspace: 387 全绿", True),
                         ],
                         "foot_lbl": "一键联检",
                         "foot_val": "make quality-gate && make test",
@@ -1135,22 +1229,22 @@ def build_tech_deck() -> None:
                     },
                 ],
                 bottom_banner=(
-                    "AI 时代做复杂工程的秘诀：能脚本化和门禁化的绝不靠口头叮嘱，每次提交 5 秒自动化验真，保证架构永不漂移。",
+                    "AI 时代做复杂工程的秘诀：能脚本化和门禁化的绝不靠口头叮嘱，每次提交自动化验真，保证架构永不漂移。",
                     "28 DESIGN PRINCIPLES · MACHINE-ENFORCED",
                     "teal",
                 ),
             ),
             "next": "倒数第二页，看位置无关交付、跨平台抽象与递弱代偿的最终边界红线。",
             "script": (
-                "很多同行好奇：你们用 AI Agent 连续演进了 50 个 Phase、近四万行 Rust 代码，怎么没把代码改烂、没把文档改漂移？\n"
-                "答案就四个字：机器门禁。我们把所有血泪教训全写成了自动化脚本：新增模块/工具/表/根文件忘了更文档，evolution-check 直接红灯；生产路径手滑写了 unwrap 或 CARGO_MANIFEST_DIR，lint-panic 和 lint-hygiene 直接拒止；连这 9 份演说 HTML 都改成了代码生成加 Playwright 像素级防重叠检查。纪律进机器，演进才可持续。"
+                "很多同行好奇：你们用 AI Agent 连续演进了 73 个 Phase、这么多 crate 和文档，怎么没把代码改烂、没把架构改漂移？\n"
+                "答案就四个字：机器门禁。我们把所有血泪教训全写成了自动化脚本：新增模块/扩展/根文件忘了更文档，evolution-check 直接红灯；微内核误混入周边业务词，arch-check 直接拒止；手滑写了 unwrap 或超过 1000 行大文件，lint-panic 和 lint-hygiene 直接拦截；连这 9 份演说 HTML 都必须过 Playwright 像素级防重叠检查。纪律进机器，演进才可持续。"
             ),
         },
-        # 23 位置无关交付、跨平台抽象与边界克制
+        # 24 位置无关交付、跨平台抽象与边界克制
         {
-            "eyebrow": "22 · PORTABILITY & BOUNDARIES · RELOCATABLE & ANTI-CREEP",
+            "eyebrow": "23 · PORTABILITY & BOUNDARIES · RELOCATABLE & ANTI-CREEP",
             "title": "位置无关交付、跨平台探针与递弱代偿红线",
-            "lead": "Phase 49 彻底清除编译期路径依赖实现 <b>100% 位置无关单二进制</b>；同时重申 6 条「坚决不做」架构边界。",
+            "lead": "彻底清除编译期路径依赖实现 <b>100% 位置无关交付</b>；同时重申 `kernel/` 与 `contrib/` 分离及「坚决不做」架构边界。",
             "svg": svg_matrix_2x2(
                 [
                     {
@@ -1160,19 +1254,19 @@ def build_tech_deck() -> None:
                         "bg": C_WHITE,
                         "lines": [
                             "清除生产/基准中全部 CARGO_MANIFEST_DIR",
-                            "仓库改名或容器内运行 bench full 100% 通过",
-                            "模块化治理：单文件 <=1500 行，错误可观测",
+                            "仓库改名或容器内运行全工作区 387 测试全绿",
+                            "模块化治理：单文件 <=1000 行，错误可观测",
                         ],
                     },
                     {
-                        "tag": "CROSS-PLATFORM · 三端适配",
-                        "title": "PlatformProbe 抽象与四层贯通",
+                        "tag": "CROSS-PLATFORM · 三端与瘦身",
+                        "title": "PlatformProbe 与零 C++ 发行版",
                         "accent": C_TEAL,
                         "bg": C_WHITE,
                         "lines": [
                             "Linux (/proc, inotify, systemd) 为首选深化内核",
-                            "macOS / Windows 纯函数解析跨平台编译容错",
-                            "preflight 启动预检 + INSTALL.md + Docker",
+                            "macOS (FSEvents, libproc) / Windows 容错适配",
+                            "probe(6.5M)/dba(6.1M)/minimal(3.8M) 零 DuckDB",
                         ],
                     },
                     {
@@ -1183,7 +1277,7 @@ def build_tech_deck() -> None:
                         "lines": [
                             "不内置 LLM ReAct 规划循环与业务推理",
                             "不替代 LangGraph / AutoGen / CrewAI 编排",
-                            "43 工具严控膨胀：新能力按 action 内聚扩展",
+                            "严守 43 工具与微内核 0 业务污染红线",
                         ],
                     },
                     {
@@ -1202,30 +1296,30 @@ def build_tech_deck() -> None:
             ),
             "next": "最后一页，总结演进终局，并附上 6 讲 × 30 分钟专题系列与开源协作入口。",
             "script": (
-                "Phase 49 我们经历了一次特别真实的教训：把仓库从旧名字改成 agent-body 后，W10 基准突然报红，一查是基准代码里残留了一个编译期宏 CARGO_MANIFEST_DIR 指向了旧路径。\n"
-                "我们借机把整套代码库做了一次彻底的卫生治理：100% 位置无关化、把超大文件按领域拆干净、把静默吞错压到预算线以下。同时始终守住下面两格的递弱代偿红线——只做最基础、最硬核的具身底座，绝不膨胀成臃肿的大框架。"
+                "Phase 49 到 73 我们把「位置无关」和「模块化拆分」一以贯之到了全工作区：`src/`、`kernel/`、`contrib/`、`distributions/` 所有生产文件严格控在 1000 行以内、0 处硬编码路径。\n"
+                "同时通过四大发行版把跨平台与容器轻量化真正落地，下探到 3.8~6.5 MB 零 C++ 运行时；并始终守住下面两格的递弱代偿红线——只做最纯粹、最硬核的具身微内核与可插拔扩展底座。"
             ),
         },
-        # 24 终局与专题导航
+        # 25 终局与专题导航
         {
-            "eyebrow": "23 · EPILOGUE · OS EMBODIED SUBSTRATE & DEEP-DIVE SERIES",
-            "title": "终局：从宿主机单二进制走向 OS 原生具身底座",
-            "lead": "今天已跑通生产闭环；如果想把某个子系统再拆透 30 分钟，欢迎直接进入配套的 <b>6 讲体系化专题演说</b>。",
+            "eyebrow": "24 · EPILOGUE · OS EMBODIED SUBSTRATE & DEEP-DIVE SERIES",
+            "title": "终局：从宿主机单二进制走向模块化 OS 原生具身底座",
+            "lead": "今天已跑通旗舰 + 微内核全家族闭环；如果想把某个子系统再拆透 30 分钟，欢迎直接进入配套的 <b>6 讲体系化专题演说</b>。",
             "svg": svg_closing(
                 kicker=f"AGENT BODY · ARCHITECTURE COMPLETE · v{APP_VER}",
                 headline="瞬态大脑千变万化，永驻本体稳如磐石",
                 pillars=[
                     ("专题 01~02 · 认知与感官", "脑体分离第一性原理 · L1~L3 分层图谱与宏微联邦", "01-brain-body · 02-host-reality-graph"),
                     ("专题 03~04 · 反射与记忆", "AOPCC 并发控制与锁 · 新鲜度治理与换脑不失忆", "03-cerebellum-aopcc · 04-hippocampus"),
-                    ("专题 05~06 · 免疫与实证", "纵深安全/双域审计/Mesh · Bench v3.9 与工程门禁", "05-security-audit-mesh · 06-benchmark"),
+                    ("专题 05~06 · 免疫与实证", "纵深安全/双域审计/Mesh · Bench v3.9 与微内核门禁", "05-security-audit-mesh · 06-benchmark"),
                 ],
-                open_question="欢迎围绕「OS 原生具身原语」「数据库性能工程迁移至 AI Infra」「多本体联邦协议」展开深度 Q&A",
+                open_question="欢迎围绕「PostgreSQL 式微内核与 contrib 扩展设计」「内生 AWR 迁移至 AI Infra」「多本体联邦协议」展开深度 Q&A",
                 next_talk="返回总览导航：presentation/index.html · 路演精简版：presentation/presentation.html",
             ),
             "script": (
-                "以上就是 Agent Body v1.1.0 的全部 24 页深度技术架构。\n"
-                "回过头看，这个项目其实只回答了一个本质问题：当大模型本身越来越强、切换越来越频繁时，宿主机侧需要沉淀一层怎样的确定性基础设施，才能让每个瞬态大脑一着陆就耳聪目明、不踩坑、不失忆、省 Token 且可审计？\n"
-                "我们用 Rust 单二进制、27 个模块、43 个原生工具、88 个存储 SPI、Benchmark v3.9 和内生 AWR 给出了第一份可复现的工程答卷。如果大家对其中某一个子系统——比如 AOPCC、分层图谱、或者 AWR 实现——想再深挖半小时，可以直接点开配套的 6 讲专题系列，或者直接拉代码跑一遍 make quality-gate 和 bench full。下面进入 Q&A，欢迎拍砖！"
+                "以上就是 Agent Body v1.1.0（Phase 73）的全部 25 页深度技术架构。\n"
+                "回过头看，这个项目其实只回答了一个本质问题：当大模型本身越来越强、切换越来越频繁时，宿主机侧需要沉淀一层怎样的确定性基础设施，才能让每个瞬态大脑一着陆就耳聪目明、不踩坑、不失忆、省 Token、可审计且可裁剪？\n"
+                "我们用 Rust 微内核 3 crate、9 个 `contrib` 扩展、4 大发行版、43 个原生工具、88 个存储 SPI、Benchmark v3.9 和全工作区 387 项测试给出了可复现的工程答卷。下面进入 Q&A，欢迎拍砖！"
             ),
         },
     ]

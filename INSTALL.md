@@ -12,9 +12,9 @@ Agent 本体采用 Rust 开发，核心设计理念是**“零外部强依赖、
 
 | 组件 / 依赖项 | 依赖类型 | 最低版本要求 | 核心用途 | 缺失后果与降级表现 |
 |:---|:---:|:---:|:---|:---|
-| **Linux Kernel** | **REQUIRED** | >= 4.5 | 提供 `inotify` 文件事件监听、`/proc` 进程网络拓扑 | 非 Linux 系统（或受限容器）无法启动守护进程 |
+| **操作系统内核 / 监听** | **REQUIRED** | >= 4.5 (Linux) | Linux 原生使用 `inotify` + `/proc`；macOS 自动切换 `FSEvents` + `libproc/lsof`（支持 LaunchAgent）；Windows 自动切换跨平台探针 | 受限容器无 `/proc` 时进程与端口探针自动降级 |
 | **Linux procfs** | **REQUIRED** | — | `/proc/net/tcp` 端口占用、`/proc/[pid]/` 动态进程识别 | 无法进行端口防撞预警与动态任务识别 |
-| **C++ 运行时库** | **REQUIRED** | GCC >= 9 (libstdc++.so.6) | 供 DuckDB 列存引擎与 SQLite Bundled 动态调用 | 极简 Alpine/Busybox 容器若无 `libstdc++6` 将报找不到动态库 |
+| **C++ 运行时库** | **仅旗舰版必选** | GCC >= 9 (libstdc++.so.6) | 旗舰版 DuckDB 列存引擎动态调用（**精简发行版 `agent-body-probe` / `agent-body-dba` / `agent-body-kernel-minimal` 零 DuckDB、零 C++ 运行时依赖**） | 旗舰版极简 Alpine 容器若无 `libstdc++6` 将报找不到动态库；精简发行版可直接运行 |
 | **Rust 工具链** | *编译期* | >= 1.75.0 (推荐 1.82+) | 从源码编译 Rust 二进制 | 若使用预编译发布二进制包，则**无需安装** |
 | **C/C++ 编译器** | *编译期* | gcc / g++ >= 9 或 clang | 编译 `rusqlite` 与 `duckdb` 内置 C/C++ 引擎 | 源码编译失败 |
 | **CMake & Make** | *编译期* | CMake >= 3.15, GNU Make | DuckDB Bundled 静态构建支持 | 源码编译构建阶段报错退出 |
@@ -100,9 +100,18 @@ agent-body preflight
 ### 方案 B：使用 Makefile 自动化构建
 ```bash
 make build       # 编译 release
-make test        # 运行测试
+make test        # 运行工作区全量测试 (推荐 RUST_TEST_THREADS=1)
 sudo make install # 安装到 /usr/local/bin
 make preflight   # 预检依赖
+```
+
+### 方案 C：按需编译零 C++ 依赖精简发行版（政务云探针 / DBA 哨兵 / 纯微内核）
+无需 CMake 与 `libstdc++6` / DuckDB 运行时，单二进制仅 `3.8~6.5 MB`：
+```bash
+cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
+./target/release/agent-body-kernel-minimal self-check
+./target/release/agent-body-probe self-check
+./target/release/agent-body-dba self-check
 ```
 
 ---

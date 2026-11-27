@@ -51,6 +51,9 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
     - 严禁仅审计含 `path` 参数的写文件操作而丢弃命令/服务/锁/非路径工具调用，更严禁后台 `Daemon`、`Reconciler`、`HostGC`、`LinkRepair`、`PlacementLearner` 等 Agent 之外主动/被动更改宿主对象时静默“黑盒变更”；所有双域关键行为必须经 `SecretRedactor` 脱敏、附带 `before_after_delta` 与 `evidence_sha256` 落库，并对 `Watcher` 高频事件实施时间窗折叠防洪。
 12. **Agent 本体脑体分离、四级自治包络与三层命名兼容（Agent Embodiment，对齐规约 #1, #2, #3, #8 & #27）**:
     - 确立 LLM=瞬态大脑、本项目=永驻宿主机的 Agent 本体（感官/小脑反射/海马体连续性/代谢稳态/多体联邦）；严守递弱代偿，绝不内置主战 LLM 规划循环或替代编排框架；自治行为严格遵循 `L0_OBSERVE` / `L1_AUTONOMIC` / `L2_SUPERVISED` / `L3_FORBIDDEN` 四级权限包络；对外叙事升级为「Agent 本体」，但工程标识（`agent-body` / `body_*` / `~/.agent-body/`）100% 向后兼容。
+13. **微内核 (`kernel/`) 与周边 (`contrib/`) 物理分离红线（对齐 ISSUE #52）**:
+    - `kernel/`（`body-sdk` / `body-protocol` / `body-kernel`）仅承载领域无关机制（8 张 `body_cat_*` 目录表 + 6 大 Routine + 7 大 Hook + `OutOfProcessFdwAdapter`），严禁混入周边业务/OS/行业词与跨层依赖；
+    - 新行业与运维能力一律在 `contrib/<ext>/` 以标准五件套（`Cargo.toml` + `<ext>.control.toml` + `sql/` `ext_<ext>__*` + `body_module_magic!()` + `contrib/<ext>/tests/regress.rs`）落地，并按需组装至 `distributions/`，由 [arch_boundary_check.py](../../scripts/arch_boundary_check.py) 强制守卫。
 
 ---
 
@@ -58,8 +61,12 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 
 | 路径 | 角色与用途 | 读写权限/规则 |
 |---|---|---|
-| `Cargo.toml`, `Cargo.lock` | Rust 依赖与工作空间配置 | 引入新 crate 需考虑编译耗时与轻量化 |
-| `src/` | Rust 核心源码目录（27 个顶层模块） | 业务实现与单元测试所在 |
+| `Cargo.toml`, `Cargo.lock` | Rust 依赖与工作空间配置（旗舰 root + `kernel/*` + `contrib/*` + `distributions/*`） | 引入新 crate 需考虑编译耗时与轻量化 |
+| `kernel/` | 纯机制微内核底座（3 crates：`body-sdk` / `body-protocol` / `body-kernel`） | 单向依赖隔离，0 业务词污染（`make arch-check`） |
+| `contrib/` | 独立周边扩展插件目录（9 个标准五件套模块） | 严格 `ext_<id>__*` 前缀、`body_module_magic!()` 与 `contrib/<ext>/tests/regress.rs` |
+| `distributions/` | 多发行版组装入口（3 精简版：`kernel-minimal` / `aiops-probe` / `dba-sentinel`） | 精简版 0 DuckDB / 0 C++ 运行时依赖，内置 `self-check` |
+| `scripts/arch_boundary_check.py` | 微内核防腐与 `contrib/` 五件套边界门禁脚本 | 纳管于 `make quality-gate` |
+| `src/` | Rust 旗舰版源码目录（27 个顶层模块） | 旗舰业务实现与单元测试所在（`<1000L` / 模块） |
 | ├── `src/config/` | 配置文件结构体与 `~/.agent-body/config.toml` 引导、参数校验 | 保持向后兼容 |
 | ├── `src/preflight/` | 运行时环境与依赖完整性预检引擎 | 严格保障可移植部署与优雅降级 |
 | ├── `src/storage/` | SQLite/PG/DuckDB 三引擎、88 方法 SPI 抽象、27 张表与分域子模块 (`{assets,facts,memory,locks,audit}.rs`) | 任何表变更必须同步 schema |
@@ -93,7 +100,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | `user_feedback.md` | 主理人与 Agent 实际使用体验与探针自上报总账 | `body_feedback` 双向读写目标 |
 | `docs/manual/` | 面向使用者与架构师的分卷深度技术手册 (01~10) | 保持与代码演进实时同步 |
 | `docs/src_doc/` | 开发者指南、产品边界治理、活跃演进路线图与历史 `archive/` | 任务流转枢纽，统一 kebab-case |
-| `docs/design_doc/` | 架构设计文档闭环交付件 (01~19) | 顶层架构事实依据，统一 kebab-case |
+| `docs/design_doc/` | 架构设计文档闭环交付件 (01~20) | 顶层架构事实依据，统一 kebab-case |
 | `docs/idea_doc/` | 初始思考、方案推导与设计全过程长文 | 原始产品哲学思考沉淀 |
 | `docs/markdown/` | 面向公众传播的技术长文与高保真 SVG 架构图 | 宣传与技术分享沉淀 |
 | `skills/` | 本项目内置技能库 (`developer`, `doc-writer`, `guide`) | 指导 Agent 认知与自闭环自进化 |
@@ -108,13 +115,13 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 flowchart TD
     A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 docs/src_doc/roadmap-phase*.md)"]
     B --> C["步骤 3: 串行编码与单元测试驱动<br/>(TDD + cargo test 局部验证)"]
-    C --> D["步骤 4: 编译检查与全量回归<br/>(cargo test 347+ 项全绿 + release 构建)"]
+    C --> D["步骤 4: 编译检查与全量回归<br/>(workspace 387 tests 全绿 + release 构建)"]
     D --> E["步骤 5: 文档同步与交付三段式小结<br/>(更新手册/README + 状态标记)"]
 ```
 
 ### 步骤 1: 需求对齐与设计查验
 1. 检查用户的需求是否符合第一节的“核心信条与设计红线”。
-2. 查阅 `docs/design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../docs/design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../docs/design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../docs/design_doc/08-graph-intelligence.md) 与 [14-graph-intelligence-and-mesh-protocol-spec.md](../../docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)，AOPCC 并发策略查 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](../../docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)，双域审计与自进化查 [16-dual-domain-audit-and-self-evolution-spec.md](../../docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md)，Agent 本体与跨大脑连续性查 [17-agent-embodiment-and-continuity-spec.md](../../docs/design_doc/17-agent-embodiment-and-continuity-spec.md)，Wait Events 与内生 AWR 诊断查 [18-wait-events-and-awr-perf-diagnostics-spec.md](../../docs/design_doc/18-wait-events-and-awr-perf-diagnostics-spec.md)）。
+2. 查阅 `docs/design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../docs/design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../docs/design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../docs/design_doc/08-graph-intelligence.md) 与 [14-graph-intelligence-and-mesh-protocol-spec.md](../../docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)，AOPCC 并发策略查 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](../../docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)，双域审计与自进化查 [16-dual-domain-audit-and-self-evolution-spec.md](../../docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md)，Agent 本体与跨大脑连续性查 [17-agent-embodiment-and-continuity-spec.md](../../docs/design_doc/17-agent-embodiment-and-continuity-spec.md)，Wait Events 与内生 AWR 诊断查 [18-wait-events-and-awr-perf-diagnostics-spec.md](../../docs/design_doc/18-wait-events-and-awr-perf-diagnostics-spec.md)，微内核与周边插件架构查 [20-plugin-microkernel-architecture-spec.md](../../docs/design_doc/20-plugin-microkernel-architecture-spec.md)）。
 3. 如涉及新增数据表或字段，先在 `src/storage/schema.sql`、`src/storage/models.rs`、`src/storage/mod.rs` 设计对齐。
 
 ### 步骤 2: 任务拆解与断点登记（严禁大步跨越）
@@ -128,21 +135,24 @@ flowchart TD
    - 引擎新增逻辑 -> 在对应子模块内编写 `tests`；
    - MCP 工具扩展 -> 在 `src/api/mcp.rs` 测试 JSON-RPC 解析与工具调用。
 2. **环境路径提醒**:
-   - 本机 Rust 工具链位于 `/root/.cargo/bin`，执行命令时必须前置环境变量：
-     `export PATH="/root/.cargo/bin:$PATH"`
-   - 运行针对性测试：`cargo test <module_name>::tests`。
+   - 确保 Rust 工具链在 PATH 中，执行命令时可前置环境变量：
+     `export PATH="$HOME/.cargo/bin:$PATH"`
+   - 运行针对性测试：`cargo test <module_name>::tests` 或 `cargo test -p <crate_name>`。
 
 ### 步骤 4: 编译检查与全量回归
-1. 运行全量单元测试：
+1. 运行全工作区单元与集成测试（推荐设置 `RUST_TEST_THREADS=1` 避免微基准 CPU 争抢）：
    ```bash
-   export PATH="/root/.cargo/bin:$PATH" && cargo test
+   export PATH="$HOME/.cargo/bin:$PATH" && RUST_TEST_THREADS=1 cargo test --workspace
    ```
-   **门禁要求**: 目前必须达到 **347+ 个 tests 全部 `ok`**，0 failed（另允许 1 项 doc-test ignored）。
-2. 运行 release 生产构建：
+   **门禁要求**: 全工作区 **387 项测试全部 `ok`**（根包 349 + `kernel` 22 + `contrib` 12 + `distributions` 4），0 failed。
+2. 运行 release 生产构建（旗舰版与精简发行版按需编译）：
    ```bash
-   export PATH="/root/.cargo/bin:$PATH" && cargo build --release
+   export PATH="$HOME/.cargo/bin:$PATH" && cargo build --release
+   # 零 C++/DuckDB 精简发行版按需构建与自检：
+   cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
+   ./target/release/agent-body-probe self-check
    ```
-   **门禁要求**: 编译无 error，binary 产物位于 `target/release/agent-body`。
+   **门禁要求**: 编译无 error，旗舰产物位于 `target/release/agent-body`，精简探针产物位于 `target/release/agent-body-probe`（`< 12 MB`）。
 3. 冒烟运行验证命令：
    ```bash
    ./target/release/agent-body status
@@ -196,7 +206,7 @@ flowchart TD
 - [ ] **本体边界与命名兼容自检（规约 #2 & #27）**：是否严守脑体分离不内置业务 LLM 规划循环？自治行为是否遵守 `L0~L3` 权限包络（不越权执行 `L2/L3`）？对外叙事升级为「Agent 本体」的同时，是否保证 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
-- [ ] 是否执行了 `make quality-gate`（`evolution-check` 含根目录核心文件自文档化与活跃文档 0 断链 + `lint-panic` + `lint-hygiene` 位置无关性/`>1500L` 文件清零/`let _ = <= 50`/核心自治 `= 0`/`18/18 WaitEventId` + `lint-strict` 零警告编译）且 `cargo test` 全部通过（**要求 >= 320 tests 全部通过，零 warning**）？若改动 `presentation/` 或演说生成脚本，是否已通过 `make verify-decks` Playwright 无头验真？
+- [ ] 是否执行了 `make quality-gate`（`evolution-check` + `arch-check` 防腐边界门禁 + `lint-panic` + `lint-hygiene` 位置无关性/`>1000L` 文件清零/`let _ = <= 15`/核心自治及微内核与周边路径 `= 0`/`18/18 WaitEventId` + `lint-strict` 全工作区零警告编译）且 `RUST_TEST_THREADS=1 cargo test --workspace` 全部通过（**387 项全工作区测试全绿，零 warning**）？若改动 `presentation/` 或演说生成脚本，是否已通过 `make verify-decks` Playwright 无头验真？
 - [ ] **二进制位置无关与发版一致性自检（规约 #11 & #28）**：生产路径是否 0 处 `env!("CARGO_MANIFEST_DIR")`？改名/核心修复提交后是否已重编安装 `make restart` 并核验 `agent-body --version` hash 与 `HEAD` 一致且 `DQ5 >= 98%`？
 - [ ] 是否执行了 `agent-body preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？

@@ -76,7 +76,8 @@ flowchart TD
 
 ### 步骤 1: 提取代码事实
 在动笔前，Agent 必须快速查阅：
-- `EVOLUTION_GUIDE.md` & `ISSUE.md`：27 模块 / 43 工具 / 88 SPI 方法 / 27 表计数锚点与演进议题总账；
+- `EVOLUTION_GUIDE.md` & `ISSUE.md`：27 模块 / 43 工具 / 88 SPI 方法 / 27 表 + 3 微内核 Crate / 9 `contrib/` 扩展 / 3 精简发行版锚点与演进议题总账；
+- `kernel/`、`contrib/`、`distributions/` 与 [20-plugin-microkernel-architecture-spec.md](../../docs/design_doc/20-plugin-microkernel-architecture-spec.md)：纯微内核契约、标准五件套扩展、轨 B 沙盒与四大发行版装配规格；
 - `src/cli_args.rs` & `src/cli_handlers/*`：当前支持的所有 30 个顶级子命令与 flags 参数；
 - `src/api/mcp_schemas.rs` & `src/api/mcp_tools/mod.rs`：当前注册的全部 **43 个原生 MCP 工具** 名与 inputSchema；
 - `src/body/`：Agent 本体中枢（`BodyManifest`、`ContinuityCapsule`、`HomeostasisVitals`、`AutonomyEnvelope`、`perf_awr/*`）；
@@ -112,7 +113,7 @@ flowchart TD
   - 错误写法: `A[客户端(Agent)]`
   - 正确写法: `A["客户端 (Agent)"]`
 - **SVG 图表规范**：矢量图保存为独立 `.svg` 文件置于 `docs/markdown/svg/`，保证自适应与文字高对比度无遮挡；
-- **死链检查与防漂移门禁**：运行 `make evolution-check` 校验 27 模块 / 43 工具 / 88 SPI / 27 表 / Benchmark v3.9 (`W1~W19`/`DQ1~DQ10`) 计数零漂移与全仓活跃 `.md` 0 死链，确保文档与代码事实 100% 同步。
+- **死链检查与防漂移门禁**：运行 `make quality-gate`（含 `make evolution-check` 校验 `27` 模块 / `43` 工具 / `88` SPI / `27` 表 / 微内核 `3` crates / `contrib` `9` 扩展 / 发行版 `3` 个 / Benchmark `v3.9` 与活跃 `.md` 0 死链 + `make arch-check` 防腐边界门禁）。
 
 ### 步骤 5: 交付检查与 Commit
 - 检查 `README.md`、`docs/manual/` 与 `docs/src_doc/` 是否无缝互引；
@@ -138,4 +139,4 @@ flowchart TD
 - [ ] 矢量 SVG 资源是否已独立落盘于 `docs/markdown/svg/` 并在 Markdown 中以标准语法正确引用？
 - [ ] `README.md` 是否已同步最新「Agent 本体」架构、全量 43 个 MCP 工具与演进路线？
 - [ ] `docs/manual/` 目录下的 10 卷分卷手册超链接是否全部有效无死链？
-- [ ] 是否已通过 `make evolution-check` 零漂移校验与全局死链审计脚本（0 断链）？
+- [ ] 是否已通过 `make quality-gate`（含 `evolution-check` 零漂移、0 断链与 `arch-check` 架构边界检查）并对齐四大发行版口径？

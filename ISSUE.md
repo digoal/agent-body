@@ -243,3 +243,23 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - 预防性拆分 `src/hooks/client_gen.rs`、`src/fact/property_graph.rs`、`src/scanner/multimodal.rs`、`src/benchmark/competitors.rs`、`src/api/mcp_schemas.rs` 为 10 个 `<700L` 高可读模块，彻底消除后续迭代触及 `1000L` 门禁风险；
     - 升级 `scripts/evolution_manifest.py` 兼容 `mcp_schemas_ops.rs` 与 `competitor_tracks.rs` 提取；
     - 新增 [tests/storage_spi_contract.rs](tests/storage_spi_contract.rs) 共享 12 域 `StorageProvider` SPI 契约测试套件，确保 SQLite 与 DuckDB 在放置/扫描/资产/向量/记忆/图谱/锁/审计/胶囊等核心方法上行为严格等价（详见 [roadmap-phase69.md](docs/src_doc/roadmap-phase69.md)）。
+
+52. **`[P1 · 架构演进]` 借鉴 PostgreSQL 插件体系的微内核 (`kernel/`) 与周边 (`contrib/`) 彻底分离重构、双轨扩展与多发行版组装** `✅ Phase 70~73 (K1~K5) 已全量落地`:
+    > 原始探讨：评估 `agent-body` 在省级政务云 AIOps 等场景的契合度与 GAP 后，确立彻底的架构拆分铁律——借鉴 PostgreSQL `src/backend/` + `contrib/` 设计哲学，**微内核 (`kernel/`) 与周边 (`contrib/`) 必须物理与逻辑彻底分离，周边功能绝不进内核；现网已识别出的行业/运维 GAP 绝不在重构前硬塞进内核，而是在完成微内核底座重构与存量周边剥离后，统一在独立 `contrib/` 目录下作为周边模块实现**。
+
+    - **现网源码实证耦合与 GAP**：
+      1. **内核与周边混杂、SPI 膨胀**：[src/storage/spi.rs](src/storage/spi.rs) 达 88 个业务耦合方法；[src/storage/schema.sql](src/storage/schema.sql) 用 `CHECK` 静态锁死实体/关系；[src/hooks/mod.rs](src/hooks/mod.rs) `BodyEvent` 封闭；[src/api/mcp_tools/mod.rs](src/api/mcp_tools/mod.rs) 静态路由分发；个人放置规则、Ollama 多模态、DuckDB（含 C++ `libstdc++6`）、Web 路演与 Benchmark 全焊死在主干（[Cargo.toml](Cargo.toml)）。
+      2. **运维、政务云与安全合规 GAP（均应待重构后由 `contrib/` 承接）**：[src/web/server.rs](src/web/server.rs) 只读接口免鉴权且缺 mTLS/租户 RLS 与 SIEM 外发（[src/audit/mod.rs](src/audit/mod.rs)）；[src/scanner/redactor.rs](src/scanner/redactor.rs) 硬编码脱敏且 Java `-D` 等号易截断、[src/fact/automation.rs](src/fact/automation.rs) 未脱敏且漏扫 `/usr/lib/systemd/system`、`*.service.d`、RHEL/麒麟/openEuler `/var/spool/cron/*` 及 Unit 实时态；[src/env/mod.rs](src/env/mod.rs) 180 字符截断 Java 参数、[src/fact/process_net.rs](src/fact/process_net.rs) 缺 `started_at`/`ppid`/`ESTABLISHED` 且同端口 `dedup_by` 吞实例；[src/body/manifest.rs](src/body/manifest.rs) 缺 `host_labels`。
+    - **核心架构方案（`kernel/` 纯机制微内核 + `contrib/` 独立周边目录 + 四大发行版）**：
+      - **物理分层与准入红线**：`kernel/`（`body-sdk` + `body-protocol` + `body-kernel`）仅保留 100% 领域/OS/中间件/行业无关的纯粹机制——**8 张 `body_cat_*` 系统目录表**、5 张通用基表（含 `epoch_seq` 脑体增量漂移顺风车同步机制）、`ScopedSqlExecutor` 私有表前缀沙盒（`ext_<name>__*`）、**7 大生命周期 Hook 插槽**（`client_auth` / `object_access` RLS / `planner_rewrite` / `executor_start` / `executor_end` / `tuple_redact` / `emit_audit`）与 **6 大底层 Routine SPI**（`Type/Op`、`TableAmRoutine` ~18 原语、`IndexAm/OpClass` + `RrfMergeExecutor`、`FdwRoutine::poll_drift` O(1) 指纹短路游标、`ProcRoutine` 单点四端自动派生、`BgWorkerRoutine`）。
+      - **`contrib/` 标准五件套与双轨加载**：所有周边模块迁入或新建于顶层 `contrib/<ext>/`（必备 `Cargo.toml` + `.control.toml` + `sql/` + `body_module_magic!` + `tests/regress.rs`，仅单向依赖 `body-sdk`）；支持 **轨 A 编译期静态 Crate** 与 **轨 B 进程外 `.control.toml` + JSON-RPC/UDS `L0` 只读沙盒**（强制出站 `TupleRedactHook` + 抗投毒清洗）。
+      - **四大发行版谱系（`distributions/`）**：`kernel-minimal`（0 `contrib` 纯内核防腐包）、`agent-body`（个人旗舰全功能版，100% 兼容 `v1.1.0`）、`agent-body-probe`（政务云极简探针版，`<12MB`、`<20MB RSS`、零 DuckDB/C++/Ollama/WebUI）、`agent-body-dba`（数据库诊断版）；IAM/CMDB 控制面/堡垒机/K8s/SLB 严格留在外部平台侧（详尽规格见 [20-plugin-microkernel-architecture-spec.md](docs/design_doc/20-plugin-microkernel-architecture-spec.md)）。
+    - **严格四阶段演进顺序（`Phase K1 → K4`，禁止抢跑塞入内核）**：
+      - `Phase K1`：搭建 `kernel/body-sdk` + `body-kernel`（8 张目录表 + 7 大 Hook 插槽 + 6 大 Routine），**0 业务新功能混入内核**；
+      - `Phase K2`：落地 `TableAmRoutine` 瘦身、`body_cat_proc` 自动四端派发与轨 B 沙盒代理；
+      - `Phase K3`：建立 `contrib/` 目录，将存量 14 个周边模块（`duckdb`/`ollama`/`placement`/`mesh`/`web`/`demo`/`benchmark` 等）逐批剥离出内核，验证 `kernel-minimal` 独立全绿与 `personal-flagship` 100% 向后兼容；
+      - `Phase K4`：在 `contrib/` 下全新开发 `probe_linux_ops`、`probe_jvm_middleware`、`hook_auth_mtls_rbac`、`hook_gov_compliance`、`hook_audit_siem`、`fdw_cmdb_ticket` 填平运维与政务云 GAP（内核 0 业务改动），组装并实证验收 `aiops-probe` 与 `dba-sentinel`。
+    - **实证验收数据（详见 [roadmap-phase70-73.md](docs/src_doc/roadmap-phase70-73.md)）**：
+      - 全工作区测试（`RUST_TEST_THREADS=1 cargo test --workspace`）：**387 passed, 0 failed**（根包 `agent-body` 349 + `kernel/` 3 crates 22 + `contrib/` 9 扩展包 12 + `distributions/` 3 发行版 4），`cargo clippy --workspace --all-targets -- -D warnings` 零告警；
+      - 六重质量门禁（`make quality-gate`：`evolution-check`、`arch-check`、`lint-panic`、`lint-hygiene`、`lint-strict`）全绿（`kernel` 3 个核心 crate 单向依赖 0 业务词污染、`contrib` 9 个标准五件套 100% 合规、`0` `.unwrap()`/`.expect()`/`let _ =`、`0` 文件 `>1000L`）；
+      - 三大精简 Release 发行版实测体积与 `self-check` 全绿：`agent-body-kernel-minimal` **3.8 MB**（`catalog=8, base=5, parity=1, audit=4`）、`agent-body-probe` **6.5 MB**（`ext=7, tuples=5, audit=4`）、`agent-body-dba` **6.1 MB**（`ext=5, db_instances=3, audit=1`）；`otool -L target/release/agent-body-probe` 仅链接 `libSystem.B.dylib` / `libiconv.2.dylib` / `CoreFoundation`，零 `libc++` / `libstdc++` / DuckDB 运行时依赖。

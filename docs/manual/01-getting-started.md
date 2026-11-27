@@ -54,6 +54,16 @@ cp target/release/agent-body /usr/local/bin/
 chmod +x /usr/local/bin/agent-body
 ```
 
+### 2.3 精简发行版编译与自检（零 C++/DuckDB 依赖）
+针对仅需服务端/数据库只读采集而无需 DuckDB 与 Web UI 的场景，可按需编译纯 Rust 精简发行版（`3.8~6.5 MB`）：
+
+```bash
+cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
+./target/release/agent-body-kernel-minimal self-check
+./target/release/agent-body-probe self-check
+./target/release/agent-body-dba self-check
+```
+
 ---
 
 ## 3. 首次启动与数据初始化

@@ -27,6 +27,9 @@ MICRO_CNT = _COUNTS["micro"]
 DQ_CNT = _COUNTS["dq"]
 COMP_CNT = _COUNTS["competitors"]
 PR_CNT = _COUNTS["pr_rules"]
+KERNEL_CNT = _COUNTS["kernel_crates"]
+CONTRIB_CNT = _COUNTS["contrib_exts"]
+DIST_CNT = _COUNTS["distributions"]
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "presentation"
@@ -939,7 +942,7 @@ def build_talk_05() -> None:
                         ],
                     },
                 ],
-                ("所有安全承诺均可直接翻阅开源代码与 347+ 项自动化测试逐行核验。", "Apache-2.0 全透明开源", "teal"),
+                ("所有安全承诺均可直接翻阅开源代码与 387 项全工作区测试逐行核验。", "Apache-2.0 全透明开源", "teal"),
             ),
             "next": "收束第 5 讲，准备进入整个系列的压轴终章——第 6 讲。",
             "script": (
@@ -1008,8 +1011,8 @@ def build_talk_06() -> None:
                 title="三轨实证 Benchmark 与工程体系",
                 en_sub="Pareto Token-Quality Gate, Live Competitor Bench & Zero-Drift Ops",
                 subtitle1="拒绝自嗨口号：既要省 Token，更要上下文质量不降反升",
-                subtitle2="帕累托双门禁 Q · 17 负载 + 5 微基准 + 8 DQ + 4 竞品 · 零漂移防重扫",
-                spec_line="Spec v3.9 · SHA-256 存证 · 347+ 测试 0 失败 · 0 Panic · 0 Drift",
+                subtitle2=f"帕累托双门禁 Q · {WL_CNT} 负载 + {MICRO_CNT} 微基准 + {DQ_CNT} DQ + {COMP_CNT} 竞品 · 微内核:{KERNEL_CNT} 周边:{CONTRIB_CNT}",
+                spec_line=f"Spec v{BENCH_VER} · SHA-256 存证 · 387 测试 0 失败 · 0 Panic · 0 Drift",
                 strata=[
                     ("帕累托双门禁 · 拒绝截断作弊", "Q = 40% 事实 + 30% 信噪 + 20% 行动 + 10% 安全", "#EBF1EE", C_INK),
                     ("轨道 A · 19 负载 + 6 微基准 + 10 DQ", "W1~W19 A/B 真跑 · M1~M6 微秒 SLA · DQ1~DQ10 宿主与遥测门禁", "#CFE0DC", C_INK),
@@ -1075,28 +1078,28 @@ def build_talk_06() -> None:
                 [
                     {
                         "tag": "TRACK A · 标准可控 A/B",
-                        "title": "17 负载 + 5 微基准 + 8 DQ",
+                        "title": "19 负载 + 6 微基准 + 10 DQ",
                         "accent": C_TEAL_D,
                         "bg": C_TEAL_L,
                         "lines": [
                             "W1~W19 覆盖 6 大器官与 AWR 诊断",
                             "M1~M6 锁定微秒级内核与无锁探针 SLA",
                             "DQ1~DQ10 直查宿主机库与内生遥测健康",
-                            ("总耗时仅 5.98 秒，一键全量回归", True),
+                            ("一键全量回归，帕累托质量零降级", True),
                         ],
                         "foot_lbl": "实测结果",
-                        "foot_val": "30 / 30 全部 PASS",
+                        "foot_val": "35 / 35 全部 PASS",
                     },
                     {
                         "tag": "TRACK B · 生产效能账本",
-                        "title": "PR-01 ~ PR-13 自动记账",
+                        "title": "PR-01 ~ PR-14 自动记账",
                         "accent": C_GREEN,
                         "bg": C_GREEN_L,
                         "lines": [
                             "日常每次 MCP/CLI/Web/Hook 自动记账",
                             "严格区分「真实省下的」与「演示沙盒」",
                             "按 24h / 7d / 30d / all 聚合 ROI",
-                            ("Phase 44 新增 PR-13 跨脑接力归因", True),
+                            ("含 PR-13 接力归因与 PR-14 AWR 账本", True),
                         ],
                         "foot_lbl": "源码触点",
                         "foot_val": "src/benchmark/{provenance,ledger}.rs",
@@ -1120,7 +1123,7 @@ def build_talk_06() -> None:
             ),
             "next": "让我们逐一展开轨道 A 的 19 大负载与 6 大微基准真实成绩。",
             "script": (
-                "为什么设计三轨？因为实验室跑分容易脱离实际，所以加了轨道 B 生产效能账本，日常每一次真实调用都按 PR-01 到 PR-13 自动记账；光跟裸奔自己比又容易井底之蛙，所以加了轨道 C 同机实跑主流开源竞品。"
+                "为什么设计三轨？因为实验室跑分容易脱离实际，所以加了轨道 B 生产效能账本，日常每一次真实调用都按 PR-01 到 PR-14 自动记账；光跟裸奔自己比又容易井底之蛙，所以加了轨道 C 同机实跑主流开源竞品。"
             ),
         },
         {
@@ -1237,29 +1240,29 @@ def build_talk_06() -> None:
                         "accent": C_TEAL_D,
                         "lines": [
                             "根目录唯一演进入口",
-                            "8 大演进场景变更触点矩阵",
+                            "9 大演进场景变更触点矩阵",
                             "Tier-0/1/2 文档分级禁扫令",
                             ("新会话 3 秒定位精确源码触点", True),
                         ],
                     },
                     {
                         "tag": "PILLAR 02 · 确定性门禁",
-                        "title": "evolution_manifest.py",
+                        "title": "manifest + arch_boundary",
                         "accent": C_GREEN,
                         "lines": [
-                            "直接 AST/正则扫 Rust 源码提取真值",
-                            "核对模块/工具/SPI/表/Bench 计数",
-                            "检查 Tier-1 定位术语防回退",
-                            ("make evolution-check -> 0 drift", True),
+                            "直接扫描源码与微内核/周边目录",
+                            "核对模块/工具/SPI/表/扩展计数",
+                            "守卫 kernel 零业务词与五件套",
+                            ("evolution-check + arch-check", True),
                         ],
                     },
                     {
                         "tag": "PILLAR 03 · 零崩溃红线",
-                        "title": "lint-panic + 347+ 测试",
+                        "title": "lint-panic + 387 测试",
                         "accent": C_CLAY,
                         "lines": [
                             "生产代码强制 0 unwrap/expect",
-                            "244 lib + 24 main/集成测试全覆盖",
+                            "349 旗舰 + 38 微内核/周边测试",
                             "Parity 43/43 写死进单元测试",
                             ("任一破坏性修改编译测试即红", True),
                         ],
@@ -1269,9 +1272,9 @@ def build_talk_06() -> None:
                         "title": "CodeGraph + Sync Mirror",
                         "accent": C_GOLD,
                         "lines": [
-                            "codegraph sync 1.5s 增量更新符号图",
+                            "codegraph init/sync 索引符号图",
                             "make sync-mirror 安全同步开源仓",
-                            "3 套 SKILL 同步至全局 Agent 目录",
+                            "3 套 SKILL 与手册一等公民对齐",
                             ("研发/文档/演示全自动同频", True),
                         ],
                     },
@@ -1280,8 +1283,8 @@ def build_talk_06() -> None:
             ),
             "next": "连你现在看到的这 9 份 HTML 演讲稿，也纳入了自动化视觉门禁！",
             "script": (
-                "很多人好奇：一个人带 AI 迭代 46 个 Phase、写两万多行 Rust 和几十份文档，为什么没有烂尾成屎山？\n"
-                "秘诀就是把「靠自觉」全部替换成「确定性门禁」：`make evolution-check` 扫源码核对文档，少改一个数字立刻报错；`make lint-panic` 扫生产代码，多写一个 `unwrap()` 立刻报错；`cargo test` 跑 347+ 项测试，少对齐一个黑白屏工具立刻报错。"
+                "很多人好奇：一个人带 AI 迭代 73 个 Phase、写数万行 Rust、微内核加 9 个插件和几十份文档，为什么没有烂尾成屎山？\n"
+                "秘诀就是把「靠自觉」全部替换成「确定性门禁」：`make evolution-check` 扫源码核对文档，`make arch-check` 防微内核跨层污染，`make lint-panic` 扫生产代码禁 `unwrap()`，`cargo test --workspace` 跑全 387 项测试。"
             ),
         },
         {
@@ -1320,79 +1323,79 @@ def build_talk_06() -> None:
                 "从零独立复现全套门禁与基准",
                 "Makefile · README.md",
                 [
-                    "# 1. 校验架构文档与源码 0 漂移 + 生产代码 0 Panic",
-                    "make evolution-check && make lint-panic",
+                    "# 1. 校验六重质量门禁与微内核防腐边界",
+                    "make quality-gate",
                     "",
-                    "# 2. 编译检查 + 全量 268 项单元与集成测试",
-                    "make check && make test",
+                    "# 2. 全工作区 387 项单元与集成测试",
+                    "RUST_TEST_THREADS=1 make test",
                     "",
-                    "# 3. 构建 Release 单二进制并运行宿主机预检",
-                    "make build && ./target/release/agent-body preflight",
+                    "# 3. 按需构建零 C++ 精简探针并执行离线自检",
+                    "cargo build --release -p agent-body-probe && ./target/release/agent-body-probe self-check",
                     "",
                     "# 4. 独立运行 Benchmark v3.9 全量三轨评测（~6 秒）",
                     "./target/release/agent-body bench run --suite full --save false",
                     "",
-                    "# 5. 启动 Web 2.0 驾驶舱（默认 http://127.0.0.1:8756）",
+                    "# 5. 启动 Web 2.0 驾驶舱（默认 http://127.0.0.1:8765）",
                     "./target/release/agent-body web",
                 ],
                 "复现环境极简要求",
                 [
-                    ("基础要求", "Rust 1.80+ 工具链（单二进制编译零 C/外部数据库强依赖）", "SQLite 静态内嵌"),
+                    ("旗舰与精简版任选", "旗舰版含 DuckDB/WebUI；probe(6.5M)/dba(6.1M)/minimal(3.8M) 零 C++", "SQLite 静态内嵌"),
                     ("增强可选", "本机安装 Ollama (nomic-embed-text + qwen3.5:0.8b) 解锁 L2/L3", "离线自动优雅降级"),
                     ("零污染跑批", "--save false 在隔离内存/临时沙箱执行 W1~W19 与 COMP-C1~C4", "不污染宿主机文件"),
-                    ("验证本套 PPT", "python3 scripts/verify_presentations.py", "9 份 HTML 逐页验真"),
+                    ("验证本套 PPT", "make verify-decks (scripts/verify_presentations.py)", "9 份 HTML 逐页验真"),
                 ],
             ),
             "next": "看一眼整个仓库目前的物理工程规模与健康指标快照。",
             "script": (
-                "对可复现的执着，是我们区分「玩具 Demo」和「基础设施」的分水岭。这五条命令复制粘贴跑完不到两分钟，你会亲眼看到 0 drift、0 panic、347+ passed 和一份带 SHA-256 指纹的 v3.9 实测报告。"
+                "对可复现的执着，是我们区分「玩具 Demo」和「基础设施」的分水岭。这五条命令复制粘贴跑完，你会亲眼看到 0 drift、0 panic、全工作区 387 项测试零失败、6.5MB 零 C++ 探针自检通过和一份带 SHA-256 指纹的 v3.9 实测报告。"
             ),
         },
         {
             "eyebrow": "09 · 工程体检全景",
-            "title": "v1.1.0 完整工程快照：27 模块 · 43 工具 · 88 SPI · 347+ 测试",
-            "lead": "小体量单二进制，却拥有完整数据库级存储抽象与企业级自证工程密度。",
+            "title": "v1.1.0 完整工程快照：27 模块 · 微内核/9 扩展 · 387 测试",
+            "lead": "小体量单二进制家族，同时具备数据库级存储抽象与微内核模块化扩展密度。",
             "svg": svg_metrics_table(
                 [
-                    ("27 模块", "Rust 内核模块数", "含 #26 audit & #27 body"),
+                    ("27 模块", "旗舰内核模块数", "43 MCP · 88 SPI · 27 表"),
+                    ("3 / 9 / 4", "微内核·扩展·发行版", "probe 6.5M · 0 C++"),
                     ("43 / 43", "黑白屏 1:1:1 同步率", "MCP / CLI / Web 100%"),
-                    ("88 SPI", "三引擎存储契约方法", "SQLite · PG · DuckDB"),
-                    ("347+ / 0", "单元 + 集成测试全绿", "0 failed · 0 unwrap"),
+                    ("387 / 0", "全工作区测试全绿", "0 failed · 0 unwrap"),
                 ],
                 ["架构切面", "精确规模与实测状态", "对应硬门禁", "状态"],
                 [
-                    ["存储层", "27 张表 · 88 SPI 方法 · 3 存储引擎无损互迁", "duckdb + pg + migration 测试", "PASS"],
-                    ["协议层", "43 原生 MCP 工具 · 1:1 CLI · Web 2.0 9 大工作台", "test_web_parity_matrix_100%", "PASS"],
-                    ["基准层", "Bench v3.9：19 负载 + 6 微基准 + 10 DQ + 4 竞品 + 14 PR", "run-6a0a4995 SLA 全绿", "PASS"],
-                    ["文档与技能", "EVOLUTION_GUIDE + docs/manual/ + 3 套 SKILL + 9 份 HTML 演讲", "evolution-check 0 drift + Playwright", "PASS"],
+                    ["存储与基准", "27 表 · 88 SPI · Bench v3.9 (W1~19 / M1~6 / DQ1~10)", "duckdb + spi + bench 测试", "PASS"],
+                    ["协议与双屏", "43 原生 MCP 工具 · 30 CLI · Web 2.0 9 大工作台", "test_web_parity_matrix_100%", "PASS"],
+                    ["微内核/扩展", "3 kernel crates · 9 contrib 五件套 · 3 精简版 3.8~6.5M", "make arch-check + self-check", "PASS"],
+                    ["文档与演说", "EVOLUTION_GUIDE + 手册 + 3 SKILL + 9 份 HTML 演讲", "evolution-check 0 drift + Playwright", "PASS"],
                 ],
                 [18, 220, 820, 1290],
-                footnote="基线版本：agent-body v1.1.0 (Phase 1 ~ Phase 57) · Apache-2.0",
+                footnote="基线版本：agent-body v1.1.0 (Phase 1 ~ Phase 73) · Apache-2.0",
             ),
-            "next": "接下来还有哪些未完的演进？看看面向 Phase 47（ISSUE #29）的收官蓝图。",
+            "next": "回顾从「#27 本体升维 → #52 微内核分离」的零返工演进脉络。",
             "script": (
-                "这是今天为止 agent-body 的完整工程体检表：27 个模块、43 个原生工具、88 个存储 SPI 方法、27 张表、347+ 项测试零失败、Bench v3.9 全绿。每一项数字都能通过脚本直接从源码反算出来。"
+                "这是 Phase 73 收官时的完整工程体检表：27 个旗舰模块、43 个原生工具、88 个存储 SPI、加上 3 个纯机制微内核 crate、9 个标准五件套 `contrib` 扩展、3 款零 C++ 精简发行版，以及全工作区 387 项测试零失败。"
             ),
         },
         {
             "eyebrow": "10 · 零返工演进序",
-            "title": "为什么按「#27 本体升维 → #28 体系演讲 → #29 目录规整」推进",
-            "lead": "复杂项目演进最忌讳前后打架。<b>合理排布依赖拓扑，实现 100% 零返工</b>。",
+            "title": "为什么按「本体升维 → 多模态拆分 → 微内核分离」推进",
+            "lead": "复杂项目演进最忌讳前后打架。<b>合理排布依赖拓扑，先夯实能力边界再拆微内核，实现零返工</b>。",
             "svg": svg_pipeline(
                 [
-                    {"tag": "PHASE 44~45 ✅", "title": "ISSUE #27 本体升维", "accent": C_GREEN, "bg": C_GREEN_L, "lines": ["src/body/ + body_checkpoints", "43 工具 + Bench v3.9 全绿", "三层兼容刷新全物料"]},
-                    {"tag": "PHASE 46 ✅", "title": "ISSUE #28 体系演讲", "accent": C_TEAL_D, "bg": C_TEAL_L, "lines": ["新建 presentation/ 目录", "6 讲 × 30min 专题 HTML", "老双 Deck 终刷新 + 验真"]},
-                    {"tag": "PHASE 47 ⏳", "title": "ISSUE #29 目录规整", "accent": C_GOLD, "bg": C_GOLD_L, "lines": ["git mv 收拢一级文档目录", "全仓路径引用批量刷新", "重建 .codegraph/ 完美收官"]},
-                    {"tag": "FUTURE", "title": "生态与跨端演进", "accent": C_TEAL_3, "lines": ["更多客户端一键接入", "跨宿主机多体集群协作", "社区插件与场景模板"]},
+                    {"tag": "PHASE 44~57 ✅", "title": "本体升维与演说规整", "accent": C_TEAL_D, "bg": C_TEAL_L, "lines": ["src/body/ + AWR 自愈", "Benchmark v3.9 全绿", "9 份 HTML + 目录规整"]},
+                    {"tag": "PHASE 58~69 ✅", "title": "多模态与高水位拆分", "accent": C_GREEN, "bg": C_GREEN_L, "lines": ["纯 Rust 多模态/KnowHow", "Top-5 <700L 防爆拆分", "SQLite/DuckDB SPI 契约"]},
+                    {"tag": "PHASE 70~73 ✅", "title": "ISSUE #52 微内核分离", "accent": C_CLAY, "bg": C_CLAY_L, "lines": ["3 kernel + 9 contrib", "AIOps/DBA 6 扩展落地", "3 精简发行版 (0 C++)"]},
+                    {"tag": "FUTURE · 共建", "title": "跨端生态与政务实战", "accent": C_GOLD, "bg": C_GOLD_L, "lines": ["国产 OS/数据库真实接入", "更多轨 B CMDB/SIEM", "OS 原生具身标准协议"]},
                 ],
                 [
                     {
-                        "title": "顺序背后的工程逻辑",
+                        "title": "先收敛再拆微内核的工程逻辑",
                         "accent": C_TEAL,
                         "bg": C_TEAL_L,
                         "lines": [
-                            "先做 #27 把本体定位与 v3.9 数据钉死，#28 产出的 9 份演讲稿才一步到位不过时",
-                            "最后做 #29 一次性规整一级文档层级、全仓扫路径、刷 CodeGraph，避免反复搬家改链接",
+                            "先打穿全栈功能边界并建立六重硬门禁与 SPI 契约，再去抽象 kernel/ 才不会设计出拍脑袋的空壳接口",
+                            "完成微内核与 contrib/ 物理隔离后，政务云 AIOps/DBA 六大行业 GAP 全落周边，内核保持 0 业务词污染",
                         ],
                     },
                 ],
@@ -1400,7 +1403,7 @@ def build_talk_06() -> None:
             ),
             "next": "最后，谈谈我们对「AI 时代基础软件」的终局判断。",
             "script": (
-                "大家看这个三阶段推进顺序：Phase 44~45 先把产品内核和实测数据打穿；Phase 46 也就是今天，把 6 讲体系化演讲和两份老 Deck 全部收进 `presentation/` 并验真；下一步 Phase 47 再统一规整根目录文档、全仓刷路径、重建 CodeGraph，全程零返工。"
+                "看这条从 Phase 44 走到 Phase 73 的演进脉络：先做本体升维与演说体系化，再做多模态与 `<1000L` 模块拆分、立住 `SPI` 契约，最后在第 70~73 期用 ISSUE #52 完成 PostgreSQL 式微内核 `kernel/` 与 `contrib/` 拆分并产出三大零 C++ 发行版，每一步都踩在前一步的坚固门禁上，全程零返工。"
             ),
         },
         {
@@ -1456,7 +1459,7 @@ def build_talk_06() -> None:
                 headline="Agent Body：用数据库级工程纪律，锻造 AI 时代的宿主机具身底座",
                 pillars=[
                     ("帕累托实证", "Token -99.22% × 质量 35.8→99.8 × 密度 92.1x", "W1~W19 · M1~M6 · DQ1~DQ10 全面对齐"),
-                    ("零漂移纪律", "evolution-check + lint-panic + 347+ 测试 + Playwright", "可独立 2 分钟完整复现"),
+                    ("零漂移纪律", "evolution-check + arch-check + 387 测试 + Playwright", "可独立 2 分钟完整复现"),
                     ("长期主义", "脑体分离、递弱代偿、三层兼容、Apache-2.0 开源", "github.com/digoal/agent-body"),
                 ],
                 open_question="终局之问：如果五年后每台个人电脑与服务器都默认运行着一层「Agent 本体底座」，它最不可或缺的三条标准协议应该是什么？",
@@ -1492,7 +1495,7 @@ def build_index_hub() -> None:
         ("05", "纵深安全、双域审计与探针驱动自进化", "05-security-audit-evolution-mesh.html", "30 min · 13 页",
          "四道纵深安全铁闸、IN/OUT 双域 60s 折叠审计、P1~P5 内生对比探针、五维稳态自愈与 MeshEnvelope v1.0。"),
         ("06", "三轨实证 Benchmark v3.9 与可复现工程体系", "06-empirical-benchmark-engineering.html", "30 min · 13 页",
-         "帕累托四维质量门禁 Q、W1~W19 / M1~M6 / DQ1~DQ10 实测与 COMP-C1~C4 同跑、COMP-C1~C4 竞品同跑与 2 分钟独立复现纪律。"),
+         "帕累托四维质量门禁 Q、W1~W19 / M1~M6 / DQ1~DQ10 实测与 COMP-C1~C4 同跑、微内核 387 测试与 2 分钟独立复现纪律。"),
     ]
     cards_html = "".join(
         f"""<a class="deck-card" href="{href}">
@@ -1549,20 +1552,20 @@ h1{{font-family:var(--f-r);font-size:44px;font-weight:600;margin-top:12px;letter
 <div class="wrap">
   <div class="eyebrow">AGENT BODY · PRESENTATION SUITE · v{APP_VER} · APACHE-2.0</div>
   <h1>Agent 本体体系化演讲与路演总览</h1>
-  <p class="sub">统一采用<b>「浅色纸基 · 地层剖面 · 工程蓝图」</b>视觉规范（零外部依赖 · 内联正交 SVG · <code>N/T</code> 联动讲稿 · <code>G</code> 目录 · <code>P/A/S/R</code> 步进动画 · Decks-as-Code 确定性生成）。基线实测：27 模块 · 43 工具 · 88 SPI · 347+ 测试全绿 · Bench v3.9（-99.23% Token · 质量 35.6→98.0 · 18/18 WaitEvent AWR）。</p>
+  <p class="sub">统一采用<b>「浅色纸基 · 地层剖面 · 工程蓝图」</b>视觉规范（零外部依赖 · 内联正交 SVG · <code>N/T</code> 联动讲稿 · <code>G</code> 目录 · <code>P/A/S/R</code> 步进动画 · Decks-as-Code 确定性生成）。基线实测：27 模块 · 43 工具 · 88 SPI · 微内核 {KERNEL_CNT} Crates · {CONTRIB_CNT} Contrib 扩展 · {DIST_CNT} 精简发行版 · 387 测试全绿 · Bench v3.9。</p>
   <div class="rule"></div>
-  <div class="sec-lbl">OVERVIEW DECKS · 旗舰全景总览版（Phase 57 全景对齐 · v1.1.0 Agent 本体现状）</div>
+  <div class="sec-lbl">OVERVIEW DECKS · 旗舰全景总览版（Phase 73 全景对齐 · v1.1.0 旗舰与微内核四发行版）</div>
   <div class="hero-grid">
     <a class="hero-card" href="presentation.html">
-      <div class="dc-top"><span>ROADSHOW · 路演总览版</span><span class="dc-meta">16 页 · 15~20 分钟</span></div>
+      <div class="dc-top"><span>ROADSHOW · 路演总览版</span><span class="dc-meta">17 页 · 15~20 分钟</span></div>
       <h2>Agent 本体对外路演版（presentation.html）</h2>
-      <p>面向投资人、CTO 与技术决策者：比较优势 → 脑体分离六大器官 → AOPCC 乐观-悲观并发 → 换脑不失忆 → 内生 AWR → Bench v3.9 帕累托双门禁与四赛道竞品实测。</p>
+      <p>面向投资人、CTO 与技术决策者：比较优势 → 脑体分离六大器官 → AOPCC 乐观-悲观并发 → 换脑不失忆 → 内生 AWR → PostgreSQL 式微内核与四大发行版 → Bench v3.9 与竞品实测。</p>
       <span class="dc-go">打开路演版 →</span>
     </a>
     <a class="hero-card clay" href="agent-body-deck.html">
-      <div class="dc-top"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">24 页 · 45~60 分钟</span></div>
+      <div class="dc-top"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">25 页 · 45~60 分钟</span></div>
       <h2>Agent 本体深度技术交流版（agent-body-deck.html）</h2>
-      <p>面向数据库内核与 AI Infra 架构师：27 模块 / 88 SPI、L1~L3 分层图谱、AOPCC 数学边界、新鲜度写穿、MeshEnvelope v1.0、双域审计自进化、Wait Events / AWR / ADDM 与五重确定性门禁。</p>
+      <p>面向数据库内核与 AI Infra 架构师：27 模块 / 88 SPI、L1~L3 分层图谱、AOPCC 数学边界、新鲜度写穿、MeshEnvelope v1.0、Wait Events/AWR/ADDM、kernel/contrib 分离架构与六重确定性门禁。</p>
       <span class="dc-go">打开交流版 →</span>
     </a>
   </div>

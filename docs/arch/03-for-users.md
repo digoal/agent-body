@@ -82,7 +82,16 @@ agent-body close session-20261118-01 --clean-temp
 
 ---
 
-## 三、三大接入方式全景
+## 三、三大接入方式与四大发行版选择
+
+### 0. 按场景选择发行版（Phase 70~73）
+
+| 发行版 | Release 二进制 | 运行依赖 | 适用场景与快速自检 |
+|---|---|---|---|
+| **个人旗舰版** | `agent-body` | SQLite + DuckDB (`libstdc++6`) + Web UI | 个人开发者 / 本机全功能伴侣（43 MCP + Web 大屏 + Benchmark v3.9） |
+| **政务云 AIOps 探针** | `agent-body-probe` (`6.5 MB`) | **纯 Rust（零 DuckDB / 零 C++）** | 服务器与政务云只读采集、mTLS/RLS、脱敏与 SIEM 审计（`agent-body-probe self-check`） |
+| **DBA 专项哨兵** | `agent-body-dba` (`6.1 MB`) | **纯 Rust（零 DuckDB / 零 C++）** | PostgreSQL / 达梦 / 人大金仓配置诊断与脱敏审计（`agent-body-dba self-check`） |
+| **纯微内核验证版** | `agent-body-kernel-minimal` (`3.8 MB`) | **纯 Rust（0 `contrib`）** | 验证微内核目录表、Hooks 与轨 B 沙盒最小基座（`agent-body-kernel-minimal self-check`） |
 
 ### 方式 1：CLI 命令行终端操作（人类最爱）
 适合日常快速巡检、排障与脚本编写：

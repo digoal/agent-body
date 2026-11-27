@@ -39,11 +39,12 @@
 | **Phase 67** | **全仓 `< 1000L` 模块化拆分与 `let _ = <= 15` 吞错治理** | 拆分全部 10 个 `>=1000L` 生产文件至 `<1000L`（`mcp_tools`/`workloads`/`multimodal_ext`/`config`/`metadata`/`knowledge_graph`/`cli_args`/`awr_engine`/`preflight`），修复 `prod_slice` 原始字符串漏检并收紧 `code_hygiene.py` 红线至 `>1000L = 0`、`let _ = <= 15` | `#49` | [roadmap-phase67.md](roadmap-phase67.md) | ✅ **已完成** |
 | **Phase 68** | **一等公民 SSoT 交叉对齐与防漂移门禁闭环** | `evolution_manifest.py` 新增 `Cargo.toml` 版本对齐、反引号源码路径存在性、`parity_api` 43 路由精确命中 `server.rs` 与全量演说/脚本 `Bench v3.9` 四重硬门禁；重构 4 套演说生成器动态读取快照；补齐 `src/web/mod.rs` 43 工具三端交叉契约单测并消除全部 SKILL/手册/路线图漂移 | `#50` | [roadmap-phase68.md](roadmap-phase68.md) | ✅ **已完成** |
 | **Phase 69** | **Top-5 高水位模块预防性拆分与 SQLite/DuckDB 共享 SPI 契约测试** | 将逼近 `1000L` 红线的 `client_gen` / `property_graph` / `multimodal` / `competitors` / `mcp_schemas` 全部拆至 `<700L`（留足演进余量）；新增 `tests/storage_spi_contract.rs` 对 SQLite 与 DuckDB 同套 12 域 SPI 契约等价验证 | `#51` | [roadmap-phase69.md](roadmap-phase69.md) | ✅ **已完成** |
+| **Phase 70~73** | **微内核 (`kernel/`) 与周边 (`contrib/`) 分离重构、政务云 AIOps/DBA 周边生态与三大精简发行版 (`distributions/`)** | 构建 `body-sdk` / `body-protocol` / `body-kernel` 纯机制微内核与防腐门禁；在 `contrib/` 落地 9 个标准五件套扩展（含 Linux/JVM/Nginx、PG/达梦/金仓、mTLS/RLS、合规脱敏、SIEM、轨 B CMDB 工单沙盒与 AIOps 证据包）；组装验证 `kernel-minimal` / `aiops-probe` / `dba-sentinel` | `#52` | [roadmap-phase70-73.md](roadmap-phase70-73.md) | ✅ **已完成** |
 
 ---
 
 ## 三、断点恢复指引
 
-1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与最近活跃路线图 [roadmap-phase67.md](roadmap-phase67.md)；
+1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与最近活跃路线图 [roadmap-phase70-73.md](roadmap-phase70-73.md)；
 2. 严禁全仓扫描 `docs/src_doc/archive/` 内已冻结的历史路线图；
 3. 每次代码/文档改动收口前执行 `make quality-gate && make test && make verify-decks` 与 `make sync-mirror` 校验零漂移。

@@ -145,6 +145,14 @@ classDiagram
 - **双向无损热迁移 (`StorageMigrator`)**：支持从 SQLite 到 PostgreSQL / DuckDB 的全量数据冷热迁移；
 - **增量同步管道 (`SyncPipeline`)**：基于 `sync_watermark` 高水位标记，以毫秒级时延将主库事务流水同步至分析型 DuckDB 副本，实现 OLTP 与 OLAP 物理负载隔离。
 
+### 4. 微内核 (`kernel/`) 与周边 (`contrib/`) 分离及四大发行版谱系 (Phase 70~73 · ISSUE #52)
+
+借鉴 PostgreSQL `src/backend/` + `contrib/` 插件体系，项目完成微内核与周边的物理和逻辑分离（详见 [20-plugin-microkernel-architecture-spec.md](../design_doc/20-plugin-microkernel-architecture-spec.md)）：
+
+- **纯机制微内核 (`kernel/`)**：由 `body-sdk`（6 大开放 Routine + 7 大 Lifecycle Hook + `body_module_magic!()`）、`body-protocol`（`.control.toml` 前缀隔离校验与 JSON-RPC 2.0 线协议）及 `body-kernel`（8 张 `body_cat_*` 目录表 + 5 张基表 + `ScopedSqlExecutor` + `KernelDispatcher` 四端自动派发 + 轨 B `OutOfProcessFdwAdapter` 超时强杀沙盒）组成，`make arch-check` 强制守卫零跨层依赖与零周边业务词污染；
+- **独立周边扩展 (`contrib/`)**：统一采用标准五件套（`Cargo.toml` + `.control.toml` + `sql/` `ext_<id>__*` + `body_module_magic!()` + `contrib/<ext>/tests/regress.rs`），已落地 9 个模块（`idx_fts_fuzzy`、`gov_placement`、`probe_db_engines` 及面向运维与政务云的 `probe_linux_ops`、`probe_jvm_middleware`、`hook_auth_mtls_rbac`、`hook_gov_compliance`、`hook_audit_siem`、`fdw_cmdb_ticket`）；
+- **四大发行版谱系 (`distributions/`)**：旗舰全功能版 `agent-body`（向后兼容 43 工具与 DuckDB/WebUI）与三大零 C++/零 DuckDB 精简发行版——`agent-body-kernel-minimal`（3.8 MB，0 `contrib`）、`agent-body-probe`（6.5 MB，政务云/AIOps 极简探针）及 `agent-body-dba`（6.1 MB，PG/达梦/人大金仓专项哨兵）。
+
 ---
 
 ### 2. 多 Agent 协作锁与互斥协调模型 (`CoordinationEngine`)

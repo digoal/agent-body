@@ -1,6 +1,6 @@
 # Agent Body — 官方使用手册 (User Manual)
 
-> **版本**: v1.1.0 (Rust Edition · Phase 64)  
+> **版本**: v1.1.0 (Rust Edition · Phase 64~73 · 旗舰版与微内核多发行版)  
 > **编写标准**: 遵循项目内置技能 [`skills/agent-body-doc-writer/SKILL.md`](../../skills/agent-body-doc-writer/SKILL.md)  
 > **更新时间**: 2026-11-27
 
@@ -20,7 +20,7 @@
 | **[02-core-concepts.md](02-core-concepts.md)** | **核心架构与设计哲学** | 三位一体架构、白名单深挖到底、黑名单浅层阻断、受限扫描与动态进程感知 | 架构师 / 开发者 | ✅ 已完成 |
 | **[03-cli-reference.md](03-cli-reference.md)** | **全量 CLI 命令行实战字典** | 涵盖 status, brief, place, asset, env, memory, links, coordination, ecosystem, mesh, demo, bench, feedback, audit, body 等全量 30 顶级命令 | 终端用户 / 运维 | ✅ 已完成 |
 | **[04-mcp-integration.md](04-mcp-integration.md)** | **Agent 接入与 MCP 协议指南** | JSON-RPC 2.0 stdio 协议、43 个原生工具规格、Cursor / Claude / Antigravity 配置 | Agent 开发者 | ✅ 已完成 |
-| **[05-daemon-and-watcher.md](05-daemon-and-watcher.md)** | **守护进程与 inotify 实时监听** | 300ms 防抖、写穿失效与删除级联、FreshnessReconciler 对账、定时巡检与 systemd 自启 | 系统运维 | ✅ 已完成 |
+| **[05-daemon-and-watcher.md](05-daemon-and-watcher.md)** | **守护进程与 inotify 实时监听** | 300ms 防抖、写穿失效与删除级联、FreshnessReconciler 对账、双频后台巡检（60s 进程轮询 + 1800s 深度巡检）与 systemd/LaunchAgent 自启 | 系统运维 | ✅ 已完成 |
 | **[06-advanced-features.md](06-advanced-features.md)** | **进阶特性指南** | 端口防撞、分层加权图谱与断链修复、MeshEnvelope 零信任协同、AOPCC 乐观租约、新鲜度探针与 TUI | 进阶开发者 / DBA | ✅ 已完成 |
 | **[07-troubleshooting.md](07-troubleshooting.md)** | **故障诊断与常见问题 (FAQ)** | SQLite 锁超时排查、FTS5 虚拟表修复、权限问题与高频报错处置 | 全体用户 | ✅ 已完成 |
 | **[08-web-dashboard.md](08-web-dashboard.md)** | **Web UI 2.0 与可视化监控大屏** | 昼夜双主题蓝图、9 大工作台、本体中枢、双域审计、力导向拓扑图、路演剧场、43/43 同步与实证基准 | 全体用户 / 架构师 | ✅ 已完成 |

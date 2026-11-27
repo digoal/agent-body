@@ -1,14 +1,19 @@
 # Agent Body — Agent 本体开发者全景开发指南 (面向开发者)
 
 > **目标受众**：Rust 研发工程师、开源贡献者、智能体插件与 MCP 工具生态开发者  
-> **定位准则**：**脑体分离架构下的 Agent 本体（宿主机具身底座，27 模块 / 43 MCP / 88 SPI / 27 表 · 0 `>1500L` 文件）**，严守三层命名兼容纪律（对外叙事为 Agent 本体，底层 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容）  
+> **定位准则**：**脑体分离架构下的 Agent 本体（宿主机具身底座，27 模块 / 43 MCP / 88 SPI / 27 表 · 0 `>1000L` 文件 · 微内核 3 crates / contrib 9 扩展 / 3 精简发行版）**，严守三层命名兼容纪律（对外叙事为 Agent 本体，底层 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容）  
 > **工程要求**：严格类型安全 · 零内存泄漏 · 100% 测试全绿门禁 · 工业级可调试性
 
 ---
 
 ## 一、源码工程组织全景图
 
-Agent Body 采用高内聚、低耦合的模块化设计。核心源码集中于 `src/` 目录：
+Agent Body 采用“微内核 (`kernel/`) + 独立周边 (`contrib/`) + 多发行版 (`distributions/`)”与旗舰主干 (`src/`) 并行兼容的模块化架构：
+
+- `kernel/`：纯机制微内核底座（`body-sdk` / `body-protocol` / `body-kernel`），受 `scripts/arch_boundary_check.py` 强制约束零业务词污染；
+- `contrib/`：9 个按需挂载的标准五件套扩展模块（`idx_fts_fuzzy` / `gov_placement` / `probe_db_engines` / `probe_linux_ops` / `probe_jvm_middleware` / `hook_auth_mtls_rbac` / `hook_gov_compliance` / `hook_audit_siem` / `fdw_cmdb_ticket`）；
+- `distributions/`：3 个零 C++/DuckDB 精简发行版装配入口（`kernel-minimal` / `aiops-probe` / `dba-sentinel`）；
+- `src/`：旗舰全功能版核心源码（27 个顶层模块）：
 
 ```mermaid
 graph TD
@@ -98,8 +103,13 @@ export PATH="/root/.cargo/bin:$PATH"
 # 1. 快速语法与类型检查 (耗时约 2~4 秒)
 cargo check
 
-# 2. 运行全量 252+ 项自动化测试套件
-cargo test
+# 2. 运行全工作区 387 项自动化测试套件（含旗舰版 349 + kernel 22 + contrib 12 + distributions 4）
+RUST_TEST_THREADS=1 cargo test --workspace
+
+# 2b. 单独校验微内核防腐边界与精简发行版自检
+make arch-check
+cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
+./target/release/agent-body-probe self-check && ./target/release/agent-body-dba self-check
 
 # 3. 运行特定模块的单元测试 (如测试 web 模块)
 cargo test web::tests
@@ -183,7 +193,7 @@ pub struct MyCustomProvider { /* 连接句柄 */ }
 impl StorageProvider for MyCustomProvider {
     fn init(&self) -> Result<()> { /* 创建 schema */ Ok(()) }
     fn provider_name(&self) -> &'static str { "custom" }
-    // 实现其余 72 个接口...
+    // 实现其余 86 个接口（共 88 个 SPI 方法）...
 }
 ```
 
@@ -206,6 +216,17 @@ pub fn check_custom_feature() -> CheckItem {
     }
 }
 ```
+
+---
+
+### How-To 4: 如何在 `contrib/` 新增一个标准五件套扩展？
+
+凡是行业、操作系统发行版、中间件或合规规则能力，均严禁写入 `kernel/`，必须按标准五件套落在 `contrib/<ext_name>/`：
+1. `Cargo.toml`：单向依赖 `agent-body-sdk`（与按需 `agent-body-protocol`），严禁依赖兄弟 `contrib/` 或根包；
+2. `<ext_name>.control.toml`：声明 `id`、`kind`（`compiled_crate` / `out_of_process`）、`table_prefix = "ext_<ext_name>__"` 与提供的 Routine/Hook 能力；
+3. `sql/<ext_name>--0.1.0.sql`：所有 `TABLE` 与 `INDEX` 命名必须严格以 `ext_<ext_name>__` 开头（由 `ScopedSqlExecutor` 拦截校验）；
+4. `src/lib.rs`：实现 `BodyExtension` Trait 并在 Crate 根调用 `body_module_magic!();`；
+5. `contrib/<ext_name>/tests/regress.rs`：在 `KernelRuntime` 上完成独立安装与端到端回归测试，并执行 `make arch-check && make quality-gate` 校验零边界越权。
 
 ---
 

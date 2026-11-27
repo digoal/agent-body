@@ -103,6 +103,7 @@
 - 🧬 **[17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)**：Agent 本体（宿主机具身底座）、跨大脑连续性接力、五维稳态生命体征与四级自治包络规格说明书（`BodyManifest`、`ContinuityCapsule` `<=300 tok`、`HomeostasisVitals`、`L0~L3` 权限边界与三层命名兼容契约）
 - 📈 **[18-wait-events-and-awr-perf-diagnostics-spec.md](docs/design_doc/18-wait-events-and-awr-perf-diagnostics-spec.md)**：本体内生等待事件（Wait Events）、`/proc/self` 零特权内核遥测、AWR 快照黄金基线差分与 ADDM 自优化设计规格说明书（6 大类 18 事件、`Body Time` 分解、8 档对数分位桶与 `L1` 内存/锁自调优）
 - 🧠 **[19-knowledge-network-and-graph-recall-spec.md](docs/design_doc/19-knowledge-network-and-graph-recall-spec.md)**：弱向量补偿、行业 Know-How 知识网络与全信号 Omni-RRF 多路融合召回规格说明书（Heading-Aware 切片 + 别名归一 + PMI 共现 + `qwen3.5:0.8b` 原文锚定因果抽取 + BM25/Fuzzy/Vector/Graph/Hierarchy/Links/Scalar 融合）
+- 🧩 **[20-plugin-microkernel-architecture-spec.md](docs/design_doc/20-plugin-microkernel-architecture-spec.md)**：借鉴 PostgreSQL 插件体系的纯微内核 `kernel/` 与周边 `contrib/` 分离架构规格说明书（8 张 `body_cat_*` 系统目录 + 7 大 Hook 插槽 + 6 大 Routine SPI + Epoch 顺风车脑体漂移同步 + 双轨加载 + 四大发行版组装）
 
 ---
 
@@ -118,7 +119,7 @@
 - 🛠️ **[02-for-developers.md](docs/arch/02-for-developers.md)**（面向研发工程师与贡献者）：
   - 源码 27 大模块全景职责与依赖拓扑速查（Phase 67 全量 `<1000L` 模块化，0 `>1000L` God File）；
   - 核心扩展三大 How-To（添加原生 MCP 工具、实现新存储后端 SPI、新增环境预检项）；
-  - 347+ 项自动化测试套件与本地开发流；
+  - **387 项全工作区自动化测试套件**（旗舰版 `349` + `kernel` `22` + `contrib` `12` + `distributions` `4`）与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
 - 🧭 **[03-for-users.md](docs/arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
   - Agent 本体核心心智模型与物理世界哨兵定位；
@@ -141,7 +142,7 @@
 - 🛠️ **[07-troubleshooting.md](docs/manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
 - 🌐 **[08-web-dashboard.md](docs/manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级Agent 本体拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
 - 🪝 **[09-hooks-integration.md](docs/manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
-- 🧪 **六重确定性质量门禁与 347+ 自动化测试**：`make quality-gate`（`evolution-check` 全仓一等公民防漂移/活跃文档与源码路径 0 断链 + `0` `unwrap`/`expect` + `>1000L` 文件清零 + 静默 `let _ =` 0/15 + 全仓零旧命名残留 + `18/18` `WaitEventId` 全埋点 + `-D warnings` 严格编译）+ `cargo test` 全绿；
+- 🧪 **六重确定性质量门禁与 387 项全工作区测试**：`make quality-gate`（`evolution-check` 全仓一等公民防漂移/活跃文档与源码路径 0 断链 + `arch-check` 微内核/周边隔离边界 + `0` `unwrap`/`expect` + `>1000L` 文件清零 + 静默 `let _ =` 0/15 + 全仓零旧命名残留 + `18/18` `WaitEventId` 全埋点 + `-D warnings` 全工作区严格编译）+ `RUST_TEST_THREADS=1 cargo test --workspace` 全绿；
 - 📊 **[10-benchmark-and-roi.md](docs/manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.9 与生产效能存证账本（`W1~W19` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ10` + `COMP-C1~C4` 竞品对标 + `PR-01~14` 溯源流水）
 
 ---
@@ -160,6 +161,13 @@ cargo build --release
 
 # 查看运行状态 (自动完成 `~/.agent-body` 数据初始化)
 ./target/release/agent-body status
+```
+
+### 2. 按需编译零 C++ 精简发行版 (Phase 70~73)
+```bash
+# 纯微内核最小版 (3.8M)、政务云 AIOps 探针 (6.5M)、DBA 哨兵 (6.1M)，零 DuckDB / 零 C++ 运行时
+cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
+./target/release/agent-body-probe self-check && ./target/release/agent-body-dba self-check
 ```
 
 ### 2. 常用 CLI 命令一览
@@ -213,7 +221,10 @@ cargo build --release
 - `presentation/` : 离线 HTML 演讲体系（含 `index.html` 总览、`presentation.html` 路演版、`agent-body-deck.html` 深度交流版及 `01~06` 6 讲 × 30 分钟单点说透专题）
 - `scripts/` : 辅助运维与演进脚本（架构清单防漂移检查、演讲生成与 Playwright 门禁、Ollama 向量补齐等）
 - `skills/` : 与本产品相关的对接 AI Agent 的 SKILL 包
-- `src/` : Rust 核心源代码
+- `src/` : Rust 旗舰版源代码
+- `kernel/` : 纯机制微内核底座（`body-sdk` / `body-protocol` / `body-kernel`）
+- `contrib/` : 独立周边扩展插件目录（标准五件套，按需挂载）
+- `distributions/` : 多发行版组装入口（`kernel-minimal` / `aiops-probe` / `dba-sentinel`）
 - `tests/` : 自动化集成测试与 Benchmark 评测套件
 - 根目录核心文件：
   - `README.md` : 项目总览、核心架构定位、快速上手指南、项目结构与 28 条顶层设计规约
@@ -293,7 +304,7 @@ cargo build --release
     - 在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误，保证服务 7×24 稳定运行。
 
 13. **测试驱动、零警告与五重确定性门禁**：
-    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 347+ 项自动化测试，含 `mesh` / `audit` / `body_awr` / `hooks` / `cli_e2e` 跨模块集成套件）。
+    - 新增功能必须在 `tests/` 或 `contrib/<ext>/tests/regress.rs` 内提供自动化测试（全工作区持续守卫 **387 项自动化测试**，含 `mesh` / `audit` / `body_awr` / `hooks` / `cli_e2e`、`kernel`、`contrib` 与 `distributions` 端到端集成套件）。
     - 任何提交前必须通过一键六重确定性门禁 `make quality-gate && make test`：`make evolution-check`（`Cargo.toml` 版本/架构计数/根目录核心文件自文档化/活跃文档与源码路径 0 断链/`parity_api` 43 路由精确命中/演说基准 0 漂移）、`make lint-panic`（生产代码 0 `unwrap`/`expect`）、`make lint-hygiene`（位置无关性、`>1000L` 文件清零、`let _ = <= 15` 且核心自治路径 `= 0`、`18/18` `WaitEventId` 埋点全覆盖、全仓 0 旧命名残留与非基准 `/root/new` 硬编码清零）、`make lint-strict`（本 crate `-D warnings` 严格编译 + 自动联动 `clippy`）及 `cargo test` 全绿；凡修改 `presentation/` 或演说生成脚本时，必须追加通过 `make verify-decks` Playwright 无头视觉与交互门禁。
     - MCP 工具与 CLI 子命令必须保持一一映射（Phase 44 已实现 43/43 同步）。
 

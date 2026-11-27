@@ -27,6 +27,9 @@ MICRO_CNT = _COUNTS["micro"]
 DQ_CNT = _COUNTS["dq"]
 COMP_CNT = _COUNTS["competitors"]
 PR_CNT = _COUNTS["pr_rules"]
+KERNEL_CNT = _COUNTS["kernel_crates"]
+CONTRIB_CNT = _COUNTS["contrib_exts"]
+DIST_CNT = _COUNTS["distributions"]
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "presentation"
@@ -548,7 +551,7 @@ def build_talk_01() -> None:
             "lead": "所有数据均来自本机实跑持久化存证 <b>run-6a0a4995-7302-4bc1-86b6-554a784a6156</b>，绝无手工估算。",
             "svg": svg_metrics_table(
                 [
-                    ("-99.22%", "17 负载总体 Token 节省", "650,073 → 5,065 tok"),
+                    ("-99.22%", "19 负载总体 Token 节省", "650,073 → 5,065 tok"),
                     ("99.8/100", "D6 上下文质量（+64.0）", "基线 35.8 → 赋能 99.8"),
                     ("92.1x", "有效信息密度提升", "Facts / 1k Tokens"),
                     ("10 / 10", "DQ1~DQ10 宿主与遥测门禁", "全维度核验"),
@@ -559,14 +562,14 @@ def build_talk_01() -> None:
                     ["DQ8", "本体五维稳态健康度与自治包络合规", "稳态 99.9/100 · L3 硬拦截", "100.0% (>=99.0%)", "PASS"],
                     ["DQ2", "本地 Ollama Embedding 向量覆盖率", "199 / 200 抽样已生成向量", "99.5% (>=99.0%)", "PASS"],
                     ["scene-7", "Web 路演剧场第 7 幕：换脑不失忆", "独立内存沙箱真引擎实跑", "零宿主污染 · 一键复位", "PASS"],
-                    ["cargo test", "全仓单元 + 集成测试（0 失败）", "347+ 单元与集成", "347+ passed / 0 failed", "PASS"],
+                    ["cargo test", "全工作区单元 + 集成测试（0 失败）", "387 项全工作区测试", "387 passed / 0 failed", "PASS"],
                 ],
                 [18, 150, 560, 960, 1290],
                 footnote="Benchmark v3.9 实机 SHA-256 存证 · 覆盖 W1~W19 / M1~M6 / DQ1~DQ10 / PR-01~14",
             ),
             "next": "从第 1 讲出发，接下来 5 讲我们将把这具身体的每一个器官彻底拆开讲透。",
             "script": (
-                "看这份刚跑出来的 `v3.9` 全绿基线：`W1` 到 `W18` 19 个负载全过，`M1` 到 `M6` 6 个微基准全过，`DQ1` 到 `DQ9` 全维度覆盖，`COMP-C1` 到 `C4` 4 个热门竞品对标全过。\n"
+                "看这份刚跑出来的 `v3.9` 全绿基线：`W1` 到 `W19` 19 个负载全过，`M1` 到 `M6` 6 个微基准全过，`DQ1` 到 `DQ10` 全维度覆盖，`COMP-C1` 到 `C4` 4 个热门竞品对标全过。\n"
                 "单看新增的 `W17`：换脑接力从裸奔重扫的 2400 tok 压到 175 tok，省了 92.7%，上下文质量从 37.0 直接拉满到 100.0，4 条关键接力事实全部命中。"
             ),
         },
@@ -620,7 +623,7 @@ def build_talk_01() -> None:
                 pillars=[
                     ("定位清澈", "不是多 Agent 编排器，也不是个人助理", "Agent Embodiment Substrate"),
                     ("边界克制", "严守递弱代偿：只做确定性感知、反射与连续态", "L0~L3 自治包络 · 0 越权"),
-                    ("实证说话", "三层兼容零断层，43/43 同构，347+ 测试全绿", "Bench v3.9 · -99.22% Token"),
+                    ("实证说话", "三层兼容零断层，43/43 同构，387 测试全绿", f"微内核:{KERNEL_CNT} / 周边:{CONTRIB_CNT} / 精简版:{DIST_CNT}"),
                 ],
                 open_question="开放思考：当你的团队同时使用 4 种以上 AI 编程客户端，谁来为它们共享的宿主机状态负责？",
                 next_talk="下一讲预告 → 第 02 讲：宿主机物理感官图谱与零污染扫盘（02-host-reality-graph.html）",

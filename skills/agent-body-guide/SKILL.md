@@ -44,8 +44,8 @@ Agent 本体采用 **Rust** 编写，原生单二进制交付，依赖极简、�
 | 依赖组件 | 规格要求 | 用途与说明 |
 |---|---|---|
 | **操作系统** | Linux (Ubuntu / Debian / CentOS / 统信 / 麒麟) | 深度利用 Linux `/proc` 文件系统与 `inotify` 机制 |
-| **C/C++ 工具链 (必选)** | GCC/G++ >= 9, CMake >= 3.15, make | SQLite 与 DuckDB bundled C/C++ 静态构建必须 |
-| **C++ 运行时 (必选)** | `libstdc++.so.6` | 极简 Alpine/Busybox 容器若无将报找不到动态库 |
+| **C/C++ 工具链 (旗舰版编译期)** | GCC/G++ >= 9, CMake >= 3.15, make | 旗舰版 DuckDB bundled 构建必须；精简发行版（`probe`/`dba`/`kernel-minimal`）无需 CMake/DuckDB |
+| **C++ 运行时 (`libstdc++.so.6`)** | 仅旗舰全功能版必选 | 精简发行版 `agent-body-probe` (6.5M) / `agent-body-dba` (6.1M) / `agent-body-kernel-minimal` (3.8M) **零 C++ 运行时依赖** |
 | **Rust 工具链 (编译期)** | Rust >= 1.88 (推荐 1.99+) + Cargo | 源码编译构建工具（`Cargo.lock` 依赖 `edition = "2024"` crate），安装于 `/root/.cargo/bin` |
 | **SQLite3 运行环境** | 内置 Bundled FTS5 (无需外装系统级动态库) | `rusqlite` 以 bundled 特性编译，单二进制自包含 |
 | **本地 Ollama (可选)** | `http://127.0.0.1:11434` (模型推荐 `nomic-embed-text` 或 `bge-m3`) | 提供语义向量混合检索（RRF）。若未安装自动降级为 FTS5 |
@@ -60,13 +60,15 @@ Agent 本体采用 **Rust** 编写，原生单二进制交付，依赖极简、�
 # 1. 确保 Rust 工具链路径生效
 export PATH="$HOME/.cargo/bin:$PATH"
 
-# 2. 编译生产优化二进制 (单二进制约 70MB，含 DuckDB 与 SQLite 列存/行存引擎)
+# 2. 编译生产优化二进制 (旗舰版含 DuckDB/WebUI；精简发行版零 DuckDB/C++)
 make build
-# 或: cargo build --release
+# 或按需编译精简发行版：
+cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
+./target/release/agent-body-probe self-check && ./target/release/agent-body-dba self-check
 
-# 3. 运行全量测试验证环境 (347+ 项单元/集成测试全部通过，1 项文档示例忽略)
-make test
-# 或: cargo test
+# 3. 运行全工作区 387 项自动化测试验证环境
+RUST_TEST_THREADS=1 make test
+# 或: RUST_TEST_THREADS=1 cargo test --workspace
 
 # 4. 运行环境与依赖完整性预检 (Preflight)
 agent-body preflight

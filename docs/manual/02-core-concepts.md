@@ -83,3 +83,13 @@ Agent 本体直接深入 Linux 内核 `/proc` 文件系统与 `sysinfo`：
 2. **开工回溯与完工自洁（Changes & Session Close）**：
    - Agent **开工时**：调用 `changes since`，查看上次离线以来宿主机发生的所有新增、删除与修改；
    - Agent **完工时**：调用 `close <session_id>`，自动清理临时测试垃圾，将工单总结自动沉淀为一条长期记忆。
+
+---
+
+## 6. 核心机制五：微内核 (`kernel/`) 与周边 (`contrib/`) 分离及四大发行版
+
+借鉴 PostgreSQL `src/backend/` + `contrib/` 插件体系，项目自 Phase 70~73 起落地了微内核与独立周边分离架构（详述见 [20-plugin-microkernel-architecture-spec.md](../design_doc/20-plugin-microkernel-architecture-spec.md)）：
+
+- **`kernel/` 纯机制微内核**：仅包含 `body-sdk` / `body-protocol` / `body-kernel` 3 个核心 crate（8 张 `body_cat_*` 目录表 + 6 大开放 Routine + 7 大 Lifecycle Hook + `OutOfProcessFdwAdapter` 轨 B 沙盒），严格 0 业务/行业词污染；
+- **`contrib/` 独立周边扩展**：9 个遵循标准五件套与 `ext_<id>__*` 前缀隔离的插件模块按需挂载；
+- **四大发行版谱系 (`distributions/`)**：在保留个人旗舰全功能版 `agent-body` 100% 向后兼容的同时，独立交付零 C++/DuckDB 依赖的 `agent-body-kernel-minimal`（`3.8M`）、`agent-body-probe`（`6.5M` 政务云 AIOps 探针）与 `agent-body-dba`（`6.1M` 数据库专项哨兵）。

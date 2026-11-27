@@ -58,6 +58,9 @@ MICRO_CNT = _COUNTS["micro"]
 DQ_CNT = _COUNTS["dq"]
 COMP_CNT = _COUNTS["competitors"]
 PR_CNT = _COUNTS["pr_rules"]
+KERNEL_CNT = _COUNTS["kernel_crates"]
+CONTRIB_CNT = _COUNTS["contrib_exts"]
+DIST_CNT = _COUNTS["distributions"]
 
 ROOT = Path(__file__).resolve().parent.parent
 PRES_DIR = ROOT / "presentation"
@@ -76,7 +79,7 @@ def build_roadshow_deck() -> None:
                 en_sub="Brain-Body Separation · Embodied Host Substrate",
                 subtitle1="大语言模型是可热切换的瞬态大脑，本系统是永驻宿主机的物理身体",
                 subtitle2="感官图谱 × 小脑反射 × 海马体接力 × 规约脊柱 × 代谢稳态 × 多体联邦",
-                spec_line="Rust 单二进制 · 27 模块 · 43 原生 MCP · 88 SPI · Bench v3.9 (-99.23% Token / 质量 +64.2)",
+                spec_line=f"Rust 单二进制 · {MOD_CNT} 模块 · {TOOL_CNT} MCP · 微内核:{KERNEL_CNT} 周边:{CONTRIB_CNT} 精简版:{DIST_CNT} · Bench v{BENCH_VER}",
                 strata=[
                     ("瞬态大脑层 · LLM Clients", "Antigravity / Claude / Cursor / Codex / Cron", "#EBF1EE", C_INK),
                     ("感官图谱层 · Host Reality", "/proc · Socket · L1/L2/L3 有向加权图谱 · CodeGraph", "#CFE0DC", C_INK),
@@ -86,12 +89,12 @@ def build_roadshow_deck() -> None:
                     ("安全审计与稳态 · AWR", "全链路脱敏抗投毒 · 双域审计 · Wait Events / AWR / ADDM", "#2E6373", C_PAPER),
                     ("多体联邦层 · Mesh v1.0", "HMAC-SHA256 防重放 · Peer Scopes · 沙盒收件箱", "#1E4B5A", C_PAPER),
                 ],
-                right_tag="地层剖面 · 工程蓝图 · 对外路演版 (16 页)",
+                right_tag="地层剖面 · 工程蓝图 · 对外路演版 (17 页)",
             ),
             "script": (
                 "各位好，今天用十五到二十分钟，向大家完整汇报一个从真实工程痛点里长出来的开源项目——Agent Body，中文我们叫它「Agent 本体」。\n"
                 "先看封面右边这七层地层剖面。最上面浅色的是瞬态大脑层，也就是我们每天切换使用的各种大模型和客户端；下面六层越往下越深、越稳固，从感官图谱、小脑反射、海马体接力、规约脊柱、安全审计与 AWR 稳态，一直到底层的跨机联邦，共同构成 Agent 永驻物理宿主机的「身体」。\n"
-                "这页底部的硬数字全部来自当前宿主机真机实测：Rust 单二进制交付，27 个顶层模块、43 个原生 MCP 工具、88 个存储 SPI 方法，在最新的 Benchmark v3.9 套件里，实现了 Prompt Token 节省 99.23%，同时上下文质量从 35.6 升至 98.0 (+64.2)。下面我们从头讲清，为什么这个东西非做不可。"
+                "而且在 Phase 70~73 我们完成了借鉴 PostgreSQL 插件体系的微内核重构：3 个纯机制微内核 crate、9 个标准五件套周边扩展、外加 3 款零 C++/零 DuckDB 精简发行版，全工作区 387 项测试与六重门禁全绿，Benchmark v3.9 实现 Token 节省 99.23%，上下文质量升至 98.0 (+64.2)。"
             ),
         },
         # 02 起源 · 比较优势
@@ -732,7 +735,7 @@ def build_roadshow_deck() -> None:
                             ("Parity 矩阵自动化守卫 100% 对齐", True),
                         ],
                         "foot_lbl": "访问方式",
-                        "foot_val": "agent-body web --port 8756",
+                        "foot_val": "agent-body web --port 8765",
                     },
                     {
                         "tag": "ROADSHOW · 7 大黄金剧目",
@@ -761,42 +764,105 @@ def build_roadshow_deck() -> None:
                 "而且 Web 里还内置了 7 幕路演演示剧场——全部是真实引擎在隔离沙盒里真跑，演完一键无痕复位。"
             ),
         },
-        # 14 工程交付账单与五重质量门禁
+        # 14 微内核与周边分离架构及四大发行版 (Phase 70~73 · ISSUE #52)
         {
-            "eyebrow": "13 · ENGINEERING BILL · ZERO-PANIC & QUALITY GATE",
-            "title": "工程账单：单二进制、位置无关与五重确定性门禁",
-            "lead": "用系统级数据库工程标准打造 AI 底座：<b>零外部运行时依赖、零生产 Panic、位置无关单二进制</b>，每次提交过五重硬门禁。",
+            "eyebrow": "13 · PLUGIN MICROKERNEL · KERNEL / CONTRIB / 4 EDITIONS",
+            "title": "微内核与周边分离：借鉴 PostgreSQL 插件体系与四大发行版",
+            "lead": "借鉴 PostgreSQL <b>src/backend/ + contrib/</b> 哲学：纯机制留在 <b>kernel/</b>，行业与运维能力全落 <b>contrib/</b>，按需装配四大发行版。",
+            "svg": svg_columns(
+                [
+                    {
+                        "tag": f"KERNEL/ · {KERNEL_CNT} CRATES",
+                        "title": "纯机制微内核底座",
+                        "accent": C_TEAL_D,
+                        "bg": C_TEAL_L,
+                        "lines": [
+                            "8 张 body_cat_* 系统目录",
+                            "6 大 Routine + 7 大 Hook",
+                            "ScopedSql 前缀沙盒隔离",
+                            ("make arch-check: 0 业务污染", True),
+                        ],
+                        "foot_lbl": "防腐边界",
+                        "foot_val": "单向依赖 · 0 行业/OS 硬编码",
+                    },
+                    {
+                        "tag": f"CONTRIB/ · {CONTRIB_CNT} 独立扩展",
+                        "title": "标准五件套与双轨沙盒",
+                        "accent": C_GREEN,
+                        "bg": C_GREEN_L,
+                        "lines": [
+                            "Linux / JVM / Nginx / PG·DM·金仓",
+                            "强制 401 mTLS/RLS + 合规脱敏",
+                            "RFC5424 SIEM + 轨 B CMDB 沙盒",
+                            ("body_module_magic! + ext_*__ 表", True),
+                        ],
+                        "foot_lbl": "隔离机制",
+                        "foot_val": "env_clear · 超时强杀 · 防注入",
+                    },
+                    {
+                        "tag": "DISTRIBUTIONS/ · 4 大发行版",
+                        "title": "旗舰兼容 + 零 C++ 裁剪",
+                        "accent": C_CLAY,
+                        "bg": C_CLAY_L,
+                        "lines": [
+                            "旗舰版 agent-body (43 工具/Web)",
+                            "政务云探针 probe (6.5 MB)",
+                            "数据库哨兵 dba (6.1 MB)",
+                            ("纯微内核 minimal (3.8M · 0 C++)", True),
+                        ],
+                        "foot_lbl": "动态链接检查",
+                        "foot_val": "probe / dba 零 libc++ 与 DuckDB",
+                    },
+                ],
+                bottom_banner=(
+                    "新运维/行业 GAP 不改内核 1 行业务代码，统一通过 contrib/ 挂载；个人开发用旗舰全功能，服务器/政务云用 6.5 MB 极简探针。",
+                    "ISSUE #52 · PHASE 70~73 VERIFIED",
+                    "teal",
+                ),
+            ),
+            "next": "微内核拆干净之后，整套代码库的工程账单与六重确定性门禁同样过硬。",
+            "script": (
+                "在最新 Phase 70~73 演进里，我们面对政务云 AIOps 等行业场景做了一次非常克制的架构升级——完全借鉴 PostgreSQL `src/backend/` 加 `contrib/` 的插件体系。\n"
+                "所有领域无关的纯粹机制留在 `kernel/` 三个 crate；所有操作系统、Java/Nginx、国产数据库、mTLS/RLS、脱敏、SIEM 和进程外 CMDB 沙盒，全部做成 `contrib/` 下的独立五件套扩展模块。\n"
+                "最终一套微内核底座衍生出四大发行版：开发机继续用全功能的 `agent-body`；上服务器和政务云用零 C++、零 DuckDB 运行时的 `agent-body-probe`（实测仅 6.5 MB）或 `agent-body-dba`（6.1 MB），既守住了安全合规，又彻底告别重型依赖。"
+            ),
+        },
+        # 15 工程交付账单与六重质量门禁
+        {
+            "eyebrow": "14 · ENGINEERING BILL · ZERO-PANIC & QUALITY GATE",
+            "title": "工程账单：单二进制、位置无关与六重确定性门禁",
+            "lead": "用系统级数据库工程标准打造 AI 底座：<b>零外部运行时依赖、零生产 Panic、位置无关单二进制</b>，每次提交过六重硬门禁。",
             "svg": svg_code_and_flow(
-                left_title="五重确定性质量门禁 (Makefile · 5 秒一键联检)",
+                left_title="六重确定性质量门禁 (Makefile · 一键联检)",
                 file_ref="Makefile & scripts/",
                 code_lines=[
-                    "# 一键全检：零漂移 + 零 Panic + 卫生 + 零警告 + 全测 + 演说验真",
-                    "$ make quality-gate && make test && make verify-decks",
+                    "# 一键全检：漂移 + 边界 + Panic + 卫生 + 编译 + 全测",
+                    "$ make quality-gate && RUST_TEST_THREADS=1 make test",
                     "",
-                    "1. evolution-check : 27模块 / 43MCP / 88SPI / 0断链 / 0 drift",
-                    "2. lint-panic      : 生产代码 0 处 .unwrap() / .expect()",
-                    "3. lint-hygiene    : 0 个>1500L文件 · let _= 43/50 · 0硬编码",
-                    "4. lint-strict     : cargo rustc -D warnings + clippy 零警告",
-                    "5. cargo test      : 347+ 单元/集成/Web/并发/E2E 全绿 PASS",
-                    "6. verify-decks    : Playwright 无头验真 9/9 HTML 0 溢出/重叠",
+                    "1. evolution-check : 27模块 / 43MCP / 3核 / 9插件 / 3版",
+                    "2. arch-check      : kernel 0 业务污染 / contrib 五件套",
+                    "3. lint-panic      : 生产代码 0 处 .unwrap() / .expect()",
+                    "4. lint-hygiene    : 0 个>1000L文件 · let _= 0/15 · 0硬编码",
+                    "5. lint-strict     : cargo clippy --workspace -D warnings",
+                    "6. workspace test  : 387 全工作区测试全绿 + Playwright",
                 ],
                 right_title="PRODUCTION RUNTIME BUDGET",
                 right_cards=[
-                    ("极致轻量化与低开销", "单次 CLI/MCP 常驻 <15MB；全功能守护 <90MB、空闲 CPU <0.5%", "SQLite WAL + PRAGMA shrink_memory + malloc_trim(0)"),
-                    ("100% 位置无关与跨平台", "搬移二进制至任意目录或 Docker 容器直接运行，PlatformProbe 抽象三端", "Linux 原生深化 + macOS / Windows 容错适配"),
-                    ("零重扫演进体系", "EVOLUTION_GUIDE.md + 自建 .codegraph/，新 Agent 2 轮精准锁触点", "27 模块 / 27 表 / 3 后端存储 (SQLite / PG / DuckDB)"),
+                    ("极致轻量化与多发行版体积", "旗舰 CLI <15MB / 全功能守护 <90MB；精简探针 probe 6.5MB (0 C++)", "SQLite WAL + 裁剪特性 / 零 DuckDB"),
+                    ("100% 位置无关与跨平台", "搬移二进制至任意目录或容器直接运行，PlatformProbe 抽象三端", "Linux 原生深化 + macOS / Windows 容错"),
+                    ("零重扫演进体系", "EVOLUTION_GUIDE.md + .codegraph/，新 Agent 2 轮精准锁触点", "27 模块 / 3 微内核 / 9 扩展 / 3 发行版"),
                 ],
             ),
             "next": "做工程最怕什么都想做结果沦为平庸。接下来亮出我们的架构克制清单。",
             "script": (
                 "很多 AI 基础设施演示很炫，一上生产就内存泄漏、依赖地狱。Agent Body 是按数据库内核的工程纪律打磨的。\n"
-                "左边是我们每次提交必过的五重确定性门禁：文档与代码计数零漂移、生产代码零 unwrap/expect 防 Panic、零编译期硬编码路径保证二进制搬到哪儿都能跑、严格零警告编译、320 多项自动化测试全绿，连今天这两份演说 HTML 都要过 Playwright 无头浏览器验真。\n"
-                "运行账单同样克制：单次 CLI 常驻不到 15 兆，全功能常驻守护不到 90 兆，空闲 CPU 低于 0.5%，单二进制零外部运行时依赖。"
+                "左边是我们每次提交必过的六重确定性门禁：文档与代码计数零漂移、微内核与周边防腐边界零越权、生产代码零 unwrap/expect 防 Panic、零>1000行超大文件、零警告 clippy 编译，外加全工作区 387 项测试与 9 份演说 HTML 的 Playwright 像素级验真。\n"
+                "运行账单同样克制：旗舰 CLI 常驻不到 15 兆，而针对服务器/政务云裁剪的 `agent-body-probe` 仅 6.5 MB 且完全零 C++ 运行时依赖。"
             ),
         },
-        # 15 架构克制 · 递弱代偿边界
+        # 16 架构克制 · 递弱代偿边界
         {
-            "eyebrow": "14 · ARCHITECTURAL RESTRAINT · ANTI-FRAMEWORK CREEP",
+            "eyebrow": "15 · ARCHITECTURAL RESTRAINT · ANTI-FRAMEWORK CREEP",
             "title": "递弱代偿：明确「做什么」与「坚决不做什么」",
             "lead": "越基础的能力越被深度依赖。升维为 Agent 本体，绝不意味着膨胀成臃肿的全栈 Agent Runtime。",
             "svg": svg_matrix_2x2(
@@ -850,31 +916,31 @@ def build_roadshow_deck() -> None:
             ),
             "next": "最后，用一页看清 Agent Body 的终局愿景，以及 3 行命令 5 分钟接入方式。",
             "script": (
-                "项目走到 Phase 50，我越发觉得克制比加功能更难、也更重要。王东岳先生讲「递弱代偿」：越基础、越纯粹的底层能力，越不可替代。\n"
-                "上面两格是我们死磕到底的护城河：宿主机物理感官、小脑防撞反射、跨大脑连续性、双域审计、内生 AWR 稳态和轻量联邦。\n"
-                "下面两格是我们明确写进规约 #2 的「坚决不做」清单：不内置业务 LLM 循环、不替代多 Agent 编排框架、不造容器沙箱和密钥库、不造重型 Raft。正因为边界极度清晰，它才能零冲突地嵌入任何 AI 开发工作流。"
+                "项目演进到 Phase 73，我越发觉得克制比加功能更难、也更重要。王东岳先生讲「递弱代偿」：越基础、越纯粹的底层能力，越不可替代。\n"
+                "上面两格是我们死磕到底的护城河：宿主机物理感官、小脑防撞反射、跨大脑连续性、双域审计、内生 AWR 稳态，以及微内核与周边插件的清晰分层。\n"
+                "下面两格是我们明确写进规约 #2 的「坚决不做」清单：不内置业务 LLM 循环、不替代多 Agent 编排框架、不造容器沙箱和密钥库、不造重型 Raft。正因为边界极度清晰，它才能零冲突地嵌入任何 AI 开发与运维工作流。"
             ),
         },
-        # 16 终局与 5 分钟上手
+        # 17 终局与 5 分钟上手
         {
-            "eyebrow": "15 · VISION & QUICK START",
+            "eyebrow": "16 · VISION & QUICK START",
             "title": "终局：面向智能体时代的下一代 OS 原生具身底座",
-            "lead": "今天它是外挂在 Linux 宿主机上的 Rust 单二进制；明天，它所定义的<b>感官、反射、连续性与稳态原语</b>，将成为操作系统的标配。",
+            "lead": "今天它是外挂在宿主机上的模块化微内核家族；明天，它所定义的<b>感官、反射、连续性与稳态原语</b>，将成为操作系统的标配。",
             "svg": svg_closing(
                 kicker="NEXT-GEN OS EMBODIED SUBSTRATE FOR AI AGENTS",
                 headline="让每个瞬态大脑，一着陆就拥有耳聪目明的物理身体",
                 pillars=[
-                    ("1. 编译与启动（1 分钟）", "cargo build --release && make restart", "零外部依赖 · 自动初始化 ~/.agent-body/body.db"),
+                    ("1. 编译与自检（1 分钟）", "cargo build --release -p agent-body-probe", "旗舰全功能 / probe(6.5M) / dba(6.1M) / minimal(3.8M)"),
                     ("2. 接入大脑（2 分钟）", "挂载 MCP (agent-body mcp) + 生成 Hooks", "Antigravity / Claude Code / Cursor 即刻生效"),
-                    ("3. 真机验证（2 分钟）", "agent-body bench run --suite full", "agent-body web --port 8756 体验 7 幕路演与 AWR"),
+                    ("3. 真机验证（2 分钟）", "agent-body bench run --suite full", "agent-body web --port 8765 体验 7 幕路演与 AWR"),
                 ],
-                open_question="深度技术架构请移步「深度交流版 agent-body-deck.html (24 页)」与「6 讲 × 30 分钟专题系列 index.html」",
+                open_question="深度技术架构请移步「深度交流版 agent-body-deck.html (25 页)」与「6 讲 × 30 分钟专题系列 index.html」",
                 next_talk="开源仓库：github.com/digoal/agent-body · 全套手册见 docs/manual/01~10",
             ),
             "script": (
                 "最后收个尾。操作系统过去五十年是为人类设计的——提供文件系统、进程树和终端；但在智能体时代，操作系统需要一层原生面向 AI 大脑的具身底座，替大脑管好物理感官、痛觉反射、工作态连续性和代谢稳态。\n"
-                "Agent Body 已经用开源代码把这条路跑通了。只需要三步、五分钟：编译启动守护、挂载 MCP 与 Hooks、跑一遍全量 Benchmark 和 Web 指挥舱，你就能亲眼看到它如何替你的 Agent 省下 99% 探索 Token 且让回答质量大幅跃升。\n"
-                "如果你想深入看 27 个模块、AOPCC 数学边界和 AWR 内核实现，欢迎打开旁边的 24 页深度技术交流版，或者 6 讲专题系列。感谢聆听，欢迎交流拍砖！"
+                "Agent Body 已经用开源代码把这条路跑通了，并且进化出了纯微内核加可插拔周边的四大发行版家族。只需要三步、五分钟：按需编出旗舰版或 6.5MB 零依赖探针、挂载 MCP 与 Hooks、跑一遍全量 Benchmark 和 Web 指挥舱，你就能亲眼看到它如何替你的 Agent 省下 99% 探索 Token 且让回答质量大幅跃升。\n"
+                "如果你想深入看 27 个模块、微内核 SPI/Hook 分离、AOPCC 数学边界和 AWR 内核实现，欢迎打开旁边的 25 页深度技术交流版，或者 6 讲专题系列。感谢聆听，欢迎交流拍砖！"
             ),
         },
     ]
