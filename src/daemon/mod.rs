@@ -20,12 +20,12 @@ impl Drop for RunningFlagGuard {
     }
 }
 
-pub struct StewardDaemon {
+pub struct BodyDaemon {
     config: Config,
     storage: Storage,
 }
 
-impl StewardDaemon {
+impl BodyDaemon {
     pub fn new(config: Config, storage: Storage) -> Self {
         Self { config, storage }
     }
@@ -290,7 +290,7 @@ impl StewardDaemon {
                         crate::body::WaitEventId::IdleDaemonLoop,
                         idle_wait_start.elapsed().as_micros() as u64,
                     );
-                    println!("\n[Steward] 收到停机信号，正在保存状态并安全退出...");
+                    println!("\n[Agent Body] 收到停机信号，正在保存状态并安全退出...");
                     break;
                 }
             }

@@ -58,7 +58,7 @@ graph TD
 | `src/memory/` | 跨会话长期记忆、三方适配与 Omni-RRF 多路融合检索 | `MemoryManager`, `BuiltinLocalProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
 | `src/links/` | 分层加权依赖关系网与爆炸半径推演 | `LinksEngine`, `CodeGraphBridge`, `LinkRepairer` |
 | `src/scanner/` | 资产扫描、全链路脱敏、抗投毒、多模态深度解析（L1A+L2）、原子 Know-How 抽取与 Omni-RRF 检索 | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `MultimodalExtractor`, `KnowHowExtractor`, `AssetSearchEngine`, `OllamaAnnotator` |
-| `src/api/` | 43 个原生 MCP 工具服务端（含 `core`/`dev`/`ops`/`full` Schema 减税档位） | `McpServer`, `AgentHookEngine`, `StewardResponse` |
+| `src/api/` | 43 个原生 MCP 工具服务端（含 `core`/`dev`/`ops`/`full` Schema 减税档位） | `McpServer`, `AgentHookEngine`, `BodyResponse` |
 | `src/benchmark/` | 三轨实证 Benchmark v3.9 (`W1~W19`/`M1~M6`/`DQ1~DQ10`/`PR-01~14`) | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
 | `src/feedback/` | 使用反馈总账、新鲜度对账与五点对比自进化探针 | `FeedbackEngine`, `FreshnessReconciler`, `SelfEvolutionProbeEngine` |
 | `src/demo/` | 路演沙盒引擎与 ROI 核算 | `DemoEngine`, `DemoExecutionResult`, `RoiReport` |
@@ -71,7 +71,7 @@ graph TD
 | `src/preflight/` | 运行时依赖预检与降级保护 | `PreflightChecker`, `PreflightReport`, `CheckItem` |
 | `src/brief/` | 自适应情境上下文组装器与 AOPCC 乐观租约 | `BriefAssembler`, `BriefQuality`, `OptimisticLeaseEngine` |
 | `src/changes/` | 宿主变更历史与开工回溯摘要 | `ChangesEngine` |
-| `src/daemon/` | 常驻守护进程与后台巡检调度 | `StewardDaemon`, `BackgroundScheduler` |
+| `src/daemon/` | 常驻守护进程与后台巡检调度 | `BodyDaemon`, `BackgroundScheduler` |
 | `src/env/` | 内核 `/proc` 进程采集、端口防撞与安全 GC | `EnvCollector`, `PortChecker`, `HostGarbageCollector` |
 | `src/tui/` | 交互式终端全景实时看板 | `TuiDashboard` |
 | `src/watcher/` | `inotify` 文件监听与 300ms 防抖流水线 | `FileWatcher`, `ChangeHandler` |
@@ -157,7 +157,7 @@ cargo build --release
 
 ### How-To 2: 如何扩展一个新的 StorageProvider 存储后端？
 
-大管家通过 `StorageProvider` Trait 抽象底层持久化。扩展新存储引擎（如 MySQL 或 RocksDB）流程：
+Agent 本体通过 `StorageProvider` Trait 抽象底层持久化。扩展新存储引擎（如 MySQL 或 RocksDB）流程：
 
 ```mermaid
 sequenceDiagram

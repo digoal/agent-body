@@ -94,7 +94,7 @@ def build_tech_deck() -> None:
                 ],
                 takeaway=(
                     "核心判据：LLM 是无状态算力大脑，宿主机需要一层永驻的、确定性的具身操作系统抽象。",
-                    "参见 docs/idea_doc/04-from-steward-to-agent-body.md",
+                    "参见 docs/idea_doc/04-agent-body-philosophy.md",
                 ),
             ),
             "next": "确立了脑体分离之后，整套系统的分层拓扑和存储底座是如何组织的？",

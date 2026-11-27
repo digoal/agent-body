@@ -33,7 +33,7 @@ impl BackgroundScheduler {
         Self { storage }
     }
 
-    /// 执行一次管家深度环境巡检与事实图谱同步循环
+    /// 执行一次Agent 本体深度环境巡检与事实图谱同步循环
     pub fn run_inspection_cycle(&self) -> Result<SchedulerCycleReport> {
         let t0 = std::time::Instant::now();
         // 1. 动态进程与端口采集

@@ -1,6 +1,6 @@
 # 03 — 功能规格（Feature Spec）· 三模块解耦版
 
-> Agent Host Steward 产品设计 · 交付件 3/7  
+> Agent Body 产品设计 · 交付件 3/7  
 > 版本: v2.0 (模块化体系升级) · 更新: 2026-11-15  
 > 战略原则: **事实图谱为基石护城河 · 偏好规约为协作灵魂 · 记忆模块开放插拔成熟生态**
 
@@ -8,7 +8,7 @@
 
 ## 一、产品名称与定位
 
-**产品名**: `agent-steward` (Agent Host Steward / 宿主环境大管家)
+**产品名**: `agent-body` (Agent Body / Agent 本体)
 
 **核心使命**: 驻留在 AI Agent 宿主机中的轻量级系统认知底座。它彻底消除了 Agent 对宿主机物理世界的“全盲”状态，建立机器真实世界的客观事实图谱；同时规约用户的代码与文件放置偏好；并通过可插拔标准无缝集成成熟的跨会话记忆生态。
 
@@ -19,7 +19,7 @@
 ## 二、三模块核心划分与边界
 
 ```
-agent-steward
+agent-body
 │
 ├── 1. 事实图谱模块 (Host Reality Graph - 核心护城河)
 │   ├── capability/       # 软件与 CLI 工具能力语义注解库 (如 pdftotext, ffmpeg, jq)
@@ -52,7 +52,7 @@ agent-steward
   2. 匹配内置的“系统工具能力知识库”，为工具打上功能语义标签（如 `pdf-text-extract`, `image-convert`, `video-transcode`, `json-query`, `fast-search`, `network-sniff`）；
   3. 提供最佳实践命令行模板与避坑提示（例如 `pdftotext -layout input.pdf output.txt` 保持原样排版）。
 - **查询接口契约**：
-  - `steward_fact_query(type="capability", intent="<自然语言意图>")`
+  - `body_fact_query(type="capability", intent="<自然语言意图>")`
   - 返回：推荐工具名、二进制物理绝对路径、已安装版本号、推荐调用参数、同类备选工具列表。
 
 #### 1.2 运行时进程与网络拓扑 (Process & Net Graph)
@@ -62,8 +62,8 @@ agent-steward
   2. 自动过滤内核底噪（`kworker`, `systemd-journald` 等），专注应用级工作负载；
   3. 端口全景映射：提供端口占用状态、PID、可执行文件完整命令行、工作目录、运行时间、启动者。
 - **查询接口契约**：
-  - `steward_port_check(port=<int>)`
-  - `steward_env_processes(filter="<keyword>", include_system=false)`
+  - `body_port_check(port=<int>)`
+  - `body_env_processes(filter="<keyword>", include_system=false)`
 
 #### 1.3 系统自动化拓扑 (Systemd & Cron Topology)
 - **业务价值**：消除“后台神秘脚本干扰”，防止改动通用配置导致后台生产服务挂掉。
@@ -83,7 +83,7 @@ agent-steward
 - **核心功能**：
   1. inotify 监听核心代码与配置目录，带 300ms 智能防抖；
   2. 审计近期变更：过去 1 小时/24 小时哪些文件被改动；
-  3. 爆炸半径分析（`steward_links_impact`）：输入某公共模块，多跳追溯下游引用依赖链。
+  3. 爆炸半径分析（`body_links_impact`）：输入某公共模块，多跳追溯下游引用依赖链。
 
 ---
 
@@ -96,7 +96,7 @@ agent-steward
   2. **命名范式规约**：强制遵循项目命名规范（蛇形命名、小写下划线、版本号格式等）；
   3. **安全隔离准则**：临时实验必须放 `/root/new/tmp/` 并具备 TTL 回收机制；敏感凭据严格阻断进入公共资产。
 - **接口契约**：
-  - `steward_placement_suggest(type="<type>", name="<name>", intent="<intent>")`
+  - `body_placement_suggest(type="<type>", name="<name>", intent="<intent>")`
 
 #### 2.2 用户工程与工作流习惯 (Conventions)
 - **工具链偏好**：例如在已有 `.codegraph` 项目中优先使用 `codegraph` 工具而非 `grep`；
@@ -106,14 +106,14 @@ agent-steward
 #### 2.3 纠偏自演化学习机制 (Feedback Learner)
 - **核心机制**：
   - 当检测到 Agent 产生的文件被人工移动或覆盖时，触发纠偏分析；
-  - 提炼新偏好规则并入库，随着协作越深入，大管家越懂用户的组织习惯。
+  - 提炼新偏好规则并入库，随着协作越深入，Agent 本体越懂用户的组织习惯。
 
 ---
 
 ### 模块 3：记忆与上下文适配层 (Memory & Context) —— 【开放可插拔生态】
 
 #### 3.1 战略原则：生态共赢、绝不重复造轮子
-市面上已有成熟的开源记忆项目（Mem0、Letta、Zep、PowerContext 等），大管家不把精力浪费在重新发明认知心理学长程记忆模型上，而是**定义开放的通用接口，做统一的接入中枢**。
+市面上已有成熟的开源记忆项目（Mem0、Letta、Zep、PowerContext 等），Agent 本体不把精力浪费在重新发明认知心理学长程记忆模型上，而是**定义开放的通用接口，做统一的接入中枢**。
 
 #### 3.2 抽象接口 SPI (Service Provider Interface)
 - `search(query, limit, filter)`: 跨会话搜索过往决策、排障经验、用户画像；
@@ -244,7 +244,7 @@ rules:
 
 #### 2.4 白名单/黑名单与颗粒度分级策略（Granularity Policy）
 
-大管家纳管宿主机一切对象，**坚决杜绝“一股脑全生成对象元数据”**：
+Agent 本体纳管宿主机一切对象，**坚决杜绝“一股脑全生成对象元数据”**：
 
 ```
                     ┌─────────────────────────┐
@@ -300,7 +300,7 @@ PlacementRule:
 
 #### 3.3 内置规范策略与决策逻辑
 
-大管家为 Agent 提供清晰的宿主机空间拓扑导引：
+Agent 本体为 Agent 提供清晰的宿主机空间拓扑导引：
 
 ```
                            【Agent 产生新对象请求】
@@ -534,7 +534,7 @@ NodeRef:
 |------|------|----------|
 | MCP | Model Context Protocol over stdio/SSE | Agent 框架直接调用（首选） |
 | REST | HTTP JSON over Unix socket (默认) 或 TCP | 脚本、自动化、第三方集成 |
-| CLI | `steward` 命令行工具 | 人工交互、调试、cron 脚本 |
+| CLI | `agent-body` 命令行工具 | 人工交互、调试、cron 脚本 |
 
 三种接口是同一套后端逻辑的不同入口，保证行为一致。
 
@@ -543,99 +543,99 @@ NodeRef:
 ```yaml
 mcp_tools:
   # Placement (放置建议)
-  - steward_placement_suggest
-  - steward_placement_rules
+  - body_placement_suggest
+  - body_placement_rules
 
   # Assets
-  - steward_asset_search
-  - steward_asset_register
-  - steward_asset_get
-  - steward_asset_scan
+  - body_asset_search
+  - body_asset_register
+  - body_asset_get
+  - body_asset_scan
 
   # Environment
-  - steward_env_system
-  - steward_env_services
-  - steward_env_service
-  - steward_env_processes
-  - steward_env_packages
-  - steward_env_network
-  - steward_env_crons
-  - steward_env_snapshot
+  - body_env_system
+  - body_env_services
+  - body_env_service
+  - body_env_processes
+  - body_env_packages
+  - body_env_network
+  - body_env_crons
+  - body_env_snapshot
 
   # Memory
-  - steward_memory_add
-  - steward_memory_search
-  - steward_memory_task_create
-  - steward_memory_task_update
-  - steward_memory_task_list
+  - body_memory_add
+  - body_memory_search
+  - body_memory_task_create
+  - body_memory_task_update
+  - body_memory_task_list
 
   # Changes
-  - steward_changes_since
-  - steward_changes_summary
-  - steward_changes_query
+  - body_changes_since
+  - body_changes_summary
+  - body_changes_query
 
   # Links
-  - steward_links_query
-  - steward_links_dependents
+  - body_links_query
+  - body_links_dependents
 
   # Meta
-  - steward_status           # 大管家自身状态
-  - steward_brief            # 一键获取当前上下文简报（综合记忆+资产+环境+变更+进程）
+  - body_status           # Agent 本体自身状态
+  - body_brief            # 一键获取当前上下文简报（综合记忆+资产+环境+变更+进程）
 ```
 
-其中 `steward_brief` 是最重要的 MCP 工具 —— Agent 新建会话时调用一次，就能拿到完整的上下文简报，包含：最近任务进展、环境与进程状态、上次会话以来的变更、需要注意的事项。
+其中 `body_brief` 是最重要的 MCP 工具 —— Agent 新建会话时调用一次，就能拿到完整的上下文简报，包含：最近任务进展、环境与进程状态、上次会话以来的变更、需要注意的事项。
 
 #### 7.3 CLI 命令结构
 
 ```bash
-steward                          # 启动 daemon
-steward status                   # 查看 daemon 状态
-steward stop                     # 停止 daemon
+agent-body                          # 启动 daemon
+agent-body status                   # 查看 daemon 状态
+agent-body stop                     # 停止 daemon
 
 # Placement
-steward place suggest --type script --name sec_scraper --intent "美股抓取"
-steward place rules              # 查看放置规范
+agent-body place suggest --type script --name sec_scraper --intent "美股抓取"
+agent-body place rules              # 查看放置规范
 
 # Assets
-steward assets scan /root/new/   # 扫描目录 (应用白黑名单颗粒度)
-steward assets search "财报扫描脚本"
-steward assets health            # 健康检查
-steward assets register /path --tags "tool,python" --desc "xxx" --owner "user:digoal" --security "internal"
+agent-body assets scan /root/new/   # 扫描目录 (应用白黑名单颗粒度)
+agent-body assets search "财报扫描脚本"
+agent-body assets health            # 健康检查
+agent-body assets register /path --tags "tool,python" --desc "xxx" --owner "user:digoal" --security "internal"
 
 # Environment
-steward env snapshot             # 生成快照
-steward env services             # 列出服务
-steward env processes            # 查看活跃动态进程
-steward env service postgresql   # PG 详情
-steward env diff --last          # 与上次快照对比
+agent-body env snapshot             # 生成快照
+agent-body env services             # 列出服务
+agent-body env processes            # 查看活跃动态进程
+agent-body env service postgresql   # PG 详情
+agent-body env diff --last          # 与上次快照对比
 
 # Memory
-steward memory search "DuckDB 文章"
-steward memory write --type decision "选用 FastAPI 做 API 层"
-steward memory tasks             # 列出进行中的任务
-steward memory maintain          # 手动触发记忆维护
+agent-body memory search "DuckDB 文章"
+agent-body memory write --type decision "选用 FastAPI 做 API 层"
+agent-body memory tasks             # 列出进行中的任务
+agent-body memory maintain          # 手动触发记忆维护
 
 # Changes
-steward changes since --last-session
-steward changes summary --days 7
-steward changes watch start      # 启动文件监听
-steward changes watch stop
+agent-body changes since --last-session
+agent-body changes summary --days 7
+agent-body changes watch start      # 启动文件监听
+agent-body changes watch stop
 
 # Links
-steward links query /root/new/shared_proj/earnings_scan/ --depth 2
-steward links visualize /root/new/src/duckdb/ --format mermaid
+agent-body links query /root/new/shared_proj/earnings_scan/ --depth 2
+agent-body links visualize /root/new/src/duckdb/ --format mermaid
 
 # Meta
-steward brief                    # 一键上下文简报
-steward config                   # 查看/编辑配置
-steward export                   # 导出所有数据
+agent-body brief                    # 一键上下文简报
+agent-body config                   # 查看/编辑配置
+agent-body export                   # 导出所有数据
 ```
 
 ---
 
 ### 模块 8：Scheduler（内部调度器）
 
-大管家自身的定时任务：
+Agent 本体自身的定时任务：
 
 | 任务 | 默认频率 | 说明 |
 |------|----------|------|
@@ -665,7 +665,7 @@ MVP 只做下面这些，保证核心价值可验证：
 | API | MCP + CLI | REST (P1) |
 | Scheduler | 环境快照 (每天) | 其他定时任务 |
 
-**MVP 的核心价值主张**: Agent 终于能在新会话中一次调用 `steward brief`，就知道"我处于什么环境 + 有哪些对象与活跃任务 + 新建资产应该放哪里"。
+**MVP 的核心价值主张**: Agent 终于能在新会话中一次调用 `agent-body brief`，就知道"我处于什么环境 + 有哪些对象与活跃任务 + 新建资产应该放哪里"。
 
 ---
 

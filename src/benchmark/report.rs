@@ -42,7 +42,7 @@ pub struct BenchmarkReportPayload {
     #[serde(default)]
     pub competitor_matrix: Vec<CompetitorCapabilityRow>,
     pub total_baseline_tokens: i64,
-    pub total_steward_tokens: i64,
+    pub total_body_tokens: i64,
     pub overall_token_savings_pct: f64,
     pub overall_speedup_factor: f64,
     #[serde(default)]
@@ -174,7 +174,7 @@ impl BenchmarkReportPayload {
             competitors,
             competitor_matrix,
             total_baseline_tokens: rec.total_baseline_tokens,
-            total_steward_tokens: rec.total_steward_tokens,
+            total_body_tokens: rec.total_body_tokens,
             overall_token_savings_pct: rec.overall_token_savings_pct,
             overall_speedup_factor: rec.overall_speedup_factor,
             geometric_mean_speedup,
@@ -209,9 +209,9 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
         md,
         "| **Prompt Token 消耗 (D1)** | {} tok | {} tok | **-{:.2}%** ({} tok saved) |",
         report.total_baseline_tokens,
-        report.total_steward_tokens,
+        report.total_body_tokens,
         report.overall_token_savings_pct,
-        report.total_baseline_tokens.saturating_sub(report.total_steward_tokens)
+        report.total_baseline_tokens.saturating_sub(report.total_body_tokens)
     )?;
     writeln!(
         md,
@@ -260,12 +260,12 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
                 w.id,
                 w.title,
                 w.baseline_tokens,
-                w.steward_tokens,
+                w.body_tokens,
                 w.token_savings_pct,
                 w.baseline_quality_score,
-                w.steward_quality_score,
+                w.body_quality_score,
                 w.quality_delta,
-                w.steward_facts_hit,
+                w.body_facts_hit,
                 w.required_facts_total,
                 w.info_density_gain,
                 w.speedup_factor,
@@ -329,10 +329,10 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
                 c.competitor_name,
                 c.competitor_metric_value,
                 c.competitor_elapsed_us,
-                c.steward_metric_value,
-                c.steward_elapsed_us,
+                c.body_metric_value,
+                c.body_elapsed_us,
                 c.competitor_quality_score,
-                c.steward_quality_score,
+                c.body_quality_score,
                 c.quality_delta,
                 c.info_density_gain,
                 c.token_savings_pct,
@@ -346,7 +346,7 @@ pub fn render_markdown_report(report: &BenchmarkReportPayload) -> Result<String>
 }
 
 pub fn render_csv_report(report: &BenchmarkReportPayload) -> Result<String> {
-    let mut csv = String::from("kind,id,name,baseline_tokens,steward_tokens,token_savings_pct,baseline_elapsed_us,steward_elapsed_us,speedup_factor,hazards_intercepted,blocked_noise,passed\n");
+    let mut csv = String::from("kind,id,name,baseline_tokens,body_tokens,token_savings_pct,baseline_elapsed_us,body_elapsed_us,speedup_factor,hazards_intercepted,blocked_noise,passed\n");
     for w in &report.workloads {
         writeln!(
             csv,
@@ -354,10 +354,10 @@ pub fn render_csv_report(report: &BenchmarkReportPayload) -> Result<String> {
             w.id,
             w.name,
             w.baseline_tokens,
-            w.steward_tokens,
+            w.body_tokens,
             w.token_savings_pct,
             w.baseline_elapsed_us,
-            w.steward_elapsed_us,
+            w.body_elapsed_us,
             w.speedup_factor,
             w.hazards_intercepted,
             w.blocked_noise,

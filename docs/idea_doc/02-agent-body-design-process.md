@@ -1,4 +1,4 @@
-# 我设计了一个 Agent 宿主机大管家，这是全部思考过程
+# 我设计了一个 Agent 宿主机Agent 本体，这是全部思考过程
 
 
 
@@ -24,7 +24,7 @@
 
 **不管的：** 不管 Agent 的推理过程、不管对话内容本身（那是 Agent 框架的事）、不管远端服务器（只管本机）、不管文件内容索引（那是 RAG 的事，我只管元数据和路径）。
 
-这条边界花了我最多时间。因为"环境大管家"这四个字太容易失控——你可以把操作系统的每个角落都纳进来。但一旦失控，就永远做不完。
+这条边界花了我最多时间。因为"Agent 本体"这四个字太容易失控——你可以把操作系统的每个角落都纳进来。但一旦失控，就永远做不完。
 
 **我最后定这条边界的逻辑是：站在 Agent 的视角，它在新会话的前 10 秒最需要知道什么？**
 
@@ -38,21 +38,21 @@
 
 
 
-## 二、核心产品洞察：steward brief
+## 二、核心产品洞察：agent-body brief
 
 **如果整个产品只保留一个 API，保留哪个？**
 
-我的答案是 `steward brief`。
+我的答案是 `agent-body brief`。
 
 这个 API 做一件事：Agent 在新会话开始时调用它，返回一段结构化的摘要文本。摘要包含最近的记忆、活跃的项目、运行中的服务、24 小时内的重要变更——刚好够 Agent "醒来"时知道自己身处何方。
 
-![steward brief 工作流程](svg/steward-brief-flow.svg)
+![agent-body brief 工作流程](svg/body-brief-flow.svg)
 
 为什么这个 API 是核心？
 
-因为**它定义了产品的价值检验标准**——如果装了 steward 之后，Agent 新会话的第一句回复就变得更准确、更有上下文感，那产品就有价值；如果没变化，那不管底层架构多精妙，都是白搭。
+因为**它定义了产品的价值检验标准**——如果装了 agent-body 之后，Agent 新会话的第一句回复就变得更准确、更有上下文感，那产品就有价值；如果没变化，那不管底层架构多精妙，都是白搭。
 
-这也直接影响了我的开发优先级：MVP 只需要做到 `steward brief` 能返回有用信息，其他都可以往后排。
+这也直接影响了我的开发优先级：MVP 只需要做到 `agent-body brief` 能返回有用信息，其他都可以往后排。
 
 `brief` 的另一个设计要点是 **max_tokens 参数**（默认 2000，范围 200-8000）。不同的 Agent 框架、不同的模型，上下文窗口不一样，能承受的 system prompt 长度也不一样。brief 必须能按需裁剪——你给我 500 tokens 的预算，我就给你最精华的 5 条；给我 8000，我就给你全景。
 
@@ -64,7 +64,7 @@
 
 第一反应是 Rust。本地 daemon、低资源占用、单二进制分发——Rust 简直天生为这个场景而生。
 
-但冷静下来想了想，**MVP 阶段的核心风险是什么？** 不是性能，是"产品定义对不对"。steward 的目标用户量在千级到万级，数据量在万级条目。这个量级下，Go 和 Rust 的性能差异用户根本感知不到。
+但冷静下来想了想，**MVP 阶段的核心风险是什么？** 不是性能，是"产品定义对不对"。agent-body 的目标用户量在千级到万级，数据量在万级条目。这个量级下，Go 和 Rust 的性能差异用户根本感知不到。
 
 而 Go 的开发速度大约是 Rust 的 2-3 倍（我个人体感）。用 Rust 多花的时间，可能导致 MVP 晚发一个月。
 
@@ -74,9 +74,9 @@
 
 ### 3.2 SQLite 够用吗？
 
-直觉上，一个"管一切"的大管家应该用一个强大的数据库——PostgreSQL，甚至 DuckDB。
+直觉上，一个"管一切"的Agent 本体应该用一个强大的数据库——PostgreSQL，甚至 DuckDB。
 
-但 steward 的部署约束是 **"一个二进制 + 一个文件就能跑"**。引入 PG 就意味着用户还得装 PG、维护 PG、担心 PG 挂了数据丢不丢。这跟"环境大管家"的定位矛盾——管家自己不应该成为环境的负担。
+但 agent-body 的部署约束是 **"一个二进制 + 一个文件就能跑"**。引入 PG 就意味着用户还得装 PG、维护 PG、担心 PG 挂了数据丢不丢。这跟"Agent 本体"的定位矛盾——Agent 本体自己不应该成为环境的负担。
 
 SQLite 的核心优势在这个场景里恰好全部命中：
 - 零配置、单文件、嵌入式
@@ -85,7 +85,7 @@ SQLite 的核心优势在这个场景里恰好全部命中：
 - WAL 模式支持并发读，单写够用（daemon 是唯一写者）
 - 一年的典型数据量约 130 MB，完全在 SQLite 的舒适区
 
-**我甚至直接把 init.sql 写好并跑通了验证：14 个逻辑表、8 个触发器、15 个索引，一个 `sqlite3 ~/.steward/steward.db < init.sql` 就完成初始化。**
+**我甚至直接把 init.sql 写好并跑通了验证：14 个逻辑表、8 个触发器、15 个索引，一个 `sqlite3 ~/.agent-body/body.db < init.sql` 就完成初始化。**
 
 ### 3.3 中文搜索怎么办？
 
@@ -110,7 +110,7 @@ Go 生态有纯 Go 实现的 jieba（`go-ego/gse`），无 cgo 依赖，开销�
 
 比如你三个月前记录了一条记忆："`shared_buffers` 从 256MB 调到 2GB，解决了慢查询"。三个月后你遇到 seq scan 太多的问题，想找之前的经验。关键词搜索可能搜不到——因为"seq scan"和"shared_buffers"在词层面几乎不相关。但在语义层面，它们都属于"PostgreSQL 性能调优"。
 
-所以 **向量搜索不是可选的，是必须的。** 但它应该优雅降级——如果本机没有 Ollama 或者 Ollama 暂时不可用，steward 应该仍然能正常工作，只是退化为纯关键词搜索。
+所以 **向量搜索不是可选的，是必须的。** 但它应该优雅降级——如果本机没有 Ollama 或者 Ollama 暂时不可用，agent-body 应该仍然能正常工作，只是退化为纯关键词搜索。
 
 这就是为什么我在数据库表里设计了 `embedding_status` 字段（pending/done/failed）。写入不阻塞、embedding 异步做、Ollama 恢复后自动补上。
 
@@ -120,9 +120,9 @@ Go 生态有纯 Go 实现的 jieba（`go-ego/gse`），无 cgo 依赖，开销�
 
 现有的 Agent Memory 项目做的都是"单表查询"——给我一个 query，我从记忆库里搜出最相关的 N 条，完事。
 
-steward 不同。它的五个数据维度——记忆、资产、环境、变更、关联——**不是五个独立的数据库，而是通过 `links` 表相互串联的一张大图。**
+agent-body 不同。它的五个数据维度——记忆、资产、环境、变更、关联——**不是五个独立的数据库，而是通过 `links` 表相互串联的一张大图。**
 
-举个例子。你上周让 Agent 帮你调了 PostgreSQL 的配置，整个过程 steward 记录了：
+举个例子。你上周让 Agent 帮你调了 PostgreSQL 的配置，整个过程 agent-body 记录了：
 
 - **记忆**：决策记录 "把 `work_mem` 从 64MB 调到 256MB"
 - **资产**：关联的配置文件 `/etc/postgresql/17/main/postgresql.conf`
@@ -136,9 +136,9 @@ steward 不同。它的五个数据维度——记忆、资产、环境、变更
 
 但有了关联，Agent 还能告诉你："配置文件在 `/etc/postgresql/17/main/postgresql.conf`，当前 PG 版本是 17.2，上次改的时间是 11 月 14 号下午。对了，从那次修改到现在，这个文件没有再被动过。"
 
-**这才是"记忆"和"大管家"的区别。** 记忆只告诉你"发生过什么"，大管家告诉你"发生过什么 + 涉及什么 + 现在什么状态"。
+**这才是"记忆"和"Agent 本体"的区别。** 记忆只告诉你"发生过什么"，Agent 本体告诉你"发生过什么 + 涉及什么 + 现在什么状态"。
 
-![从「记忆管理」到「环境大管家」—— 需求全景对比](svg/steward-vs-memory.svg)
+![从「记忆管理」到「Agent 本体」—— 需求全景对比](svg/body-vs-memory.svg)
 
 
 
@@ -148,7 +148,7 @@ steward 不同。它的五个数据维度——记忆、资产、环境、变更
 
 什么叫交叉一致性？就是检查 7 份文档之间是否自洽。比如：
 - 03 功能规格里说资产类型有 8 种，07 数据模型的 CHECK 约束里是不是也是 8 种？
-- 06 API 文档里 `steward_brief` 有没有 `max_tokens` 参数？和 03 描述的行为是否一致？
+- 06 API 文档里 `body_brief` 有没有 `max_tokens` 参数？和 03 描述的行为是否一致？
 - 05 架构文档说用 Go，04 产品手册里的示例命令是不是也对得上？
 
 Review 找出了 14 个问题——3 个红色（数据不一致）、8 个黄色（信息缺失）、3 个橙色（风险未评估）。
@@ -161,18 +161,18 @@ Review 找出了 14 个问题——3 个红色（数据不一致）、8 个黄�
 
 ## 六、技术架构全景
 
-![steward 架构图](svg/steward-arch.svg)
+![agent-body 架构图](svg/body-arch.svg)
 
 整个架构的设计哲学：**像 SQLite 一样简单——一个进程、一个文件、零外部依赖。**
 
-- **一个二进制**：`steward`，包含 daemon、MCP server、REST server、CLI、scheduler、file watcher。
-- **一个数据库文件**：`~/.steward/steward.db`，SQLite + FTS5 + sqlite-vec。
-- **一个配置文件**：`~/.steward/config.toml`。
+- **一个二进制**：`agent-body`，包含 daemon、MCP server、REST server、CLI、scheduler、file watcher。
+- **一个数据库文件**：`~/.agent-body/body.db`，SQLite + FTS5 + sqlite-vec。
+- **一个配置文件**：`~/.agent-body/config.toml`。
 - **一个 Embedding 依赖**：本地 Ollama（可选，没有时优雅降级为纯关键词搜索）。
 
-不需要 Docker，不需要 Kubernetes，不需要云服务。`curl | sh` 安装，`steward init` 初始化，完事。
+不需要 Docker，不需要 Kubernetes，不需要云服务。`curl | sh` 安装，`agent-body init` 初始化，完事。
 
-Agent 通过 MCP 协议连接 steward（和连接其他 MCP server 的姿势完全一样），也可以通过 REST API 或 CLI 调用。
+Agent 通过 MCP 协议连接 agent-body（和连接其他 MCP server 的姿势完全一样），也可以通过 REST API 或 CLI 调用。
 
 
 
@@ -180,7 +180,7 @@ Agent 通过 MCP 协议连接 steward（和连接其他 MCP server 的姿势完�
 
 ### 7.1 产品设计的第一个输出应该是"场景"，不是"功能"
 
-我一开始就想写功能清单——steward 要有记忆写入、记忆搜索、资产扫描、环境快照……列了一大堆。
+我一开始就想写功能清单——agent-body 要有记忆写入、记忆搜索、资产扫描、环境快照……列了一大堆。
 
 后来退回来，先写场景集。4 个用户画像 × 26 个具体场景，按"冷启动 / 日常工作 / 跨会话续接 / 异常排障 / 定时自动 / 多 Agent 协作"六个触发时机分类。
 
@@ -208,7 +208,7 @@ Agent 通过 MCP 协议连接 steward（和连接其他 MCP server 的姿势完�
 
 ## 八、这个产品的终局
 
-上一篇文章我说过，环境大管家的终局是"Agent 时代的认知操作系统"。
+上一篇文章我说过，Agent 本体的终局是"Agent 时代的认知操作系统"。
 
 经过这次完整的产品设计之后，我对这个判断更有信心了。原因有三：
 
@@ -218,7 +218,7 @@ Agent 通过 MCP 协议连接 steward（和连接其他 MCP server 的姿势完�
 
 **第三，产品形态是明确的。** 本地 daemon + MCP 原生接口 + CLI，这个形态已经被 Claude MCP 生态验证了。用户的接入成本极低——在 MCP 配置里加两行 JSON 就完事。
 
-下一步是写 Go 代码，从 `steward brief` 这一个 API 开始。
+下一步是写 Go 代码，从 `agent-body brief` 这一个 API 开始。
 
 如果你也对这个方向感兴趣，或者你有 Agent 失忆的痛点想吐槽，欢迎来 GitHub 聊：`https://github.com/digoal`。
 

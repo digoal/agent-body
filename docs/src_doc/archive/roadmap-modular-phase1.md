@@ -1,4 +1,4 @@
-# Agent Host Steward 研发演进路线图 — 模块化新体系第 1 阶段 (Phase 1)
+# Agent Body 研发演进路线图 — 模块化新体系第 1 阶段 (Phase 1)
 
 > **阶段主题**: 宿主机事实图谱核心（Host Reality Graph Core）—— 铸就核心护城河  
 > **制定时间**: 2026-11-15T21:05:00+08:00  
@@ -30,7 +30,7 @@
 │        • 自动感知 Git 仓库与 CodeGraph 就绪状态 (引导使用 codegraph)        │
 │        • 编目 /root/new/note/ 权威网站清单与本地离线技术资料                │
 │  [1.5] 统一只读查询语义接口与 CLI/MCP 端点 (Read-Only API)                  │
-│        • 实现 steward_fact_query 与 CLI 子命令                              │
+│        • 实现 body_fact_query 与 CLI 子命令                              │
 │        • 严格只读契约，集成端到端测试与真实场景验证                        │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -45,7 +45,7 @@
 | **1.2** | **内核级进程与端口拓扑引擎** | 构建 `src/fact/process_net.rs`：直接解析 `/proc` 与网络监听套接字，过滤底噪，提供端口冲突预警 | ✅ **已完成** | 2026-11-15 21:15 | 2026-11-15 21:19 |
 | **1.3** | **系统自动化拓扑分析器** | 构建 `src/fact/automation.rs`：解析 systemd 单元与依赖配置、扫描系统与用户 crontab 调度 | ✅ **已完成** | 2026-11-15 21:26 | 2026-11-15 21:28 |
 | **1.4** | **源码工程与知识资料编目器** | 构建 `src/fact/assets_catalog.rs`：编目 Git 仓库、CodeGraph 就绪探测、权威清单编目 | ✅ **已完成** | 2026-11-17 15:35 | 2026-11-17 17:20 |
-| **1.5** | **只读查询接口与 MCP/CLI 贯通** | 构建 `steward_fact_query` MCP 端点与 `steward fact` CLI 命令，全量编译并热升级验证 | ✅ **已完成** | 2026-11-17 17:21 | 2026-11-17 17:35 |
+| **1.5** | **只读查询接口与 MCP/CLI 贯通** | 构建 `body_fact_query` MCP 端点与 `agent-body fact` CLI 命令，全量编译并热升级验证 | ✅ **已完成** | 2026-11-17 17:21 | 2026-11-17 17:35 |
 
 ---
 
@@ -56,8 +56,8 @@
 - 构建了内核级进程与网络端口无噪拓扑引擎 `src/fact/process_net.rs`，毫秒级反查端口占用（PID、命令、工作目录），提供事前防撞预警；
 - 构建了系统自动化拓扑分析器 `src/fact/automation.rs`，解析 Systemd 依赖与全系统 Crontab 调度，提供配置文件改动逆向爆炸半径反查；
 - 构建了源码工程与资料编目器 `src/fact/assets_catalog.rs`，扫描并编目 100+ 个本地 Git 仓库（识别 CodeGraph 状态）与 `/root/new/note` 权威清单；
-- 暴露了统一只读查询 MCP 工具 `steward_fact_query` 与 CLI 子命令 `steward fact`，全系统单元测试由 40 项扩充至 **57 项全部 100% PASS**；
-- Release 生产二进制编译通过，热安装至 `/usr/local/bin/agent-steward`，systemd 服务活跃运行，全量成果同步至开源镜像。
+- 暴露了统一只读查询 MCP 工具 `body_fact_query` 与 CLI 子命令 `agent-body fact`，全系统单元测试由 40 项扩充至 **57 项全部 100% PASS**；
+- Release 生产二进制编译通过，热安装至 `/usr/local/bin/agent-body`，systemd 服务活跃运行，全量成果同步至开源镜像。
 
 ---
 

@@ -12,7 +12,7 @@ agent-body [OPTIONS] <COMMAND>
 
 | 顶级子命令 | 简要说明 | 适用场景 |
 |---|---|---|
-| `status` | 查看大管家自身版本、数据库位置、资产/依赖边/进程统计 | 状态巡检与探活 |
+| `status` | 查看Agent 本体自身版本、数据库位置、资产/依赖边/进程统计 | 状态巡检与探活 |
 | `tui` | 启动终端 ANSI 实时全景看板 | 终端实时运维观测 |
 | `brief` | 一键获取宿主系统硬件、活跃任务、最近资产与记忆简报 | Agent 开工首调 |
 | `place` | 咨询对象放置规范建议、列出规则或纠偏自演化学习 | 新建文件/工程防乱放 |
@@ -48,7 +48,7 @@ agent-body [OPTIONS] <COMMAND>
 ## 2. 详细子命令与实操指南
 
 ### 2.1 `status` — 系统状态与统计
-- **说明**: 显示当前大管家的基础运行信息与数据库统计。
+- **说明**: 显示当前Agent 本体的基础运行信息与数据库统计。
 - **示例**:
   ```bash
   agent-body status
@@ -101,7 +101,7 @@ agent-body [OPTIONS] <COMMAND>
 - **真实输出**:
   ```text
   ╔═══════════════════════════════════════════════════════╗
-  ║             Steward 对象放置与路径建议                ║
+  ║             Agent Body 对象放置与路径建议                ║
   ╚═══════════════════════════════════════════════════════╝
   推荐目标路径:   "/root/new/shared_proj/sec_scanner/"
   命中规范规则:   shared_tools
@@ -114,7 +114,7 @@ agent-body [OPTIONS] <COMMAND>
   ```
 
 #### (2) `place rules`
-- **说明**: 查看大管家内置的 8 大宿主机目录放置规范字典。
+- **说明**: 查看Agent 本体内置的 8 大宿主机目录放置规范字典。
 - **示例**:
   ```bash
   agent-body place rules
@@ -401,7 +401,7 @@ agent-body [OPTIONS] <COMMAND>
 ---
 
 ### 2.15 `web` — Web UI 与可视化监控大屏
-- **说明**: 启动基于浏览器的轻量级大管家拓扑图与协作锁监控看板。单二进制 100% 自包含交付，零外部 CDN 网络依赖。
+- **说明**: 启动基于浏览器的轻量级Agent 本体拓扑图与协作锁监控看板。单二进制 100% 自包含交付，零外部 CDN 网络依赖。
 - **参数**:
   - `--host <IP>`: 监听地址（默认 `127.0.0.1`，可设为 `0.0.0.0` 允许局域网访问）
   - `-p, --port <PORT>`: 监听端口（默认 `8765`）
@@ -458,7 +458,7 @@ agent-body [OPTIONS] <COMMAND>
 ---
 
 ### 2.18 补充子命令速查（1:1 映射补齐）
-- `agent-body asset register --path <PATH> --type <TYPE> [--description <DESC>]`：手动向大管家登记单个文件或目录资产（对应 `body_asset_register`）。
+- `agent-body asset register --path <PATH> --type <TYPE> [--description <DESC>]`：手动向Agent 本体登记单个文件或目录资产（对应 `body_asset_register`）。
 - `agent-body asset search <QUERY> [--limit 20] [--detail-level micro|standard|full] [--asset-type <TYPE>] [--modality <MOD>] [--kv-filter key=val] [--graph-hops 1] [--no-fuzzy] [--no-links]`：全信号 Omni-RRF + 知识网络检索纳管资产（对应 `body_asset_search`）。
 - `agent-body asset scan <PATH> [--enrich-with-ollama] [--enrich-limit 50] [--mine-knowledge] [--extract-knowhow] [--backfill-multimodal]`：白黑名单分级扫描目录，提取纯 Rust 多模态 L1A v2.0 元数据并可选执行存量回填与原子 Know-How 抽取（对应 `body_asset_scan`）。
 - `agent-body coordination acquire -t <TYPE> -i <ID> [-s exclusive|shared] [-a <AGENT>] [--ttl-seconds 300]`：申请资源协作锁（对应 `body_lock_acquire`）。

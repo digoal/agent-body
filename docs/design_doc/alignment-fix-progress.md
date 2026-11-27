@@ -14,7 +14,7 @@
 | | 1.2 | 更新场景集：补充 S-27(放置建议), S-28(白黑名单颗粒度), S-29(动态进程与并发任务) | `docs/design_doc/01-scenarios.md` | ✅ 已完成 | 2026-11-15 11:57 |
 | | 1.3 | 更新需求分析：新增 FP(放置建议需求)与 FA/FE/FC 颗粒度与元数据需求 | `docs/design_doc/02-requirements.md` | ✅ 已完成 | 2026-11-15 11:58 |
 | **阶段 2** | 2.1 | 更新功能规格：恢复 directory 类型，增加 Placement 引擎与三级颗粒度扫描规范 | `docs/design_doc/03-feature-spec.md` | ✅ 已完成 | 2026-11-15 12:00 |
-| | 2.2 | 更新 API 规范：新增 `steward_placement_suggest`, 升级 `steward_asset_scan/search`, 新增 `steward_process_list` | `docs/design_doc/06-api-spec.md` | ✅ 已完成 | 2026-11-15 12:01 |
+| | 2.2 | 更新 API 规范：新增 `body_placement_suggest`, 升级 `body_asset_scan/search`, 新增 `body_process_list` | `docs/design_doc/06-api-spec.md` | ✅ 已完成 | 2026-11-15 12:01 |
 | | 2.3 | 同步更新架构与产品手册：补充 Placement 架构与 CLI/配置文档 | `docs/design_doc/04-product-manual.md`, `docs/design_doc/05-architecture.md` | ✅ 已完成 | 2026-11-15 12:02 |
 | **阶段 3** | 3.1 | 更新数据模型文档：升级 assets、新增 placement_rules/scan_policies/active_processes | `docs/design_doc/07-data-model.md` | ✅ 已完成 | 2026-11-15 12:03 |
 | | 3.2 | 更新 init.sql：写入完整 DDL、触发器及预置白黑名单与放置规则 | `docs/design_doc/init.sql` | ✅ 已完成 | 2026-11-15 12:04 |

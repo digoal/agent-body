@@ -3,7 +3,7 @@
 //! 桥接 Letta（原 MemGPT）的本地或云端 Agent 记忆服务，
 //! 实现 `MemoryProvider` SPI。
 //!
-//! ## 配置示例（steward.toml）
+//! ## 配置示例（config.toml）
 //! ```toml
 //! [memory]
 //! provider = "letta"
@@ -289,7 +289,7 @@ mod tests {
         let token = std::env::var("LETTA_TOKEN").unwrap_or_default();
         let adapter =
             LettaAdapter::new("http://127.0.0.1:8283", &agent_id, &token).unwrap();
-        let results = adapter.search("steward memory", 5, None);
+        let results = adapter.search("agent-body memory", 5, None);
         assert!(results.is_ok(), "search 应返回 Ok: {:?}", results.err());
     }
 }

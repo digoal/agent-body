@@ -4,7 +4,7 @@ use agent_body::api::hooks::AgentHookEngine;
 use agent_body::hooks::{
     AutoSyncEngine, ClientHookGenerator, ClientType, EventBus, HookAction, HookDispatcher,
     HookFilter, HookPipeline, HookPipelineEngine, HookRule, HookStep, OnFailureStrategy,
-    PipelineExecutionStatus, StewardEvent,
+    PipelineExecutionStatus, BodyEvent,
 };
 use agent_body::storage::Storage;
 
@@ -67,7 +67,7 @@ async fn test_event_bus_dispatcher_and_pipeline_debounce() {
     let bus = EventBus::new();
     let mut rx = bus.subscribe();
 
-    let ev = StewardEvent::FileCreated {
+    let ev = BodyEvent::FileCreated {
         path: "/tmp/demo_pipeline.rs".to_string(),
         source: "integration_test".to_string(),
         timestamp: "2026-11-23T00:00:00+08:00".to_string(),
@@ -93,7 +93,7 @@ async fn test_event_bus_dispatcher_and_pipeline_debounce() {
         vec!["target".to_string(), ".git".to_string()],
     );
     let skipped = dispatcher
-        .dispatch(Arc::new(StewardEvent::FileCreated {
+        .dispatch(Arc::new(BodyEvent::FileCreated {
             path: "/app/target/debug/out.rs".to_string(),
             source: "test".to_string(),
             timestamp: "2026-11-23T00:00:00+08:00".to_string(),

@@ -1,4 +1,4 @@
-# Agent Host Steward — Phase 12: 运行依赖显式化与可移植部署
+# Agent Body — Phase 12: 运行依赖显式化与可移植部署
 
 > 创建时间: 2026-11-18T16:45:00+08:00  
 > 对齐: README.md ISSUE #10（运行依赖要写清楚，防止到其他环境部署失败）  
@@ -19,10 +19,10 @@
 | **Systemd 假设** | `fact/automation.rs` 扫描 `/etc/systemd/system/`，硬编码路径 | 非 systemd 系统（Alpine/OpenRC/Busybox init）跳过但无清晰提示 |
 | **Ollama 可选依赖** | config.toml 有 `fallback_fts_only = true`，但无版本、模型尺寸、端口探活说明 | 用户装了 Ollama 但模型名不对，静默降级无任何日志 |
 | **PostgreSQL 可选依赖** | PG 连接仅在 `config.toml` 配 `storage_backend = "postgres"` 时使用 | 但文档未说明需要哪个 PG 版本、需要哪些扩展（pgvector）、DDL 如何初始化 |
-| **配置文件** | `~/.steward/config.toml` 首次运行自动生成，但缺少字段注释、取值范围、依赖关系说明 | 用户改错一个字段整个服务起不来 |
+| **配置文件** | `~/.agent-body/config.toml` 首次运行自动生成，但缺少字段注释、取值范围、依赖关系说明 | 用户改错一个字段整个服务起不来 |
 | **部署脚本** | 无 Makefile / install.sh / Dockerfile | 手工 cp + systemctl，步骤散落在多份文档中 |
 | **代码内检测** | 无编译期 feature-gate、无运行时依赖预检（preflight check） | 缺少 `/proc` 的容器中直接 panic 而非 graceful fallback |
-| **SKILL 文件** | `agent-steward-guide` SKILL.md 中部署说明过时（MCP 工具数写 22，实际 31） | Agent 读 SKILL 获得错误信息 |
+| **SKILL 文件** | `agent-body-guide` SKILL.md 中部署说明过时（MCP 工具数写 22，实际 31） | Agent 读 SKILL 获得错误信息 |
 
 ### 目标状态
 
@@ -57,7 +57,7 @@
    - `check_procfs()`: 验证 `/proc/net/tcp` 可读
    - `check_inotify()`: 验证 `inotify_init` 可用（通过 notify crate 创建临时 watcher 测试）
    - `check_libstdcpp()`: 实际已经在运行了说明没问题，但在 Docker 构建指南中标注
-   - `check_data_dir()`: 验证 `~/.steward/` 可写
+   - `check_data_dir()`: 验证 `~/.agent-body/` 可写
    - `check_sqlite_db()`: 验证 SQLite DB 可打开（版本兼容）
 
 3. 可选项（Optional，不满足时优雅降级并输出 Warning）：
@@ -73,18 +73,18 @@
    - `info_binary_features()`: 编译时开启的 feature flags
    - `info_inotify_watches()`: `/proc/sys/fs/inotify/max_user_watches` 当前值
 
-5. CLI 新增 `agent-steward preflight` 子命令，独立输出预检报告（表格格式）。
+5. CLI 新增 `agent-body preflight` 子命令，独立输出预检报告（表格格式）。
 
 6. `daemon` 启动序列修改：先调用 `preflight::run_checks()`，Required 项不过则 `exit(1)` 并输出诊断；Optional 项不过则 Warning 日志并标记降级状态。
 
 **验收标准**:
 ```bash
 # preflight 子命令可运行
-agent-steward preflight
+agent-body preflight
 # 预期: 表格输出所有检查项及状态
 
 # daemon 启动前自动运行 preflight
-agent-steward daemon
+agent-body daemon
 # 预期: 日志中可见 preflight 报告
 ```
 
@@ -136,14 +136,14 @@ agent-steward daemon
 
 2. 在 `--version` 输出中展示完整构建信息：
    ```
-   steward 0.3.2 (afa65d4 2026-11-18 linux/x86_64)
+   agent-body 0.3.2 (afa65d4 2026-11-18 linux/x86_64)
    ```
 
 3. 在 `preflight` 报告中展示编译环境 vs 运行环境对比。
 
 **验收标准**:
 ```bash
-agent-steward --version
+agent-body --version
 # 预期包含 git hash、build timestamp、OS/ARCH
 ```
 
@@ -167,18 +167,18 @@ agent-steward --version
 1. 新增 `config.example.toml`，每个字段有中英文注释、取值范围、依赖关系说明：
    ```toml
    # ============================================================
-   # Agent Host Steward 配置文件参考模板
-   # 实际配置文件路径: ~/.steward/config.toml
+   # Agent Body 配置文件参考模板
+   # 实际配置文件路径: ~/.agent-body/config.toml
    # ============================================================
 
    # 数据存储目录（SQLite 数据库、缓存、日志均存于此）
-   # 默认: ~/.steward
+   # 默认: ~/.agent-body
    # 要求: 目录可写，磁盘空间 >= 100MB
-   data_dir = "/root/.steward"
+   data_dir = "/root/.agent-body"
 
    # SQLite 数据库文件路径
-   # 默认: {data_dir}/steward.db
-   db_path = "/root/.steward/steward.db"
+   # 默认: {data_dir}/body.db
+   db_path = "/root/.agent-body/body.db"
 
    # MCP API 监听端口（JSON-RPC 2.0 stdio 模式下此项不生效）
    # 范围: 1024-65535
@@ -196,7 +196,7 @@ agent-steward --version
    # PostgreSQL 连接串（仅 storage_backend = "postgres" 时需要）
    # 要求: PostgreSQL >= 14, 需安装 pgvector 扩展
    # 格式: "host=x dbname=y user=z password=w"
-   # postgres_url = "host=localhost dbname=steward user=steward password=xxx"
+   # postgres_url = "host=localhost dbname=agent_body user=agent_body password=xxx"
 
    # ============================================================
    # [embedding] 向量嵌入配置（可选，不配则纯 FTS5 全文检索）
@@ -231,7 +231,7 @@ agent-steward --version
        ".git",
        "node_modules",
        "__pycache__",
-       ".steward",
+       ".agent-body",
        "target",
        ".venv",
    ]
@@ -315,7 +315,7 @@ cat config.example.toml | head -5
 6. **Systemd 守护进程配置**（含 Unit 文件完整内容）
 
 7. **健康检查与故障排除**:
-   - `agent-steward preflight` 一键检查
+   - `agent-body preflight` 一键检查
    - 常见错误速查表
 
 8. **可选依赖逐项配置指南**:
@@ -362,9 +362,9 @@ cat config.example.toml | head -5
    # Stage 2: Runtime
    FROM debian:bookworm-slim
    RUN apt-get update && apt-get install -y libstdc++6 && rm -rf /var/lib/apt/lists/*
-   COPY --from=builder /app/target/release/agent-steward /usr/local/bin/
+   COPY --from=builder /app/target/release/agent-body /usr/local/bin/
    EXPOSE 9527
-   ENTRYPOINT ["agent-steward"]
+   ENTRYPOINT ["agent-body"]
    CMD ["daemon"]
    ```
 
@@ -381,16 +381,16 @@ cat config.example.toml | head -5
        cargo test
 
    install: build
-       install -m 755 target/release/agent-steward /usr/local/bin/
+       install -m 755 target/release/agent-body /usr/local/bin/
 
    preflight:
-       agent-steward preflight
+       agent-body preflight
 
    clean:
        cargo clean
 
    docker:
-       docker build -t agent-steward:latest .
+       docker build -t agent-body:latest .
    ```
 
 4. **.dockerignore**
@@ -426,7 +426,7 @@ docker build --check .   # 或 hadolint Dockerfile
 2. 更新目录树（补充 `coordination/`、`preflight/`、`brief/`、`fact/` 等新模块）
 3. 更新依赖清单（补充 cmake、DuckDB bundled、PostgreSQL 可选依赖）
 4. 更新测试命令（137 项测试，分 lib / integration / benchmarks）
-5. 新增"运行时依赖预检"章节（`agent-steward preflight`）
+5. 新增"运行时依赖预检"章节（`agent-body preflight`）
 6. 新增"Docker 开发环境"章节
 7. 新增"多后端存储切换"章节
 8. 新增"常见编译/运行问题 FAQ"
@@ -444,13 +444,13 @@ docker build --check .   # 或 hadolint Dockerfile
 
 **子任务 ID**: `12.7`  
 **涉及文件**:
-- `skills/agent-steward-guide/SKILL.md`（更新）
-- `skills/agent-steward-developer/SKILL.md`（更新）
-- `skills/agent-steward-doc-writer/SKILL.md`（更新）
+- `skills/agent-body-guide/SKILL.md`（更新）
+- `skills/agent-body-developer/SKILL.md`（更新）
+- `skills/agent-body-doc-writer/SKILL.md`（更新）
 
 **具体工作**:
 
-1. **agent-steward-guide**:
+1. **agent-body-guide**:
    - MCP 工具数更新：22 → 31
    - 新增模块说明：`coordination/`、`preflight/`、`brief/`、`fact/`
    - 部署指南段落引用 `INSTALL.md` 而非内联
@@ -458,18 +458,18 @@ docker build --check .   # 或 hadolint Dockerfile
    - 新增协作锁使用说明
    - 更新测试数：40 → 137
 
-2. **agent-steward-developer**:
+2. **agent-body-developer**:
    - 开发规范新增：所有新模块必须在 `preflight` 中注册依赖检查
    - 编译指南引用 `INSTALL.md` 编译依赖章节
    - 更新当前模块全景图
 
-3. **agent-steward-doc-writer**:
+3. **agent-body-doc-writer**:
    - 文档写作规范新增：涉及外部依赖时必须标注"必选/可选"与版本范围
 
 **断点续传检查点**:
-- [x] agent-steward-guide 更新
-- [x] agent-steward-developer 更新
-- [x] agent-steward-doc-writer 更新
+- [x] agent-body-guide 更新
+- [x] agent-body-developer 更新
+- [x] agent-body-doc-writer 更新
 
 ---
 
@@ -494,9 +494,9 @@ docker build --check .   # 或 hadolint Dockerfile
 2. Release 构建 + 部署 + preflight 验证：
    ```bash
    cargo build --release
-   install -m 755 target/release/agent-steward /usr/local/bin/
-   agent-steward preflight
-   systemctl restart agent-steward.service
+   install -m 755 target/release/agent-body /usr/local/bin/
+   agent-body preflight
+   systemctl restart agent-body.service
    ```
 
 3. 版本号升级：`Cargo.toml` version → `0.3.2`
@@ -512,7 +512,7 @@ docker build --check .   # 或 hadolint Dockerfile
    git tag -a v0.3.2 -m "Release v0.3.2 — 运行依赖显式化与可移植部署"
    ```
 
-7. 同步到 `/root/new/shared_git/agent-steward`
+7. 同步到 `/root/new/shared_git/agent-body`
 
 **断点续传检查点**:
 - [x] 全量测试通过

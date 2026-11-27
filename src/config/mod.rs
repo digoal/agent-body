@@ -215,19 +215,15 @@ impl Default for Config {
     }
 }
 
-/// 纯函数解析配置文件查找优先级：`custom_path` > `AGENT_BODY_CONFIG` > `STEWARD_CONFIG` > `~/.agent-body/config.toml`
+/// 纯函数解析配置文件查找优先级：`custom_path` > `AGENT_BODY_CONFIG` > `~/.agent-body/config.toml`
 pub fn resolve_config_path_with(
     custom_path: Option<&Path>,
     agent_body_env: Option<&str>,
-    steward_env: Option<&str>,
 ) -> PathBuf {
     if let Some(p) = custom_path {
         return p.to_path_buf();
     }
     if let Some(v) = agent_body_env.map(str::trim).filter(|s| !s.is_empty()) {
-        return PathBuf::from(v);
-    }
-    if let Some(v) = steward_env.map(str::trim).filter(|s| !s.is_empty()) {
         return PathBuf::from(v);
     }
     default_data_dir().join("config.toml")
@@ -237,11 +233,9 @@ impl Config {
     /// 加载配置，若不存在则创建默认配置
     pub fn load_or_default(custom_path: Option<&Path>) -> Result<Self> {
         let ab_env = std::env::var("AGENT_BODY_CONFIG").ok();
-        let st_env = std::env::var("STEWARD_CONFIG").ok();
         let config_path = resolve_config_path_with(
             custom_path,
             ab_env.as_deref(),
-            st_env.as_deref(),
         );
 
         if config_path.exists() {
@@ -270,12 +264,9 @@ impl Config {
     }
 
     /// 无异常读取当前生效配置；若加载失败则安全回退到 `Config::default()`
-    /// 单元测试模式下除非显式指定 `AGENT_BODY_CONFIG`/`STEWARD_CONFIG`，否则隔离宿主机真实配置以保持零外部污染
+    /// 单元测试模式下除非显式指定 `AGENT_BODY_CONFIG`，否则隔离宿主机真实配置以保持零外部污染
     pub fn load_effective_or_default() -> Self {
-        if cfg!(test)
-            && std::env::var_os("AGENT_BODY_CONFIG").is_none()
-            && std::env::var_os("STEWARD_CONFIG").is_none()
-        {
+        if cfg!(test) && std::env::var_os("AGENT_BODY_CONFIG").is_none() {
             return Self::default();
         }
         Self::load_or_default(None).unwrap_or_default()
@@ -344,11 +335,9 @@ impl Config {
         mcp_profile: Option<McpToolProfile>,
     ) -> Result<(PathBuf, Self)> {
         let ab_env = std::env::var("AGENT_BODY_CONFIG").ok();
-        let st_env = std::env::var("STEWARD_CONFIG").ok();
         let config_path = resolve_config_path_with(
             custom_path,
             ab_env.as_deref(),
-            st_env.as_deref(),
         );
         let mut cfg = Self::load_or_default(custom_path)?;
         cfg.runtime.mode = mode.as_str().to_string();
@@ -715,19 +704,19 @@ default_owner = "user:digoal"
     fn test_agent_body_config_env_takes_precedence() {
         let explicit = Path::new("/tmp/explicit.toml");
         assert_eq!(
-            resolve_config_path_with(Some(explicit), Some("/tmp/ab.toml"), Some("/tmp/st.toml")),
+            resolve_config_path_with(Some(explicit), Some("/tmp/ab.toml")),
             explicit
         );
         assert_eq!(
-            resolve_config_path_with(None, Some("/tmp/ab.toml"), Some("/tmp/st.toml")),
+            resolve_config_path_with(None, Some("/tmp/ab.toml")),
             PathBuf::from("/tmp/ab.toml")
         );
         assert_eq!(
-            resolve_config_path_with(None, Some(""), Some("/tmp/st.toml")),
-            PathBuf::from("/tmp/st.toml")
+            resolve_config_path_with(None, Some("")),
+            default_data_dir().join("config.toml")
         );
         assert_eq!(
-            resolve_config_path_with(None, None, None),
+            resolve_config_path_with(None, None),
             default_data_dir().join("config.toml")
         );
     }
@@ -752,7 +741,7 @@ default_owner = "user:digoal"
         cfg.storage.pg_url = None;
         assert!(cfg.validate().is_err());
 
-        cfg.storage.pg_url = Some("host=localhost dbname=steward".to_string());
+        cfg.storage.pg_url = Some("host=localhost dbname=agent_body".to_string());
         assert!(cfg.validate().is_ok());
 
         cfg.memory.provider = "unknown_mem".to_string();

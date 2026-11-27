@@ -210,7 +210,7 @@ mod tests {
             id: "service:agent-body".to_string(),
             node_type: "service".to_string(),
             name: "agent-body".to_string(),
-            label: "Agent Steward Service".to_string(),
+            label: "Agent Body Service".to_string(),
             properties: serde_json::json!({"unit": "agent-body.service"}),
             updated_at: None,
         }).expect("upsert service");

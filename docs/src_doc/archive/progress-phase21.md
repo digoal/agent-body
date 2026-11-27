@@ -23,10 +23,10 @@
 | 阶段 | 子任务 ID | 任务内容与检查点 | 涉及路径 | 状态 | 交付时间 |
 |:---:|:---:|---|---|:---:|:---:|
 | **22.1** | 22.1.1 | 构建 `src/demo/mod.rs` (`DemoEngine`)：实现 6 大黄金路演剧目真引擎沙盒推演（`demo:*` 隔离命名空间 + `reset_sandbox` 一键无痕复位）与商业价值 `RoiReport` 实时核算器 | `src/demo/mod.rs`, `src/lib.rs` | ✅ 已完成 | 2026-11-19 09:42 |
-| | 22.1.2 | 反向同步至黑屏（新增第 39 个 MCP 工具 `steward_demo_scenario` + CLI `agent-steward demo` 子命令），并在 Web Server 挂载 `/api/v1/demo/{scenarios,run,reset,roi}` 与离线 PPT `/deck`、`/presentation` 路由 | `src/api/mcp_tools.rs`, `src/main.rs`, `src/web/server.rs` | ✅ 已完成 | 2026-11-19 09:42 |
-| **22.2** | 22.2.1 | 实现 Web UI 第 6 工作台「🎬 路演演示剧场」：顶部 ROI 商业价值账单、6 大王牌剧目点播与自动巡航 (Auto-Cruise)、左右分屏（裸奔惨案 vs 管家微秒级护航）、演讲者提词卡、黑屏命令同步框及演讲者全屏模式 | `src/web/assets/mod.rs` | ✅ 已完成 | 2026-11-19 09:46 |
+| | 22.1.2 | 反向同步至黑屏（新增第 39 个 MCP 工具 `body_demo_scenario` + CLI `agent-body demo` 子命令），并在 Web Server 挂载 `/api/v1/demo/{scenarios,run,reset,roi}` 与离线 PPT `/deck`、`/presentation` 路由 | `src/api/mcp_tools.rs`, `src/main.rs`, `src/web/server.rs` | ✅ 已完成 | 2026-11-19 09:42 |
+| **22.2** | 22.2.1 | 实现 Web UI 第 6 工作台「🎬 路演演示剧场」：顶部 ROI 商业价值账单、6 大王牌剧目点播与自动巡航 (Auto-Cruise)、左右分屏（裸奔惨案 vs Agent 本体微秒级护航）、演讲者提词卡、黑屏命令同步框及演讲者全屏模式 | `src/web/assets/mod.rs` | ✅ 已完成 | 2026-11-19 09:46 |
 | **22.3** | 22.3.T | 补充 `demo::tests`、黑白屏 39 工具 100% Parity 契约单测与 `tests/test_web_dashboard.rs` E2E 测试，确保 `make lint-panic` 与 `cargo test` 全绿 | `src/demo/mod.rs`, `src/web/mod.rs`, `tests/test_web_dashboard.rs` | ✅ 已完成 | 2026-11-19 09:54 |
-| | 22.3.D | 四层贯通文档刷新（`README.md`, `docs/manual/03,04,08`, `docs/arch/02`, `steward-deck.html`）、3 处全局 `SKILL.md` 同步、`make restart` 现网热部署验收与 `/root/new/shared_git/agent-steward` 镜像同步 | 全系统 & 现网守护进程 | ✅ 已完成 | 2026-11-19 09:55 |
+| | 22.3.D | 四层贯通文档刷新（`README.md`, `docs/manual/03,04,08`, `docs/arch/02`, `agent-body-deck.html`）、3 处全局 `SKILL.md` 同步、`make restart` 现网热部署验收与 `/root/new/shared_git/agent-body` 镜像同步 | 全系统 & 现网守护进程 | ✅ 已完成 | 2026-11-19 09:55 |
 
 ---
 

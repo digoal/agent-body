@@ -27,10 +27,10 @@ pub use pipeline::{
 pub use push::UdsBroadcaster;
 pub use push::{bridge_event_bus_to_sse, WebhookDeliveryReport, WebhookPusher};
 
-/// Steward 系统生命周期与宿主物理事实事件枚举 (零捏造，规约 #5)
+/// Agent Body 系统生命周期与宿主物理事实事件枚举 (零捏造，规约 #5)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", content = "payload")]
-pub enum StewardEvent {
+pub enum BodyEvent {
     /// 物理文件创建 (inotify / agent 产出)
     FileCreated {
         path: String,
@@ -125,7 +125,7 @@ pub enum StewardEvent {
     },
 }
 
-impl StewardEvent {
+impl BodyEvent {
     /// 获取事件类型字符串标识
     pub fn event_type(&self) -> &'static str {
         match self {

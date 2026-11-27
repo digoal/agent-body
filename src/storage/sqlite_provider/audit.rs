@@ -210,7 +210,7 @@ impl SqliteStorageProvider {
         conn.execute(
             "INSERT OR REPLACE INTO benchmark_runs (
                 run_id, suite_name, git_commit, app_version, host_fingerprint,
-                workload_count, total_baseline_tokens, total_steward_tokens,
+                workload_count, total_baseline_tokens, total_body_tokens,
                 overall_token_savings_pct, overall_speedup_factor,
                 total_hazards_intercepted, total_noise_blocked, sla_passed,
                 results_json, report_sha256, duration_ms, created_at
@@ -223,7 +223,7 @@ impl SqliteStorageProvider {
                 host_fp,
                 run.workload_count as i64,
                 run.total_baseline_tokens,
-                run.total_steward_tokens,
+                run.total_body_tokens,
                 run.overall_token_savings_pct,
                 run.overall_speedup_factor,
                 run.total_hazards_intercepted,
@@ -252,7 +252,7 @@ impl SqliteStorageProvider {
         }
         let mut stmt = conn.prepare(
             "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
-                    workload_count, total_baseline_tokens, total_steward_tokens,
+                    workload_count, total_baseline_tokens, total_body_tokens,
                     overall_token_savings_pct, overall_speedup_factor,
                     total_hazards_intercepted, total_noise_blocked, sla_passed,
                     results_json, report_sha256, duration_ms, created_at
@@ -272,7 +272,7 @@ impl SqliteStorageProvider {
         let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
-                    workload_count, total_baseline_tokens, total_steward_tokens,
+                    workload_count, total_baseline_tokens, total_body_tokens,
                     overall_token_savings_pct, overall_speedup_factor,
                     total_hazards_intercepted, total_noise_blocked, sla_passed,
                     results_json, report_sha256, duration_ms, created_at
@@ -290,7 +290,7 @@ impl SqliteStorageProvider {
         let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(
             "SELECT run_id, suite_name, git_commit, app_version, host_fingerprint,
-                    workload_count, total_baseline_tokens, total_steward_tokens,
+                    workload_count, total_baseline_tokens, total_body_tokens,
                     overall_token_savings_pct, overall_speedup_factor,
                     total_hazards_intercepted, total_noise_blocked, sla_passed,
                     results_json, report_sha256, duration_ms, created_at
@@ -318,8 +318,8 @@ impl SqliteStorageProvider {
         conn.execute(
             "INSERT OR REPLACE INTO effectiveness_ledger (
                 event_id, session_id, source_channel, tool_or_action, provenance_rule,
-                baseline_tokens, steward_tokens, tokens_saved,
-                baseline_rounds, steward_rounds, rounds_saved,
+                baseline_tokens, body_tokens, tokens_saved,
+                baseline_rounds, body_rounds, rounds_saved,
                 hazard_intercepted, noise_blocked, elapsed_us, evidence_summary, created_at
              ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
             params![
@@ -329,10 +329,10 @@ impl SqliteStorageProvider {
                 event.tool_or_action,
                 event.provenance_rule,
                 event.baseline_tokens,
-                event.steward_tokens,
+                event.body_tokens,
                 event.tokens_saved,
                 event.baseline_rounds,
-                event.steward_rounds,
+                event.body_rounds,
                 event.rounds_saved,
                 event.hazard_intercepted,
                 event.noise_blocked,
@@ -367,7 +367,7 @@ impl SqliteStorageProvider {
         ) = conn.query_row(
             "SELECT COUNT(*),
                     COALESCE(SUM(baseline_tokens), 0),
-                    COALESCE(SUM(steward_tokens), 0),
+                    COALESCE(SUM(body_tokens), 0),
                     COALESCE(SUM(tokens_saved), 0),
                     COALESCE(SUM(rounds_saved), 0),
                     COALESCE(SUM(hazard_intercepted), 0),
@@ -419,8 +419,8 @@ impl SqliteStorageProvider {
 
         let mut ev_stmt = conn.prepare(
             "SELECT event_id, session_id, source_channel, tool_or_action, provenance_rule,
-                    baseline_tokens, steward_tokens, tokens_saved,
-                    baseline_rounds, steward_rounds, rounds_saved,
+                    baseline_tokens, body_tokens, tokens_saved,
+                    baseline_rounds, body_rounds, rounds_saved,
                     hazard_intercepted, noise_blocked, elapsed_us, evidence_summary, created_at
              FROM effectiveness_ledger
              WHERE (?1 = '' OR created_at >= ?1)
@@ -436,10 +436,10 @@ impl SqliteStorageProvider {
                     tool_or_action: r.get(3)?,
                     provenance_rule: r.get(4)?,
                     baseline_tokens: r.get(5)?,
-                    steward_tokens: r.get(6)?,
+                    body_tokens: r.get(6)?,
                     tokens_saved: r.get(7)?,
                     baseline_rounds: r.get(8)?,
-                    steward_rounds: r.get(9)?,
+                    body_rounds: r.get(9)?,
                     rounds_saved: r.get(10)?,
                     hazard_intercepted: r.get(11)?,
                     noise_blocked: r.get(12)?,
@@ -460,7 +460,7 @@ impl SqliteStorageProvider {
             window: window.to_string(),
             total_events: total_events as usize,
             total_baseline_tokens: total_base,
-            total_steward_tokens: total_stew,
+            total_body_tokens: total_stew,
             total_tokens_saved: total_saved,
             token_savings_pct,
             total_rounds_saved: total_rounds,

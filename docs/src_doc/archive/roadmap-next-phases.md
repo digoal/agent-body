@@ -1,4 +1,4 @@
-# Agent Host Steward — 下一阶段路线图 (Phase 5~9)
+# Agent Body — 下一阶段路线图 (Phase 5~9)
 
 > 创建时间: 2026-11-18T10:00:00+08:00  
 > 基线: 三位一体 Phase 1~4 全部完成 · 89 单测全绿 · 11155 行 Rust · v0.3.1  
@@ -21,7 +21,7 @@
 | #7 | 产品边界守护、原子功能哲学 | **Phase 9** | P2 |
 
 **排序逻辑**:  
-- P0 = 产品核心差异化能力，直接决定"大管家"是否名副其实；  
+- P0 = 产品核心差异化能力，直接决定"Agent 本体"是否名副其实；  
 - P1 = 规模化与工程质量，Agent 大量调用后的瓶颈会最先暴露在存储和输出格式；  
 - P2 = 生态拓展与长期定位，不影响当前核心价值但决定天花板。
 
@@ -30,7 +30,7 @@
 ## 二、Phase 5：宿主机主动扫描与智能记录引擎
 
 > **对齐 ISSUE**: #9（主动扫描 + 断点续扫 + 属性图）、#2（记录取舍）、#3（hook 时机）  
-> **目标**: 大管家不再被动等待 Agent 提问，而是像真正的管家一样主动巡查、持续积累、按重要性筛选存储。
+> **目标**: Agent 本体不再被动等待 Agent 提问，而是像真正的Agent 本体一样主动巡查、持续积累、按重要性筛选存储。
 
 ### 5.1 断点续扫状态机 (Incremental Scanner State Machine)
 
@@ -42,7 +42,7 @@
 - `ScanJob` 结构体：记录 `job_id`、`root_path`、`last_scanned_path`、`depth`、`status`（pending/running/paused/completed）、`progress_pct`、`created_at`、`updated_at`
 - 每扫完一个目录批次（如 100 个目录条目）持久化一次断点到 SQLite `scan_jobs` 表
 - 恢复时从 `last_scanned_path` 的字典序下一个条目继续，不重复扫描
-- 新增 MCP 工具 `steward_scan_start` / `steward_scan_status` / `steward_scan_pause` / `steward_scan_resume`
+- 新增 MCP 工具 `body_scan_start` / `body_scan_status` / `body_scan_pause` / `body_scan_resume`
 
 **验收标准**:
 - 扫描 `/root/new/` 时在 50% 位置 kill 进程，重启后自动续扫，最终结果与全量扫描一致
@@ -78,33 +78,33 @@
 **目标实现**:
 - 新增 `fact_nodes` 表（节点：项目/工具/端口/服务/cron/文件）和 `fact_edges` 表（关系：depends_on / listens_on / scheduled_by / reads / writes / part_of）
 - `PropertyGraphOrganizer`：扫描完成后自动从已有事实表（capability/process_net/automation/assets_catalog）提取节点和边，写入图表
-- 查询接口：`steward_fact_query` 扩展支持图遍历语义，如 `"项目 agent-steward 的完整依赖图"` → 返回以该项目为根的 N 跳子图
+- 查询接口：`body_fact_query` 扩展支持图遍历语义，如 `"项目 agent-body 的完整依赖图"` → 返回以该项目为根的 N 跳子图
 - 图的更新策略：增量更新（新扫描结果与已有图 diff，只更新变化部分）
 
 **验收标准**:
-- `steward_fact_query("agent-steward 依赖图")` 返回包含工具、端口、systemd 服务、cron 的关联图
-- 图节点和边可以通过 `steward_links_visualize` 渲染为 mermaid 图
+- `body_fact_query("agent-body 依赖图")` 返回包含工具、端口、systemd 服务、cron 的关联图
+- 图节点和边可以通过 `body_links_visualize` 渲染为 mermaid 图
 - 增量更新：修改一个 cron 后重新扫描，只更新该 cron 相关的节点和边
 
 ### 5.4 定时扫描调度器与 Agent Hook 集成 (Scheduled Scan & Agent Hooks)
 
 **涉及文件**: `src/daemon/scheduler.rs`（新增）、`src/api/hooks.rs`（新增）
 
-**当前状态**: 扫描只能手动触发（CLI `scan` 子命令或 MCP `steward_asset_scan`）。没有定时后台扫描。Agent 工具调用前后也没有 hook 点。
+**当前状态**: 扫描只能手动触发（CLI `scan` 子命令或 MCP `body_asset_scan`）。没有定时后台扫描。Agent 工具调用前后也没有 hook 点。
 
 **目标实现**:
-- **定时扫描**: daemon 模式下内置 cron 表达式调度器（基于 tokio cron），默认每 6 小时全量增量扫描一次，可通过 `steward.toml` 配置
+- **定时扫描**: daemon 模式下内置 cron 表达式调度器（基于 tokio cron），默认每 6 小时全量增量扫描一次，可通过 `config.toml` 配置
 - **Agent Hook 协议**:
-  - `pre_tool_call(tool_name, args)` → 大管家在 Agent 调用工具前检查：端口冲突？文件即将覆盖的是关键配置？
+  - `pre_tool_call(tool_name, args)` → Agent 本体在 Agent 调用工具前检查：端口冲突？文件即将覆盖的是关键配置？
   - `post_tool_call(tool_name, result)` → 工具执行后捕获变更：新增了文件？修改了配置？自动更新事实图
-  - Hook 通过 MCP 工具暴露：`steward_hook_pre` / `steward_hook_post`
+  - Hook 通过 MCP 工具暴露：`body_hook_pre` / `body_hook_post`
   - Hook 是**建议性**的（返回 warnings），不强制阻断 Agent 操作
 - **非 Agent 时段**: daemon 进程在无 MCP 连接时自动进入"巡查模式"——以低优先级执行增量扫描 + 记忆衰减审计 + 事实图刷新
 
 **验收标准**:
 - daemon 启动后 6 小时自动触发一次增量扫描（可用测试环境缩短到 10 秒验证）
-- `steward_hook_pre("bind_port", {"port": 8080})` 在端口已被占用时返回警告
-- `steward_hook_post("write_file", {"path": "/etc/xxx.conf"})` 自动更新 automation 拓扑中该文件的依赖链
+- `body_hook_pre("bind_port", {"port": 8080})` 在端口已被占用时返回警告
+- `body_hook_post("write_file", {"path": "/etc/xxx.conf"})` 自动更新 automation 拓扑中该文件的依赖链
 
 ---
 
@@ -133,7 +133,7 @@
   }
   ```
 - 现有 `Storage` 重构为 `SqliteProvider` 实现该 trait
-- `StorageRouter`：根据 `steward.toml` 中 `[storage] provider = "sqlite"` 配置路由
+- `StorageRouter`：根据 `config.toml` 中 `[storage] provider = "sqlite"` 配置路由
 
 **验收标准**:
 - 重构后 89 个现有测试 100% 通过（行为不变）
@@ -170,7 +170,7 @@
 **涉及文件**: `src/storage/migration.rs`（新增）
 
 **目标实现**:
-- `steward migrate --from sqlite --to postgres` 一键迁移所有数据
+- `agent-body migrate --from sqlite --to postgres` 一键迁移所有数据
 - 支持增量同步（基于 `updated_at` 时间戳）
 - 迁移前后一致性校验（行数 + 抽样 checksum）
 
@@ -188,7 +188,7 @@
 **当前状态**: MCP 工具输出混合了人类可读文本（含 emoji、中文描述）和结构化 JSON。Agent 解析时需要额外理解自然语言。
 
 **目标实现**:
-- 所有 MCP 工具输出统一为 `StewardResponse<T>` 结构体：
+- 所有 MCP 工具输出统一为 `BodyResponse<T>` 结构体：
   ```json
   {
     "status": "ok|warning|error",
@@ -247,7 +247,7 @@
 
 **验收标准**:
 - `cargo build --target x86_64-apple-darwin` 交叉编译成功
-- macOS 上 `steward_env_show` / `steward_port_check` 功能正常
+- macOS 上 `body_env_show` / `body_port_check` 功能正常
 
 ### 8.2 CI 矩阵扩展
 
@@ -260,7 +260,7 @@
 ## 六、Phase 9：产品边界守护与生态定位
 
 > **对齐 ISSUE**: #1（OS 级功能？）、#7（产品边界）  
-> **目标**: 明确大管家的"不做清单"和生态协作协议，防止功能蔓延。
+> **目标**: 明确Agent 本体的"不做清单"和生态协作协议，防止功能蔓延。
 
 ### 9.1 产品边界治理文档
 
@@ -270,7 +270,7 @@
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│                   Agent Host Steward 做什么                      │
+│                   Agent Body 做什么                      │
 │                                                                │
 │  ✅ 宿主机物理世界感知（工具/端口/进程/服务/文件拓扑）            │
 │  ✅ 用户偏好规约（文件放置/命名/安全纪律）                        │
@@ -279,7 +279,7 @@
 │  ✅ 变更审计与依赖影响推演                                       │
 │  ✅ 宿主机资源 GC（临时文件/僵尸进程清理）                        │
 ├────────────────────────────────────────────────────────────────┤
-│                   Agent Host Steward 不做什么                    │
+│                   Agent Body 不做什么                    │
 │                                                                │
 │  ❌ 对话管理/会话历史（交给 Agent 框架）                          │
 │  ❌ 重型 RAG/向量数据库（交给 Mem0/Letta/PowerContext）           │
@@ -290,12 +290,12 @@
 └────────────────────────────────────────────────────────────────┘
 ```
 
-### 9.2 生态集成协议 (Steward Integration Protocol)
+### 9.2 生态集成协议 (Agent Body Integration Protocol)
 
 **涉及文件**: `docs/src_doc/integration-protocol.md`（新增）
 
 **目标**:
-- 定义第三方 Agent 框架接入 Steward 的标准协议（MCP stdio + 约定的工具命名空间）
+- 定义第三方 Agent 框架接入 Agent Body 的标准协议（MCP stdio + 约定的工具命名空间）
 - 定义外部记忆引擎接入的 SPI 规范版本号（当前 v1）
 - 定义宿主机事实图谱的查询语义规范（让生态伙伴可以构建上层应用）
 
@@ -306,7 +306,7 @@
 **对 ISSUE #1 的回答**:
 - **短期立场**: 保持 userspace 单二进制，不依赖 OS 内核修改。理由：(1) OS 内核迭代周期以年计，Agent 生态以月计；(2) 不同发行版/OS 分裂严重；(3) userspace 更灵活可插拔。
 - **长期探索**: 通过 D-Bus 接口在 Linux 上暴露宿主机事实为系统级服务，让非 Rust 进程也能查询。macOS 通过 XPC Services。Windows 通过 Named Pipes / COM。
-- **终极形态**: 如果 Agent OS 成为独立品类（如 Google Fuchsia 对 IoT），Steward 的核心能力可以作为 OS 子系统被内置。
+- **终极形态**: 如果 Agent OS 成为独立品类（如 Google Fuchsia 对 IoT），Agent Body 的核心能力可以作为 OS 子系统被内置。
 
 ---
 
@@ -344,14 +344,14 @@ Phase 5 (主动扫描)  ──→  Phase 6 (存储抽象)  ──→  Phase 7 (A
 |:---------:|---------|---------|:----:|---------|
 | 5.1 | 断点续扫状态机：`ScanJob` + SQLite `scan_jobs` 表 + 增量恢复逻辑 | `src/scanner/state_machine.rs`, `src/storage/schema.sql` | ✅ 已完成 | 2026-11-18 10:02 |
 | 5.2 | 重要性评分器：`ImportanceScorer` trait + 内置规则引擎 + `NoiseFilter` | `src/scanner/importance.rs`, `src/memory/intake.rs` | ✅ 已完成 | 2026-11-18 10:05 |
-| 5.3 | 属性图组织器：`fact_nodes/fact_edges` 表 + `PropertyGraphOrganizer` + `steward_fact_query` 图遍历扩展 | `src/fact/property_graph.rs`, `src/storage/schema.sql` | ✅ 已完成 | 2026-11-18 10:11 |
-| 5.4 | 定时扫描 + Agent Hook：daemon cron 调度 + `steward_hook_pre/post` MCP 工具 | `src/daemon/scheduler.rs`, `src/api/hooks.rs` | ✅ 已完成 | 2026-11-18 10:17 |
+| 5.3 | 属性图组织器：`fact_nodes/fact_edges` 表 + `PropertyGraphOrganizer` + `body_fact_query` 图遍历扩展 | `src/fact/property_graph.rs`, `src/storage/schema.sql` | ✅ 已完成 | 2026-11-18 10:11 |
+| 5.4 | 定时扫描 + Agent Hook：daemon cron 调度 + `body_hook_pre/post` MCP 工具 | `src/daemon/scheduler.rs`, `src/api/hooks.rs` | ✅ 已完成 | 2026-11-18 10:17 |
 | 5.5 | 端到端集成验收：全量测试 + 断点续扫实测 + 属性图查询实测 + 生产部署 | 全系统 | ✅ 已完成 | 2026-11-18 12:02 |
 | 6.1 | 存储层 SPI 抽象：定义 `StorageProvider` trait (33个方法) 并解耦门面 | `src/storage/spi.rs`, `src/storage/mod.rs` | ✅ 已完成 | 2026-11-18 12:12 |
 | 6.2 | PostgreSQL 适配器：实现 `PgStorageProvider` (pgvector + tsvector) | `src/storage/pg_provider.rs`, `src/storage/pg_schema.sql` | ✅ 已完成 | 2026-11-18 12:14 |
 | 6.3 | 存储路由配置：`Config::storage` 与 `Storage::from_config` | `src/config/mod.rs`, `src/storage/mod.rs` | ✅ 已完成 | 2026-11-18 12:17 |
 | 6.4 | 跨后端热迁移工具：`StorageMigrator` + CLI `storage migrate` 真实无损迁移 | `src/storage/migration.rs`, `src/main.rs` | ✅ 已完成 | 2026-11-18 12:23 |
-| 7.1 | Agent-Native 强类型响应封套：`StewardResponse<T>` + 溯源信息 | `src/api/response.rs`, `src/api/mod.rs` | ✅ 已完成 | 2026-11-18 12:25 |
+| 7.1 | Agent-Native 强类型响应封套：`BodyResponse<T>` + 溯源信息 | `src/api/response.rs`, `src/api/mod.rs` | ✅ 已完成 | 2026-11-18 12:25 |
 | 7.2 | 亚毫秒基准测试套件：图遍历、全文检索、放置决策性能压测验证 | `tests/benchmarks.rs` | ✅ 已完成 | 2026-11-18 12:26 |
 | 8.1 | 跨平台抽象与容错：macOS / Windows 路径与服务安全降级保障 | `src/fact/automation.rs`, `src/env/mod.rs` | ✅ 已完成 | 2026-11-18 12:27 |
 | 9.1 | 产品边界指南与生态治理协议规范 | `docs/src_doc/product-boundaries-and-governance.md`, `docs/src_doc/agent-ecosystem-integration-protocol.md` | ✅ 已完成 | 2026-11-18 12:28 |
@@ -370,16 +370,16 @@ Phase 5 (主动扫描)  ──→  Phase 6 (存储抽象)  ──→  Phase 7 (A
 ### 决策 2：ImportanceScorer 用 LLM 还是规则？
 
 **决策**: 纯规则引擎，理由：
-- 大管家定位是**基础设施层**，不能依赖 LLM 推理（延迟不可控、成本高、离线场景挂掉）
+- Agent 本体定位是**基础设施层**，不能依赖 LLM 推理（延迟不可控、成本高、离线场景挂掉）
 - 规则可确定性复现、可单测、可调试
 - 未来可开放 `ImportanceScorer` trait 让上层 Agent 注入 LLM 增强的评分器（插件模式）
 
 ### 决策 3：Agent Hook 是阻断式还是建议式？
 
 **决策**: 建议式（返回 warnings + suggested_actions），理由：
-- 大管家是"管家"不是"保安"，越权会让 Agent 框架不愿意接入
+- Agent 本体是"Agent 本体"不是"保安"，越权会让 Agent 框架不愿意接入
 - Agent 框架自己决定是否采纳建议
-- 保持大管家"朋友多、敌人少"的产品哲学
+- 保持Agent 本体"朋友多、敌人少"的产品哲学
 
 ---
 

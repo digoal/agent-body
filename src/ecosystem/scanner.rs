@@ -396,7 +396,7 @@ mcp_servers:
 
     #[test]
     fn test_skill_frontmatter_parse() {
-        let tmp = std::env::temp_dir().join(format!("steward_skill_test_{}", uuid::Uuid::new_v4()));
+        let tmp = std::env::temp_dir().join(format!("agent_body_skill_test_{}", uuid::Uuid::new_v4()));
         let scripts_dir = tmp.join("scripts");
         fs::create_dir_all(&scripts_dir).expect("mkdir");
         let skill_md = tmp.join("SKILL.md");

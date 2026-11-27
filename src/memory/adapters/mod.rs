@@ -12,7 +12,7 @@
 //! ```rust,ignore
 //! use agent_body::memory::adapters::MemoryFactory;
 //!
-//! // 由 steward.toml 中的 provider 字段驱动
+//! // 由 config.toml 中的 provider 字段驱动
 //! let provider = MemoryFactory::from_config("powercontext", &config)?;
 //! let results = provider.search("rust agent", 10, None)?;
 //! ```
@@ -32,7 +32,7 @@ use crate::memory::spi::MemoryProvider;
 use crate::memory::builtin_provider::BuiltinMemoryProvider;
 use crate::storage::Storage;
 
-/// 适配器配置参数（从 steward.toml 映射）
+/// 适配器配置参数（从 config.toml 映射）
 #[derive(Debug, Clone, Default)]
 pub struct AdapterConfig {
     // PowerContext
@@ -69,7 +69,7 @@ impl AdapterConfig {
 
 /// 记忆提供者工厂
 ///
-/// 根据 `provider` 字符串（来自 `steward.toml` 的 `[memory].provider`）
+/// 根据 `provider` 字符串（来自 `config.toml` 的 `[memory].provider`）
 /// 动态创建对应的 `MemoryProvider` 实例。
 ///
 /// 若目标引擎不可达，自动降级为内置 SQLite 引擎并打印警告。
@@ -79,7 +79,7 @@ impl MemoryFactory {
     /// 根据 provider 名称与配置创建适配器
     ///
     /// - `provider`: "builtin" | "powercontext" | "mem0" | "letta"
-    /// - `config`: 适配器配置（从 steward.toml 解析）
+    /// - `config`: 适配器配置（从 config.toml 解析）
     /// - `storage`: 内置引擎所需的 Storage 实例（供降级使用）
     pub fn create(
         provider: &str,
@@ -96,12 +96,12 @@ impl MemoryFactory {
             "powercontext" => {
                 match PowerContextAdapter::new(&cfg.powercontext_url, &cfg.powercontext_scope_id) {
                     Ok(p) => {
-                        eprintln!("[steward] 记忆引擎 → PowerContext ({})", cfg.powercontext_url);
+                        eprintln!("[agent-body] 记忆引擎 → PowerContext ({})", cfg.powercontext_url);
                         Ok(Arc::new(p))
                     }
                     Err(e) => {
                         eprintln!(
-                            "[steward] ⚠️  PowerContext 不可达，降级为内置引擎: {}",
+                            "[agent-body] ⚠️  PowerContext 不可达，降级为内置引擎: {}",
                             e
                         );
                         let p = BuiltinMemoryProvider::new(storage);
@@ -111,18 +111,18 @@ impl MemoryFactory {
             }
             "mem0" => {
                 let p = Mem0Adapter::new(&cfg.mem0_url, &cfg.mem0_api_key, &cfg.mem0_user_id)?;
-                eprintln!("[steward] 记忆引擎 → Mem0 ({})", cfg.mem0_url);
+                eprintln!("[agent-body] 记忆引擎 → Mem0 ({})", cfg.mem0_url);
                 Ok(Arc::new(p))
             }
             "letta" => {
                 match LettaAdapter::new(&cfg.letta_url, &cfg.letta_agent_id, &cfg.letta_token) {
                     Ok(p) => {
-                        eprintln!("[steward] 记忆引擎 → Letta ({})", cfg.letta_url);
+                        eprintln!("[agent-body] 记忆引擎 → Letta ({})", cfg.letta_url);
                         Ok(Arc::new(p))
                     }
                     Err(e) => {
                         eprintln!(
-                            "[steward] ⚠️  Letta 配置错误，降级为内置引擎: {}",
+                            "[agent-body] ⚠️  Letta 配置错误，降级为内置引擎: {}",
                             e
                         );
                         let p = BuiltinMemoryProvider::new(storage);

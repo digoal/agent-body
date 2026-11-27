@@ -15,13 +15,13 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 
 1. **代码真实性第一（Zero Hallucination）**：
    - 所有的命令参数、子命令名称、配置项键名、MCP 工具名称（共 43 个）、JSON 返回结构，必须直接源自 `src/` 源码（如 `src/cli_args.rs`, `src/main.rs`, `src/api/mcp_schemas.rs`, `src/api/mcp_tools.rs`, `src/config/mod.rs`, `src/body/`），绝不允许擅自发明不存在的命令或参数。
-   - 遵循 **三层命名兼容纪律**：对外文档叙事统一围绕 **「脑体分离 · Agent 本体（宿主机具身底座）」**（说明大管家/小秘书为两大侧面），同时工程标识（`agent-body`、`body_*`、`~/.agent-body/`）100% 保持原样不误导改动。
+   - 遵循 **三层命名兼容纪律**：对外文档叙事统一围绕 **「脑体分离 · Agent 本体（宿主机具身底座）」**，同时工程标识（`agent-body`、`body_*`、`~/.agent-body/`）100% 保持原样不误导改动。
    - 凡涉及运行依赖、环境要求与部署配置，必须严格注明**“必选 (Required)”**与**“可选 (Optional)”**，并在 [INSTALL.md](../../INSTALL.md) 与 [config.example.toml](../../config.example.toml) 中保持事实对齐。
 2. **命令必须实跑验证（Execution-Verified）**：
    - 文档中凡是贴出的 CLI 输出、curl 返回或 JSON 示例，**必须使用编译出来的实际二进制执行一次**（例如 `./target/release/agent-body env port 22`、`./target/release/agent-body links audit`），捕获真实输出后贴入，严禁“凭印象编造输出”。
 3. **通俗易懂与直击痛点（小白听得懂，架构师有共鸣）**：
    - 开篇不讲枯燥概念，先讲**场景痛点**（“为什么 Agent 换了个会话就乱放文件？”、“为什么启动测试服务会把宿主机端口打架打崩？”、“改动一个公共脚本怎么知道下游哪几个 cron 会挂？”）；
-   - 用大白话类比解释核心机制（例如：黑名单浅层阻断 = “敲门但不进屋”，防止把 node_modules 万级无用碎片扫爆数据库；宏微双层联邦 = “大管家管城市交通网，CodeGraph 管大楼内部房间”）。
+   - 用大白话类比解释核心机制（例如：黑名单浅层阻断 = “敲门但不进屋”，防止把 node_modules 万级无用碎片扫爆数据库；宏微双层联邦 = “Agent 本体管城市交通网，CodeGraph 管大楼内部房间”）。
 4. **全套结构化排版与防渲染踩坑**：
    - 代码块标注具体语言（`bash`, `json`, `toml`, `sql`）；
    - 所有 Mermaid 图必须使用标准语法（节点文字含特殊符号或括号必须用双引号包裹，如 `node["描述 (详情)"]`），布局美观，避免文字重叠或溢出；
@@ -40,7 +40,7 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 ## 二、文档目标受众与手册目录体系架构
 
 ### 2.1 读者画像
-1. **AI Agent 本身**：通过阅读 `README.md` 和 `docs/manual/04-mcp-integration.md`，知道如何通过 stdio MCP 挂载大管家，在开工时主动调用 `body_brief`。
+1. **AI Agent 本身**：通过阅读 `README.md` 和 `docs/manual/04-mcp-integration.md`，知道如何通过 stdio MCP 挂载Agent 本体，在开工时主动调用 `body_brief`。
 2. **普通开发者与工程师**：希望能一条命令安装并作为后台守护进程跑起来，规范本地文件和记忆。
 3. **系统架构师与平台运维**：关心安全隐私（数据是否全部本地 SQLite）、资源消耗（CLI/MCP 单次 `< 15 MB`，全功能常驻守护含 Web/DuckDB `< 90 MB`）、分级扫描黑名单阻断、端口防撞以及宏微代码拓扑穿透机制。
 
@@ -123,7 +123,7 @@ flowchart TD
 
 ## 四、文档风格与表达指南（"德哥"接地气风范）
 
-- **杜绝官话套话**：不要写“本系统采用了高效的分布式协同机制”，而要写“大管家死守一条原则：白名单深挖到底，黑名单绝不下钻，哪怕你目录里有十万个 node_modules 垃圾碎片，也绝不把 SQLite 扫爆”。
+- **杜绝官话套话**：不要写“本系统采用了高效的分布式协同机制”，而要写“Agent 本体死守一条原则：白名单深挖到底，黑名单绝不下钻，哪怕你目录里有十万个 node_modules 垃圾碎片，也绝不把 SQLite 扫爆”。
 - **注重实战场景**：多举具体路径（如 `/root/new/shared_proj/`, `/root/new/work/`, `/root/new/tmp/`, `/root/new/skills/`）。
 - **善用图解**：复杂的数据流动与生命周期，用 Mermaid 流程图直观表现；系统全景架构与宏微联邦用矢量 SVG 清晰展示。
 

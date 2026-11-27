@@ -492,7 +492,7 @@ CREATE TABLE config (
 
 -- 初始配置
 INSERT INTO config VALUES ('schema_version', '1', strftime('%Y-%m-%dT%H:%M:%f+00:00','now'));
-INSERT INTO config VALUES ('steward_version', '0.1.0', strftime('%Y-%m-%dT%H:%M:%f+00:00','now'));
+INSERT INTO config VALUES ('body_version', '0.1.0', strftime('%Y-%m-%dT%H:%M:%f+00:00','now'));
 ```
 
 ### 2.12 migrations — 版本迁移记录
@@ -544,7 +544,7 @@ INSERT INTO migrations VALUES (1, 'initial schema', strftime('%Y-%m-%dT%H:%M:%f+
 
 | 查询 | 频率 | 优化手段 |
 |------|------|----------|
-| `steward brief` (最近 N 条记忆 + 环境 + 活跃项目) | 每次新会话 | 缓存 + 复合索引 |
+| `agent-body brief` (最近 N 条记忆 + 环境 + 活跃项目) | 每次新会话 | 缓存 + 复合索引 |
 | 记忆语义搜索 | 每次对话 | sqlite-vec HNSW |
 | 记忆关键词搜索 | 每次对话 | FTS5 BM25 |
 | 资产搜索 | 每次任务 | FTS5 + 标签索引 |

@@ -11,9 +11,9 @@
 
 1. **根治 `W10 ❌ FAIL` 与 `SLA ❌ FAIL`**：消除 `src/benchmark/workloads.rs` 中硬编码 `env!("CARGO_MANIFEST_DIR")` 导致的位置耦合，确保单二进制在任意目录/容器均可 100% 通过 `W10` 与全量 `bench run --suite full`。
 2. **根治 `DQ5 ❌ FAIL`（45.3% → >= 98.0%）**：消除 `BackgroundScheduler` 对 `FreshnessReconciler::reconcile` 的静默吞错，补齐改名/搬移后的现网对账与清理。
-3. **修复改名遗留高危断链与漂移**：修复 `Dockerfile`、`docker-compose.yml`、`config.example.toml`、`src/scanner/matcher.rs` 中残留的 `/.steward`；对齐 `bench --help` 与 `EVOLUTION_GUIDE.md`。
+3. **修复改名遗留高危断链与漂移**：修复 `Dockerfile`、`docker-compose.yml`、`config.example.toml`、`src/scanner/matcher.rs` 中残留的 `/.agent-body`；对齐 `bench --help` 与 `EVOLUTION_GUIDE.md`。
 4. **构建五大确定性质量门禁**：引入 `cargo clippy --all-targets -- -D warnings` 与 `make lint-hygiene`，补齐 `evolution_manifest.py` 四大盲区。
-5. **精准代码质量治理**：清理用户可见输出中的 `steward` 命名分裂、治理关键路径 `let _ =` 静默吞错、低风险模块化拆分 Top 3 God Files（`src/main.rs`、`src/api/mcp_tools.rs`、`src/benchmark/workloads.rs`）、压降 `agent-body.service` 常驻内存至 `< 90 MB`。
+5. **精准代码质量治理**：清理用户可见输出中的 `agent-body` 命名分裂、治理关键路径 `let _ =` 静默吞错、低风险模块化拆分 Top 3 God Files（`src/main.rs`、`src/api/mcp_tools.rs`、`src/benchmark/workloads.rs`）、压降 `agent-body.service` 常驻内存至 `< 90 MB`。
 6. **升级工程规约与一等公民同步**：更新 `README.md`（规约 #11/#13/#28）、`EVOLUTION_GUIDE.md`、`skills/agent-body-developer/SKILL.md`、重建 `.codegraph/` 并 `make sync-mirror`。
 
 ---
@@ -27,7 +27,7 @@
 | **P49-03** | M1 | 修复 `BackgroundScheduler` 对账静默吞错并在现网执行 `FreshnessReconciler` 恢复 `DQ5 >= 98%` | ✅ 已完成 | 2026-11-22 18:36 | `DQ5` 由 `45.3%` 恢复至 `99.8% ✅` |
 | **P49-04** | M2 | 新增 `make lint-strict`（`--lib/--bin -D warnings` + 自动联动 `clippy`）清零全仓编译警告 | ✅ 已完成 | 2026-11-22 18:35 | `0 warnings` 严格编译通过 |
 | **P49-05** | M2 | 升级 `scripts/evolution_manifest.py` 补齐 4 大盲区 + 新增 `scripts/code_hygiene.py` & `make quality-gate` | ✅ 已完成 | 2026-11-22 18:35 | 五重确定性门禁 0 drift / 0 panic / 0 hygiene 违规 |
-| **P49-06** | M3 | 清理 Benchmark 报告 / Web UI 等用户可见输出中的 `steward` 命名分裂 | ✅ 已完成 | 2026-11-22 18:24 | 报告与 Web UI 统一 `Without Agent Body vs With Agent Body` |
+| **P49-06** | M3 | 清理 Benchmark 报告 / Web UI 等用户可见输出中的 `agent-body` 命名分裂 | ✅ 已完成 | 2026-11-22 18:24 | 报告与 Web UI 统一 `Without Agent Body vs With Agent Body` |
 | **P49-07** | M3 | 治理 `daemon` / `links` / `feedback` / `watcher` / `fact` 核心路径 `let _ =` 静默吞错 | ✅ 已完成 | 2026-11-22 18:28 | 核心自治写入吞错清零，全仓 `let _ =` 降至 `125/130` |
 | **P49-08** | M3 | 低风险模块化拆分 Top 3 God Files（`src/main.rs`、`src/api/mcp_tools.rs`、`src/benchmark/workloads.rs`） | ✅ 已完成 | 2026-11-22 18:27 | 拆出 `cli_args.rs` / `mcp_schemas.rs` / `workloads/{mod,advanced}.rs` |
 | **P49-09** | M3 | 压降 `agent-body.service` 内存（SQLite `cache_size=-8000` + 巡检后 `malloc_trim(0)`） | ✅ 已完成 | 2026-11-22 18:25 | 已落地缓存收敛与堆页归还机制 |

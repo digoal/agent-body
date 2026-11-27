@@ -58,7 +58,7 @@
 | `src/changes/` | `ChangesEngine` | 宿主变更审计流与开工回溯摘要（含脱敏） |
 | `src/config/` | `Config`, `WebConfig`, `StorageConfig` | TOML 配置加载、校验与 `~/.agent-body/` 权限收敛 |
 | `src/coordination/` | `CoordinationEngine`, `DeadlockDetector`, `LockWaitQueue` | 多 Agent 协作锁、层级互斥传播与 WFG 死锁环路检测 |
-| `src/daemon/` | `StewardDaemon`, `BackgroundScheduler` | 常驻守护主循环、后台巡检与生命周期托管 |
+| `src/daemon/` | `BodyDaemon`, `BackgroundScheduler` | 常驻守护主循环、后台巡检与生命周期托管 |
 | `src/demo/` | `DemoEngine`, `RoiReport` | 6 大路演沙盒剧目（`demo:*` 隔离，真引擎实跑） |
 | `src/ecosystem/` | `McpConfigScanner`, `SkillCatalogScanner`, `ContextBudgetRouter` | MCP/SKILL 目录、外部服务通讯录与 Token 防爆路由 |
 | `src/env/` | `EnvCollector`, `PortChecker`, `HostGarbageCollector` | `/proc` 任务采集（脱敏+去噪）、端口防撞与白名单 `dry-run` GC |

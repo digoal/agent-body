@@ -4,7 +4,7 @@
   </defs>
 
   <!-- 标题 -->
-  <text x="360" y="30" text-anchor="middle" fill="#1e293b" font-size="16" font-weight="700">从「记忆管理」到「环境大管家」—— 需求全景对比</text>
+  <text x="360" y="30" text-anchor="middle" fill="#1e293b" font-size="16" font-weight="700">从「记忆管理」到「Agent 本体」—— 需求全景对比</text>
 
   <!-- 左半: 现有方案 -->
   <rect x="20" y="50" width="320" height="330" rx="12" fill="#fef2f2" stroke="#fca5a5" stroke-width="1" filter="url(#s2)"/>
@@ -29,9 +29,9 @@
   <rect x="40" y="342" width="280" height="28" rx="6" fill="#f1f5f9"/>
   <text x="180" y="361" text-anchor="middle" fill="#94a3b8" font-size="12">❌ 四维信息之间无关联</text>
 
-  <!-- 右半: steward -->
+  <!-- 右半: agent-body -->
   <rect x="380" y="50" width="320" height="330" rx="12" fill="#f0fdf4" stroke="#86efac" stroke-width="1" filter="url(#s2)"/>
-  <text x="540" y="78" text-anchor="middle" fill="#166534" font-size="14" font-weight="700">steward 环境大管家</text>
+  <text x="540" y="78" text-anchor="middle" fill="#166534" font-size="14" font-weight="700">agent-body Agent 本体</text>
   <text x="540" y="96" text-anchor="middle" fill="#15803d" font-size="11">记忆 × 资产 × 环境 × 变更 × 关联</text>
 
   <rect x="400" y="112" width="280" height="36" rx="6" fill="#dcfce7"/>
@@ -50,5 +50,5 @@
   <text x="540" y="319" text-anchor="middle" fill="#166534" font-size="12">✅ 智能关联（四维交叉检索）</text>
 
   <rect x="400" y="342" width="280" height="28" rx="6" fill="#bbf7d0"/>
-  <text x="540" y="361" text-anchor="middle" fill="#166534" font-size="12" font-weight="600">= steward brief（一次调用全拿到）</text>
+  <text x="540" y="361" text-anchor="middle" fill="#166534" font-size="12" font-weight="600">= agent-body brief（一次调用全拿到）</text>
 </svg>

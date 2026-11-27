@@ -1,4 +1,4 @@
-# Agent Host Steward — 产品设计 Review 报告
+# Agent Body — 产品设计 Review 报告
 
 > 审查人: digoal 德哥
 > 审查范围: 7 个交付件全量（3,820 行 / 127KB）
@@ -53,13 +53,13 @@
 
 ### 🟡 问题 5：MCP 工具命名不一致
 
-- **03-feature-spec.md**: `steward_memory_write`, `steward_assets_search`, `steward_context_brief`
-- **04-product-manual.md**: `steward_memory_add`, `steward_asset_search`, `steward_brief`
-- **06-api-spec.md**: `steward_memory_add`, `steward_asset_search`, `steward_brief`
+- **03-feature-spec.md**: `body_memory_write`, `body_assets_search`, `body_context_brief`
+- **04-product-manual.md**: `body_memory_add`, `body_asset_search`, `body_brief`
+- **06-api-spec.md**: `body_memory_add`, `body_asset_search`, `body_brief`
 
 `write` vs `add`、`assets` vs `asset`（单复数）、`context_brief` vs `brief`。
 
-**修复**: 统一为 06 的命名（`steward_memory_add`, `steward_asset_*`），回补 03。
+**修复**: 统一为 06 的命名（`body_memory_add`, `body_asset_*`），回补 03。
 
 ---
 
@@ -67,36 +67,36 @@
 
 ### 🟡 遗漏 1：记忆写入的"由谁触发"问题
 
-当前设计隐含一个重大假设：**Agent 会主动调用 `steward_memory_add` 来写入记忆**。但实际使用中，大部分 Agent 不会自己决定"这段对话值得记住"。
+当前设计隐含一个重大假设：**Agent 会主动调用 `body_memory_add` 来写入记忆**。但实际使用中，大部分 Agent 不会自己决定"这段对话值得记住"。
 
 **缺一个机制**: Agent 对话结束后（或会话中），由谁来提取值得记忆的内容？
 
 三种方案：
-1. **Agent 自行判断** — 需要 Agent 的 system prompt 里教它"遇到决策/偏好/经验时调 steward_memory_add"。这依赖 Agent 框架的配合。
-2. **steward 主动提取** — Agent 结束对话后，把 transcript 推给 steward，steward 用本地 LLM 自动提取。但 01 的"非场景"第 2 条说"不做 LLM 调用"。
-3. **混合模式** — Agent 主动写 + steward 提供"transcript → memories"批处理命令。
+1. **Agent 自行判断** — 需要 Agent 的 system prompt 里教它"遇到决策/偏好/经验时调 body_memory_add"。这依赖 Agent 框架的配合。
+2. **agent-body 主动提取** — Agent 结束对话后，把 transcript 推给 agent-body，agent-body 用本地 LLM 自动提取。但 01 的"非场景"第 2 条说"不做 LLM 调用"。
+3. **混合模式** — Agent 主动写 + agent-body 提供"transcript → memories"批处理命令。
 
 **建议**: 在 04 产品手册或 03 功能规格里增加一节"记忆写入策略"，说清楚这个问题。推荐方案 3。
 
-### 🟡 遗漏 2：`steward brief` 的 token 预算控制
+### 🟡 遗漏 2：`agent-body brief` 的 token 预算控制
 
-`steward brief` 返回的内容会被注入到 Agent 的 prompt 里。如果记忆多、项目多、环境复杂，brief 可能很长（几千 token），挤占 Agent 的上下文窗口。
+`agent-body brief` 返回的内容会被注入到 Agent 的 prompt 里。如果记忆多、项目多、环境复杂，brief 可能很长（几千 token），挤占 Agent 的上下文窗口。
 
 **缺一个参数**: `max_tokens` 或 `budget`，让 Agent 指定"我最多给 brief 留 2000 token，你自己裁剪"。
 
-**建议**: 在 06-api-spec 的 `steward_brief` 参数里加 `max_tokens: int`。
+**建议**: 在 06-api-spec 的 `body_brief` 参数里加 `max_tokens: int`。
 
 ### 🟡 遗漏 3：多用户场景
 
-当前设计全部基于单用户（`~/.steward/`）。如果一台机器上有多个用户（如跳板机、共享开发机），每个用户需要独立的 steward 实例。
+当前设计全部基于单用户（`~/.agent-body/`）。如果一台机器上有多个用户（如跳板机、共享开发机），每个用户需要独立的 agent-body 实例。
 
-当前设计已经天然支持（每个用户 `~/.steward/` 互不干扰），但没有显式提到。
+当前设计已经天然支持（每个用户 `~/.agent-body/` 互不干扰），但没有显式提到。
 
 **建议**: 在 05 架构设计或 04 产品手册里加一段"多用户"，说明天然隔离。
 
 ### 🟡 遗漏 4：数据库路径重映射
 
-**03 的边界**说"不做远程机器管理"。但画像 C（DBA/SRE）管的是"多台机器"。如果 Agent 需要知道"远程服务器 db-prod-01 上的 PostgreSQL 版本"，steward 完全不管这个。
+**03 的边界**说"不做远程机器管理"。但画像 C（DBA/SRE）管的是"多台机器"。如果 Agent 需要知道"远程服务器 db-prod-01 上的 PostgreSQL 版本"，agent-body 完全不管这个。
 
 不需要现在做，但需要**预留一个扩展点**：未来版本里的"remote host"概念，或者让用户把远程信息作为 `fact` 类型记忆手动注册。
 
@@ -140,11 +140,11 @@ sqlite-vec 是 Alex Garcia 的扩展项目，目前还比较年轻。几个实�
 
 ### 🟠 决策 4：MCP stdio 模式的 daemon 通信
 
-05 的 MCP 模式 A 描述了 `steward mcp` 子进程通过 Unix Socket 连接 daemon。这意味着：
+05 的 MCP 模式 A 描述了 `agent-body mcp` 子进程通过 Unix Socket 连接 daemon。这意味着：
 - daemon 需要监听一个 Unix Socket（除了 REST 的 TCP 端口）
-- `steward mcp` 是一个瘦桥接进程
+- `agent-body mcp` 是一个瘦桥接进程
 
-**需要明确**: Unix Socket 路径是什么？建议 `~/.steward/steward.sock`。
+**需要明确**: Unix Socket 路径是什么？建议 `~/.agent-body/agent-body.sock`。
 
 ---
 
@@ -164,7 +164,7 @@ sqlite-vec 是 Alex Garcia 的扩展项目，目前还比较年轻。几个实�
 
 ### 🟡 问题 8：assets_vec 缺失
 
-memories 有 `memories_vec` 向量表，但 assets 没有对应的向量表。03-feature-spec 的 AssetEntry 定义了 `embedding: vector(768)`，06 的 `steward_asset_search` 也支持语义搜索。
+memories 有 `memories_vec` 向量表，但 assets 没有对应的向量表。03-feature-spec 的 AssetEntry 定义了 `embedding: vector(768)`，06 的 `body_asset_search` 也支持语义搜索。
 
 **修复**: 07 补上 `assets_vec` 虚拟表，类似 `memories_vec`。
 
@@ -177,15 +177,15 @@ memories 有 `memories_vec` 向量表，但 assets 没有对应的向量表。03
 04 只说了"怎么连"，没说"连上后 Agent 该怎么用"。需要一段最佳实践：
 
 > **推荐使用模式:**
-> 1. 新会话开始时，调用 `steward_brief` 获取上下文
-> 2. 对话中遇到决策/经验/任务时，调用 `steward_memory_add` 记录
-> 3. 需要找文件/脚本时，调用 `steward_asset_search`
-> 4. 需要知道环境时，调用 `steward_env_show` 或 `steward_env_service`
-> 5. 任务中断时，用 `steward_memory_add --type task` 保存进度
+> 1. 新会话开始时，调用 `body_brief` 获取上下文
+> 2. 对话中遇到决策/经验/任务时，调用 `body_memory_add` 记录
+> 3. 需要找文件/脚本时，调用 `body_asset_search`
+> 4. 需要知道环境时，调用 `body_env_show` 或 `body_env_service`
+> 5. 任务中断时，用 `body_memory_add --type task` 保存进度
 
 ### 🟡 缺少 system prompt 集成示例
 
-Agent 使用 steward 的前提是 system prompt 里告诉 Agent "你有一个叫 steward 的工具"。需要给出一段推荐的 system prompt 片段。
+Agent 使用 agent-body 的前提是 system prompt 里告诉 Agent "你有一个叫 agent-body 的工具"。需要给出一段推荐的 system prompt 片段。
 
 ---
 
@@ -193,7 +193,7 @@ Agent 使用 steward 的前提是 system prompt 里告诉 Agent "你有一个叫
 
 | 调整 | 原级别 | 建议级别 | 理由 |
 |------|--------|----------|------|
-| FC-05 变更摘要 | P1 | **P0** | `steward brief` 的"最近变更"部分依赖它，而 brief 是 MVP 核心价值 |
+| FC-05 变更摘要 | P1 | **P0** | `agent-body brief` 的"最近变更"部分依赖它，而 brief 是 MVP 核心价值 |
 | FL-03 手动关联 | P1 | P1 不变 | OK |
 | FE-07 快照对比 | P1 | P1 不变 | OK |
 | REST API | P1 | **P0** | CLI 和 MCP 已覆盖 Agent 和人工场景，REST 可以降 P1，但如果要支持 Web UI 或外部脚本则需 P0。我建议保持 P1，MVP 只做 MCP+CLI |

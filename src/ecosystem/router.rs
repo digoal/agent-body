@@ -306,7 +306,7 @@ mod tests {
 
         storage
             .upsert_mcp_catalog(&McpCatalogRecord {
-                id: "mcp-steward".to_string(),
+                id: "mcp-agent-body".to_string(),
                 server_name: "agent-body".to_string(),
                 client_source: "hermes".to_string(),
                 transport: "stdio".to_string(),

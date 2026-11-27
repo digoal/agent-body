@@ -126,7 +126,7 @@ import subprocess
 import sys
 from typing import Any, Dict, Optional
 
-STEWARD_BIN = shutil.which("agent-body") or "/usr/local/bin/agent-body"
+BODY_BIN = shutil.which("agent-body") or "/usr/local/bin/agent-body"
 
 # 仅匹配明确“启动监听服务/端口绑定”的命令，避免误拦 psql -p 5432 / curl :8080 等客户端命令
 LISTEN_PORT_PATTERNS = [
@@ -195,8 +195,8 @@ def is_noise_path(path: str) -> bool:
     if not path:
         return True
     home_gemini = os.path.expanduser("~/.gemini/")
-    home_steward = os.path.expanduser("~/.agent-body/")
-    prefixes = NOISE_PATH_PREFIXES + (home_gemini, home_steward)
+    home_body = os.path.expanduser("~/.agent-body/")
+    prefixes = NOISE_PATH_PREFIXES + (home_gemini, home_body)
     return any(path.startswith(prefix) for prefix in prefixes)
 
 
@@ -214,12 +214,12 @@ def extract_listen_port(cmd: str) -> Optional[int]:
 
 
 def handle_session_start() -> None:
-    if not os.path.exists(STEWARD_BIN):
+    if not os.path.exists(BODY_BIN):
         emit({})
         return
     try:
         proc = subprocess.run(
-            [STEWARD_BIN, "brief"],
+            [BODY_BIN, "brief"],
             capture_output=True,
             text=True,
             timeout=2.5,
@@ -248,7 +248,7 @@ def handle_session_start() -> None:
 
 def handle_pre_tool() -> None:
     payload = read_stdin_json()
-    if not os.path.exists(STEWARD_BIN):
+    if not os.path.exists(BODY_BIN):
         emit({"decision": "allow"})
         return
 
@@ -259,13 +259,13 @@ def handle_pre_tool() -> None:
         emit({"decision": "allow"})
         return
 
-    steward_args: Dict[str, Any] = {}
+    body_args: Dict[str, Any] = {}
     if tool_name in ("write_file", "edit_file"):
         path = str(raw_args.get("Path") or raw_args.get("path") or "")
         if is_noise_path(path):
             emit({"decision": "allow"})
             return
-        steward_args["path"] = path
+        body_args["path"] = path
     elif tool_name == "run_command":
         cmd = str(raw_args.get("CommandLine") or raw_args.get("command") or "")
         if not cmd:
@@ -275,9 +275,9 @@ def handle_pre_tool() -> None:
         if port is None and not is_destructive_or_sensitive_command(cmd):
             emit({"decision": "allow"})
             return
-        steward_args["command"] = cmd
+        body_args["command"] = cmd
         if port is not None:
-            steward_args["port"] = port
+            body_args["port"] = port
     else:
         emit({"decision": "allow"})
         return
@@ -285,13 +285,13 @@ def handle_pre_tool() -> None:
     try:
         proc = subprocess.run(
             [
-                STEWARD_BIN,
+                BODY_BIN,
                 "hooks",
                 "pre",
                 "-t",
                 tool_name,
                 "-a",
-                json.dumps(steward_args, ensure_ascii=False),
+                json.dumps(body_args, ensure_ascii=False),
             ],
             capture_output=True,
             text=True,
@@ -371,7 +371,7 @@ def extract_failure_text(payload: Dict[str, Any]) -> Optional[str]:
 
 def handle_post_tool() -> None:
     payload = read_stdin_json()
-    if not os.path.exists(STEWARD_BIN):
+    if not os.path.exists(BODY_BIN):
         emit({})
         return
 
@@ -384,23 +384,23 @@ def handle_post_tool() -> None:
     # AOPCC 失败早回退（OCC Abort Recovery）：工具执行出错时 1.5s 内同步诊断并回注自愈处方
     err_text = extract_failure_text(payload)
     if err_text:
-        steward_args: Dict[str, Any] = {}
+        body_args: Dict[str, Any] = {}
         cmd = raw_args.get("CommandLine") or raw_args.get("command") or ""
         path = raw_args.get("Path") or raw_args.get("path") or ""
         if cmd:
-            steward_args["command"] = str(cmd)
+            body_args["command"] = str(cmd)
         if path:
-            steward_args["path"] = str(path)
+            body_args["path"] = str(path)
         try:
             proc = subprocess.run(
                 [
-                    STEWARD_BIN,
+                    BODY_BIN,
                     "hooks",
                     "post",
                     "-t",
                     tool_name or "run_command",
                     "-a",
-                    json.dumps(steward_args, ensure_ascii=False),
+                    json.dumps(body_args, ensure_ascii=False),
                     "--success=false",
                     "--error-output",
                     err_text,
@@ -438,17 +438,17 @@ def handle_post_tool() -> None:
         emit({})
         return
 
-    steward_args = {"path": path}
+    body_args = {"path": path}
     try:
         subprocess.Popen(
             [
-                STEWARD_BIN,
+                BODY_BIN,
                 "hooks",
                 "post",
                 "-t",
                 tool_name,
                 "-a",
-                json.dumps(steward_args, ensure_ascii=False),
+                json.dumps(body_args, ensure_ascii=False),
                 "--success",
             ],
             stdin=subprocess.DEVNULL,

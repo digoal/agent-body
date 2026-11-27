@@ -20,7 +20,7 @@
 - 它不知道哪个 cron 任务在后台定时跑脚本、修改数据库；
 - 它不知道用户偏好把脚本放在哪里，随手乱丢文件污染工作区。
 
-**Agent 本体（工程代号 `Agent Body`，其中「大管家 / 小秘书」是本体面向环境治理与比较优势协同的两大功能侧面）** 将脑与体彻底解耦，确立**三位一体内核**：
+**Agent 本体（工程代号 `Agent Body`）** 将脑与体彻底解耦，确立**三位一体内核**：
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -29,7 +29,7 @@
 └───────────────────────────────────────────┬────────────────────────────────────────────┘
                                             │ MCP (stdio/SSE) / Unix Socket / CLI
 ┌───────────────────────────────────────────▼────────────────────────────────────────────┐
-│                    Agent Body (宿主环境大管家)                                  │
+│                        Agent Body (Agent 本体)                                         │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                        │
 │ ┌────────────────────────────────────────────────────────────────────────────────────┐ │
@@ -63,7 +63,7 @@
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
   
-> 💡 **脑体分离与三层命名兼容说明**：本项目核心定位为 **为 Agent 服务的「Agent 本体（宿主机具身底座）」**——“小秘书”是其感官盘点侧面，“大管家”是其稳态防撞侧面，绝非多 Agent 编排调度器或人类个人助理；同时为保障现有 `hooks.json`、Systemd 服务与 43 个原生 MCP 协议的 100% 向后兼容，工程标识（`agent-body` / `body_*` / `~/.agent-body/`）严格保持稳定不破坏（详见 [04-from-steward-to-agent-body.md](docs/idea_doc/04-from-steward-to-agent-body.md) 与 [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)）。
+> 💡 **脑体分离与三层命名兼容说明**：本项目核心定位为 **为 Agent 服务的「Agent 本体（宿主机具身底座）」**——绝非多 Agent 编排调度器或人类个人助理；同时为保障现有 `hooks.json`、Systemd 服务与 43 个原生 MCP 协议的 100% 向后兼容，工程标识（`agent-body` / `body_*` / `~/.agent-body/`）严格保持稳定不破坏（详见 [04-agent-body-philosophy.md](docs/idea_doc/04-agent-body-philosophy.md) 与 [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md)）。
 
 ---
 
@@ -71,31 +71,31 @@
 
 ### 场景 1：查询机器上的工具能力（问“有没有能处理 PDF 的东西？”）
 - **Agent 请求**: `body_fact_query(type="capability", intent="处理 PDF 提取纯文本")`
-- **大管家返回**:
+- **Agent 本体返回**:
   > “有 `pdftotext`，版本 24.02，绝对路径 `/usr/bin/pdftotext`。**推荐用法**：`pdftotext -layout input.pdf output.txt`（保持原始排版，性能极快，无需 pip 安装 Python 库）。备选工具：`pdftoppm`（转图片）与 Python `pypdf`。”
 
 ### 场景 2：端口排障与防撞（问“8080 端口被谁占了？”）
 - **Agent 请求**: `body_port_check(port=8080)`
-- **大管家返回**:
+- **Agent 本体返回**:
   > “8080 端口已被占用！PID: `18493`，进程名: `python3`，启动命令: `uvicorn main:app --port 8080`，工作目录: `/root/new/work/api-service`，已运行 3 天。**建议**：换用 8081 或 8082 端口。”
 
 ### 场景 3：资产放置偏好（问“我要写个抓取脚本，该放哪里？”）
 - **Agent 请求**: `body_placement_suggest(type="script", name="sec_crawler", intent="美股财报抓取")`
-- **大管家返回**:
+- **Agent 本体返回**:
   > “依主人规范，复用脚本应放置在 `/root/new/shared_proj/sec_crawler/`；临时文件请放 `/root/new/tmp/`；严禁散落在当前目录。遵循蛇形命名规范。”
 
 ---
 
 ## 顶层思想与全新演进路线
 
-- 🌱 **[00-comparative-advantage-origin.md](docs/idea_doc/00-comparative-advantage-origin.md)**：项目缘起：从硅谷园区物业、高管秘书到 AI Agent 的「比较优势」协同
-- 🧬 **[04-from-steward-to-agent-body.md](docs/idea_doc/04-from-steward-to-agent-body.md)**：范式升维：从「大管家 / 小秘书」到「脑体分离 · Agent 本体」的第一性原理思考
-- 💡 **[03-modular-steward-architecture.md](docs/idea_doc/03-modular-steward-architecture.md)**：三位一体架构设计深度思考（事实感官、规约脊柱与记忆海马体的分野与统一）
+- 🌱 **[00-comparative-advantage-origin.md](docs/idea_doc/00-comparative-advantage-origin.md)**：项目缘起：从硅谷园区物业、高管幕僚体系到 AI Agent 的「比较优势」协同
+- 🧬 **[04-agent-body-philosophy.md](docs/idea_doc/04-agent-body-philosophy.md)**：范式升维：「脑体分离 · Agent 本体」的第一性原理思考
+- 💡 **[03-modular-body-architecture.md](docs/idea_doc/03-modular-body-architecture.md)**：三位一体架构设计深度思考（事实感官、规约脊柱与记忆海马体的分野与统一）
 - 🗺️ **[09-modular-roadmap.md](docs/design_doc/09-modular-roadmap.md)**：最新模块化演进路线图（Phase 1 事实图谱护城河 → Phase 2 偏好自演化 → Phase 3 记忆生态插拔 → Phase 4 终极智能中枢）
 - 📐 **[05-architecture.md](docs/design_doc/05-architecture.md)**：三模块分层架构与系统规格说明书
 - 📖 **[03-feature-spec.md](docs/design_doc/03-feature-spec.md)**：三模块功能规格详细定义
 - 📊 **[10-benchmark-spec.md](docs/design_doc/10-benchmark-spec.md)**：实证 Benchmark 对照评测与生产效能存证账本设计规格说明书（双轨闭环确保使用效果 100% 有据可查）
-- 🛡️ **[11-security-spec.md](docs/design_doc/11-security-spec.md)**：宿主大管家安全架构、威胁建模与纵深防御规格说明书（全链路脱敏、高危拦截、写鉴权与抗投毒防线）
+- 🛡️ **[11-security-spec.md](docs/design_doc/11-security-spec.md)**：Agent 本体安全架构、威胁建模与纵深防御规格说明书（全链路脱敏、高危拦截、写鉴权与抗投毒防线）
 - 🔄 **[13-freshness-and-self-evolution-spec.md](docs/design_doc/13-freshness-and-self-evolution-spec.md)**：全生命周期信息新鲜度对账与五点对比探针闭环自进化规格说明书（写穿失效、僵尸清理、`FreshnessReconciler` 与 `P1~P5` 探针反馈闭环）
 - 🕸️ **[14-graph-intelligence-and-mesh-protocol-spec.md](docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)**：多维证据分层有向加权图谱与联邦网格信封协同协议规格说明书（`L1/L2/L3` 三层关系本体、结构上卷与向量语义发现、`MeshEnvelope v1.0` HMAC 防重放认证、跨机对话与沙盒文件投递）
 - ⚡ **[15-adaptive-optimistic-pessimistic-concurrency-spec.md](docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)**：乐观-悲观自适应并发控制（AOPCC）与失败早回退规格说明书（期望代价数学边界、开工乐观直通租约、三态动作分级器与 `PostToolUse` 碰壁秒级自愈）
@@ -121,7 +121,7 @@
   - 320+ 项自动化测试套件与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
 - 🧭 **[03-for-users.md](docs/arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
-  - 大管家核心心智模型与物理世界哨兵定位；
+  - Agent 本体核心心智模型与物理世界哨兵定位；
   - 典型作业六部曲闭环 SOP（开工简报 → 放置问询 → 端口防撞 → 爆炸半径推演 → 协作锁防踩踏 → 完工结清）；
   - 三大接入方式（CLI 终端交互、MCP 智能体挂载、Web 可视化大屏）；
   - 常见问题排查与速查表 (FAQ)。
@@ -133,13 +133,13 @@
 完整的手册发布于 **[`docs/manual/`](docs/manual/)** 目录：
 
 - 🚀 **[01-getting-started.md](docs/manual/01-getting-started.md)**：快速上手、环境依赖准备与首次编译运行
-- 🧠 **[02-core-concepts.md](docs/manual/02-core-concepts.md)**：核心理念：大管家定位、黑白名单浅层阻断、放置建议哲学
+- 🧠 **[02-core-concepts.md](docs/manual/02-core-concepts.md)**：核心理念：Agent 本体定位、黑白名单浅层阻断、放置建议哲学
 - 📖 **[03-cli-reference.md](docs/manual/03-cli-reference.md)**：全量 CLI 命令行实操字典（全子命令 + 真实输出）
 - 🔌 **[04-mcp-integration.md](docs/manual/04-mcp-integration.md)**：Agent 接入指南：43 个原生 MCP 工具与 Claude/Cursor 配置
 - 🔄 **[05-daemon-and-watcher.md](docs/manual/05-daemon-and-watcher.md)**：后台常驻守护服务、inotify 300ms 防抖与 systemd 自启
 - ⚡ **[06-advanced-features.md](docs/manual/06-advanced-features.md)**：进阶特性：端口防撞、断链智能修复、放置规则自演化、三层元数据、WFG 死锁检测、宿主资源 GC、记忆生命周期与 TUI 看板
 - 🛠️ **[07-troubleshooting.md](docs/manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
-- 🌐 **[08-web-dashboard.md](docs/manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级大管家拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
+- 🌐 **[08-web-dashboard.md](docs/manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级Agent 本体拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
 - 🪝 **[09-hooks-integration.md](docs/manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
 - 🧪 **五重确定性质量门禁与 320+ 自动化测试**：`make quality-gate`（`evolution-check` 全仓防漂移/活跃文档 0 断链 + `0` `unwrap`/`expect` + `>1500L` 文件清零 + `18/18` `WaitEventId` 全埋点 + 非基准 `/root/new` 硬编码清零 + `-D warnings` 严格编译）+ `cargo test` 全绿；
 - 📊 **[10-benchmark-and-roi.md](docs/manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.9 与生产效能存证账本（`W1~W19` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ10` + `COMP-C1~C4` 竞品对标 + `PR-01~14` 溯源流水）
@@ -168,7 +168,7 @@ cargo build --release
 # 1. 开工获取系统硬件、活跃任务、最近资产与长期记忆简报
 ./target/release/agent-body brief
 
-# 2. 准备写一个爬虫脚本？先问大管家放哪里
+# 2. 准备写一个爬虫脚本？先问Agent 本体放哪里
 ./target/release/agent-body place suggest --type script --name sec_fetcher --intent "抓取美股财报"
 
 # 3. 准备启动一个测试服务？先探测 8080 端口是否已被占用 (防撞预警)
@@ -237,7 +237,7 @@ cargo build --release
 ### 产品定位与边界
 
 1. **本体定位与脑体分离准则（Embodied Substrate & Brain-Body Separation）**：
-   - 确立 **「脑体分离」** 架构：各类 LLM 与客户端（Antigravity / Claude Code / Cursor / Codex / Cron Worker）是可随时切换的**瞬态大脑皮层**，本项目是永驻物理宿主机的 **Agent 本体（Agent Embodiment Substrate）**；“小秘书（感官盘点）”与“大管家（防撞自治）”只是本体的两个功能侧面，绝非多 Agent 编排器，更非给人类日常使用的个人助理。
+   - 确立 **「脑体分离」** 架构：各类 LLM 与客户端（Antigravity / Claude Code / Cursor / Codex / Cron Worker）是可随时切换的**瞬态大脑皮层**，本项目是永驻物理宿主机的 **Agent 本体（Agent Embodiment Substrate）**；“Agent 本体（感官盘点）”与“Agent 本体（防撞自治）”只是本体的两个功能侧面，绝非多 Agent 编排器，更非给人类日常使用的个人助理。
    - 产品的核心消费者始终是 **AI Agent 大脑**。数据输入输出必须以“极低认知负载、零幻觉只读提取、语义自解释”为第一标准。
 
 2. **边界与递弱代偿防膨胀红线（Anti-Framework Creep）**：
@@ -302,8 +302,8 @@ cargo build --release
     - 确保中断后任何新会话均能通过读取 `EVOLUTION_GUIDE.md` + 当前活跃 `roadmap-phase*.md` 恢复上下文无缝继续。
 
 15. **宏微联邦、不重复造轮子**：
-    - 大管家负责宏观宿主拓扑（文件、服务、端口、定时任务间的依赖网络），并支持将微观文件级 `links` 自动上卷聚合（Roll-up）至宏观项目/服务级 `fact_edges`，实现文件引用、项目拓扑与 CodeGraph 符号级调用的三层贯通。
-    - 微观符号调用（函数、类、AST）下钻交给 CodeGraph，大管家通过 `CodeGraphBridge` 无缝桥接。
+    - Agent 本体负责宏观宿主拓扑（文件、服务、端口、定时任务间的依赖网络），并支持将微观文件级 `links` 自动上卷聚合（Roll-up）至宏观项目/服务级 `fact_edges`，实现文件引用、项目拓扑与 CodeGraph 符号级调用的三层贯通。
+    - 微观符号调用（函数、类、AST）下钻交给 CodeGraph，Agent 本体通过 `CodeGraphBridge` 无缝桥接。
     - 记忆模块通过 SPI 抽象，拥抱成熟开源生态（Mem0/Letta/PowerContext），绝不重复发明轮子。
 
 16. **黑白屏全能力双向同步规约 (Black/White-Screen Parity)**：
@@ -316,9 +316,9 @@ cargo build --release
     - **演说代码化与整体重构红线（Decks-as-Code）**：所有旗舰演说（`presentation/presentation.html`、`presentation/agent-body-deck.html`）与 30 分钟专题演说统一由确定性 Python 引擎（`scripts/deck_engine.py` + `scripts/build_*.py`）生成，共享「地层剖面 / 工程蓝图」视觉 Token 与真实架构数据，严禁手工在成品大 HTML 上局部打补丁拼接；当项目发生核心架构范式跃迁时，旗舰演说必须重构叙事主线并经 `make verify-decks`（Playwright 无头验真：0 报错、0 溢出、0 SVG 重叠/越界、快捷键 `G/N/T/F` 与动画全通）后，重编安装同步至 Web UI 内嵌资产。
 
 18. **实证基准、效能存证与全行为审计双账本规约 (Empirical Benchmark, Verifiable ROI & Dual-Domain Audit Ledger)**：
-    - 任何宣称的效能提升（Token 节省率、上下文质量净提升、探索轮次缩减、微秒级响应延迟、故障/冲突拦截率、垃圾噪音阻断率）必须通过可复现的 **A/B 对照基准套件（Without Steward 裸奔基线 vs With Steward 管家赋能）** 与 **生产运行态效能存证账本（Effectiveness Telemetry Ledger）** 双轨实证，严禁无出处估算或主观拍脑袋指标。
-    - **帕累托双门禁（既省 Token，上下文质量不降反升）**：严禁通过丢弃关键事实或返回空洞摘要来骗取高 Token 压缩率；每个基准负载与竞品对标轨道必须同时考核 **关键事实完整度（Fact Recall）**、**信噪比/纯净度（Signal Precision）**、**结构化可行动性（Actionability）** 与 **有效信息密度提升倍数（Info Density Gain: Facts/1k-tok）**，强制满足 $Q_{\text{steward}} \ge Q_{\text{baseline}}$ 且必含事实 100% 命中。
-    - **双账本协同与 OLAP 分析**：`effectiveness_ledger` 专注核定含规则编号（`provenance_rule`）的 Token/轮次/拦截 ROI；`audit_events` 100% 覆盖 43 个工具全通道调用与本体后台自治维护动作，统一经 DuckDB 列存引擎聚合分析与 Parquet/CSV 安全导出，确保大管家使用效果与内部行为 100% 有据可查。
+    - 任何宣称的效能提升（Token 节省率、上下文质量净提升、探索轮次缩减、微秒级响应延迟、故障/冲突拦截率、垃圾噪音阻断率）必须通过可复现的 **A/B 对照基准套件（Without Agent Body 裸奔基线 vs With Agent Body Agent 本体赋能）** 与 **生产运行态效能存证账本（Effectiveness Telemetry Ledger）** 双轨实证，严禁无出处估算或主观拍脑袋指标。
+    - **帕累托双门禁（既省 Token，上下文质量不降反升）**：严禁通过丢弃关键事实或返回空洞摘要来骗取高 Token 压缩率；每个基准负载与竞品对标轨道必须同时考核 **关键事实完整度（Fact Recall）**、**信噪比/纯净度（Signal Precision）**、**结构化可行动性（Actionability）** 与 **有效信息密度提升倍数（Info Density Gain: Facts/1k-tok）**，强制满足 $Q_{\text{agent-body}} \ge Q_{\text{baseline}}$ 且必含事实 100% 命中。
+    - **双账本协同与 OLAP 分析**：`effectiveness_ledger` 专注核定含规则编号（`provenance_rule`）的 Token/轮次/拦截 ROI；`audit_events` 100% 覆盖 43 个工具全通道调用与本体后台自治维护动作，统一经 DuckDB 列存引擎聚合分析与 Parquet/CSV 安全导出，确保Agent 本体使用效果与内部行为 100% 有据可查。
     - 基准测试必须基于宿主机真实物理探针与 `bench:*` 隔离沙盒实跑（覆盖内核微基准延迟 SLA 与宏观业务负载），并同步核算通过开工乐观租约省去的**整轮对话税 (`rounds_saved` / 回路工具调用轮次)**；每次评测与日常工具调用的真实耗时（`elapsed_us`）、Token 缩减量（`tokens_saved`）、探索轮次缩减（`rounds_saved`）及风险拦截事件（`hazard_intercepted`）均须携带确定性推导规则编号（`provenance_rule`）落库留痕，支持通过 CLI（`agent-body bench`）、MCP（`body_benchmark`）、Web UI 与 DuckDB 导出报告随时溯源核验与跨版本回归比对。
 
 19. **纵深安全防御、全链路脱敏与抗投毒规约 (Defense-in-Depth Security, End-to-End Redaction & Anti-Poisoning)**：

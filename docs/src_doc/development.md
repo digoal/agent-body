@@ -156,13 +156,13 @@ sudo make restart
 ### 2. 测试 PostgreSQL 后端
 1. 准备本地 PG 实例并创建数据库：
    ```sql
-   CREATE DATABASE steward_test;
-   \c steward_test
+   CREATE DATABASE body_test;
+   \c body_test
    CREATE EXTENSION IF NOT EXISTS vector;
    ```
 2. 执行迁移：
    ```bash
-   ./target/release/agent-body storage migrate --to postgres --to-url "host=127.0.0.1 dbname=steward_test user=postgres"
+   ./target/release/agent-body storage migrate --to postgres --to-url "host=127.0.0.1 dbname=body_test user=postgres"
    ```
 
 ### 3. 测试 DuckDB 分析副本同步

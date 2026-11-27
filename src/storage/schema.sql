@@ -1,5 +1,5 @@
 -- ============================================================
--- Agent Host Steward — 内置 Schema (Rust Edition)
+-- Agent Body (Agent 本体) — 内置 Schema (Rust Edition)
 -- ============================================================
 
 PRAGMA journal_mode = WAL;
@@ -397,7 +397,7 @@ END;
 -- 预置数据
 INSERT OR IGNORE INTO config(key, value) VALUES
     ('schema_version', '2'),
-    ('steward_version', '0.2.0');
+    ('body_version', '1.1.0');
 
 INSERT OR IGNORE INTO migrations(version, description) VALUES
     (1, 'initial schema v2');
@@ -413,7 +413,7 @@ CREATE TABLE IF NOT EXISTS benchmark_runs (
     host_fingerprint          TEXT NOT NULL,
     workload_count            INTEGER NOT NULL,
     total_baseline_tokens     INTEGER NOT NULL,
-    total_steward_tokens      INTEGER NOT NULL,
+    total_body_tokens      INTEGER NOT NULL,
     overall_token_savings_pct REAL NOT NULL,
     overall_speedup_factor    REAL NOT NULL,
     total_hazards_intercepted INTEGER NOT NULL,
@@ -434,10 +434,10 @@ CREATE TABLE IF NOT EXISTS effectiveness_ledger (
     tool_or_action     TEXT NOT NULL,
     provenance_rule    TEXT NOT NULL,
     baseline_tokens    INTEGER NOT NULL DEFAULT 0,
-    steward_tokens     INTEGER NOT NULL DEFAULT 0,
+    body_tokens     INTEGER NOT NULL DEFAULT 0,
     tokens_saved       INTEGER NOT NULL DEFAULT 0,
     baseline_rounds    INTEGER NOT NULL DEFAULT 1,
-    steward_rounds     INTEGER NOT NULL DEFAULT 1,
+    body_rounds     INTEGER NOT NULL DEFAULT 1,
     rounds_saved       INTEGER NOT NULL DEFAULT 0,
     hazard_intercepted INTEGER NOT NULL DEFAULT 0,
     noise_blocked      INTEGER NOT NULL DEFAULT 0,
@@ -496,7 +496,7 @@ CREATE TABLE IF NOT EXISTS audit_events (
     session_id         TEXT NOT NULL DEFAULT 'system',
     domain             TEXT NOT NULL CHECK (domain IN ('IN_AGENT', 'OUT_OF_AGENT')),
     actor_kind         TEXT NOT NULL,
-    actor_id           TEXT NOT NULL DEFAULT 'steward',
+    actor_id           TEXT NOT NULL DEFAULT 'agent-body',
     source_channel     TEXT NOT NULL,
     category           TEXT NOT NULL,
     action             TEXT NOT NULL,

@@ -91,9 +91,9 @@ impl ExternalContactsManager {
                 protocol: "postgres".to_string(),
                 capabilities: "PostgreSQL + pgvector 向量与关系共享存储、Advisory Lock 分布式锁".to_string(),
                 auth_type: "env".to_string(),
-                auth_env_var: Some("STEWARD_PG_URL".to_string()),
+                auth_env_var: Some("AGENT_BODY_PG_URL".to_string()),
                 health_endpoint: None,
-                usage_example: Some("psql \"$STEWARD_PG_URL\" -c 'SELECT version();'".to_string()),
+                usage_example: Some("psql \"$AGENT_BODY_PG_URL\" -c 'SELECT version();'".to_string()),
                 status: "unknown".to_string(),
                 last_checked_at: None,
             };
@@ -260,7 +260,7 @@ mod tests {
         let storage = Storage::open_in_memory().expect("open");
         let mgr = ExternalContactsManager::new(storage.clone());
         let mut cfg = Config::default();
-        cfg.storage.pg_url = Some("postgresql://steward:supersecret@127.0.0.1:5432/steward".to_string());
+        cfg.storage.pg_url = Some("postgresql://agent_body:supersecret@127.0.0.1:5432/agent_body".to_string());
 
         let count = mgr.bootstrap_from_config(&cfg).expect("bootstrap");
         assert_eq!(count, 2);

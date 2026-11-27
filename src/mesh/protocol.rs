@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-pub const MESH_PROTOCOL_VERSION: &str = "steward.mesh/1.0";
+pub const MESH_PROTOCOL_VERSION: &str = "agent-body.mesh/1.0";
 
 /// 跨主机 Mesh 协同标准信封
 #[derive(Debug, Clone, Serialize, Deserialize)]

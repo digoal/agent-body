@@ -1,17 +1,17 @@
-# 思想升维：从「大管家 / 小秘书」到「Agent 本体（Agent Embodiment）」
+# 思想升维：「Agent 本体（Agent Embodiment）」第一性原理哲学
 
 > **记录人**: digoal 德哥 & Antigravity  
 > **日期**: 2026-11-22 (Asia/Shanghai)  
 > **关联立项**: [ISSUE.md #27](../../ISSUE.md#L132) · [17-agent-embodiment-and-continuity-spec.md](../design_doc/17-agent-embodiment-and-continuity-spec.md) · [roadmap-phase44-45.md](../src_doc/archive/roadmap-phase44-45.md)  
-> **前序思想**: [00-comparative-advantage-origin.md](00-comparative-advantage-origin.md) · [03-modular-steward-architecture.md](03-modular-steward-architecture.md)
+> **前序思想**: [00-comparative-advantage-origin.md](00-comparative-advantage-origin.md) · [03-modular-body-architecture.md](03-modular-body-architecture.md)
 
 ---
 
-## 一、为什么「大管家 / 小秘书」会把路走窄？—— 命名失配的三重根因诊断
+## 一、为什么必须彻底确立「Agent 本体」定位？—— 定位失配的三重根因诊断
 
-在历经 43 个阶段的工程演进后，回顾最初的立意与用户反馈，一个越来越清晰的心智障碍浮出水面：**早期「`Agent Host Steward`（宿主环境大管家 / 小秘书）」这个外部标签，已经配不上它实际承载的系统架构，而且正在对外产生系统性误导**：
+在工程演进中，一个核心架构准则始终清晰：**任何偏离“具身底座”的外置辅助标签，都会对用户产生系统性误导**：
 
-| 维度 | 「大管家」标签引发的误读 | 「小秘书」标签引发的误读 | 真实初衷与系统现状 |
+| 常见行业误解维度 | 「外置编排器」视角引发的误读 | 「人类个人助理」视角引发的误读 | 真实初衷与 Agent 本体现状 |
 |---|---|---|---|
 | **服务对象** | 容易被误解为 **“管理、调度、驱使多个 Agent 干活的编排中控（Orchestrator）”** | 容易被误解为 **“给人类用户发通知、订日程、管琐事的个人 AI 助手”** | 核心用户始终是 **AI Agent 本身**，做的是「为 Agent 服务的宿主机基础设施」。 |
 | **撞车赛道** | 误撞 LangGraph / CrewAI / AutoGen / Swarm 等上层编排框架 | 误撞个人效率 Copilots / 聊天助手，丧失系统工程硬核辨识度 | 我们只做宿主机物理真实与协作协调，**严守规约 #2 明确不做编排和人类 IM**。 |
@@ -72,13 +72,13 @@ flowchart TB
 
 ---
 
-## 三、旧隐喻的兼容归位：「管家」与「秘书」是本体的两大侧面
+## 三、生理隐喻归位：「感官与海马体」×「脊柱、小脑与代谢」
 
-升华为 **Agent 本体**，并不否定在 [00-comparative-advantage-origin.md](00-comparative-advantage-origin.md) 中奠定的 **比较优势（Comparative Advantage）** 第一性原理，而是完成了一次概念收编：
+确立 **Agent 本体**，并不否定在 [00-comparative-advantage-origin.md](00-comparative-advantage-origin.md) 中奠定的 **比较优势（Comparative Advantage）** 第一性原理，而是完成了一次概念统一：
 
-- **「小秘书」是 Agent 本体的「感官与海马体侧面」**：把硅谷园区物业、高管秘书帮你提前盘点家底（源码目录、`.codegraph`、历史决策）的能力，解释为本体醒来时自带的 **本体感觉（Proprioception）**，让瞬态大脑不必从零折腾琐事。
-- **「大管家」是 Agent 本体的「脊柱、小脑与代谢侧面」**：把端口防撞、协作锁、规范放置、垃圾清理与后台巡检，解释为本体的 **防伤害痛觉反射与自稳态代谢机制**。
-- **对外科普与内化表达的黄金桥梁**：面向初学者时，依然可以用“硅谷园区物业/高管秘书”的比较优势故事零门槛引入；但一旦进入架构定义，立刻点破——**在数字世界里，最彻底的“比较优势”分工不是再雇一个外部助理，而是把环境感知、规约防线和记忆连续性直接做成 Agent 的“身体”。**
+- **Agent 本体的「感官与海马体侧面」**：把硅谷园区物业与专业幕僚提前盘点家底（源码目录、`.codegraph`、历史决策）的能力，收敛为本体醒来时自带的 **本体感觉（Proprioception）**，让瞬态大脑不必从零折腾琐事。
+- **Agent 本体的「脊柱、小脑与代谢侧面」**：把端口防撞、协作锁、规范放置、垃圾清理与后台巡检，收敛为本体的 **防伤害痛觉反射与自稳态代谢机制**。
+- **对外科普与内化表达的黄金桥梁**：面向初学者时，依然可以用“硅谷园区物业与专业幕僚”的比较优势故事零门槛引入；但一旦进入架构定义，立刻点破——**在数字世界里，最彻底的“比较优势”分工不是再雇一个外部助理，而是把环境感知、规约防线和记忆连续性直接做成 Agent 的“身体”。**
 
 ---
 
@@ -100,15 +100,15 @@ flowchart TB
 
 | 方案 | 做法摘要 | 优势 | 风险与代价 | 结论 |
 |---|---|---|---|---|
-| **方案 A：纯文案换皮** | 仅把文档、PPT、注释里的“大管家/小秘书”批量替换为“Agent 本体”，不增任何本体原生能力 | 改动小，短期不会引入新代码风险 | **名实不副**：如果只有“本体”标签却缺少身体身份证、换脑连续性、生命体征与统一自治边界，读者依然会觉得只是换了个时髦名词 | ❌ 不推荐 |
-| **方案 B：定位升维 + 渐进兼容 + 五大本体原语增量演化（Phase 44~45 历史决策）** | ① 文档/注释/HTML/Web UI 全面升维为「脑体分离 · Agent 本体」；② 在 Phase 44~45 过渡期暂保留 `agent-steward`/`steward_*`/`~/.steward/` 三层命名兼容；③ 落地 `src/body/` 五大本体原生能力（`BodyManifest`、`ContinuityCapsule`、`HomeostasisVitals`、`AutonomyEnvelope`、多体名片发现）与 `W17`/`DQ8`；④ 完成注释/文档/SKILL/路演刷新，无缝衔接 `#28` 与 `#29` | **名实相符 + 渐进平滑升级 + 逻辑连绵**：既彻底消除外部误解，又以最少增量补齐本体作为独立范式的核心产品闭环，同时保护过渡期 Hook/MCP/Systemd 契约 | 需要 2 个阶段（Phase 44 内核 + Phase 45 物料刷新）有序推进 | ✅ **Phase 44~45 采用** *(注：随后在 Phase 48 经主理人拍板，已完成无损硬切，统一升级为 `agent-body` / `body_*` / `~/.agent-body/`)* |
-| **方案 C：当期直接推倒改名重构（Phase 44 时点评估）** | 在尚未补齐本体内核与目录收拢时直接将二进制、Crate 名、`~/.steward/`、`steward_*` 全量重命名为 `agent-body` / `body_*` | 字面一步到位 | **当期风险极高**：会与 `#28`/`#29` 并发冲突并打断现网 `hooks.json` 与 Systemd 服务，需待内核稳定后择机专项硬切 | ❌ Phase 44 暂缓 *(后于 Phase 48 专项无损落地)* |
+| **方案 A：纯文案换皮** | 仅把文档、PPT、注释里的外置辅助工具隐喻批量替换为“Agent 本体”，不增任何本体原生能力 | 改动小，短期不会引入新代码风险 | **名实不副**：如果只有“本体”标签却缺少身体身份证、换脑连续性、生命体征与统一自治边界，读者依然会觉得只是换了个时髦名词 | ❌ 不推荐 |
+| **方案 B：定位升维 + 渐进兼容 + 五大本体原语增量演化（Phase 44~45 历史决策）** | ① 文档/注释/HTML/Web UI 全面升维为「脑体分离 · Agent 本体」；② 在 Phase 44~45 过渡期暂保留 `agent-body`/`body_*`/`~/.agent-body/` 三层命名兼容；③ 落地 `src/body/` 五大本体原生能力（`BodyManifest`、`ContinuityCapsule`、`HomeostasisVitals`、`AutonomyEnvelope`、多体名片发现）与 `W17`/`DQ8`；④ 完成注释/文档/SKILL/路演刷新，无缝衔接 `#28` 与 `#29` | **名实相符 + 渐进平滑升级 + 逻辑连绵**：既彻底消除外部误解，又以最少增量补齐本体作为独立范式的核心产品闭环，同时保护过渡期 Hook/MCP/Systemd 契约 | 需要 2 个阶段（Phase 44 内核 + Phase 45 物料刷新）有序推进 | ✅ **Phase 44~45 采用** *(注：随后在 Phase 48 经主理人拍板，已完成无损硬切，统一升级为 `agent-body` / `body_*` / `~/.agent-body/`)* |
+| **方案 C：当期直接推倒改名重构（Phase 44 时点评估）** | 在尚未补齐本体内核与目录收拢时直接将二进制、Crate 名、`~/.agent-body/`、`body_*` 全量重命名为 `agent-body` / `body_*` | 字面一步到位 | **当期风险极高**：会与 `#28`/`#29` 并发冲突并打断现网 `hooks.json` 与 Systemd 服务，需待内核稳定后择机专项硬切 | ❌ Phase 44 暂缓 *(后于 Phase 48 专项无损落地)* |
 
 ---
 
 ## 六、站在「Agent 本体」高度重新思考的五大产品功能点
 
-当产品心智从“外挂管家”切换为“Agent 本体”后，五个原先零散或缺失的关键能力瞬间变得无比清晰（详尽技术规格见 [17-agent-embodiment-and-continuity-spec.md](../design_doc/17-agent-embodiment-and-continuity-spec.md)）：
+当产品心智从“外置辅助工具”切换为“Agent 本体”后，五个原先零散或缺失的关键能力瞬间变得无比清晰（详尽技术规格见 [17-agent-embodiment-and-continuity-spec.md](../design_doc/17-agent-embodiment-and-continuity-spec.md)）：
 
 1. **身体身份证与器官自省（`BodyManifest`）**：让任意新接入的大脑在 `<10ms` 内看清自己着陆的物理躯干 ID、宿主资源、6 大器官健康度与不可越界的边界。
 2. **跨大脑工作态接力胶囊（`ContinuityCapsule`）**：解决业界高频痛点——“Claude Code 改到一半换 Antigravity / Codex / Cron 接手”时，由本体保管 `<300 tok` 脱敏防投毒的接力胶囊，实现**换脑不失忆、换壳不换魂**。

@@ -58,7 +58,7 @@ chmod +x /usr/local/bin/agent-body
 
 ## 3. 首次启动与数据初始化
 
-大管家采用 **零配置引导（Zero-Config Bootstrap）** 机制。无需手动执行 SQL 建表脚本，大管家在首次运行时会自动检测并创建所有必要目录和数据结构。
+Agent 本体采用 **零配置引导（Zero-Config Bootstrap）** 机制。无需手动执行 SQL 建表脚本，Agent 本体在首次运行时会自动检测并创建所有必要目录和数据结构。
 
 ### 3.1 运行状态检查
 在终端中执行：
@@ -95,7 +95,7 @@ chmod +x /usr/local/bin/agent-body
 
 ## 4. 首次冒烟测试：获取宿主上下文简报
 
-体验大管家最核心的命令之一：`brief`。该命令聚合了操作系统指标、正在运行的动态任务进程以及跨会话记忆：
+体验Agent 本体最核心的命令之一：`brief`。该命令聚合了操作系统指标、正在运行的动态任务进程以及跨会话记忆：
 
 ```bash
 ./target/release/agent-body brief
@@ -103,7 +103,7 @@ chmod +x /usr/local/bin/agent-body
 
 **真实输出片段示例**:
 ```text
-=== Steward Brief 上下文简报 ===
+=== Agent Body Brief 上下文简报 ===
 系统: Linux 13 Debian GNU/Linux | 内核: 6.12.107+deb13-amd64 | 内存使用率: 20.3%
 活跃动态任务进程 (前 5):
   - [PID 951] ollama (CPU 0.0%, 内存 53.9MB) -> /usr/local/bin/ollama serve
@@ -120,6 +120,6 @@ chmod +x /usr/local/bin/agent-body
 ---
 
 ## 5. 下一步阅读
-- 想要理解大管家的白名单深度递归与黑名单阻断原则？请阅读 [02-core-concepts.md](02-core-concepts.md)。
+- 想要理解Agent 本体的白名单深度递归与黑名单阻断原则？请阅读 [02-core-concepts.md](02-core-concepts.md)。
 - 想要查看完整的命令行参数与实操大全？请阅读 [03-cli-reference.md](03-cli-reference.md)。
-- 想要让 Claude Desktop / Cursor / Antigravity Agent 直接调用大管家？请阅读 [04-mcp-integration.md](04-mcp-integration.md)。
+- 想要让 Claude Desktop / Cursor / Antigravity Agent 直接调用Agent 本体？请阅读 [04-mcp-integration.md](04-mcp-integration.md)。

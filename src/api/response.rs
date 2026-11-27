@@ -17,7 +17,7 @@ pub struct ResponseProvenance {
 /// Agent-Native 强类型标准化统一响应封套 (Envelope)
 /// 专为 LLM Agent 设计：消除非结构化文本歧义，提供确定性错误码、Token 预估与物理可证元数据
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct StewardResponse<T> {
+pub struct BodyResponse<T> {
     /// 操作是否成功
     pub success: bool,
     /// 机器可解析的标准状态码 (如 "OK", "PORT_CONFLICT", "NOISE_FILTERED", "RULE_MATCHED", "ASSET_NOT_FOUND")
@@ -32,7 +32,7 @@ pub struct StewardResponse<T> {
     pub provenance: ResponseProvenance,
 }
 
-impl<T: Serialize> StewardResponse<T> {
+impl<T: Serialize> BodyResponse<T> {
     /// 构造成功的 Agent 统一响应
     pub fn ok(code: impl Into<String>, message: impl Into<String>, data: T, source: &str, start: Instant) -> Self {
         let msg_str = message.into();
@@ -56,12 +56,12 @@ impl<T: Serialize> StewardResponse<T> {
     }
 
     /// 构造失败的 Agent 统一响应
-    pub fn err(code: impl Into<String>, message: impl Into<String>, source: &str, start: Instant) -> StewardResponse<()> {
+    pub fn err(code: impl Into<String>, message: impl Into<String>, source: &str, start: Instant) -> BodyResponse<()> {
         let msg_str = message.into();
         let token_estimate = msg_str.len() / 3 + 10;
         let duration_us = start.elapsed().as_micros() as u64;
 
-        StewardResponse {
+        BodyResponse {
             success: false,
             code: code.into(),
             message: msg_str,
@@ -88,9 +88,9 @@ mod tests {
     }
 
     #[test]
-    fn test_steward_response_ok_serialization() {
+    fn test_body_response_ok_serialization() {
         let start = Instant::now();
-        let resp = StewardResponse::ok(
+        let resp = BodyResponse::ok(
             "OK",
             "端口检测成功，端口 9876 可用",
             DemoData { port: 9876, is_free: true },
@@ -111,9 +111,9 @@ mod tests {
     }
 
     #[test]
-    fn test_steward_response_err_serialization() {
+    fn test_body_response_err_serialization() {
         let start = Instant::now();
-        let err_resp = StewardResponse::<()>::err(
+        let err_resp = BodyResponse::<()>::err(
             "PORT_CONFLICT",
             "目标端口 5432 已被 postgres (PID 1234) 占用",
             "reality:proc",

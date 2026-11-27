@@ -3,7 +3,7 @@
 > 创建时间: 2026-11-18T20:46:00+08:00  
 > 状态: 100% 全部完成 (Phase 14.1 ~ 14.6 全部贯通)  
 > 对应路线图: [roadmap-phase14.md](roadmap-phase14.md)  
-> 规约对齐: [README.md 核心设计原则与约束 §14](file:///root/new/work/agent-steward/README.md#L262-L266)
+> 规约对齐: [README.md 核心设计原则与约束 §14](file:///root/new/work/agent-body/README.md#L262-L266)
 
 ---
 
@@ -11,7 +11,7 @@
 
 | 阶段 | 子任务 ID | 任务内容与检查点 | 涉及路径 | 状态 | 交付时间 |
 |:---:|:---:|---|---|:---:|:---:|
-| **14.1** | 14.1.1 | 定义 `StewardEvent` 事件枚举与物理真实负载（零捏造规约 #5） | `src/hooks/mod.rs` | ✅ 已完成 | 2026-11-18 21:00 |
+| **14.1** | 14.1.1 | 定义 `BodyEvent` 事件枚举与物理真实负载（零捏造规约 #5） | `src/hooks/mod.rs` | ✅ 已完成 | 2026-11-18 21:00 |
 | | 14.1.2 | 实现 `EventBus` 异步广播总线（延迟 < 1ms，吞吐 >= 1000/s） | `src/hooks/event_bus.rs` | ✅ 已完成 | 2026-11-18 21:05 |
 | | 14.1.3 | 实现 `HookDispatcher` 钩子分发器（支持 exec/webhook/黑名单过滤） | `src/hooks/dispatcher.rs` | ✅ 已完成 | 2026-11-18 21:10 |
 | | 14.1.4 | 在 watcher、memory、coordination 关键写路径植入事件发射点 | `src/watcher/`, `src/coordination/`, `src/storage/` | ✅ 已完成 | 2026-11-18 21:26 |
@@ -26,7 +26,7 @@
 | | 14.2.D | 更新使用手册与 SKILL 文档 | `docs/manual/`, `skills/` | ✅ 已完成 | 2026-11-18 22:28 |
 | **14.3** | 14.3.1 | 实现 Antigravity 客户端 Hook 配置生成器 | `src/hooks/client_gen.rs` | ✅ 已完成 | 2026-11-18 22:30 |
 | | 14.3.2 | 实现 Cursor / Claude Code / Git Hooks 生成器 | `src/hooks/client_gen.rs` | ✅ 已完成 | 2026-11-18 22:30 |
-| | 14.3.3 | 新增 CLI `agent-steward hooks generate` 与 MCP 工具（1:1映射） | `src/main.rs`, `src/api/` | ✅ 已完成 | 2026-11-18 22:35 |
+| | 14.3.3 | 新增 CLI `agent-body hooks generate` 与 MCP 工具（1:1映射） | `src/main.rs`, `src/api/` | ✅ 已完成 | 2026-11-18 22:35 |
 | | 14.3.T | 验证各客户端生成文件的有效性单测 | `src/hooks/client_gen.rs`, `src/api/mcp.rs` | ✅ 已完成 | 2026-11-18 22:36 |
 | **14.4** | 14.4.1 | 实现会话首次交互自动注册生命周期 | `src/session/lifecycle.rs` | ✅ 已完成 | 2026-11-18 22:38 |
 | | 14.4.2 | 自动注入会话变更标签与会话成果聚合统计 | `src/session/lifecycle.rs` | ✅ 已完成 | 2026-11-18 22:38 |

@@ -48,7 +48,7 @@ async function loadDemoTheater() {
 }
 
 function renderDemoSceneWidget(res) {
-  const ws = res.with_steward || {};
+  const ws = res.with_body || {};
   const roi = res.roi_metrics || {};
   const id = res.scenario_id;
 
@@ -266,7 +266,7 @@ window.runDemoScenario = async function (scenarioId, idx) {
       );
     }
     const elapsedMs = (Number(res.elapsed_us || 0) / 1000).toFixed(2);
-    const wo = res.without_steward || {};
+    const wo = res.without_body || {};
     const heroCards = (res.hero_metrics || []).map((m) => `
       <div class="hero-metric-card tone-${esc(m.tone || "info")}">
         <span class="hero-metric-label">${esc(m.label)}</span>
@@ -305,7 +305,7 @@ window.runDemoScenario = async function (scenarioId, idx) {
 
       <div class="demo-split">
         <div class="demo-pane-bad">
-          <div class="item-top"><strong style="color:var(--red);">💥 没有大管家：盲人 Agent 翻车现场</strong><span class="badge badge-err">高危痛点</span></div>
+          <div class="item-top"><strong style="color:var(--red);">💥 没有 Agent 本体：盲人 Agent 翻车现场</strong><span class="badge badge-err">高危痛点</span></div>
           <div class="story-step-list">
             <div class="story-step">
               <span class="step-num">1</span>
@@ -324,7 +324,7 @@ window.runDemoScenario = async function (scenarioId, idx) {
         </div>
 
         <div class="demo-pane-good">
-          <div class="item-top"><strong style="color:var(--green);">🛡️ 有了大管家：小秘书毫秒级护航</strong><span class="badge badge-ok">真引擎实跑</span></div>
+          <div class="item-top"><strong style="color:var(--green);">🛡️ 有了 Agent 本体：毫秒级感知与护航</strong><span class="badge badge-ok">真引擎实跑</span></div>
           ${renderDemoSceneWidget(res)}
         </div>
       </div>
@@ -332,7 +332,7 @@ window.runDemoScenario = async function (scenarioId, idx) {
       <details class="raw-json-details">
         <summary>🔍 技术专家核验区：展开查看本机 Rust 真引擎原始返回 JSON 与等价 CLI / MCP 命令</summary>
         <div class="muted-text" style="margin-bottom:6px;">CLI: <code class="mono">${esc(res.black_screen_mirror?.cli_command || "")}</code></div>
-        <pre class="md-pre">${esc(JSON.stringify({ without_steward: res.without_steward, with_steward: res.with_steward, roi_metrics: res.roi_metrics }, null, 2))}</pre>
+        <pre class="md-pre">${esc(JSON.stringify({ without_body: res.without_body, with_body: res.with_body, roi_metrics: res.roi_metrics }, null, 2))}</pre>
       </details>
     `;
   } catch (e) {
@@ -462,7 +462,7 @@ function renderBenchmarkReportPayload(rep) {
       wbox.innerHTML = workloads.map((w) => {
         const pct = Math.max(0, Math.min(100, Number(w.token_savings_pct || 0)));
         const qBadge = w.required_facts_total
-          ? ` · 质量 ${Number(w.baseline_quality_score || 0).toFixed(0)}→${Number(w.steward_quality_score || 0).toFixed(0)} (+${Number(w.quality_delta || 0).toFixed(1)}) · 事实 ${w.steward_facts_hit}/${w.required_facts_total} · 密度 ${Number(w.info_density_gain || 1).toFixed(1)}x`
+          ? ` · 质量 ${Number(w.baseline_quality_score || 0).toFixed(0)}→${Number(w.body_quality_score || 0).toFixed(0)} (+${Number(w.quality_delta || 0).toFixed(1)}) · 事实 ${w.body_facts_hit}/${w.required_facts_total} · 密度 ${Number(w.info_density_gain || 1).toFixed(1)}x`
           : "";
         return `<div class="card" style="padding:10px;margin-bottom:8px;">
           <div class="item-top">
@@ -475,7 +475,7 @@ function renderBenchmarkReportPayload(rep) {
             <div style="flex:1;height:6px;background:var(--border);border-radius:4px;overflow:hidden;">
               <div style="width:${(100 - pct).toFixed(1)}%;height:100%;background:var(--green);"></div>
             </div>
-            <span style="min-width:95px;text-align:right;">本体 ${w.steward_tokens} tok</span>
+            <span style="min-width:95px;text-align:right;">本体 ${w.body_tokens} tok</span>
           </div>
         </div>`;
       }).join("");
@@ -535,7 +535,7 @@ function renderBenchmarkReportPayload(rep) {
     } else {
       const compCards = comps.map((c) => {
         const cq = c.required_facts_total
-          ? ` · 质量 ${Number(c.competitor_quality_score || 0).toFixed(0)}→${Number(c.steward_quality_score || 0).toFixed(0)} (+${Number(c.quality_delta || 0).toFixed(1)}) · 密度 ${Number(c.info_density_gain || 1).toFixed(1)}x`
+          ? ` · 质量 ${Number(c.competitor_quality_score || 0).toFixed(0)}→${Number(c.body_quality_score || 0).toFixed(0)} (+${Number(c.quality_delta || 0).toFixed(1)}) · 密度 ${Number(c.info_density_gain || 1).toFixed(1)}x`
           : "";
         return `
         <div class="card" style="padding:10px;margin-bottom:8px;">
@@ -543,8 +543,8 @@ function renderBenchmarkReportPayload(rep) {
             <strong>${esc(c.id)} · ${esc(c.title)} vs ${esc(c.competitor_name)}</strong>
             <span class="badge ${c.passed ? "badge-ok" : "badge-err"}">${esc(c.evidence_tier)} · 省 ${Number(c.token_savings_pct || 0).toFixed(1)}%${cq}</span>
           </div>
-          <div class="muted-text" style="font-size:12px;margin-top:4px;">竞品: ${esc(c.competitor_metric_value)} (${c.competitor_elapsed_us} μs) ｜ Steward: ${esc(c.steward_metric_value)} (${c.steward_elapsed_us} μs)</div>
-          <div style="font-size:11px;margin-top:4px;color:var(--green);">优势: ${esc(c.steward_advantage)} · 互补: ${esc(c.complement_note)}</div>
+          <div class="muted-text" style="font-size:12px;margin-top:4px;">竞品: ${esc(c.competitor_metric_value)} (${c.competitor_elapsed_us} μs) ｜ Agent Body: ${esc(c.body_metric_value)} (${c.body_elapsed_us} μs)</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--green);">优势: ${esc(c.body_advantage)} · 互补: ${esc(c.complement_note)}</div>
         </div>`;
       }).join("");
       const matRows = matrix.slice(0, 9).map((r) => `

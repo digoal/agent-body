@@ -11,16 +11,16 @@ Agent Body 原生内置了轻量级、无依赖的 JSON-RPC 2.0 stdio 服务端�
 ```mermaid
 sequenceDiagram
     participant Agent as "瞬态大脑 (Claude / Cursor / AGY)"
-    participant Steward as "agent-body mcp (Agent 本体 stdio 进程)"
+    participant Agent Body as "agent-body mcp (Agent 本体 stdio 进程)"
     participant SQLite as "body.db"
 
-    Agent->>Steward: JSON-RPC "initialize"
-    Steward-->>Agent: capabilities (tools: true), serverInfo
-    Agent->>Steward: JSON-RPC "tools/list"
-    Steward-->>Agent: 返回 43 个原生工具列表与 JSON Schema
-    Agent->>Steward: JSON-RPC "tools/call" (body_brief)
-    Steward->>SQLite: 聚合查询物理感官、规约、海马体与跨大脑接力胶囊
-    Steward-->>Agent: 返回结果内容文本
+    Agent->>Agent Body: JSON-RPC "initialize"
+    Agent Body-->>Agent: capabilities (tools: true), serverInfo
+    Agent->>Agent Body: JSON-RPC "tools/list"
+    Agent Body-->>Agent: 返回 43 个原生工具列表与 JSON Schema
+    Agent->>Agent Body: JSON-RPC "tools/call" (body_brief)
+    Agent Body->>SQLite: 聚合查询物理感官、规约、海马体与跨大脑接力胶囊
+    Agent Body-->>Agent: 返回结果内容文本
 ```
 
 - **通信方式**: Stdio（标准输入/输出），按换行符（`\n`）分隔 JSON-RPC 报文；
@@ -143,7 +143,7 @@ Agent 本体向瞬态大脑暴露 43 个原子级感官、反射、海马体与�
     "content": [
       {
         "type": "text",
-        "text": "╔═══════════════════════════════════════════════════════╗\n║             Steward 对象放置与路径建议                ║\n╚═══════════════════════════════════════════════════════╝\n推荐目标路径:   \"/root/new/shared_proj/sec_fetcher/\"\n命中规范规则:   shared_tools\n..."
+        "text": "╔═══════════════════════════════════════════════════════╗\n║             Agent Body 对象放置与路径建议                ║\n╚═══════════════════════════════════════════════════════╝\n推荐目标路径:   \"/root/new/shared_proj/sec_fetcher/\"\n命中规范规则:   shared_tools\n..."
       }
     ]
   }

@@ -33,7 +33,7 @@
      ```bash
      ps aux | grep agent-body
      ```
-  2. 大管家底层已配置 `PRAGMA busy_timeout = 5000;` 和 WAL 模式，正常情况下读写互不阻塞；
+  2. Agent 本体底层已配置 `PRAGMA busy_timeout = 5000;` 和 WAL 模式，正常情况下读写互不阻塞；
   3. 若持续锁定，可尝试运行修复检查：
      ```bash
      sqlite3 ~/.agent-body/body.db "PRAGMA integrity_check;"
@@ -56,7 +56,7 @@
   - 该端口虽然处于监听状态，但持有该端口的进程属于其他隔离容器/Namespace，或者当前用户无权读取 `/proc/[pid]/fd` 符号链接（普通非 root 用户权限受限）；
   - 或者该端口并非由进程持有，而是处于 TCP `TIME_WAIT` 或内核套接字状态。
 - **建议**:
-  优先听从大管家给出的 `recommended_free_ports` 建议，改用推荐的空闲端口启动服务。
+  优先听从Agent 本体给出的 `recommended_free_ports` 建议，改用推荐的空闲端口启动服务。
 
 ---
 
@@ -70,7 +70,7 @@
 
 ### Q7: 混合检索调用 Ollama 超时
 - **现象**: `memory search` 能返回结果，但没有显示向量相似度。
-- **说明**: 这是大管家的 **全自动优雅降级保护**！当本地 Ollama 服务未启动、模型未拉取或 1.5 秒内未响应时，大管家自动降级为 FTS5 关键词检索，确保 Agent 的业务请求 100% 成功返回而不抛出网络异常。
+- **说明**: 这是Agent 本体的 **全自动优雅降级保护**！当本地 Ollama 服务未启动、模型未拉取或 1.5 秒内未响应时，Agent 本体自动降级为 FTS5 关键词检索，确保 Agent 的业务请求 100% 成功返回而不抛出网络异常。
 - **恢复语义增强**:
   ```bash
   # 启动本地 Ollama

@@ -4,7 +4,7 @@ use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use super::{HookAction, HookFilter, StewardEvent};
+use super::{HookAction, HookFilter, BodyEvent};
 use crate::storage::Storage;
 use crate::storage::models::ChangeRecord;
 
@@ -94,7 +94,7 @@ impl HookPipelineEngine {
     }
 
     /// 计算事件哈希以进行幂等防抖
-    fn compute_event_hash(event: &StewardEvent) -> u64 {
+    fn compute_event_hash(event: &BodyEvent) -> u64 {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         event.event_type().hash(&mut hasher);
         if let Some(target) = event.target_path() {
@@ -117,7 +117,7 @@ impl HookPipelineEngine {
     }
 
     /// 执行匹配的所有编排链路
-    pub async fn execute(&self, event: Arc<StewardEvent>) -> Vec<HookAuditRecord> {
+    pub async fn execute(&self, event: Arc<BodyEvent>) -> Vec<HookAuditRecord> {
         let mut audits = Vec::new();
         let event_type_str = event.event_type();
         let event_hash = Self::compute_event_hash(&event);
@@ -194,7 +194,7 @@ impl HookPipelineEngine {
     }
 
     /// 执行单个 Hook 步骤
-    async fn execute_step(&self, step: &HookStep, event: &StewardEvent) -> Result<()> {
+    async fn execute_step(&self, step: &HookStep, event: &BodyEvent) -> Result<()> {
         match &step.action {
             HookAction::Exec { command } => {
                 let cmd_interpolated = super::dispatcher::interpolate_hook_command(command, event)?;
@@ -288,7 +288,7 @@ mod tests {
         let storage = Storage::open_in_memory().expect("open_in_memory");
         let engine = HookPipelineEngine::new(vec![pipeline], Some(storage.clone()));
 
-        let event = Arc::new(StewardEvent::FileCreated {
+        let event = Arc::new(BodyEvent::FileCreated {
             path: "/root/new/work/demo.rs".to_string(),
             source: "test".to_string(),
             timestamp: "2026-11-18T22:00:00Z".to_string(),
@@ -341,7 +341,7 @@ mod tests {
         };
 
         let engine = HookPipelineEngine::new(vec![pipeline], None);
-        let event = Arc::new(StewardEvent::LockAcquired {
+        let event = Arc::new(BodyEvent::LockAcquired {
             resource_type: "port".to_string(),
             resource_id: "8080".to_string(),
             holder_agent: "agent-1".to_string(),

@@ -1,19 +1,19 @@
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use anyhow::Result;
-use super::StewardEvent;
+use super::BodyEvent;
 
 /// 异步事件总线句柄 (克隆开销低，用于在多模块间共享注入)
 #[derive(Clone)]
 pub struct EventBusHandle {
-    sender: broadcast::Sender<Arc<StewardEvent>>,
+    sender: broadcast::Sender<Arc<BodyEvent>>,
 }
 
 impl EventBusHandle {
     /// 广播发射事实事件
     /// 
     /// 无论是否有活跃的接收端，发射操作均保证快速非阻塞 (< 100μs)
-    pub fn emit(&self, event: StewardEvent) -> Result<usize> {
+    pub fn emit(&self, event: BodyEvent) -> Result<usize> {
         let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::IpcEventBus);
         // 如果当前没有订阅者，broadcast::send 会返回 Err(SendError)
         // 在总线语义下，无订阅者属于正常现象，静默返回 0 接收者
@@ -24,14 +24,14 @@ impl EventBusHandle {
     }
 
     /// 订阅事件流
-    pub fn subscribe(&self) -> broadcast::Receiver<Arc<StewardEvent>> {
+    pub fn subscribe(&self) -> broadcast::Receiver<Arc<BodyEvent>> {
         self.sender.subscribe()
     }
 }
 
 /// 集中式事件总线
 pub struct EventBus {
-    sender: broadcast::Sender<Arc<StewardEvent>>,
+    sender: broadcast::Sender<Arc<BodyEvent>>,
 }
 
 impl EventBus {
@@ -54,7 +54,7 @@ impl EventBus {
     }
 
     /// 订阅事件广播
-    pub fn subscribe(&self) -> broadcast::Receiver<Arc<StewardEvent>> {
+    pub fn subscribe(&self) -> broadcast::Receiver<Arc<BodyEvent>> {
         self.sender.subscribe()
     }
 }
@@ -78,7 +78,7 @@ mod tests {
         let mut rx1 = handle.subscribe();
         let mut rx2 = handle.subscribe();
 
-        let event = StewardEvent::FileCreated {
+        let event = BodyEvent::FileCreated {
             path: "/root/new/work/demo.rs".to_string(),
             source: "agent".to_string(),
             timestamp: Local::now().to_rfc3339(),
@@ -99,7 +99,7 @@ mod tests {
         let bus = EventBus::new();
         let handle = bus.handle();
 
-        let event = StewardEvent::PortChanged {
+        let event = BodyEvent::PortChanged {
             port: 8080,
             status: "occupied".to_string(),
             process_name: Some("python3".to_string()),

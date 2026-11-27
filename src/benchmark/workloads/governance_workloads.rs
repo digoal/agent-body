@@ -107,13 +107,13 @@ pub(super) fn run_w14_mesh_protocol_security_and_collab() -> Result<WorkloadResu
         ContextQualityInputs {
             required_facts_total: 4,
             baseline_facts_hit: 0,
-            steward_facts_hit: hits as usize,
+            body_facts_hit: hits as usize,
             baseline_signal_precision: 0.25,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.25,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.0,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         95.0,
     );
@@ -158,7 +158,7 @@ pub(super) fn run_w15_optimistic_vs_pessimistic_execution_loop() -> Result<Workl
     let base_us = t_base.elapsed().as_micros().max(1);
     let base_tokens = estimate_tokens(&baseline_dump);
 
-    // With Steward (AOPCC): 开工 MVCC 乐观租约 + 三态分类免查直行 + PostToolUse 碰壁秒级自愈与自动降级
+    // With Agent Body (AOPCC): 开工 MVCC 乐观租约 + 三态分类免查直行 + PostToolUse 碰壁秒级自愈与自动降级
     let t_stew = Instant::now();
     let sandbox = Storage::open_in_memory()?;
     for (id, port, proc_name) in [
@@ -306,13 +306,13 @@ pub(super) fn run_w15_optimistic_vs_pessimistic_execution_loop() -> Result<Workl
         ContextQualityInputs {
             required_facts_total: 4,
             baseline_facts_hit: 2,
-            steward_facts_hit: hits as usize,
+            body_facts_hit: hits as usize,
             baseline_signal_precision: 0.45,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.50,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.85,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         95.0,
     );
@@ -367,7 +367,7 @@ pub(super) fn run_w16_dual_domain_audit_and_lease_self_evolution() -> Result<Wor
     }
 
     // 3. OUT_OF_AGENT 守护巡检闭环 (Host GC + FreshnessReconciler)
-    let tmp_dir = std::env::temp_dir().join("steward_w16_gc_empty");
+    let tmp_dir = std::env::temp_dir().join("body_w16_gc_empty");
     std::fs::create_dir_all(&tmp_dir)?;
     let _gc_rep = HostGarbageCollector::run_gc_audited(&storage, &tmp_dir, 24, true)?;
     if tmp_dir.exists() {
@@ -446,13 +446,13 @@ pub(super) fn run_w16_dual_domain_audit_and_lease_self_evolution() -> Result<Wor
         ContextQualityInputs {
             required_facts_total: 4,
             baseline_facts_hit: 1,
-            steward_facts_hit: hits,
+            body_facts_hit: hits,
             baseline_signal_precision: 0.40,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.45,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.50,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         95.0,
     );
@@ -567,13 +567,13 @@ pub(super) fn run_w17_cross_brain_continuity_and_body_proprioception() -> Result
         ContextQualityInputs {
             required_facts_total: 4,
             baseline_facts_hit: 1,
-            steward_facts_hit: hits,
+            body_facts_hit: hits,
             baseline_signal_precision: 0.45,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.40,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.55,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         95.0,
     );
@@ -703,13 +703,13 @@ pub(super) fn run_w18_perf_awr_and_self_diagnostics() -> Result<WorkloadResult> 
         ContextQualityInputs {
             required_facts_total: 4,
             baseline_facts_hit: 1,
-            steward_facts_hit: hits,
+            body_facts_hit: hits,
             baseline_signal_precision: 0.35,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.30,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.65,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         95.0,
     );

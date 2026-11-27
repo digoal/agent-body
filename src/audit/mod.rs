@@ -87,7 +87,7 @@ impl AuditEventInput {
             session_id: "system".to_string(),
             domain: "OUT_OF_AGENT".to_string(),
             actor_kind: actor_kind.into(),
-            actor_id: "steward".to_string(),
+            actor_id: "agent-body".to_string(),
             source_channel: source_channel.into(),
             category: category.into(),
             action: action.into(),

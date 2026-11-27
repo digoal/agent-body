@@ -2,13 +2,13 @@ use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
-use super::StewardEvent;
+use super::BodyEvent;
 
 /// 钩子动作类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "action", rename_all = "snake_case")]
 pub enum HookAction {
-    /// 执行本机命令或脚本 (如 command = "steward asset scan {path}")
+    /// 执行本机命令或脚本 (如 command = "agent-body asset scan {path}")
     Exec {
         command: String,
     },
@@ -37,7 +37,7 @@ pub struct HookFilter {
 
 impl HookFilter {
     /// 评估事件是否满足过滤规则
-    pub fn matches(&self, event: &StewardEvent) -> bool {
+    pub fn matches(&self, event: &BodyEvent) -> bool {
         // 1. 检查路径前缀
         if let Some(ref prefix) = self.path_prefix {
             if let Some(path) = event.target_path() {
@@ -64,7 +64,7 @@ impl HookFilter {
         // 3. 检查记忆标签
         if let Some(ref filter_tags) = self.tags_contain {
             let event_tags = match event {
-                StewardEvent::MemoryAdded { tags, .. } | StewardEvent::MemoryUpdated { tags, .. } => tags,
+                BodyEvent::MemoryAdded { tags, .. } | BodyEvent::MemoryUpdated { tags, .. } => tags,
                 _ => return false,
             };
             let has_match = filter_tags.iter().any(|ft| event_tags.contains(ft));
@@ -106,7 +106,7 @@ pub fn shell_escape_posix(input: &str) -> String {
 }
 
 /// 安全插值 Hook 执行命令（拒绝控制字符，并对 `{path}` / `{event}` 执行 POSIX 单引号转义）
-pub fn interpolate_hook_command(template: &str, event: &StewardEvent) -> anyhow::Result<String> {
+pub fn interpolate_hook_command(template: &str, event: &BodyEvent) -> anyhow::Result<String> {
     let mut result = template.to_string();
     if let Some(path) = event.target_path() {
         if path.chars().any(|c| c == '\0' || c == '\n' || c == '\r') {
@@ -149,7 +149,7 @@ impl HookDispatcher {
     }
 
     /// 针对特定事件进行分发处理 (异步非阻塞触发)
-    pub async fn dispatch(&self, event: Arc<StewardEvent>) -> Vec<String> {
+    pub async fn dispatch(&self, event: Arc<BodyEvent>) -> Vec<String> {
         let mut executed_actions = Vec::new();
 
         // 检查黑名单
@@ -256,7 +256,7 @@ mod tests {
         let dispatcher = HookDispatcher::new(vec![rule], vec!["target".to_string()]);
 
         // 1. 匹配成功 (.md + /root/new/work)
-        let ev1 = Arc::new(StewardEvent::FileCreated {
+        let ev1 = Arc::new(BodyEvent::FileCreated {
             path: "/root/new/work/notes.md".to_string(),
             source: "agent".to_string(),
             timestamp: Local::now().to_rfc3339(),
@@ -266,7 +266,7 @@ mod tests {
         assert_eq!(actions1[0], "exec: echo file '/root/new/work/notes.md'");
 
         // 2. 扩展名不匹配 (.rs)
-        let ev2 = Arc::new(StewardEvent::FileCreated {
+        let ev2 = Arc::new(BodyEvent::FileCreated {
             path: "/root/new/work/main.rs".to_string(),
             source: "agent".to_string(),
             timestamp: Local::now().to_rfc3339(),
@@ -275,7 +275,7 @@ mod tests {
         assert!(actions2.is_empty());
 
         // 3. 黑名单目录被阻断
-        let ev3 = Arc::new(StewardEvent::FileCreated {
+        let ev3 = Arc::new(BodyEvent::FileCreated {
             path: "/root/new/work/target/out.md".to_string(),
             source: "agent".to_string(),
             timestamp: Local::now().to_rfc3339(),
@@ -286,9 +286,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_dispatcher_escapes_shell_injection_in_path() {
-        let marker = std::env::temp_dir().join(format!("steward_pwn_{}", uuid::Uuid::new_v4()));
+        let marker = std::env::temp_dir().join(format!("body_pwn_{}", uuid::Uuid::new_v4()));
         let malicious_path = format!("/root/new/work/evil'; touch {}; echo '.md", marker.display());
-        let ev = StewardEvent::FileCreated {
+        let ev = BodyEvent::FileCreated {
             path: malicious_path,
             source: "test".to_string(),
             timestamp: Local::now().to_rfc3339(),
@@ -299,7 +299,7 @@ mod tests {
         assert!(!marker.exists(), "恶意注入的 touch 命令绝不能被执行！");
 
         // 含换行控制字符应被直接拒绝
-        let ev_nl = StewardEvent::FileCreated {
+        let ev_nl = BodyEvent::FileCreated {
             path: "/root/new/work/bad\ntouch /tmp/x.md".to_string(),
             source: "test".to_string(),
             timestamp: Local::now().to_rfc3339(),

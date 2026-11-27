@@ -231,7 +231,7 @@ impl PreflightChecker {
                     .storage
                     .duckdb_path
                     .clone()
-                    .unwrap_or_else(|| config.data_dir.join("steward.duckdb"));
+                    .unwrap_or_else(|| config.data_dir.join("body.duckdb"));
                 let parent_ok = duck_path
                     .parent()
                     .map(|p| p.exists() || fs::create_dir_all(p).is_ok())

@@ -135,16 +135,16 @@ impl ConventionsEngine {
             EngineeringConvention {
                 category: "audit".to_string(),
                 rule_title: "双域行为审计与自治动作有据可查准则 (Dual-Domain Audit)".to_string(),
-                requirement: "Agent 接入后的全链路调用 (IN_AGENT: Brief/Hook/MCP/CLI/Web/Mesh) 与管家在 Agent 之外的主动/被动宿主机维护动作 (OUT_OF_AGENT: Daemon 巡检/Watcher 60s 折叠/HostGC/LinkRepair/Reconcile/RuleLearn) 必须经 SecretRedactor 脱敏后写入 audit_events 并携带 before_after_delta 与 evidence_sha256，持续驱动 DuckDB OLAP 分析与 AOPCC 租约/规则自进化。".to_string(),
+                requirement: "Agent 接入后的全链路调用 (IN_AGENT: Brief/Hook/MCP/CLI/Web/Mesh) 与 Agent 本体在 Agent 之外的主动/被动宿主机维护动作 (OUT_OF_AGENT: Daemon 巡检/Watcher 60s 折叠/HostGC/LinkRepair/Reconcile/RuleLearn) 必须经 SecretRedactor 脱敏后写入 audit_events 并携带 before_after_delta 与 evidence_sha256，持续驱动 DuckDB OLAP 分析与 AOPCC 租约/规则自进化。".to_string(),
                 applies_to: vec!["all".to_string(), "code".to_string(), "script".to_string(), "ops".to_string()],
                 severity: "CRITICAL".to_string(),
             },
 
-            // 9. Agent 本体脑体分离、四级自治与三层命名兼容规约 (Phase 44 / 规约 #1, #2, #3, #8, #27)
+            // 9. Agent 本体脑体分离与四级自治规约 (Phase 44 / 规约 #1, #2, #3, #8, #27)
             EngineeringConvention {
                 category: "embodiment".to_string(),
-                rule_title: "Agent 本体脑体分离、四级自治与命名零破坏准则 (Agent Embodiment)".to_string(),
-                requirement: "遵循脑体分离与递弱代偿：本项目是永驻宿主机的 Agent 本体（感官/反射/海马体/代谢/跨大脑接力），绝不内置主战 LLM 规划循环或替代编排框架；自治行为严守 L0_OBSERVE/L1_AUTONOMIC/L2_SUPERVISED/L3_FORBIDDEN 四级包络；对外叙事升级为 Agent 本体，但工程标识符 (agent-body / steward_* / ~/.agent-body/) 保持 100% 向后兼容。".to_string(),
+                rule_title: "Agent 本体脑体分离与四级自治准则 (Agent Embodiment)".to_string(),
+                requirement: "遵循脑体分离与递弱代偿：本项目是永驻宿主机的 Agent 本体（感官/反射/海马体/代谢/跨大脑接力），绝不内置主战 LLM 规划循环或替代编排框架；自治行为严守 L0_OBSERVE/L1_AUTONOMIC/L2_SUPERVISED/L3_FORBIDDEN 四级包络；工程标识符统一规范为 agent-body / body_* / ~/.agent-body/。".to_string(),
                 applies_to: vec!["all".to_string(), "code".to_string(), "article".to_string(), "ops".to_string()],
                 severity: "HIGH".to_string(),
             },
@@ -313,6 +313,6 @@ mod tests {
         let code = ConventionsEngine::get_conventions_for_context("code", true);
         assert!(code.brief_prompt_injection.contains("Agent 本体"));
         assert!(code.brief_prompt_injection.contains("L0_OBSERVE"));
-        assert!(code.brief_prompt_injection.contains("steward_*"));
+        assert!(code.brief_prompt_injection.contains("body_*"));
     }
 }

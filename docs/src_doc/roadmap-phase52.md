@@ -15,7 +15,7 @@
 3. **P52-03 Tokio 与边界 Panic 排雷**：`McpServer::run_stdio` 迁移至 `tokio::task::spawn_blocking` 隔离；`ExternalContactsManager` / `EmbeddingClient` 同步 HTTP 隔离防 Tokio drop panic；修复 `PlacementEngine`/`PlacementEngineV2` 空规则 `&rules[0]` 越界、`PortChecker` `u16` 65535 溢出、`PowerContextAdapter` UTF-8 字节切片、`ScanStateMachine` 断点文件被删跳过全树 Bug。
 4. **P52-04 安全纵深补洞与 Web 鉴权**：修复 `body_bridge.py` 无端口破坏性命令绕过；分离 `GET`（纯只读/预览）与 `POST /api/v1/body/perf/awr` 写语义并将 `POST/PUT/DELETE`、`links/mermaid?discover_semantic=true`、`mesh/locks/acquire` 统一纳入常量时间鉴权与双域审计；补充 Mesh `read:facts` 作用域校验、`SKILL.md` 抗注入、`env/port.rs` & `env/gc.rs` cmdline 脱敏及严格路径组件校验、`AutonomyEnvelope` 未知动作 fail-closed。
 5. **P52-05 核心逻辑、账本、Clap 与模板纠错**：修复 `ledger.rs` 死锁 100% 误报与 `"denied"` 漏记；修复 `handle_mesh_graph` URL 解码；修复 `cli_args.rs` 4 处 Clap `bool` 无法传 `false` 与 `name = "agent-body"`；修复 `client_gen.rs` & `diagnoser.rs` 3 条无效 CLI 命令模板。
-6. **P52-06 P0 损毁文档与 3 套 SKILL 急救**：修复 `04-from-steward-to-agent-body.md` 与 `17-agent-embodiment-and-continuity-spec.md` Phase 48 批量替换语义损毁；修复 `skills/agent-body-*/SKILL.md` 全部 12 处断链、`MemoryMax=64M`、幻觉命令与错误 MCP 参数，并同步全局 SKILL 镜像。
+6. **P52-06 P0 损毁文档与 3 套 SKILL 急救**：修复 `04-agent-body-philosophy.md` 与 `17-agent-embodiment-and-continuity-spec.md` Phase 48 批量替换语义损毁；修复 `skills/agent-body-*/SKILL.md` 全部 12 处断链、`MemoryMax=64M`、幻觉命令与错误 MCP 参数，并同步全局 SKILL 镜像。
 7. **P52-07 回归验证与现网交付**：补全回归单测与集成测试，通过 `make quality-gate && make test`、`make restart`、现网 `feedback reconcile` 与 `make sync-mirror`。
 
 ---

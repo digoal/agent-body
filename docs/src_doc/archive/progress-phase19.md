@@ -14,7 +14,7 @@
 | **19.1** | 19.1.1 | 修复 `EnvCollector::collect_and_sync_processes()`：过滤 Linux 线程（`thread_kind().is_some()`）及系统底噪，按 PID 关联真实监听端口 | `src/env/mod.rs` | ✅ 已完成 | 2026-11-19 07:37 |
 | | 19.1.2 | 重构 `build_full_topology()` 与 `build_impact_topology()`：整合 `fact_nodes`、`fact_edges`、活跃进程与 `links` 输出真实连通图谱 | `src/web/topology.rs` | ✅ 已完成 | 2026-11-19 07:37 |
 | **19.2** | 19.2.1 | 扩展 `SystemOverview` 并新增只读全景 API：`/api/v1/{facts,ecosystem,ecosystem/route,governance,mesh/status}` | `src/web/api.rs`, `src/web/server.rs` | ✅ 已完成 | 2026-11-19 08:05 |
-| | 19.2.2 | 补齐 `handle_locks_history()` 审计查询，并在 `StewardDaemon` 打通 Watcher/Scheduler -> SSE `/api/v1/stream` 实时事件推流 | `src/web/locks_api.rs`, `src/daemon/mod.rs` | ✅ 已完成 | 2026-11-19 08:05 |
+| | 19.2.2 | 补齐 `handle_locks_history()` 审计查询，并在 `BodyDaemon` 打通 Watcher/Scheduler -> SSE `/api/v1/stream` 实时事件推流 | `src/web/locks_api.rs`, `src/daemon/mod.rs` | ✅ 已完成 | 2026-11-19 08:05 |
 | **19.3** | 19.3.1 | 重构 Web UI 2.0 视觉框架（暗色科技驾驶舱、全局 KPI 条、5 大工作台导航、可折叠 SSE 流与节点抽屉，100% 离线自包含） | `src/web/assets/mod.rs` | ✅ 已完成 | 2026-11-19 08:15 |
 | | 19.3.2 | 实现工作台 1「宿主机事实拓扑交互图（移除 `drawMockGraph`，支持拖拽/缩放/筛选/爆炸半径）」与工作台 2「运行时事实雷达」 | `src/web/assets/mod.rs` | ✅ 已完成 | 2026-11-19 08:15 |
 | | 19.3.3 | 实现工作台 3「协作锁/等待队列/WFG死锁雷达」、工作台 4「生态防爆路由器沙盒」与工作台 5「规约/记忆/变更/Mesh」 | `src/web/assets/mod.rs` | ✅ 已完成 | 2026-11-19 08:15 |
@@ -28,7 +28,7 @@
 |:---:|:---:|---|---|:---:|:---:|
 | **20.1** | 20.1.1 | 补全 `docs/manual/04-mcp-integration.md` 第 3 节全部 38 个 MCP 工具字典，并重写 `docs/manual/08-web-dashboard.md` 匹配 Web 2.0 | `docs/manual/04-mcp-integration.md`, `docs/manual/08-web-dashboard.md` | ✅ 已完成 | 2026-11-19 08:18 |
 | | 20.1.2 | 刷新 `README.md`、`docs/arch/02-for-developers.md`、`docs/src_doc/progress.md` 的模块/SPI/测试实测数字与 ISSUE 状态 | `README.md`, `docs/arch/02-for-developers.md`, `docs/src_doc/progress.md` | ✅ 已完成 | 2026-11-19 08:23 |
-| **20.2** | 20.2.1 | 对齐并同步三套 `SKILL.md` 到项目 `skills/`、`/root/new/skills/` 与 `/root/.gemini/antigravity-cli/skills/` | `skills/agent-steward-*/SKILL.md` | ✅ 已完成 | 2026-11-19 08:18 |
+| **20.2** | 20.2.1 | 对齐并同步三套 `SKILL.md` 到项目 `skills/`、`/root/new/skills/` 与 `/root/.gemini/antigravity-cli/skills/` | `skills/agent-body-*/SKILL.md` | ✅ 已完成 | 2026-11-19 08:18 |
 | | 20.2.T | 全量验证（`make check && make lint-panic && make test && make restart`）、现网 Web 2.0 真实接口与视图检查及 `/root/new/shared_git/` 同步 | 全系统 & 现网守护进程 | ✅ 已完成 | 2026-11-19 08:23 |
 
 ---

@@ -8,7 +8,7 @@
 
 ## 一、系统与运行依赖全景矩阵
 
-大管家采用 Rust 开发，核心设计理念是**“零外部强依赖、单二进制开箱即用、渐进式功能增强”**。
+Agent 本体采用 Rust 开发，核心设计理念是**“零外部强依赖、单二进制开箱即用、渐进式功能增强”**。
 
 | 组件 / 依赖项 | 依赖类型 | 最低版本要求 | 核心用途 | 缺失后果与降级表现 |
 |:---|:---:|:---:|:---|:---|
@@ -109,7 +109,7 @@ make preflight   # 预检依赖
 
 ## 四、运行依赖一键预检 (Preflight Check)
 
-大管家内置了环境诊断引擎，在上线前可通过以下命令全面验证环境状态：
+Agent 本体内置了环境诊断引擎，在上线前可通过以下命令全面验证环境状态：
 
 ```bash
 agent-body preflight
@@ -135,9 +135,9 @@ agent-body preflight
 ✅ PASS   OPTIONAL     Ollama 向量服务与模型           服务正常且已拉取嵌入模型 `nomic-embed-text`
 ✅ PASS   OPTIONAL     Ollama 元数据标注模型           服务正常且已拉取小模型 `qwen3.5:0.8b` (L2 自动语义标注就绪)
 ✅ PASS   INFO         系统内核 inotify watch 限制    max_user_watches = 123055 (建议大项目 >= 65536)
-✅ PASS   INFO         Agent Steward 软件包版本      v0.4.0 (9ba7bca, linux/x86_64, built at 2026-11-19T07:53:18Z)
+✅ PASS   INFO         Agent Body 软件包版本      v0.4.0 (9ba7bca, linux/x86_64, built at 2026-11-19T07:53:18Z)
 --------------------------------------------------------------------------------------------
-🚀 结论: 所有 REQUIRED 基础环境依赖全部满足，大管家可稳定上线运行。
+🚀 结论: 所有 REQUIRED 基础环境依赖全部满足，Agent 本体可稳定上线运行。
 ```
 
 > **自动化集成提示**: CI/CD 或 Agent 脚本可执行 `agent-body preflight --json`，退出码为 `0` 代表满足，非 `0` 代表缺少关键基础依赖。
@@ -146,14 +146,14 @@ agent-body preflight
 
 ## 五、Systemd 常驻守护进程配置
 
-在生产 Linux 宿主机上，推荐将大管家配置为 Systemd 托管的开机自启常驻服务。
+在生产 Linux 宿主机上，推荐将Agent 本体配置为 Systemd 托管的开机自启常驻服务。
 
 ### 1. 创建 Unit 配置文件
 在 `/etc/systemd/system/agent-body.service` 写入：
 
 ```ini
 [Unit]
-Description=Agent Body Daemon (宿主环境大管家后台守护)
+Description=Agent Body Daemon (Agent 本体后台守护)
 After=network.target
 
 [Service]
@@ -202,7 +202,7 @@ launchctl bootout gui/$(id -u)/com.digoal.agent-body
 
 ## 六、Docker 容器化部署
 
-若在容器隔离环境中使用大管家，请务必保证 **`/proc`** 具有透传访问权限。
+若在容器隔离环境中使用Agent 本体，请务必保证 **`/proc`** 具有透传访问权限。
 
 ### 1. 标准 Docker 启动命令
 ```bash
@@ -217,7 +217,7 @@ docker run -d \
 ```
 
 > 💡 **参数关键点**:
-> - `--pid host`: 允许大管家感知宿主机所有非系统活跃进程；
+> - `--pid host`: 允许Agent 本体感知宿主机所有非系统活跃进程；
 > - `-v /proc:/proc:ro`: 赋予 `/proc/net/tcp` 监听端口采集权限；
 > - `-v /root/.agent-body:/root/.agent-body`: 持久化元数据库。
 

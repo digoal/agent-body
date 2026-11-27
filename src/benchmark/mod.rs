@@ -127,16 +127,16 @@ impl BenchmarkEngine {
         };
 
         let total_baseline_tokens: i64 = workloads.iter().map(|w| w.baseline_tokens).sum();
-        let total_steward_tokens: i64 = workloads.iter().map(|w| w.steward_tokens).sum();
+        let total_body_tokens: i64 = workloads.iter().map(|w| w.body_tokens).sum();
         let overall_token_savings_pct = if total_baseline_tokens > 0 {
-            let saved = total_baseline_tokens.saturating_sub(total_steward_tokens);
+            let saved = total_baseline_tokens.saturating_sub(total_body_tokens);
             ((saved as f64 / total_baseline_tokens as f64) * 100.0 * 100.0).round() / 100.0
         } else {
             0.0
         };
 
         let total_base_us: u128 = workloads.iter().map(|w| w.baseline_elapsed_us).sum();
-        let total_stew_us: u128 = workloads.iter().map(|w| w.steward_elapsed_us).sum();
+        let total_stew_us: u128 = workloads.iter().map(|w| w.body_elapsed_us).sum();
         let arithmetic_speedup_factor = if total_stew_us > 0 && total_base_us > 0 {
             ((total_base_us as f64 / total_stew_us as f64) * 100.0).round() / 100.0
         } else {
@@ -168,14 +168,14 @@ impl BenchmarkEngine {
         let stew_q_samples: Vec<f64> = workloads
             .iter()
             .filter(|w| w.required_facts_total > 0)
-            .map(|w| w.steward_quality_score)
+            .map(|w| w.body_quality_score)
             .collect();
         let overall_baseline_quality_score = if base_q_samples.is_empty() {
             0.0
         } else {
             ((base_q_samples.iter().sum::<f64>() / base_q_samples.len() as f64) * 100.0).round() / 100.0
         };
-        let overall_steward_quality_score = if stew_q_samples.is_empty() {
+        let overall_body_quality_score = if stew_q_samples.is_empty() {
             d6_quality_score
         } else {
             ((stew_q_samples.iter().sum::<f64>() / stew_q_samples.len() as f64) * 100.0).round() / 100.0
@@ -183,7 +183,7 @@ impl BenchmarkEngine {
         let overall_quality_delta = if base_q_samples.is_empty() {
             0.0
         } else {
-            ((overall_steward_quality_score - overall_baseline_quality_score) * 100.0).round() / 100.0
+            ((overall_body_quality_score - overall_baseline_quality_score) * 100.0).round() / 100.0
         };
         let density_samples: Vec<f64> = workloads
             .iter()
@@ -199,11 +199,11 @@ impl BenchmarkEngine {
         let quality_non_degraded = workloads
             .iter()
             .filter(|w| w.required_facts_total > 0)
-            .all(|w| w.steward_quality_score >= w.baseline_quality_score && w.steward_facts_hit == w.required_facts_total)
+            .all(|w| w.body_quality_score >= w.baseline_quality_score && w.body_facts_hit == w.required_facts_total)
             && competitors
                 .iter()
                 .filter(|c| c.required_facts_total > 0)
-                .all(|c| c.steward_quality_score >= c.competitor_quality_score && c.steward_facts_hit == c.required_facts_total);
+                .all(|c| c.body_quality_score >= c.competitor_quality_score && c.body_facts_hit == c.required_facts_total);
 
         let total_hazards_intercepted: i64 = workloads.iter().map(|w| w.hazards_intercepted).sum();
         let total_noise_blocked: i64 = workloads.iter().map(|w| w.blocked_noise as i64).sum();
@@ -243,7 +243,7 @@ impl BenchmarkEngine {
             competitors: competitors.clone(),
             competitor_matrix: competitor_matrix.clone(),
             total_baseline_tokens,
-            total_steward_tokens,
+            total_body_tokens,
             overall_token_savings_pct,
             overall_speedup_factor,
             geometric_mean_speedup,
@@ -270,7 +270,7 @@ impl BenchmarkEngine {
                 host_fingerprint,
                 workload_count: workloads.len(),
                 total_baseline_tokens,
-                total_steward_tokens,
+                total_body_tokens,
                 overall_token_savings_pct,
                 overall_speedup_factor: geometric_mean_speedup,
                 total_hazards_intercepted,
@@ -326,14 +326,14 @@ mod tests {
         let bad_w: Vec<String> = report
             .workloads
             .iter()
-            .filter(|w| w.required_facts_total > 0 && (w.steward_quality_score < w.baseline_quality_score || w.steward_facts_hit != w.required_facts_total))
-            .map(|w| format!("{}(hit={}/{}, q={:.1}<{:.1})", w.id, w.steward_facts_hit, w.required_facts_total, w.steward_quality_score, w.baseline_quality_score))
+            .filter(|w| w.required_facts_total > 0 && (w.body_quality_score < w.baseline_quality_score || w.body_facts_hit != w.required_facts_total))
+            .map(|w| format!("{}(hit={}/{}, q={:.1}<{:.1})", w.id, w.body_facts_hit, w.required_facts_total, w.body_quality_score, w.baseline_quality_score))
             .collect();
         let bad_c: Vec<String> = report
             .competitors
             .iter()
-            .filter(|c| c.required_facts_total > 0 && (c.steward_quality_score < c.competitor_quality_score || c.steward_facts_hit != c.required_facts_total))
-            .map(|c| format!("{}(hit={}/{}, q={:.1}<{:.1})", c.id, c.steward_facts_hit, c.required_facts_total, c.steward_quality_score, c.competitor_quality_score))
+            .filter(|c| c.required_facts_total > 0 && (c.body_quality_score < c.competitor_quality_score || c.body_facts_hit != c.required_facts_total))
+            .map(|c| format!("{}(hit={}/{}, q={:.1}<{:.1})", c.id, c.body_facts_hit, c.required_facts_total, c.body_quality_score, c.competitor_quality_score))
             .collect();
         assert!(
             report.quality_non_degraded,
@@ -353,8 +353,8 @@ mod tests {
         for w in &report.workloads {
             println!(
                 "[W] {} ({}): passed={}, base_tok={}, stew_tok={}, base_us={}, stew_us={}, haz={}, noise={}, detail={}",
-                w.id, w.name, w.sla_passed, w.baseline_tokens, w.steward_tokens,
-                w.baseline_elapsed_us, w.steward_elapsed_us, w.hazards_intercepted,
+                w.id, w.name, w.sla_passed, w.baseline_tokens, w.body_tokens,
+                w.baseline_elapsed_us, w.body_elapsed_us, w.hazards_intercepted,
                 w.blocked_noise, w.evidence_detail
             );
         }

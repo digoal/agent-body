@@ -5,4 +5,4 @@ pub mod hooks;
 pub mod response;
 
 pub use hooks::{AgentHookEngine, PreHookResult, PostHookResult};
-pub use response::{StewardResponse, ResponseProvenance};
+pub use response::{BodyResponse, ResponseProvenance};

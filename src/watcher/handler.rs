@@ -165,19 +165,19 @@ impl ChangeHandler {
 
                     if let Some(ref bus) = self.event_bus {
                         let now = chrono::Local::now().to_rfc3339();
-                        let steward_ev = match event.kind {
-                            FileChangeKind::Created => crate::hooks::StewardEvent::FileCreated {
+                        let body_ev = match event.kind {
+                            FileChangeKind::Created => crate::hooks::BodyEvent::FileCreated {
                                 path: path_str,
                                 source: "watcher".to_string(),
                                 timestamp: now,
                             },
-                            _ => crate::hooks::StewardEvent::FileModified {
+                            _ => crate::hooks::BodyEvent::FileModified {
                                 path: path_str,
                                 source: "watcher".to_string(),
                                 timestamp: now,
                             },
                         };
-                        let _delivered = bus.emit(steward_ev);
+                        let _delivered = bus.emit(body_ev);
                     }
                     crate::audit::AuditLogger::record_best_effort(
                         &self.storage,
@@ -231,7 +231,7 @@ impl ChangeHandler {
                     })?;
 
                     if let Some(ref bus) = self.event_bus {
-                        let _delivered = bus.emit(crate::hooks::StewardEvent::FileDeleted {
+                        let _delivered = bus.emit(crate::hooks::BodyEvent::FileDeleted {
                             path: path_str.clone(),
                             source: "watcher".to_string(),
                             timestamp: chrono::Local::now().to_rfc3339(),

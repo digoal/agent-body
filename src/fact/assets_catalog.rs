@@ -338,8 +338,8 @@ mod tests {
         println!("扫描到宿主机源码仓库数量: {}", repos.len());
 
         // 验证当前 agent-body 或 duckdb 是否被探测到
-        let has_steward = repos.iter().any(|r| r.name == "agent-body");
-        println!("是否包含 agent-body 仓库: {}", has_steward);
+        let has_agent_body = repos.iter().any(|r| r.name == "agent-body");
+        println!("是否包含 agent-body 仓库: {}", has_agent_body);
     }
 
     #[test]
@@ -366,7 +366,7 @@ mod tests {
     fn test_query_repos_and_documents() {
         let dir = tempfile::tempdir().expect("tempdir");
         let repos_root = dir.path().join("src");
-        let repo_a = repos_root.join("agent-steward-demo");
+        let repo_a = repos_root.join("agent-body-demo");
         fs::create_dir_all(repo_a.join(".git")).expect("mkdir git");
         fs::write(repo_a.join(".git/HEAD"), "ref: refs/heads/main\n").expect("head");
         fs::write(repo_a.join("Cargo.toml"), "[package]\nname = \"demo\"\n").expect("cargo");
@@ -376,7 +376,7 @@ mod tests {
         fs::write(notes_root.join("权威网站.md"), "# 权威网站清单\nRust 官网\n").expect("doc");
 
         let repos_str = repos_root.to_string_lossy().to_string();
-        let matched_repos = AssetsCatalogEngine::query_repos("steward", Some(&[repos_str.as_str()]))
+        let matched_repos = AssetsCatalogEngine::query_repos("agent-body", Some(&[repos_str.as_str()]))
             .expect("查询仓库成功");
         assert_eq!(matched_repos.len(), 1);
         assert_eq!(matched_repos[0].primary_lang.as_deref(), Some("Rust"));

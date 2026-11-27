@@ -1,13 +1,13 @@
 # 01 — 使用场景集（Scenarios）
 
-> Agent Host Steward 产品设计 · 交付件 1/7
+> Agent Body 产品设计 · 交付件 1/7
 > 版本: v2.0 · 更新: 2026-11-15 (引入混合检索、防撞预警、爆炸半径推演与会话闭环)
 
 ---
 
 ## 一、用户画像
 
-在定义场景之前，先锁定"谁在用"。大管家的目标用户不是所有人，而是 **在本地长期驻留使用 AI Agent 的专业工作者**。
+在定义场景之前，先锁定"谁在用"。Agent 本体的目标用户不是所有人，而是 **在本地长期驻留使用 AI Agent 的专业工作者**。
 
 ### 画像 A：独立开发者 / 技术博主（"德哥"原型）
 
@@ -44,7 +44,7 @@
 
 ## 二、场景矩阵
 
-我按 **触发时机 × 信息维度** 来组织场景，确保覆盖大管家五层能力：
+我按 **触发时机 × 信息维度** 来组织场景，确保覆盖Agent 本体五层能力：
 
 | | 记忆 | 资产 | 环境 | 变更 | 关联 |
 |---|---|---|---|---|---|
@@ -62,14 +62,14 @@
 ### S-01：冷启动 — 初始记忆导入
 
 **画像**: A（德哥原型）
-**触发**: 第一次安装大管家
+**触发**: 第一次安装Agent 本体
 
 **故事**:
-> 德哥装好了 Agent Host Steward。启动后，大管家问：
+> 德哥装好了 Agent Body。启动后，Agent 本体问：
 >
 > "检测到你有 Antigravity 的会话历史（3284 条），要不要导入为初始记忆？"
 >
-> 德哥选了"导入"。大管家花了 2 分钟扫描历史会话，提取了：
+> 德哥选了"导入"。Agent 本体花了 2 分钟扫描历史会话，提取了：
 > - 142 个关键决策点（"选了 DuckDB 而不是 ClickHouse 做分析引擎，因为嵌入式零依赖"）
 > - 67 个任务摘要（"2026-10-20：写了一篇 PG 17 新特性文章"）
 > - 23 条用户偏好（"默认用中文回复"、"北京时区"、"脚本放 /root/new/shared_proj/"）
@@ -87,7 +87,7 @@
 **触发**: 首次启动后自动触发
 
 **故事**:
-> 大管家开始扫描关键目录：
+> Agent 本体开始扫描关键目录：
 >
 > ```
 > 发现 12 个项目目录 (/root/new/work/*)
@@ -113,7 +113,7 @@
 **触发**: 首次启动后自动触发
 
 **故事**:
-> 大管家自动采集环境信息：
+> Agent 本体自动采集环境信息：
 >
 > ```yaml
 > OS: Ubuntu 22.04 LTS (kernel 5.15.0)
@@ -148,7 +148,7 @@
 **触发**: 前三步完成后自动触发
 
 **故事**:
-> 大管家开始建立资产间的关联：
+> Agent 本体开始建立资产间的关联：
 >
 > ```
 > 关联发现:
@@ -159,7 +159,7 @@
 > ● 笔记 /root/new/note/权威网站.md 被 3 个 SKILL 引用
 > ```
 >
-> 这些关联被存为图结构。Agent 以后问"我的财报扫描脚本还能跑吗"，大管家可以沿着关联链检查：脚本在→Python 环境 OK→PG 服务在跑→端口可达→"能跑"。
+> 这些关联被存为图结构。Agent 以后问"我的财报扫描脚本还能跑吗"，Agent 本体可以沿着关联链检查：脚本在→Python 环境 OK→PG 服务在跑→端口可达→"能跑"。
 
 **价值**: 信息不再是割裂的四个数据库，而是一张有机关联网。
 
@@ -174,7 +174,7 @@
 > 德哥：
 > "我想给 DuckDB 源码分析写第三篇文章，前两篇写了什么来着？"
 >
-> Agent 调大管家的记忆 API：
+> Agent 调Agent 本体的记忆 API：
 >
 > ```json
 > GET /memory/search
@@ -185,7 +185,7 @@
 > }
 > ```
 >
-> 大管家返回：
+> Agent 本体返回：
 > - 第一篇 (2026-09-15): "DuckDB 存储引擎解析"，发到了公众号，阅读量 3200
 > - 第二篇 (2026-10-08): "DuckDB 向量化执行引擎"，配了 4 张 SVG 架构图
 > - 当时规划的第三篇主题是"DuckDB 优化器"，但因为插入了财经文章任务被搁置
@@ -204,7 +204,7 @@
 > 用户：
 > "我之前下载过一篇关于 RAG 评估方法的论文，找不到了。"
 >
-> Agent 调大管家：
+> Agent 调Agent 本体：
 >
 > ```json
 > GET /assets/search
@@ -215,7 +215,7 @@
 > }
 > ```
 >
-> 大管家返回：
+> Agent 本体返回：
 > - `/root/new/src/papers/ragas-evaluation-framework.pdf` (2026-08-12 下载, 22 页)
 > - `/root/new/note/rag-eval-notes.md` (2026-08-14, 你读完后写的笔记)
 > - 关联记忆: "2026-08-14 讨论过 RAGAS vs DeepEval，最终选了 RAGAS 因为指标更全"
@@ -233,7 +233,7 @@
 > 用户：
 > "帮我检查一下 PG 的 shared_buffers 够不够"
 >
-> Agent 不需要先问"你的 PG 装在哪"、"配置文件在哪"。它直接调大管家：
+> Agent 不需要先问"你的 PG 装在哪"、"配置文件在哪"。它直接调Agent 本体：
 >
 > ```json
 > GET /env/service/postgresql
@@ -271,7 +271,7 @@
 **故事**:
 > 德哥在另一个终端里跑了 `pip install duckdb --upgrade`。
 >
-> 大管家检测到变更，主动记录：
+> Agent 本体检测到变更，主动记录：
 > ```
 > [2026-11-15 10:30:22] CHANGE DETECTED
 > Type: package_upgrade
@@ -280,10 +280,10 @@
 > Env: /root/.venvs/default
 > Affected assets:
 >   - /root/new/shared_proj/duckdb_bench/ (imports duckdb)
->   - /root/new/work/agent-steward/ 的数据模型文档提到了 DuckDB
+>   - /root/new/work/agent-body/ 的数据模型文档提到了 DuckDB
 > ```
 >
-> 下次 Agent 启动新会话时，大管家主动推送：
+> 下次 Agent 启动新会话时，Agent 本体主动推送：
 > "注意：上次会话后，duckdb Python 包升级到了 1.2.0，你 shared_proj 里的 duckdb_bench 脚本可能需要测试兼容性。"
 
 **价值**: 环境变了，Agent 知道；不会拿着旧信息做决策。
@@ -305,7 +305,7 @@
 > 3. **环境**: 依赖满足吗？→ Python 3.12 ✓, requests ✓, psycopg2 ✓, PG running ✓
 > 4. **变更**: 有没有什么变了？→ 上周到现在 SEC 的 API 返回格式变了（变更日志里有一条 cron 报错）
 >
-> 大管家综合回答：
+> Agent 本体综合回答：
 > "脚本在，依赖都满足。但注意：11 月 12 日的 cron 执行日志显示 SEC EDGAR 的 `company-search` 接口返回格式变了，`scan_sec.py` 的第 87 行解析会报 KeyError。建议先修复再跑。"
 
 **价值**: 这就是关联的力量。单独问记忆、资产、环境都得不到这个答案。
@@ -322,7 +322,7 @@
 >
 > "继续昨天的性能测试。"
 >
-> Agent 调大管家：
+> Agent 调Agent 本体：
 > ```json
 > GET /memory/tasks/latest
 > {
@@ -372,12 +372,12 @@
 > 德哥上午在会话 A 里克隆了一个新项目：
 > `git clone https://github.com/example/new-vector-db.git /root/new/src/new-vector-db`
 >
-> 大管家自动注册这个新资产，打标签、跑 codegraph init。
+> Agent 本体自动注册这个新资产，打标签、跑 codegraph init。
 >
 > 下午在会话 B 里：
 > "那个新克隆的向量数据库项目，架构图跑出来了吗？"
 >
-> 大管家回答：
+> Agent 本体回答：
 > "已注册。codegraph init 在 14:22 完成，生成了 2,341 个符号索引。项目结构：Rust 核心引擎 + Python binding + HTTP server。"
 
 **价值**: 会话 A 做的事，会话 B 自动知道。
@@ -390,7 +390,7 @@
 **触发**: 新会话开始时
 
 **故事**:
-> 德哥早上打开新会话。Agent 主动推送大管家的变更摘要：
+> 德哥早上打开新会话。Agent 主动推送Agent 本体的变更摘要：
 >
 > "距上次会话（昨晚 22:15）以来发生了以下变化：
 > 1. Hermes cron `daily-finance` 凌晨 6:00 正常执行，输出了今日财经简报
@@ -414,7 +414,7 @@
 >
 > 这周新会话里写文章，Agent 生成了一张 SVG 图。
 >
-> 大管家拦截检查（或 Agent 主动查询偏好）：
+> Agent 本体拦截检查（或 Agent 主动查询偏好）：
 > "根据 11 月 8 日的决策（context: conv-xxxx），SVG 应存到 `svg/` 子目录再引用，不要内联。"
 >
 > Agent 自动遵循这个偏好。
@@ -432,7 +432,7 @@
 > 用户：
 > "PG 的 WAL 堆积到了 200GB，怎么回事？"
 >
-> Agent 调大管家搜索历史经验：
+> Agent 调Agent 本体搜索历史经验：
 > ```json
 > GET /memory/search
 > {
@@ -445,7 +445,7 @@
 > 1. "2026-07-20：WAL 堆积 150GB，原因是 replication slot 的 consumer 挂了。解决：drop 掉挂掉的 slot，WAL 立即回收。"
 > 2. "2026-09-03：WAL 堆积 80GB，原因是 archive_command 失败但没告警。解决：修复归档路径，WAL 逐步回收。"
 >
-> Agent 综合历史经验 + 当前环境（大管家知道这台机器有 3 个 replication slot）：
+> Agent 综合历史经验 + 当前环境（Agent 本体知道这台机器有 3 个 replication slot）：
 > "先检查 replication slot 状态，上次是 slot consumer 挂了导致的……"
 
 **价值**: 不只是"记得做过"，而是"记得怎么做的、为什么那样做"。
@@ -461,7 +461,7 @@
 > 用户：
 > "昨天跑得好好的脚本，今天报 ImportError 了。"
 >
-> Agent 调大管家的变更日志：
+> Agent 调Agent 本体的变更日志：
 > ```json
 > GET /changes/since
 > {
@@ -492,7 +492,7 @@
 > 工程师：
 > "我想把 Redis 从 7.2 升到 7.4，会影响什么？"
 >
-> Agent 调大管家：
+> Agent 调Agent 本体：
 > ```json
 > GET /links/dependents
 > {
@@ -522,7 +522,7 @@
 > 用户：
 > "今天的 daily-finance cron 输出质量很差，数据都是昨天的。"
 >
-> Agent 调大管家做关联分析：
+> Agent 调Agent 本体做关联分析：
 >
 > 1. **记忆**: daily-finance cron 的正常行为是什么？→ 每天 6:00 跑，调用 web_search 获取最新新闻
 > 2. **变更**: 今天的执行日志有什么异常？→ 6:02 有 3 个 web_search 调用超时
@@ -544,7 +544,7 @@
 **触发**: 定时任务
 
 **故事**:
-> 大管家每天凌晨自动执行记忆维护：
+> Agent 本体每天凌晨自动执行记忆维护：
 >
 > ```
 > [Memory Maintenance 2026-11-15 03:00]
@@ -605,7 +605,7 @@
 **触发**: 定时对比环境快照
 
 **故事**:
-> 大管家每天对比当前环境和上次快照：
+> Agent 本体每天对比当前环境和上次快照：
 >
 > ```
 > [Environment Drift 2026-11-15 05:00]
@@ -633,7 +633,7 @@
 **触发**: 每周自动
 
 **故事**:
-> 大管家将本周的变更日志压缩归档：
+> Agent 本体将本周的变更日志压缩归档：
 >
 > ```
 > [Changelog Archive 2026-11-15 05:30 Weekly]
@@ -644,7 +644,7 @@
 >   服务事件: 5 次 (重启 3, crash 1, config change 1)
 >   cron 执行: 98 次 (成功 94, 失败 3, 超时 1)
 >
-> 归档: /root/new/work/agent-steward/changelogs/week-2026-46.jsonl.gz (2.3MB)
+> 归档: /root/new/work/agent-body/changelogs/week-2026-46.jsonl.gz (2.3MB)
 > 原始日志已清理，可通过归档搜索。
 > ```
 
@@ -656,15 +656,15 @@
 **触发**: 资产或环境变更时
 
 **故事**:
-> 德哥新建了一个项目 `/root/new/work/steward-prototype/`，在里面写了一个 Python 脚本引入了 duckdb 和 psycopg2。
+> 德哥新建了一个项目 `/root/new/work/agent-body-prototype/`，在里面写了一个 Python 脚本引入了 duckdb 和 psycopg2。
 >
-> 大管家自动分析并更新关联图：
+> Agent 本体自动分析并更新关联图：
 > ```
 > 新增关联:
->   steward-prototype → depends_on → duckdb (Python, 1.2.0)
->   steward-prototype → depends_on → PostgreSQL (via psycopg2, port 5432)
->   steward-prototype → created_in → conv-xxx (2026-11-15 的会话)
->   steward-prototype → related_to → agent-steward (同一工作空间，设计文档)
+>   agent-body-prototype → depends_on → duckdb (Python, 1.2.0)
+>   agent-body-prototype → depends_on → PostgreSQL (via psycopg2, port 5432)
+>   agent-body-prototype → created_in → conv-xxx (2026-11-15 的会话)
+>   agent-body-prototype → related_to → agent-body (同一工作空间，设计文档)
 > ```
 
 ---
@@ -677,17 +677,17 @@
 **故事**:
 > 工程师在 Antigravity 里做了一个技术决策：选用 FastAPI 做 API 层。
 >
-> 切换到 Cursor 继续写代码。Cursor 的 Agent 调大管家：
+> 切换到 Cursor 继续写代码。Cursor 的 Agent 调Agent 本体：
 > "当前项目的技术栈决策有哪些？"
 >
-> 大管家返回：
+> Agent 本体返回：
 > - API 框架: FastAPI (决策时间: 今天 10:30, 来源: Antigravity 会话)
 > - 数据库: PostgreSQL 17 (决策时间: 昨天, 来源: Antigravity 会话)
 > - 认证: JWT (决策时间: 昨天, 来源: Antigravity 会话)
 >
 > **Cursor 的 Agent 不需要重新问用户"你打算用什么框架"。**
 
-**价值**: 大管家是 Agent 之间的"共享大脑"。
+**价值**: Agent 本体是 Agent 之间的"共享大脑"。
 
 ---
 
@@ -701,7 +701,7 @@
 >
 > 同时，Antigravity Agent 收到德哥指令："帮我读一下今天的财经简报。"
 >
-> 大管家检测到冲突：
+> Agent 本体检测到冲突：
 > "daily-finance cron 正在写这个文件（进度 70%），建议等 2 分钟完成后再读取，或读取昨天的版本。"
 >
 > Agent："cron 还在写今天的财经简报，大约 2 分钟后完成。要不先看昨天的？"
@@ -720,7 +720,7 @@
 >
 > Agent B 想启动另一个推理任务。
 >
-> 大管家：
+> Agent 本体：
 > "GPU 0 当前被 Agent A 的推理任务占用（显存使用 22GB/24GB），预计 5 分钟后完成。Agent B 的任务需要 18GB 显存，无法并行。建议排队。"
 >
 > Agent B 的响应：
@@ -736,7 +736,7 @@
 **故事**:
 > Agent A 删除了一个 Redis 缓存服务（因为切换到了内存缓存方案）。
 >
-> 大管家立即更新关联图，并通知所有订阅了 Redis 变更的 Agent：
+> Agent 本体立即更新关联图，并通知所有订阅了 Redis 变更的 Agent：
 > "Redis 服务已被停止。以下资产受影响：
 > - `/root/new/work/session-cache/` — 硬依赖 Redis，需要修改
 > - cron `rate-limit-check` — 依赖 Redis，下次执行会失败"
@@ -755,19 +755,19 @@
 >
 > 传统的 Agent 会随手在当前目录建 `test.py` 或者乱扔到 `/tmp`，导致宿主机文件混乱、缺乏归档。
 >
-> 现在，Agent 在动工前调用大管家：
-> `steward_placement_suggest(object_type="script", name="sec_filing_scraper", intent="长期复用的美股财报抓取工具", tags=["python", "sec", "finance"])`
+> 现在，Agent 在动工前调用Agent 本体：
+> `body_placement_suggest(object_type="script", name="sec_filing_scraper", intent="长期复用的美股财报抓取工具", tags=["python", "sec", "finance"])`
 >
-> 大管家返回智能放置建议：
+> Agent 本体返回智能放置建议：
 > - **推荐路径**: `/root/new/shared_proj/sec_filing_scraper/`
 > - **命中规范**: 长期沉淀的复用程序与脚本统一置于 `/root/new/shared_proj/`，应建立独立项目子目录
 > - **命名约定**: 目录采用 `snake_case`，主脚本命名为 `main.py` 或 `sec_filing_scraper.py`，配备 `README.md`
 > - **测试数据建议**: 临时测试数据置于 `/root/new/tmp/sec_test/`，长期样例数据集建议置于该脚本目录下的 `samples/`
 > - **安全与脱敏提示**: 严禁将 SEC User-Agent 邮箱硬编码入代码，应通过环境变量或配置文件注入
 >
-> Agent 听从建议，规范落盘，并在大管家中自动完成资产位置打标。
+> Agent 听从建议，规范落盘，并在Agent 本体中自动完成资产位置打标。
 
-**价值**: 大管家不仅管已有资产，更是新对象落盘的规范制定者与位置引导者，彻底解决 Agent 随手乱建文件引发的环境污染。
+**价值**: Agent 本体不仅管已有资产，更是新对象落盘的规范制定者与位置引导者，彻底解决 Agent 随手乱建文件引发的环境污染。
 
 ---
 
@@ -779,7 +779,7 @@
 **故事**:
 > 宿主机上有核心工作区 `/root/new/work/`、共享工具库 `/root/new/shared_proj/`、大体量第三方源码 `/root/new/src/`、以及含敏感密钥和海量依赖的 `/root/.cache/`、`/root/.ssh/`、`node_modules/`。
 >
-> 大管家执行环境资产感知时，严格执行**分级颗粒度**策略：
+> Agent 本体执行环境资产感知时，严格执行**分级颗粒度**策略：
 > 1. **白名单目录（Deep Tier - 细到最深层）**：
 >    对 `/root/new/shared_proj/` 深入递归到每一个叶子节点，全面提炼 `desc_kv`、全文 FTS5、BM25 索引、向量 Embedding 和依赖关系图谱。
 > 2. **黑名单目录（Shallow Tier - 止于当前目录层级）**：
@@ -790,7 +790,7 @@
 >    对 `/root/new/src/` 仅索引到仓库根目录层级和 README，不做大文件深层向量化。
 >
 > 当 Agent 询问："机器上有哪些私密目录或缓存？占用多大？"
-> 大管家能立即准确返回其目录级元数据，同时确保深层隐私安全与索引高性能。
+> Agent 本体能立即准确返回其目录级元数据，同时确保深层隐私安全与索引高性能。
 
 **价值**: 彻底避免“一股脑全生成元数据”导致的算力浪费和敏感泄露，白名单深挖到底，黑名单知其存在而止于外层。
 
@@ -804,10 +804,10 @@
 **故事**:
 > 德哥对 Agent 吐槽："为什么今天系统 load 这么高，新闻抓取 cron 好像被卡住了？"
 >
-> 过去大管家只查 systemd 的 PostgreSQL 和 Redis（显示 active），看不出端倪。
+> 过去Agent 本体只查 systemd 的 PostgreSQL 和 Redis（显示 active），看不出端倪。
 >
-> 现在，大管家纳管了宿主机上的一切动态对象（Active Processes）：
-> Agent 查询 `steward_process_list()`，大管家立即上报：
+> 现在，Agent 本体纳管了宿主机上的一切动态对象（Active Processes）：
+> Agent 查询 `body_process_list()`，Agent 本体立即上报：
 > - **PID 14208**: `python /root/new/shared_proj/earnings_scan/scan_sec.py`（CPU 98%, 内存 4.2GB, 启动于 3 小时前, owner: agent:hermes_cron）
 > - **PID 18932**: `ollama runner --model qwen2.5:7b`（占用 GPU 显存 14GB）
 > - **关联分析**: `scan_sec.py` 关联的代码资产正在处于高频重试阻塞状态，且占满了单核 CPU，导致后置的日报生成任务等待。
@@ -828,13 +828,13 @@
 > 
 > 过去单纯依赖 FTS5 全文搜索，因为历史上记录的词汇是“PostgreSQL 熔断降级与连接池溢出处置”，FTS5 关键词匹配返回了 0 条命中。Agent 误以为“以前从未讨论过”，重新开始造轮子。
 > 
-> 在 v2.0 中，大管家启用了本地 Ollama 向量模型（如 nomic-embed-text）辅助的混合检索：
+> 在 v2.0 中，Agent 本体启用了本地 Ollama 向量模型（如 nomic-embed-text）辅助的混合检索：
 > 1. FTS5 进行关键词索引召回；
 > 2. Vector 进行 768 维余弦语义相似度召回；
 > 3. RRF (Reciprocal Rank Fusion) 算法自动融合评分：
 >    $$RRF\_score = \frac{1}{60 + rank_{fts}} + \frac{1}{60 + rank_{vec}}$$
 > 
-> 大管家毫秒级返回 Top 1 记忆：“2026-09-12 记录：PostgreSQL 熔断降级与连接池溢出处置（语义相似度 0.88）”，并关联到了当时的处置脚本 `/root/new/shared_proj/pg_pool_guard/`。
+> Agent 本体毫秒级返回 Top 1 记忆：“2026-09-12 记录：PostgreSQL 熔断降级与连接池溢出处置（语义相似度 0.88）”，并关联到了当时的处置脚本 `/root/new/shared_proj/pg_pool_guard/`。
 > Agent 瞬间找回组织记忆，直接在既有成果上扩展。
 
 **价值**: 彻底打破关键词字面必须精确匹配的局限，让 Agent 的记忆检索具备人类般的概念联想与语义泛化能力。
@@ -848,9 +848,9 @@
 
 **故事**:
 > 某 Agent 编写了一个分析看板，准备在后台启动一个服务并监听 `8080` 端口。
-> 在启动前，Agent 主动调用大管家 MCP 工具 `steward_env_port_check(port=8080)`。
+> 在启动前，Agent 主动调用Agent 本体 MCP 工具 `body_env_port_check(port=8080)`。
 > 
-> 大管家立即返回冲突阻断信息：
+> Agent 本体立即返回冲突阻断信息：
 > ```json
 > {
 >   "port": 8080,
@@ -880,9 +880,9 @@
 **故事**:
 > Agent 优化代码时，打算将 `/root/new/shared_proj/sec_fetcher/utils.py` 中的一个函数签名进行修改，或者删除该脚本。
 > 
-> 在修改之前，Agent 调用 `steward_links_impact(target="/root/new/shared_proj/sec_fetcher/utils.py")`。
+> 在修改之前，Agent 调用 `body_links_impact(target="/root/new/shared_proj/sec_fetcher/utils.py")`。
 > 
-> 大管家查询 `links` 依赖图谱并计算传递闭包（Transitive Closure），给出爆炸半径报告：
+> Agent 本体查询 `links` 依赖图谱并计算传递闭包（Transitive Closure），给出爆炸半径报告：
 > - **直接依赖者 (Direct, 3 个)**:
 >   - 脚本: `/root/new/work/earnings_cron/run.py`
 >   - 定时任务: `crontab: sec-daily-scan` (每天 22:00 运行)
@@ -904,9 +904,9 @@
 
 **故事**:
 > Agent 在本次长任务中，根据放置建议在 `/root/new/tmp/` 创建了 4 个临时测试用例，并在后台跑了一个 `tail -f` 监视日志。
-> 会话结束时，Agent 触发 `steward_session_close(session_id="session-20261115-01")`。
+> 会话结束时，Agent 触发 `body_session_close(session_id="session-20261115-01")`。
 > 
-> 大管家自动执行会话闭环检查：
+> Agent 本体自动执行会话闭环检查：
 > 1. **临时资产回收**: 探测到属于当前会话的 4 个临时脚本已超过生命周期，提示并一键清理，释放空间；
 > 2. **孤儿进程清理**: 识别到当前会话遗留的无用进程（PID 33102, tail 命令），自动优雅回收；
 > 3. **会话环境总结**: 提取本会话在 `changes` 表中产生的 12 次有效变更，生成标准的《本次会话宿主环境变更清单》，自动存入长期记忆 `memories`。
@@ -962,14 +962,14 @@
 
 ## 五、场景补充：边界与非场景
 
-以下是大管家 **不做** 的事情，明确边界：
+以下是Agent 本体 **不做** 的事情，明确边界：
 
-1. **不做 Agent 框架** — 大管家不运行 Agent，它只为 Agent 提供基础设施
-2. **不做 LLM 调用** — 大管家本身不调 LLM 做推理（自身可以用轻量 LLM 做摘要/分类，但不处理用户任务）
-3. **不做远程机器管理** — 大管家只管本机（多机扩展是未来的事）
-4. **不做安全审计** — 大管家可以提供信息，但不做入侵检测、漏洞扫描
-5. **不做备份恢复** — 大管家不是备份工具，它只索引和关联
-6. **不替代操作系统** — 大管家是 OS 之上的认知层，不替代 OS 的资源管理
+1. **不做 Agent 框架** — Agent 本体不运行 Agent，它只为 Agent 提供基础设施
+2. **不做 LLM 调用** — Agent 本体本身不调 LLM 做推理（自身可以用轻量 LLM 做摘要/分类，但不处理用户任务）
+3. **不做远程机器管理** — Agent 本体只管本机（多机扩展是未来的事）
+4. **不做安全审计** — Agent 本体可以提供信息，但不做入侵检测、漏洞扫描
+5. **不做备份恢复** — Agent 本体不是备份工具，它只索引和关联
+6. **不替代操作系统** — Agent 本体是 OS 之上的认知层，不替代 OS 的资源管理
 
 ---
 

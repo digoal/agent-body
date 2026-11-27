@@ -271,7 +271,7 @@ impl AgentHookEngine {
         );
 
         PreHookResult {
-            allowed: true, // 管家默认采取建议式，不直接强制阻断
+            allowed: true, // Agent 本体默认采取建议式，不直接强制阻断
             has_warnings,
             warnings,
             suggestions,
@@ -304,7 +304,7 @@ impl AgentHookEngine {
             ("/.ssh/", "SSH 私钥与 authorized_keys 凭据目录"),
             ("/.gnupg/", "GPG 私钥与信任链目录"),
             ("/boot/", "系统内核与引导分区目录"),
-            ("/.agent-body/body.db", "大管家主 SQLite 数据库文件，禁止绕过 Steward API 直接写文件"),
+            ("/.agent-body/body.db", "Agent 本体主 SQLite 数据库文件，禁止绕过 Agent Body API 直接写文件"),
         ];
 
         for (pattern, desc) in critical_rules {
@@ -314,7 +314,7 @@ impl AgentHookEngine {
                     path_str, desc
                 ));
                 suggestions.push(
-                    "请再次确认人工授权；涉及认证/系统配置建议先备份并在受控变更窗口操作，涉及数据库请通过 steward CLI/MCP 接口写入。".to_string(),
+                    "请再次确认人工授权；涉及认证/系统配置建议先备份并在受控变更窗口操作，涉及数据库请通过 agent-body CLI/MCP 接口写入。".to_string(),
                 );
                 break;
             }
@@ -472,7 +472,7 @@ impl AgentHookEngine {
 
         PostHookResult {
             recorded: true,
-            message: format!("管家已成功捕获工具 `{}` 产生的事实变更，并记录审计流水", tool_name),
+            message: format!("Agent 本体已成功捕获工具 `{}` 产生的事实变更，并记录审计流水", tool_name),
             affected_services: affected,
             concurrency_mode: mode_str,
             recovery_prescription: None,

@@ -239,10 +239,10 @@ impl<'a> PlacementLearner<'a> {
         candidates
     }
 
-    /// 将规则候选集导出为标准 .steward-rules.toml 文件内容
+    /// 将规则候选集导出为标准 .agent-body-rules.toml 文件内容
     pub fn export_as_toml(candidates: &[LearnedRuleCandidate]) -> String {
         let mut out = String::new();
-        out.push_str("# 自动演进生成的项目放置规范 (.steward-rules.toml)\n\n");
+        out.push_str("# 自动演进生成的项目放置规范 (.agent-body-rules.toml)\n\n");
         for c in candidates {
             out.push_str("[[rules]]\n");
             out.push_str(&format!("object_type = \"{}\"\n", c.pattern_type));
@@ -337,7 +337,7 @@ pub mod tests {
         assert!(top.confidence >= 0.90);
 
         let toml_str = PlacementLearner::export_as_toml(&candidates);
-        assert!(toml_str.contains(".steward-rules.toml"));
+        assert!(toml_str.contains(".agent-body-rules.toml"));
         assert!(toml_str.contains("shared_proj/tools"));
 
         Ok(())

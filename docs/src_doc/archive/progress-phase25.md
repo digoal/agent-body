@@ -1,4 +1,4 @@
-# Agent Host Steward — Phase 25 断点续传进度表
+# Agent Body — Phase 25 断点续传进度表
 
 > **关联路线图**: [roadmap-phase25.md](roadmap-phase25.md)  
 > **创建时间**: 2026-11-19T13:31:00+08:00  

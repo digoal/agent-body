@@ -4,7 +4,7 @@ use std::process::Command;
 fn test_cli_binary_e2e_isolated_lifecycle() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let data_dir = tmp.path().join("data");
-    let db_path = data_dir.join("steward.db");
+    let db_path = data_dir.join("body.db");
     let ws_root = tmp.path().join("ws");
     std::fs::create_dir_all(ws_root.join("work")).expect("mkdir work");
     std::fs::create_dir_all(ws_root.join("tmp")).expect("mkdir tmp");

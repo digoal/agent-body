@@ -27,7 +27,7 @@ pub struct WorkloadSpec {
     pub title: String,
     pub category: String,
     pub baseline_desc: String,
-    pub steward_desc: String,
+    pub body_desc: String,
     pub sla_desc: String,
 }
 
@@ -38,14 +38,14 @@ pub struct WorkloadResult {
     pub title: String,
     pub category: String,
     pub baseline_tokens: i64,
-    pub steward_tokens: i64,
+    pub body_tokens: i64,
     pub tokens_saved: i64,
     pub token_savings_pct: f64,
     pub baseline_rounds: i64,
-    pub steward_rounds: i64,
+    pub body_rounds: i64,
     pub rounds_saved: i64,
     pub baseline_elapsed_us: u128,
-    pub steward_elapsed_us: u128,
+    pub body_elapsed_us: u128,
     pub speedup_factor: f64,
     pub baseline_failures: i64,
     pub hazards_intercepted: i64,
@@ -56,7 +56,7 @@ pub struct WorkloadResult {
     pub noise_reduction_pct: f64,
     pub sla_passed: bool,
     pub baseline_command: String,
-    pub steward_action: String,
+    pub body_action: String,
     pub evidence_detail: String,
     #[serde(default)]
     pub quality_score: Option<f64>,
@@ -67,13 +67,13 @@ pub struct WorkloadResult {
     #[serde(default)]
     pub baseline_quality_score: f64,
     #[serde(default)]
-    pub steward_quality_score: f64,
+    pub body_quality_score: f64,
     #[serde(default)]
     pub quality_delta: f64,
     #[serde(default)]
     pub baseline_facts_hit: usize,
     #[serde(default)]
-    pub steward_facts_hit: usize,
+    pub body_facts_hit: usize,
     #[serde(default)]
     pub required_facts_total: usize,
     #[serde(default)]
@@ -85,22 +85,22 @@ pub struct WorkloadResult {
 pub struct ContextQualityInputs {
     pub required_facts_total: usize,
     pub baseline_facts_hit: usize,
-    pub steward_facts_hit: usize,
+    pub body_facts_hit: usize,
     pub baseline_signal_precision: f64,
-    pub steward_signal_precision: f64,
+    pub body_signal_precision: f64,
     pub baseline_actionability: f64,
-    pub steward_actionability: f64,
+    pub body_actionability: f64,
     pub baseline_safety: f64,
-    pub steward_safety: f64,
+    pub body_safety: f64,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct ContextQualityEval {
     pub baseline_quality_score: f64,
-    pub steward_quality_score: f64,
+    pub body_quality_score: f64,
     pub quality_delta: f64,
-    pub steward_recall_pct: f64,
-    pub steward_precision_pct: f64,
+    pub body_recall_pct: f64,
+    pub body_precision_pct: f64,
     pub info_density_gain: f64,
     pub pareto_passed: bool,
 }
@@ -109,37 +109,37 @@ pub struct ContextQualityEval {
 pub fn evaluate_context_quality(
     inp: ContextQualityInputs,
     baseline_tokens: i64,
-    steward_tokens: i64,
+    body_tokens: i64,
     min_quality_sla: f64,
 ) -> ContextQualityEval {
     let total = inp.required_facts_total.max(1) as f64;
     let r_base = (inp.baseline_facts_hit.min(inp.required_facts_total) as f64) / total;
-    let r_stew = (inp.steward_facts_hit.min(inp.required_facts_total) as f64) / total;
+    let r_stew = (inp.body_facts_hit.min(inp.required_facts_total) as f64) / total;
     let p_base = inp.baseline_signal_precision.clamp(0.0, 1.0);
-    let p_stew = inp.steward_signal_precision.clamp(0.0, 1.0);
+    let p_stew = inp.body_signal_precision.clamp(0.0, 1.0);
     let a_base = inp.baseline_actionability.clamp(0.0, 1.0);
-    let a_stew = inp.steward_actionability.clamp(0.0, 1.0);
+    let a_stew = inp.body_actionability.clamp(0.0, 1.0);
     let s_base = inp.baseline_safety.clamp(0.0, 1.0);
-    let s_stew = inp.steward_safety.clamp(0.0, 1.0);
+    let s_stew = inp.body_safety.clamp(0.0, 1.0);
 
     let q_base = ((0.40 * r_base + 0.30 * p_base + 0.20 * a_base + 0.10 * s_base) * 100.0 * 100.0).round() / 100.0;
     let q_stew = ((0.40 * r_stew + 0.30 * p_stew + 0.20 * a_stew + 0.10 * s_stew) * 100.0 * 100.0).round() / 100.0;
     let delta = ((q_stew - q_base) * 100.0).round() / 100.0;
 
     let rho_base = (inp.baseline_facts_hit as f64 / baseline_tokens.max(1) as f64) * 1000.0;
-    let rho_stew = (inp.steward_facts_hit as f64 / steward_tokens.max(1) as f64) * 1000.0;
+    let rho_stew = (inp.body_facts_hit as f64 / body_tokens.max(1) as f64) * 1000.0;
     let density_gain = ((rho_stew / rho_base.max(0.01)) * 100.0).round() / 100.0;
 
-    let pareto_passed = inp.steward_facts_hit == inp.required_facts_total
+    let pareto_passed = inp.body_facts_hit == inp.required_facts_total
         && q_stew >= q_base
         && q_stew >= min_quality_sla;
 
     ContextQualityEval {
         baseline_quality_score: q_base,
-        steward_quality_score: q_stew,
+        body_quality_score: q_stew,
         quality_delta: delta,
-        steward_recall_pct: (r_stew * 100.0 * 100.0).round() / 100.0,
-        steward_precision_pct: (p_stew * 100.0 * 100.0).round() / 100.0,
+        body_recall_pct: (r_stew * 100.0 * 100.0).round() / 100.0,
+        body_precision_pct: (p_stew * 100.0 * 100.0).round() / 100.0,
         info_density_gain: density_gain,
         pareto_passed,
     }
@@ -150,17 +150,17 @@ pub(super) fn apply_quality_eval(
     inp: ContextQualityInputs,
     min_quality_sla: f64,
 ) {
-    let ev = evaluate_context_quality(inp, res.baseline_tokens, res.steward_tokens, min_quality_sla);
+    let ev = evaluate_context_quality(inp, res.baseline_tokens, res.body_tokens, min_quality_sla);
     res.baseline_quality_score = ev.baseline_quality_score;
-    res.steward_quality_score = ev.steward_quality_score;
+    res.body_quality_score = ev.body_quality_score;
     res.quality_delta = ev.quality_delta;
     res.baseline_facts_hit = inp.baseline_facts_hit;
-    res.steward_facts_hit = inp.steward_facts_hit;
+    res.body_facts_hit = inp.body_facts_hit;
     res.required_facts_total = inp.required_facts_total;
     res.info_density_gain = ev.info_density_gain;
-    res.quality_score = Some(ev.steward_quality_score);
-    res.recall_pct = Some(ev.steward_recall_pct);
-    res.precision_pct = Some(ev.steward_precision_pct);
+    res.quality_score = Some(ev.body_quality_score);
+    res.recall_pct = Some(ev.body_recall_pct);
+    res.precision_pct = Some(ev.body_precision_pct);
     res.sla_passed = res.sla_passed && ev.pareto_passed;
 }
 
@@ -192,8 +192,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "宿主工具能力发现".into(),
             category: "Host Reality Graph".into(),
             baseline_desc: "串行执行 which + --version/--help 外部子进程探查 5 类工具".into(),
-            steward_desc: "CapabilityEngine 内存能力图谱语义检索".into(),
-            sla_desc: "rounds_saved >= 4, steward_elapsed_us < 50ms".into(),
+            body_desc: "CapabilityEngine 内存能力图谱语义检索".into(),
+            sla_desc: "rounds_saved >= 4, body_elapsed_us < 50ms".into(),
         },
         WorkloadSpec {
             id: "W2".into(),
@@ -201,7 +201,7 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "活跃端口防撞与空闲选址".into(),
             category: "Pre-Hook & PortChecker".into(),
             baseline_desc: "盲目尝试 TcpListener::bind 活跃端口触发 EADDRINUSE 后顺延重试".into(),
-            steward_desc: "Pre-Hook 1ms 事前拦截 + PortChecker 一次推荐空闲端口".into(),
+            body_desc: "Pre-Hook 1ms 事前拦截 + PortChecker 一次推荐空闲端口".into(),
             sla_desc: "hazards_intercepted >= 1, interception_rate == 100%".into(),
         },
         WorkloadSpec {
@@ -210,7 +210,7 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "分级扫描与黑名单噪音阻断".into(),
             category: "Granularity Tiering".into(),
             baseline_desc: "WalkDir 无过滤递归遍历含 node_modules/.git/__pycache__/.cache 混合树".into(),
-            steward_desc: "Scanner + PolicyMatcher + NoiseFilter 分级阻断".into(),
+            body_desc: "Scanner + PolicyMatcher + NoiseFilter 分级阻断".into(),
             sla_desc: "noise_reduction_pct >= 80%, 黑名单子文件 0 入库".into(),
         },
         WorkloadSpec {
@@ -219,8 +219,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "8 类资产放置合规门禁".into(),
             category: "Placement Governance".into(),
             baseline_desc: "8 类文件默认裸放根目录或驼峰命名引发规约违规与返工".into(),
-            steward_desc: "PlacementEngineV2 路径推导 + hook_pre 违规拦截".into(),
-            sla_desc: "interception_rate == 100%, steward_elapsed_us < 10ms".into(),
+            body_desc: "PlacementEngineV2 路径推导 + hook_pre 违规拦截".into(),
+            sla_desc: "interception_rate == 100%, body_elapsed_us < 10ms".into(),
         },
         WorkloadSpec {
             id: "W5".into(),
@@ -228,7 +228,7 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "3 跳爆炸半径与断链自愈".into(),
             category: "LinksEngine & Repair".into(),
             baseline_desc: "全目录树逐文件读取文本正则扫描引用链且漏检断链".into(),
-            steward_desc: "ImpactAnalyzer 3 跳图查询 + LinkAuditor + LinkRepairer".into(),
+            body_desc: "ImpactAnalyzer 3 跳图查询 + LinkAuditor + LinkRepairer".into(),
             sla_desc: "hazards_intercepted >= 2, token_savings_pct >= 50%".into(),
         },
         WorkloadSpec {
@@ -237,8 +237,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "多 Agent 并发死锁破局".into(),
             category: "Multi-Agent Coordination".into(),
             baseline_desc: "无死锁检测器时双 Agent 交叉等锁陷入超时窗口".into(),
-            steward_desc: "CoordinationEngine + WFG 环路检测毫秒级裁决".into(),
-            sla_desc: "hazards_intercepted >= 1, steward_elapsed_us < 10ms".into(),
+            body_desc: "CoordinationEngine + WFG 环路检测毫秒级裁决".into(),
+            sla_desc: "hazards_intercepted >= 1, body_elapsed_us < 10ms".into(),
         },
         WorkloadSpec {
             id: "W7".into(),
@@ -246,8 +246,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "百级 SKILL 预算路由与渐进披露".into(),
             category: "Context Budget Router".into(),
             baseline_desc: "全量注入宿主机 120+ SKILL 与 MCP 描述进 Prompt".into(),
-            steward_desc: "ContextBudgetRouter (600 tok 预算) 精准 Top-K 召回".into(),
-            sla_desc: "token_savings_pct >= 85%, steward_tokens <= 1200".into(),
+            body_desc: "ContextBudgetRouter (600 tok 预算) 精准 Top-K 召回".into(),
+            sla_desc: "token_savings_pct >= 85%, body_tokens <= 1200".into(),
         },
         WorkloadSpec {
             id: "W8".into(),
@@ -255,8 +255,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "冷启动态势简报组装".into(),
             category: "Adaptive Brief".into(),
             baseline_desc: "真机串行执行 6 步冷启动探查命令汇总环境态势".into(),
-            steward_desc: "BriefAssembler 单次预算受控三维融合简报".into(),
-            sla_desc: "rounds_saved == 5, steward_elapsed_us < 100ms".into(),
+            body_desc: "BriefAssembler 单次预算受控三维融合简报".into(),
+            sla_desc: "rounds_saved == 5, body_elapsed_us < 100ms".into(),
         },
         WorkloadSpec {
             id: "W9".into(),
@@ -264,7 +264,7 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "混合语义检索 Recall@5 准确率".into(),
             category: "D6 Quality & Recall".into(),
             baseline_desc: "纯字面精确匹配在同义词错位场景下漏召回被迫全量扫描".into(),
-            steward_desc: "属性字典+语义标签混合检索精准召回 Top-K".into(),
+            body_desc: "属性字典+语义标签混合检索精准召回 Top-K".into(),
             sla_desc: "recall_pct >= 90%, token_savings_pct >= 50%".into(),
         },
         WorkloadSpec {
@@ -273,7 +273,7 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "复杂模板依赖抽取抗假阳性".into(),
             category: "D6 Quality & Precision".into(),
             baseline_desc: "朴素正则抽取 %s/f-string/占位符/JSON 数字产生大量假断链".into(),
-            steward_desc: "LinksEngine 模板脱敏抽取实现 >= 95% Precision".into(),
+            body_desc: "LinksEngine 模板脱敏抽取实现 >= 95% Precision".into(),
             sla_desc: "precision_pct >= 95% (FPR <= 5%)".into(),
         },
         WorkloadSpec {
@@ -282,8 +282,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "全链路脱敏、防命令注入与抗提示词投毒".into(),
             category: "D4/D6 Security Guardrail".into(),
             baseline_desc: "裸采 /proc cmdline、直接 sh -c 拼接与原文摘要注入导致凭据泄露与命令/提示词逃逸".into(),
-            steward_desc: "SecretRedactor + POSIX 转义 + PromptInjectionScanner 三重微秒级拦截".into(),
-            sla_desc: "redaction == 100%, injection_escape == 0, steward_elapsed_us < 10_000".into(),
+            body_desc: "SecretRedactor + POSIX 转义 + PromptInjectionScanner 三重微秒级拦截".into(),
+            sla_desc: "redaction == 100%, injection_escape == 0, body_elapsed_us < 10_000".into(),
         },
         WorkloadSpec {
             id: "W12".into(),
@@ -291,8 +291,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "资产改删写穿失效与跨表一致性自愈".into(),
             category: "D6 Freshness & Self-Healing".into(),
             baseline_desc: "文件改删后仍沿用旧向量/旧描述/已删FTS/幽灵Fact节点与同路径重复摘要记忆".into(),
-            steward_desc: "Write-Through 写穿失效 + FreshnessReconciler 跨表一致性自愈闭环".into(),
-            sla_desc: "4/4 新鲜度防线命中, token_savings_pct >= 50%, steward_elapsed_us < 100_000".into(),
+            body_desc: "Write-Through 写穿失效 + FreshnessReconciler 跨表一致性自愈闭环".into(),
+            sla_desc: "4/4 新鲜度防线命中, token_savings_pct >= 50%, body_elapsed_us < 100_000".into(),
         },
         WorkloadSpec {
             id: "W13".into(),
@@ -300,8 +300,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "多维证据分层有向加权图谱与隐式语义发现".into(),
             category: "D6 Graph Intelligence".into(),
             baseline_desc: "无结构上卷与向量隐式挖掘时工程节点孤立且物理边/语义边混杂".into(),
-            steward_desc: "L2 结构上卷 + L3 向量稀疏剪枝 (Top-K=3) + 加权衰减爆炸半径分层过滤".into(),
-            sla_desc: "4/4 图谱发现断言命中, token_savings_pct >= 45%, steward_elapsed_us < 250_000".into(),
+            body_desc: "L2 结构上卷 + L3 向量稀疏剪枝 (Top-K=3) + 加权衰减爆炸半径分层过滤".into(),
+            sla_desc: "4/4 图谱发现断言命中, token_savings_pct >= 45%, body_elapsed_us < 250_000".into(),
         },
         WorkloadSpec {
             id: "W14".into(),
@@ -309,8 +309,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "MeshEnvelope v1.0 零信任签名、防重放与受控沙盒协同".into(),
             category: "D4/D6 Mesh Protocol".into(),
             baseline_desc: "裸 HTTP 明文直写、无防重放与敏感文件直传导致篡改/重放/凭据泄露".into(),
-            steward_desc: "HMAC-SHA256 签名 + NonceCache 防重放 + 对话脱敏 + mesh_inbox 沙盒隔离".into(),
-            sla_desc: "4/4 安全协同防线命中, replay/tamper/sensitive 100% 拦截, steward_elapsed_us < 100_000".into(),
+            body_desc: "HMAC-SHA256 签名 + NonceCache 防重放 + 对话脱敏 + mesh_inbox 沙盒隔离".into(),
+            sla_desc: "4/4 安全协同防线命中, replay/tamper/sensitive 100% 拦截, body_elapsed_us < 100_000".into(),
         },
         WorkloadSpec {
             id: "W15".into(),
@@ -318,8 +318,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "AOPCC 乐观直通与悲观门禁自适应及碰壁秒级自愈".into(),
             category: "D2/D6 Concurrency Loop".into(),
             baseline_desc: "全悲观回路每步前置查表付出整轮对话税 (20 rounds) 或裸奔盲猜反复失败".into(),
-            steward_desc: "Brief MVCC 乐观租约 + 三态分类器 + PostToolUse <2ms 碰壁秒级自愈与自动降级".into(),
-            sla_desc: "rounds_saved >= 8, 4/4 AOPCC 断言命中, token_savings_pct >= 50%, steward_elapsed_us < 250_000".into(),
+            body_desc: "Brief MVCC 乐观租约 + 三态分类器 + PostToolUse <2ms 碰壁秒级自愈与自动降级".into(),
+            sla_desc: "rounds_saved >= 8, 4/4 AOPCC 断言命中, token_savings_pct >= 50%, body_elapsed_us < 250_000".into(),
         },
         WorkloadSpec {
             id: "W16".into(),
@@ -327,8 +327,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "双域行为审计脱敏防洪与租约自进化闭环".into(),
             category: "D6/D7 Audit & Self-Evolution".into(),
             baseline_desc: "无统一审计或明文日志泛洪 (10+ 噪声事件)、Daemon 隐身与静态规则漂移 (12 rounds)".into(),
-            steward_desc: "IN_AGENT/OUT_OF_AGENT 双域审计 + 密钥脱敏 + 60s Watcher 防洪折叠 + AOPCC 滑窗升降级".into(),
-            sla_desc: "4/4 双域审计与自进化断言命中, token_savings_pct >= 50%, steward_elapsed_us < 1_000_000".into(),
+            body_desc: "IN_AGENT/OUT_OF_AGENT 双域审计 + 密钥脱敏 + 60s Watcher 防洪折叠 + AOPCC 滑窗升降级".into(),
+            sla_desc: "4/4 双域审计与自进化断言命中, token_savings_pct >= 50%, body_elapsed_us < 1_000_000".into(),
         },
         WorkloadSpec {
             id: "W17".into(),
@@ -336,7 +336,7 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "跨大脑连续性接力与本体器官自省".into(),
             category: "D6/D7 Embodiment & Continuity".into(),
             baseline_desc: "新大脑切换接盘时盲目重跑 ls/find/ps/git log 重新探索宿主与任务态 (4 rounds)".into(),
-            steward_desc: "BodyManifest 6 器官自省 + ContinuityCapsule (<=300 tok 脱敏抗投毒) + L0~L3 自治包络拦截".into(),
+            body_desc: "BodyManifest 6 器官自省 + ContinuityCapsule (<=300 tok 脱敏抗投毒) + L0~L3 自治包络拦截".into(),
             sla_desc: "4/4 接力/脱敏/包络断言命中, rounds_saved >= 2, token_savings_pct >= 50%, +ΔQ > 0".into(),
         },
         WorkloadSpec {
@@ -345,8 +345,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "内生等待事件与 AWR/ADDM 自诊断闭环".into(),
             category: "D3/D7 Self-Telemetry & AWR".into(),
             baseline_desc: "无内生遥测时外部轮询 ps/lsof/iostat/top 抓性能瓶颈与内存漂移 (5 rounds)".into(),
-            steward_desc: "18/18 WaitEventRegistry + AWR 快照差分 + ADDM 根因诊断 + 报告删除闭环 (1 round)".into(),
-            sla_desc: "4/4 AWR/ADDM/分位单调性断言命中, token_savings_pct >= 50%, steward_elapsed_us < 250_000".into(),
+            body_desc: "18/18 WaitEventRegistry + AWR 快照差分 + ADDM 根因诊断 + 报告删除闭环 (1 round)".into(),
+            sla_desc: "4/4 AWR/ADDM/分位单调性断言命中, token_savings_pct >= 50%, body_elapsed_us < 250_000".into(),
         },
         WorkloadSpec {
             id: "W19".into(),
@@ -354,8 +354,8 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             title: "弱向量 L1/L2 Know-How 网络与 Omni-RRF 多路融合召回".into(),
             category: "D6 Know-How Graph & Omni-RRF".into(),
             baseline_desc: "弱小模型无图谱时纯字面 FTS 漏召回跨词因果、拼写错误与关联图表 (4 rounds)".into(),
-            steward_desc: "L1 章节PMI网 + 原文锚定 L2 Know-How + 8维 Omni-RRF + 写穿级联失效 (1 round)".into(),
-            sla_desc: "4/4 跨词/容错/防幻觉/写穿断言命中, token_savings_pct >= 50%, steward_elapsed_us < 250_000".into(),
+            body_desc: "L1 章节PMI网 + 原文锚定 L2 Know-How + 8维 Omni-RRF + 写穿级联失效 (1 round)".into(),
+            sla_desc: "4/4 跨词/容错/防幻觉/写穿断言命中, token_savings_pct >= 50%, body_elapsed_us < 250_000".into(),
         },
     ]
 }
@@ -400,11 +400,11 @@ pub(super) fn finalize_result(
     title: &str,
     category: &str,
     baseline_tokens: i64,
-    steward_tokens: i64,
+    body_tokens: i64,
     baseline_rounds: i64,
-    steward_rounds: i64,
+    body_rounds: i64,
     baseline_elapsed_us: u128,
-    steward_elapsed_us: u128,
+    body_elapsed_us: u128,
     baseline_failures: i64,
     hazards_intercepted: i64,
     raw_entries: usize,
@@ -412,18 +412,18 @@ pub(super) fn finalize_result(
     blocked_noise: usize,
     sla_passed: bool,
     baseline_command: String,
-    steward_action: String,
+    body_action: String,
     evidence_detail: String,
 ) -> WorkloadResult {
-    let tokens_saved = baseline_tokens.saturating_sub(steward_tokens);
+    let tokens_saved = baseline_tokens.saturating_sub(body_tokens);
     let token_savings_pct = if baseline_tokens > 0 {
         ((tokens_saved as f64 / baseline_tokens as f64) * 100.0 * 100.0).round() / 100.0
     } else {
         0.0
     };
-    let rounds_saved = baseline_rounds.saturating_sub(steward_rounds);
-    let speedup_factor = if steward_elapsed_us > 0 {
-        ((baseline_elapsed_us as f64 / steward_elapsed_us as f64) * 100.0).round() / 100.0
+    let rounds_saved = baseline_rounds.saturating_sub(body_rounds);
+    let speedup_factor = if body_elapsed_us > 0 {
+        ((baseline_elapsed_us as f64 / body_elapsed_us as f64) * 100.0).round() / 100.0
     } else {
         1.0
     };
@@ -444,14 +444,14 @@ pub(super) fn finalize_result(
         title: title.into(),
         category: category.into(),
         baseline_tokens,
-        steward_tokens,
+        body_tokens,
         tokens_saved,
         token_savings_pct,
         baseline_rounds,
-        steward_rounds,
+        body_rounds,
         rounds_saved,
         baseline_elapsed_us,
-        steward_elapsed_us,
+        body_elapsed_us,
         speedup_factor,
         baseline_failures,
         hazards_intercepted,
@@ -462,16 +462,16 @@ pub(super) fn finalize_result(
         noise_reduction_pct,
         sla_passed,
         baseline_command,
-        steward_action,
+        body_action,
         evidence_detail,
         quality_score: None,
         precision_pct: None,
         recall_pct: None,
         baseline_quality_score: 0.0,
-        steward_quality_score: 0.0,
+        body_quality_score: 0.0,
         quality_delta: 0.0,
         baseline_facts_hit: 0,
-        steward_facts_hit: 0,
+        body_facts_hit: 0,
         required_facts_total: 0,
         info_density_gain: 1.0,
     }
@@ -488,13 +488,13 @@ mod pareto_tests {
             ContextQualityInputs {
                 required_facts_total: 5,
                 baseline_facts_hit: 4,
-                steward_facts_hit: 1,
+                body_facts_hit: 1,
                 baseline_signal_precision: 0.5,
-                steward_signal_precision: 1.0,
+                body_signal_precision: 1.0,
                 baseline_actionability: 0.5,
-                steward_actionability: 0.2,
+                body_actionability: 0.2,
                 baseline_safety: 0.8,
-                steward_safety: 1.0,
+                body_safety: 1.0,
             },
             10_000,
             1,

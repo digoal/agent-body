@@ -3,10 +3,11 @@
 
 检查项:
   1. 位置无关性红线: 生产代码 (#[cfg(test)] 之前) 严禁硬编码 env!("CARGO_MANIFEST_DIR")，且非 Benchmark 生产代码严禁新增 /root/new/ 与 user:digoal 硬编码
-  2. 活跃部署与配置红线: Dockerfile / docker-compose.yml / config.example.toml 严禁残留 /.steward
+  2. 活跃部署与配置红线: Dockerfile / docker-compose.yml / config.example.toml 严禁残留旧数据目录路径
   3. 关键自治路径错误可观测性: 统计生产代码 let _ = 静默吞错数量 (<= 15) 且核心自治/SQLite/本体路径必须为 0
   4. 模块化复杂度红线: 严格禁止任何生产 Rust 文件超过 1000 行 (>1000L 清零)
   5. WaitEventId 全埋点红线: 所有 WaitEventId 枚举变体必须在生产路径中具备 WaitEventGuard::enter / WaitEventRegistry::record_us 埋点
+  6. 全仓统一命名红线: 源码、测试、脚本、Skills、文档与演说文件严禁残留旧项目命名（统一为 agent-body / Agent Body / Agent 本体）
 """
 
 from __future__ import annotations
@@ -103,11 +104,12 @@ def run_checks() -> tuple[list[str], list[str]]:
             "核心自治与 SQLite 主路径禁止 `let _ =` 静默吞错: " + ", ".join(core_silent_hits)
         )
 
-    # 2. 活跃部署与配置禁止残留 /.steward
+    # 2. 活跃部署与配置禁止残留旧数据目录路径
+    legacy_dir = "/." + "stew" + "ard"
     for rel in ("Dockerfile", "docker-compose.yml", "config.example.toml"):
         p = ROOT / rel
-        if p.exists() and "/.steward" in p.read_text(encoding="utf-8"):
-            errors.append(f"{rel} 存在旧路径残留 '/.steward'")
+        if p.exists() and legacy_dir in p.read_text(encoding="utf-8"):
+            errors.append(f"{rel} 存在旧路径残留 '{legacy_dir}'")
 
     # 3. 静默吞错上限检查
     if silent_let_total > MAX_SILENT_LET_UNDERSCORE:
@@ -140,6 +142,47 @@ def run_checks() -> tuple[list[str], list[str]]:
             if missing_we:
                 errors.append(f"存在未埋点 WaitEventId 变体: {', '.join(missing_we)}")
             notes.append(f"WaitEventId 埋点覆盖: {len(variants) - len(missing_we)} / {len(variants)}")
+
+    # 6. 全仓统一命名检查（零旧称残留）
+    legacy_re = re.compile(
+        r"(?:" + "stew" + "ard" + "|" + "大" + "管" + "家" + "|" + "管" + "家" + "|" + "秘" + "书" + r")",
+        re.IGNORECASE,
+    )
+    skip_dirs = {".git", "target", ".codegraph", "node_modules", "__pycache__"}
+    legacy_hits: list[str] = []
+    for sub in ("src", "tests", "scripts", "skills", "docs", "presentation"):
+        base = ROOT / sub
+        if not base.exists():
+            continue
+        for p in sorted(base.rglob("*")):
+            if not p.is_file() or any(part in skip_dirs for part in p.parts):
+                continue
+            rel = p.relative_to(ROOT).as_posix()
+            if "stew" + "ard" in p.name.lower():
+                legacy_hits.append(f"{rel} (文件名)")
+                continue
+            try:
+                txt = p.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            m = legacy_re.search(txt)
+            if m:
+                ln = txt[: m.start()].count("\n") + 1
+                legacy_hits.append(f"{rel}:{ln} ({m.group(0)})")
+    for p in sorted(ROOT.iterdir()):
+        if p.is_file() and p.suffix in (".md", ".toml"):
+            try:
+                txt = p.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            m = legacy_re.search(txt)
+            if m:
+                ln = txt[: m.start()].count("\n") + 1
+                legacy_hits.append(f"{p.name}:{ln} ({m.group(0)})")
+    if legacy_hits:
+        sample = ", ".join(legacy_hits[:8])
+        errors.append(f"存在 {len(legacy_hits)} 处旧命名残留（应统一为 Agent 本体 / agent-body）: {sample}")
+    notes.append(f"旧命名残留: {len(legacy_hits)} 处")
 
     return errors, notes
 

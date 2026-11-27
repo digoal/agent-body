@@ -18,7 +18,7 @@ fn test_ecosystem_end_to_end_and_35_mcp_tools() {
     assert_eq!(tools.len(), 43, "Phase 44 后原生 MCP 工具应为 43 个");
 
     // 2. 构造临时目录测试 SKILL 与 MCP 扫描
-    let tmp = std::env::temp_dir().join(format!("steward_eco_e2e_{}", uuid::Uuid::new_v4()));
+    let tmp = std::env::temp_dir().join(format!("agent_body_eco_e2e_{}", uuid::Uuid::new_v4()));
     let skill_a = tmp.join("skills/postgres-tuning");
     let skill_b = tmp.join("skills/video-editor");
     std::fs::create_dir_all(&skill_a).expect("mkdir a");

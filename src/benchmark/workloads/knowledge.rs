@@ -241,13 +241,13 @@ pub(super) fn run_w19_knowhow_graph_and_omni_rrf() -> Result<WorkloadResult> {
         ContextQualityInputs {
             required_facts_total: 4,
             baseline_facts_hit: base_hit,
-            steward_facts_hit: hits,
+            body_facts_hit: hits,
             baseline_signal_precision: 0.35,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.35,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.60,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         100.0,
     );

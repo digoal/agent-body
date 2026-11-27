@@ -389,8 +389,8 @@ mod tests {
         if cfg!(target_os = "linux") && std::path::Path::new("/run/systemd/system").exists() {
             assert!(!services.is_empty(), "systemd 宿主机上应该至少存在 systemd 单元");
         }
-        let found_steward = services.iter().any(|s| s.service_name.contains("steward"));
-        println!("扫描到 systemd 服务数: {}, 是否包含 steward: {}", services.len(), found_steward);
+        let found_agent_body = services.iter().any(|s| s.service_name.contains("agent-body"));
+        println!("扫描到 systemd 服务数: {}, 是否包含 agent-body: {}", services.len(), found_agent_body);
     }
 
     #[test]

@@ -209,7 +209,7 @@ mod tests {
 
         let id = mm.add(
             "experience",
-            "连接 PG postgres://steward:MyPgSecret77@127.0.0.1:5432/db 与 OPENAI_API_KEY=sk-1234567890abcdef 排障",
+            "连接 PG postgres://agent_body:MyPgSecret77@127.0.0.1:5432/db 与 OPENAI_API_KEY=sk-1234567890abcdef 排障",
             Some("TOKEN=ghp_1234567890abcdef 备注"),
             Some("agent:sec"),
             vec!["security".to_string()],

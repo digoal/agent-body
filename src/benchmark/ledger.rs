@@ -12,9 +12,9 @@ pub struct LedgerEventInput {
     pub tool_or_action: String,
     pub rule: ProvenanceRule,
     pub baseline_tokens: i64,
-    pub steward_tokens: i64,
+    pub body_tokens: i64,
     pub baseline_rounds: i64,
-    pub steward_rounds: i64,
+    pub body_rounds: i64,
     pub hazard_intercepted: i64,
     pub noise_blocked: i64,
     pub elapsed_us: i64,
@@ -60,8 +60,8 @@ pub struct EffectivenessLedger;
 impl EffectivenessLedger {
     /// 非阻塞静默容错记账：即使写入失败也不会中断主业务调用链
     pub fn record(storage: &dyn StorageProvider, input: LedgerEventInput) {
-        let tokens_saved = input.baseline_tokens.saturating_sub(input.steward_tokens);
-        let rounds_saved = input.baseline_rounds.saturating_sub(input.steward_rounds);
+        let tokens_saved = input.baseline_tokens.saturating_sub(input.body_tokens);
+        let rounds_saved = input.baseline_rounds.saturating_sub(input.body_rounds);
         let rec = EffectivenessLedgerRecord {
             event_id: format!("ev-{}", uuid::Uuid::new_v4()),
             session_id: input.session_id,
@@ -69,10 +69,10 @@ impl EffectivenessLedger {
             tool_or_action: input.tool_or_action,
             provenance_rule: input.rule.code().to_string(),
             baseline_tokens: input.baseline_tokens,
-            steward_tokens: input.steward_tokens,
+            body_tokens: input.body_tokens,
             tokens_saved,
             baseline_rounds: input.baseline_rounds,
-            steward_rounds: input.steward_rounds,
+            body_rounds: input.body_rounds,
             rounds_saved,
             hazard_intercepted: input.hazard_intercepted,
             noise_blocked: input.noise_blocked,
@@ -128,9 +128,9 @@ impl EffectivenessLedger {
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr01SkillMcpRouting,
                     baseline_tokens: base,
-                    steward_tokens: stew_tokens,
+                    body_tokens: stew_tokens,
                     baseline_rounds: 3,
-                    steward_rounds: 1,
+                    body_rounds: 1,
                     hazard_intercepted: 0,
                     noise_blocked: 0,
                     elapsed_us,
@@ -143,9 +143,9 @@ impl EffectivenessLedger {
                 tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr02ProgressiveAssetSearch,
                 baseline_tokens: stew_tokens.saturating_mul(4).max(400),
-                steward_tokens: stew_tokens,
+                body_tokens: stew_tokens,
                 baseline_rounds: 4,
-                steward_rounds: 1,
+                body_rounds: 1,
                 hazard_intercepted: 0,
                 noise_blocked: 0,
                 elapsed_us,
@@ -166,9 +166,9 @@ impl EffectivenessLedger {
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr03PreHookInterception,
                     baseline_tokens: 600,
-                    steward_tokens: stew_tokens,
+                    body_tokens: stew_tokens,
                     baseline_rounds: 3,
-                    steward_rounds: 1,
+                    body_rounds: 1,
                     hazard_intercepted: 1,
                     noise_blocked: 0,
                     elapsed_us,
@@ -185,9 +185,9 @@ impl EffectivenessLedger {
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr04HostFactQuery,
                     baseline_tokens: stew_tokens.saturating_mul(3).max(300),
-                    steward_tokens: stew_tokens,
+                    body_tokens: stew_tokens,
                     baseline_rounds: 4,
-                    steward_rounds: 1,
+                    body_rounds: 1,
                     hazard_intercepted: if occupied { 1 } else { 0 },
                     noise_blocked: 0,
                     elapsed_us,
@@ -201,9 +201,9 @@ impl EffectivenessLedger {
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr05GraphImpactAndAudit,
                     baseline_tokens: stew_tokens.saturating_mul(4).max(500),
-                    steward_tokens: stew_tokens,
+                    body_tokens: stew_tokens,
                     baseline_rounds: 4,
-                    steward_rounds: 1,
+                    body_rounds: 1,
                     hazard_intercepted: 0,
                     noise_blocked: 0,
                     elapsed_us,
@@ -245,9 +245,9 @@ impl EffectivenessLedger {
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr07LockDeadlockGuard,
                     baseline_tokens: 400,
-                    steward_tokens: stew_tokens,
+                    body_tokens: stew_tokens,
                     baseline_rounds: 3,
-                    steward_rounds: 1,
+                    body_rounds: 1,
                     hazard_intercepted: 1,
                     noise_blocked: 0,
                     elapsed_us,
@@ -260,9 +260,9 @@ impl EffectivenessLedger {
                 tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr08AdaptiveBriefColdStart,
                 baseline_tokens: stew_tokens.saturating_mul(3).max(1800),
-                steward_tokens: stew_tokens,
+                body_tokens: stew_tokens,
                 baseline_rounds: 6,
-                steward_rounds: 1,
+                body_rounds: 1,
                 hazard_intercepted: 0,
                 noise_blocked: 0,
                 elapsed_us,
@@ -274,9 +274,9 @@ impl EffectivenessLedger {
                 tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr09HybridSemanticSearch,
                 baseline_tokens: stew_tokens.saturating_mul(4).max(600),
-                steward_tokens: stew_tokens,
+                body_tokens: stew_tokens,
                 baseline_rounds: 3,
-                steward_rounds: 1,
+                body_rounds: 1,
                 hazard_intercepted: 0,
                 noise_blocked: 0,
                 elapsed_us,
@@ -288,9 +288,9 @@ impl EffectivenessLedger {
                 tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr10FeedbackAndMemoryLoop,
                 baseline_tokens: stew_tokens.saturating_mul(3).max(450),
-                steward_tokens: stew_tokens,
+                body_tokens: stew_tokens,
                 baseline_rounds: 2,
-                steward_rounds: 1,
+                body_rounds: 1,
                 hazard_intercepted: 0,
                 noise_blocked: 0,
                 elapsed_us,
@@ -308,9 +308,9 @@ impl EffectivenessLedger {
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr11OptimisticLeaseAndRecovery,
                     baseline_tokens: stew_tokens.saturating_mul(3).max(600),
-                    steward_tokens: stew_tokens,
+                    body_tokens: stew_tokens,
                     baseline_rounds: 3,
-                    steward_rounds: 1,
+                    body_rounds: 1,
                     hazard_intercepted: 1,
                     noise_blocked: 0,
                     elapsed_us,
@@ -323,9 +323,9 @@ impl EffectivenessLedger {
                 tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr12AuditDrivenSelfEvolution,
                 baseline_tokens: stew_tokens.saturating_mul(3).max(500),
-                steward_tokens: stew_tokens,
+                body_tokens: stew_tokens,
                 baseline_rounds: 3,
-                steward_rounds: 1,
+                body_rounds: 1,
                 hazard_intercepted: 0,
                 noise_blocked: 0,
                 elapsed_us,
@@ -348,9 +348,9 @@ impl EffectivenessLedger {
                         tool_or_action: tool_or_action.into(),
                         rule: ProvenanceRule::Pr14PerfAwrDiagnosticsSaved,
                         baseline_tokens: stew_tokens.saturating_mul(4).max(1200),
-                        steward_tokens: stew_tokens,
+                        body_tokens: stew_tokens,
                         baseline_rounds: 5,
-                        steward_rounds: 1,
+                        body_rounds: 1,
                         hazard_intercepted: 0,
                         noise_blocked: 0,
                         elapsed_us,
@@ -363,9 +363,9 @@ impl EffectivenessLedger {
                         tool_or_action: tool_or_action.into(),
                         rule: ProvenanceRule::Pr13CrossBrainContinuitySaved,
                         baseline_tokens: stew_tokens.saturating_mul(4).max(800),
-                        steward_tokens: stew_tokens,
+                        body_tokens: stew_tokens,
                         baseline_rounds: 4,
-                        steward_rounds: 1,
+                        body_rounds: 1,
                         hazard_intercepted: 0,
                         noise_blocked: 0,
                         elapsed_us,
@@ -396,16 +396,16 @@ impl EffectivenessLedger {
 
         for wb in &map_b {
             if let Some(wa) = map_a.iter().find(|x| x.id == wb.id) {
-                let elapsed_delta_pct = if wa.steward_elapsed_us > 0 {
-                    ((wb.steward_elapsed_us as f64 - wa.steward_elapsed_us as f64)
-                        / wa.steward_elapsed_us as f64)
+                let elapsed_delta_pct = if wa.body_elapsed_us > 0 {
+                    ((wb.body_elapsed_us as f64 - wa.body_elapsed_us as f64)
+                        / wa.body_elapsed_us as f64)
                         * 100.0
                 } else {
                     0.0
                 };
                 let savings_delta_pct = wb.token_savings_pct - wa.token_savings_pct;
                 // 若延迟暴涨 >50% 且超过 1ms 或 Token 节省率显著退化 >5%，标记回归告警
-                let regression = (elapsed_delta_pct > 50.0 && wb.steward_elapsed_us > 1_000)
+                let regression = (elapsed_delta_pct > 50.0 && wb.body_elapsed_us > 1_000)
                     || savings_delta_pct < -5.0;
                 if regression {
                     has_regression = true;
@@ -413,8 +413,8 @@ impl EffectivenessLedger {
                 diffs.push(WorkloadDelta {
                     id: wb.id.clone(),
                     name: wb.name.clone(),
-                    run_a_elapsed_us: wa.steward_elapsed_us,
-                    run_b_elapsed_us: wb.steward_elapsed_us,
+                    run_a_elapsed_us: wa.body_elapsed_us,
+                    run_b_elapsed_us: wb.body_elapsed_us,
                     elapsed_delta_pct: (elapsed_delta_pct * 100.0).round() / 100.0,
                     run_a_savings_pct: wa.token_savings_pct,
                     run_b_savings_pct: wb.token_savings_pct,

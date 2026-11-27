@@ -956,7 +956,7 @@ mod tests {
             id: "project:agent-body".to_string(),
             node_type: "project".to_string(),
             name: "agent-body".to_string(),
-            label: "宿主大管家工程".to_string(),
+            label: "Agent 本体工程".to_string(),
             properties: serde_json::json!({}),
             updated_at: None,
         };
@@ -964,7 +964,7 @@ mod tests {
             id: "service:agent-body".to_string(),
             node_type: "service".to_string(),
             name: "agent-body".to_string(),
-            label: "大管家守护进程".to_string(),
+            label: "Agent 本体守护进程".to_string(),
             properties: serde_json::json!({}),
             updated_at: None,
         };

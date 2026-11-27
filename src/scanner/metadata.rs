@@ -601,7 +601,7 @@ impl HeuristicMetadataExtractor {
                 for word in t.split(|c: char| !c.is_ascii_alphanumeric() && c != '_') {
                     if word.len() >= 4
                         && word.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
-                        && (word.contains("KEY") || word.contains("TOKEN") || word.contains("URL") || word.contains("STEWARD") || word.contains("PATH"))
+                        && (word.contains("KEY") || word.contains("TOKEN") || word.contains("URL") || word.contains("AGENT_BODY") || word.contains("PATH"))
                         && !env_vars.contains(&word.to_string()) {
                             env_vars.push(word.to_string());
                         }
@@ -950,12 +950,12 @@ mod tests {
     #[test]
     fn test_secret_redactor_extended_patterns() {
         // 1. URI 内嵌口令 + CLI 标志 + 中文混合
-        let cmd = "psql postgres://steward:MyDbPass99@127.0.0.1:5432/prod --password=cliSecret42 --token tokVal9988 中文备注";
+        let cmd = "psql postgres://agent_body:MyDbPass99@127.0.0.1:5432/prod --password=cliSecret42 --token tokVal9988 中文备注";
         let out = SecretRedactor::redact_single_line(cmd);
         assert!(!out.contains("MyDbPass99"), "URI 密码必须脱敏: {}", out);
         assert!(!out.contains("cliSecret42"), "CLI --password= 必须脱敏: {}", out);
         assert!(!out.contains("tokVal9988"), "CLI --token 空格参数必须脱敏: {}", out);
-        assert!(out.contains("postgres://steward:<REDACTED>@127.0.0.1:5432/prod"));
+        assert!(out.contains("postgres://agent_body:<REDACTED>@127.0.0.1:5432/prod"));
         assert!(out.contains("中文备注"));
         assert!(!out.ends_with('\n'), "单行脱敏不应追加换行");
 

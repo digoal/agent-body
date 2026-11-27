@@ -496,7 +496,7 @@ impl BriefAssembler {
         }
 
         // 2. 语义搜索命中经验
-        let search_query = if query.is_empty() { "agent steward" } else { query };
+        let search_query = if query.is_empty() { "agent body" } else { query };
         let filter = MemoryFilter {
             memory_type: None,
             tags: vec![],
@@ -599,7 +599,7 @@ mod tests {
 
     #[test]
     fn test_estimate_tokens_chinese() {
-        let text = "选用 Rust 编写高性能大管家守护进程";
+        let text = "选用 Rust 编写高性能Agent 本体守护进程";
         let t = estimate_tokens(text);
         assert!(t > 5, "中文 token 估算应大于 5，实际: {}", t);
     }
@@ -723,7 +723,7 @@ mod tests {
                 label: "agent-body".to_string(),
                 properties: serde_json::json!({
                     "canonical_path": "/root/new/work/agent-body",
-                    "description": "宿主大管家"
+                    "description": "Agent 本体"
                 }),
                 updated_at: None,
             })

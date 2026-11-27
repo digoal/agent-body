@@ -3,7 +3,7 @@
 > [!NOTE]
 > **历史设计基线说明**：本文档沉淀自项目 v2.0 架构重构期（2026-11-15）。当前 `v0.4.0` 完整 24 模块源码架构、61 方法存储 SPI、双轨实证评测与 Web UI 2.0 权威口径，请以 [docs/arch/01-for-architects.md](../arch/01-for-architects.md) 与 [docs/arch/02-for-developers.md](../arch/02-for-developers.md) 为准。
 
-> Agent Host Steward 产品设计 · 交付件 5/7  
+> Agent Body 产品设计 · 交付件 5/7  
 > 版本: v2.0 (三模块重构版) · 更新: 2026-11-15  
 > 战略定位: **宿主机事实图谱为核心护城河 + 用户偏好规约为协作准则 + 开放插拔记忆拥抱成熟生态**
 
@@ -13,7 +13,7 @@
 
 在真实的宿主机操作环境中，Agent 最致命的缺陷不是跨会话失忆，而是对宿主机物理世界的“全盲”与“缺乏用户默契”。市面上有大量专注于“对话记忆”的开源项目，但几乎没有基础设施为 Agent 提供精准、低延迟、零幻觉的**宿主机物理世界数字化事实**与**用户工程偏好规约**。
 
-大管家（Agent Host Steward）实行严格的关注点分离（Separation of Concerns），确立三大核心子系统：
+Agent 本体（Agent Body）实行严格的关注点分离（Separation of Concerns），确立三大核心子系统：
 
 1. **【事实模块：宿主机事实图谱 (Host Reality Graph)】—— 独家核心护城河**
    - **职责**：回答 **"What IS"**（客观物理世界存在什么）。
@@ -39,7 +39,7 @@
 └───────────────────────────────────────────┬────────────────────────────────────────────┘
                                             │ MCP (stdio/SSE) / Unix Domain Socket / CLI
 ┌───────────────────────────────────────────▼────────────────────────────────────────────┐
-│                           Agent Host Steward Core Daemon                               │
+│                           Agent Body Core Daemon                               │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                        │
 │ ┌────────────────────────────────────────────────────────────────────────────────────┐ │
@@ -59,7 +59,7 @@
 │ │  └─────────────────────────────────────────────────┘ └──────────────────────────┘  │ │
 │ │                                                                                    │ │
 │ │  ═══════════════════════════════════════════════════════════════════════════════   │ │
-│ │  只读语义查询与探测接口: steward_fact_query / env_port / links_impact              │ │
+│ │  只读语义查询与探测接口: body_fact_query / env_port / links_impact              │ │
 │ └────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                        │
 │ ┌────────────────────────────────────────────────────────────────────────────────────┐ │
@@ -110,7 +110,7 @@
 传统 Linux 环境下，Agent 面临的最大痛点是“不知道本机有什么工具能解决当前任务”。
 - **采集与建模机制**：
   1. 扫描 `$PATH` 下的可执行文件与包管理器已装列表；
-  2. 匹配**工具能力语义注解库（Capability Knowledge Base）**。大管家内置 Linux 高频工具能力词条：
+  2. 匹配**工具能力语义注解库（Capability Knowledge Base）**。Agent 本体内置 Linux 高频工具能力词条：
      - *PDF 处理*：`pdftotext`（提取文字，推荐参数 `-layout`）、`pdftoppm`（PDF转图片）、`pdfunite`（合并）；
      - *多媒体处理*：`ffmpeg`（音视频转码、雪碧图）、`sox`（音频分析）、`imagemagick / convert`（图像变换）；
      - *文本与数据*：`jq`（JSON解析与过滤）、`ripgrep / rg`（极速正文搜索）、`pandoc`（文档格式互转）；
@@ -118,7 +118,7 @@
      - *编译与分析*：`rustc`, `cargo`, `gcc`, `gdb`, `perf`；
   3. 运行时动态探测版本号与路径，生成精准能力记录。
 - **Agent 只读问答契约**：
-  - 查询：`steward_fact_query(type="capability", intent="处理 PDF 提取排版文字")`
+  - 查询：`body_fact_query(type="capability", intent="处理 PDF 提取排版文字")`
   - 响应：
     ```json
     {
@@ -138,7 +138,7 @@
 - **底层机制**：直接读取 Linux `/proc` 文件系统与内核网络套接字信息（避免频繁 fork `ps`/`ss` 命令的性能开销）。
 - **进程指纹过滤**：自动过滤系统级底噪（内核线程 `kworker`、基础系统守护进程），精准聚合用户级与 Agent 级工作进程。
 - **端口冲突防撞与追溯**：
-  - 查询：`steward_port_check(port=8080)`
+  - 查询：`body_port_check(port=8080)`
   - 响应：
     ```json
     {
@@ -159,7 +159,7 @@
 - **拓扑关系建模**：
   - 解析 `/etc/systemd/system/` 与 `/etc/crontab` / `crontab -l`；
   - 建立双向边：`ConfigFile -> depends_on -> Service`，`Script -> executed_by -> CronJob`；
-  - Agent 在修改任意配置文件前，可查询其爆炸半径：“该文件被 `agent-steward.service` 监听，改动后需要 `systemctl reload`”。
+  - Agent 在修改任意配置文件前，可查询其爆炸半径：“该文件被 `agent-body.service` 监听，改动后需要 `systemctl reload`”。
 
 #### (4) 源码工程与权威资料编目 (Code & Knowledge Graph)
 - **资产发现**：
@@ -234,7 +234,7 @@
 - **Zep**：高性能长程记忆服务，带时序图谱；
 - **PowerContext**：工程级项目上下文与记忆沉淀。
 
-**大管家的战略定位是“宿主环境底座”，而非“又一个孤立的记忆应用”**。因此，记忆模块采用 **SPI（Service Provider Interface）适配器架构**，大管家扮演**统一协议门面（Facade）**。
+**Agent 本体的战略定位是“宿主环境底座”，而非“又一个孤立的记忆应用”**。因此，记忆模块采用 **SPI（Service Provider Interface）适配器架构**，Agent 本体扮演**统一协议门面（Facade）**。
 
 #### (2) Memory Provider SPI 抽象
 ```rust
@@ -262,7 +262,7 @@ pub trait MemoryProvider: Send + Sync {
    - **Mem0 Adapter**：通过 Mem0 REST/Python API 桥接，支持 Mem0 托管的长短期事实提取；
    - **Letta Adapter**：桥接 Letta 服务端，同步 Core Memory 与 Archival 检索；
    - **PowerContext Adapter**：桥接 PowerContext 记忆检索与项目工作流上下文。
-   - 用户只需在 `steward.toml` 中配置：
+   - 用户只需在 `config.toml` 中配置：
      ```toml
      [memory]
      provider = "mem0" # 可选: "builtin" | "mem0" | "letta" | "powercontext"
@@ -271,7 +271,7 @@ pub trait MemoryProvider: Send + Sync {
      api_key = "..."
      endpoint = "http://127.0.0.1:8888"
      ```
-   - Agent 端只需调用统一步骤 `steward_memory_search`，大管家在底层自动透明路由！
+   - Agent 端只需调用统一步骤 `body_memory_search`，Agent 本体在底层自动透明路由！
 
 ---
 
@@ -307,7 +307,7 @@ FTS5 内置的 `unicode61` tokenizer 按 Unicode 字符类别分词，对中文�
   原始中文文本
        │
        ▼
-  jieba.cut(text)  →  "项目 steward 主 存储 选型 确定 为 SQLite"
+  jieba.cut(text)  →  "项目 agent-body 主 存储 选型 确定 为 SQLite"
        │
        ▼
   空格分隔的分词结果存入 FTS5
@@ -335,7 +335,7 @@ Go 生态可用 `yanyiwu/gojieba` 或 `go-ego/gse`（纯 Go，无 cgo 依赖）�
 |------|------|------|
 | **MCP** (Model Context Protocol) | Agent 调用主通道 | stdio transport (MVP) + SSE transport (P1) |
 | **REST** | 外部集成、Web UI、脚本调用 | HTTP/JSON, 绑定 127.0.0.1 |
-| **CLI** | 人工操作、调试、脚本集成 | steward 子命令 |
+| **CLI** | 人工操作、调试、脚本集成 | agent-body 子命令 |
 
 ---
 
@@ -343,7 +343,7 @@ Go 生态可用 `yanyiwu/gojieba` 或 `go-ego/gse`（纯 Go，无 cgo 依赖）�
 
 ```
                   ┌──────────────────┐
-                  │   steward daemon  │
+                  │   agent-body daemon  │
                   │   (主进程)         │
                   │                   │
                   │  ┌──────────────┐ │
@@ -365,41 +365,41 @@ Go 生态可用 `yanyiwu/gojieba` 或 `go-ego/gse`（纯 Go，无 cgo 依赖）�
                   └──────┬───────────┘
                          │
                    ┌─────▼─────┐
-                   │ SQLite DB │  ~/.steward/steward.db
-                   │ + FTS5    │  ~/.steward/config.toml
-                   │ + Vec     │  ~/.steward/logs/
+                   │ SQLite DB │  ~/.agent-body/body.db
+                   │ + FTS5    │  ~/.agent-body/config.toml
+                   │ + Vec     │  ~/.agent-body/logs/
                    └───────────┘
 ```
 
 ### 4.1 进程生命周期
 
-1. **安装**: `curl -sSL https://steward.dev/install | sh` 下载二进制到 `/usr/local/bin/steward`
-2. **初始化**: `steward init` → 创建 `~/.steward/` 目录、初始化 SQLite 数据库、生成默认配置
-3. **启动**: `steward start` → 以 daemon 模式运行，同时启动 MCP/REST/Scheduler
-4. **连接**: Agent 通过 `steward mcp` 子命令获得 stdio MCP 通道
-5. **停止**: `steward stop` → 优雅关闭，刷盘所有数据
+1. **安装**: `curl -sSL https://agent-body.dev/install | sh` 下载二进制到 `/usr/local/bin/agent-body`
+2. **初始化**: `agent-body init` → 创建 `~/.agent-body/` 目录、初始化 SQLite 数据库、生成默认配置
+3. **启动**: `agent-body start` → 以 daemon 模式运行，同时启动 MCP/REST/Scheduler
+4. **连接**: Agent 通过 `agent-body mcp` 子命令获得 stdio MCP 通道
+5. **停止**: `agent-body stop` → 优雅关闭，刷盘所有数据
 6. **自恢复**: 进程崩溃后 systemd/launchd 自动重启，SQLite WAL 保证数据一致性
 
 ### 4.2 MCP 连接模式
 
-Agent 连接 steward 有两种模式：
+Agent 连接 agent-body 有两种模式：
 
 **模式 A: stdio（MVP）**
 ```
 Agent Process
     │ spawn
     ▼
-steward mcp   ←──stdin/stdout──► Agent
+agent-body mcp   ←──stdin/stdout──► Agent
     │
     ▼ (内部连接)
-steward daemon
+agent-body daemon
 ```
 
-Agent 启动 `steward mcp` 子进程，这个子进程通过 Unix Socket 连接到 daemon，自身作为 Agent 和 daemon 之间的 MCP 桥接。
+Agent 启动 `agent-body mcp` 子进程，这个子进程通过 Unix Socket 连接到 daemon，自身作为 Agent 和 daemon 之间的 MCP 桥接。
 
 **模式 B: SSE（P1）**
 ```
-Agent Process ──── HTTP/SSE ────► steward daemon:9527/mcp
+Agent Process ──── HTTP/SSE ────► agent-body daemon:9527/mcp
 ```
 
 Agent 直接通过 HTTP SSE 连接 daemon 的 MCP endpoint，无需额外进程。
@@ -411,7 +411,7 @@ Agent 直接通过 HTTP SSE 连接 daemon 的 MCP endpoint，无需额外进程�
 ### 5.1 数据库 Schema 概览
 
 ```
-steward.db
+body.db
 ├── memories          # 记忆表
 ├── memories_fts      # FTS5 全文索引
 ├── memories_vec      # 向量索引 (sqlite-vec)
@@ -538,7 +538,7 @@ k = 60  (标准值，平衡精确匹配与语义匹配)
        ▼
   事件过滤
   (忽略 .git/, node_modules/,
-   __pycache__/, .steward/ 等)
+   __pycache__/, .agent-body/ 等)
        │
        ▼
   防抖 (debounce 300ms)
@@ -560,7 +560,7 @@ k = 60  (标准值，平衡精确匹配与语义匹配)
 | `~/Documents/` | 文档 |
 | 用户 `$HOME` 下的 `.bashrc`, `.zshrc`, `.gitconfig` 等 | 环境配置 |
 
-用户可通过 `steward watch add <path>` 增加、`steward watch rm <path>` 移除。
+用户可通过 `agent-body watch add <path>` 增加、`agent-body watch rm <path>` 移除。
 
 ---
 
@@ -637,18 +637,18 @@ ss -tlnp 获取监听端口列表
 |------|----------|------|
 | CLI | 本地 Unix 用户身份 | 同用户直接访问，无需额外认证 |
 | MCP (stdio) | 继承父进程权限 | Agent spawn 的子进程，天然可信 |
-| REST | Bearer Token | `steward init` 时生成随机 token，存 `~/.steward/token` |
+| REST | Bearer Token | `agent-body init` 时生成随机 token，存 `~/.agent-body/token` |
 | REST (远程) | 默认禁止 | 只绑 127.0.0.1，需显式配置才能绑 0.0.0.0（不推荐） |
 
 ### 9.2 数据安全
 
-- **数据库文件权限**: `chmod 600 ~/.steward/steward.db`
-- **配置文件权限**: `chmod 600 ~/.steward/config.toml`
-- **Token 文件权限**: `chmod 600 ~/.steward/token`
+- **数据库文件权限**: `chmod 600 ~/.agent-body/body.db`
+- **配置文件权限**: `chmod 600 ~/.agent-body/config.toml`
+- **Token 文件权限**: `chmod 600 ~/.agent-body/token`
 - **无网络外传**: 不含任何 telemetry、auto-update、cloud sync 代码
 - **敏感信息标记**: 记忆/资产可标记 `sensitive: true`，标记后：
   - REST 响应中该字段用 `***` 掩码
-  - 不出现在 `steward brief` 的汇总中
+  - 不出现在 `agent-body brief` 的汇总中
   - 导出时自动跳过
 
 ---
@@ -659,29 +659,29 @@ ss -tlnp 获取监听端口列表
 
 | 方式 | 命令 | 适用场景 |
 |------|------|----------|
-| 一键安装 | `curl -sSL https://steward.dev/install \| sh` | 普通用户 |
-| Homebrew | `brew install steward` | macOS |
-| apt/dnf | `apt install steward` | Debian/Ubuntu, Fedora |
-| Docker | `docker run -v ~/.steward:/data steward` | 容器化部署 |
-| 源码编译 | `go build -o steward ./cmd/steward` | 开发者/定制 |
+| 一键安装 | `curl -sSL https://agent-body.dev/install \| sh` | 普通用户 |
+| Homebrew | `brew install agent-body` | macOS |
+| apt/dnf | `apt install agent-body` | Debian/Ubuntu, Fedora |
+| Docker | `docker run -v ~/.agent-body:/data agent-body` | 容器化部署 |
+| 源码编译 | `go build -o agent-body ./cmd/agent-body` | 开发者/定制 |
 
 ### 10.2 目录结构
 
 ```
-~/.steward/
-├── steward.db          # 主数据库（SQLite）
-├── steward.db-wal      # WAL 文件
-├── steward.db-shm      # 共享内存
+~/.agent-body/
+├── body.db          # 主数据库（SQLite）
+├── body.db-wal      # WAL 文件
+├── body.db-shm      # 共享内存
 ├── config.toml         # 配置文件
 ├── token               # REST API token
 ├── rules/              # 服务识别规则扩展
 │   └── custom.toml
 ├── logs/
-│   ├── steward.log     # 主日志
-│   └── steward.log.1   # 轮转日志
+│   ├── agent-body.log     # 主日志
+│   └── agent-body.log.1   # 轮转日志
 ├── backups/            # 自动备份
-│   ├── steward-2026-11-14.db
-│   └── steward-2026-11-13.db
+│   ├── agent-body-2026-11-14.db
+│   └── agent-body-2026-11-13.db
 └── plugins/            # 插件目录 (P2)
 ```
 
@@ -690,7 +690,7 @@ ss -tlnp 获取监听端口列表
 Scheduler 每天 03:00 自动备份：
 ```
 SQLite Online Backup API
-→ ~/.steward/backups/steward-<date>.db
+→ ~/.agent-body/backups/agent-body-<date>.db
 → 保留最近 7 天
 → 超出自动删除
 ```
@@ -707,7 +707,7 @@ SQLite Online Backup API
 | 关键词搜索 | < 100ms | FTS5 索引 |
 | 语义搜索 | < 200ms | sqlite-vec HNSW, embedding 预计算 |
 | 混合搜索 | < 200ms | 并行执行 FTS + Vec |
-| `steward brief` | < 500ms | 缓存上次环境快照 + 最近记忆 top-10 |
+| `agent-body brief` | < 500ms | 缓存上次环境快照 + 最近记忆 top-10 |
 | 环境快照（冷） | < 5s | 并发采集各维度 |
 | 环境快照（热） | < 500ms | 增量更新 + 缓存 |
 
@@ -744,7 +744,7 @@ SQLite Online Backup API
 ### 12.1 插件机制（P2）
 
 ```
-steward daemon
+agent-body daemon
        │
        ▼
   Plugin Manager
@@ -770,22 +770,22 @@ Plugin Plugin           Plugin
 
 ```
 Agent A ──┐
-Agent B ──┼──► steward daemon ──► SQLite (WAL)
+Agent B ──┼──► agent-body daemon ──► SQLite (WAL)
 Agent C ──┘
 ```
 
-SQLite WAL 模式支持多个并发读者 + 1 个写者。steward daemon 是唯一写者，通过内部写入队列序列化写操作。多个 Agent 同时调用 MCP 不会冲突。
+SQLite WAL 模式支持多个并发读者 + 1 个写者。agent-body daemon 是唯一写者，通过内部写入队列序列化写操作。多个 Agent 同时调用 MCP 不会冲突。
 
 ---
 
 ## 十三、冷启动策略
 
-新用户首次 `steward init` 后的冷启动流程：
+新用户首次 `agent-body init` 后的冷启动流程：
 
 ```
-steward init
+agent-body init
     │
-    ├─ 1. 创建 ~/.steward/ 及数据库
+    ├─ 1. 创建 ~/.agent-body/ 及数据库
     │
     ├─ 2. 快速环境扫描 (~2s)
     │      uname, cpu, mem, disk
@@ -830,7 +830,7 @@ if N < M:
     逐版本执行 migration N+1, N+2, ..., M
     更新 schema_version = M
 if N > M:
-    报错: 数据库版本高于软件版本, 请升级 steward
+    报错: 数据库版本高于软件版本, 请升级 agent-body
 if N == M:
     正常启动
 ```
@@ -839,17 +839,17 @@ if N == M:
 
 ```bash
 # 导出全部数据为 JSON（可选过滤）
-steward export --format json --output backup.json
+agent-body export --format json --output backup.json
 
 # 导出为 SQLite 副本
-steward export --format sqlite --output backup.db
+agent-body export --format sqlite --output backup.db
 
 # 导入
-steward import --from backup.json
+agent-body import --from backup.json
 
 # 从另一台机器迁移
-scp remote:~/.steward/steward.db .
-steward import --from steward.db --merge
+scp remote:~/.agent-body/body.db .
+agent-body import --from body.db --merge
 ```
 
 ---

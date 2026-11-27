@@ -1,7 +1,7 @@
-# Agent Host Steward — Phase 13: Web UI 与可视化监控大屏 (Web Dashboard & Visual Monitor)
+# Agent Body — Phase 13: Web UI 与可视化监控大屏 (Web Dashboard & Visual Monitor)
 
 > 创建时间: 2026-11-18T17:42:00+08:00  
-> 对齐: README.md ISSUE #13（Web UI / 可视化监控大屏：提供基于浏览器的轻量级大管家拓扑图与协作锁监控看板）  
+> 对齐: README.md ISSUE #13（Web UI / 可视化监控大屏：提供基于浏览器的轻量级Agent 本体拓扑图与协作锁监控看板）  
 > 基线: Phase 1~12 全部完成 · 140 项测试 100% PASS · 31 MCP 工具 · v0.3.2  
 > 核心原则: **单二进制自包含交付 · 亚毫秒本地响应 · 工业级可观测性 · 全链路断点续传**
 
@@ -11,14 +11,14 @@
 
 ### 1. 痛点分析
 
-在 Phase 1~12 的演化过程中，Agent Host Steward 已经构建了完备的内核级环境感知（/proc、端口、Systemd、Cron）、可插拔记忆、多 Agent 协作锁（CoordinationEngine）以及 31 个原生 MCP 工具。然而：
-1. **黑盒化与心智负担**：多 Agent 并发干活时，人类主理人或调度管理员只能通过 CLI 子命令（`agent-steward env list`、`agent-steward memory search`）或 `tui` 终端界面查看状态，缺乏全局全景视图。
+在 Phase 1~12 的演化过程中，Agent Body 已经构建了完备的内核级环境感知（/proc、端口、Systemd、Cron）、可插拔记忆、多 Agent 协作锁（CoordinationEngine）以及 31 个原生 MCP 工具。然而：
+1. **黑盒化与心智负担**：多 Agent 并发干活时，人类主理人或调度管理员只能通过 CLI 子命令（`agent-body env list`、`agent-body memory search`）或 `tui` 终端界面查看状态，缺乏全局全景视图。
 2. **依赖拓扑不直观**：宿主机上的进程-端口-服务-文件-CodeGraph 之间存在深层网状依赖，CLI 文本难以一眼看清逆向依赖爆炸半径（Blast Radius）。
 3. **多 Agent 锁冲突不可见**：当多个 Agent 产生资源竞争、锁等待或排队时，目前仅能通过日志或 `lock_list` 查看静态列表，缺乏活跃租期倒计时、死锁风险预警与持锁历史流转的直观展示。
 
 ### 2. 核心架构约束与工业级要求
 
-根据 Agent Host Steward 的产品哲学：
+根据 Agent Body 的产品哲学：
 - **严格单二进制交付（Single Binary Deployment）**：严禁额外安装 Node.js、Nginx、Python 或依赖外部 CDN 网络；HTML/CSS/JS 静态资产必须编译期内嵌（`include_str!` 或 `rust-embed`），离线环境 100% 独立可用。
 - **轻量低开销（Zero Overhead When Idle）**：内嵌异步 HTTP 引擎必须复用已有的 Tokio 运行时，无请求时 CPU 占用趋近于 0，内存增量控制在 10MB 以内。
 - **只读安全隔离（Read-Heavy & Safe Operation）**：监控看板以全景观测为主；仅在管理员明确配置授权的情况下，才允许触发受控运维动作（如超时死锁强制释放、临时文件定向 GC）。
@@ -40,7 +40,7 @@
 └───────────────────┴─────────▲──────────┴───────────────▲───────────────┘
                               │ REST API / SSE Stream    │
 ┌─────────────────────────────┼──────────────────────────┼───────────────┐
-│                    agent-steward daemon / web server                   │
+│                    agent-body daemon / web server                   │
 │                    (Tokio 异步内嵌轻量 HTTP 引擎)                      │
 ├─────────────────────────────┴──────────────────────────┴───────────────┤
 │ REST Endpoints:                                                        │
@@ -53,7 +53,7 @@
 └─────────────────────────────┬──────────────────────────────────────────┘
                               │
 ┌─────────────────────────────▼──────────────────────────────────────────┐
-│                   Agent Host Steward 内核核心引擎                      │
+│                   Agent Body 内核核心引擎                      │
 │ ┌──────────────────┐ ┌───────────────────┐ ┌─────────────────────────┐ │
 │ │  Host Reality    │ │ CoordinationEngine│ │ Memory & Placement      │ │
 │ │  (Proc/Port/Sys) │ │ (Advisory Lock)   │ │ (SQLite/PG/Learner)     │ │
@@ -94,7 +94,7 @@
 ### 13.2 阶段二：宿主机事实拓扑与依赖爆炸半径图谱 API
 
 - **子任务 ID**: `13.2`
-- **目标**: 将大管家底层采集的进程、端口、Systemd 服务、Crontab 定时任务、Git 仓库以及 `LinksEngine` 依赖关系统一转换为适合前端力导向图/树图渲染的标准图数据模型。
+- **目标**: 将Agent 本体底层采集的进程、端口、Systemd 服务、Crontab 定时任务、Git 仓库以及 `LinksEngine` 依赖关系统一转换为适合前端力导向图/树图渲染的标准图数据模型。
 - **涉及文件**:
   - `src/web/topology.rs`（拓扑数据聚合器与图谱协议转换）
   - `src/fact/` 与 `src/links/`（对齐底层数据获取接口）
@@ -104,12 +104,12 @@
     "nodes": [
       { "id": "proc:18493", "label": "python3 (main.py)", "type": "process", "status": "running", "metadata": { "pid": 18493, "port": 8080 } },
       { "id": "port:8080", "label": ":8080", "type": "port", "status": "bound" },
-      { "id": "service:steward", "label": "agent-steward.service", "type": "systemd", "status": "active" },
+      { "id": "service:agent-body", "label": "agent-body.service", "type": "systemd", "status": "active" },
       { "id": "file:/root/new/shared_proj/test.py", "label": "test.py", "type": "file", "status": "normal" }
     ],
     "edges": [
       { "source": "proc:18493", "target": "port:8080", "relation": "listens_on" },
-      { "source": "service:steward", "target": "proc:18493", "relation": "manages" },
+      { "source": "service:agent-body", "target": "proc:18493", "relation": "manages" },
       { "source": "proc:18493", "target": "file:/root/new/shared_proj/test.py", "relation": "depends_on" }
     ]
   }
@@ -165,7 +165,7 @@
   - `src/web/assets/app.js`（数据获取、SSE 连接、拓扑渲染器、锁看板联动）
   - `src/web/assets/mod.rs`（静态资源打包与 MIME 类型响应封装）
 - **核心功能分区**:
-  1. **顶部导航状态栏**：宿主机名、IP、系统负载、大管家运行时间、SSE 连接健康状态灯（绿色常亮/重连呼吸灯）；
+  1. **顶部导航状态栏**：宿主机名、IP、系统负载、Agent 本体运行时间、SSE 连接健康状态灯（绿色常亮/重连呼吸灯）；
   2. **面板 A：事实图谱拓扑可视化区**：
      - 支持缩放、平移、节点点击聚焦；
      - 差异化颜色与图标区分进程、端口、Systemd 服务与代码资产；
@@ -174,7 +174,7 @@
      - 活跃锁卡片网格，动态进度条展示 TTL 剩余时间；
      - 锁竞争告警徽标与等待队列展示；
      - 提供一键快速复制 Key 与安全释放弹窗；
-  4. **面板 C：管家核心指标速览**：
+  4. **面板 C：Agent 本体核心指标速览**：
      - 记忆库条目计数（FTS5 / Vector）；
      - 资产放置规则命中与纠偏学习沉淀统计；
      - 最近变更审计流水实时滚动。
@@ -193,9 +193,9 @@
 ### 13.5 阶段五：CLI 命令、Daemon 常驻集成与配置联动
 
 - **子任务 ID**: `13.5`
-- **目标**: 将 Web 监控服务融入大管家的统一命令行体系和后台守护进程，支持配置文件开箱即用与独立子命令快速唤起。
+- **目标**: 将 Web 监控服务融入Agent 本体的统一命令行体系和后台守护进程，支持配置文件开箱即用与独立子命令快速唤起。
 - **涉及文件**:
-  - `src/main.rs`（新增 `agent-steward web` CLI 子命令与参数解析）
+  - `src/main.rs`（新增 `agent-body web` CLI 子命令与参数解析）
   - `src/config/mod.rs` 与 `config.example.toml`（新增 `[web]` 配置节）
   - `src/daemon/mod.rs`（守护进程启动时按需拉起内嵌 Web 服务）
 - **配置项规范 (`config.toml`)**:
@@ -213,21 +213,21 @@
 - **CLI 实操命令**:
   ```bash
   # 1. 独立运行 Web 监控服务（前台运行，并在终端输出访问 URL）
-  agent-steward web --host 127.0.0.1 --port 8765
+  agent-body web --host 127.0.0.1 --port 8765
 
   # 2. 检查当前 Web 服务的运行状态与端口
-  agent-steward web status
+  agent-body web status
   ```
 - **具体工作**:
   1. 完善 Clap 命令行结构，新增 `web` 子命令，支持 `--port`、`--host`、`--open`（自动调用浏览器打开）；
-  2. 端口防撞检测：启动前复用大管家自身的 `steward_port_check` 校验端口占用；
+  2. 端口防撞检测：启动前复用Agent 本体自身的 `body_port_check` 校验端口占用；
   3. 在 `daemon` 主循环中集成 Web Server 的后台 Tokio 协程任务。
 - **验收标准**:
-  - 执行 `agent-steward web --port 8765` 正常启动并在终端打印漂亮 Banner；
+  - 执行 `agent-body web --port 8765` 正常启动并在终端打印漂亮 Banner；
   - 端口被占用时给出友好的错误提示与建议端口。
 - **断点续传检查点**:
   - [x] 扩展 `src/config/` 支持 `[web]` 配置
-  - [x] 实现 `agent-steward web` CLI 子命令
+  - [x] 实现 `agent-body web` CLI 子命令
   - [x] 接入 daemon 常驻后台集成
   - [x] 编写 CLI 参数解析单元测试
 
@@ -240,7 +240,7 @@
 - **涉及文件**:
   - `tests/test_web_dashboard.rs`（端到端集成测试）
   - `docs/manual/08-web-dashboard.md`（新增官方手册第 8 章：Web 可视化大屏使用指南）
-  - `docs/manual/03-cli-reference.md`（补充 `agent-steward web` 命令行参考）
+  - `docs/manual/03-cli-reference.md`（补充 `agent-body web` 命令行参考）
   - `docs/src_doc/progress.md`（更新进度表并归档 Phase 13）
   - `README.md`（更新项目架构图、功能列表与 ISSUE #13 状态）
 - **具体工作**:

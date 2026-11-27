@@ -18,4 +18,4 @@
    - 不手搓 Raft/Gossip 轮子，复用内嵌 HTTP 服务暴露 `/api/v1/mesh/{ping, facts, locks, locks/acquire}`；
    - 鉴权复用 `[web].auth_token`（写接口强校验 Token）；
    - `MeshClient` 支持 `ping_all`、`facts_all`、`locks_all`、`federated_port_check`、`acquire_on_peer`；
-   - 新增 `steward_mesh_query` MCP（总数 **38 个**）及 `mesh` / `platform` CLI 子命令。
+   - 新增 `body_mesh_query` MCP（总数 **38 个**）及 `mesh` / `platform` CLI 子命令。

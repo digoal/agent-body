@@ -170,7 +170,7 @@ impl CoordinationEngine {
         let granted = self.storage.insert_coordination_lock(&lock)?;
         if granted {
             if let Some(ref bus) = self.event_bus {
-                if let Err(e) = bus.emit(crate::hooks::StewardEvent::LockAcquired {
+                if let Err(e) = bus.emit(crate::hooks::BodyEvent::LockAcquired {
                     resource_type: rt_str.to_string(),
                     resource_id: norm_id.clone(),
                     holder_agent: req.holder_agent.clone(),
@@ -218,7 +218,7 @@ impl CoordinationEngine {
         if res {
             if let Some(l) = target_lock {
                 if let Some(ref bus) = self.event_bus {
-                    if let Err(e) = bus.emit(crate::hooks::StewardEvent::LockReleased {
+                    if let Err(e) = bus.emit(crate::hooks::BodyEvent::LockReleased {
                         resource_type: l.resource_type.clone(),
                         resource_id: l.resource_id.clone(),
                         holder_agent: l.holder_agent,
@@ -242,7 +242,7 @@ impl CoordinationEngine {
         if res {
             if let Some(l) = target_lock {
                 if let Some(ref bus) = self.event_bus {
-                    if let Err(e) = bus.emit(crate::hooks::StewardEvent::LockReleased {
+                    if let Err(e) = bus.emit(crate::hooks::BodyEvent::LockReleased {
                         resource_type: l.resource_type.clone(),
                         resource_id: l.resource_id.clone(),
                         holder_agent: l.holder_agent,
@@ -364,7 +364,7 @@ impl CoordinationEngine {
     fn notify_next_waiter(&self, resource_type: &str, resource_id: &str) {
         if let Ok(Some(waiter)) = self.storage.pop_next_lock_waiter(resource_type, resource_id) {
             if let Some(ref bus) = self.event_bus {
-                if let Err(e) = bus.emit(crate::hooks::StewardEvent::LockWaiterNotified {
+                if let Err(e) = bus.emit(crate::hooks::BodyEvent::LockWaiterNotified {
                     wait_id: waiter.wait_id,
                     resource_type: waiter.resource_type,
                     resource_id: waiter.resource_id,
@@ -471,7 +471,7 @@ impl CoordinationEngine {
                     handle.block_on(tokio::time::timeout(sleep_dur, rx.recv()))
                 });
                 if let Ok(Ok(ev)) = recv_res {
-                    if matches!(ev.as_ref(), crate::hooks::StewardEvent::LockWaiterNotified { .. }) {
+                    if matches!(ev.as_ref(), crate::hooks::BodyEvent::LockWaiterNotified { .. }) {
                         continue;
                     }
                 }

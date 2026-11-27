@@ -10,7 +10,7 @@
 
 ## 一、接口总览
 
-steward 对外提供三套等价接口，功能完全一致：
+agent-body 对外提供三套等价接口，功能完全一致：
 
 | 通道 | 协议 | 传输 | 使用者 |
 |------|------|------|--------|
@@ -52,7 +52,7 @@ steward 对外提供三套等价接口，功能完全一致：
     "default": 2000,
     "minimum": 200,
     "maximum": 8000,
-    "description": "brief 输出的最大 token 预算。steward 会在此预算内自动裁剪：优先保留最近记忆和环境变更，压缩资产列表和服务详情"
+    "description": "brief 输出的最大 token 预算。agent-body 会在此预算内自动裁剪：优先保留最近记忆和环境变更，压缩资产列表和服务详情"
   }
 }
 ```
@@ -68,9 +68,9 @@ steward 对外提供三套等价接口，功能完全一致：
       {
         "id": "uuid",
         "type": "decision",
-        "summary": "项目 steward 主存储选型: SQLite",
+        "summary": "项目 agent-body 主存储选型: SQLite",
         "created_at": "2026-11-15T09:00:00+08:00",
-        "tags": ["steward", "存储"]
+        "tags": ["agent-body", "存储"]
       }
     ]
   },
@@ -309,9 +309,9 @@ steward 对外提供三套等价接口，功能完全一致：
     {
       "id": "uuid",
       "type": "decision",
-      "content": "项目 steward 主存储选型: SQLite + FTS5 + sqlite-vec",
-      "summary": "steward 存储选型: SQLite",
-      "tags": ["steward", "存储", "决策"],
+      "content": "项目 agent-body 主存储选型: SQLite + FTS5 + sqlite-vec",
+      "summary": "agent-body 存储选型: SQLite",
+      "tags": ["agent-body", "存储", "决策"],
       "weight": 0.95,
       "score": 0.87,
       "created_at": "2026-11-15T09:00:00+08:00",
@@ -328,7 +328,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.4 steward_memory_list — 列出记忆
+### 2.4 body_memory_list — 列出记忆
 
 ```json
 {
@@ -345,7 +345,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.5 steward_memory_update — 更新记忆
+### 2.5 body_memory_update — 更新记忆
 
 ```json
 {
@@ -365,7 +365,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.6 steward_memory_delete — 删除记忆
+### 2.6 body_memory_delete — 删除记忆
 
 ```json
 {
@@ -600,7 +600,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.11 steward_env_snapshot — 拍环境快照
+### 2.11 body_env_snapshot — 拍环境快照
 
 ```json
 {
@@ -629,7 +629,7 @@ steward 对外提供三套等价接口，功能完全一致：
 
 ---
 
-### 2.12 steward_search — 跨维度搜索
+### 2.12 body_search — 跨维度搜索
 
 ```json
 {
@@ -766,16 +766,16 @@ steward 对外提供三套等价接口，功能完全一致：
 | GET | `/brief` | body_brief |
 | POST | `/memory` | body_memory_add |
 | GET | `/memory/search?q=...` | body_memory_search |
-| GET | `/memory?last=20` | steward_memory_list |
-| PATCH | `/memory/:id` | steward_memory_update |
-| DELETE | `/memory/:id` | steward_memory_delete |
+| GET | `/memory?last=20` | body_memory_list |
+| PATCH | `/memory/:id` | body_memory_update |
+| DELETE | `/memory/:id` | body_memory_delete |
 | POST | `/asset` | body_asset_register |
 | GET | `/asset/search?q=...` | body_asset_search |
 | POST | `/asset/scan` | body_asset_scan |
 | GET | `/env` | body_env_show |
 | GET | `/env/service/:name` | body_env_show (service_name) |
-| POST | `/env/snapshot` | steward_env_snapshot |
-| GET | `/search?q=...` | steward_search |
+| POST | `/env/snapshot` | body_env_snapshot |
+| GET | `/search?q=...` | body_search |
 | GET | `/health` | 健康检查（无需认证） |
 | GET | `/status` | 服务状态 |
 
@@ -807,70 +807,70 @@ steward 对外提供三套等价接口，功能完全一致：
 ## 四、CLI 命令清单
 
 ```
-steward                          # 显示帮助
-steward init                     # 初始化
-steward start                    # 启动 daemon
-steward stop                     # 停止 daemon
-steward restart                  # 重启
-steward status                   # 查看状态
-steward health                   # 健康检查
-steward logs [--follow]          # 查看日志
+agent-body                          # 显示帮助
+agent-body init                     # 初始化
+agent-body start                    # 启动 daemon
+agent-body stop                     # 停止 daemon
+agent-body restart                  # 重启
+agent-body status                   # 查看状态
+agent-body health                   # 健康检查
+agent-body logs [--follow]          # 查看日志
 
 # Brief
-steward brief [--section X] [--focus KEYWORD] [--verbose]
+agent-body brief [--section X] [--focus KEYWORD] [--verbose]
 
 # Memory
-steward memory add --type TYPE --content TEXT [--tags a,b] [--pinned] [--sensitive]
-steward memory search QUERY [--type TYPE] [--limit N] [--mode hybrid|fts|semantic]
-steward memory list [--last N] [--type TYPE] [--status STATUS]
-steward memory show ID
-steward memory update ID [--content TEXT] [--status STATUS] [--tags a,b]
-steward memory delete ID [--hard]
+agent-body memory add --type TYPE --content TEXT [--tags a,b] [--pinned] [--sensitive]
+agent-body memory search QUERY [--type TYPE] [--limit N] [--mode hybrid|fts|semantic]
+agent-body memory list [--last N] [--type TYPE] [--status STATUS]
+agent-body memory show ID
+agent-body memory update ID [--content TEXT] [--status STATUS] [--tags a,b]
+agent-body memory delete ID [--hard]
 
 # Assets
-steward asset register PATH --type TYPE [--desc TEXT] [--tags a,b] [--usage TEXT]
-steward asset search QUERY [--type TYPE] [--tags a,b]
-steward asset scan PATH [--depth N] [--auto-register]
-steward asset list [--type TYPE] [--last N]
-steward asset show ID
-steward asset remove ID [--hard]
+agent-body asset register PATH --type TYPE [--desc TEXT] [--tags a,b] [--usage TEXT]
+agent-body asset search QUERY [--type TYPE] [--tags a,b]
+agent-body asset scan PATH [--depth N] [--auto-register]
+agent-body asset list [--type TYPE] [--last N]
+agent-body asset show ID
+agent-body asset remove ID [--hard]
 
 # Environment
-steward env show [--section SECTION]
-steward env service NAME
-steward env snapshot [--label LABEL]
-steward env snapshots list
-steward env diff SNAPSHOT_A SNAPSHOT_B    # P1
+agent-body env show [--section SECTION]
+agent-body env service NAME
+agent-body env snapshot [--label LABEL]
+agent-body env snapshots list
+agent-body env diff SNAPSHOT_A SNAPSHOT_B    # P1
 
 # Watch (P1)
-steward watch add PATH
-steward watch rm PATH
-steward watch list
+agent-body watch add PATH
+agent-body watch rm PATH
+agent-body watch list
 
 # Changes (P1)
-steward changes list [--since DURATION] [--type TYPE]
+agent-body changes list [--since DURATION] [--type TYPE]
 
 # Search
-steward search QUERY [--scope memory,assets,env] [--limit N]
+agent-body search QUERY [--scope memory,assets,env] [--limit N]
 
 # Database
-steward db stats
-steward db vacuum
-steward db backup [--output PATH]
-steward db repair
-steward db reembed                       # 重新生成所有 embedding
+agent-body db stats
+agent-body db vacuum
+agent-body db backup [--output PATH]
+agent-body db repair
+agent-body db reembed                       # 重新生成所有 embedding
 
 # MCP
-steward mcp                              # 启动 MCP stdio 通道（供 Agent 连接）
+agent-body mcp                              # 启动 MCP stdio 通道（供 Agent 连接）
 
 # Export / Import
-steward export --format json|sqlite --output PATH [--type memory|assets|all]
-steward import --from PATH [--merge]
+agent-body export --format json|sqlite --output PATH [--type memory|assets|all]
+agent-body import --from PATH [--merge]
 
 # Config
-steward config show
-steward config set KEY VALUE
-steward config edit                      # 用 $EDITOR 打开 config.toml
+agent-body config show
+agent-body config set KEY VALUE
+agent-body config edit                      # 用 $EDITOR 打开 config.toml
 ```
 
 ---
@@ -884,7 +884,7 @@ steward config edit                      # 用 $EDITOR 打开 config.toml
     "memory_id": "uuid",
     "type": "decision",
     "content": "...",
-    "tags": ["steward"]
+    "tags": ["agent-body"]
   },
   "timestamp": "2026-11-15T10:30:00+08:00"
 }

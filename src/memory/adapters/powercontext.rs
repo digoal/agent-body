@@ -3,7 +3,7 @@
 //! 桥接本地 PowerContext 服务（默认 http://127.0.0.1:8000）的记忆能力，
 //! 实现 `MemoryProvider` SPI，支持混合检索（FTS + 向量）与记忆写入。
 //!
-//! ## 配置示例（steward.toml）
+//! ## 配置示例（config.toml）
 //! ```toml
 //! [memory]
 //! provider = "powercontext"
@@ -243,7 +243,7 @@ impl MemoryProvider for PowerContextAdapter {
 
     fn evict(&self, _criteria: &EvictCriteria) -> Result<usize> {
         // PowerContext 有自己的记忆生命周期管理（dream/lifecycle）
-        // 大管家层面暂不主动干预，直接返回 0（本引擎不管淘汰）
+        // Agent 本体层面暂不主动干预，直接返回 0（本引擎不管淘汰）
         Ok(0)
     }
 }
@@ -329,7 +329,7 @@ mod tests {
             .expect("PowerContext 应可达");
         assert_eq!(adapter.provider_name(), "powercontext");
 
-        let results = adapter.search("rust agent steward", 5, None)
+        let results = adapter.search("rust agent body", 5, None)
             .expect("search 应成功");
         // 结果可能为空，但不应报错
         for item in &results {

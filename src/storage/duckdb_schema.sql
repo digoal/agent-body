@@ -1,5 +1,5 @@
 -- ============================================================
--- Agent Host Steward — DuckDB Schema (Analytical & OLAP Replica)
+-- Agent Body (Agent 本体) — DuckDB Schema (Analytical & OLAP Replica)
 -- ============================================================
 
 CREATE SEQUENCE IF NOT EXISTS changes_seq START 1;
@@ -238,7 +238,7 @@ CREATE TABLE IF NOT EXISTS benchmark_runs (
     host_fingerprint          VARCHAR NOT NULL,
     workload_count            INTEGER NOT NULL,
     total_baseline_tokens     BIGINT NOT NULL,
-    total_steward_tokens      BIGINT NOT NULL,
+    total_body_tokens      BIGINT NOT NULL,
     overall_token_savings_pct DOUBLE NOT NULL,
     overall_speedup_factor    DOUBLE NOT NULL,
     total_hazards_intercepted BIGINT NOT NULL,
@@ -257,10 +257,10 @@ CREATE TABLE IF NOT EXISTS effectiveness_ledger (
     tool_or_action     VARCHAR NOT NULL,
     provenance_rule    VARCHAR NOT NULL,
     baseline_tokens    BIGINT DEFAULT 0,
-    steward_tokens     BIGINT DEFAULT 0,
+    body_tokens     BIGINT DEFAULT 0,
     tokens_saved       BIGINT DEFAULT 0,
     baseline_rounds    BIGINT DEFAULT 1,
-    steward_rounds     BIGINT DEFAULT 1,
+    body_rounds     BIGINT DEFAULT 1,
     rounds_saved       BIGINT DEFAULT 0,
     hazard_intercepted BIGINT DEFAULT 0,
     noise_blocked      BIGINT DEFAULT 0,
@@ -310,7 +310,7 @@ CREATE TABLE IF NOT EXISTS audit_events (
     session_id         VARCHAR DEFAULT 'system',
     domain             VARCHAR NOT NULL,
     actor_kind         VARCHAR NOT NULL,
-    actor_id           VARCHAR DEFAULT 'steward',
+    actor_id           VARCHAR DEFAULT 'agent-body',
     source_channel     VARCHAR NOT NULL,
     category           VARCHAR NOT NULL,
     action             VARCHAR NOT NULL,

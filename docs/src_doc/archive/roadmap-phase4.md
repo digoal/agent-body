@@ -1,4 +1,4 @@
-# Agent Host Steward 研发演进路线图 — 第四阶段 (Phase 4)
+# Agent Body 研发演进路线图 — 第四阶段 (Phase 4)
 
 > **目标**: 图智能与环境拓扑演进 (Graph Intelligence & CodeGraph Federation)  
 > **制定时间**: 2026-11-15  
@@ -16,7 +16,7 @@
 | **P4-3** | 断链体检引擎 | `LinksEngine::audit_links` 侦测缺失文件与离线服务端口，计算健康分 | ✅ 已完成 | `cargo test links::audit` 通过 | 2026-11-15 17:41 |
 | **P4-4** | CodeGraph 桥接 | `CodeGraphBridge` 自动侦测 `.codegraph/`，直查微观调用方与符号拓扑 | ✅ 已完成 | `cargo test links::codegraph_bridge` 通过 | 2026-11-15 17:42 |
 | **P4-5** | 爆炸半径出处增强 | `ImpactAnalyzer` 携带行号、调用片段与 CodeGraph 下钻能力 | ✅ 已完成 | `cargo test links::impact` 通过 | 2026-11-15 17:43 |
-| **P4-6** | MCP & CLI 暴露 | 注册 `steward_links_audit` / `steward_codegraph_bridge` 工具与 CLI 子命令 | ✅ 已完成 | `cargo test api::mcp::tests` 通过 | 2026-11-15 17:44 |
+| **P4-6** | MCP & CLI 暴露 | 注册 `body_links_audit` / `body_codegraph_bridge` 工具与 CLI 子命令 | ✅ 已完成 | `cargo test api::mcp::tests` 通过 | 2026-11-15 17:44 |
 | **P4-7** | 全量回归与构建 | 运行全量单元测试与 `cargo build --release` 冒烟运行 | ✅ 已完成 | `cargo test` 全部 PASS (31 tests) | 2026-11-15 17:45 |
 | **P4-8** | 手册与 README | 迭代 `docs/manual/` 章节、`README.md` 与用户手册 | ✅ 已完成 | 文档真实反映 v3.0 新特性 | 2026-11-15 17:48 |
 

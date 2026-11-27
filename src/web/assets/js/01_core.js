@@ -76,7 +76,7 @@ function rawJsonDrawer(data, title) {
 function initTheme() {
   let saved = "dark";
   try {
-    const v = localStorage.getItem("steward_ui_theme");
+    const v = localStorage.getItem("agent_body_ui_theme");
     if (v === "light" || v === "dark") saved = v;
   } catch (_) {}
   applyTheme(saved, false);
@@ -87,7 +87,7 @@ function applyTheme(theme, persist) {
   state.theme = next;
   document.documentElement.setAttribute("data-theme", next);
   if (persist !== false) {
-    try { localStorage.setItem("steward_ui_theme", next); } catch (_) {}
+    try { localStorage.setItem("agent_body_ui_theme", next); } catch (_) {}
   }
   const btn = document.getElementById("btn-theme-toggle");
   if (btn) {
@@ -104,7 +104,7 @@ function toggleTheme() {
 
 function getStoredAuthToken() {
   try {
-    return (localStorage.getItem("steward_auth_token") || "").trim();
+    return (localStorage.getItem("agent_body_auth_token") || "").trim();
   } catch (_) {
     return "";
   }
@@ -127,8 +127,8 @@ function promptAuthToken() {
   if (next === null) return;
   const trimmed = next.trim();
   try {
-    if (trimmed) localStorage.setItem("steward_auth_token", trimmed);
-    else localStorage.removeItem("steward_auth_token");
+    if (trimmed) localStorage.setItem("agent_body_auth_token", trimmed);
+    else localStorage.removeItem("agent_body_auth_token");
   } catch (_) {}
   updateAuthTokenButton();
 }

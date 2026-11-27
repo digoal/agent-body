@@ -1,4 +1,4 @@
-# Agent Host Steward — 代码与文档全景审计及 Phase 15~18 演进路线图
+# Agent Body — 代码与文档全景审计及 Phase 15~18 演进路线图
 
 > **编制**: Antigravity · **日期**: 2026-11-18  
 > **基线 Commit**: `80efa9f` (`v0.3.2`, Phase 1~14 全部交付)  
@@ -17,7 +17,7 @@
 |---|---|---|
 | **模块规模** | `src/lib.rs` 导出 **19 个顶层模块**（`config`, `storage`, `placement`, `scanner`, `env`, `memory`, `api`, `watcher`, `daemon`, `links`, `changes`, `session`, `tui`, `fact`, `brief`, `coordination`, `preflight`, `web`, `hooks`）+ `src/main.rs` | `src/lib.rs` |
 | **存储抽象** | `StorageProvider` Trait 定义 **40 个核心方法**，实现 SQLite (Bundled + FTS5) / PostgreSQL (pgvector + Advisory Lock) / DuckDB (列存 OLAP) 三后端 | `src/storage/spi.rs` |
-| **MCP 端点** | `McpToolRegistry` 注册 **32 个原生 MCP 工具**（含 Phase 14 新增 `steward_hook_generate`） | `src/api/mcp_tools.rs` |
+| **MCP 端点** | `McpToolRegistry` 注册 **32 个原生 MCP 工具**（含 Phase 14 新增 `body_hook_generate`） | `src/api/mcp_tools.rs` |
 | **编译与测试** | `cargo check --tests` **0 warnings**；`cargo test` 实跑 **160 passed, 0 failed, 1 ignored**（141 项 lib 单测 + 5 项 benchmarks + 8 项 coordination + 5 项 duckdb + 1 项 web dashboard + 1 ignored doctest） | `cargo test` 实测 |
 | **宿主机现网背景** | 仅 `~/.gemini/antigravity-cli/skills/` 下已沉淀 **130 个技能目录**，加上 `/root/new/skills/` 下 **9 个技能目录**及多套 MCP Server；Context 膨胀风险已成为真实物理痛点 | 宿主机目录扫描 |
 
@@ -41,21 +41,21 @@
 
 | 序号 | 已注册 MCP 工具 | 缺失的 CLI 子命令映射 | 归属模块 |
 |:---:|---|---|---|
-| 1 | `steward_asset_register` | `agent-steward asset register` | `AssetCommands` |
-| 2 | `steward_hook_pre` | `agent-steward hooks pre` | `HooksCommands` |
-| 3 | `steward_hook_post` | `agent-steward hooks post` | `HooksCommands` |
-| 4 | `steward_analytics_heatmap` | `agent-steward analytics heatmap` | 新增 `AnalyticsCommands` |
-| 5 | `steward_analytics_trend` | `agent-steward analytics trend` | 新增 `AnalyticsCommands` |
-| 6 | `steward_analytics_export` | `agent-steward analytics export` | 新增 `AnalyticsCommands` |
-| 7 | `steward_lock_acquire` | `agent-steward coordination acquire` | `CoordinationCommands` |
+| 1 | `body_asset_register` | `agent-body asset register` | `AssetCommands` |
+| 2 | `body_hook_pre` | `agent-body hooks pre` | `HooksCommands` |
+| 3 | `body_hook_post` | `agent-body hooks post` | `HooksCommands` |
+| 4 | `body_analytics_heatmap` | `agent-body analytics heatmap` | 新增 `AnalyticsCommands` |
+| 5 | `body_analytics_trend` | `agent-body analytics trend` | 新增 `AnalyticsCommands` |
+| 6 | `body_analytics_export` | `agent-body analytics export` | 新增 `AnalyticsCommands` |
+| 7 | `body_lock_acquire` | `agent-body coordination acquire` | `CoordinationCommands` |
 
 3. **差距 C — 违反规约 #10 & #11（四层贯通 & 文档/SKILL 一等公民同步）：多份核心文档滞后于 Phase 14 现状**
    - `README.md`：第 110 行仍写 `145 项自动化测试套件`（实际为 160 passed），第 108 行“19 大模块”在 `docs/arch/02-for-developers.md` 中仅列出了 10 个核心目录（缺少 `hooks/`、`session/`、`brief/`、`changes/`、`daemon/`、`tui/`、`watcher/` 等）。
    - `docs/arch/01-for-architects.md`、`docs/arch/02-for-developers.md`、`docs/arch/03-for-users.md`：仍写 `31 Tools` / `31 个原生工具` / `145 项测试` 与 `StorageProvider 35+ 接口`。
    - `docs/src_doc/progress.md`：总阶段表格仅写到 Phase 13，缺少 Phase 14 验收记录；`docs/src_doc/development.md` 仍写 `31 个原生 MCP 工具` 与 `v0.3.2` 旧测试数。
-   - 仓库内 `skills/agent-steward-*/SKILL.md`：停留在 `31 个原生 MCP` 版本，未与 Phase 14 的 32 工具及 `steward_hook_pre` 大小写修复状态同步。
+   - 仓库内 `skills/agent-body-*/SKILL.md`：停留在 `31 个原生 MCP` 版本，未与 Phase 14 的 32 工具及 `body_hook_pre` 大小写修复状态同步。
 
-> **顺带记录的工程性能观察**（建议纳入后续优化）：`src/api/mcp_tools.rs` 中 `steward_analytics_*` 每次调用都新建 DuckDB 内存连接并全量执行 `pipeline.sync_all()`；随着资产/变更表行数增长，该路径存在突破规约 #9（亚毫秒/毫秒级响应）的风险，应在后续演进中改为增量水位同步或复用持久化分析副本。
+> **顺带记录的工程性能观察**（建议纳入后续优化）：`src/api/mcp_tools.rs` 中 `body_analytics_*` 每次调用都新建 DuckDB 内存连接并全量执行 `pipeline.sync_all()`；随着资产/变更表行数增长，该路径存在突破规约 #9（亚毫秒/毫秒级响应）的风险，应在后续演进中改为增量水位同步或复用持久化分析副本。
 
 ---
 
@@ -71,7 +71,7 @@
 | **结论** | ✅ **强烈推荐采纳** | ❌ 不推荐（技术债雪球效应） | ❌ 不推荐（违背轻量化与痛点优先级） |
 
 **推荐理由（第一性原理）**：
-1. 大管家自身核心用户是 **AI Agent**，若仓库文档与 `SKILL.md` 滞后，Agent 读到旧契约就会产生认知偏差；若生产路径仍有 140 处 `unwrap()`，7×24 守护稳定性就无法兑现。因此 **Phase 15 必须作为前置底座清债**。
+1. Agent 本体自身核心用户是 **AI Agent**，若仓库文档与 `SKILL.md` 滞后，Agent 读到旧契约就会产生认知偏差；若生产路径仍有 140 处 `unwrap()`，7×24 守护稳定性就无法兑现。因此 **Phase 15 必须作为前置底座清债**。
 2. 当前宿主机已存在 **139 个 SKILL 目录（130 个全局 + 9 个 `/root/new/skills/`）** 及多个 MCP 服务，Open Issue #4（管理 MCP / SKILL / 外部服务并防止 Context 被打爆）直接决定大模型推理质量与召回信噪比，具有最高业务杠杆，故列为 **Phase 16 (P0)**。
 3. 单机多 Agent 锁已有基础（Phase 11），但仅支持非阻塞快速失败（`Denied`），补齐等待队列与死锁环路检测（Open Issue #2）即可形成完整并发原语闭环，列为 **Phase 17 (P1)**。
 4. 跨平台抽象与轻量多机联邦（Open Issue #3 & #1）属于边界拓展层，适合在单机语义底座完全稳固后作为 **Phase 18 (P2)** 落地。
@@ -100,10 +100,10 @@ flowchart LR
      - 增加 CI/脚本门禁校验（扫描 `#[cfg(test)]` 之前禁止出现 `.unwrap(` / `.expect(`）。
   2. **15.2 CLI 与 MCP 1:1 映射补齐（规约 #13）**：
      - 在 `src/main.rs` 补齐缺失的 7 个 CLI 子命令：`asset register`、`hooks pre`、`hooks post`、`analytics {heatmap, trend, export}`、`coordination acquire`；
-     - 同步审视 `close` / `steward_session_close` 的 `dry_run` 预览开关参数一致性（规约 #8）。
+     - 同步审视 `close` / `body_session_close` 的 `dry_run` 预览开关参数一致性（规约 #8）。
   3. **15.3 四层贯通文档与 SKILL 全面刷新（规约 #10 & #11）**：
      - 同步更新 `README.md`、`docs/arch/01~03`、`docs/manual/03 & 04`、`docs/src_doc/progress.md`、`docs/src_doc/development.md` 中的模块数（19 大模块）、MCP 工具数（32 个，Phase 15 完成后保持一致）、存储 SPI 方法数（40 个）与实测测试数；
-     - 将仓库 `skills/agent-steward-*/SKILL.md` 与全局已部署技能事实对齐，移除已过时的“31 工具”和“未修复 bug”表述。
+     - 将仓库 `skills/agent-body-*/SKILL.md` 与全局已部署技能事实对齐，移除已过时的“31 工具”和“未修复 bug”表述。
 - **DoD 验收门禁**：
   - 生产路径 `.unwrap()` / `.expect()` 扫描计数 **= 0**；
   - 32 个 MCP 工具与 CLI 子命令 **100% 一一映射**；
@@ -114,7 +114,7 @@ flowchart LR
 ### Phase 16：管理范围扩展与 Context 防爆路由器（对齐 Open Issue #4）
 
 > **核心定位与边界约束（规约 #2 递弱代偿 & #5 零捏造）**：
-> - 大管家**只做“宿主机能力地图 + 服务通讯录 + 按需渐进式路由推荐”**；
+> - Agent 本体**只做“宿主机能力地图 + 服务通讯录 + 按需渐进式路由推荐”**；
 > - **明确不做**：不做 MCP 流量代理网关、不替代 LLM 执行业务推理、**绝不在 SQLite/PostgreSQL 中存储明文 API Key 或密码**（外部服务仅登记 `auth_env_var` 环境变量名引用，契合规约 #2 不替代 Vault 及“隐私安全不泄露敏感信息”准则）。
 
 - **战略目标**：解决“宿主机 MCP Server / 工具定义与 130+ SKILL 全量塞入上下文导致 Context 被打爆、模型注意力退化”以及“Agent 不知道可调用哪些宿主机外延服务”的两大难题。
@@ -125,7 +125,7 @@ flowchart TD
     subgraph Sources["宿主机客观发现源 (只读扫描 + 受控登记)"]
         S1["客户端 MCP 配置<br/>(~/.hermes, claude_desktop, cursor等)"]
         S2["SKILL 目录树<br/>(/root/new/skills, ~/.gemini/antigravity-cli/skills)"]
-        S3["外部服务联系人声明<br/>(steward.toml / 手动注册)"]
+        S3["外部服务联系人声明<br/>(config.toml / 手动注册)"]
     end
 
     subgraph Engine["Phase 16 生态目录与防爆路由器 (src/ecosystem/)"]
@@ -136,8 +136,8 @@ flowchart TD
     end
 
     subgraph Consumers["消费者接口"]
-        C1["steward_brief 动态注入最匹配 Top-K"]
-        C2["新增 MCP/CLI 1:1 工具<br/>(steward_mcp_*, steward_skill_*, steward_service_*)"]
+        C1["body_brief 动态注入最匹配 Top-K"]
+        C2["新增 MCP/CLI 1:1 工具<br/>(body_mcp_*, body_skill_*, body_service_*)"]
     end
 
     S1 --> E1
@@ -163,15 +163,15 @@ flowchart TD
      - 支持自动从本机已有信息（如 `config.toml` Ollama、`pg_url`、`~/.hermes` 外部端点或 `/root/new/note/*权威网站*.md` 提取的常用公开服务）冷启动预置，也支持通过 CLI/MCP 手动登记、查询和轻量探活（TCP/HTTP HEAD 状态检查）。
   4. **16.4 Context Budget Router（防爆渐进式披露路由器）**：
      - 给定 `intent` 与 `budget_tokens`（默认 `<= 600 tokens`），融合关键字/BM25/意图匹配，**只返回 Top-K 最相关 MCP 工具清单、Top-K SKILL 路径与可用外部服务调用卡片**，其余折叠为数量提示与按需展开命令，防止 Context 膨胀；
-     - 无缝接入 `BriefAssembler`（`src/brief/assembler.rs`），使 `steward_brief` 自动附带当前任务最该加载的 SKILL/MCP/外部服务推荐，并统计“节省 Context Token 估算值”。
+     - 无缝接入 `BriefAssembler`（`src/brief/assembler.rs`），使 `body_brief` 自动附带当前任务最该加载的 SKILL/MCP/外部服务推荐，并统计“节省 Context Token 估算值”。
   5. **16.5 新增 MCP & CLI 1:1 工具矩阵**：
-     - `steward_mcp_catalog` <-> `agent-steward mcp-catalog [scan|list|route]`
-     - `steward_skill_route` <-> `agent-steward skill [scan|list|route]`
-     - `steward_service_contact` <-> `agent-steward service [register|list|query|check]`
+     - `body_mcp_catalog` <-> `agent-body mcp-catalog [scan|list|route]`
+     - `body_skill_route` <-> `agent-body skill [scan|list|route]`
+     - `body_service_contact` <-> `agent-body service [register|list|query|check]`
 - **DoD 验收门禁**：
   - 宿主机 130+ 个 SKILL 与多 MCP Server 秒级建索引，敏感字段脱敏率 100%；
   - 在 `budget_tokens = 600` 约束下，路由器单次召回响应 `< 10ms`，准确给出 Top-K SKILL/MCP 与外部服务名片；
-  - `steward_brief` 总体预算继续保持可控不超限，CLI 与 MCP 1:1 映射。
+  - `body_brief` 总体预算继续保持可控不超限，CLI 与 MCP 1:1 映射。
 
 ---
 
@@ -186,10 +186,10 @@ flowchart TD
      - 运行 DFS/Tarjan 强连通环路检测：当 `Agent A` 持 `R1` 等 `R2`，同时 `Agent B` 持 `R2` 等 `R1`（包含目录祖先后代关系传递），立即在申请排队时返回 **死锁环路路径诊断报告** 并拒绝进入死等，而非事后超时；
      - 针对已形成的僵尸等待链，支持最低优先级/最短剩余租期退让建议。
   3. **17.3 Push 通知唤醒通道（复用 Phase 14 事件总线）**：
-     - 当 `CoordinationEngine::release()`、`force_release()` 或后台调度器 `gc_expired_locks()` 释放资源时，自动从等待队列按优先级 + FIFO 出队下一个等待者，向 `EventBus` 发射 `StewardEvent::LockWaiterNotified`，通过 **UDS Socket / SSE (`/api/v1/stream`) / Webhook** 推送唤醒信号，并配套同步阻塞/长轮询命令 `steward_lock_wait`（带超时保护）。
+     - 当 `CoordinationEngine::release()`、`force_release()` 或后台调度器 `gc_expired_locks()` 释放资源时，自动从等待队列按优先级 + FIFO 出队下一个等待者，向 `EventBus` 发射 `BodyEvent::LockWaiterNotified`，通过 **UDS Socket / SSE (`/api/v1/stream`) / Webhook** 推送唤醒信号，并配套同步阻塞/长轮询命令 `body_lock_wait`（带超时保护）。
   4. **17.4 Web 大屏与 CLI/MCP 1:1 联动**：
      - Web 看板新增“锁等待队列与 WFG 死锁拓扑态”视图；
-     - 新增 `steward_lock_wait` / `steward_lock_deadlock_check` 及其 CLI 对等子命令 `coordination wait` / `coordination deadlock`。
+     - 新增 `body_lock_wait` / `body_lock_deadlock_check` 及其 CLI 对等子命令 `coordination wait` / `coordination deadlock`。
 - **DoD 验收门禁**：
   - 构造双 Agent 与三 Agent 环形等待场景，100% 检出精确死锁环路且延迟 `< 2ms`；
   - 持锁释放后排队 Agent 在 `< 50ms` 内通过 UDS/SSE 收到唤醒事件，零空转轮询；

@@ -1,8 +1,8 @@
-# 大管家架构重构：事实、偏好与记忆的三位一体设计
+# Agent 本体架构重构：事实、偏好与记忆的三位一体设计
 > —— 从同质化“记忆”内卷中破局，做真正的 Agent 宿主环境认知底座
 >
 > 记录人: 联合创始人 (digoal德哥 & Antigravity)  
-> 日期: 2026-11-15（Phase 44 已在此三位一体内核之上进一步升维为 **脑体分离 · Agent 本体**，详见 [04-from-steward-to-agent-body.md](04-from-steward-to-agent-body.md)）  
+> 日期: 2026-11-15（Phase 44 已在此三位一体内核之上进一步升维为 **脑体分离 · Agent 本体**，详见 [04-agent-body-philosophy.md](04-agent-body-philosophy.md)）  
 > 状态: 架构愿景与顶层设计确立
 
 ---
@@ -18,22 +18,22 @@
 想象一下真实场景：
 - **场景 1（工具盲区）**：Agent 接收到一个“将 PDF 提取为结构化文本”的任务。它开始思考写一段 Python 脚本、尝试 `pip install pypdf2`、遇到编译依赖报错、折腾半小时……而宿主机上其实早就预装了业界性能最强、排版还原最好的 `pdftotext`（来自 `poppler-utils`），且带 `-layout` 参数就能一秒解决。**Agent 不知道机器上有什么能力。**
 - **场景 2（物理撞车）**：Agent 准备启动一个本地 Web 服务，直接绑定 `8080` 端口，结果抛出 `Address already in use` 崩溃。它不知道宿主机上有一个正在后台跑着的 uvicorn 进程占用了这个端口，也不知道这个进程是谁启动的、pid 是多少、是不是重要生产任务。**Agent 对宿主机的动态物理状态一无所知。**
-- **场景 3（灾难性破坏）**：Agent 为了修一个功能，随手修改了 `/etc/steward/steward.toml` 或某个通用配置文件。它不知道后台有一个关键的 systemd 守护服务或 cron 任务强依赖该文件，导致后台服务瞬间崩溃。**Agent 不知道静态文件与后台动态服务的依赖拓扑。**
+- **场景 3（灾难性破坏）**：Agent 为了修一个功能，随手修改了 `/etc/agent-body/config.toml` 或某个通用配置文件。它不知道后台有一个关键的 systemd 守护服务或 cron 任务强依赖该文件，导致后台服务瞬间崩溃。**Agent 不知道静态文件与后台动态服务的依赖拓扑。**
 - **场景 4（隐形干扰）**：Agent 正在调试数据库性能，跑压测时发现数据时不时被篡改或 CPU 偶尔冲高，排查半天以为是 Bug，殊不知是一个半年前写的 cron 任务每 5 分钟在后台偷偷跑清理脚本。**Agent 看不到偷跑的定时自动化系统。**
 - **场景 5（地皮污染）**：Agent 每次写新脚本、克隆源码、存临时分析结果，全都顺手扔在当前工作区或者根目录下，产生大量 `test1.py`、`temp.json`、`run.sh`。而主人其实有极具秩序的偏好目录：脚本必须在 `/root/new/shared_proj`，技能在 `/root/new/skills`，临时文件在 `/root/new/tmp`。**Agent 缺乏用户偏好与放置规约。**
 
 这说明了什么？  
 **Agent 跨会话失忆只是皮外伤，对宿主机物理世界的“全盲”才是致命伤！**  
 
-如果从经济学第一性原理——**比较优势（Comparative Advantage）**来看，这种“全盲”的代价更加惊人。硅谷 101 曾采访过一位创业者，他能在办公区负一楼连续近一周足不出户、心无旁骛地沉浸在 coding 中，靠的是园区物业包办了一切后勤琐事；企业高管有专职秘书过滤杂务，家庭主妇包揽生活琐事让另一半专心创收——底层逻辑都是**让主战力把 100% 的精力放在最专长、单位产出最高的事情上**。  
+如果从经济学第一性原理——**比较优势（Comparative Advantage）**来看，这种“全盲”的代价更加惊人。硅谷 101 曾采访过一位创业者，他能在办公区负一楼连续近一周足不出户、心无旁骛地沉浸在 coding 中，靠的是园区物业包办了一切后勤琐事；企业高管有专职Agent 本体过滤杂务，家庭主妇包揽生活琐事让另一半专心创收——底层逻辑都是**让主战力把 100% 的精力放在最专长、单位产出最高的事情上**。  
 
-反观今天的 AI Agent：比如我经常让 Agent 调研 PostgreSQL 的内核代码或新特性，明明本机 `/root/new/src/` 里早就备好了 `postgres`、`pg19_fixed`、`pgvector`、`pg_duckdb` 等十几个现成源码树、编译环境和 `.codegraph` 代码地图，但因为 Agent 没有“小秘书”，它每次都要重新拉取代码、文档，重新 `./configure` 编译安装验证，白白浪费时间、磁盘空间和宝贵的 Context Token（详见 [缘起：从硅谷园区物业、高管秘书到 Agent 的「比较优势」](00-comparative-advantage-origin.md)）。
+反观今天的 AI Agent：比如我经常让 Agent 调研 PostgreSQL 的内核代码或新特性，明明本机 `/root/new/src/` 里早就备好了 `postgres`、`pg19_fixed`、`pgvector`、`pg_duckdb` 等十几个现成源码树、编译环境和 `.codegraph` 代码地图，但因为 Agent 没有“Agent 本体”，它每次都要重新拉取代码、文档，重新 `./configure` 编译安装验证，白白浪费时间、磁盘空间和宝贵的 Context Token（详见 [缘起：从硅谷园区物业、专业幕僚到 Agent 的「比较优势」](00-comparative-advantage-origin.md)）。
 
 ---
 
-## 二、大管家的三位一体形态
+## 二、Agent 本体的三位一体形态
 
-大管家（Agent Host Steward）必须分模块解耦，将职责边界划分为三个不可混淆的核心维度：
+Agent 本体（Agent Body）必须分模块解耦，将职责边界划分为三个不可混淆的核心维度：
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -42,7 +42,7 @@
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │ MCP stdio / Unix Socket / CLI
 ┌────────────────────────────────────▼────────────────────────────────────┐
-│                    Agent Host Steward (宿主大管家)                       │
+│                    Agent Body (Agent 本体)                       │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │   ┌─────────────────────────────────────────────────────────────────┐   │
@@ -80,12 +80,12 @@
 - **图谱内容**：
   1. **能力事实（Capabilities）**：机器装了哪些包、CLI 二进制、语言运行时，并建立“能力语义索引”。
      - *Agent 问*：“这台机器上有没有能处理 PDF 的东西？”
-     - *大管家答*：“有 `pdftotext`（版本 24.02，路径 `/usr/bin/pdftotext`，通常配 `-layout` 保持排版）；此外有 Python 运行时及 `pypdf` 库。”
+     - *Agent 本体答*：“有 `pdftotext`（版本 24.02，路径 `/usr/bin/pdftotext`，通常配 `-layout` 保持排版）；此外有 Python 运行时及 `pypdf` 库。”
      - *Agent 问*：“能把视频切成雪碧图吗？”
-     - *大管家答*：“有 `ffmpeg`（路径 `/usr/bin/ffmpeg`，支持硬件加速，常用过滤器 `fps=1,scale=320:-1,tile=5x5`）。”
+     - *Agent 本体答*：“有 `ffmpeg`（路径 `/usr/bin/ffmpeg`，支持硬件加速，常用过滤器 `fps=1,scale=320:-1,tile=5x5`）。”
   2. **运行事实（Runtimes & Ports）**：
      - *Agent 问*：“8080 端口被谁占了？”
-     - *大管家答*：“PID 18493，进程名 `python3`，启动命令 `uvicorn main:app --port 8080`，工作目录 `/root/new/work/api-service`，已稳定运行 3 天。”
+     - *Agent 本体答*：“PID 18493，进程名 `python3`，启动命令 `uvicorn main:app --port 8080`，工作目录 `/root/new/work/api-service`，已稳定运行 3 天。”
   3. **自动化事实（Automation & Daemons）**：
      - 记录 systemd 服务及其依赖的配置文件；
      - 记录 crontab 偷偷跑的任务（何时跑、跑什么脚本、输出到哪）。Agent 想排查后台干扰时一目了然。
@@ -105,13 +105,13 @@
   2. **操作偏好（Habits & Guardrails）**：
      - 例如：代码搜索优先使用 `codegraph` 而非全盘 `grep`；时区强制采用北京时间；撰写技术文章严禁编造数据。
   3. **纠偏自演化（Feedback-driven Rule Evolution）**：
-     - 当用户说“这个不要放这，以后这类工具都放 `/root/new/shared_git/`”，大管家捕获该纠偏动作，自动提炼为新规则，更新规则库。
+     - 当用户说“这个不要放这，以后这类工具都放 `/root/new/shared_git/`”，Agent 本体捕获该纠偏动作，自动提炼为新规则，更新规则库。
 
 ### 3. 记忆模块（Memory & Context）—— 开放适配成熟开源生态
 - **定位**：记录“过去发生了什么”、“过往任务的决策和避坑经验”。
 - **战略原则**：**绝不重新发明轮子，开放拥抱成熟开源**。
   - 市面上已有 Mem0、Letta、Zep、PowerContext 等优秀的记忆项目。
-  - 大管家提供标准的 **Memory Provider SPI**：
+  - Agent 本体提供标准的 **Memory Provider SPI**：
     ```rust
     pub trait MemoryProvider: Send + Sync {
         async fn search(&self, query: &str, limit: usize) -> Result<Vec<MemoryItem>>;
@@ -120,19 +120,19 @@
     }
     ```
   - **默认实现**：内置基于 SQLite FTS5 + 本地轻量向量的 LocalProvider（零依赖、离线、轻便）。
-  - **扩展实现**：用户若在机器上配置了 Mem0 / Letta / PowerContext，大管家只需作为 Provider 适配器桥接，Agent 只需面对大管家一个统一门面（Facade）。
+  - **扩展实现**：用户若在机器上配置了 Mem0 / Letta / PowerContext，Agent 本体只需作为 Provider 适配器桥接，Agent 只需面对Agent 本体一个统一门面（Facade）。
 
 ---
 
-## 三、大管家的接口哲学：只读事实 + 咨询偏好 + 委托记忆
+## 三、Agent 本体的接口哲学：只读事实 + 咨询偏好 + 委托记忆
 
-Agent 与大管家交互时，工具职责必须清晰：
+Agent 与Agent 本体交互时，工具职责必须清晰：
 
 | 模块 | MCP / CLI 语义 | 读写属性 | 典型问答示例 |
 |------|---------------|---------|-------------|
-| **事实图谱** | `steward_fact_query` / `steward_fact_get` | **严格只读** | “机器上能转 webp 的工具有吗？”<br>“谁占了 5432 端口？”<br>“改了这个 SQL 会影响哪个正在跑的 cron？” |
-| **偏好规约** | `steward_preference_suggest` / `steward_preference_learn` | 咨询 / 演化 | “我写了一个新的分析工具，应该放在哪里、怎么命名？”<br>“记录用户的新偏好规则” |
-| **记忆模块** | `steward_memory_search` / `steward_memory_save` | 读写（委托） | “之前调试 DuckDB 并发写锁死是怎么解决的？”<br>“记录本次排障总结” |
+| **事实图谱** | `body_fact_query` / `body_fact_get` | **严格只读** | “机器上能转 webp 的工具有吗？”<br>“谁占了 5432 端口？”<br>“改了这个 SQL 会影响哪个正在跑的 cron？” |
+| **偏好规约** | `body_preference_suggest` / `body_preference_learn` | 咨询 / 演化 | “我写了一个新的分析工具，应该放在哪里、怎么命名？”<br>“记录用户的新偏好规则” |
+| **记忆模块** | `body_memory_search` / `body_memory_save` | 读写（委托） | “之前调试 DuckDB 并发写锁死是怎么解决的？”<br>“记录本次排障总结” |
 
 ---
 
@@ -159,7 +159,7 @@ Agent 与大管家交互时，工具职责必须清晰：
 
 ## 五、结论与行动纲领
 
-大管家从今日起，彻底告别“又一个记忆库”的狭隘定位，正式确立为：
+Agent 本体从今日起，彻底告别“又一个记忆库”的狭隘定位，正式确立为：
 **“Agent 宿主环境认知底座 —— 事实图谱为基，偏好规约为准，记忆生态为翼”**。
 
 不写盲目代码，先修规划与蓝图。下一步全量更新产品设计与 Roadmap。

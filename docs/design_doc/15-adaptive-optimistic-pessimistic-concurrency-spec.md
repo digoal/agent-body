@@ -1,6 +1,6 @@
 # 15 — 乐观-悲观自适应并发控制（AOPCC）与失败早回退规格说明书
 
-> **Agent Host Steward 产品设计 · 交付件 15**  
+> **Agent Body 产品设计 · 交付件 15**  
 > **版本**: v1.0 · **编制**: Antigravity · **日期**: 2026-11-22  
 > **对齐约束**: [README.md 规约 #8, #18, #22, #25](../../README.md) · [ISSUE #25](../../ISSUE.md#L120) · [roadmap-phase42.md](../src_doc/archive/roadmap-phase42.md)
 
@@ -10,13 +10,13 @@
 
 ### 1.1 现网实测与代码根因
 
-结合数据库 **悲观并发控制 (PCC)** 与 **乐观并发控制 (OCC)** 的理论模型，审视当前 `agent-steward` 在执行回路中的介入方式（[src/brief/assembler.rs](../../src/brief/assembler.rs)、[src/api/hooks.rs](../../src/api/hooks.rs)、[src/hooks/client_gen.rs](../../src/hooks/client_gen.rs)），存在以下三项核心问题：
+结合数据库 **悲观并发控制 (PCC)** 与 **乐观并发控制 (OCC)** 的理论模型，审视当前 `agent-body` 在执行回路中的介入方式（[src/brief/assembler.rs](../../src/brief/assembler.rs)、[src/api/hooks.rs](../../src/api/hooks.rs)、[src/hooks/client_gen.rs](../../src/hooks/client_gen.rs)），存在以下三项核心问题：
 
 | 现网/源码位置 | 现状事实 | 本质问题剖析 |
 |---|---|---|
-| **执行回路中的前置查询** | 若 Agent 每次执行验证（如连本机 PostgreSQL `:5432`、调 `pdftotext`）前均先调一次 `steward_fact_query` / `steward_port_check` | 虽单次 MCP 本地仅耗时 `~1 ms`、返回 `~30 tok`，但强制 LLM **多跑 1 轮完整推理（Turn）**——需将当前整个上下文（`5k ~ 30k` input tokens）重发预填充并付出 `1.5s ~ 4.0s` 等待延迟，即 **整轮对话税 $C_{\text{turn}}$**！ |
+| **执行回路中的前置查询** | 若 Agent 每次执行验证（如连本机 PostgreSQL `:5432`、调 `pdftotext`）前均先调一次 `body_fact_query` / `body_port_check` | 虽单次 MCP 本地仅耗时 `~1 ms`、返回 `~30 tok`，但强制 LLM **多跑 1 轮完整推理（Turn）**——需将当前整个上下文（`5k ~ 30k` input tokens）重发预填充并付出 `1.5s ~ 4.0s` 等待延迟，即 **整轮对话税 $C_{\text{turn}}$**！ |
 | **[src/brief/assembler.rs](../../src/brief/assembler.rs#L240-L280)** | 开工简报仅输出 `:5432 (postgres)` 等纯列表，未标注稳定服务的可乐观假设置信度、纪元指纹与免查询直行授权 | Agent 无法区分“稳定免密可直连服务”与“临时测试不稳定端口”，只能保守选择每步先查（全悲观）或盲猜试错 |
-| **[src/api/hooks.rs](../../src/api/hooks.rs#L247-L254)** & **[src/hooks/client_gen.rs](../../src/hooks/client_gen.rs#L298-L300)** | `post_tool_call` 第一行即写死 `if !success { return ... "工具执行失败，忽略后置事实图同步" }`，`steward_bridge.py` 也写死 `if payload.get("error"): emit({}); return` | 彻底丢弃了乐观锁最核心的 **「冲突失败后回滚与恢复 (OCC Abort Recovery)」** 机制——一旦乐观直连碰壁（如 `:5432` 没启、`command not found`、`Address already in use`），Agent 得不到管家秒级注入的替代处方，只能重新多轮摸黑排查 |
+| **[src/api/hooks.rs](../../src/api/hooks.rs#L247-L254)** & **[src/hooks/client_gen.rs](../../src/hooks/client_gen.rs#L298-L300)** | `post_tool_call` 第一行即写死 `if !success { return ... "工具执行失败，忽略后置事实图同步" }`，`body_bridge.py` 也写死 `if payload.get("error"): emit({}); return` | 彻底丢弃了乐观锁最核心的 **「冲突失败后回滚与恢复 (OCC Abort Recovery)」** 机制——一旦乐观直连碰壁（如 `:5432` 没启、`command not found`、`Address already in use`），Agent 得不到Agent 本体秒级注入的替代处方，只能重新多轮摸黑排查 |
 
 ### 1.2 期望代价边界公式（什么时候用 OCC，什么时候用 PCC？）
 
@@ -43,7 +43,7 @@ $$\text{选用 OCC 的充分必要条件：} \quad (1 - p_{\text{valid}}) \cdot 
 
 ```mermaid
 flowchart TD
-    S["SessionStart: steward_brief<br/>签发宿主机 MVCC 快照 + ⚡ 乐观直通租约"] --> C{"动作并发分级器<br/>ConcurrencyPolicyClassifier"}
+    S["SessionStart: body_brief<br/>签发宿主机 MVCC 快照 + ⚡ 乐观直通租约"] --> C{"动作并发分级器<br/>ConcurrencyPolicyClassifier"}
     C -->|"高危/写共享/绑定端口/高爆炸半径<br/>C_fail 极高"| PCC["🔴 PESSIMISTIC_LOCK (悲观门禁)<br/>PreToolUse 强制核验物理端口/锁/爆炸半径"]
     C -->|"创建新文件/普通本地写<br/>条件静态校验"| CAS["🟡 CAUTIOUS_CAS (条件静默放行)<br/>本地正则/规则静默校验，合规则 0 打扰"]
     C -->|"连接服务(psql/curl)/只读/沙盒/已授权CLI<br/>C_fail ~ 0 & P_valid >= 0.85"| OCC["🟢 OPTIMISTIC (乐观直通)<br/>跳过前置查询，直接执行主业务动作!"]
@@ -64,7 +64,7 @@ flowchart TD
 
 ### 2.2 开工乐观直通租约 (`OptimisticAssumptionLease`)
 
-在 `steward_brief` 的输出中新增精简区块（上限 `~120 tokens`，严守预算控制）：`## ⚡ 乐观直通契约 (Optimistic Leases)`，让 Agent 在开工瞬间获得类似数据库 **MVCC Read-Snapshot** 的确定性授权：
+在 `body_brief` 的输出中新增精简区块（上限 `~120 tokens`，严守预算控制）：`## ⚡ 乐观直通契约 (Optimistic Leases)`，让 Agent 在开工瞬间获得类似数据库 **MVCC Read-Snapshot** 的确定性授权：
 
 ```rust
 pub struct OptimisticLease {
@@ -80,7 +80,7 @@ pub struct OptimisticLease {
 
 ### 2.3 乐观碰壁诊断与秒级自愈引擎 (`OptimisticFailureDiagnoser`)
 
-彻底改造 `AgentHookEngine::post_tool_call`（不再在 `!success` 时丢弃！）及 `steward_bridge.py`（在 `run_command` 失败时主动唤醒诊断），支持四类高频碰壁模式的 `< 2 ms` 确定性诊断：
+彻底改造 `AgentHookEngine::post_tool_call`（不再在 `!success` 时丢弃！）及 `body_bridge.py`（在 `run_command` 失败时主动唤醒诊断），支持四类高频碰壁模式的 `< 2 ms` 确定性诊断：
 
 1. **服务连接拒绝 (`Connection refused` / `could not connect to server` / `ECONNREFUSED`)**：
    - 从报错文本提取目标端口（如 `5432`, `11434`, `6379`）与服务关键词；
@@ -100,8 +100,8 @@ pub struct OptimisticLease {
 - **新增基准负载 `W15 (optimistic_vs_pessimistic_execution_loop)`**：
   - 同台模拟 10 项混合任务（8 项本地 PG/Ollama/工具验证 + 2 项端口已被占/工具缺失的漂移场景）；
   - 对比三组：
-    1. **全悲观模式 (Full PCC)**：10 次执行全部前置调用 `steward_fact_query` / `steward_port_check`，累计产生 `10` 次额外回路轮次（计入整轮对话税 `rounds = 20`）；
-    2. **无大管家盲猜模式**：在 2 个漂移场景下反复瞎猜试错 `3+` 轮；
+    1. **全悲观模式 (Full PCC)**：10 次执行全部前置调用 `body_fact_query` / `body_port_check`，累计产生 `10` 次额外回路轮次（计入整轮对话税 `rounds = 20`）；
+    2. **无Agent 本体盲猜模式**：在 2 个漂移场景下反复瞎猜试错 `3+` 轮；
     3. **AOPCC 自适应模式**：8 项命中租约 **0 前置查询直接成功** + 2 项碰壁由 `PostToolUse` 一次注入真实处方自愈（总轮次从 `20` 压降至 `12`，整轮对话税节省 `40%+` 且 100% 命中真实事实）。
 - **新增效能存证规则 `PR-11` (`OptimisticLeaseAndRecovery`)**：
   - 每次 `BriefAssembler` 签发乐观租约并消除回路内查询，或 `post_tool_call` 成功在碰壁时自愈，均带出处记入 `effectiveness_ledger`。

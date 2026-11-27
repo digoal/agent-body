@@ -382,7 +382,7 @@ impl OptimisticFailureDiagnoser {
                         (port == 5432 && nl.contains("postgres"))
                             || (port == 11434 && nl.contains("ollama"))
                             || (port == 6379 && nl.contains("redis"))
-                            || (port == 8765 && (nl.contains("agent-body") || nl.contains("steward")))
+                            || (port == 8765 && nl.contains("agent-body"))
                     })
                     .take(2)
                     .map(|u| u.service_name)

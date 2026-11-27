@@ -9,7 +9,7 @@
 
 在没有 **Agent 本体** 之前，大模型客户端（LLM）就像只有临时大脑皮层、却没有物理身体的孤魂：换个窗口就失忆、不知端口谁在用、不知公用库放在哪、不知改动配置会不会搞垮后台服务。
 
-**Agent Body** 就是驻留在物理宿主机上的 **Agent 本体（Agent Embodiment Substrate）**（注：早期的“小秘书 / 大管家”分别代表本体的**感官盘点侧面**与**防撞稳态侧面**）：
+**Agent Body** 就是驻留在物理宿主机上的 **Agent 本体（Agent Embodiment Substrate）**（注：早期的“Agent 本体 / Agent 本体”分别代表本体的**感官盘点侧面**与**防撞稳态侧面**）：
 - **感官与本体感觉**：对系统底层（进程、端口、systemd、定时任务、文件拓扑）**了如指掌**；
 - **脊柱与反射弧**：对主人习惯（脚本/项目/临时文件规范）与痛觉红线（`L0~L3` 权限包络）**条件反射式拦截**；
 - **海马体与连续性**：为换脑/换客户端交接提供 `<300 tok` **跨大脑接力胶囊**，实现换脑不失忆；
@@ -30,7 +30,7 @@ graph LR
 
 ```mermaid
 flowchart TD
-    S1["第 1 步: 开工对齐 (agent-body brief)<br>获取硬件规格、活跃任务、长期经验简报"] --> S2["第 2 步: 问询放置 (place suggest)<br>写脚本/建项目前，先问大管家放哪个规范目录"]
+    S1["第 1 步: 开工对齐 (agent-body brief)<br>获取硬件规格、活跃任务、长期经验简报"] --> S2["第 2 步: 问询放置 (place suggest)<br>写脚本/建项目前，先问Agent 本体放哪个规范目录"]
     S2 --> S3["第 3 步: 端口防撞 (env port)<br>启动 Web/API 服务前，探测端口是否已被占用"]
     S3 --> S4["第 4 步: 依赖推演 (links impact)<br>修改公共代码或配置前，推演多跳爆炸半径"]
     S4 --> S5["第 5 步: 协作加锁 (coordination lock)<br>独占端口或写入共享目录前，申请协作互斥锁"]
@@ -55,14 +55,14 @@ agent-body place suggest --type script --name sec_crawler --intent "抓取美股
 ```bash
 agent-body env port 8080
 ```
-> **大管家返回**：8080 已被 PID `18493` (`uvicorn`) 占用！推荐改用空闲端口 `8081` 或 `8082`。
+> **Agent 本体返回**：8080 已被 PID `18493` (`uvicorn`) 占用！推荐改用空闲端口 `8081` 或 `8082`。
 
 ### 4. 依赖推演：`agent-body links impact`
 准备重构或改动公共模块？先看谁在依赖它：
 ```bash
 agent-body links impact <workspace_base>/shared_proj/test.py
 ```
-> **大管家返回**：发现 2 个 systemd 服务与 3 个定时任务依赖该文件，盲目修改将引发次生灾害！
+> **Agent 本体返回**：发现 2 个 systemd 服务与 3 个定时任务依赖该文件，盲目修改将引发次生灾害！
 
 ### 5. 并发协作锁：`agent-body coordination`
 多 Agent 协作防止踩踏，锁定工作目录或通信端口：
@@ -87,7 +87,7 @@ agent-body close session-20261118-01 --clean-temp
 ### 方式 1：CLI 命令行终端操作（人类最爱）
 适合日常快速巡检、排障与脚本编写：
 ```bash
-agent-body status       # 查看大管家健康状态
+agent-body status       # 查看Agent 本体健康状态
 agent-body tui          # 启动全屏终端 ANSI 实时看板
 agent-body memory search "数据库连接池排障" --hybrid # 混合检索记忆
 ```

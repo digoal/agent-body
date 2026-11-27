@@ -136,7 +136,7 @@ pub(crate) enum Commands {
         json: bool,
     },
 
-    #[command(about = "启动基于浏览器的轻量级大管家拓扑图与协作锁监控大屏")]
+    #[command(about = "启动基于浏览器的轻量级Agent 本体拓扑图与协作锁监控大屏")]
     Web {
         #[arg(long, help = "监听地址 (默认 127.0.0.1)")]
         host: Option<String>,

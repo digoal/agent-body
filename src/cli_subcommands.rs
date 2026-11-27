@@ -335,7 +335,7 @@ pub(crate) enum StorageCommands {
         #[arg(long, help = "目标分析引擎类型 (duckdb)", default_value = "duckdb")]
         to: String,
 
-        #[arg(long, help = "目标端数据库文件路径 (默认 ~/.agent-body/steward.duckdb)")]
+        #[arg(long, help = "目标端数据库文件路径 (默认 ~/.agent-body/body.duckdb)")]
         to_path: Option<String>,
     },
     #[command(about = "查看当前生效的存储后端技术栈与配置")]
@@ -503,7 +503,7 @@ pub(crate) enum AssetCommands {
         no_links: bool,
     },
 
-    #[command(about = "手动向大管家登记一个文件或目录资产")]
+    #[command(about = "手动向Agent 本体登记一个文件或目录资产")]
     Register {
         #[arg(short, long, help = "文件或目录绝对路径")]
         path: String,

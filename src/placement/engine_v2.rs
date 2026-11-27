@@ -43,7 +43,7 @@ pub struct PlacementSuggestionV2 {
     pub guidelines: Vec<String>,
 }
 
-/// 项目局部放置规则配置模型（读取 .steward-rules.toml）
+/// 项目局部放置规则配置模型（读取 .agent-body-rules.toml）
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ProjectPlacementRulesConfig {
     #[serde(default)]
@@ -73,7 +73,7 @@ impl PlacementEngineV2 {
         // 1. 规范化资产名称为小写下划线（杜绝空格、特殊字符、大写）
         let sanitized = sanitize_name_v2(&req.name);
 
-        // 2. 优先检查是否存在项目级配置覆盖 (.steward-rules.toml)
+        // 2. 优先检查是否存在项目级配置覆盖 (.agent-body-rules.toml)
         if let Some(ref ws) = req.current_workspace {
             if let Some(custom_suggestion) = Self::try_project_override(ws, req, &sanitized) {
                 return Ok(custom_suggestion);
@@ -117,13 +117,13 @@ impl PlacementEngineV2 {
         })
     }
 
-    /// 尝试读取项目级 `.steward-rules.toml` 覆盖规则
+    /// 尝试读取项目级 `.agent-body-rules.toml` 覆盖规则
     fn try_project_override(
         workspace: &Path,
         req: &PlacementRequestV2,
         sanitized_name: &str,
     ) -> Option<PlacementSuggestionV2> {
-        let config_file = workspace.join(".steward-rules.toml");
+        let config_file = workspace.join(".agent-body-rules.toml");
         if !config_file.is_file() {
             return None;
         }
@@ -146,7 +146,7 @@ impl PlacementEngineV2 {
         if let Some(ref g) = matched.guideline {
             guidelines.push(g.clone());
         }
-        guidelines.push("📌 已应用当前工程项目级放置覆盖规则 (.steward-rules.toml)".to_string());
+        guidelines.push("📌 已应用当前工程项目级放置覆盖规则 (.agent-body-rules.toml)".to_string());
         Self::enrich_engineering_conventions(req, &mut guidelines);
 
         Some(PlacementSuggestionV2 {
@@ -260,7 +260,7 @@ impl PlacementEngineV2 {
             guidelines.push("🕒 时区标准: 默认强制采用北京时间 (Asia/Shanghai) 标注产生时间。".to_string());
         } else if req.object_type == "tmp" {
             let tmp_dir = crate::config::Config::load_effective_or_default().effective_temp_dir();
-            guidelines.push(format!("⏳ 生命周期管束: {}/ 下文件受大管家 TTL 守护纳管，会话结清后将自动回收。", tmp_dir.display()));
+            guidelines.push(format!("⏳ 生命周期管束: {}/ 下文件受Agent 本体 TTL 守护纳管，会话结清后将自动回收。", tmp_dir.display()));
         }
     }
 }
@@ -326,7 +326,7 @@ mod tests {
         let storage = Storage::open_in_memory().expect("open memory");
         let engine = PlacementEngineV2::new(storage);
 
-        // 创建临时工作区并在其中写入 .steward-rules.toml
+        // 创建临时工作区并在其中写入 .agent-body-rules.toml
         let dir = tempdir().expect("tempdir");
         let ws = dir.path();
         let config_toml = r#"
@@ -336,7 +336,7 @@ target_sub_dir = "markdown"
 naming_pattern = "{name}.md"
 guideline = "公众号文章统一保存到 markdown/ 目录并使用 SVG 图解"
 "#;
-        fs::write(ws.join(".steward-rules.toml"), config_toml).expect("write toml");
+        fs::write(ws.join(".agent-body-rules.toml"), config_toml).expect("write toml");
 
         let req = PlacementRequestV2 {
             object_type: "article".to_string(),

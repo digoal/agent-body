@@ -2,14 +2,14 @@
 
 > 编制：digoal德哥 · 日期：2026-11-18  
 > 状态：规划就绪 / 待启动实施  
-> 对齐标准：[README.md 核心设计原则与约束 §1-§15](file:///root/new/work/agent-steward/README.md#L205-L277)  
-> 追踪检查点文件：[progress-phase14.md](file:///root/new/work/agent-steward/src_doc/progress-phase14.md)
+> 对齐标准：[README.md 核心设计原则与约束 §1-§15](file:///root/new/work/agent-body/README.md#L205-L277)  
+> 追踪检查点文件：[progress-phase14.md](file:///root/new/work/agent-body/src_doc/progress-phase14.md)
 
 ---
 
 ## 一、战略目标与定位
 
-让 Agent 接入 Agent Host Steward 从**“被动调用 MCP 工具”**升级为**“在 Agent 执行回路中由 HOOK 自动触发驱动”**。
+让 Agent 接入 Agent Body 从**“被动调用 MCP 工具”**升级为**“在 Agent 执行回路中由 HOOK 自动触发驱动”**。
 同时实现双向赋能：
 1. **读向赋能（Pre-Tool Hook）**：执行前自动环境预检、协作锁互斥检查、端口防撞、爆炸半径评估与规范路径提示；
 2. **写向赋能（Post-Tool Hook & Inotify Event）**：执行后自动增量资产注册、根据内容/重要性评分门禁自动沉淀记忆、自动刷新宏观拓扑图谱，无需依赖 Agent 主观记忆。
@@ -53,7 +53,7 @@ flowchart TD
   - 500ms 防抖幂等，后台异步 Task 执行，不阻塞主流程（规约 #9）。
 
 ### 14.3 Agent 客户端 Hook 自动生成器 (Client Hook Generator)
-- **目标**：提供 `agent-steward hooks generate --client <agy|cursor|claude|git>` CLI 命令与对应 MCP 端点，自动产出各端适配的自动化 Hook 脚本与规则。
+- **目标**：提供 `agent-body hooks generate --client <agy|cursor|claude|git>` CLI 命令与对应 MCP 端点，自动产出各端适配的自动化 Hook 脚本与规则。
 - **涉及路径**：`src/hooks/client_gen.rs`、`src/main.rs`、`src/api/mcp_tools.rs`。
 - **设计约束**：
   - CLI 与 MCP 工具必须保持 1:1 映射（规约 #13）；
@@ -70,7 +70,7 @@ flowchart TD
 - **目标**：扩展 `/api/v1/stream` SSE 推流，支持出站 Webhook（HTTP POST）与本地 Unix Domain Socket。
 - **涉及路径**：`src/hooks/push.rs`、`src/web/sse.rs`、`src/daemon/mod.rs`。
 - **设计约束**：
-  - 推送 Payload 格式必须符合统一 `StewardResponse<T>` 封套规范（规约 #1）。
+  - 推送 Payload 格式必须符合统一 `BodyResponse<T>` 封套规范（规约 #1）。
 
 ### 14.6 Hook Pipeline 链式编排引擎 (Hook Pipeline Engine)
 - **目标**：支持多步骤链式触发、多维条件过滤（路径前缀、扩展名、标签）、去重与指数退避重试，以及持久化审计流水。
@@ -86,4 +86,4 @@ flowchart TD
 1. **代码层**：新增 `src/hooks/` 模块与单元测试，保持零 Panic，`cargo check --tests` 零警告；
 2. **配置层**：更新 `config.example.toml`，详尽注释 `[[hooks]]`、`[auto_sync]` 与 `[session]` 配置；
 3. **文档层**：创建 `docs/manual/09-hooks-integration.md`，更新 `README.md` 与 `docs/manual/03-cli-reference.md`；
-4. **SKILL 层**：同步更新 `agent-steward-developer`、`agent-steward-guide` 与 `agent-steward-doc-writer`。
+4. **SKILL 层**：同步更新 `agent-body-developer`、`agent-body-guide` 与 `agent-body-doc-writer`。

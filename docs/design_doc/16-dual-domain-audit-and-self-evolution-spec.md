@@ -1,6 +1,6 @@
 # 16 — 双域全链路行为审计、因果溯源与数据驱动自进化规格说明书
 
-> **Agent Host Steward 产品设计 · 交付件 16**  
+> **Agent Body 产品设计 · 交付件 16**  
 > **版本**: v1.0 · **编制**: Antigravity · **日期**: 2026-11-22  
 > **对齐约束**: [README.md 规约 #4, #8, #18, #22, #26](../../README.md) · [ISSUE #26](../../ISSUE.md#L126) · [roadmap-phase43.md](../src_doc/archive/roadmap-phase43.md)
 
@@ -8,7 +8,7 @@
 
 ## 一、第一性原理与现网实证诊断：为什么现有的 `changes` + `effectiveness_ledger` 远远不够？
 
-结合 ISSUE #26 的两个核心诉求——**“接入 Agent 后的行为审计与自进化数据分析”** 与 **“Agent 之外的主动/被动宿主机维护行为审计与有据可查”**，对本机现网数据库 `/root/.steward/steward.db` 与源码执行一轮实证盘点，暴露出三类结构性断层：
+结合 ISSUE #26 的两个核心诉求——**“接入 Agent 后的行为审计与自进化数据分析”** 与 **“Agent 之外的主动/被动宿主机维护行为审计与有据可查”**，对本机现网数据库 `/root/.agent-body/body.db` 与源码执行一轮实证盘点，暴露出三类结构性断层：
 
 ### 1.1 现网数据分布实证（2026-11-22 实测）
 
@@ -23,8 +23,8 @@
    - [src/api/hooks.rs](../../src/api/hooks.rs#L43-L191) `pre_tool_call()` 执行了端口占用、协锁、安全红线、AOPCC 分级等关键裁决，但**零落盘留痕**；
    - [src/api/hooks.rs](../../src/api/hooks.rs#L310) `post_tool_call_with_error()` 仅在 `path_opt` 为 `Some(...)` 时记入 `changes`，直接丢弃命令执行（`run_command`）、服务启停、协作锁等全量调用；
    - [src/api/mcp_tools/mod.rs](../../src/api/mcp_tools/mod.rs) 41 个原生 MCP 工具、CLI 子命令及 Web 写操作缺少统一、脱敏、防注入的行为审计汇流管道。
-2. **Out-of-Agent 管家自治与被动维护域零审计（最高风险黑盒）**：
-   - 大管家在 Agent 对话回路之外**直接变更或清理宿主机对象与知识库状态**的 7 条关键链路当前均未落盘审计：
+2. **Out-of-Agent Agent 本体自治与被动维护域零审计（最高风险黑盒）**：
+   - Agent 本体在 Agent 对话回路之外**直接变更或清理宿主机对象与知识库状态**的 7 条关键链路当前均未落盘审计：
      1. [src/daemon/scheduler.rs](../../src/daemon/scheduler.rs#L31-L101) `BackgroundScheduler::run_inspection_cycle()`（每 30 分钟执行进程同步、属性图更新、记忆冲突审计、断点扫描恢复、过期锁清理、生态刷新、新鲜度对账、Ollama 精炼）；
      2. [src/feedback/probes.rs](../../src/feedback/probes.rs#L61-L224) `FreshnessReconciler::reconcile()`（将资产标 `missing`、写穿清空旧向量、剪枝幽灵 `fact_nodes`、归档重复 `memories`）；
      3. [src/env/gc.rs](../../src/env/gc.rs#L52-L137) `HostGarbageCollector::run_gc()`（当 `dry_run=false` 时直接 `fs::remove_file` / `fs::remove_dir` 物理删除临时文件）；
@@ -40,7 +40,7 @@
 
 ## 二、双域全链路行为审计架构 (`Dual-Domain Behavioral Audit`)
 
-严格恪守 **规约 #2 递弱代偿原则**：不重造通用 SIEM / ELK / OpenTelemetry 全量追踪引擎，仅聚焦宿主机大管家双域关键动作的**因果可溯、修改可逆核对、脱敏零泄露与自进化闭环**。
+严格恪守 **规约 #2 递弱代偿原则**：不重造通用 SIEM / ELK / OpenTelemetry 全量追踪引擎，仅聚焦宿主机Agent 本体双域关键动作的**因果可溯、修改可逆核对、脱敏零泄露与自进化闭环**。
 
 ```mermaid
 flowchart TB
@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS audit_events (
     session_id         TEXT NOT NULL DEFAULT 'system',
     domain             TEXT NOT NULL CHECK (domain IN ('IN_AGENT', 'OUT_OF_AGENT')),
     actor_kind         TEXT NOT NULL,
-    actor_id           TEXT NOT NULL DEFAULT 'steward',
+    actor_id           TEXT NOT NULL DEFAULT 'agent-body',
     source_channel     TEXT NOT NULL, -- mcp | cli | web | hook | daemon | watcher | mesh | system
     category           TEXT NOT NULL,
     action             TEXT NOT NULL,
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS audit_events (
 ## 四、黑白屏 1:1 同步与 Benchmark `v3.6` 规划
 
 - **MCP / CLI / Web 1:1:1 内聚同步（规约 #16）**：
-  - 遵循“防止 MCP 工具数膨胀打爆上下文”原则，将审计查询、详情回溯、OLAP 洞察与自进化触发内聚到现有 `steward_analytics_export` / `steward_changes_since` / `steward_feedback` 或通过新增 **`steward_audit_query`**（支持 `action: query | summary | trace | evolve | export` 单工具多动作聚合）暴露，并在 CLI (`agent-steward audit ...`)、Web REST API (`/api/v1/audit/...`) 与前端工作台新增/升级 **「📜 双域行为审计与自进化中心」** 面板保持 1:1:1 同步。
+  - 遵循“防止 MCP 工具数膨胀打爆上下文”原则，将审计查询、详情回溯、OLAP 洞察与自进化触发内聚到现有 `body_analytics_export` / `body_changes_since` / `body_feedback` 或通过新增 **`body_audit_query`**（支持 `action: query | summary | trace | evolve | export` 单工具多动作聚合）暴露，并在 CLI (`agent-body audit ...`)、Web REST API (`/api/v1/audit/...`) 与前端工作台新增/升级 **「📜 双域行为审计与自进化中心」** 面板保持 1:1:1 同步。
 - **Benchmark `v3.6` 新增门禁（规约 #18 & #26）**：
   - **`W16 (dual_domain_audit_and_lease_self_evolution)`**：同场验证 ① Agent 工具全链路 `IN_AGENT` 审计留痕 + 脱敏零泄露 + `trace_id` 串联；② 模拟 `OUT_OF_AGENT`（`HostGC` + `LinkRepair` + `Reconcile`）审计 `before_after_delta` 留痕；③ 审计流驱动 AOPCC 租约动态降级与康复自进化；
   - **`DQ7 (audit_completeness_and_redaction_hygiene)`**：巡检现网数据库校验双域覆盖率、敏感字段 0 明文泄露、`evidence_sha256` 完整率 `100%` 及 `Watcher` 折叠信噪比；

@@ -23,7 +23,7 @@
    - 升级 Web Benchmark 工作台至 `v3.8` (`W1~W18` / `M1~M6` / `DQ1~DQ9` / `PR-01~14`) 并渲染 `data_quality` 卡片与门禁表格；
    - 扩展 `src/hooks/client_gen.rs` 支持 `codex` (`AGENTS.md`)、`hermes` (`.hermes/agent-body-rules.md` + `.hermes/hooks/body_bridge.py`) 及 Claude `.claude/settings.json` + `.claude/hooks/body_claude_bridge.py`。
 4. **P54-04 终端全景看板 TUI 升级 (`src/tui/mod.rs`)**：
-   - 将过时 `AGENT HOST STEWARD (v0.3.0)` 升级为 `AGENT BODY (v{VERSION})`，展示五维稳态体征、内核 RSS/FD & Top WaitEvents/AWR、24h 双域审计统计、连续性接力胶囊与活跃/过期协作锁状态。
+   - 将终端全景看板升级为 `AGENT BODY (v{VERSION})`，展示五维稳态体征、内核 RSS/FD & Top WaitEvents/AWR、24h 双域审计统计、连续性接力胶囊与活跃/过期协作锁状态。
 5. **P54-05 Benchmark `v3.8` (`W18` / `M6` / `DQ9` / `PR-14`) 与哈希完整性**：
    - 修复 `overall_speedup_factor` 落库几何均值与 Payload 不一致；扩展 `compute_canonical_sha256` 纳入 `spec_version`/`data_quality`/`competitors`；
    - 新增 `W18`（内生等待事件与 AWR/ADDM 自诊断闭环）、`M6`（`WaitEventGuard` 零分配微秒级耗时 SLA）、`DQ9`（18/18 Telemetry、分位单调性、过期锁 SPI 与 AWR 仓库完整性）、`PR-14`（AWR 诊断省轮记账）。

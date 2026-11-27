@@ -1,4 +1,4 @@
-# Agent Host Steward — Phase 25 演进路线图：Web UI 白天/夜间双色调美化与路演演示剧场故事化重构
+# Agent Body — Phase 25 演进路线图：Web UI 白天/夜间双色调美化与路演演示剧场故事化重构
 
 > **编制**: Antigravity · **日期**: 2026-11-19  
 > **基线 Commit**: `40affe3` (`v0.3.3`, Phase 1~24 全部交付，194 tests passed，39 个原生 MCP 工具黑白屏 100% 同步)  
@@ -33,4 +33,4 @@
 | **25.2** | 升级 `DemoEngine`：补充故事元数据并修复 Scene 2/3 实证数据 | `src/demo/mod.rs` | 新增 `analogy` / `intent_summary` / `hero_metrics`（向后兼容）；Scene 2 探测 `>=1024` 应用端口；Scene 3 含级联链与修复对比；`cargo test demo::tests` 全绿 |
 | **25.3** | ISSUE #11：双色调 CSS 变量体系、主题切换、Canvas 联动与面板美化 | `src/web/assets/mod.rs` | 昼夜双主题一键切换与 `localStorage` 记忆、Canvas 自动重绘、版本与对齐标示刷新、高频面板去裸 JSON 化 |
 | **25.4** | ISSUE #12：路演演示剧场三层故事舞台与 6 大专属图形组件 | `src/web/assets/mod.rs` | 比较优势导览条、6 幕全部渲染专属图形组件且主舞台无裸 JSON 霸屏、原始 JSON 折叠于 `<details>`、完美适配昼夜双主题 |
-| **25.5** | Playwright 真实渲染验收 + 测试回归 + 热部署 + 四层文档同步 | `tests/test_web_dashboard.rs`, `docs/manual/08-web-dashboard.md`, `README.md`, `docs/src_doc/progress.md`, `/root/new/shared_git/agent-steward` | Playwright 昼夜切换与 6 幕图形自检全绿、`make lint-panic` 0 违规、`cargo test` 全绿、Release 热重启与镜像同步完成 |
+| **25.5** | Playwright 真实渲染验收 + 测试回归 + 热部署 + 四层文档同步 | `tests/test_web_dashboard.rs`, `docs/manual/08-web-dashboard.md`, `README.md`, `docs/src_doc/progress.md`, `/root/new/shared_git/agent-body` | Playwright 昼夜切换与 6 幕图形自检全绿、`make lint-panic` 0 违规、`cargo test` 全绿、Release 热重启与镜像同步完成 |

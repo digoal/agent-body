@@ -14,15 +14,15 @@
 | **P6-4** | `docs/src_doc/` 规范化 | `git mv` 大写下划线文件至小写 kebab-case 并更新代码与 Skill 引用 | ✅ 已完成 | `CHECKPOINT-SRC-DOC` |
 | **P6-5** | 死链与空目录清理 | 清除 `screenshots/` 空目录，运行全局自动化死链扫描审计脚本 (187 引用 100% 校验通过) | ✅ 已完成 | `CHECKPOINT-AUDIT-LINKS` |
 | **P6-6** | 全量回归与构建测试 | 运行 `cargo test` (31 测试全部通过) 及 `cargo build --release` | ✅ 已完成 | `CHECKPOINT-TESTS-PASS` |
-| **P6-7** | 镜像同步与状态交付 | Git commit 规范化提交，同步更新 `/root/new/shared_git/agent-steward` | ✅ 已完成 | `CHECKPOINT-DELIVERY` |
+| **P6-7** | 镜像同步与状态交付 | Git commit 规范化提交，同步更新 `/root/new/shared_git/agent-body` | ✅ 已完成 | `CHECKPOINT-DELIVERY` |
 
 ---
 
 ## 二、重命名映射对照表
 
 ### 1. `docs/idea_doc/` (消除中文与符号)
-- `docs/idea_doc/01-agent-环境大管家-为什么记忆管理没人做对.md` -> `docs/idea_doc/01-why-memory-management-failed.md`
-- `docs/idea_doc/02-agent-steward-设计全过程.md` -> `docs/idea_doc/02-agent-steward-design-process.md`
+- `docs/idea_doc/01-agent-Agent 本体-为什么记忆管理没人做对.md` -> `docs/idea_doc/01-why-memory-management-failed.md`
+- `docs/idea_doc/02-agent-body-设计全过程.md` -> `docs/idea_doc/02-agent-body-design-process.md`
 
 ### 2. `docs/design_doc/` (消除全大写)
 - `docs/design_doc/REVIEW.md` -> `docs/design_doc/review.md`
@@ -54,7 +54,7 @@
    - `docs/src_doc/DEVELOPMENT.md`
    - 各 design 文档相互引用
 3. **`docs/src_doc/` 引用方**：
-   - `skills/agent-steward-developer/SKILL.md`
+   - `skills/agent-body-developer/SKILL.md`
    - `README.md`
    - `docs/manual/*.md`
    - `src/main.rs` 或其他源码注释 (如有)

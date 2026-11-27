@@ -45,7 +45,7 @@ pub struct MeshNodeFacts {
     pub cpu_cores: usize,
     pub total_memory_mb: u64,
     pub listening_ports: Vec<MeshPortFact>,
-    pub steward_version: String,
+    pub body_version: String,
     pub timestamp: String,
 }
 
@@ -78,7 +78,7 @@ pub fn build_local_facts() -> MeshNodeFacts {
         cpu_cores: sys.cpus().len(),
         total_memory_mb: sys.total_memory() / (1024 * 1024),
         listening_ports: ports,
-        steward_version: crate::VERSION.to_string(),
+        body_version: crate::VERSION.to_string(),
         timestamp: chrono::Utc::now().to_rfc3339(),
     }
 }
@@ -113,7 +113,6 @@ pub fn check_peer_read_scope_with_cfg(
     let from_node = req
         .headers
         .get("x-body-node")
-        .or_else(|| req.headers.get("x-steward-node"))
         .map(String::as_str)
         .or_else(|| req.query_params.get("from_node").map(String::as_str))
         .map(str::trim)
@@ -134,7 +133,6 @@ pub fn check_peer_read_scope_with_cfg(
 
 fn check_peer_read_scope(req: &HttpRequest, required_scope: &str) -> Option<HttpResponse> {
     if req.headers.contains_key("x-body-node")
-        || req.headers.contains_key("x-steward-node")
         || req.query_params.contains_key("from_node")
     {
         let cfg = crate::config::Config::load_or_default(None).unwrap_or_default();
@@ -151,7 +149,7 @@ pub fn handle_mesh_ping(req: &HttpRequest, auth_token: &Option<String>) -> HttpR
     WebResponse::success(serde_json::json!({
         "node_id": System::host_name().unwrap_or_else(|| "unknown-node".to_string()),
         "os": std::env::consts::OS,
-        "steward_version": crate::VERSION,
+        "body_version": crate::VERSION,
         "timestamp": chrono::Utc::now().to_rfc3339(),
     }))
 }

@@ -8,7 +8,7 @@
 
 ## 欢迎阅读 Agent 本体（宿主具身底座）官方手册
 
-**Agent Body** 是脑体分离架构下常驻宿主机底层的 **Agent 本体（Agent Embodiment Substrate）**——大语言模型是可随时切换的瞬态大脑，本系统是永驻物理宿主机的数字躯干（宿主机事实感官 × 小脑反射与规约脊柱 × 可插拔海马体与跨大脑连续性接力；“大管家/小秘书”为本体对外两大功能侧面）。本手册按由浅入深、场景化解耦的原则组织为 **10 大专题章节**。
+**Agent Body** 是脑体分离架构下常驻宿主机底层的 **Agent 本体（Agent Embodiment Substrate）**——大语言模型是可随时切换的瞬态大脑，本系统是永驻物理宿主机的数字躯干（宿主机事实感官 × 小脑反射与规约脊柱 × 可插拔海马体与跨大脑连续性接力；外置辅助工具隐喻为本体对外两大功能侧面）。本手册按由浅入深、场景化解耦的原则组织为 **10 大专题章节**。
 
 ---
 
@@ -33,7 +33,7 @@
 
 - **如果你是初次使用的开发者 / Agent**：
   请直接从 [01-getting-started.md](01-getting-started.md) 开始，花费 3 分钟完成编译并在终端跑通 `agent-body brief`；
-- **如果你想配置 Agent（如 Claude Desktop / Antigravity / Cursor）通过 MCP 自动挂载大管家**：
+- **如果你想配置 Agent（如 Claude Desktop / Antigravity / Cursor）通过 MCP 自动挂载Agent 本体**：
   请重点阅读 [04-mcp-integration.md](04-mcp-integration.md) 与 [09-hooks-integration.md](09-hooks-integration.md)；
 - **如果你想在浏览器中直观查看宿主机事实拓扑、协作锁与路演演示剧场**：
   请查阅 [08-web-dashboard.md](08-web-dashboard.md)。

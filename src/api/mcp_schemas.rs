@@ -281,7 +281,7 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_memory_add",
-                "description": "向大管家写入一条长期记忆（决策依据、排障经验、技术偏好或事实），跨会话持久化。",
+                "description": "向Agent 本体写入一条长期记忆（决策依据、排障经验、技术偏好或事实），跨会话持久化。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -573,7 +573,7 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_analytics_export",
-                "description": "基于 DuckDB 原生列式引擎将指定的管家数据表秒级导出为 Parquet 格式，供离线深度分析或数据科学工具消费。",
+                "description": "基于 DuckDB 原生列式引擎将指定的Agent 本体数据表秒级导出为 Parquet 格式，供离线深度分析或数据科学工具消费。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {

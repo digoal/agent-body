@@ -3,7 +3,7 @@
 //! 桥接 Mem0 记忆服务（https://api.mem0.ai 或私有化部署端点），
 //! 实现 `MemoryProvider` SPI。
 //!
-//! ## 配置示例（steward.toml）
+//! ## 配置示例（config.toml）
 //! ```toml
 //! [memory]
 //! provider = "mem0"
@@ -304,7 +304,7 @@ mod tests {
         let api_key = std::env::var("MEM0_API_KEY").unwrap_or_default();
         let adapter =
             Mem0Adapter::new("https://api.mem0.ai", &api_key, "agent-body-test").unwrap();
-        let results = adapter.search("agent steward rust", 3, None);
+        let results = adapter.search("agent body rust", 3, None);
         // 结果可能为空列表，但接口调用本身不应报错
         assert!(results.is_ok(), "search 应返回 Ok: {:?}", results.err());
     }

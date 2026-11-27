@@ -109,9 +109,9 @@ impl PreflightReport {
 
         out.push_str("--------------------------------------------------------------------------------------------\n");
         if self.passed_required {
-            out.push_str("🚀 结论: 所有 REQUIRED 基础环境依赖全部满足，大管家可稳定上线运行。\n");
+            out.push_str("🚀 结论: 所有 REQUIRED 基础环境依赖全部满足，Agent 本体可稳定上线运行。\n");
         } else {
-            out.push_str("🛑 结论: 存在 REQUIRED 基础依赖未满足项！大管家关键功能将受限或无法启动，请参考修复建议。\n");
+            out.push_str("🛑 结论: 存在 REQUIRED 基础依赖未满足项！Agent 本体关键功能将受限或无法启动，请参考修复建议。\n");
         }
         out
     }
@@ -722,7 +722,7 @@ mod tests {
     #[test]
     fn test_resolve_binary_path_finds_sh_and_handles_missing() {
         assert!(PreflightChecker::resolve_binary_path("sh").is_some());
-        assert!(PreflightChecker::resolve_binary_path("__nonexistent_steward_bin_999__").is_none());
+        assert!(PreflightChecker::resolve_binary_path("__nonexistent_body_bin_999__").is_none());
     }
 
     #[test]

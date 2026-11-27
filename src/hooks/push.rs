@@ -3,8 +3,8 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
-use super::StewardEvent;
-use crate::api::response::StewardResponse;
+use super::BodyEvent;
+use crate::api::response::BodyResponse;
 
 /// Webhook 投递结果报告
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,13 +46,13 @@ impl WebhookPusher {
     pub async fn send_event(
         &self,
         url: &str,
-        event: &StewardEvent,
+        event: &BodyEvent,
         timeout_ms: u64,
     ) -> WebhookDeliveryReport {
         let start = std::time::Instant::now();
-        let envelope = StewardResponse::ok(
+        let envelope = BodyResponse::ok(
             "EVENT_DISPATCHED",
-            "Steward Hook Event Notification",
+            "Agent Body Hook Event Notification",
             event.clone(),
             "hook_pusher",
             start,
@@ -124,7 +124,7 @@ impl UdsBroadcaster {
     }
 
     /// 广播事件给所有 UDS 客户端
-    pub fn broadcast(&self, event: &StewardEvent) -> Result<usize> {
+    pub fn broadcast(&self, event: &BodyEvent) -> Result<usize> {
         let json = serde_json::to_string(event)?;
         self.event_tx.send(json).map_err(|e| anyhow::anyhow!("广播失败: {}", e))
     }
@@ -163,7 +163,7 @@ impl UdsBroadcaster {
 
 /// 将 EventBus 事件流异步桥接至 WebServer SSE 发送器
 pub fn bridge_event_bus_to_sse(
-    mut event_rx: broadcast::Receiver<Arc<StewardEvent>>,
+    mut event_rx: broadcast::Receiver<Arc<BodyEvent>>,
     sse_tx: broadcast::Sender<String>,
 ) {
     tokio::spawn(async move {
@@ -184,7 +184,7 @@ mod tests {
     #[tokio::test]
     async fn test_webhook_pusher_retry_on_unreachable_endpoint() {
         let pusher = WebhookPusher::new(2, 10);
-        let event = StewardEvent::FileCreated {
+        let event = BodyEvent::FileCreated {
             path: "/root/new/work/test.rs".to_string(),
             source: "test".to_string(),
             timestamp: "2026-11-18T22:00:00Z".to_string(),
@@ -204,7 +204,7 @@ mod tests {
         use tokio::io::AsyncBufReadExt;
 
         let dir = tempdir().unwrap();
-        let sock_path = dir.path().join("steward_test.sock");
+        let sock_path = dir.path().join("agent_body_test.sock");
         let broadcaster = UdsBroadcaster::new(sock_path.clone());
 
         broadcaster.run_server().await.expect("run uds server");
@@ -214,7 +214,7 @@ mod tests {
         let mut reader = tokio::io::BufReader::new(stream);
 
         // 触发广播
-        let event = StewardEvent::AssetRegistered {
+        let event = BodyEvent::AssetRegistered {
             path: "/root/new/work/test.rs".to_string(),
             object_type: "script".to_string(),
             owner: "user:digoal".to_string(),

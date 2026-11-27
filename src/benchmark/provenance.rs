@@ -97,16 +97,16 @@ impl ProvenanceRule {
     pub fn formula_desc(&self) -> &'static str {
         match self {
             Self::Pr01SkillMcpRouting => {
-                "baseline_tokens = sum(skills_catalog.est_tokens) + sum(mcp_catalog.est_tokens); steward_tokens = estimate_tokens(routed_response)"
+                "baseline_tokens = sum(skills_catalog.est_tokens) + sum(mcp_catalog.est_tokens); body_tokens = estimate_tokens(routed_response)"
             }
             Self::Pr02ProgressiveAssetSearch => {
-                "baseline_tokens = sum(min(matched_asset.size_bytes, 65536) / 4); steward_tokens = estimate_tokens(response)"
+                "baseline_tokens = sum(min(matched_asset.size_bytes, 65536) / 4); body_tokens = estimate_tokens(response)"
             }
             Self::Pr03PreHookInterception => {
                 "On BLOCK/WARN: hazard_intercepted = 1, rounds_saved = 2, baseline_tokens = 600"
             }
             Self::Pr04HostFactQuery => {
-                "baseline_tokens = calibrated_w1_w2_tokens (or 2x floor), baseline_rounds = 4, steward_rounds = 1"
+                "baseline_tokens = calibrated_w1_w2_tokens (or 2x floor), baseline_rounds = 4, body_rounds = 1"
             }
             Self::Pr05GraphImpactAndAudit => {
                 "baseline_tokens = min(managed_assets, 500) * 12, hazard_intercepted = dangling_links_found"
@@ -118,13 +118,13 @@ impl ProvenanceRule {
                 "On Denied/WaitQueued/Deadlock: hazard_intercepted = cycles_or_conflict, rounds_saved = 2"
             }
             Self::Pr08AdaptiveBriefColdStart => {
-                "baseline_rounds = 6, steward_rounds = 1, baseline_tokens = calibrated_w8_tokens (or 1800 floor)"
+                "baseline_rounds = 6, body_rounds = 1, baseline_tokens = calibrated_w8_tokens (or 1800 floor)"
             }
             Self::Pr09HybridSemanticSearch => {
-                "baseline_tokens = max(steward_tokens * 4, 600), baseline_rounds = 3, steward_rounds = 1"
+                "baseline_tokens = max(body_tokens * 4, 600), baseline_rounds = 3, body_rounds = 1"
             }
             Self::Pr10FeedbackAndMemoryLoop => {
-                "baseline_tokens = max(steward_tokens * 3, 450), baseline_rounds = 2, steward_rounds = 1"
+                "baseline_tokens = max(body_tokens * 3, 450), baseline_rounds = 2, body_rounds = 1"
             }
             Self::Pr11OptimisticLeaseAndRecovery => {
                 "Optimistic lease hits save 1 turn/step (C_turn); on abort PostToolUse(success=false) heals in <2ms, rounds_saved = 2"

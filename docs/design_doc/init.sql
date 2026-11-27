@@ -336,7 +336,7 @@ CREATE INDEX IF NOT EXISTS idx_links_relation ON links(relation);
 -- ────────────────────────────────────────────────────
 INSERT OR IGNORE INTO config(key, value, updated_at) VALUES
     ('schema_version', '2', strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
-    ('steward_version', '0.2.0', strftime('%Y-%m-%dT%H:%M:%f+00:00','now'));
+    ('body_version', '0.2.0', strftime('%Y-%m-%dT%H:%M:%f+00:00','now'));
 
 INSERT OR IGNORE INTO migrations(version, description, applied_at) VALUES
     (1, 'initial schema', strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),

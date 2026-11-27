@@ -1,4 +1,4 @@
-# Agent Host Steward — Phase 30 ~ Phase 31 演进路线图：实际使用反馈闭环攻坚与 Benchmark 标准 v2.0 持续迭代
+# Agent Body — Phase 30 ~ Phase 31 演进路线图：实际使用反馈闭环攻坚与 Benchmark 标准 v2.0 持续迭代
 
 > **编制**: Antigravity · **日期**: 2026-11-19  
 > **基线 Commit**: `cf38f53` (`v0.4.0` + Phase 29 全景属性字典 & 全链路 Ollama Embedding 已合入)  
@@ -9,7 +9,7 @@
 
 ## 一、现网审计与立项背景（从真实数据逆向定位主要矛盾）
 
-在完成 Phase 29 后，我们在本机现网环境（`/root/.steward/steward.db` + `./target/release/agent-steward`）进行了首次面向“真实生产体感 + Benchmark 标准校准”的全面核验，实测揭示出两组鲜明反差：
+在完成 Phase 29 后，我们在本机现网环境（`/root/.agent-body/body.db` + `./target/release/agent-body`）进行了首次面向“真实生产体感 + Benchmark 标准校准”的全面核验，实测揭示出两组鲜明反差：
 
 1. **底座资产治理已非常扎实（`PRO-01` ~ `PRO-05`）**：
    - `assets` 21,188 条、`fact_nodes` 350 个已 **100%** 补齐 `description` 与本地 Ollama Embedding 向量；
@@ -17,13 +17,13 @@
    - `W7` 百级 SKILL 预算路由将 `450,003 tok` 压缩至 `358 tok`（`-99.9%`）。
 2. **实际使用痛点与 Benchmark 评测口径失真成为当前主要矛盾（`CON-01` ~ `CON-06`, `BENCH-01` ~ `BENCH-04`）**：
    - **生产体感痛点**：
-     - `steward_brief` 冷启动组装实测 **`474.18 ms`**（`W8`），比裸跑 6 条 Shell（`43.99 ms`）慢 10.7 倍，因为 `BriefAssembler::build_fact_section` 绕过了已索引的 `fact_nodes` / `assets` 持久化表，每次请求都重新遍历目录并派生外部 `git` 进程；
-     - `agent-steward links audit` 报告 **101 处断链（健康分 `0/100`）**，其中至少 **77 处（`76.2%`）** 为动态模板截断（`%s`/`{var}`）、示例占位符（`...`/`xxx`）、`/tmp/` 临时路径和 `.json` 数据误判端口导致的假阳性；
+     - `body_brief` 冷启动组装实测 **`474.18 ms`**（`W8`），比裸跑 6 条 Shell（`43.99 ms`）慢 10.7 倍，因为 `BriefAssembler::build_fact_section` 绕过了已索引的 `fact_nodes` / `assets` 持久化表，每次请求都重新遍历目录并派生外部 `git` 进程；
+     - `agent-body links audit` 报告 **101 处断链（健康分 `0/100`）**，其中至少 **77 处（`76.2%`）** 为动态模板截断（`%s`/`{var}`）、示例占位符（`...`/`xxx`）、`/tmp/` 临时路径和 `.json` 数据误判端口导致的假阳性；
      - `effectiveness_ledger` 仅记录 **4 条**流水，CLI 与 Web API 调用均未入账；`memories` 长期记忆表仅 **2 条**，导致简报里占比高达 40% 的记忆预算长期饥饿；
-     - **磁盘水位与 GC 盲区（现场捕获 `CON-06`）**：同步 `/root/new/shared_git/agent-steward` 时暴露出 `work` 与 `shared_git` 两处 `target/` 构建缓存共占用 **`91GB`**（`53GB + 38GB`），直接将 233GB 根分区打满至 `100% (0 Avail)`，而大管家事前未给出磁盘高水位预警或冗余构建产物 GC 建议。
+     - **磁盘水位与 GC 盲区（现场捕获 `CON-06`）**：同步 `/root/new/shared_git/agent-body` 时暴露出 `work` 与 `shared_git` 两处 `target/` 构建缓存共占用 **`91GB`**（`53GB + 38GB`），直接将 233GB 根分区打满至 `100% (0 Avail)`，而Agent 本体事前未给出磁盘高水位预警或冗余构建产物 GC 建议。
    - **Benchmark 标准本身存在失真**：
      - 算术总耗时比 `sum(base_us)/sum(stew_us)` 被单项 `W8` 拖垮至 **`0.38x`**；
-     - `W2`、`W3`、`W4`、`W7` 的 Without vs With 对照存在物理不等价（如 `W4` Baseline 仅拼 8 行短字符串 `119 tok` vs Steward JSON `177 tok`，出现 `-48.7%` 负优化假象）；
+     - `W2`、`W3`、`W4`、`W7` 的 Without vs With 对照存在物理不等价（如 `W4` Baseline 仅拼 8 行短字符串 `119 tok` vs Agent Body JSON `177 tok`，出现 `-48.7%` 负优化假象）；
      - 五维指标（`D1~D5`）缺乏 **D6 质量与准确率（Recall@K / Precision / 覆盖率）** 门禁，且未覆盖 Phase 29 的向量检索与复杂模板抗误报回归。
 
 ---
@@ -91,11 +91,11 @@ flowchart LR
 | 步骤 ID | 原子任务 | 涉及文件 | 具体改造方案 | 验收门禁 (DoD) |
 |:---:|---|---|---|---|
 | **30.1** | **`user_feedback.md` 建立与路线图登记** | `user_feedback.md`<br/>`docs/src_doc/roadmap-phase30.md`<br/>`docs/src_doc/progress-phase30.md`<br/>`README.md`, `docs/src_doc/progress.md` | 基于现网实测数据建立 `PRO/CON/BENCH/REQ` 反馈总账与 Phase 30~31 断点路线图，并同步索引与镜像仓库。 | ✅ 本步骤已就绪（事实与数字 100% 源自现网实查）。 |
-| **30.2** | **`BriefAssembler` 索引优先加速（修复 `CON-01`）** | `src/brief/assembler.rs`<br/>`src/fact/mod.rs`<br/>`src/fact/assets_catalog.rs`<br/>`src/api/mcp_tools.rs` | 1. `build_fact_section()` 优先从 `Storage` 的 `fact_nodes`（`tool`/`port`/`project`）和 `assets` 表毫秒级查询组装，仅当表为空或 `fresh=true` 时才触发实时扫盘/子进程；<br/>2. 优化 `ProcessNetTopology` 缓存 TTL，避免 `hook_pre` + `PortChecker` 重复读 `/proc`。 | `steward_brief` / `W8` 实测延迟从 `474.18 ms` 降至 **`< 10 ms`**，单测全绿。 |
+| **30.2** | **`BriefAssembler` 索引优先加速（修复 `CON-01`）** | `src/brief/assembler.rs`<br/>`src/fact/mod.rs`<br/>`src/fact/assets_catalog.rs`<br/>`src/api/mcp_tools.rs` | 1. `build_fact_section()` 优先从 `Storage` 的 `fact_nodes`（`tool`/`port`/`project`）和 `assets` 表毫秒级查询组装，仅当表为空或 `fresh=true` 时才触发实时扫盘/子进程；<br/>2. 优化 `ProcessNetTopology` 缓存 TTL，避免 `hook_pre` + `PortChecker` 重复读 `/proc`。 | `body_brief` / `W8` 实测延迟从 `474.18 ms` 降至 **`< 10 ms`**，单测全绿。 |
 | **30.3** | **`LinksEngine` 与 `LinkAuditor` 假阳性脱敏治理（修复 `CON-02`）** | `src/links/mod.rs`<br/>`src/links/extractor.rs`（或抽取子模块）<br/>`src/links/audit.rs` | 1. 识别并跳过含 `%s`/`%d`/`%f`/`{var}`/`<var>`/`...`/`xxx`/`placeholder` 的动态格式化模板路径；<br/>2. 跳过 `.json`/`.jsonl`/`.csv` 纯数据文件的端口服务正则匹配；<br/>3. 将 `/tmp/` 与 `/root/new/tmp/` 归类为 `ephemeral` 临时边，不计入断链扣分；<br/>4. 现网库刷新提取与旧假边清理。 | 针对 `CON-02` 样本集测试 **Precision >= 95%**；现网 `links audit` 假阳性 `< 5%`，健康分恢复至 `>= 90/100`。 |
 | **30.4** | **全渠道生产效能账本与 `PR-01~10` 扩展（修复 `CON-03`）** | `src/benchmark/provenance.rs`<br/>`src/benchmark/ledger.rs`<br/>`src/main.rs`<br/>`src/web/` | 1. 新增 `PR-09`（语义向量 + FTS RRF 混合检索）与 `PR-10`（反馈与长期记忆沉淀）；<br/>2. 抽离轻量非阻塞 `record_action()`，补齐 CLI 高频只读命令与 Web API 调用记账；<br/>3. 过滤空操作噪音事件，保持账本高信噪比。 | 执行 CLI `brief` / `search` / `links audit` 后 `effectiveness_ledger` 真实递增带 `PR-*` 规则记录，单次耗时 `< 100 μs`。 |
-| **30.5** | **`user_feedback.md` 双向联动与反馈转长期记忆沉淀（修复 `CON-04`, `CON-05`）** | `src/feedback/mod.rs`（或轻量模块）<br/>`src/memory/mod.rs`<br/>`src/api/mcp_tools.rs`<br/>`src/main.rs`, `src/web/` | 1. 提供 `feedback list/add/verify` 能力，结构化解析与追加 `user_feedback.md`（不破坏人工 Markdown 格式）；<br/>2. 在反馈标记为 `✅ Verified` 或触发 `session_close` 时，自动将根因与经验摘要生成 Ollama Embedding 写入 `memories` 表；<br/>3. 保持黑白屏（CLI/MCP/WebUI）1:1 对齐。 | `memories` 表可真实沉淀经验并被 `steward_brief` 40% 记忆预算召回；`parity/matrix` 100% 通过。 |
-| **30.6** | **宿主磁盘高水位预警与冗余构建缓存 GC 硬化（修复 `CON-06`）** | `src/preflight/mod.rs`<br/>`src/env/gc.rs`<br/>`Makefile`<br/>`skills/agent-steward-developer/SKILL.md` | 1. `PreflightChecker` 与 `steward_env_gc` 增加宿主机磁盘使用率（`>= 85%` 告警 / `>= 95%` 严重告警）及 `shared_git/` 冗余构建产物（`target/`、`node_modules/`）只读 `dry-run` 扫描建议；<br/>2. 在 `Makefile` 新增 `sync-mirror` 目标并更新 SKILL，固化 `rsync -a --delete --exclude 'target/'`。 | `preflight` / `env gc --dry-run` 可精准检出冗余 `target/` 并给出可回收 GB 数；`make sync-mirror` 零误拷 `target/`。 |
+| **30.5** | **`user_feedback.md` 双向联动与反馈转长期记忆沉淀（修复 `CON-04`, `CON-05`）** | `src/feedback/mod.rs`（或轻量模块）<br/>`src/memory/mod.rs`<br/>`src/api/mcp_tools.rs`<br/>`src/main.rs`, `src/web/` | 1. 提供 `feedback list/add/verify` 能力，结构化解析与追加 `user_feedback.md`（不破坏人工 Markdown 格式）；<br/>2. 在反馈标记为 `✅ Verified` 或触发 `session_close` 时，自动将根因与经验摘要生成 Ollama Embedding 写入 `memories` 表；<br/>3. 保持黑白屏（CLI/MCP/WebUI）1:1 对齐。 | `memories` 表可真实沉淀经验并被 `body_brief` 40% 记忆预算召回；`parity/matrix` 100% 通过。 |
+| **30.6** | **宿主磁盘高水位预警与冗余构建缓存 GC 硬化（修复 `CON-06`）** | `src/preflight/mod.rs`<br/>`src/env/gc.rs`<br/>`Makefile`<br/>`skills/agent-body-developer/SKILL.md` | 1. `PreflightChecker` 与 `body_env_gc` 增加宿主机磁盘使用率（`>= 85%` 告警 / `>= 95%` 严重告警）及 `shared_git/` 冗余构建产物（`target/`、`node_modules/`）只读 `dry-run` 扫描建议；<br/>2. 在 `Makefile` 新增 `sync-mirror` 目标并更新 SKILL，固化 `rsync -a --delete --exclude 'target/'`。 | `preflight` / `env gc --dry-run` 可精准检出冗余 `target/` 并给出可回收 GB 数；`make sync-mirror` 零误拷 `target/`。 |
 
 ---
 
@@ -106,10 +106,10 @@ flowchart LR
 | 步骤 ID | 原子任务 | 涉及文件 | 具体改造方案 | 验收门禁 (DoD) |
 |:---:|---|---|---|---|
 | **31.1** | **Benchmark `v2.0` 规格协议与六维模型扩展** | `src/benchmark/mod.rs`<br/>`src/benchmark/report.rs`<br/>`src/storage/{schema,pg_schema,duckdb_schema}.sql`<br/>`src/storage/models.rs` | 1. 在 `BenchmarkReportPayload` / `benchmark_runs` 增加 `spec_version`（默认 `"2.0"`）、`geometric_mean_speedup`、`query_guard_speedup` 与 `d6_quality_score`；<br/>2. 为 `WorkloadResult` 新增可选 `quality_score` / `precision_pct` / `recall_pct` 字段；<br/>3. 保证读取旧版 `"1.0"` 记录向后兼容反序列化。 | 兼容读取现网 3 条 `v1.0` 历史 `benchmark_runs` 记录；单测覆盖几何平均与旧版反序列化。 |
-| **31.2** | **`W1~W8` 物理等价基线校准（修复 `BENCH-02`）** | `src/benchmark/workloads.rs` | 1. **`W2`**：Baseline 改为等价外调探测 + 试错重连，Steward 合并单次 `/proc` 检查；<br/>2. **`W3`**：Baseline 改为在隔离内存库将 290 个文件全量读取并写入 SQLite+FTS5，对比 Steward 分级过滤入库；<br/>3. **`W4`**：Baseline 计量 8 个错放文件从发现违规、规范回溯到重命名搬移的真实返工上下文，消除 `-48.7%` 畸变；<br/>4. **`W7`**：Baseline 真实读取磁盘 `SKILL.md` 文件耗时（受控缓存/文件数），移除硬编码 `base_us.max(stew_us)`。 | `W1~W8` 全部物理等价、100% 真实运行，无硬编码拉平逻辑，SLA 全绿。 |
+| **31.2** | **`W1~W8` 物理等价基线校准（修复 `BENCH-02`）** | `src/benchmark/workloads.rs` | 1. **`W2`**：Baseline 改为等价外调探测 + 试错重连，Agent Body 合并单次 `/proc` 检查；<br/>2. **`W3`**：Baseline 改为在隔离内存库将 290 个文件全量读取并写入 SQLite+FTS5，对比 Agent Body 分级过滤入库；<br/>3. **`W4`**：Baseline 计量 8 个错放文件从发现违规、规范回溯到重命名搬移的真实返工上下文，消除 `-48.7%` 畸变；<br/>4. **`W7`**：Baseline 真实读取磁盘 `SKILL.md` 文件耗时（受控缓存/文件数），移除硬编码 `base_us.max(stew_us)`。 | `W1~W8` 全部物理等价、100% 真实运行，无硬编码拉平逻辑，SLA 全绿。 |
 | **31.3** | **新增 `W9`（混合检索召回）与 `W10`（模板抗假阳性）** | `src/benchmark/workloads.rs`<br/>`tests/benchmarks.rs` | 1. **`W9 (hybrid_semantic_recall)`**：构建带中文语义近义词与概念错位样本库，对比纯关键词搜索 vs 语义向量 + 属性字典 RRF 混合检索的 `Recall@5`、`MRR` 与 Token 效率；<br/>2. **`W10 (link_precision_regression)`**：直接使用 `CON-02` 沉淀的 `%s`/f-string/`...`/`xxx`/`.json` 真实对抗样本 + 真依赖样本，实测抽取 `Precision` 与 `FPR <= 5%`。 | `W9 Recall@5 >= 90%`、`W10 Precision >= 95%`（FPR `<= 5%`）写入自动化门禁。 |
-| **31.4** | **新增 `DQ1~DQ3` 宿主机数据质量基准与跨版本对比** | `src/benchmark/dq.rs`（或子模块）<br/>`src/benchmark/ledger.rs`<br/>`src/benchmark/report.rs` | 1. **`DQ1`**：资产与事实节点 `description` 覆盖率（SLA `>= 99%`）；<br/>2. **`DQ2`**：`assets` / `fact_nodes` / `memories` 本地向量覆盖率（SLA `>= 99%`）；<br/>3. **`DQ3`**：当前宿主机 `links` 断链健康度与疑似假阳性率；<br/>4. 升级 `compare_runs()` 支持识别 `spec_version` 差异并输出分项回归报告。 | 现网运行 `agent-steward bench run --suite full` 可输出 `W1~W10` + `M1~M5` + `DQ1~DQ3` 完整六维报告。 |
-| **31.5** | **WebUI v2.0 升级、四层文档同步与现网验收部署** | `src/web/assets/mod.rs`<br/>`docs/design_doc/10-benchmark-spec.md`<br/>`docs/manual/10-benchmark-and-roi.md`<br/>`skills/agent-steward-*`<br/>`user_feedback.md` | 1. WebUI「📊 实证基准与效能账本」升级展示 `spec_version` 徽章、`Geomean` 加速比、D6 质量准确率柱条与 `DQ1~DQ3` 宿主机健康卡；<br/>2. 同步更新 `docs/design_doc/10`、`docs/manual/10`、3 处 `SKILL.md`；<br/>3. 全量 `make lint-panic`、`cargo check --tests`、`cargo test`、`cargo build --release`、实机重跑 `bench run --save`、热重启服务、并将 `CON-01~06` / `BENCH-01~04` 状态核验更新至 `✅ Verified` 并同步镜像。 | 全量门禁零违规零警告通过；现网报告与 WebUI 数据 100% 实测一致。 | |
+| **31.4** | **新增 `DQ1~DQ3` 宿主机数据质量基准与跨版本对比** | `src/benchmark/dq.rs`（或子模块）<br/>`src/benchmark/ledger.rs`<br/>`src/benchmark/report.rs` | 1. **`DQ1`**：资产与事实节点 `description` 覆盖率（SLA `>= 99%`）；<br/>2. **`DQ2`**：`assets` / `fact_nodes` / `memories` 本地向量覆盖率（SLA `>= 99%`）；<br/>3. **`DQ3`**：当前宿主机 `links` 断链健康度与疑似假阳性率；<br/>4. 升级 `compare_runs()` 支持识别 `spec_version` 差异并输出分项回归报告。 | 现网运行 `agent-body bench run --suite full` 可输出 `W1~W10` + `M1~M5` + `DQ1~DQ3` 完整六维报告。 |
+| **31.5** | **WebUI v2.0 升级、四层文档同步与现网验收部署** | `src/web/assets/mod.rs`<br/>`docs/design_doc/10-benchmark-spec.md`<br/>`docs/manual/10-benchmark-and-roi.md`<br/>`skills/agent-body-*`<br/>`user_feedback.md` | 1. WebUI「📊 实证基准与效能账本」升级展示 `spec_version` 徽章、`Geomean` 加速比、D6 质量准确率柱条与 `DQ1~DQ3` 宿主机健康卡；<br/>2. 同步更新 `docs/design_doc/10`、`docs/manual/10`、3 处 `SKILL.md`；<br/>3. 全量 `make lint-panic`、`cargo check --tests`、`cargo test`、`cargo build --release`、实机重跑 `bench run --save`、热重启服务、并将 `CON-01~06` / `BENCH-01~04` 状态核验更新至 `✅ Verified` 并同步镜像。 | 全量门禁零违规零警告通过；现网报告与 WebUI 数据 100% 实测一致。 | |
 
 ---
 
@@ -117,9 +117,9 @@ flowchart LR
 
 1. **反馈条目与代码/Benchmark 一一闭环**：`user_feedback.md` 中的 `CON-01~06` 与 `BENCH-01~04` 在 Phase 30~31 完成后全部具备实测前/后对比证据并更新为 `✅ Verified`。
 2. **真机量化硬指标达成**：
-   - `steward_brief` (`W8`) 耗时 `< 10,000 μs`（从 `474,178 μs` 提速 `>= 40x`）；
+   - `body_brief` (`W8`) 耗时 `< 10,000 μs`（从 `474,178 μs` 提速 `>= 40x`）；
    - `links audit` 假阳性率 `< 5%`，`W10 Precision >= 95%`；
    - `W9` 语义混合检索 `Recall@5 >= 90%`；
    - `DQ1/DQ2` 描述与向量覆盖率 `>= 99%`；
    - 综合几何平均加速比与分组加速比科学透明，无负向畸变指标。
-3. **工程纪律红线（规约 #12, #13, #16）**：生产路径 0 `unwrap`/`expect`、`cargo check --tests` 0 warning、`cargo test` 100% 全绿、黑白屏 100% Parity 对齐、四层文档与 `/root/new/shared_git/agent-steward` 同步一致。
+3. **工程纪律红线（规约 #12, #13, #16）**：生产路径 0 `unwrap`/`expect`、`cargo check --tests` 0 warning、`cargo test` 100% 全绿、黑白屏 100% Parity 对齐、四层文档与 `/root/new/shared_git/agent-body` 同步一致。

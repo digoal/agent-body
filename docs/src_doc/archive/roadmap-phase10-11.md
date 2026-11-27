@@ -1,4 +1,4 @@
-# Agent Host Steward — Phase 10~11 路线图与任务分解
+# Agent Body — Phase 10~11 路线图与任务分解
 
 > 创建时间: 2026-11-18T12:45:00+08:00  
 > 基线: Phase 5~9 全部完成 · 111 测试全绿 · 14174 行 Rust · v0.3.1  
@@ -11,7 +11,7 @@
 
 ### 1.1 DuckDB 分析后端（Phase 10）
 
-**核心洞察**: 大管家积累的资产、变更、记忆、事实图谱数据量会随时间线性增长。SQLite 和 PG 擅长 OLTP（增删查改），但 Agent 经常需要的"趋势分析、汇总统计、时序对比"类查询是 OLAP 场景——DuckDB 的列存引擎在这类查询上比 SQLite 快 10~100x。
+**核心洞察**: Agent 本体积累的资产、变更、记忆、事实图谱数据量会随时间线性增长。SQLite 和 PG 擅长 OLTP（增删查改），但 Agent 经常需要的"趋势分析、汇总统计、时序对比"类查询是 OLAP 场景——DuckDB 的列存引擎在这类查询上比 SQLite 快 10~100x。
 
 **产品价值**:
 - Agent 可以问"过去 30 天变更最频繁的 10 个文件是什么？"——秒级返回
@@ -26,7 +26,7 @@
 - 部署同一服务
 - 操作同一目录
 
-大管家目前只能**告警**（`steward_hook_pre` 返回 warning），无法**互斥协调**。
+Agent 本体目前只能**告警**（`body_hook_pre` 返回 warning），无法**互斥协调**。
 
 **产品价值**:
 - Agent 可以申请"独占写 `/etc/nginx/conf.d/`"——其他 Agent 自动排队或跳过
@@ -42,7 +42,7 @@
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                 MCP / CLI 接口层                          │
-│  steward_*  25个工具 → Phase 11: +3 coordination 工具    │
+│  body_*  25个工具 → Phase 11: +3 coordination 工具    │
 ├──────────┬───────────┬───────────┬───────────────────────┤
 │ 放置引擎  │ 扫描引擎   │ 事实图谱  │ 协作锁引擎 (Phase 11) │
 │ placement │ scanner   │ fact      │ coordination (新增)   │
@@ -74,7 +74,7 @@ DuckDB **不是** SQLite/PG 的替代品，而是**分析副本**：
 ### 2.3 多 Agent 协作锁协议
 
 ```
-Agent A                     Steward                      Agent B
+Agent A                     Agent Body                      Agent B
   │                           │                             │
   │── lock_acquire ──────────→│                             │
   │   (resource="port:8080"   │                             │
@@ -216,9 +216,9 @@ pub trait AnalyticsProvider {
 **新增 MCP 工具**（3 个）:
 | 工具名 | 功能 | 参数 |
 |--------|------|------|
-| `steward_analytics_heatmap` | 变更热力图 | `days`, `bucket_hours` |
-| `steward_analytics_trend` | 资产/记忆趋势分析 | `metric`(assets\|memories\|changes), `days` |
-| `steward_analytics_export` | Parquet 离线导出 | `table`, `since`, `output_path` |
+| `body_analytics_heatmap` | 变更热力图 | `days`, `bucket_hours` |
+| `body_analytics_trend` | 资产/记忆趋势分析 | `metric`(assets\|memories\|changes), `days` |
+| `body_analytics_export` | Parquet 离线导出 | `table`, `since`, `output_path` |
 
 **验收标准**:
 ```bash
@@ -232,7 +232,7 @@ cargo test test_duckdb_analytics_parquet_export -- --nocapture
 
 # 3. MCP 工具集成测试
 cargo test test_mcp_tools_call_analytics -- --nocapture
-# 预期: steward_analytics_heatmap 返回 StewardResponse<HeatmapData>
+# 预期: body_analytics_heatmap 返回 BodyResponse<HeatmapData>
 ```
 
 **断点续传检查点**:
@@ -262,7 +262,7 @@ cargo test test_mcp_tools_call_analytics -- --nocapture
 2. 同步粒度：按表同步（assets, changes, memories, fact_nodes, fact_edges）
 3. 同步频率：daemon 模式下每 30 分钟自动同步一次（可配置）
 4. 一致性保证：同步完成后写入 `sync_watermark` 表记录各表的最新 `updated_at`
-5. CLI 支持：`agent-steward storage sync --to duckdb`（手动触发）和 `storage migrate --to duckdb`（全量迁移）
+5. CLI 支持：`agent-body storage sync --to duckdb`（手动触发）和 `storage migrate --to duckdb`（全量迁移）
 
 **数据流**:
 ```
@@ -448,7 +448,7 @@ dir:/etc/nginx → hash("dir:/etc/nginx") → 0x1B2C... → pg_try_advisory_lock
 
 PG Advisory Lock 提供数据库级互斥保证。同时在 `coordination_locks` 表记录元数据（谁持有、何时过期、附加信息），供查询展示用。
 
-**SQLite Fallback**: 对于 SQLite 存储模式，使用 `flock(fd, LOCK_EX | LOCK_NB)` 对锁文件（`~/.steward/locks/<resource_hash>.lock`）进行进程级互斥。
+**SQLite Fallback**: 对于 SQLite 存储模式，使用 `flock(fd, LOCK_EX | LOCK_NB)` 对锁文件（`~/.agent-body/locks/<resource_hash>.lock`）进行进程级互斥。
 
 **SPI 扩展（4 个新方法）**:
 ```rust
@@ -509,15 +509,15 @@ cargo test test_sqlite_flock_fallback -- --nocapture
 
 | 工具名 | 功能 | 参数 | 返回 |
 |--------|------|------|------|
-| `steward_lock_acquire` | 获取资源锁 | `resource_type`, `resource_id`, `scope`(默认 exclusive), `ttl`(默认 300), `holder`(默认 Agent 会话 ID) | `LockResult` |
-| `steward_lock_release` | 释放资源锁 | `lock_id` 或 `resource_type`+`resource_id`, `holder` | `{released: bool}` |
-| `steward_lock_list` | 列出活跃锁 | `resource_type`(可选过滤) | `Vec<LockInfo>` |
+| `body_lock_acquire` | 获取资源锁 | `resource_type`, `resource_id`, `scope`(默认 exclusive), `ttl`(默认 300), `holder`(默认 Agent 会话 ID) | `LockResult` |
+| `body_lock_release` | 释放资源锁 | `lock_id` 或 `resource_type`+`resource_id`, `holder` | `{released: bool}` |
+| `body_lock_list` | 列出活跃锁 | `resource_type`(可选过滤) | `Vec<LockInfo>` |
 
 **工具调用示例**:
 ```json
 // 获取端口锁
 {
-  "tool": "steward_lock_acquire",
+  "tool": "body_lock_acquire",
   "arguments": {
     "resource_type": "port",
     "resource_id": "8080",
@@ -550,11 +550,11 @@ cargo test test_sqlite_flock_fallback -- --nocapture
 ```bash
 # MCP 工具注册测试
 cargo test test_mcp_tools_list -- --nocapture
-# 预期: 工具列表包含 steward_lock_acquire, steward_lock_release, steward_lock_list
+# 预期: 工具列表包含 body_lock_acquire, body_lock_release, body_lock_list
 
 # MCP 工具调用测试
 cargo test test_mcp_tools_call_coordination -- --nocapture
-# 预期: 通过 MCP 协议调用锁工具, 返回正确的 StewardResponse
+# 预期: 通过 MCP 协议调用锁工具, 返回正确的 BodyResponse
 ```
 
 **断点续传检查点**:
@@ -571,11 +571,11 @@ cargo test test_mcp_tools_call_coordination -- --nocapture
 **子任务 ID**: `11.3`  
 **依赖**: 11.1, 11.2  
 **涉及文件**:
-- `src/api/hooks.rs`（扩展 `steward_hook_pre` 逻辑）
+- `src/api/hooks.rs`（扩展 `body_hook_pre` 逻辑）
 
 **实现要点**:
 
-`steward_hook_pre` 目前检查端口冲突和文件覆盖风险。Phase 11 增加**锁冲突检查**：
+`body_hook_pre` 目前检查端口冲突和文件覆盖风险。Phase 11 增加**锁冲突检查**：
 
 ```rust
 // 在 pre_hook 中新增锁检查
@@ -589,7 +589,7 @@ if tool_name == "bind_port" || tool_name == "listen" {
                 port, lock.holder_agent, lock.expires_at
             ),
             suggestion: format!(
-                "调用 steward_lock_acquire(port, {}) 先获取锁, 或等待锁释放",
+                "调用 body_lock_acquire(port, {}) 先获取锁, 或等待锁释放",
                 port
             ),
         });
@@ -655,17 +655,17 @@ cargo test test_agent_pre_hook_directory_lock_propagation -- --nocapture
 **CLI 子命令**:
 ```bash
 # 列出当前锁
-agent-steward coordination list
+agent-body coordination list
 # 输出示例:
 # LOCK_ID    RESOURCE         HOLDER           EXPIRES
 # a1b2c3d4   port:8080        main-agent       2026-11-18 13:00:00
 # e5f6g7h8   dir:/etc/nginx   hermes-cron      2026-11-18 12:40:00
 
 # 手动释放锁（管理员操作）
-agent-steward coordination release --lock-id a1b2c3d4 --force
+agent-body coordination release --lock-id a1b2c3d4 --force
 
 # 清理所有过期锁
-agent-steward coordination gc
+agent-body coordination gc
 ```
 
 **验收标准**:
@@ -768,8 +768,8 @@ Phase 10-11 完成后（v0.4.0），下一步可能的方向：
 |------|------|-------|---------|
 | **向量混合检索** | DuckDB vss + PG pgvector 统一的 embedding 检索 | 中 | Agent 记忆量 > 10K 条 |
 | **Agent 状态共享** | 多 Agent 共享事实图谱的读写协议 | 高 | 宿主机 Agent 数量 > 3 |
-| **远程 Steward** | 通过 gRPC/HTTP 暴露 Steward 服务 | 高 | 跨机器 Agent 编排 |
-| **插件系统** | 第三方开发者编写 Steward 插件（扫描器/分析器/锁后端） | 中 | 社区贡献需求 |
+| **远程 Agent Body** | 通过 gRPC/HTTP 暴露 Agent Body 服务 | 高 | 跨机器 Agent 编排 |
+| **插件系统** | 第三方开发者编写 Agent Body 插件（扫描器/分析器/锁后端） | 中 | 社区贡献需求 |
 | **WebUI 监控面板** | 资产/锁/记忆的 Web 可视化 | 中 | 人类管理员监控需求 |
 
 ---
@@ -781,7 +781,7 @@ Phase 10-11 完成后（v0.4.0），下一步可能的方向：
 ```bash
 # 1. 编译检查
 export PATH="/root/.cargo/bin:$PATH"
-cd /root/new/work/agent-steward
+cd /root/new/work/agent-body
 cargo build 2>&1 | tail -1
 # 预期: Finished `dev` profile ...
 
@@ -792,12 +792,12 @@ cargo test 2>&1 | grep "test result"
 #   test result: ok. ~6 passed; 0 failed    (3 现有 bench + ~3 新增)
 
 # 3. 工具数量
-cargo test test_mcp_tools_list -- --nocapture 2>&1 | grep "steward_"
+cargo test test_mcp_tools_list -- --nocapture 2>&1 | grep "body_"
 # Phase 10 后预期: 28 个工具 (25 + 3 analytics)
 # Phase 11 后预期: 31 个工具 (28 + 3 coordination)
 
 # 4. Daemon 运行状态
-systemctl status agent-steward.service | head -5
+systemctl status agent-body.service | head -5
 # 预期: active (running)
 
 # 5. Git 状态

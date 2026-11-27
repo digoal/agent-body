@@ -1,4 +1,4 @@
-# Agent Host Steward — Phase 29 演进路线图：事实对象全景属性字典重构、全链路 Embedding 向量化与 WebUI 元数据贯通
+# Agent Body — Phase 29 演进路线图：事实对象全景属性字典重构、全链路 Embedding 向量化与 WebUI 元数据贯通
 
 > **编制**: Antigravity · **日期**: 2026-11-19  
 > **对齐基准**: 用户反馈（WebUI 元数据 JSON 过干瘪、缺乏 `description` 与 `embedding` 等属性 Key）  

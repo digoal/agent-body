@@ -12,7 +12,7 @@
 
 1. **P55-01 阶段立项**：创建 `roadmap-phase55.md`，更新 `ISSUE.md #39` 为进行中，更新 `EVOLUTION_GUIDE.md` 活跃路线图指针。
 2. **P55-02 配置真相化与可移植工作区模型 (`src/config/mod.rs` & `config.example.toml`)**：
-   - 接入 `AGENT_BODY_CONFIG`（优先于 `STEWARD_CONFIG`），清理已失效死字段 `api_port` / `api_bind`（保持对旧版 `config.toml` serde 静默兼容）；
+   - 接入 `AGENT_BODY_CONFIG`（优先于 `AGENT_BODY_CONFIG`），清理已失效死字段 `api_port` / `api_bind`（保持对旧版 `config.toml` serde 静默兼容）；
    - 新增 `[workspace]` (`WorkspaceConfig`) 与宿主自适应默认值（`$HOME/new` 存在时自动命中以保持 Zero-Regression，否则使用便携 `$HOME/agent-body-workspace` 与 `std::env::temp_dir().join("agent-body")`）；
    - `default_owner()` 改为从 `$USER`/`$USERNAME` 动态推导（fallback `user:local`）；
    - 新增 `[memory]` (`MemoryConfig`) 与 `Config::build_memory_provider()` 对接 `MemoryFactory::create`；新增 `pipelines: Vec<HookPipeline>`；
@@ -22,7 +22,7 @@
    - 解除 `api` / `web` / `duckdb_analytics` / `session` / `env` / `fact` / `ecosystem` / `feedback` / `preflight` / `links` / `scanner` / `watcher` / `placement` / `hooks` / `demo` / `cli_args` / `main` 等生产模块对 `/root/new/` 与 `user:digoal` 的硬编码耦合。
 4. **P55-04 将死配置真实接入运行时主链路**：
    - `[memory]` / `MemoryFactory` 接入 `main.rs` / `mcp_tools.rs` / `parity_api.rs` 中的 `BriefAssembler` 调用点；
-   - `[[hooks]]` (`HookDispatcher`) 与 `[[pipelines]]` (`HookPipelineEngine`) 订阅 `EventBus` 并在 `StewardDaemon::run()` 后台执行；
+   - `[[hooks]]` (`HookDispatcher`) 与 `[[pipelines]]` (`HookPipelineEngine`) 订阅 `EventBus` 并在 `BodyDaemon::run()` 后台执行；
    - `assets.ignore_patterns` 接入 `NoiseFilter` / `Scanner` / `ScanStateMachine` / `FileWatcher` / `ChangeHandler`；
    - `embedding.fallback_fts_only` 接入 `HybridSearchEngine`，当设置为 `false` 且 Ollama 不可用时显式返回错误而非静默降级。
 5. **P55-05 跨平台与网络健壮性加固**：
@@ -41,6 +41,6 @@
 | **P55-01** | M1 | 创建 `roadmap-phase55.md`，更新 `ISSUE.md` & `EVOLUTION_GUIDE.md` | ✅ 已完成 | 2026-11-22 23:25 | Tier-0 活跃路线图已切换 |
 | **P55-02** | M1 | `AGENT_BODY_CONFIG` / `[workspace]` / `[memory]` / `[[pipelines]]` / `[mesh]` 校验 & 清理死字段 | ✅ 已完成 | 2026-11-22 23:41 | 环境变量优先、legacy `api_port`/`api_bind` 静默兼容、三段配置校验实装 |
 | **P55-03** | M2 | 全仓消除生产路径 `/root/new/` 与 `user:digoal` 硬编码 & 三后端动态种子 | ✅ 已完成 | 2026-11-22 23:41 | SQLite/PG/DuckDB 动态种子 + 全生产模块可移植路径与属主解耦 |
-| **P55-04** | M3 | 接线 `MemoryFactory`、`HookDispatcher`/`HookPipelineEngine`、`ignore_patterns`、`fallback_fts_only` | ✅ 已完成 | 2026-11-22 23:54 | `BriefAssembler` / `StewardDaemon` EventBus / `Scanner`+`Watcher` / `HybridSearchEngine` 全接线 |
+| **P55-04** | M3 | 接线 `MemoryFactory`、`HookDispatcher`/`HookPipelineEngine`、`ignore_patterns`、`fallback_fts_only` | ✅ 已完成 | 2026-11-22 23:54 | `BriefAssembler` / `BodyDaemon` EventBus / `Scanner`+`Watcher` / `HybridSearchEngine` 全接线 |
 | **P55-05** | M3 | `gnu` 条件编译、`KernelSelfTelemetry` `sysinfo` 回退、Windows 本地化 `netstat`、HTTP 头循环读取 | ✅ 已完成 | 2026-11-22 23:41 | musl/non-Linux/多语言 Windows 适配 + 32KB 有界 HTTP 头循环读取 |
 | **P55-06** | M4 | 新增测试、`make quality-gate && make test`、`make restart` + 现网验证、`make sync-mirror` | ✅ 已完成 | 2026-11-22 23:55 | 全量门禁、测试、守护重编译部署、Bench v3.8 与镜像同步验收 |

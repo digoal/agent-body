@@ -1,4 +1,4 @@
-# Agent Host Steward 研发演进路线图 — 模块化新体系第 3 阶段 (Phase 3)
+# Agent Body 研发演进路线图 — 模块化新体系第 3 阶段 (Phase 3)
 
 > **阶段主题**: 记忆模块可插拔体系与成熟开源适配（Pluggable Memory & Open Ecosystem）—— 生态共赢  
 > **制定时间**: 2026-11-17T18:00:00+08:00  
@@ -11,12 +11,12 @@
 ## 一、阶段目标与范围
 
 回答 **"What HAPPENED"**（过往任务经验、决策历史与上下文沉淀）。
-市面上已有 Mem0、Letta、Zep、PowerContext 等成熟开源记忆服务。大管家的使命是做“宿主环境底座与统一接入中枢”，绝不陷入重新造轮子的同质化竞争泥潭。
+市面上已有 Mem0、Letta、Zep、PowerContext 等成熟开源记忆服务。Agent 本体的使命是做“宿主环境底座与统一接入中枢”，绝不陷入重新造轮子的同质化竞争泥潭。
 
 本阶段聚焦三大核心成果落地：
 1. **统一 SPI 抽象 (Service Provider Interface)**：定义无歧义的通用特征 `MemoryProvider`（Search, Store, GetContext, Evict）；
 2. **内置轻量 Provider**：基于 SQLite FTS5 + 本地向量混合检索，零依赖离线开箱即用；
-3. **成熟开源适配器生态**：构建 Mem0、Letta、PowerContext 适配器驱动，支持在 `steward.toml` 中一行透明切换，Agent 面向大管家统一端点即可享受外部高级记忆能力。
+3. **成熟开源适配器生态**：构建 Mem0、Letta、PowerContext 适配器驱动，支持在 `config.toml` 中一行透明切换，Agent 面向Agent 本体统一端点即可享受外部高级记忆能力。
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -32,7 +32,7 @@
 │        • Mem0 适配器 (REST 桥接)                                            │
 │        • Letta / MemGPT 适配器                                              │
 │        • PowerContext 适配器 (当前宿主机 8000/8001 端口直连)                 │
-│        • steward.toml 中 provider = "..." 一行透明切换与热加载              │
+│        • config.toml 中 provider = "..." 一行透明切换与热加载              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -68,14 +68,14 @@
 | `src/memory/adapters/mem0.rs`：Mem0 REST 适配器，支持云端与私有化部署，含 auth_header 管理 | ✅ |
 | `src/memory/adapters/letta.rs`：Letta/MemGPT 适配器，支持 Archival Memory 检索与核心记忆块读取 | ✅ |
 | `src/memory/adapters/mod.rs`：`MemoryFactory` 工厂，`builtin|powercontext|mem0|letta` 一行切换 + 优雅降级 | ✅ |
-| `AdapterConfig` 应用默认值，`steward.toml` 配置部分省略安全兼容 | ✅ |
+| `AdapterConfig` 应用默认值，`config.toml` 配置部分省略安全兼容 | ✅ |
 | 单元测试 82 项 100% PASS，零 warning | ✅ |
-| Release 二进制构建并热部署至 `/usr/local/bin/agent-steward` | ✅ |
-| `systemctl status agent-steward` = `active (running)` | ✅ |
+| Release 二进制构建并热部署至 `/usr/local/bin/agent-body` | ✅ |
+| `systemctl status agent-body` = `active (running)` | ✅ |
 
 ### 关键实现决策
 
-1. **PowerContext 适配器**：通过 `/v1/scopes/default` 自动解析 scope_id，`scope_id` 配置为空时自动发现；不可达时 `MemoryFactory` 自动降级为内置 SQLite 引擎，确保大管家在无外部依赖时仍可正常运转。
+1. **PowerContext 适配器**：通过 `/v1/scopes/default` 自动解析 scope_id，`scope_id` 配置为空时自动发现；不可达时 `MemoryFactory` 自动降级为内置 SQLite 引擎，确保Agent 本体在无外部依赖时仍可正常运转。
 
 2. **Mem0 适配器**：采用标准 REST `POST /v1/memories/search/` 与 `POST /v1/memories/`，支持空 `api_key`（私有化部署场景）；从 `categories` 字段推断 `memory_type`，扩展 `metadata` 携带 `source_agent`、`memory_type` 等语义元数据。
 

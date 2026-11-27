@@ -2,7 +2,7 @@
 
 > **Agent Embodiment Substrate (Agent Body) 产品设计 · 交付件 17**  
 > **版本**: v1.0 · **编制**: Antigravity · **日期**: 2026-11-22 (Asia/Shanghai)  
-> **对齐约束**: [README.md 规约 #1, #2, #3, #8, #11, #13, #17, #27](../../README.md) · [ISSUE #27](../../ISSUE.md#L132) · [04-from-steward-to-agent-body.md](../idea_doc/04-from-steward-to-agent-body.md) · [roadmap-phase44-45.md](../src_doc/archive/roadmap-phase44-45.md)
+> **对齐约束**: [README.md 规约 #1, #2, #3, #8, #11, #13, #17, #27](../../README.md) · [ISSUE #27](../../ISSUE.md#L132) · [04-agent-body-philosophy.md](../idea_doc/04-agent-body-philosophy.md) · [roadmap-phase44-45.md](../src_doc/archive/roadmap-phase44-45.md)
 
 ---
 
@@ -10,13 +10,13 @@
 
 ### 1.1 为什么必须分层命名，而不能随意破坏工程契约？
 
-基于 **脑体分离（Brain-Body Separation）** 架构，本项目的本质定位是：**驻留在宿主机上的 Agent 本体（Agent Embodiment Substrate）**——大语言模型与各类客户端（Antigravity / Claude Code / Cursor / Codex / Cron Worker）是可随时切换的**瞬态大脑皮层（Ephemeral Cortex）**，而本系统是永驻物理主机、零云端推理税的**数字躯干与具身底座**；过去的“大管家 / 小秘书”则是本体对外的两大功能侧面。
+基于 **脑体分离（Brain-Body Separation）** 架构，本项目的本质定位是：**驻留在宿主机上的 Agent 本体（Agent Embodiment Substrate）**——大语言模型与各类客户端（Antigravity / Claude Code / Cursor / Codex / Cron Worker）是可随时切换的**瞬态大脑皮层（Ephemeral Cortex）**，而本系统是永驻物理主机、零云端推理税的**数字躯干与具身底座**；过去的“Agent 本体 / Agent 本体”则是本体对外的两大功能侧面。
 
 本仓库在 Phase 44~45 先行采用平滑兼容过渡，并于 Phase 48 完成全仓工程硬切，将现网部署契约统一稳定为 `~/.agent-body/`、`agent-body.service`、全局 `hooks.json` 与 `43` 个 `body_*` MCP 工具。因此本规格书确立 **三层命名兼容契约（严禁违背）**：
 
 | 命名层级 | 覆盖范围 | 命名策略 | 约束红线 |
 |---|---|---|---|
-| **Tier-1：品牌与产品心智层** | README 标题、项目愿景、架构文档、`docs/idea_doc/`、对外演讲/路演 PPT、公众号文章 | 统一升维为 **「Agent 本体（宿主机具身底座）」 / Agent Embodiment Substrate (`agent-body`)** | 明确点破「脑体分离」，将“大管家/小秘书”定位为本体侧面与比较优势类比，**严禁再写容易让人误解为“多 Agent 编排器”或“人类私人助理”的表述**。 |
+| **Tier-1：品牌与产品心智层** | README 标题、项目愿景、架构文档、`docs/idea_doc/`、对外演讲/路演 PPT、公众号文章 | 统一升维为 **「Agent 本体（宿主机具身底座）」 / Agent Embodiment Substrate (`agent-body`)** | 明确点破「脑体分离」，将外置辅助工具隐喻定位为本体侧面与比较优势类比，**严禁再写容易让人误解为“多 Agent 编排器”或“人类私人助理”的表述**。 |
 | **Tier-2：交互文案、代码注释、WebUI 与 SKILL 层** | Web 控制台文案、路演剧场、CLI `--about`/Help 文本、`src/` 模块注释、`skills/*.md`、`docs/manual/*.md`、`docs/arch/*.md` | 以「Agent 本体 · 六大器官」为主体语义刷新 | 保持清晰术语映射（例如：*Agent 本体事实感官 / 本体记忆海马体 / 本体反射门禁*），不破坏任何代码标识符与既有行为语义。 |
 | **Tier-3：工程与协议稳定层（零破坏红线）** | Cargo package (`agent-body`)、二进制名、配置目录 (`~/.agent-body/`)、全部 `43` 个 MCP 工具名 (`body_*`)、CLI 命令 (`agent-body ...`)、SQLite/PG/DuckDB 既有表名与 REST 路由 | **100% 冻结稳定，向后完全兼容** | **严禁再随意改名破坏既有客户端 MCP 配置、Hooks 集成、Systemd 服务脚本或外部自动化调用**。新本体能力统一在 `src/body/` 与第 43 工具 `body_state` 内聚扩展。 |
 
@@ -156,8 +156,8 @@ flowchart LR
 1. **`W17 (cross_brain_continuity_and_body_proprioception)`**：
    - **对照场景**：模拟「大脑 A 完成 PostgreSQL 源码定位与故障排查后挂起 → 新大脑 B 接手继续任务」；
    - **Baseline（裸奔换脑）**：大脑 B 毫无接力感知，被迫重新 `ls/find/ps/git log` 盘点环境、重新定位文件与阻塞点（高 Token + 多轮延迟）；
-   - **Steward Body（具身接力）**：通过 `BodyManifest + ContinuityCapsule` 注入 `<300 tok` 脱敏接力摘要，一次直达正在修改的文件、已验证事实、未解阻塞项与下一步提示；
-   - **门禁要求**：$Q_{\text{steward}} > Q_{\text{baseline}}$，必含接力事实 `100%` 命中，`rounds_saved >= 2`，Token 显著缩减且 `SecretRedactor` 明文泄露 `== 0`。
+   - **Agent Body Body（具身接力）**：通过 `BodyManifest + ContinuityCapsule` 注入 `<300 tok` 脱敏接力摘要，一次直达正在修改的文件、已验证事实、未解阻塞项与下一步提示；
+   - **门禁要求**：$Q_{\text{agent-body}} > Q_{\text{baseline}}$，必含接力事实 `100%` 命中，`rounds_saved >= 2`，Token 显著缩减且 `SecretRedactor` 明文泄露 `== 0`。
 2. **`DQ8 (body_homeostasis_and_envelope_hygiene)`**：
    - 验证现网本体的五维生命体征计算完整（全维度 `[0, 100]` 合法值）、`AutonomyEnvelope` 对 `L3_FORBIDDEN` 越权动作拦截率 `100%`，以及 `body_checkpoints` 表内 `0` 明文密钥与 `<= 300 tok` 预算合规率 `100%`。
 3. **`PR-13 (CrossBrainContinuitySaved)`**：

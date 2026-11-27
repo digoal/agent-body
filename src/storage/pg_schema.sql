@@ -1,5 +1,5 @@
 -- ============================================================
--- Agent Host Steward — PostgreSQL Schema (Production Scale)
+-- Agent Body (Agent 本体) — PostgreSQL Schema (Production Scale)
 -- ============================================================
 
 -- embedding 存储为可移植 JSON TEXT，无需强依赖 pgvector 扩展
@@ -271,7 +271,7 @@ CREATE TABLE IF NOT EXISTS benchmark_runs (
     host_fingerprint          TEXT NOT NULL,
     workload_count            INTEGER NOT NULL,
     total_baseline_tokens     BIGINT NOT NULL,
-    total_steward_tokens      BIGINT NOT NULL,
+    total_body_tokens      BIGINT NOT NULL,
     overall_token_savings_pct DOUBLE PRECISION NOT NULL,
     overall_speedup_factor    DOUBLE PRECISION NOT NULL,
     total_hazards_intercepted BIGINT NOT NULL,
@@ -292,10 +292,10 @@ CREATE TABLE IF NOT EXISTS effectiveness_ledger (
     tool_or_action     TEXT NOT NULL,
     provenance_rule    TEXT NOT NULL,
     baseline_tokens    BIGINT NOT NULL DEFAULT 0,
-    steward_tokens     BIGINT NOT NULL DEFAULT 0,
+    body_tokens     BIGINT NOT NULL DEFAULT 0,
     tokens_saved       BIGINT NOT NULL DEFAULT 0,
     baseline_rounds    BIGINT NOT NULL DEFAULT 1,
-    steward_rounds     BIGINT NOT NULL DEFAULT 1,
+    body_rounds     BIGINT NOT NULL DEFAULT 1,
     rounds_saved       BIGINT NOT NULL DEFAULT 0,
     hazard_intercepted BIGINT NOT NULL DEFAULT 0,
     noise_blocked      BIGINT NOT NULL DEFAULT 0,
@@ -354,7 +354,7 @@ CREATE TABLE IF NOT EXISTS audit_events (
     session_id         TEXT NOT NULL DEFAULT 'system',
     domain             TEXT NOT NULL CHECK (domain IN ('IN_AGENT', 'OUT_OF_AGENT')),
     actor_kind         TEXT NOT NULL,
-    actor_id           TEXT NOT NULL DEFAULT 'steward',
+    actor_id           TEXT NOT NULL DEFAULT 'agent-body',
     source_channel     TEXT NOT NULL,
     category           TEXT NOT NULL,
     action             TEXT NOT NULL,

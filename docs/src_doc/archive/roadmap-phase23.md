@@ -1,4 +1,4 @@
-# Agent Host Steward — Phase 23 演进路线图：分层语义元数据 Key 体系与本地 Ollama 小模型双轨自动标注
+# Agent Body — Phase 23 演进路线图：分层语义元数据 Key 体系与本地 Ollama 小模型双轨自动标注
 
 > **编制**: Antigravity · **日期**: 2026-11-19  
 > **基线 Commit**: `e7f1fab` (`v0.3.3`, Phase 1~22 全部交付，39 个 MCP 工具黑白屏 100% 同步)  
@@ -36,5 +36,5 @@
 | **23.1** | 配置与预检层扩展 (`[annotation]`) | `src/config/mod.rs`, `config.example.toml`, `src/preflight/mod.rs` | `AnnotationConfig` 配置可解析校验；`preflight` 探测 Ollama 生成模型就绪状态并支持优雅降级 |
 | **23.2** | L1 确定性提取器与防覆写修复 | `src/scanner/metadata.rs`, `src/scanner/mod.rs`, `src/scanner/state_machine.rs`, `src/watcher/handler.rs`, `src/hooks/auto_sync.rs` | 提取 L1/L2/L0 结构化 KV；`Watcher`/`AutoSync` 不再覆写抹除已有语义；单文件提取 `<1ms` |
 | **23.3** | L2 本地 Ollama 异步精炼引擎 | `src/scanner/ollama_annotator.rs`, `src/daemon/scheduler.rs` | `SecretRedactor` 脱敏、`"think": false` + JSON Schema 强约束、`BackgroundScheduler` 增量精炼与优雅降级 |
-| **23.4** | 三级渐进披露与黑白屏 1:1 同步 | `src/api/mcp_tools.rs`, `src/main.rs`, `src/web/parity_api.rs`, `src/web/assets/mod.rs`, `src/demo/mod.rs` | `steward_asset_search` 支持 `detail_level`；`steward_asset_scan` 支持 `enrich_with_ollama`；Web UI 展示彩色 KV 胶囊与一键精炼 |
+| **23.4** | 三级渐进披露与黑白屏 1:1 同步 | `src/api/mcp_tools.rs`, `src/main.rs`, `src/web/parity_api.rs`, `src/web/assets/mod.rs`, `src/demo/mod.rs` | `body_asset_search` 支持 `detail_level`；`body_asset_scan` 支持 `enrich_with_ollama`；Web UI 展示彩色 KV 胶囊与一键精炼 |
 | **23.5** | 全量测试、现网库实测与四层同步 | `tests/`, `README.md`, `docs/manual/`, `skills/`, `docs/src_doc/` | `make lint-panic` 0 违规、`cargo test` 全绿、现网库重扫 + Ollama 实测对比、四层文档与服务热重启完成 |

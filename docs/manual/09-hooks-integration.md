@@ -13,7 +13,7 @@
 2. **缺乏原子保障**：文件产出后如果没有手动注册，宿主机资产索引就会脱节；
 3. **协同成本高**：每个会话都需要注入繁琐的 Prompt 提示。
 
-**HOOK 模式（Phase 42 已升级 AOPCC 悲观-乐观自适应并发控制）**将大管家能力深度内嵌进宿主与会话执行回路：
+**HOOK 模式（Phase 42 已升级 AOPCC 悲观-乐观自适应并发控制）**将Agent 本体能力深度内嵌进宿主与会话执行回路：
 - **开工阶段（SessionStart / `body_brief`）**：签发 MVCC **乐观直通契约 (`Optimistic Leases`)**（`<= 120 tok`），允许高置信可逆操作（如本机 `psql -p 5432`、`/root/new/tmp/` 沙盒与已装 CLI）免除回路前置查询税；
 - **执行前（Pre-Hook）**：通过 `ConcurrencyPolicyClassifier` 划分 `OPTIMISTIC` / `CAUTIOUS_CAS` / `PESSIMISTIC_LOCK`，对端口 `bind`、高危系统路径、破坏性命令与多 Agent 锁冲突执行强制悲观前置排查，并对乐观客户端动作零阻塞放行；
 - **执行后（Post-Hook）**：成功写操作自动登记资产索引与拓扑；当乐观执行报错（`Connection refused` / `password authentication failed` / `command not found` / `Address already in use`）时，`OptimisticFailureDiagnoser` 在 `< 2 ms` 内反查宿主机真实端口/工具/服务并注入自愈处方，同时触发对应乐观租约置信度降级；
@@ -84,7 +84,7 @@ flowchart TD
 
 ## 五、Agent 客户端 Hook 自动生成器 (`hooks generate`)
 
-为了让各种主流 Agent 客户端快速接入大管家协同体系，agent-body 提供了客户端 Hook 生成器：
+为了让各种主流 Agent 客户端快速接入Agent 本体协同体系，agent-body 提供了客户端 Hook 生成器：
 
 ### 1. CLI 命令行生成
 ```bash
@@ -140,13 +140,13 @@ Agent 会话在执行过程中会自动完成生命周期托管：
 
 ## 七、Webhook / SSE / Unix Socket 主动推送通道
 
-大管家提供三种低延迟主动通知通道，实现宿主与外部监控体系的实时联动：
+Agent 本体提供三种低延迟主动通知通道，实现宿主与外部监控体系的实时联动：
 
 1. **SSE 实时事件流 (`/api/v1/stream`)**：
    - Web 客户端与外部仪表盘可直接订阅；
    - 包含每 15 秒保活 Ping 与事件自动推流。
 2. **HTTP Webhook (`WebhookPusher`)**：
-   - 符合规约 #1 的 `StewardResponse<T>` 统一封套；
+   - 符合规约 #1 的 `BodyResponse<T>` 统一封套；
    - 支持指数退避重试（重试 3 次，间隔 100ms, 200ms, 400ms）。
 3. **本地 Unix Domain Socket (`UdsBroadcaster`)**：
    - 面向本地高性能进程，广播延迟 < 0.1ms，轻量零拷贝。
@@ -155,11 +155,11 @@ Agent 会话在执行过程中会自动完成生命周期托管：
 
 ## 八、Hook Pipeline 链式编排引擎 (`HookPipelineEngine`)
 
-针对复杂的自动化工作流，大管家支持声明式 Pipeline 编排：
+针对复杂的自动化工作流，Agent 本体支持声明式 Pipeline 编排：
 
 ```mermaid
 flowchart LR
-    E["物理事实事件<br/>(StewardEvent)"] --> H{"防抖哈希去重<br/>(debounce_ms)"}
+    E["物理事实事件<br/>(BodyEvent)"] --> H{"防抖哈希去重<br/>(debounce_ms)"}
     H -- "窗口内重复" --> S["记录 SkippedDebounced 审计"]
     H -- "通过" --> S1["Step 1: 条件过滤与命令执行"]
     S1 -- "成功" --> S2["Step 2: 外部 Webhook 投递"]

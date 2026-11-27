@@ -436,7 +436,7 @@ impl SqliteStorageProvider {
             host_fingerprint: serde_json::from_str(&host_str).unwrap_or_else(|_| serde_json::json!({})),
             workload_count: row.get::<_, i64>(5)? as usize,
             total_baseline_tokens: row.get(6)?,
-            total_steward_tokens: row.get(7)?,
+            total_body_tokens: row.get(7)?,
             overall_token_savings_pct: row.get(8)?,
             overall_speedup_factor: row.get(9)?,
             total_hazards_intercepted: row.get(10)?,

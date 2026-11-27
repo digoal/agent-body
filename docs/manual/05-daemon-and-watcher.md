@@ -1,12 +1,12 @@
 # 05 — 守护进程与 inotify 实时监听（Daemon & Watcher）
 
-> **章节目标**: 掌握大管家常驻守护进程工作机制，理解 Linux inotify 异步文件监听、300ms 智能防抖流水线，以及如何配置 systemd 实现无人值守开机自启。
+> **章节目标**: 掌握Agent 本体常驻守护进程工作机制，理解 Linux inotify 异步文件监听、300ms 智能防抖流水线，以及如何配置 systemd 实现无人值守开机自启。
 
 ---
 
 ## 1. 守护进程主循环架构
 
-大管家支持常驻后台运行（`agent-body daemon`）。守护进程采用 Tokio 异步运行时，驱动两大核心任务：
+Agent 本体支持常驻后台运行（`agent-body daemon`）。守护进程采用 Tokio 异步运行时，驱动两大核心任务：
 
 ```mermaid
 flowchart LR
@@ -33,7 +33,7 @@ flowchart LR
 当 Agent 或编辑器保存一个文件时，操作系统底层通常会密集连续触发多个底层事件（如：创建临时文件 -> 写入字节 -> 重命名替换原文件 -> 修改属性 -> 关闭句柄）。若对每个事件均触发一次数据库写入，将造成严重的 SQLite 锁竞争与 CPU 浪涌。
 
 ### 2.2 防抖策略
-大管家在 `src/watcher/mod.rs` 中实现了 **300 毫秒批处理防抖队列**：
+Agent 本体在 `src/watcher/mod.rs` 中实现了 **300 毫秒批处理防抖队列**：
 1. 捕获到文件创建/修改/删除事件后，暂存入内存通道；
 2. 聚合 300ms 窗口内的同路径变动；
 3. 将最终稳定态分发给 `src/watcher/handler.rs`：
@@ -66,7 +66,7 @@ agent-body daemon
 
 ## 4. systemd 开机自启服务配置
 
-对于生产开发机，推荐将大管家配置为 systemd 用户服务或系统服务：
+对于生产开发机，推荐将Agent 本体配置为 systemd 用户服务或系统服务：
 
 ### 4.1 创建 service 单元文件
 创建 `/etc/systemd/system/agent-body.service`：
@@ -97,7 +97,7 @@ WantedBy=multi-user.target
 # 重新加载 systemd 配置
 systemctl daemon-reload
 
-# 启动大管家守护服务
+# 启动Agent 本体守护服务
 systemctl start agent-body
 
 # 检查服务运行状态

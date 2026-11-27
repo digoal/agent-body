@@ -33,7 +33,7 @@ impl BodyPerfEngine {
             host_fingerprint: serde_json::json!({}),
             workload_count: 0,
             total_baseline_tokens: 0,
-            total_steward_tokens: 0,
+            total_body_tokens: 0,
             overall_token_savings_pct: 0.0,
             overall_speedup_factor: 1.0,
             total_hazards_intercepted: 0,

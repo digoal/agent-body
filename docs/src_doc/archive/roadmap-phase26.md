@@ -1,4 +1,4 @@
-# Agent Host Steward — Phase 26 演进路线图：数据治理硬化、真实依赖图谱闭环与 v0.4.0 四层全量对齐
+# Agent Body — Phase 26 演进路线图：数据治理硬化、真实依赖图谱闭环与 v0.4.0 四层全量对齐
 
 > **编制**: Antigravity · **日期**: 2026-11-19  
 > **基线 Commit**: `e11d052` (`v0.3.2`, Phase 1~25 全部交付，194 tests passed，39 个原生 MCP 工具黑白屏 100% 同步)  
@@ -20,15 +20,15 @@
 
 ### 3. 现网数据库净化自愈、`status` 精确统计与 `build.rs` 动态指纹修复
 - **`build.rs` 与版本升级**：监听 `.git/HEAD` 与 `.git/logs/HEAD` 变更，将 `Cargo.toml` 版本升至 `0.4.0`。
-- **`status` 真实计数**：修复 `agent-steward status` 资产总数（不再受 `list_assets(1000)` 截断显示 `1000`），并展示 `links` 关系统计。
-- **现网库自愈清洗**：在 `HostGarbageCollector`（或 `asset scan --prune`）支持清理物理不存在的幽灵资产、黑名单逃逸子文件与旧噪音变更，并在现网 `~/.steward/steward.db` 完成净化重扫、L1 元数据补齐与 `links` 依赖图谱回填。
+- **`status` 真实计数**：修复 `agent-body status` 资产总数（不再受 `list_assets(1000)` 截断显示 `1000`），并展示 `links` 关系统计。
+- **现网库自愈清洗**：在 `HostGarbageCollector`（或 `asset scan --prune`）支持清理物理不存在的幽灵资产、黑名单逃逸子文件与旧噪音变更，并在现网 `~/.agent-body/body.db` 完成净化重扫、L1 元数据补齐与 `links` 依赖图谱回填。
 
 ### 4. 四层贯通文档、Release Notes、内置 SKILL 与公众号长文全量刷新
 - 新建 `docs/releases/v0.4.0.md`，更新 `docs/releases/README.md`；
 - 刷新 `docs/manual/README.md`（01~09 全卷）与各章节、`docs/arch/` 3 篇、`docs/src_doc/{development,product-manual,hooks-and-integration}.md`、`docs/src_doc/progress.md`；
 - 刷新 3 套内置 SKILL 并同步至 `/root/new/skills/` 与 `/root/.gemini/antigravity-cli/skills/`；
-- 升级 `docs/markdown/why-agent-needs-host-steward.md` 至 v0.4.0 全景架构；
-- 全量门禁测试、`systemctl restart agent-steward.service` 热部署与 `/root/new/shared_git/agent-steward` 同步。
+- 升级 `docs/markdown/why-agent-needs-agent-body.md` 至 v0.4.0 全景架构；
+- 全量门禁测试、`systemctl restart agent-body.service` 热部署与 `/root/new/shared_git/agent-body` 同步。
 
 ---
 
@@ -39,6 +39,6 @@
 | **26.1** | 登记 Phase 26 路线图与断点检查点表 | `docs/src_doc/roadmap-phase26.md`, `docs/src_doc/progress-phase26.md` | 路线图与检查点表落盘 |
 | **26.2** | 分级扫描硬化（黑名单零逃逸 + `restricted` 落地 + 噪音门禁） | `src/scanner/{matcher,mod,state_machine,importance}.rs`, `src/watcher/{mod,handler}.rs` | 黑名单子文件 0 入库、`restricted` 仅留入口/README、Watcher 过滤 `.log`/`.swx`/`.pyc`、新增单测全绿 |
 | **26.3** | `LinksEngine` 全链路接线与幂等更新 | `src/storage/{spi,mod,sqlite_provider,pg_provider,duckdb_provider}.rs`, `src/links/mod.rs`, `src/scanner/mod.rs`, `src/watcher/handler.rs` | `delete_auto_links_for_source` 三引擎实现、扫描/变更自动抽取 `links`、单测全绿 |
-| **26.4** | `build.rs` 修复、`v0.4.0` 升级、`status` 精确统计与现网库净化 | `build.rs`, `Cargo.toml`, `src/main.rs`, `src/env/gc.rs` | `agent-steward --version` 为 `0.4.0`、`status` 显示真实资产与 `links` 数、现网库 0 逃逸/0 幽灵/`links > 100` |
+| **26.4** | `build.rs` 修复、`v0.4.0` 升级、`status` 精确统计与现网库净化 | `build.rs`, `Cargo.toml`, `src/main.rs`, `src/env/gc.rs` | `agent-body --version` 为 `0.4.0`、`status` 显示真实资产与 `links` 数、现网库 0 逃逸/0 幽灵/`links > 100` |
 | **26.5** | 四层贯通文档、Release Notes、SKILL 三镜像与公众号长文刷新 | `docs/releases/`, `docs/manual/`, `docs/arch/`, `docs/src_doc/`, `skills/`, `docs/markdown/` | 全文版本/工具数(39)/测试数 100% 一致，SKILL 三处 sha256 一致，0 死链 |
-| **26.6** | 全量门禁回归、现网热部署与开源镜像同步 | 全项目 + `/root/new/shared_git/agent-steward` | `make lint-panic` 0 违规、`cargo check --tests` 0 warning、`cargo test` 全绿、Daemon 在线、镜像一致 |
+| **26.6** | 全量门禁回归、现网热部署与开源镜像同步 | 全项目 + `/root/new/shared_git/agent-body` | `make lint-panic` 0 违规、`cargo check --tests` 0 warning、`cargo test` 全绿、Daemon 在线、镜像一致 |

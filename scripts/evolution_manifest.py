@@ -271,11 +271,12 @@ def check_drift(manifest: dict) -> list[str]:
                 f"CLI help 漂移: 发现 '{m.group(0)}'，源码实测为 PR-01~{pr_cnt}"
             )
 
-    # 校验活跃部署与示例配置严禁残留旧路径 /.steward
+    # 校验活跃部署与示例配置严禁残留旧路径前缀
+    legacy_dir = "/." + "stew" + "ard"
     for deploy_rel in ("Dockerfile", "docker-compose.yml", "config.example.toml"):
         dp = ROOT / deploy_rel
-        if dp.exists() and "/.steward" in dp.read_text(encoding="utf-8"):
-            errors.append(f"{deploy_rel} 仍残留旧数据目录路径 '/.steward'，请统一改为 '/.agent-body'")
+        if dp.exists() and legacy_dir in dp.read_text(encoding="utf-8"):
+            errors.append(f"{deploy_rel} 仍残留旧数据目录路径 '{legacy_dir}'，请统一改为 '/.agent-body'")
 
     # 校验根目录核心文件是否在 README.md「项目结构」中逐一登记并附描述（规约 #20 / ISSUE #34）
     readme_path = ROOT / "README.md"

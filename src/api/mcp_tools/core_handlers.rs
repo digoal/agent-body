@@ -75,7 +75,7 @@ impl McpToolRegistry {
                 let suggestion = engine.suggest(&req)?;
 
                 let mut out = String::new();
-                out.push_str("=== Steward 对象放置建议 ===\n");
+                out.push_str("=== Agent 本体对象放置建议 ===\n");
                 out.push_str(&format!("推荐目标路径: {:?}\n", suggestion.suggested_path));
                 out.push_str(&format!("命中规范规则: {}\n", suggestion.rule_matched));
                 out.push_str(&format!("规则理由:     {}\n", suggestion.reason));

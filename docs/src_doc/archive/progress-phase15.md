@@ -19,7 +19,7 @@
 | | 15.2.2 | 新增 `analytics {heatmap, trend, export}` 3 个 CLI 子命令 & `close --dry-run` 对齐，实现 32/32 1:1 映射（规约 #13） | `src/main.rs`, `src/api/mcp_tools.rs`, `src/session/mod.rs` | ✅ 已完成 | 2026-11-18 23:23 |
 | | 15.2.T | 编写并实跑 CLI 1:1 映射冒烟测试与单元测试 | `src/main.rs`, `tests/` | ✅ 已完成 | 2026-11-18 23:23 |
 | **15.3** | 15.3.1 | 刷新 `README.md`、`docs/arch/01~03`、`docs/manual/03~04`、`docs/src_doc/development.md` 与实际代码事实对齐（19 模块/40 SPI/32 MCP/实测测试数） | `README.md`, `docs/arch/`, `docs/manual/`, `docs/src_doc/` | ✅ 已完成 | 2026-11-18 23:25 |
-| | 15.3.2 | 同步刷新仓库内 `skills/agent-steward-*/SKILL.md` 消除旧版信息，校验全局链接与零警告构建 | `skills/`, `cargo check --tests` | ✅ 已完成 | 2026-11-18 23:25 |
+| | 15.3.2 | 同步刷新仓库内 `skills/agent-body-*/SKILL.md` 消除旧版信息，校验全局链接与零警告构建 | `skills/`, `cargo check --tests` | ✅ 已完成 | 2026-11-18 23:25 |
 
 ---
 
@@ -39,7 +39,7 @@
 | **16.4** | 16.4.1 | 实现 `ContextBudgetRouter`（多源意图召回、健康度加权、Token 预算截断与节省统计） | `src/ecosystem/router.rs` | ✅ 已完成 | 2026-11-18 23:31 |
 | | 16.4.2 | 集成到 `BriefAssembler` 与 `BackgroundScheduler` 后台巡检自动更新 | `src/brief/assembler.rs`, `src/daemon/scheduler.rs` | ✅ 已完成 | 2026-11-18 23:34 |
 | | 16.4.T | 编写 Context 路由预算约束与延迟压测测试（`< 10ms`） | `src/ecosystem/router.rs`, `tests/benchmarks.rs` | ✅ 已完成 | 2026-11-18 23:34 |
-| **16.5** | 16.5.1 | 注册 `steward_mcp_catalog`、`steward_skill_route`、`steward_service_contact` MCP 与 1:1 CLI 子命令 | `src/api/mcp_tools.rs`, `src/main.rs` | ✅ 已完成 | 2026-11-18 23:36 |
+| **16.5** | 16.5.1 | 注册 `body_mcp_catalog`、`body_skill_route`、`body_service_contact` MCP 与 1:1 CLI 子命令 | `src/api/mcp_tools.rs`, `src/main.rs` | ✅ 已完成 | 2026-11-18 23:36 |
 | | 16.5.2 | 四层贯通收口：`config.example.toml` (`[ecosystem]`)、`src/preflight/`、`docs/manual/`、`README.md`、`skills/` 全同步 | `config.example.toml`, `src/preflight/mod.rs`, `docs/manual/`, `README.md`, `skills/` | ✅ 已完成 | 2026-11-18 23:37 |
 | | 16.5.T | 编写 `tests/ecosystem_integration.rs`，执行全量 `cargo test`、零 unwrap 门禁、Release 构建与共享仓库同步 | `tests/ecosystem_integration.rs` | ✅ 已完成 | 2026-11-18 23:41 |
 

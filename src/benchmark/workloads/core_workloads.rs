@@ -81,7 +81,7 @@ pub(super) fn run_w1_capability_discovery() -> Result<WorkloadResult> {
         "which + <bin> --help x5".into(),
         "CapabilityEngine::scan_host + query_by_intent".into(),
         format!(
-            "真实子进程探测 {} 个命中工具输出 {} tok ({} μs) vs 大管家语义能力图谱 {} tok ({} μs)",
+            "真实子进程探测 {} 个命中工具输出 {} tok ({} μs) vs Agent 本体语义能力图谱 {} tok ({} μs)",
             found_base, base_tokens, base_us, stew_tokens, stew_us
         ),
     );
@@ -95,13 +95,13 @@ pub(super) fn run_w1_capability_discovery() -> Result<WorkloadResult> {
         ContextQualityInputs {
             required_facts_total: req_total,
             baseline_facts_hit: found_base.min(req_total),
-            steward_facts_hit: stew_hits,
+            body_facts_hit: stew_hits,
             baseline_signal_precision: 0.15,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.30,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 1.0,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         90.0,
     );
@@ -118,7 +118,7 @@ pub(super) fn run_w2_port_collision(storage: Arc<dyn StorageProvider>) -> Result
         .map(|p| p.port)
         .unwrap_or(8756);
 
-    // Without Steward: 尝试直接 bind 宿主机已知占用的端口（若宿主机无占用则绑定一个临时占位端口制造真实占用）
+    // Without Agent Body: 尝试直接 bind 宿主机已知占用的端口（若宿主机无占用则绑定一个临时占位端口制造真实占用）
     let _holder = if TcpListener::bind(("127.0.0.1", target_port)).is_ok() {
         // 如果居然空闲，说明刚才扫描间隙释放了，我们短暂占位以测真实碰撞
         TcpListener::bind(("127.0.0.1", target_port)).ok()
@@ -153,7 +153,7 @@ pub(super) fn run_w2_port_collision(storage: Arc<dyn StorageProvider>) -> Result
     let base_us = t_base.elapsed().as_micros();
     let base_tokens = estimate_tokens(&base_log).max(80);
 
-    // With Steward: Pre-Hook 事前拦截 + PortChecker 推荐空闲端口并一次绑定成功
+    // With Agent Body: Pre-Hook 事前拦截 + PortChecker 推荐空闲端口并一次绑定成功
     let st = Storage::new(storage);
     let hook_engine = AgentHookEngine::new(st);
     let t_stew = Instant::now();
@@ -216,13 +216,13 @@ pub(super) fn run_w2_port_collision(storage: Arc<dyn StorageProvider>) -> Result
         ContextQualityInputs {
             required_facts_total: 4,
             baseline_facts_hit: if base_failures >= 1 { 2 } else { 1 },
-            steward_facts_hit: stew_hits,
+            body_facts_hit: stew_hits,
             baseline_signal_precision: 0.30,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.25,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.80,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         90.0,
     );
@@ -231,7 +231,7 @@ pub(super) fn run_w2_port_collision(storage: Arc<dyn StorageProvider>) -> Result
 
 /// W3: 分级扫描与黑名单噪音阻断（构建 290 文件混合树，验证黑名单 0 逃逸）
 pub(super) fn run_w3_granularity_scan() -> Result<WorkloadResult> {
-    let dir = BenchTempDir::create("steward_bench_w3")?;
+    let dir = BenchTempDir::create("body_bench_w3")?;
     let root = &dir.0;
 
     // 正常白名单源码/文档 10 个
@@ -265,7 +265,7 @@ pub(super) fn run_w3_granularity_scan() -> Result<WorkloadResult> {
         std::fs::write(cache.join(format!("tmp_{}.log", i)), "debug log line\n")?;
     }
 
-    // Without Steward: 等价无分级门禁全量读取并写入 SQLite + FTS5 索引
+    // Without Agent Body: 等价无分级门禁全量读取并写入 SQLite + FTS5 索引
     let base_storage = Storage::open_in_memory()?;
     let t_base = Instant::now();
     let mut raw_entries = 0usize;
@@ -299,7 +299,7 @@ pub(super) fn run_w3_granularity_scan() -> Result<WorkloadResult> {
     let base_us = t_base.elapsed().as_micros();
     let base_tokens = estimate_tokens(&raw_paths_buf);
 
-    // With Steward: Scanner 分级扫描（内存隔离库）
+    // With Agent Body: Scanner 分级扫描（内存隔离库）
     let mem_storage = Storage::open_in_memory()?;
     let scanner = Scanner::new(mem_storage.clone())?;
     let t_stew = Instant::now();
@@ -358,13 +358,13 @@ pub(super) fn run_w3_granularity_scan() -> Result<WorkloadResult> {
         ContextQualityInputs {
             required_facts_total: 10,
             baseline_facts_hit: 10,
-            steward_facts_hit: kept_files.min(10),
+            body_facts_hit: kept_files.min(10),
             baseline_signal_precision: 10.0 / raw_entries.max(1) as f64,
-            steward_signal_precision: if escaped_blacklist == 0 { 1.0 } else { 0.5 },
+            body_signal_precision: if escaped_blacklist == 0 { 1.0 } else { 0.5 },
             baseline_actionability: 0.30,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.40,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         90.0,
     );
@@ -384,8 +384,8 @@ pub(super) fn run_w4_placement_governance(storage: Arc<dyn StorageProvider>) -> 
         ("other", "NightlyJob", "定时任务脚本", "./NightlyJob/run.py"),
     ];
 
-    // Without Steward: 8 个文件先裸放错目录，再触发审查报错、定位并执行重命名搬迁返工
-    let rework_dir = BenchTempDir::create("steward_bench_w4")?;
+    // Without Agent Body: 8 个文件先裸放错目录，再触发审查报错、定位并执行重命名搬迁返工
+    let rework_dir = BenchTempDir::create("body_bench_w4")?;
     let t_base = Instant::now();
     let mut base_violations = 0i64;
     let mut base_buf = String::new();
@@ -463,13 +463,13 @@ pub(super) fn run_w4_placement_governance(storage: Arc<dyn StorageProvider>) -> 
         ContextQualityInputs {
             required_facts_total: cases.len(),
             baseline_facts_hit: 0,
-            steward_facts_hit: intercepted as usize,
+            body_facts_hit: intercepted as usize,
             baseline_signal_precision: 0.25,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.20,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.50,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         90.0,
     );

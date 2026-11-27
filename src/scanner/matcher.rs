@@ -38,7 +38,6 @@ impl PolicyMatcher {
             "**/.codegraph/**", "**/.codegraph",
             "**/.venv/**", "**/.venv",
             "**/.agent-body/**", "**/.agent-body",
-            "**/.steward/**", "**/.steward",
             "**/.state/**", "**/.state",
             "/proc/**", "/proc",
         ] {

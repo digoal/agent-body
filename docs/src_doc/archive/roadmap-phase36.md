@@ -1,4 +1,4 @@
-# Agent Host Steward — Phase 36 演进路线图：Benchmark `v3.1`「既省 Token × 上下文质量不降反升」帕累托双门禁体系（ISSUE #19）
+# Agent Body — Phase 36 演进路线图：Benchmark `v3.1`「既省 Token × 上下文质量不降反升」帕累托双门禁体系（ISSUE #19）
 
 > **编制**: Antigravity · **日期**: 2026-11-21  
 > **基线版本**: `v0.4.0` + Phase 1~35 全部完成（Benchmark `v3.0` 含轨道 A `W1~W11`、轨道 B `PR-01~10`、轨道 C `COMP-C1~C4`）  
@@ -20,13 +20,13 @@
    - 假设一个工具直接返回空字符串 `""`（`0 tok`），其 Token 节省率高达 **`100%`**，延迟接近 `0 μs`；
    - 但它的**关键事实召回率（Fact Recall）为 `0%`**——Agent 拿不到任何宿主机真实状态，后续必然发生盲猜幻觉、端口撞车或乱放文件。**脱离质量门禁谈省 Token，没有任何工程意义。**
 2. **「注意力稀释与跨维缺失陷阱」（为什么裸奔基线虽然 Token 巨大，上下文质量反而极低？）**：
-   - 很多人误以为“裸奔 Baseline 返回几万 Token 的原始输出，信息最全、质量最高，Steward 压缩到几百 Token 只是为了省钱而做了有损摘要”。
+   - 很多人误以为“裸奔 Baseline 返回几万 Token 的原始输出，信息最全、质量最高，Agent Body 压缩到几百 Token 只是为了省钱而做了有损摘要”。
    - **事实恰恰相反！** 裸奔 Baseline 的巨量 Token 不仅充斥着稀释大模型注意力的垃圾噪音（Lost-in-the-Middle 效应），而且**严重缺失跨维度关键事实**：
      - 在 **`W1`（工具能力发现）**：裸奔 `which + --help` 倾倒 `21,079 tok` 的全量命令行手册，信噪比不足 `15%`，且缺少“针对当前任务意图的最佳推荐调用参数模板”；
-     - 在 **`W2`（端口防撞）**：裸奔 `bind` 撞车只得到一句 `Address already in use`（仅命中 `1/4 = 25%` 关键事实），**完全不知道是谁占了端口、工作目录在哪、该换哪个空闲端口**；而 Steward 用 `16 tok` 精准给出「冲突预警 + 占用 PID/进程名 + 工作目录 + 推荐空闲端口」（命中 `4/4 = 100%` 关键事实）；
-     - 在 **`W3`（分级扫描）**：裸奔扫入 280 个 `node_modules/.git/__pycache__` 噪音文件，有效资产纯净度仅 **`3.4%`**（`10/290`）；Steward 浅层阻断黑名单后纯净度达 **`100%`**（`10/10`）；
-     - 在 **`W5`（依赖爆炸半径与断链）**：裸奔全文 grep 只看到 1 跳字面文本引用（漏检跨脚本→Systemd→端口的 3 跳传导链与断链修复候选，事实完整度仅 `40%`）；Steward 图查询 + 断链审计 + Levenshtein 修复推演用 `23 tok` 实现 **`100%`** 事实覆盖；
-     - 在 **`W8`（冷启动简报）**：裸奔 6 条 Shell 命令（`uname/df/ps/ss/ls/git`）输出 `3,167 tok`，只覆盖了物理状态（1 维），**对“主理人 8 大目录放置规约”与“跨会话历史排障记忆”覆盖率为 `0%`**（三维综合完整度仅 `45%`）；Steward `BriefAssembler` 用 `585 tok` 完成「事实 30% + 记忆 40% + 偏好 30%」三位一体高密度组装（综合质量跃升至 `92+ 分`）。
+     - 在 **`W2`（端口防撞）**：裸奔 `bind` 撞车只得到一句 `Address already in use`（仅命中 `1/4 = 25%` 关键事实），**完全不知道是谁占了端口、工作目录在哪、该换哪个空闲端口**；而 Agent Body 用 `16 tok` 精准给出「冲突预警 + 占用 PID/进程名 + 工作目录 + 推荐空闲端口」（命中 `4/4 = 100%` 关键事实）；
+     - 在 **`W3`（分级扫描）**：裸奔扫入 280 个 `node_modules/.git/__pycache__` 噪音文件，有效资产纯净度仅 **`3.4%`**（`10/290`）；Agent Body 浅层阻断黑名单后纯净度达 **`100%`**（`10/10`）；
+     - 在 **`W5`（依赖爆炸半径与断链）**：裸奔全文 grep 只看到 1 跳字面文本引用（漏检跨脚本→Systemd→端口的 3 跳传导链与断链修复候选，事实完整度仅 `40%`）；Agent Body 图查询 + 断链审计 + Levenshtein 修复推演用 `23 tok` 实现 **`100%`** 事实覆盖；
+     - 在 **`W8`（冷启动简报）**：裸奔 6 条 Shell 命令（`uname/df/ps/ss/ls/git`）输出 `3,167 tok`，只覆盖了物理状态（1 维），**对“主理人 8 大目录放置规约”与“跨会话历史排障记忆”覆盖率为 `0%`**（三维综合完整度仅 `45%`）；Agent Body `BriefAssembler` 用 `585 tok` 完成「事实 30% + 记忆 40% + 偏好 30%」三位一体高密度组装（综合质量跃升至 `92+ 分`）。
 
 ### 1.2 现网 Benchmark `v3.0` 代码审计暴露的 4 处具体缺口 (`BENCH-06`)
 
@@ -35,9 +35,9 @@
 | 缺口编号 | 源码位置 | 现网具体表现 | 影响 |
 |:---:|---|---|---|
 | **GAP-Q1** | `src/benchmark/workloads.rs:292` (`make_result`) | `W1` ~ `W8` 共 8 个核心业务负载的 `quality_score`、`precision_pct`、`recall_pct` 全部硬编码为 **`None`**（仅 `W9/W10/W11` 填了单侧值）。 | 72% 的宏观负载未参与 D6 上下文质量核算。 |
-| **GAP-Q2** | `src/benchmark/workloads.rs:41` & `report.rs:151` | `WorkloadResult` 与 `CompetitorComparisonResult` 只有单侧 `quality_score`，**没有 `baseline_quality_score`（基线质量）与 `quality_delta`（质量净提升 $\Delta Q$）**；报告总表基线质量栏显示为 `-`。 | 无法直观证明“Steward 相比裸奔/竞品，上下文质量不仅没降，反而大幅提升”。 |
+| **GAP-Q2** | `src/benchmark/workloads.rs:41` & `report.rs:151` | `WorkloadResult` 与 `CompetitorComparisonResult` 只有单侧 `quality_score`，**没有 `baseline_quality_score`（基线质量）与 `quality_delta`（质量净提升 $\Delta Q$）**；报告总表基线质量栏显示为 `-`。 | 无法直观证明“Agent Body 相比裸奔/竞品，上下文质量不仅没降，反而大幅提升”。 |
 | **GAP-Q3** | `src/benchmark/workloads.rs` (`sla_passed` 判定) | `W1~W8` 的 `sla_passed` 仅考核耗时、轮次或省 Token 率，**未强制断言输出文本中必含的关键真值事实 (`required_facts_hit == required_facts_total`)**。 | 缺少防止“靠丢失关键上下文换取高 Token 压缩率”的帕累托硬门禁。 |
-| **GAP-Q4** | `src/benchmark/report.rs` & `src/web/assets/mod.rs:3867` | CLI Markdown 报告与 WebUI 负载卡片只画了「Token 节省进度条」，未展示 **「质量提升 ($\text{Baseline } Q \to \text{Steward } Q$)」** 与 **「有效信息密度提升倍数 (`Info Density Gain`)」**。 | 用户在白屏和报告上只能感知“省了多少 Token”，感知不到“质量提升了多少分、信息密度翻了多少倍”。 |
+| **GAP-Q4** | `src/benchmark/report.rs` & `src/web/assets/mod.rs:3867` | CLI Markdown 报告与 WebUI 负载卡片只画了「Token 节省进度条」，未展示 **「质量提升 ($\text{Baseline } Q \to \text{Agent Body } Q$)」** 与 **「有效信息密度提升倍数 (`Info Density Gain`)」**。 | 用户在白屏和报告上只能感知“省了多少 Token”，感知不到“质量提升了多少分、信息密度翻了多少倍”。 |
 
 ---
 
@@ -45,7 +45,7 @@
 
 | 对比维度 | 方案 A：内生确定性四维上下文质量模型 + 真值事实断言 + 帕累托双门禁（推荐） | 方案 B：调用外部云端/本地大模型 (LLM-as-a-Judge) 对输出打印象分 | 方案 C：仅在报告文案中文字说明“质量没有下降” |
 |---|---|---|---|
-| **核心做法** | 1. 建立确定性四维质量公式 $Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$；<br/>2. 为 `W1~W11` 与 `COMP-C1~C4` 逐项定义真值事实断言 (`Ground-Truth Fact Checklist`)，同场实测 `Baseline Q` vs `Steward Q` 及有效信息密度倍数；<br/>3. 启用帕累托 SLA 双门禁（省 Token **且** $Q_{\text{steward}} \ge Q_{\text{baseline}}$ **且** 必含事实 100% 命中）。 | 每次跑 Benchmark 将 Baseline 和 Steward 输出发给 LLM 打 1~10 分。 | 不改数据结构和评测逻辑，只在 Markdown 报告加一段说明。 |
+| **核心做法** | 1. 建立确定性四维质量公式 $Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$；<br/>2. 为 `W1~W11` 与 `COMP-C1~C4` 逐项定义真值事实断言 (`Ground-Truth Fact Checklist`)，同场实测 `Baseline Q` vs `Agent Body Q` 及有效信息密度倍数；<br/>3. 启用帕累托 SLA 双门禁（省 Token **且** $Q_{\text{agent-body}} \ge Q_{\text{baseline}}$ **且** 必含事实 100% 命中）。 | 每次跑 Benchmark 将 Baseline 和 Agent Body 输出发给 LLM 打 1~10 分。 | 不改数据结构和评测逻辑，只在 Markdown 报告加一段说明。 |
 | **客观性与可复现性（规约 #5, #18）** | ✅ **100% 确定性可复现**：每一分都有明确的事实命中数（`facts_hit/facts_total`）和信噪比公式支撑，SHA-256 签名稳定可验。 | ❌ **不可复现**：LLM 打分存在随机漂移，且偏好冗长文本（Verbosity Bias），极易误判。 | ❌ **违背规约 #18**：属于无实测支撑的主观宣称。 |
 | **性能与边界（规约 #2, #9）** | ✅ 纯 Rust 内存断言，单负载评估耗时 `< 50 μs`，零外部依赖。 | ❌ 违反规约 #2（不承担业务 LLM 推理），单次跑批变慢百倍。 | ✅ 零开销，但无实际门禁价值。 |
 | **决策结论** | ✅ **强烈推荐采纳** | ❌ 不采纳 | ❌ 不采纳 |
@@ -56,7 +56,7 @@
 
 ### 3.1 四维上下文质量评分公式 (`Context Quality Score` $Q \in [0, 100]$)
 
-对任意工作负载或竞品对标轨道，分别对 **Baseline（或竞品）输出上下文** 与 **Steward 输出上下文** 计算确定性质量分 $Q$：
+对任意工作负载或竞品对标轨道，分别对 **Baseline（或竞品）输出上下文** 与 **Agent Body 输出上下文** 计算确定性质量分 $Q$：
 
 $$Q = \text{round2}\Big( 100 \times \big( 0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\text{signal}} + 0.20 \cdot A_{\text{action}} + 0.10 \cdot S_{\text{safety}} \big) \Big)$$
 
@@ -75,17 +75,17 @@ $$Q = \text{round2}\Big( 100 \times \big( 0.40 \cdot R_{\text{fact}} + 0.30 \cdo
 
 定义每千 Token 承载的真值事实密度（`Facts per 1k Tokens`）：
 
-$$\rho = \frac{\text{facts\_hit}}{\max(\text{tokens}, 1)} \times 1000, \qquad \text{Info Density Gain} = \frac{\rho_{\text{steward}}}{\max(\rho_{\text{baseline}}, 0.01)}$$
+$$\rho = \frac{\text{facts\_hit}}{\max(\text{tokens}, 1)} \times 1000, \qquad \text{Info Density Gain} = \frac{\rho_{\text{agent-body}}}{\max(\rho_{\text{baseline}}, 0.01)}$$
 
-- 当 Steward 将 Token 削减 $90\% \sim 99\%$（分母缩小 $10 \sim 100$ 倍），同时将命中的关键真值事实从基线的 $40\%$ 提升至 $100\%$（分子扩大 $2.5$ 倍）时，**有效信息密度 $\rho$ 实现 $25\times \sim 250\times$ 跃升**！
+- 当 Agent Body 将 Token 削减 $90\% \sim 99\%$（分母缩小 $10 \sim 100$ 倍），同时将命中的关键真值事实从基线的 $40\%$ 提升至 $100\%$（分子扩大 $2.5$ 倍）时，**有效信息密度 $\rho$ 实现 $25\times \sim 250\times$ 跃升**！
 
 ### 3.3 帕累托 SLA 联合双门禁 (`Pareto Dual-Gate`)
 
 ```mermaid
 flowchart TD
     Run["工作负载 / 竞品轨道实跑<br/>(W1~W11 / COMP-C1~C4)"] --> Gate1{"门禁 1: 效率与省 Token 门禁<br/>Token 节省 / 延迟 / 拦截达标?"}
-    Run --> Gate2{"门禁 2: 关键事实零丢失门禁<br/>steward_facts_hit == required_facts_total?"}
-    Run --> Gate3{"门禁 3: 上下文质量不降反升门禁<br/>Q_steward >= Q_baseline<br/>且 Q_steward >= SLA_min_Q?"}
+    Run --> Gate2{"门禁 2: 关键事实零丢失门禁<br/>body_facts_hit == required_facts_total?"}
+    Run --> Gate3{"门禁 3: 上下文质量不降反升门禁<br/>Q_agent-body >= Q_baseline<br/>且 Q_agent-body >= SLA_min_Q?"}
     Gate1 -- Yes --> Pass["✅ Pareto SLA PASS<br/>(既省 Token · 质量又提升)"]
     Gate2 -- Yes --> Pass
     Gate3 -- Yes --> Pass
@@ -100,7 +100,7 @@ flowchart TD
 
 ### 4.1 轨道 A：11 大标准业务负载 (`W1 ~ W11`) 真值事实与质量对照表
 
-| 负载 ID | 场景名称 | 必含真值事实清单 (`required_facts_total`) | Baseline 上下文质量痛点 ($Q_{\text{base}}$ 预期区间) | Steward 质量提升机制 ($Q_{\text{stew}}$ 目标门禁) | 质量净收益 ($\Delta Q$) |
+| 负载 ID | 场景名称 | 必含真值事实清单 (`required_facts_total`) | Baseline 上下文质量痛点 ($Q_{\text{base}}$ 预期区间) | Agent Body 质量提升机制 ($Q_{\text{stew}}$ 目标门禁) | 质量净收益 ($\Delta Q$) |
 |:---:|---|---|---|---|---|
 | **W1** | `capability_discovery`<br/>宿主工具能力发现 | **5 项**：5 类候选工具的①存在性、②绝对路径、③版本号、④能力语义标签、⑤推荐 CLI 调用参数模板 | `which + --help` 仅含原始帮助长文，无针对性推荐模板且 85%+ 为无关参数噪音（**`~52 分`**） | 100% 命中 5 类工具结构化路径+版本+推荐命令模板，零冗余行（**`>= 95 分`**） | **`+43 分`** |
 | **W2** | `port_collision_avoidance`<br/>端口防撞与选址 | **4 项**：①目标端口占用状态、②占用进程 PID/名称、③冲突事前告警、④可直接绑定的推荐空闲端口 | 盲目 `bind` 触发 `EADDRINUSE` 仅知端口忙（命中 `1/4`），不知占用者与可用端口（**`~35 分`**） | Pre-Hook + `PortChecker` 一次返回占用详情与验证可用的空闲端口（命中 `4/4`，**`>= 95 分`**） | **`+60 分`** |
@@ -116,7 +116,7 @@ flowchart TD
 
 ### 4.2 轨道 C：4 大热门竞品横向对标 (`COMP-C1 ~ COMP-C4`) 质量与密度拓展
 
-| 竞品轨道 | 对标基线 | 竞品上下文质量短板 ($Q_{\text{comp}}$) | Steward 上下文质量优势 ($Q_{\text{stew}}$) |
+| 竞品轨道 | 对标基线 | 竞品上下文质量短板 ($Q_{\text{comp}}$) | Agent Body 上下文质量优势 ($Q_{\text{stew}}$) |
 |:---:|---|---|---|
 | **`COMP-C1`** | 裸文本记忆流水 (Mem0/JSON 无脱敏基线) | 全量返回 55 条匹配文本且 `5/5` 明文凭据泄露（信噪比低 + 安全失分，**`~48 分`**） | Top-5 FTS5 精准摘要召回 + `0/5` 凭据零泄露（**`>= 96 分`**） |
 | **`COMP-C2`** | OpenViking L0/L1 目录树 + 静态全量技能注入 | 60 个虚拟摘要文件 + 80 个技能全量塞入（`144,730 tok`），注意力严重稀释（**`~54 分`**） | 原位 L1 结构化提取 + `ContextBudgetRouter` Top-K 精准命中（**`>= 95 分`**） |
@@ -132,11 +132,11 @@ flowchart TD
 | 步骤 ID | 原子任务 | 涉及文件 | 具体改造方案 | 验收门禁 (DoD) |
 |:---:|---|---|---|---|
 | **36.1** | **升级 `10-benchmark-spec.md` 与 `12-competitor-benchmark-spec.md` 至 `v3.1` 帕累托规范** | `docs/design_doc/10-benchmark-spec.md`<br/>`docs/design_doc/12-competitor-benchmark-spec.md` | 增补「四维上下文质量评分公式 ($R, P, A, S$)」、「有效信息密度 ($\rho$) 与密度提升倍数」及「Token 节省 × 质量不降反升帕累托 SLA 双门禁」章节。 | 公式与字段定义 100% 明确、可确定性复算。 |
-| **36.2** | **扩展 `WorkloadResult`、`CompetitorComparisonResult` 与 `BenchmarkReportPayload` (`v3.1`)** | `src/benchmark/workloads.rs`<br/>`src/benchmark/competitors.rs`<br/>`src/benchmark/report.rs`<br/>`src/benchmark/mod.rs` | 1. `BENCHMARK_SPEC_VERSION` 升至 `"3.1"`；<br/>2. `WorkloadResult` 与 `CompetitorComparisonResult` 新增 `baseline_quality_score: f64`、`steward_quality_score: f64`、`quality_delta: f64`、`baseline_facts_hit: usize`、`steward_facts_hit: usize`、`required_facts_total: usize`、`info_density_gain: f64`（均带 `#[serde(default)]` 向后兼容）；<br/>3. `BenchmarkReportPayload` 新增 `overall_baseline_quality_score`、`overall_quality_delta`、`overall_info_density_gain`、`quality_non_degraded: bool`。 | 兼容反序列化现网 `v1.0 ~ v3.0` 全部历史记录；`cargo check --tests` 0 warning。 |
-| **36.3** | **为 `W1 ~ W11` 全部 11 个工作负载实装真值事实核验与成对质量评分** | `src/benchmark/workloads.rs` | 1. 新增 `evaluate_context_quality()` 辅助计算器，按 $(R_{\text{fact}}, P_{\text{signal}}, A_{\text{action}}, S_{\text{safety}})$ 计算 `baseline_quality_score`、`steward_quality_score`、`quality_delta` 与 `info_density_gain`；<br/>2. 为 `W1 ~ W11` 逐个落地真值事实断言（核验输出文本/结构中的必含事实命中数）；<br/>3. 将 `steward_quality_score >= baseline_quality_score && steward_facts_hit == required_facts_total` 写入每项 `sla_passed` 判定。 | `W1~W11` 全部具有非空成对质量分，且每项 `steward_quality_score > baseline_quality_score`、`steward_facts_hit == required_facts_total`。 |
-| **36.4** | **为 `COMP-C1 ~ COMP-C4` 竞品对标与 `PR-01~10` 补齐质量与信息密度度量** | `src/benchmark/competitors.rs`<br/>`src/benchmark/provenance.rs` | 1. 为 `COMP-C1 ~ COMP-C4` 实测计算 `competitor_quality_score`、`steward_quality_score`、`quality_delta` 与 `info_density_gain`，并纳入 `passed` 门禁；<br/>2. 在 `ProvenanceRule` (`PR-01~10`) 的公式描述中显式补充“上下文质量/信噪比增益依据”。 | `cargo test benchmark::` 全部通过；4 条竞品轨道均体现“Token 缩减 + 质量提升”。 |
-| **36.5** | **升级 CLI/Markdown/CSV 报告与 WebUI「📊 实证基准与账本」帕累托双维视图** | `src/benchmark/report.rs`<br/>`src/web/assets/mod.rs` | 1. `render_markdown_report()` 总体表展示 `D6 上下文质量 (基线 X -> 管家 Y, +ΔQ)` 与 `有效信息密度提升 (Nx)`，明细表与竞品表新增 `质量 (基线→管家)` 与 `事实完整度 (hit/total)` 列；<br/>2. WebUI 顶部 KPI 卡与 `W1~W11`、`COMP-C1~C4` 卡片同步渲染「省 Token 率 + 质量跃升 (`Q: Base → Stew (+ΔQ)` · `密度 Nx`)」双进度条/双徽章。 | CLI `bench report` 与 WebUI 昼夜双主题下直观呈现“既省 Token 又提质量”。 |
-| **36.6** | **全量门禁测试、现网 `v3.1` 实跑存证、反馈闭环与热部署同步** | `tests/benchmarks.rs`<br/>`docs/manual/10-benchmark-and-roi.md`<br/>`README.md`, `user_feedback.md`<br/>`docs/src_doc/progress.md` | 1. 编写单元测试验证“若故意截断关键事实则 `sla_passed == false`（防截断负向测试）”；<br/>2. 运行 `make evolution-check && make lint-panic && make check && make test && make build`；<br/>3. 现网执行 `./target/release/agent-steward bench run --suite full --save true` 存证，更新 `BENCH-06`/`REQ-10` 为 `✅ Verified`，重启服务并 `make sync-mirror`。 | 全部自动化测试 100% PASS，现网 `v3.1` 报告落库，镜像仓库完全同步。 |
+| **36.2** | **扩展 `WorkloadResult`、`CompetitorComparisonResult` 与 `BenchmarkReportPayload` (`v3.1`)** | `src/benchmark/workloads.rs`<br/>`src/benchmark/competitors.rs`<br/>`src/benchmark/report.rs`<br/>`src/benchmark/mod.rs` | 1. `BENCHMARK_SPEC_VERSION` 升至 `"3.1"`；<br/>2. `WorkloadResult` 与 `CompetitorComparisonResult` 新增 `baseline_quality_score: f64`、`body_quality_score: f64`、`quality_delta: f64`、`baseline_facts_hit: usize`、`body_facts_hit: usize`、`required_facts_total: usize`、`info_density_gain: f64`（均带 `#[serde(default)]` 向后兼容）；<br/>3. `BenchmarkReportPayload` 新增 `overall_baseline_quality_score`、`overall_quality_delta`、`overall_info_density_gain`、`quality_non_degraded: bool`。 | 兼容反序列化现网 `v1.0 ~ v3.0` 全部历史记录；`cargo check --tests` 0 warning。 |
+| **36.3** | **为 `W1 ~ W11` 全部 11 个工作负载实装真值事实核验与成对质量评分** | `src/benchmark/workloads.rs` | 1. 新增 `evaluate_context_quality()` 辅助计算器，按 $(R_{\text{fact}}, P_{\text{signal}}, A_{\text{action}}, S_{\text{safety}})$ 计算 `baseline_quality_score`、`body_quality_score`、`quality_delta` 与 `info_density_gain`；<br/>2. 为 `W1 ~ W11` 逐个落地真值事实断言（核验输出文本/结构中的必含事实命中数）；<br/>3. 将 `body_quality_score >= baseline_quality_score && body_facts_hit == required_facts_total` 写入每项 `sla_passed` 判定。 | `W1~W11` 全部具有非空成对质量分，且每项 `body_quality_score > baseline_quality_score`、`body_facts_hit == required_facts_total`。 |
+| **36.4** | **为 `COMP-C1 ~ COMP-C4` 竞品对标与 `PR-01~10` 补齐质量与信息密度度量** | `src/benchmark/competitors.rs`<br/>`src/benchmark/provenance.rs` | 1. 为 `COMP-C1 ~ COMP-C4` 实测计算 `competitor_quality_score`、`body_quality_score`、`quality_delta` 与 `info_density_gain`，并纳入 `passed` 门禁；<br/>2. 在 `ProvenanceRule` (`PR-01~10`) 的公式描述中显式补充“上下文质量/信噪比增益依据”。 | `cargo test benchmark::` 全部通过；4 条竞品轨道均体现“Token 缩减 + 质量提升”。 |
+| **36.5** | **升级 CLI/Markdown/CSV 报告与 WebUI「📊 实证基准与账本」帕累托双维视图** | `src/benchmark/report.rs`<br/>`src/web/assets/mod.rs` | 1. `render_markdown_report()` 总体表展示 `D6 上下文质量 (基线 X -> Agent 本体 Y, +ΔQ)` 与 `有效信息密度提升 (Nx)`，明细表与竞品表新增 `质量 (基线→Agent 本体)` 与 `事实完整度 (hit/total)` 列；<br/>2. WebUI 顶部 KPI 卡与 `W1~W11`、`COMP-C1~C4` 卡片同步渲染「省 Token 率 + 质量跃升 (`Q: Base → Stew (+ΔQ)` · `密度 Nx`)」双进度条/双徽章。 | CLI `bench report` 与 WebUI 昼夜双主题下直观呈现“既省 Token 又提质量”。 |
+| **36.6** | **全量门禁测试、现网 `v3.1` 实跑存证、反馈闭环与热部署同步** | `tests/benchmarks.rs`<br/>`docs/manual/10-benchmark-and-roi.md`<br/>`README.md`, `user_feedback.md`<br/>`docs/src_doc/progress.md` | 1. 编写单元测试验证“若故意截断关键事实则 `sla_passed == false`（防截断负向测试）”；<br/>2. 运行 `make evolution-check && make lint-panic && make check && make test && make build`；<br/>3. 现网执行 `./target/release/agent-body bench run --suite full --save true` 存证，更新 `BENCH-06`/`REQ-10` 为 `✅ Verified`，重启服务并 `make sync-mirror`。 | 全部自动化测试 100% PASS，现网 `v3.1` 报告落库，镜像仓库完全同步。 |
 
 ---
 
@@ -158,7 +158,7 @@ flowchart TD
 
 ## 七、总体验收红线 (Definition of Done)
 
-1. **全负载质量成对实证红线**：`W1 ~ W11`（11 项）与 `COMP-C1 ~ COMP-C4`（4 项）**100%** 具备实测计算的 `baseline_quality_score` 与 `steward_quality_score`，彻底消除 `quality_score: None` 与报告基线质量空白（`-`）。
-2. **帕累托不降反升红线**：每一项负载均满足 `steward_quality_score >= baseline_quality_score` 且 `steward_facts_hit == required_facts_total`，全套件平均上下文质量净提升 **$\Delta Q \ge +35\text{ 分}$**（基线 `~43 分` $\to$ 管家 `>= 95 分`），有效信息密度提升 **$\ge 20\times$**。
+1. **全负载质量成对实证红线**：`W1 ~ W11`（11 项）与 `COMP-C1 ~ COMP-C4`（4 项）**100%** 具备实测计算的 `baseline_quality_score` 与 `body_quality_score`，彻底消除 `quality_score: None` 与报告基线质量空白（`-`）。
+2. **帕累托不降反升红线**：每一项负载均满足 `body_quality_score >= baseline_quality_score` 且 `body_facts_hit == required_facts_total`，全套件平均上下文质量净提升 **$\Delta Q \ge +35\text{ 分}$**（基线 `~43 分` $\to$ Agent 本体 `>= 95 分`），有效信息密度提升 **$\ge 20\times$**。
 3. **防空输出/防截断作弊红线**：新增自动化单测验证——当任意负载缺失必含关键事实时，即使 Token 节省率 100%，`sla_passed` 也必须確定性判定为 `false`。
-4. **工程纪律红线（规约 #12, #13, #16, #18, #20）**：`make lint-panic` 0 违规、`make check` 0 warning、`make evolution-check` 0 漂移、`make test` 全绿、镜像同步至 `/root/new/shared_git/agent-steward/`。
+4. **工程纪律红线（规约 #12, #13, #16, #18, #20）**：`make lint-panic` 0 违规、`make check` 0 warning、`make evolution-check` 0 漂移、`make test` 全绿、镜像同步至 `/root/new/shared_git/agent-body/`。

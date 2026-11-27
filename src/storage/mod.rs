@@ -90,7 +90,7 @@ impl Storage {
             }
             "duckdb" => {
                 let path = config.storage.duckdb_path.clone().unwrap_or_else(|| {
-                    config.data_dir.join("steward.duckdb")
+                    config.data_dir.join("body.duckdb")
                 });
                 let provider = DuckDbStorageProvider::open(&path)?;
                 Ok(Self {
@@ -336,7 +336,7 @@ impl Storage {
     pub fn upsert_asset(&self, asset: &AssetRecord) -> Result<()> {
         self.provider.upsert_asset(asset)?;
         if let Some(ref bus) = self.event_bus {
-            let _delivered = bus.emit(crate::hooks::StewardEvent::AssetRegistered {
+            let _delivered = bus.emit(crate::hooks::BodyEvent::AssetRegistered {
                 path: asset.path.clone(),
                 object_type: asset.asset_type.clone(),
                 owner: asset.owner.clone(),
@@ -374,7 +374,7 @@ impl Storage {
     pub fn insert_memory(&self, mem: &MemoryRecord) -> Result<()> {
         self.provider.insert_memory(mem)?;
         if let Some(ref bus) = self.event_bus {
-            let _delivered = bus.emit(crate::hooks::StewardEvent::MemoryAdded {
+            let _delivered = bus.emit(crate::hooks::BodyEvent::MemoryAdded {
                 memory_id: mem.id.clone(),
                 memory_type: mem.memory_type.clone(),
                 summary: mem.summary.clone(),
@@ -930,7 +930,7 @@ mod tests {
             id: "proj:agent-body".to_string(),
             node_type: "project".to_string(),
             name: "agent-body".to_string(),
-            label: "宿主环境大管家工程".to_string(),
+            label: "Agent 本体工程".to_string(),
             properties: serde_json::json!({"path": "/root/new/work/agent-body"}),
             updated_at: None,
         };
@@ -938,7 +938,7 @@ mod tests {
             id: "service:agent-body.service".to_string(),
             node_type: "service".to_string(),
             name: "agent-body.service".to_string(),
-            label: "大管家守护服务".to_string(),
+            label: "Agent 本体守护服务".to_string(),
             properties: serde_json::json!({"unit": "/etc/systemd/system/agent-body.service"}),
             updated_at: None,
         };
@@ -1073,7 +1073,7 @@ mod tests {
             host_fingerprint: serde_json::json!({"os": "linux", "cpus": 8}),
             workload_count: 8,
             total_baseline_tokens: 10000,
-            total_steward_tokens: 500,
+            total_body_tokens: 500,
             overall_token_savings_pct: 95.0,
             overall_speedup_factor: 12.5,
             total_hazards_intercepted: 4,
@@ -1098,10 +1098,10 @@ mod tests {
             tool_or_action: "body_skill_route".to_string(),
             provenance_rule: "PR-01".to_string(),
             baseline_tokens: 4000,
-            steward_tokens: 300,
+            body_tokens: 300,
             tokens_saved: 3700,
             baseline_rounds: 3,
-            steward_rounds: 1,
+            body_rounds: 1,
             rounds_saved: 2,
             hazard_intercepted: 0,
             noise_blocked: 0,
@@ -1116,10 +1116,10 @@ mod tests {
             tool_or_action: "body_hook_pre".to_string(),
             provenance_rule: "PR-03".to_string(),
             baseline_tokens: 600,
-            steward_tokens: 120,
+            body_tokens: 120,
             tokens_saved: 480,
             baseline_rounds: 3,
-            steward_rounds: 1,
+            body_rounds: 1,
             rounds_saved: 2,
             hazard_intercepted: 1,
             noise_blocked: 0,
@@ -1236,7 +1236,7 @@ mod tests {
             host_fingerprint: serde_json::json!({}),
             workload_count: 1,
             total_baseline_tokens: 100,
-            total_steward_tokens: 10,
+            total_body_tokens: 10,
             overall_token_savings_pct: 90.0,
             overall_speedup_factor: 2.0,
             total_hazards_intercepted: 0,

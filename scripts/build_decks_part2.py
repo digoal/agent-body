@@ -808,7 +808,7 @@ def build_talk_05() -> None:
             "svg": svg_matrix_2x2(
                 [
                     {
-                        "tag": "STEWARD GUARANTEES",
+                        "tag": "AGENT BODY GUARANTEES",
                         "title": "Agent Body 强保证的安全项",
                         "accent": C_GREEN,
                         "bg": C_GREEN_L,
@@ -1466,7 +1466,7 @@ def build_index_hub() -> None:
     """Build presentation/index.html matching exact 地层剖面 aesthetic."""
     cards = [
         ("01", "脑体分离与 Agent 本体哲学", "01-brain-body-separation.html", "30 min · 14 页",
-         "为什么大管家/小秘书会误导？比较优势、六大生理器官、递弱代偿、三层零破坏兼容与 src/body/ 源码剖析。"),
+         "为什么只能定位为 Agent 本体？比较优势、六大生理器官、递弱代偿、三层统一架构与 src/body/ 源码剖析。"),
         ("02", "宿主机物理感官图谱与零污染扫盘", "02-host-reality-graph.html", "30 min · 14 页",
          "/proc 0.2ms 探测、白黑灰分级扫描敲门不进屋、L1/L2/L3 语义元数据、三层有向加权图谱与 CodeGraph 宏微联邦。"),
         ("03", "小脑反射、痛觉门禁与自适应并发控制 AOPCC", "03-cerebellum-and-aopcc.html", "30 min · 13 页",

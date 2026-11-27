@@ -31,21 +31,21 @@ flowchart TD
 
 | 原子任务 | 新增 CLI 子命令 | 映射的 MCP 工具 | 关键参数与行为对齐 |
 |---|---|---|---|
-| **15.2.1** | `agent-steward asset register`<br/>`agent-steward hooks pre`<br/>`agent-steward hooks post`<br/>`agent-steward coordination acquire` | `steward_asset_register`<br/>`steward_hook_pre`<br/>`steward_hook_post`<br/>`steward_lock_acquire` | 1. `asset register --path <PATH> --type <TYPE> [--owner] [--security] [--description] [--desc-kv <JSON>]`；<br/>2. `hooks pre --tool <NAME> --args <JSON>` & `hooks post --tool <NAME> --args <JSON> [--success]`；<br/>3. `coordination acquire --resource-type <TYPE> --resource-id <ID> [--scope] [--holder] [--ttl]` |
-| **15.2.2** | `agent-steward analytics heatmap`<br/>`agent-steward analytics trend`<br/>`agent-steward analytics export`<br/>`agent-steward close --dry-run` | `steward_analytics_heatmap`<br/>`steward_analytics_trend`<br/>`steward_analytics_export`<br/>`steward_session_close` | 1. `analytics heatmap [--days 30]`、`analytics trend [--metric assets] [--days 30]`、`analytics export --table <T> --output <PATH>`；<br/>2. 顺带排查 `steward_analytics_*` 与 CLI 共用逻辑提取到 `src/storage/duckdb_analytics.rs`（避免重复代码）；<br/>3. 为 `close` / `steward_session_close` 增加 `--dry-run` 预览开关提示（对齐规约 #8） |
+| **15.2.1** | `agent-body asset register`<br/>`agent-body hooks pre`<br/>`agent-body hooks post`<br/>`agent-body coordination acquire` | `body_asset_register`<br/>`body_hook_pre`<br/>`body_hook_post`<br/>`body_lock_acquire` | 1. `asset register --path <PATH> --type <TYPE> [--owner] [--security] [--description] [--desc-kv <JSON>]`；<br/>2. `hooks pre --tool <NAME> --args <JSON>` & `hooks post --tool <NAME> --args <JSON> [--success]`；<br/>3. `coordination acquire --resource-type <TYPE> --resource-id <ID> [--scope] [--holder] [--ttl]` |
+| **15.2.2** | `agent-body analytics heatmap`<br/>`agent-body analytics trend`<br/>`agent-body analytics export`<br/>`agent-body close --dry-run` | `body_analytics_heatmap`<br/>`body_analytics_trend`<br/>`body_analytics_export`<br/>`body_session_close` | 1. `analytics heatmap [--days 30]`、`analytics trend [--metric assets] [--days 30]`、`analytics export --table <T> --output <PATH>`；<br/>2. 顺带排查 `body_analytics_*` 与 CLI 共用逻辑提取到 `src/storage/duckdb_analytics.rs`（避免重复代码）；<br/>3. 为 `close` / `body_session_close` 增加 `--dry-run` 预览开关提示（对齐规约 #8） |
 
 ### 15.3 四层贯通文档与 SKILL 刷新（规约 #10 & #11）
 
 | 原子任务 | 涉及文件 | 同步内容 |
 |---|---|---|
 | **15.3.1** | `README.md`, `docs/arch/01-for-architects.md`, `docs/arch/02-for-developers.md`, `docs/arch/03-for-users.md`, `docs/manual/03-cli-reference.md`, `docs/manual/04-mcp-integration.md`, `docs/src_doc/development.md`, `docs/src_doc/progress.md` | 1. 统一模块数为 **19 个核心模块**（`docs/arch/02` 补齐 `hooks/`, `session/`, `brief/`, `changes/`, `daemon/`, `tui/`, `watcher/`, `env/`, `config/`）；<br/>2. 统一存储 SPI 方法数为 **40 个**；<br/>3. 统一 MCP 工具数为 **32 个**，并在 `docs/manual/03-cli-reference.md` 补齐 7 个新增 CLI 命令及实跑输出；<br/>4. 统一测试数为真实 `cargo test` 实测值 |
-| **15.3.2** | `skills/agent-steward-developer/SKILL.md`<br/>`skills/agent-steward-doc-writer/SKILL.md`<br/>`skills/agent-steward-guide/SKILL.md` | 1. 将仓库内 3 份 `SKILL.md` 与当前代码事实对齐（32 MCP 工具、Phase 14 修复事实、最新测试门禁）；<br/>2. 同步更新本地测试与部署说明，确保全量回归 100% PASS |
+| **15.3.2** | `skills/agent-body-developer/SKILL.md`<br/>`skills/agent-body-doc-writer/SKILL.md`<br/>`skills/agent-body-guide/SKILL.md` | 1. 将仓库内 3 份 `SKILL.md` 与当前代码事实对齐（32 MCP 工具、Phase 14 修复事实、最新测试门禁）；<br/>2. 同步更新本地测试与部署说明，确保全量回归 100% PASS |
 
 ---
 
 ## 二、Phase 16：管理范围扩展与 Context 防爆路由器（对齐 Open Issue #4）
 
-> **核心理念**：大管家为 Agent 充当**“工具/技能的按需索引目录 + 外部服务通讯录 + Context 预算守门员”**。  
+> **核心理念**：Agent 本体为 Agent 充当**“工具/技能的按需索引目录 + 外部服务通讯录 + Context 预算守门员”**。  
 > **安全与边界铁律**：
 > 1. 严禁存储任何明文 API Key / Password / Token（外部服务只存 `auth_env_var` 环境变量名，扫描客户端 MCP 配置时自动剥离/脱敏 `env` 敏感键值）；
 > 2. 只读扫描仅提取头部元数据与摘要（`SKILL.md` frontmatter / MCP server & tool name），遵循规约 #6 黑名单阻断原则，绝不把长文档全文灌进 Context。
@@ -56,7 +56,7 @@ flowchart TD
     P161 --> P163["16.3 外部服务通讯录与轻量探活器<br/>(名片注册 / 环境变量鉴权引用 / TCP&HTTP 探活)"]
     P162 --> P164["16.4 Context 防爆路由器 & BriefAssembler 融合<br/>(意图召回 + Token预算截断 + 节省Token统计)"]
     P163 --> P164
-    P164 --> P165["16.5 新增 3 组 MCP/CLI 1:1 映射 & Web/四层同步<br/>(steward_mcp_catalog / steward_skill_route / steward_service_contact)"]
+    P164 --> P165["16.5 新增 3 组 MCP/CLI 1:1 映射 & Web/四层同步<br/>(body_mcp_catalog / body_skill_route / body_service_contact)"]
 ```
 
 ### 16.1 存储层数据模型与 SPI 扩展
@@ -114,7 +114,7 @@ flowchart TD
     - 仅返回最匹配的 Top-K 外部服务名片（Endpoint + `auth_env_var` 就绪状态 + 一行 curl/调用示例）；
     - 计算并附带 `context_savings`（例如：“全量 139 个 SKILL 约需 ~95,000 tokens，本次精准路由仅消耗 412 tokens，节省 99.5% 上下文”）。
 - **融入 `BriefAssembler` (`src/brief/assembler.rs`)**：
-  - 在 `steward_brief` 的 `query` 非空时，从原有预算中为“生态按需推荐”动态切分紧凑片段（严格受 `req.budget_tokens` 总上限约束，不撑爆 1500 tokens）。
+  - 在 `body_brief` 的 `query` 非空时，从原有预算中为“生态按需推荐”动态切分紧凑片段（严格受 `req.budget_tokens` 总上限约束，不撑爆 1500 tokens）。
 - **原子任务拆解**：
   - **16.4.1**：实现 `ContextBudgetRouter`（多源召回、打分排序、Token 预算严格裁剪与节省估算）；
   - **16.4.2**：将该路由器接入 `BriefAssembler` 与守护进程定时巡检（`BackgroundScheduler` 定期刷新本地 SKILL/MCP 目录缓存）。
@@ -125,11 +125,11 @@ flowchart TD
 
 | 新增 MCP 工具 | 对等 CLI 子命令 | 核心动作 |
 |---|---|---|
-| `steward_mcp_catalog` | `agent-steward mcp-catalog <scan\|list\|route>` | 扫描宿主机客户端 MCP 配置、列清单、按意图筛选 |
-| `steward_skill_route` | `agent-steward skill <scan\|list\|route>` | 扫描 130+ SKILL 目录、按预算路由推荐 Top-K SKILL |
-| `steward_service_contact` | `agent-steward service <register\|list\|query\|check>` | 外部服务联系人登记、查询、安全脱敏与连通性探活 |
+| `body_mcp_catalog` | `agent-body mcp-catalog <scan\|list\|route>` | 扫描宿主机客户端 MCP 配置、列清单、按意图筛选 |
+| `body_skill_route` | `agent-body skill <scan\|list\|route>` | 扫描 130+ SKILL 目录、按预算路由推荐 Top-K SKILL |
+| `body_service_contact` | `agent-body service <register\|list\|query\|check>` | 外部服务联系人登记、查询、安全脱敏与连通性探活 |
 
 - **原子任务拆解**：
   - **16.5.1**：在 `src/api/mcp_tools.rs` 注册上述 3 个 MCP 工具并在 `src/main.rs` 实现 1:1 对等 CLI 子命令；
-  - **16.5.2**：更新 `config.example.toml`（新增 `[ecosystem]` 配置节：默认扫描路径、Token 路由默认预算、探活超时）、`src/preflight/mod.rs`（增加技能目录可读性可选检查）、`docs/manual/`、`README.md`、`skills/agent-steward-*/SKILL.md`；
+  - **16.5.2**：更新 `config.example.toml`（新增 `[ecosystem]` 配置节：默认扫描路径、Token 路由默认预算、探活超时）、`src/preflight/mod.rs`（增加技能目录可读性可选检查）、`docs/manual/`、`README.md`、`skills/agent-body-*/SKILL.md`；
   - **16.5.3**：编写 `tests/ecosystem_integration.rs` 端到端测试 + 全系统回归（`cargo test` + `cargo check --tests` 0 warning + 非测试代码 0 unwrap 验证）+ `cargo build --release`。

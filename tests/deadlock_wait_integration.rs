@@ -4,7 +4,7 @@ use agent_body::api::mcp_tools::McpToolRegistry;
 use agent_body::coordination::{
     CoordinationEngine, LockRequest, LockResult, LockScope, ResourceType,
 };
-use agent_body::hooks::{EventBus, StewardEvent};
+use agent_body::hooks::{EventBus, BodyEvent};
 use agent_body::storage::Storage;
 use serde_json::json;
 
@@ -63,7 +63,7 @@ fn test_wait_and_acquire_push_wakeup() {
     // 验证 EventBus 确实广播了 LockWaiterNotified 唤醒事件
     let mut got_notified = false;
     while let Ok(ev) = rx.try_recv() {
-        if let StewardEvent::LockWaiterNotified { notified_agent, .. } = ev.as_ref() {
+        if let BodyEvent::LockWaiterNotified { notified_agent, .. } = ev.as_ref() {
             if notified_agent == "agent-b" {
                 got_notified = true;
             }

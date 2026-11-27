@@ -24,7 +24,7 @@ pub fn handle_ops(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> {
                             Storage::new(std::sync::Arc::new(p))
                         }
                         "duckdb" => {
-                            let path = from_url.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("steward.duckdb"));
+                            let path = from_url.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("body.duckdb"));
                             let p = agent_body::storage::DuckDbStorageProvider::open(&path)?;
                             Storage::new(std::sync::Arc::new(p))
                         }
@@ -41,7 +41,7 @@ pub fn handle_ops(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> {
                             Storage::new(std::sync::Arc::new(p))
                         }
                         "duckdb" => {
-                            let path = to_url.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("steward.duckdb"));
+                            let path = to_url.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("body.duckdb"));
                             let p = agent_body::storage::DuckDbStorageProvider::open(&path)?;
                             Storage::new(std::sync::Arc::new(p))
                         }
@@ -92,7 +92,7 @@ pub fn handle_ops(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> {
                 }
                 StorageCommands::Sync { to, to_path } => {
                     println!("🔄 正在执行主存储 -> 分析副本 ({}) 同步 ...", to);
-                    let target_path = to_path.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("steward.duckdb"));
+                    let target_path = to_path.map(PathBuf::from).unwrap_or_else(|| cfg.data_dir.join("body.duckdb"));
                     let duckdb_prov = agent_body::storage::DuckDbStorageProvider::open(&target_path)?;
                     let pipeline = agent_body::storage::SyncPipeline::new(storage.provider().clone(), std::sync::Arc::new(duckdb_prov));
                     let rep = pipeline.sync_all()?;

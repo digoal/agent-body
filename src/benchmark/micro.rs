@@ -263,7 +263,7 @@ pub fn run_all_micro_benchmarks() -> Result<Vec<MicroBenchResult>> {
             )?;
         }
         let engine = DuckDbAnalyticsEngine::new(provider.conn());
-        let tmp_dir = std::env::temp_dir().join(format!("steward_micro_{}", uuid::Uuid::new_v4()));
+        let tmp_dir = std::env::temp_dir().join(format!("body_micro_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&tmp_dir)?;
         let _guard = GuardTempDir(tmp_dir.clone());
         let export_path = tmp_dir.join("bench_export.parquet");

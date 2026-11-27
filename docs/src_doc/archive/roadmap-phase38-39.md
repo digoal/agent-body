@@ -1,4 +1,4 @@
-# Agent Host Steward — Phase 38 ~ 39 演进路线图：全生命周期信息新鲜度对账（ISSUE #21）与内生对比探针闭环自进化（ISSUE #22）
+# Agent Body — Phase 38 ~ 39 演进路线图：全生命周期信息新鲜度对账（ISSUE #21）与内生对比探针闭环自进化（ISSUE #22）
 
 > **编制**: Antigravity · **日期**: 2026-11-21  
 > **基线版本**: `v0.4.0`（`39fd028`）+ Phase 1~37 全部完成（Benchmark `v3.2`、现网健康分 `100/100`、`DQ1~DQ4` 100%）  
@@ -9,7 +9,7 @@
 
 ## 一、立项背景与现网第一性原理实证诊断
 
-对现网 `/root/.steward/steward.db` 开展物理状态与库内快照比对实测，暴露出以下真实新鲜度与自进化断层：
+对现网 `/root/.agent-body/body.db` 开展物理状态与库内快照比对实测，暴露出以下真实新鲜度与自进化断层：
 
 | 诊断项 | 现网实测数字 | 根因定位 | 归属 |
 |---|---|---|:---:|
@@ -29,6 +29,6 @@
 | | **38.2** | 写穿失效：`mtime_secs` 采集 + `merge_with_existing_asset` `stale` 标记 + 三后端 `upsert_asset`/`search_assets_fts` 过滤 `active` + SPI `delete_fact_node` | `src/scanner/metadata.rs`, `src/storage/{spi,mod,sqlite_provider,pg_provider,duckdb_provider}.rs` | 修改重扫重置 `'[]'` 向量，删除资产 FTS 0 召回 | ✅ 已完成 | 2026-11-21 |
 | | **38.3** | `AutoSyncEngine` 同路径记忆幂等归档、`ChangeHandler` 删除级联清理与 `PropertyGraphOrganizer` 幽灵节点剪枝 | `src/hooks/auto_sync.rs`, `src/watcher/handler.rs`, `src/fact/property_graph.rs` | 单文件多次修改只留 1 条活跃摘要；图谱无幽灵端口 | ✅ 已完成 | 2026-11-21 |
 | **Phase 39** | **39.1** | 实现 `FeedbackEngine::add_item_deduped`、`FreshnessReconciler` 现实对账器与 `P1~P5` 对比探针引擎 | `src/feedback/mod.rs`, `src/feedback/probes.rs` | `reconcile` 清理漂移/僵尸/重复记忆；5 探针输出数字 $\Delta$ | ✅ 已完成 | 2026-11-21 |
-| | **39.2** | 接入 `BackgroundScheduler`、MCP `steward_feedback`、CLI `feedback reconcile/probes` 与 Web REST API (41/41 Parity) | `src/daemon/scheduler.rs`, `src/api/mcp_tools.rs`, `src/main.rs`, `src/web/parity_api.rs` | 黑白屏 1:1 对齐，守护巡检自动对账 | ✅ 已完成 | 2026-11-21 |
+| | **39.2** | 接入 `BackgroundScheduler`、MCP `body_feedback`、CLI `feedback reconcile/probes` 与 Web REST API (41/41 Parity) | `src/daemon/scheduler.rs`, `src/api/mcp_tools.rs`, `src/main.rs`, `src/web/parity_api.rs` | 黑白屏 1:1 对齐，守护巡检自动对账 | ✅ 已完成 | 2026-11-21 |
 | | **39.3** | Benchmark `v3.3`：新增 `W12 (freshness_and_staleness_healing)` 与 `DQ5 (freshness_and_reconciliation_health)` 并同步 `EVOLUTION_GUIDE.md` | `src/benchmark/{mod,workloads,dq,report}.rs`, `EVOLUTION_GUIDE.md`, `docs/design_doc/10-*.md`, `docs/manual/10-*.md` | `W12` 与 `DQ5` PASS，`make evolution-check` 0 漂移 | ✅ 已完成 | 2026-11-21 |
-| **收尾验收** | **39.4** | 全量门禁 (`lint-panic`/`check`/`test`/`restart`)、现网 `reconcile`/`probes`/`backfill_embeddings`、`v3.3` 实跑存证与镜像同步 | 全系统 + `scripts/backfill_embeddings.py` + `/root/.steward/steward.db` | 全测试 PASS (`237/237`)、探针 `5/5 ✅`、`DQ1~DQ5 100%`、镜像零差异 | ✅ 已完成 | 2026-11-21 |
+| **收尾验收** | **39.4** | 全量门禁 (`lint-panic`/`check`/`test`/`restart`)、现网 `reconcile`/`probes`/`backfill_embeddings`、`v3.3` 实跑存证与镜像同步 | 全系统 + `scripts/backfill_embeddings.py` + `/root/.agent-body/body.db` | 全测试 PASS (`237/237`)、探针 `5/5 ✅`、`DQ1~DQ5 100%`、镜像零差异 | ✅ 已完成 | 2026-11-21 |

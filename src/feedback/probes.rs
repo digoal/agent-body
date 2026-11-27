@@ -313,7 +313,7 @@ impl SelfEvolutionProbeEngine {
         let assembler = BriefAssembler::new(storage.clone(), Some(provider));
         let t_brief = Instant::now();
         let brief_out = assembler.assemble(&BriefRequest {
-            query: "agent steward".to_string(),
+            query: "agent body".to_string(),
             session_id: String::new(),
             budget_tokens: 1500,
         })?;

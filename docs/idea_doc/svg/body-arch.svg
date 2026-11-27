@@ -81,14 +81,14 @@
   <!-- 底部: 数据文件 -->
   <g transform="translate(0,360)">
     <rect x="140" y="0" width="440" height="46" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
-    <text x="360" y="20" text-anchor="middle" fill="#475569" font-size="12" font-weight="600">~/.steward/</text>
-    <text x="360" y="36" text-anchor="middle" fill="#94a3b8" font-size="11">steward.db · config.toml · logs/</text>
+    <text x="360" y="20" text-anchor="middle" fill="#475569" font-size="12" font-weight="600">~/.agent-body/</text>
+    <text x="360" y="36" text-anchor="middle" fill="#94a3b8" font-size="11">body.db · config.toml · logs/</text>
   </g>
 
   <!-- 右侧标注 -->
   <g transform="translate(0,430)">
     <rect x="40" y="0" width="640" height="70" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
-    <text x="60" y="22" fill="#166534" font-size="12" font-weight="600">核心 API: steward brief</text>
+    <text x="60" y="22" fill="#166534" font-size="12" font-weight="600">核心 API: agent-body brief</text>
     <text x="60" y="40" fill="#166534" font-size="11">一次调用 → 最近记忆 + 活跃项目 + 环境状态 + 待办 → 注入 Agent system prompt</text>
     <text x="60" y="56" fill="#15803d" font-size="11">Agent 新会话第一秒就拥有完整上下文，不再失忆</text>
   </g>

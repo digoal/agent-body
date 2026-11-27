@@ -20,7 +20,7 @@ use crate::storage::{Storage, StorageProvider};
 
 /// W5: 3 跳爆炸半径与断链自愈
 pub(super) fn run_w5_dependency_impact() -> Result<WorkloadResult> {
-    let dir = BenchTempDir::create("steward_bench_w5")?;
+    let dir = BenchTempDir::create("body_bench_w5")?;
     let mem = Storage::open_in_memory()?;
 
     // 创建 40 个文件，构建 3 跳依赖图并刻意制造 2 条断链
@@ -85,7 +85,7 @@ pub(super) fn run_w5_dependency_impact() -> Result<WorkloadResult> {
         })?;
     }
 
-    // Without Steward: 逐文件读取文本正则扫描引用
+    // Without Agent Body: 逐文件读取文本正则扫描引用
     let t_base = Instant::now();
     let mut all_text = String::new();
     for f in &files {
@@ -97,7 +97,7 @@ pub(super) fn run_w5_dependency_impact() -> Result<WorkloadResult> {
     let base_us = t_base.elapsed().as_micros();
     let base_tokens = estimate_tokens(&all_text);
 
-    // With Steward: ImpactAnalyzer 3 跳图查询 + LinkAuditor 检出断链 + LinkRepairer 相似度推演
+    // With Agent Body: ImpactAnalyzer 3 跳图查询 + LinkAuditor 检出断链 + LinkRepairer 相似度推演
     let arc_st = Arc::new(mem);
     let t_stew = Instant::now();
     let impact = ImpactAnalyzer::new(arc_st.clone()).analyze_impact(&files[3], 3)?;
@@ -145,13 +145,13 @@ pub(super) fn run_w5_dependency_impact() -> Result<WorkloadResult> {
         ContextQualityInputs {
             required_facts_total: 5,
             baseline_facts_hit: 1,
-            steward_facts_hit: stew_hits,
+            body_facts_hit: stew_hits,
             baseline_signal_precision: 0.15,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.25,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.80,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         90.0,
     );
@@ -160,12 +160,12 @@ pub(super) fn run_w5_dependency_impact() -> Result<WorkloadResult> {
 
 /// W6: 多 Agent 并发抢锁与 WFG 死锁破局
 pub(super) fn run_w6_deadlock_resolution() -> Result<WorkloadResult> {
-    // Without Steward: 无死锁检测，模拟交叉等锁被迫等待 15ms 超时窗口
+    // Without Agent Body: 无死锁检测，模拟交叉等锁被迫等待 15ms 超时窗口
     let t_base = Instant::now();
     std::thread::sleep(std::time::Duration::from_millis(15));
     let base_us = t_base.elapsed().as_micros();
 
-    // With Steward: 内存隔离库内注入交叉持锁 + 排队，实跑 DeadlockDetector
+    // With Agent Body: 内存隔离库内注入交叉持锁 + 排队，实跑 DeadlockDetector
     let mem_provider = Arc::new(crate::storage::SqliteStorageProvider::open_in_memory()?);
     let engine = CoordinationEngine::new(mem_provider.clone());
     let t_stew = Instant::now();
@@ -254,13 +254,13 @@ pub(super) fn run_w6_deadlock_resolution() -> Result<WorkloadResult> {
         ContextQualityInputs {
             required_facts_total: 3,
             baseline_facts_hit: 1,
-            steward_facts_hit: stew_hits,
+            body_facts_hit: stew_hits,
             baseline_signal_precision: 0.30,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.20,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.70,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         90.0,
     );
@@ -382,13 +382,13 @@ pub(super) fn run_w7_context_routing(storage: Arc<dyn StorageProvider>) -> Resul
         ContextQualityInputs {
             required_facts_total: 3,
             baseline_facts_hit: 2,
-            steward_facts_hit: stew_hits,
+            body_facts_hit: stew_hits,
             baseline_signal_precision: base_sig,
-            steward_signal_precision: 1.0,
+            body_signal_precision: 1.0,
             baseline_actionability: 0.30,
-            steward_actionability: 1.0,
+            body_actionability: 1.0,
             baseline_safety: 0.80,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         90.0,
     );
@@ -464,13 +464,13 @@ pub(super) fn run_w8_adaptive_brief(storage: Arc<dyn StorageProvider>) -> Result
         ContextQualityInputs {
             required_facts_total: 4,
             baseline_facts_hit: 2,
-            steward_facts_hit: stew_hits,
+            body_facts_hit: stew_hits,
             baseline_signal_precision: 0.30,
-            steward_signal_precision: 0.92,
+            body_signal_precision: 0.92,
             baseline_actionability: 0.35,
-            steward_actionability: 0.95,
+            body_actionability: 0.95,
             baseline_safety: 0.40,
-            steward_safety: 1.0,
+            body_safety: 1.0,
         },
         85.0,
     );

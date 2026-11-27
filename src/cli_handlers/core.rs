@@ -58,7 +58,7 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                 let assets = storage.list_assets(5)?;
 
                 let mut buf = String::new();
-                buf.push_str("=== Steward Brief 上下文简报 ===\n");
+                buf.push_str("=== Agent Body Brief 上下文简报 ===\n");
                 buf.push_str(&format!("系统: {} | 内核: {} | 内存使用率: {:.1}%\n", summary.os_name, summary.kernel_version, summary.memory_used_pct));
                 buf.push_str("活跃动态任务进程 (前 5):\n");
                 for p in procs.iter().take(5) {
@@ -103,7 +103,7 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                     };
                     let suggestion = engine.suggest(&req)?;
                     println!("╔═══════════════════════════════════════════════════════╗");
-                    println!("║             Steward 对象放置与路径建议                ║");
+                    println!("║             Agent 本体对象放置与路径建议                ║");
                     println!("╚═══════════════════════════════════════════════════════╝");
                     println!("推荐目标路径:   {:?}", suggestion.suggested_path);
                     println!("命中规范规则:   {}", suggestion.rule_matched);
@@ -464,7 +464,7 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                             println!("  [条目 B ({})]: {}", c.memory_id_b, c.content_b);
                             println!("  仲裁建议: {}", c.suggested_resolution);
                         }
-                        println!("\n💡 提示: 可通过 'steward memory audit --archive-id <ID>' 归档旧记录。");
+                        println!("\n💡 提示: 可通过 'agent-body memory audit --archive-id <ID>' 归档旧记录。");
                     }
                 }
             }
@@ -486,7 +486,7 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
         Commands::Daemon => {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-                let daemon = agent_body::daemon::StewardDaemon::new(cfg.clone(), storage);
+                let daemon = agent_body::daemon::BodyDaemon::new(cfg.clone(), storage);
                 daemon.run().await
             })?;
         }
