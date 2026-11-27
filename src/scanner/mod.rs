@@ -2,6 +2,7 @@ pub mod matcher;
 pub mod state_machine;
 pub mod importance;
 pub mod metadata;
+pub mod redactor;
 pub mod multimodal;
 pub mod multimodal_ext;
 pub mod asset_search;
@@ -231,7 +232,9 @@ impl Scanner {
                 report.total_assets_recorded += 1;
 
                 if tier == "deep" {
-                    let _ = links_engine.refresh_links_for_asset(path);
+                    if let Err(e) = links_engine.refresh_links_for_asset(path) {
+                        eprintln!("[Scanner][WARN] 刷新依赖边 {:?} 失败: {}", path, e);
+                    }
                 }
             }
 

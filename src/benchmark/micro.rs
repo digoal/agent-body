@@ -40,7 +40,11 @@ struct GuardTempDir(PathBuf);
 
 impl Drop for GuardTempDir {
     fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
+        if self.0.exists() {
+            if let Err(e) = std::fs::remove_dir_all(&self.0) {
+                eprintln!("[Bench][WARN] 清理微基准目录 {:?} 失败: {}", self.0, e);
+            }
+        }
     }
 }
 

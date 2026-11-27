@@ -4,8 +4,8 @@
 检查项:
   1. 位置无关性红线: 生产代码 (#[cfg(test)] 之前) 严禁硬编码 env!("CARGO_MANIFEST_DIR")，且非 Benchmark 生产代码严禁新增 /root/new/ 与 user:digoal 硬编码
   2. 活跃部署与配置红线: Dockerfile / docker-compose.yml / config.example.toml 严禁残留 /.steward
-  3. 关键自治路径错误可观测性: 统计生产代码 let _ = 静默吞错数量 (<= 50) 且核心自治/SQLite路径必须为 0
-  4. 模块化复杂度红线: 严格禁止任何生产 Rust 文件超过 1500 行 (>1500L 清零)
+  3. 关键自治路径错误可观测性: 统计生产代码 let _ = 静默吞错数量 (<= 15) 且核心自治/SQLite/本体路径必须为 0
+  4. 模块化复杂度红线: 严格禁止任何生产 Rust 文件超过 1000 行 (>1000L 清零)
   5. WaitEventId 全埋点红线: 所有 WaitEventId 枚举变体必须在生产路径中具备 WaitEventGuard::enter / WaitEventRegistry::record_us 埋点
 """
 
@@ -19,8 +19,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# 随着 Phase 49 -> Phase 56 治理逐步收紧的静默吞错预算上限（142 -> 130 -> 50）
-MAX_SILENT_LET_UNDERSCORE = 50
+# 随着 Phase 49 -> Phase 56 -> Phase 67 治理逐步收紧的静默吞错预算上限（142 -> 130 -> 50 -> 15）
+MAX_SILENT_LET_UNDERSCORE = 15
+MAX_PROD_LOC = 1000
 CORE_ZERO_SILENT_PREFIXES = (
     "src/daemon/",
     "src/session/",
@@ -29,12 +30,27 @@ CORE_ZERO_SILENT_PREFIXES = (
     "src/storage/sqlite_provider/",
     "src/hooks/auto_sync.rs",
     "src/links/audit.rs",
+    "src/body/",
+    "src/scanner/",
+    "src/hooks/",
+    "src/web/",
+    "src/links/",
+    "src/fact/",
+    "src/audit/",
+    "src/config/",
 )
 
 
 def prod_slice(path: Path) -> str:
     text = path.read_text(encoding="utf-8")
-    m = re.search(r"\n#\[cfg\(test\)\]\s*\n\s*(?:pub\s+)?mod\s+tests\b", text)
+    # 先屏蔽 Rust 原始字符串 r#*"..."#* 内的假 #[cfg(test)] 文本（要求 r 前非标识符字符），避免误截断或吞掉后续代码
+    masked = list(text)
+    for m in re.finditer(r'(?<![A-Za-z0-9_])r(#*)"[\s\S]*?"\1', text):
+        for idx in range(m.start(), m.end()):
+            if masked[idx] != "\n":
+                masked[idx] = " "
+    masked_text = "".join(masked)
+    m = re.search(r"(?m)^#\[cfg\(test\)\]\s*\n\s*(?:pub\s+)?mod\s+[a-zA-Z0-9_]+\b", masked_text)
     return text[: m.start()] if m else text
 
 
@@ -69,7 +85,7 @@ def run_checks() -> tuple[list[str], list[str]]:
         if file_silent > 0 and rel.startswith(CORE_ZERO_SILENT_PREFIXES):
             core_silent_hits.append(f"{rel} ({file_silent}处)")
         loc = len(prod.splitlines())
-        if loc > 1500:
+        if loc > MAX_PROD_LOC:
             oversized_files.append((loc, rel))
 
     if manifest_dir_hits:
@@ -100,14 +116,14 @@ def run_checks() -> tuple[list[str], list[str]]:
         )
     notes.append(f"静默 `let _ =` 计数: {silent_let_total} / {MAX_SILENT_LET_UNDERSCORE}")
 
-    # 4. 模块化复杂度红线 (>1500L 清零)
+    # 4. 模块化复杂度红线 (>1000L 清零)
     oversized_files.sort(reverse=True)
     if oversized_files:
         top_str = ", ".join(f"{rel}({loc}L)" for loc, rel in oversized_files[:6])
-        errors.append(f"存在 >1500L 生产 God File ({len(oversized_files)} 个): {top_str}")
-        notes.append(f">1500L 生产文件 ({len(oversized_files)} 个): {top_str}")
+        errors.append(f"存在 >{MAX_PROD_LOC}L 生产 God File ({len(oversized_files)} 个): {top_str}")
+        notes.append(f">{MAX_PROD_LOC}L 生产文件 ({len(oversized_files)} 个): {top_str}")
     else:
-        notes.append(">1500L 生产文件: 0 个")
+        notes.append(f">{MAX_PROD_LOC}L 生产文件: 0 个")
 
     # 5. WaitEventId 全枚举埋点覆盖率检查
     we_file = ROOT / "src/body/perf_awr/wait_events.rs"

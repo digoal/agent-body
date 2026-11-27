@@ -529,7 +529,9 @@ impl DemoEngine {
 
             "scene-4" => {
                 // 先清理历史 demo:* 残留，再在 demo:* 隔离命名空间内注入真实交叉持锁 + Wait-Queue
-                let _ = Self::reset_sandbox(storage.as_ref());
+                if let Err(e) = Self::reset_sandbox(storage.as_ref()) {
+                    eprintln!("[Demo][WARN] 重置 demo 沙盒失败: {}", e);
+                }
                 let engine = CoordinationEngine::new(storage.clone());
                 let lock_a = engine.try_acquire(&LockRequest {
                     resource_type: ResourceType::Custom,
@@ -554,7 +556,7 @@ impl DemoEngine {
                 let now = chrono::Utc::now();
                 let enq_at = now.to_rfc3339();
                 let timeout_at = (now + chrono::Duration::seconds(120)).to_rfc3339();
-                let _ = storage.enqueue_lock_wait(&crate::storage::LockWaitEntry {
+                if let Err(e) = storage.enqueue_lock_wait(&crate::storage::LockWaitEntry {
                     wait_id: uuid::Uuid::new_v4().to_string(),
                     resource_type: "directory".into(),
                     resource_id: "/work/demo_app".into(),
@@ -564,8 +566,10 @@ impl DemoEngine {
                     status: "waiting".into(),
                     enqueued_at: enq_at.clone(),
                     timeout_at: timeout_at.clone(),
-                });
-                let _ = storage.enqueue_lock_wait(&crate::storage::LockWaitEntry {
+                }) {
+                    eprintln!("[Demo][WARN] 写入 demo 锁等待边 alpha 失败: {}", e);
+                }
+                if let Err(e) = storage.enqueue_lock_wait(&crate::storage::LockWaitEntry {
                     wait_id: uuid::Uuid::new_v4().to_string(),
                     resource_type: "custom".into(),
                     resource_id: "demo:port:19090".into(),
@@ -575,7 +579,9 @@ impl DemoEngine {
                     status: "waiting".into(),
                     enqueued_at: enq_at,
                     timeout_at,
-                });
+                }) {
+                    eprintln!("[Demo][WARN] 写入 demo 锁等待边 beta 失败: {}", e);
+                }
 
                 let locks = storage.list_coordination_locks(None).unwrap_or_default();
                 let waits = storage.list_lock_wait_queue(None, None).unwrap_or_default();

@@ -52,7 +52,9 @@ impl<'a> GraphRelationshipMiner<'a> {
         let mut report = MiningReport::default();
 
         // 幂等清理既有 L2 边并重建
-        let _ = self.storage.delete_fact_edges_by_tier("L2_STRUCTURAL");
+        if let Err(e) = self.storage.delete_fact_edges_by_tier("L2_STRUCTURAL") {
+            eprintln!("[SemanticDiscovery][WARN] 清理旧 L2_STRUCTURAL 边失败: {}", e);
+        }
 
         let nodes = self.storage.list_all_fact_nodes(2000)?;
         let existing_edges = self.storage.list_all_fact_edges(5000)?;
@@ -71,7 +73,9 @@ impl<'a> GraphRelationshipMiner<'a> {
         report.l2_derivation_edges = self.mine_derivation_edges(&nodes, &mut existing_pairs)?;
 
         if include_semantic {
-            let _ = self.storage.delete_fact_edges_by_tier("L3_SEMANTIC");
+            if let Err(e) = self.storage.delete_fact_edges_by_tier("L3_SEMANTIC") {
+                eprintln!("[SemanticDiscovery][WARN] 清理旧 L3_SEMANTIC 边失败: {}", e);
+            }
             report.l3_semantic_edges = self.mine_semantic_edges(&nodes, &existing_pairs, 3)?;
         }
 

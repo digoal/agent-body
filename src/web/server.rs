@@ -114,7 +114,9 @@ impl WebServer {
 
     /// 广播事件给所有 SSE 客户端
     pub fn broadcast_event(&self, event: &str) {
-        let _ = self.event_tx.send(event.to_string());
+        if self.event_tx.receiver_count() > 0 && self.event_tx.send(event.to_string()).is_err() {
+            eprintln!("[Web][WARN] SSE 广播投递失败");
+        }
     }
 
     /// 启动 HTTP 服务主循环
@@ -289,14 +291,15 @@ impl WebServer {
         .await?;
         resp.apply_cors_for_origin(origin_hdr.as_deref());
         if (is_demo_run || is_bench_run) && resp.status == StatusCode::OK {
-            let _ = event_tx.send(
-                serde_json::json!({
-                    "type": if is_bench_run { "benchmark_run" } else { "demo_run" },
-                    "path": demo_path,
-                    "timestamp": chrono::Utc::now().to_rfc3339(),
-                })
-                .to_string(),
-            );
+            let payload = serde_json::json!({
+                "type": if is_bench_run { "benchmark_run" } else { "demo_run" },
+                "path": demo_path,
+                "timestamp": chrono::Utc::now().to_rfc3339(),
+            })
+            .to_string();
+            if event_tx.receiver_count() > 0 && event_tx.send(payload).is_err() {
+                eprintln!("[Web][WARN] SSE benchmark/demo 事件广播失败");
+            }
         }
         stream.write_all(&resp.to_bytes()).await?;
         stream.flush().await?;

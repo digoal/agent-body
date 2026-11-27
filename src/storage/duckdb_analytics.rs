@@ -434,7 +434,9 @@ impl AnalyticsProvider for DuckDbAnalyticsEngine {
 
         if !is_csv_requested {
             // 禁用在线自动下载扩展，避免在离线/内网环境下挂死
-            let _ = conn.execute_batch("SET autoinstall_known_extensions=false; SET autoload_known_extensions=false;");
+            if let Err(e) = conn.execute_batch("SET autoinstall_known_extensions=false; SET autoload_known_extensions=false;") {
+                eprintln!("[DuckDB][WARN] 设置离线扩展策略失败: {}", e);
+            }
             let parquet_sql = format!("COPY (SELECT * FROM {}) TO '{}' (FORMAT PARQUET)", table, sql_escaped_path);
             if conn.execute(&parquet_sql, []).is_ok() {
                 exported = true;

@@ -132,7 +132,9 @@ impl UdsBroadcaster {
     /// 启动 Unix Domain Socket 服务端监听循环
     pub async fn run_server(&self) -> Result<()> {
         if self.socket_path.exists() {
-            let _ = std::fs::remove_file(&self.socket_path);
+            if let Err(e) = std::fs::remove_file(&self.socket_path) {
+                eprintln!("[Hooks][WARN] 清理旧 UDS Socket {:?} 失败: {}", self.socket_path, e);
+            }
         }
 
         let listener = tokio::net::UnixListener::bind(&self.socket_path)
@@ -167,7 +169,9 @@ pub fn bridge_event_bus_to_sse(
     tokio::spawn(async move {
         while let Ok(event) = event_rx.recv().await {
             if let Ok(json_str) = serde_json::to_string(&*event) {
-                let _ = sse_tx.send(json_str);
+                if sse_tx.receiver_count() > 0 && sse_tx.send(json_str).is_err() {
+                    eprintln!("[Hooks][WARN] EventBus -> SSE 广播投递失败");
+                }
             }
         }
     });

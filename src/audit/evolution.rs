@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::audit::{AuditEventInput, AuditLogger};
 use crate::feedback::FeedbackEngine;
-use crate::placement::learner::{LearnedRuleCandidate, PlacementLearner};
+use crate::placement::learner::LearnedRuleCandidate;
 use crate::storage::models::AuditQueryFilter;
 use crate::storage::Storage;
 
@@ -257,7 +257,6 @@ impl AuditEvolutionAnalyzer {
                 sample_paths: samples.into_iter().take(5).collect(),
             });
         }
-        let _ = PlacementLearner::new(storage); // 保持与 PlacementLearner 类型体系对齐
 
         let report = AuditEvolutionReport {
             evaluated_events,

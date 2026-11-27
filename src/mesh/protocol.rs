@@ -116,8 +116,7 @@ pub fn sha256_bytes_hex(bytes: &[u8]) -> String {
 pub fn hex_encode(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
     for b in bytes {
-        use std::fmt::Write;
-        let _ = write!(&mut s, "{:02x}", b);
+        s.push_str(&format!("{:02x}", b));
     }
     s
 }

@@ -249,7 +249,9 @@ impl ScanStateMachine {
                     job.total_assets += 1;
 
                     if tier == "deep" {
-                        let _ = links_engine.refresh_links_for_asset(path);
+                        if let Err(e) = links_engine.refresh_links_for_asset(path) {
+                            eprintln!("[Scanner][WARN] 状态机扫描刷新依赖边 {:?} 失败: {}", path, e);
+                        }
                     }
                 }
             }

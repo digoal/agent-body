@@ -229,3 +229,7 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 48. **`[P1 · Phase 66]` macOS / Linux 跨平台体验打磨与 GitHub Actions CI/CD 工业化** `✅ 已全量落地`:
     - `preflight` 与 `daemon` 按平台分支探测与展示 `FSEvents` / `LaunchAgent` / `libproc`（彻底消除 macOS 下 Systemd `WARN` 与 `max_user_watches = 未知`）；`Makefile` 支持 `Darwin`/`Linux` 双平台安装、重启与无硬编码镜像同步；
     - 新增 `.github/workflows/ci.yml`（Ubuntu + macOS 全门禁 + Clippy + 全量测试）与 `.github/workflows/release.yml`（Tag 自动发布双平台二进制包与 SHA-256）。
+
+49. **`[P1 · Phase 67]` 全仓生产文件 `< 1000L` 模块拆分、`prod_slice` 修复与 `let _ = <= 15` 吞错治理** `✅ 已全量落地`:
+    - 拆分全部 `>= 1000L` 生产文件（`mcp_tools`、`benchmark/workloads`、`multimodal_ext`、`config`、`metadata`、`knowledge_graph`、`cli_args`、`awr_engine`、`preflight`），全仓所有生产 `.rs` 文件严格 `< 1000L`；
+    - 修复 `scripts/code_hygiene.py` `prod_slice` 原始字符串误判并收紧门槛至 `>1000L = 0`、`let _ = <= 15`，清理全仓非 benchmark/核心路径静默吞错（详见 [roadmap-phase67.md](docs/src_doc/roadmap-phase67.md)）。

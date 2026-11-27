@@ -242,14 +242,16 @@ impl FreshnessReconciler {
 
         drop(active_memories);
         drop(fact_nodes);
-        let _ = storage.provider().get_benchmark_run("awr:pragma_optimize");
+        if let Err(e) = storage.provider().get_benchmark_run("awr:pragma_optimize") {
+            eprintln!("[Reconcile][WARN] 读取 pragma_optimize 状态失败: {}", e);
+        }
         #[cfg(all(target_os = "linux", target_env = "gnu"))]
         {
             unsafe extern "C" {
                 fn malloc_trim(pad: usize) -> i32;
             }
             unsafe {
-                let _ = malloc_trim(0);
+                let _trimmed = malloc_trim(0);
             }
         }
 

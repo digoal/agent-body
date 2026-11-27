@@ -5,6 +5,7 @@ pub mod assets_catalog;
 pub mod property_graph;
 pub mod semantic_discovery;
 pub mod knowledge_graph;
+pub mod knowledge_terms;
 pub mod knowhow_extractor;
 
 pub use capability::{CapabilityEngine, ToolCapability, CapabilityQueryResult};
@@ -114,7 +115,9 @@ impl FactFacade {
                 let organizer = PropertyGraphOrganizer::new(storage.clone());
                 
                 // 自动增量感知并刷新当前宿主机实体图
-                let _ = organizer.build_host_graph();
+                if let Err(e) = organizer.build_host_graph() {
+                    eprintln!("[Fact][WARN] 自动增量刷新属性图失败: {}", e);
+                }
 
                 let sub = organizer.query_subgraph(trimmed_query, 2)?;
                 Ok(organizer.format_graph_report(&sub))

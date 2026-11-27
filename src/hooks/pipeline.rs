@@ -243,7 +243,9 @@ impl HookPipelineEngine {
                 source: "pipeline_engine".to_string(),
                 created_at: None,
             };
-            let _ = storage.record_change(&change);
+            if let Err(e) = storage.record_change(&change) {
+                eprintln!("[Hooks][WARN] 记录 Pipeline 审计变更失败: {}", e);
+            }
         }
     }
 

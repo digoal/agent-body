@@ -88,7 +88,11 @@ impl CompTempDir {
 
 impl Drop for CompTempDir {
     fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
+        if self.0.exists() {
+            if let Err(e) = std::fs::remove_dir_all(&self.0) {
+                eprintln!("[Bench][WARN] 清理临时目录 {:?} 失败: {}", self.0, e);
+            }
+        }
     }
 }
 
@@ -512,7 +516,9 @@ fn run_comp_c2_context_db(storage: Arc<dyn StorageProvider>) -> Result<Competito
             max_services: 3,
         },
     )?;
-    let _ = storage.delete_bench_sandbox_records();
+    if let Err(e) = storage.delete_bench_sandbox_records() {
+        eprintln!("[Bench][WARN] 清理竞品基准沙盒记录失败: {}", e);
+    }
     let stew_tok = estimate_tokens(&stew_meta_buf) + routed.route_tokens_used as i64;
     let stew_us = t_stew.elapsed().as_micros().max(1);
 
@@ -671,7 +677,9 @@ fn run_comp_c3_agentfs() -> Result<CompetitorComparisonResult> {
         metadata: None,
     })?;
     if let LockResult::Granted { lock_id, .. } = lock_res {
-        let _ = coord_engine.release(&lock_id, "bench:comp_c3");
+        if let Err(e) = coord_engine.release(&lock_id, "bench:comp_c3") {
+            eprintln!("[Bench][WARN] 释放 C3 测试锁失败: {}", e);
+        }
     }
     drop(coord_engine);
     drop(place_engine);

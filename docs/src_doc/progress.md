@@ -36,11 +36,12 @@
 | **Phase 63** | **多模态解析深化、三通道统一与 Shadow A/B `H1~H5` 自愈 (`v1.6`)** | `multimodal_ext.rs` 纯 Rust HTML/Parquet/CSV/JSONL/音频 L1A、`run_command_bounded` 有界探针、三大入口统一魔数分类与 `schema_version=2.0`、`kv_filter`+无损回填全端 1:1:1、运行模式 `.override` 热切与 `ShadowAbEngine` `H1~H5` 自动写穿自愈 | `v1.6` | [roadmap-phase63.md](roadmap-phase63.md) | ✅ **已完成** |
 | **Phase 64** | **`v1.1.0` 一等公民大一统对齐 (Web UI / SKILL / 手册 / 门禁)** | 升级 `evolution_manifest.py` 防漂移门禁、`Cargo.toml` 升至 `1.1.0`、Web UI 补齐三态 `shadow_ab`/`H1~H5`/`kv_filter`/`backfill` Action-level 1:1:1 交互、同步 3 套 SKILL / 10 卷手册 / `arch` / `design_doc/{06,10}` / `README` / `INSTALL` / `v1.1.0` 发版说明 | `#46` | [roadmap-phase64.md](roadmap-phase64.md) | ✅ **已完成** |
 | **Phase 65~66** | **效果真实性与可信度量攻坚 + 跨平台打磨与 GitHub CI/CD** | 修复 `DQ2` 口径矛盾与 `DQ6`/`vitals` 十万边截断失真、优化 `expand_graph_for_query` 与 `AssetSearchEngine` 代码词 `exact_id` 召回/延迟、消除 macOS 预检/Daemon/Makefile Linux 残留并新增双平台 `.github/workflows/{ci,release}.yml` | `#47`, `#48` | [roadmap-phase65-66.md](roadmap-phase65-66.md) | ✅ **已完成** |
+| **Phase 67** | **全仓 `< 1000L` 模块化拆分与 `let _ = <= 15` 吞错治理** | 拆分全部 10 个 `>=1000L` 生产文件至 `<1000L`（`mcp_tools`/`workloads`/`multimodal_ext`/`config`/`metadata`/`knowledge_graph`/`cli_args`/`awr_engine`/`preflight`），修复 `prod_slice` 原始字符串漏检并收紧 `code_hygiene.py` 红线至 `>1000L = 0`、`let _ = <= 15` | `#49` | [roadmap-phase67.md](roadmap-phase67.md) | ✅ **已完成** |
 
 ---
 
 ## 三、断点恢复指引
 
-1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与最近活跃路线图 [roadmap-phase65-66.md](roadmap-phase65-66.md)；
+1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与最近活跃路线图 [roadmap-phase67.md](roadmap-phase67.md)；
 2. 严禁全仓扫描 `docs/src_doc/archive/` 内已冻结的历史路线图；
 3. 每次代码/文档改动收口前执行 `make quality-gate && make test && make verify-decks` 与 `make sync-mirror` 校验零漂移。

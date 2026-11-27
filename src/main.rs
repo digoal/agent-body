@@ -4,6 +4,7 @@ use agent_body::config::Config;
 use agent_body::storage::Storage;
 
 mod cli_args;
+mod cli_subcommands;
 use cli_args::*;
 
 mod cli_handlers;

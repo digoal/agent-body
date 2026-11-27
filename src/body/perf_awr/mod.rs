@@ -1,6 +1,7 @@
 //! 本体等待事件 (`WaitEventRegistry`)、`/proc/self` 内核探针、AWR 快照基线差分与 ADDM 自优化引擎
 //! 对应设计规格书: `docs/design_doc/18-wait-events-and-awr-perf-diagnostics-spec.md`
 
+pub mod addm_tuner;
 pub mod awr_engine;
 pub mod wait_events;
 

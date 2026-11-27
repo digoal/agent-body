@@ -186,10 +186,13 @@ impl HookDispatcher {
                         let _wait = crate::body::WaitEventGuard::enter(
                             crate::body::WaitEventId::IpcHookSubprocess,
                         );
-                        let _ = Command::new("sh")
+                        if let Err(e) = Command::new("sh")
                             .arg("-c")
                             .arg(&cmd_to_run)
-                            .output();
+                            .output()
+                        {
+                            eprintln!("[Hooks][WARN] 异步执行 Hook 命令失败: {}", e);
+                        }
                     });
                 }
                 HookAction::Webhook { url, timeout_ms } => {
@@ -201,7 +204,15 @@ impl HookDispatcher {
                     // 异步发出 Webhook HTTP POST (基于 WebhookPusher 指数退避重试通道)
                     tokio::spawn(async move {
                         let pusher = super::push::WebhookPusher::default();
-                        let _ = pusher.send_event(&url_cloned, &ev_cloned, to_ms).await;
+                        let report = pusher.send_event(&url_cloned, &ev_cloned, to_ms).await;
+                        if !report.success {
+                            eprintln!(
+                                "[Hooks][WARN] Webhook 推送 {} 失败 (attempts={}): {}",
+                                url_cloned,
+                                report.attempts,
+                                report.error_message.as_deref().unwrap_or("unknown error")
+                            );
+                        }
                     });
                 }
             }

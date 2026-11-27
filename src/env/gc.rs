@@ -134,7 +134,11 @@ impl HostGarbageCollector {
             if !dry_run {
                 for cand in candidate_files.iter().rev() {
                     if cand.is_dir {
-                        let _ = fs::remove_dir(Path::new(&cand.path));
+                        if let Err(e) = fs::remove_dir(Path::new(&cand.path)) {
+                            if e.kind() != std::io::ErrorKind::DirectoryNotEmpty {
+                                eprintln!("[GC][WARN] 清理空目录 {:?} 失败: {}", cand.path, e);
+                            }
+                        }
                     }
                 }
             }

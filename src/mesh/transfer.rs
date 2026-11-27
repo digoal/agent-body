@@ -262,7 +262,9 @@ pub fn reject_transfer(storage: &dyn StorageProvider, transfer_id: &str) -> anyh
     if let Some(rec) = transfers.into_iter().find(|t| t.transfer_id == transfer_id) {
         let p = Path::new(&rec.inbox_path);
         if p.is_file() {
-            let _ = fs::remove_file(p);
+            if let Err(e) = fs::remove_file(p) {
+                eprintln!("[Mesh][WARN] 删除被拒隔离文件 {:?} 失败: {}", p, e);
+            }
         }
     }
     storage.update_mesh_transfer_status(transfer_id, "rejected", None)

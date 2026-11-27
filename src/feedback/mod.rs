@@ -228,7 +228,7 @@ impl FeedbackEngine {
                 item.status,
                 item.summary.chars().take(180).collect::<String>()
             );
-            let _ = mm.add(
+            mm.add(
                 "experience",
                 &content,
                 Some(&format!("使用反馈沉淀 {}", item.id)),

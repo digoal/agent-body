@@ -189,11 +189,13 @@ impl ContinuityManager {
             if let Ok(existing) = storage.list_body_checkpoints(Some("active"), 20) {
                 for old in existing {
                     if old.session_id == session_id {
-                        let _ = storage.mark_body_checkpoint_resumed(
+                        if let Err(e) = storage.mark_body_checkpoint_resumed(
                             &old.checkpoint_id,
                             "superseded",
                             &now,
-                        );
+                        ) {
+                            eprintln!("[Continuity][WARN] 标记旧胶囊 superseded 失败: {}", e);
+                        }
                     }
                 }
             }
@@ -258,7 +260,7 @@ impl ContinuityManager {
             40,
         );
         let now = Utc::now().to_rfc3339();
-        let _ = storage.mark_body_checkpoint_resumed(&cp.checkpoint_id, &clean_brain, &now)?;
+        storage.mark_body_checkpoint_resumed(&cp.checkpoint_id, &clean_brain, &now)?;
         cp.status = "resumed".to_string();
         cp.resumed_by_brain = Some(clean_brain.clone());
         cp.resumed_at = Some(now);

@@ -896,7 +896,9 @@ exit 0
                 if executable {
                     use std::os::unix::fs::PermissionsExt;
                     let perms = fs::Permissions::from_mode(0o755);
-                    let _ = fs::set_permissions(&full_path, perms);
+                    if let Err(e) = fs::set_permissions(&full_path, perms) {
+                        eprintln!("[Hooks][WARN] 设置脚本权限 {:?} 失败: {}", full_path, e);
+                    }
                 }
             }
             written_path = Some(full_path.to_string_lossy().to_string());
@@ -919,7 +921,9 @@ exit 0
                     if comp_exec {
                         use std::os::unix::fs::PermissionsExt;
                         let perms = fs::Permissions::from_mode(0o755);
-                        let _ = fs::set_permissions(&comp_full, perms);
+                        if let Err(e) = fs::set_permissions(&comp_full, perms) {
+                            eprintln!("[Hooks][WARN] 设置配套脚本权限 {:?} 失败: {}", comp_full, e);
+                        }
                     }
                 }
                 comp_written = Some(comp_full.to_string_lossy().to_string());

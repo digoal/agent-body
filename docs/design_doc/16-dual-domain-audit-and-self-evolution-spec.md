@@ -22,7 +22,7 @@
 1. **In-Agent 接入域碎片化与静默丢失**：
    - [src/api/hooks.rs](../../src/api/hooks.rs#L43-L191) `pre_tool_call()` 执行了端口占用、协锁、安全红线、AOPCC 分级等关键裁决，但**零落盘留痕**；
    - [src/api/hooks.rs](../../src/api/hooks.rs#L310) `post_tool_call_with_error()` 仅在 `path_opt` 为 `Some(...)` 时记入 `changes`，直接丢弃命令执行（`run_command`）、服务启停、协作锁等全量调用；
-   - [src/api/mcp_tools.rs](../../src/api/mcp_tools.rs) 41 个原生 MCP 工具、CLI 子命令及 Web 写操作缺少统一、脱敏、防注入的行为审计汇流管道。
+   - [src/api/mcp_tools/mod.rs](../../src/api/mcp_tools/mod.rs) 41 个原生 MCP 工具、CLI 子命令及 Web 写操作缺少统一、脱敏、防注入的行为审计汇流管道。
 2. **Out-of-Agent 管家自治与被动维护域零审计（最高风险黑盒）**：
    - 大管家在 Agent 对话回路之外**直接变更或清理宿主机对象与知识库状态**的 7 条关键链路当前均未落盘审计：
      1. [src/daemon/scheduler.rs](../../src/daemon/scheduler.rs#L31-L101) `BackgroundScheduler::run_inspection_cycle()`（每 30 分钟执行进程同步、属性图更新、记忆冲突审计、断点扫描恢复、过期锁清理、生态刷新、新鲜度对账、Ollama 精炼）；

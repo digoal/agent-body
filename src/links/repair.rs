@@ -180,7 +180,9 @@ impl LinkRepairer {
                                 && fs::write(source_path, new_content).is_ok() {
                                     applied_count += 1;
                                     // 同步更新 links 表
-                                    let _ = self.storage.update_link_target(&issue.source, &issue.target, &candidate);
+                                    if let Err(e) = self.storage.update_link_target(&issue.source, &issue.target, &candidate) {
+                                        eprintln!("[Links][WARN] 同步更新 links 表失败: {}", e);
+                                    }
                                 }
                         }
                     }
