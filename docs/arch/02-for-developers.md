@@ -103,7 +103,7 @@ export PATH="/root/.cargo/bin:$PATH"
 # 1. 快速语法与类型检查 (耗时约 2~4 秒)
 cargo check
 
-# 2. 运行全工作区 387 项自动化测试套件（含旗舰版 349 + kernel 22 + contrib 12 + distributions 4）
+# 2. 运行全工作区 395 项自动化测试套件（含旗舰版 352 + kernel 26 + contrib 13 + distributions 4）
 RUST_TEST_THREADS=1 cargo test --workspace
 
 # 2b. 单独校验微内核防腐边界与精简发行版自检

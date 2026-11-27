@@ -63,7 +63,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 |---|---|---|
 | `Cargo.toml`, `Cargo.lock` | Rust 依赖与工作空间配置（旗舰 root + `kernel/*` + `contrib/*` + `distributions/*`） | 引入新 crate 需考虑编译耗时与轻量化 |
 | `kernel/` | 纯机制微内核底座（3 crates：`body-sdk` / `body-protocol` / `body-kernel`） | 单向依赖隔离，0 业务词污染（`make arch-check`） |
-| `contrib/` | 独立周边扩展插件目录（9 个标准五件套模块） | 严格 `ext_<id>__*` 前缀、`body_module_magic!()` 与 `contrib/<ext>/tests/regress.rs` |
+| `contrib/` | 独立周边扩展插件目录（10 个标准五件套模块，含 `obs_telemetry` 可观测导出） | 严格 `ext_<id>__*` 前缀、`body_module_magic!()` 与 `contrib/<ext>/tests/regress.rs` |
 | `distributions/` | 多发行版组装入口（3 精简版：`kernel-minimal` / `aiops-probe` / `dba-sentinel`） | 精简版 0 DuckDB / 0 C++ 运行时依赖，内置 `self-check` |
 | `scripts/arch_boundary_check.py` | 微内核防腐与 `contrib/` 五件套边界门禁脚本 | 纳管于 `make quality-gate` |
 | `src/` | Rust 旗舰版源码目录（27 个顶层模块） | 旗舰业务实现与单元测试所在（`<1000L` / 模块） |
@@ -115,7 +115,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 flowchart TD
     A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 docs/src_doc/roadmap-phase*.md)"]
     B --> C["步骤 3: 串行编码与单元测试驱动<br/>(TDD + cargo test 局部验证)"]
-    C --> D["步骤 4: 编译检查与全量回归<br/>(workspace 387 tests 全绿 + release 构建)"]
+    C --> D["步骤 4: 编译检查与全量回归<br/>(workspace 395 tests 全绿 + release 构建)"]
     D --> E["步骤 5: 文档同步与交付三段式小结<br/>(更新手册/README + 状态标记)"]
 ```
 
@@ -144,7 +144,7 @@ flowchart TD
    ```bash
    export PATH="$HOME/.cargo/bin:$PATH" && RUST_TEST_THREADS=1 cargo test --workspace
    ```
-   **门禁要求**: 全工作区 **387 项测试全部 `ok`**（根包 349 + `kernel` 22 + `contrib` 12 + `distributions` 4），0 failed。
+   **门禁要求**: 全工作区 **395 项测试全部 `ok`**（根包 352 + `kernel` 26 + `contrib` 13 + `distributions` 4），0 failed。
 2. 运行 release 生产构建（旗舰版与精简发行版按需编译）：
    ```bash
    export PATH="$HOME/.cargo/bin:$PATH" && cargo build --release
@@ -206,7 +206,7 @@ flowchart TD
 - [ ] **本体边界与命名兼容自检（规约 #2 & #27）**：是否严守脑体分离不内置业务 LLM 规划循环？自治行为是否遵守 `L0~L3` 权限包络（不越权执行 `L2/L3`）？对外叙事升级为「Agent 本体」的同时，是否保证 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
-- [ ] 是否执行了 `make quality-gate`（`evolution-check` + `arch-check` 防腐边界门禁 + `lint-panic` + `lint-hygiene` 位置无关性/`>1000L` 文件清零/`let _ = <= 15`/核心自治及微内核与周边路径 `= 0`/`18/18 WaitEventId` + `lint-strict` 全工作区零警告编译）且 `RUST_TEST_THREADS=1 cargo test --workspace` 全部通过（**387 项全工作区测试全绿，零 warning**）？若改动 `presentation/` 或演说生成脚本，是否已通过 `make verify-decks` Playwright 无头验真？
+- [ ] 是否执行了 `make quality-gate`（`evolution-check` + `arch-check` 防腐边界门禁 + `lint-panic` + `lint-hygiene` 位置无关性/`>1000L` 文件清零/`let _ = <= 15`/核心自治及微内核与周边路径 `= 0`/`18/18 WaitEventId` + `lint-strict` 全工作区零警告编译）且 `RUST_TEST_THREADS=1 cargo test --workspace` 全部通过（**395 项全工作区测试全绿，零 warning**）？若改动 `presentation/` 或演说生成脚本，是否已通过 `make verify-decks` Playwright 无头验真？
 - [ ] **二进制位置无关与发版一致性自检（规约 #11 & #28）**：生产路径是否 0 处 `env!("CARGO_MANIFEST_DIR")`？改名/核心修复提交后是否已重编安装 `make restart` 并核验 `agent-body --version` hash 与 `HEAD` 一致且 `DQ5 >= 98%`？
 - [ ] 是否执行了 `agent-body preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？

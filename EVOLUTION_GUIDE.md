@@ -1,6 +1,6 @@
 # Agent Body — 零重扫项目演进指南 (`EVOLUTION_GUIDE.md`)
 
-<!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=88 tables=27 workloads=19 micro=6 dq=10 pr_rules=14 kernel_crates=3 contrib_exts=9 distributions=3 -->
+<!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=88 tables=27 workloads=19 micro=6 dq=10 pr_rules=14 kernel_crates=3 contrib_exts=10 distributions=3 -->
 
 > **核心定位（解决 ISSUE #17）**：让任何新接手的 AI Agent 或开发者在 **不重复扫描 3.8 万行源码与 48 份历史 `docs/src_doc/` 文档** 的前提下，**2 轮以内**完成需求定位、触点锁定与规范演进。
 
@@ -10,7 +10,7 @@
 
 1. **只读 Tier-0 文档（仅 2 份）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构地图 + 变更触点矩阵）；
-   - 当前活跃路线图 [docs/src_doc/roadmap-phase70-73.md](docs/src_doc/roadmap-phase70-73.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase69.md](docs/src_doc/roadmap-phase69.md)、[docs/src_doc/roadmap-phase68.md](docs/src_doc/roadmap-phase68.md)、[docs/src_doc/roadmap-phase67.md](docs/src_doc/roadmap-phase67.md)、[docs/src_doc/roadmap-phase65-66.md](docs/src_doc/roadmap-phase65-66.md)、[docs/src_doc/roadmap-phase64.md](docs/src_doc/roadmap-phase64.md)、[docs/src_doc/roadmap-phase63.md](docs/src_doc/roadmap-phase63.md)、[docs/src_doc/roadmap-phase62.md](docs/src_doc/roadmap-phase62.md)、[docs/src_doc/roadmap-phase61.md](docs/src_doc/roadmap-phase61.md)、[docs/src_doc/roadmap-phase60.md](docs/src_doc/roadmap-phase60.md)、[docs/src_doc/roadmap-phase59.md](docs/src_doc/roadmap-phase59.md)、[docs/src_doc/roadmap-phase58.md](docs/src_doc/roadmap-phase58.md)、[docs/src_doc/roadmap-phase57.md](docs/src_doc/roadmap-phase57.md)、[docs/src_doc/roadmap-phase56.md](docs/src_doc/roadmap-phase56.md)、[docs/src_doc/roadmap-phase55.md](docs/src_doc/roadmap-phase55.md)、[docs/src_doc/roadmap-phase54.md](docs/src_doc/roadmap-phase54.md)、[docs/src_doc/roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)、[docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)、[docs/src_doc/roadmap-phase51.md](docs/src_doc/archive/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/archive/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/archive/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/archive/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/archive/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/archive/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/archive/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/archive/roadmap-phase42.md)）。
+   - 当前活跃路线图 [docs/src_doc/roadmap-phase74.md](docs/src_doc/roadmap-phase74.md)（断点续传状态表；已完成的前序阶段见 [docs/src_doc/roadmap-phase70-73.md](docs/src_doc/roadmap-phase70-73.md)、[docs/src_doc/roadmap-phase69.md](docs/src_doc/roadmap-phase69.md)、[docs/src_doc/roadmap-phase68.md](docs/src_doc/roadmap-phase68.md)、[docs/src_doc/roadmap-phase67.md](docs/src_doc/roadmap-phase67.md)、[docs/src_doc/roadmap-phase65-66.md](docs/src_doc/roadmap-phase65-66.md)、[docs/src_doc/roadmap-phase64.md](docs/src_doc/roadmap-phase64.md)、[docs/src_doc/roadmap-phase63.md](docs/src_doc/roadmap-phase63.md)、[docs/src_doc/roadmap-phase62.md](docs/src_doc/roadmap-phase62.md)、[docs/src_doc/roadmap-phase61.md](docs/src_doc/roadmap-phase61.md)、[docs/src_doc/roadmap-phase60.md](docs/src_doc/roadmap-phase60.md)、[docs/src_doc/roadmap-phase59.md](docs/src_doc/roadmap-phase59.md)、[docs/src_doc/roadmap-phase58.md](docs/src_doc/roadmap-phase58.md)、[docs/src_doc/roadmap-phase57.md](docs/src_doc/roadmap-phase57.md)、[docs/src_doc/roadmap-phase56.md](docs/src_doc/roadmap-phase56.md)、[docs/src_doc/roadmap-phase55.md](docs/src_doc/roadmap-phase55.md)、[docs/src_doc/roadmap-phase54.md](docs/src_doc/roadmap-phase54.md)、[docs/src_doc/roadmap-phase53.md](docs/src_doc/roadmap-phase53.md)、[docs/src_doc/roadmap-phase52.md](docs/src_doc/roadmap-phase52.md)、[docs/src_doc/roadmap-phase51.md](docs/src_doc/archive/roadmap-phase51.md)、[docs/src_doc/roadmap-phase50.md](docs/src_doc/archive/roadmap-phase50.md)、[docs/src_doc/roadmap-phase49.md](docs/src_doc/archive/roadmap-phase49.md)、[docs/src_doc/roadmap-phase48.md](docs/src_doc/archive/roadmap-phase48.md)、[docs/src_doc/roadmap-phase46.md](docs/src_doc/archive/roadmap-phase46.md)、[docs/src_doc/roadmap-phase44-45.md](docs/src_doc/archive/roadmap-phase44-45.md)、[docs/src_doc/roadmap-phase43.md](docs/src_doc/archive/roadmap-phase43.md) 与 [docs/src_doc/roadmap-phase42.md](docs/src_doc/archive/roadmap-phase42.md)）。
 2. **运行 O(1) 实时架构快照（`<100ms`，禁止手动数模块/工具数）**：
    ```bash
    make evolution-check
@@ -24,7 +24,7 @@
    ```
 4. **文档三级分层与禁扫令 (Document Tiering)**：
    - **`Tier-0`（开工必读）**：`EVOLUTION_GUIDE.md` + 当前最新活跃 `docs/src_doc/roadmap-phase*.md`；
-   - **`Tier-1`（按改点跳读）**：`docs/design_doc/05~20`、`docs/manual/01~10`、`user_feedback.md`；
+   - **`Tier-1`（按改点跳读）**：`docs/design_doc/05~21`、`docs/manual/01~10`、`user_feedback.md`；
    - **`Tier-2`（历史冻结归档，严禁常规迭代全量扫描）**：`docs/src_doc/archive/roadmap-phase*.md`、`docs/src_doc/archive/progress-phase*.md`、`docs/design_doc/review*.md`。
 
 ---

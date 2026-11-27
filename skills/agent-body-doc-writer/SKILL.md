@@ -76,8 +76,8 @@ flowchart TD
 
 ### 步骤 1: 提取代码事实
 在动笔前，Agent 必须快速查阅：
-- `EVOLUTION_GUIDE.md` & `ISSUE.md`：27 模块 / 43 工具 / 88 SPI 方法 / 27 表 + 3 微内核 Crate / 9 `contrib/` 扩展 / 3 精简发行版锚点与演进议题总账；
-- `kernel/`、`contrib/`、`distributions/` 与 [20-plugin-microkernel-architecture-spec.md](../../docs/design_doc/20-plugin-microkernel-architecture-spec.md)：纯微内核契约、标准五件套扩展、轨 B 沙盒与四大发行版装配规格；
+- `EVOLUTION_GUIDE.md` & `ISSUE.md`：27 模块 / 43 工具 / 88 SPI 方法 / 27 表 + 3 微内核 Crate / 10 `contrib/` 扩展 / 3 精简发行版锚点与演进议题总账；
+- `kernel/`、`contrib/`、`distributions/` 与 [20-plugin-microkernel-architecture-spec.md](../../docs/design_doc/20-plugin-microkernel-architecture-spec.md) / [21-observability-and-telemetry-spec.md](../../docs/design_doc/21-observability-and-telemetry-spec.md)：纯微内核契约、标准五件套扩展、全栈可观测闭环、轨 B 沙盒与四大发行版装配规格；
 - `src/cli_args.rs` & `src/cli_handlers/*`：当前支持的所有 30 个顶级子命令与 flags 参数；
 - `src/api/mcp_schemas.rs` & `src/api/mcp_tools/mod.rs`：当前注册的全部 **43 个原生 MCP 工具** 名与 inputSchema；
 - `src/body/`：Agent 本体中枢（`BodyManifest`、`ContinuityCapsule`、`HomeostasisVitals`、`AutonomyEnvelope`、`perf_awr/*`）；
@@ -113,7 +113,7 @@ flowchart TD
   - 错误写法: `A[客户端(Agent)]`
   - 正确写法: `A["客户端 (Agent)"]`
 - **SVG 图表规范**：矢量图保存为独立 `.svg` 文件置于 `docs/markdown/svg/`，保证自适应与文字高对比度无遮挡；
-- **死链检查与防漂移门禁**：运行 `make quality-gate`（含 `make evolution-check` 校验 `27` 模块 / `43` 工具 / `88` SPI / `27` 表 / 微内核 `3` crates / `contrib` `9` 扩展 / 发行版 `3` 个 / Benchmark `v3.9` 与活跃 `.md` 0 死链 + `make arch-check` 防腐边界门禁）。
+- **死链检查与防漂移门禁**：运行 `make quality-gate`（含 `make evolution-check` 校验 `27` 模块 / `43` 工具 / `88` SPI / `27` 表 / 微内核 `3` crates / `contrib` `10` 扩展 / 发行版 `3` 个 / Benchmark `v3.9` 与活跃 `.md` 0 死链 + `make arch-check` 防腐边界门禁）。
 
 ### 步骤 5: 交付检查与 Commit
 - 检查 `README.md`、`docs/manual/` 与 `docs/src_doc/` 是否无缝互引；

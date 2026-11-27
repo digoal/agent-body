@@ -106,6 +106,7 @@ port = 8765
 | `GET` | `/api/v1/feedback` | 列出 `user_feedback.md` 实际使用反馈总账条目 | 开放 |
 | `POST` | `/api/v1/feedback` | 触发反馈追加 (`add`)、同步入记忆 (`sync`)、对账 (`reconcile`) 与 `P1~P5` 探针 (`probes`) | Bearer Token |
 | `GET` | `/deck` / `/presentation` | 内嵌离线版路演与架构演示 PPT | 开放 |
+| `GET` | `/metrics` / `/api/v1/metrics` | Prometheus / OpenMetrics 0.0.4 实时指标暴露（含 18 种 `WaitEventId` 单调累计直方图、RSS/FD/WAL、协作锁与 24h 审计） | 开放 |
 | `GET` | `/api/v1/stream` | Server-Sent Events (SSE) 实时事件推流 | 开放 |
 
-> 💡 **安全说明**：当非回环暴露（`host != 127.0.0.1`）或配置了 `[web].auth_token` 时，所有 `POST` 写端点及 `/api/v1/env/gc` 等敏感接口均统一受 `Authorization: Bearer <token>` 保护。
+> 💡 **安全与可观测说明**：当非回环暴露（`host != 127.0.0.1`）或配置了 `[web].auth_token` 时，所有 `POST` 写端点及 `/api/v1/env/gc` 等敏感接口均统一受 `Authorization: Bearer <token>` 保护；所有 HTTP 响应头默认透传/生成 `X-Trace-Id` 与 W3C `traceparent`，设置 `AGENT_BODY_LOG_FORMAT=json` 可启用单行 JSONL 结构化日志输出。
