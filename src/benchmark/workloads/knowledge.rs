@@ -191,16 +191,17 @@ pub(super) fn run_w19_knowhow_graph_and_omni_rrf() -> Result<WorkloadResult> {
         hits += 1;
     }
 
-    let stew_us = t0.elapsed().as_micros();
+    let body_us = t0.elapsed().as_micros();
     let compact_out = g_res
         .iter()
         .take(3)
         .map(|h| format!("{} {:?} {:?}", h.asset.path, h.matched_channels, h.reasoning_paths))
         .collect::<Vec<_>>()
         .join("\n");
-    let stew_tokens = estimate_tokens(&compact_out).clamp(80, 480);
-    let tok_pct = ((base_tokens - stew_tokens) as f64 / base_tokens as f64) * 100.0;
-    let sla_passed = hits == 4 && tok_pct >= 50.0 && stew_us < 250_000;
+    let body_tokens = estimate_tokens(&compact_out).clamp(80, 480);
+    let tok_pct = ((base_tokens - body_tokens) as f64 / base_tokens as f64) * 100.0;
+    let w19_limit_us = if cfg!(debug_assertions) { 750_000 } else { 250_000 };
+    let sla_passed = hits == 4 && tok_pct >= 50.0 && body_us < w19_limit_us;
     let _storage_arc: Arc<Storage> = Arc::new(storage);
     drop(std::fs::remove_dir_all(&dir));
 
@@ -210,11 +211,11 @@ pub(super) fn run_w19_knowhow_graph_and_omni_rrf() -> Result<WorkloadResult> {
         "弱向量 L1/L2 Know-How 网络与 Omni-RRF 多路融合召回",
         "D6 Know-How Graph & Omni-RRF",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         4,
         1,
         base_us,
-        stew_us,
+        body_us,
         hits as i64,
         4,
         12,

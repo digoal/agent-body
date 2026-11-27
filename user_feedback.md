@@ -289,7 +289,7 @@ flowchart LR
 
 ## 五、第三部分：Benchmark 标准失真诊断与持续迭代诉求 (`BENCH-01` ~ `BENCH-12`)
 
-### `BENCH-01` `[P0 · 指标算法缺陷]` 算术总耗时比 (`sum(base_us) / sum(stew_us)`) 导致综合加速比失真为 `0.38x`
+### `BENCH-01` `[P0 · 指标算法缺陷]` 算术总耗时比 (`sum(base_us) / sum(body_us)`) 导致综合加速比失真为 `0.38x`
 - **状态**: `✅ Verified (Phase 31.1)` · **首次记录**: 2026-11-19 · **验证实测**: 升级为 `v2.0` 几何平均加速比 `1.35x`（`Query/Guard: 2.30x`）
 - **实测证据**: [src/benchmark/mod.rs](src/benchmark/mod.rs#L70-L76) 直接将 8 个工作负载的微秒耗时相加再相除：
   - 总基线耗时 `≈ 202 ms`，Agent 本体总耗时 `≈ 528 ms`（仅 `W8` 单项就占 `474 ms`），导致最终对外展示的“综合执行加速比”为 **`0.38x`**（即“用了Agent 本体反而变慢 2.6 倍”），完全掩盖了 `W1` **`571.96x`** 与 `W6` **`53.25x`** 的真实加速。
@@ -303,7 +303,7 @@ flowchart LR
   1. **`W2 (port_collision_avoidance)`**: Baseline 仅在同进程用 `TcpListener::bind` 撞端口（`39 μs`），而 Agent Body 侧连续调用 `hook_pre` + `PortChecker::check_port` 扫描了两次 `/proc`（`26,769 μs`，`0.00x`）。真实裸奔 Agent 查端口需要派生 `ss -tlnp` / `lsof` 外部命令并试错重连，同时 Agent Body 也应合并 `/proc` 探针消除二次扫描。
   2. **`W3 (granularity_scan_noise_gate)`**: Baseline 仅运行 `WalkDir` 拼接路径字符串（`182 μs`，**未读取任何文件内容，也未写入 SQLite/FTS**），Agent Body 却执行了完整的元数据解析 + SQLite 事务落盘 + FTS5 建索引（`9,580 μs`，`0.02x`）。等价 Baseline 必须是“未开分级策略将 290 个文件全部读取并写入 SQLite + FTS5”，才能真正衡量分层门禁对建库耗时与索引膨胀的削减。
   3. **`W4 (placement_governance)`**: Baseline 仅用 `format!` 拼了 8 行短字符串（`119 tok`, `3 μs`），Agent Body 返回完整 JSON（`177 tok`, `15,783 μs`），结果产生 **`-48.7%` 负 Token 节省率** 的荒诞数字！真实裸奔 Agent 放错 8 个文件后，需经历“定位错放位置 + 规范审查打回 + `mv` 搬移 + 修正引用”的多轮上下文，基线应真实测量发现与搬移修正的等价上下文/文件操作开销。
-  4. **`W7 (context_budget_routing)`**: [src/benchmark/workloads/mod.rs](src/benchmark/workloads/mod.rs) 早期实现曾写了 `base_us.max(stew_us)`，Baseline 仅从 SQLite 读取缓存整型列 `est_tokens` 求和，没有真实读取宿主机 `SKILL.md` 文件，导致加速比恒死锁在 `1.00x`。
+  4. **`W7 (context_budget_routing)`**: [src/benchmark/workloads/mod.rs](src/benchmark/workloads/mod.rs) 早期实现曾写了 `base_us.max(body_us)`，Baseline 仅从 SQLite 读取缓存整型列 `est_tokens` 求和，没有真实读取宿主机 `SKILL.md` 文件，导致加速比恒死锁在 `1.00x`。
 
 ### `BENCH-03` `[P1 · 评估维度缺失]` 五维矩阵缺少“D6 认知质量与准确率 (Quality & Precision)”门禁
 - **状态**: `✅ Verified (Phase 31.1 & 31.3)` · **首次记录**: 2026-11-19 · **验证实测**: 六维矩阵 D6 (`85.0/100`) 上线，`DQ2` 真实捕获现网旧库向量 `'[]'` 覆盖率仅 `27.5%` 缺陷

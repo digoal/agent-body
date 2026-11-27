@@ -445,10 +445,10 @@ function renderBenchmarkReportPayload(rep) {
   if (sha) sha.innerText = `SHA-256: ${String(rep.report_sha256 || "").slice(0, 16)}...`;
   if (sla) {
     const qBase = Number(rep.overall_baseline_quality_score || 0).toFixed(0);
-    const qStew = Number(rep.d6_quality_score || 100).toFixed(0);
+    const qBody = Number(rep.d6_quality_score || 100).toFixed(0);
     const qDelta = Number(rep.overall_quality_delta || 0).toFixed(1);
     const dens = Number(rep.overall_info_density_gain || 1).toFixed(1);
-    const qHint = rep.overall_baseline_quality_score ? ` · 质量 ${qBase}→${qStew} (+${qDelta}) · 密度 ${dens}x` : ` · D6 ${qStew}分`;
+    const qHint = rep.overall_baseline_quality_score ? ` · 质量 ${qBase}→${qBody} (+${qDelta}) · 密度 ${dens}x` : ` · D6 ${qBody}分`;
     sla.innerText = rep.sla_passed ? `✅ 帕累托 PASS${qHint}` : "❌ SLA FAIL";
     sla.className = rep.sla_passed ? "badge badge-ok" : "badge badge-err";
   }

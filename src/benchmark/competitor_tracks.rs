@@ -46,11 +46,11 @@ pub(crate) fn round2(val: f64) -> f64 {
     (val * 100.0).round() / 100.0
 }
 
-pub(crate) fn calc_savings_pct(base_tok: i64, stew_tok: i64) -> f64 {
+pub(crate) fn calc_savings_pct(base_tok: i64, body_tok: i64) -> f64 {
     if base_tok <= 0 {
         return 0.0;
     }
-    let saved = base_tok.saturating_sub(stew_tok);
+    let saved = base_tok.saturating_sub(body_tok);
     round2((saved as f64 / base_tok as f64) * 100.0)
 }
 
@@ -113,7 +113,7 @@ pub(crate) fn run_comp_c1_memory() -> Result<CompetitorComparisonResult> {
     let comp_us = t_comp.elapsed().as_micros().max(1);
 
     // Agent Body 组: SecretRedactor + SqliteStorageProvider (FTS5)
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let provider = SqliteStorageProvider::open_in_memory()?;
     for (id, content) in &samples {
         let redacted = SecretRedactor::redact(content);
@@ -133,7 +133,7 @@ pub(crate) fn run_comp_c1_memory() -> Result<CompetitorComparisonResult> {
         provider.insert_memory(&rec)?;
     }
     let all_stored = provider.list_all_active_memories(200)?;
-    let stew_leaked = all_stored
+    let body_leaked = all_stored
         .iter()
         .filter(|m| {
             m.content.contains("SuperSecret99")
@@ -144,17 +144,17 @@ pub(crate) fn run_comp_c1_memory() -> Result<CompetitorComparisonResult> {
         })
         .count();
     let fts_hits = provider.search_memories_fts("pgbouncer", 5)?;
-    let stew_text: String = fts_hits
+    let body_text: String = fts_hits
         .iter()
         .map(|m| format!("{}: {}", m.id, m.summary.as_deref().unwrap_or(&m.content)))
         .collect::<Vec<_>>()
         .join("\n");
-    let stew_tok = estimate_tokens(&stew_text);
-    let stew_us = t_stew.elapsed().as_micros().max(1);
+    let body_tok = estimate_tokens(&body_text);
+    let body_us = t_body.elapsed().as_micros().max(1);
 
-    let speedup = round2(comp_us as f64 / stew_us as f64);
-    let savings = calc_savings_pct(comp_tok, stew_tok);
-    let stew_hits = [stew_leaked == 0, !fts_hits.is_empty(), fts_hits.len() <= 5]
+    let speedup = round2(comp_us as f64 / body_us as f64);
+    let savings = calc_savings_pct(comp_tok, body_tok);
+    let body_hits = [body_leaked == 0, !fts_hits.is_empty(), fts_hits.len() <= 5]
         .iter()
         .filter(|&&b| b)
         .count();
@@ -162,16 +162,16 @@ pub(crate) fn run_comp_c1_memory() -> Result<CompetitorComparisonResult> {
         ContextQualityInputs {
             required_facts_total: 3,
             baseline_facts_hit: 1,
-            body_facts_hit: stew_hits,
+            body_facts_hit: body_hits,
             baseline_signal_precision: (5.0 / comp_hits.len().max(5) as f64).min(1.0),
             body_signal_precision: 1.0,
             baseline_actionability: 0.40,
             body_actionability: 1.0,
             baseline_safety: 0.0,
-            body_safety: if stew_leaked == 0 { 1.0 } else { 0.0 },
+            body_safety: if body_leaked == 0 { 1.0 } else { 0.0 },
         },
         comp_tok,
-        stew_tok,
+        body_tok,
         90.0,
     );
 
@@ -182,23 +182,23 @@ pub(crate) fn run_comp_c1_memory() -> Result<CompetitorComparisonResult> {
         competitor_name: "裸文本记忆流水 (Mem0/JSON 无脱敏基线)".into(),
         evidence_tier: "LIVE_BENCHMARKED".into(),
         competitor_elapsed_us: comp_us,
-        body_elapsed_us: stew_us,
+        body_elapsed_us: body_us,
         speedup_factor: speedup,
         competitor_tokens: comp_tok,
-        body_tokens: stew_tok,
+        body_tokens: body_tok,
         token_savings_pct: savings,
         competitor_metric_label: "凭据明文泄露".into(),
         competitor_metric_value: format!("{}/5 明文落盘", comp_leaked),
         body_metric_label: "凭据明文泄露".into(),
-        body_metric_value: format!("{}/5 (0% 泄露 · Top-5 FTS)", stew_leaked),
+        body_metric_value: format!("{}/5 (0% 泄露 · Top-5 FTS)", body_leaked),
         body_advantage: "全链路 SecretRedactor 零明文落盘 + 本地 FTS5 精确 Top-K 召回".into(),
         complement_note: "可通过 MemoryProvider SPI 一行配置外挂 Mem0 / Letta / PowerContext".into(),
-        passed: stew_leaked == 0 && !fts_hits.is_empty() && qev.pareto_passed,
+        passed: body_leaked == 0 && !fts_hits.is_empty() && qev.pareto_passed,
         competitor_quality_score: qev.baseline_quality_score,
         body_quality_score: qev.body_quality_score,
         quality_delta: qev.quality_delta,
         competitor_facts_hit: 1,
-        body_facts_hit: stew_hits,
+        body_facts_hit: body_hits,
         required_facts_total: 3,
         info_density_gain: qev.info_density_gain,
     })
@@ -273,13 +273,13 @@ pub(crate) fn run_comp_c2_context_db(storage: Arc<dyn StorageProvider>) -> Resul
     let comp_us = t_comp.elapsed().as_micros().max(1);
 
     // Agent Body 组: 原位零搬迁 L1 结构化提取 + ContextBudgetRouter Top-K 预算路由
-    let t_stew = Instant::now();
-    let mut stew_meta_buf = String::new();
+    let t_body = Instant::now();
+    let mut body_meta_buf = String::new();
     for i in 0..30 {
         let main_py = native_root.join(format!("proj_{}", i)).join("main.py");
         let meta = HeuristicMetadataExtractor::extract(&main_py, "script", "deep", None, Some(128));
-        stew_meta_buf.push_str(&meta.description);
-        stew_meta_buf.push('\n');
+        body_meta_buf.push_str(&meta.description);
+        body_meta_buf.push('\n');
     }
     for s in &skills {
         storage.upsert_skill_catalog(s)?;
@@ -297,12 +297,12 @@ pub(crate) fn run_comp_c2_context_db(storage: Arc<dyn StorageProvider>) -> Resul
     if let Err(e) = storage.delete_bench_sandbox_records() {
         eprintln!("[Bench][WARN] 清理竞品基准沙盒记录失败: {}", e);
     }
-    let stew_tok = estimate_tokens(&stew_meta_buf) + routed.route_tokens_used as i64;
-    let stew_us = t_stew.elapsed().as_micros().max(1);
+    let body_tok = estimate_tokens(&body_meta_buf) + routed.route_tokens_used as i64;
+    let body_us = t_body.elapsed().as_micros().max(1);
 
-    let speedup = round2(comp_us as f64 / stew_us as f64);
-    let savings = calc_savings_pct(comp_tok, stew_tok);
-    let stew_hits = [!stew_meta_buf.is_empty(), !routed.skills.is_empty(), savings > 80.0]
+    let speedup = round2(comp_us as f64 / body_us as f64);
+    let savings = calc_savings_pct(comp_tok, body_tok);
+    let body_hits = [!body_meta_buf.is_empty(), !routed.skills.is_empty(), savings > 80.0]
         .iter()
         .filter(|&&b| b)
         .count();
@@ -310,7 +310,7 @@ pub(crate) fn run_comp_c2_context_db(storage: Arc<dyn StorageProvider>) -> Resul
         ContextQualityInputs {
             required_facts_total: 3,
             baseline_facts_hit: 2,
-            body_facts_hit: stew_hits,
+            body_facts_hit: body_hits,
             baseline_signal_precision: (routed.skills.len().max(1) as f64 / skills.len() as f64).min(1.0),
             body_signal_precision: 1.0,
             baseline_actionability: 0.45,
@@ -319,7 +319,7 @@ pub(crate) fn run_comp_c2_context_db(storage: Arc<dyn StorageProvider>) -> Resul
             body_safety: 1.0,
         },
         comp_tok,
-        stew_tok,
+        body_tok,
         90.0,
     );
 
@@ -330,15 +330,15 @@ pub(crate) fn run_comp_c2_context_db(storage: Arc<dyn StorageProvider>) -> Resul
         competitor_name: "OpenViking L0/L1 目录树 + 静态全量技能注入".into(),
         evidence_tier: "LIVE_BENCHMARKED".into(),
         competitor_elapsed_us: comp_us,
-        body_elapsed_us: stew_us,
+        body_elapsed_us: body_us,
         speedup_factor: speedup,
         competitor_tokens: comp_tok,
-        body_tokens: stew_tok,
+        body_tokens: body_tok,
         token_savings_pct: savings,
         competitor_metric_label: "额外副本与全量注入".into(),
         competitor_metric_value: format!("60 虚拟摘要文件 / {} tok", comp_tok),
         body_metric_label: "原位提取与预算路由".into(),
-        body_metric_value: format!("0 副本搬迁 / {} tok", stew_tok),
+        body_metric_value: format!("0 副本搬迁 / {} tok", body_tok),
         body_advantage: "原位零拷贝微秒 L1 提取 + ContextBudgetRouter 防止百级 SKILL 打爆上下文".into(),
         complement_note: "均采用 L0/L1/L2 渐进披露思想；Agent Body 专注宿主机原位免导入治理".into(),
         passed: savings > 80.0 && !routed.skills.is_empty() && qev.pareto_passed,
@@ -346,7 +346,7 @@ pub(crate) fn run_comp_c2_context_db(storage: Arc<dyn StorageProvider>) -> Resul
         body_quality_score: qev.body_quality_score,
         quality_delta: qev.quality_delta,
         competitor_facts_hit: 2,
-        body_facts_hit: stew_hits,
+        body_facts_hit: body_hits,
         required_facts_total: 3,
         info_density_gain: qev.info_density_gain,
     })
@@ -430,12 +430,12 @@ pub(crate) fn run_comp_c3_agentfs() -> Result<CompetitorComparisonResult> {
     let comp_us = t_comp.elapsed().as_micros().max(1);
 
     // Agent Body 组: 分级阻断 Scanner + PlacementEngineV2 + CoordinationEngine
-    let t_stew = Instant::now();
-    let stew_db_path = dir.0.join("body_comp_c3.db");
-    let stew_storage = Arc::new(Storage::open(&stew_db_path)?);
-    let scanner = Scanner::new((*stew_storage).clone())?;
+    let t_body = Instant::now();
+    let body_db_path = dir.0.join("body_comp_c3.db");
+    let body_storage = Arc::new(Storage::open(&body_db_path)?);
+    let scanner = Scanner::new((*body_storage).clone())?;
     let stats = scanner.scan_path(&tree)?;
-    let place_engine = PlacementEngineV2::new((*stew_storage).clone());
+    let place_engine = PlacementEngineV2::new((*body_storage).clone());
     let _place = place_engine.suggest(&PlacementRequestV2 {
         object_type: "script".into(),
         name: "TmpBadScript".into(),
@@ -444,7 +444,7 @@ pub(crate) fn run_comp_c3_agentfs() -> Result<CompetitorComparisonResult> {
         security_level: "internal".into(),
         current_workspace: None,
     })?;
-    let coord_engine = CoordinationEngine::new(stew_storage.provider().clone());
+    let coord_engine = CoordinationEngine::new(body_storage.provider().clone());
     let lock_res = coord_engine.try_acquire(&LockRequest {
         resource_type: ResourceType::Directory,
         resource_id: tree.to_string_lossy().to_string(),
@@ -462,14 +462,14 @@ pub(crate) fn run_comp_c3_agentfs() -> Result<CompetitorComparisonResult> {
     drop(coord_engine);
     drop(place_engine);
     drop(scanner);
-    drop(stew_storage);
-    let stew_db_bytes = std::fs::metadata(&stew_db_path).map(|m| m.len()).unwrap_or(0);
-    let stew_tok = (stats.deep_indexed_files * 25) as i64;
-    let stew_us = t_stew.elapsed().as_micros().max(1);
+    drop(body_storage);
+    let body_db_bytes = std::fs::metadata(&body_db_path).map(|m| m.len()).unwrap_or(0);
+    let body_tok = (stats.deep_indexed_files * 25) as i64;
+    let body_us = t_body.elapsed().as_micros().max(1);
 
-    let speedup = round2(comp_us as f64 / stew_us as f64);
-    let savings = calc_savings_pct(comp_tok, stew_tok);
-    let stew_hits = [
+    let speedup = round2(comp_us as f64 / body_us as f64);
+    let savings = calc_savings_pct(comp_tok, body_tok);
+    let body_hits = [
         stats.deep_indexed_files <= 15 && stats.deep_indexed_files >= 10,
         !stats.shallow_blocked_dirs.is_empty(),
         true, // placement & coordination lock exercised
@@ -481,7 +481,7 @@ pub(crate) fn run_comp_c3_agentfs() -> Result<CompetitorComparisonResult> {
         ContextQualityInputs {
             required_facts_total: 3,
             baseline_facts_hit: 1,
-            body_facts_hit: stew_hits,
+            body_facts_hit: body_hits,
             baseline_signal_precision: 10.0 / vfs_file_count.max(1) as f64,
             body_signal_precision: 1.0,
             baseline_actionability: 0.35,
@@ -490,7 +490,7 @@ pub(crate) fn run_comp_c3_agentfs() -> Result<CompetitorComparisonResult> {
             body_safety: 1.0,
         },
         comp_tok,
-        stew_tok,
+        body_tok,
         90.0,
     );
 
@@ -501,15 +501,15 @@ pub(crate) fn run_comp_c3_agentfs() -> Result<CompetitorComparisonResult> {
         competitor_name: "AgentFS (SQLite VFS 四表全量导入)".into(),
         evidence_tier: "LIVE_BENCHMARKED".into(),
         competitor_elapsed_us: comp_us,
-        body_elapsed_us: stew_us,
+        body_elapsed_us: body_us,
         speedup_factor: speedup,
         competitor_tokens: comp_tok,
-        body_tokens: stew_tok,
+        body_tokens: body_tok,
         token_savings_pct: savings,
         competitor_metric_label: "VFS 全量灌库".into(),
         competitor_metric_value: format!("{} 文件 / {} B ({} B raw)", vfs_file_count, vfs_db_bytes, comp_total_bytes),
         body_metric_label: "分级阻断+锁治理".into(),
-        body_metric_value: format!("{} 净入库 (阻断目录 {}, 跳过噪音 {}) / {} B", stats.deep_indexed_files, stats.shallow_blocked_dirs.len(), stats.noise_skipped_files, stew_db_bytes),
+        body_metric_value: format!("{} 净入库 (阻断目录 {}, 跳过噪音 {}) / {} B", stats.deep_indexed_files, stats.shallow_blocked_dirs.len(), stats.noise_skipped_files, body_db_bytes),
         body_advantage: "黑名单目录 0 下钻防扫爆 + 放置规约纠正 + 目录递归互斥协作锁".into(),
         complement_note: "AgentFS 适合做 Agent 沙盒内虚拟文件系统；Agent Body 管真实宿主机治理".into(),
         passed: stats.deep_indexed_files <= 15 && (!stats.shallow_blocked_dirs.is_empty() || stats.noise_skipped_files > 0) && qev.pareto_passed,
@@ -517,7 +517,7 @@ pub(crate) fn run_comp_c3_agentfs() -> Result<CompetitorComparisonResult> {
         body_quality_score: qev.body_quality_score,
         quality_delta: qev.quality_delta,
         competitor_facts_hit: 1,
-        body_facts_hit: stew_hits,
+        body_facts_hit: body_hits,
         required_facts_total: 3,
         info_density_gain: qev.info_density_gain,
     })
@@ -574,7 +574,7 @@ pub(crate) fn run_comp_c4_host_cli(storage: Arc<dyn StorageProvider>) -> Result<
     let comp_us = t_comp.elapsed().as_micros().max(1);
 
     // Agent Body 组: BriefAssembler (Index-First) + LinksEngine 3 跳爆炸半径
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let iso_storage = Arc::new(Storage::open_in_memory()?);
     let now = chrono::Utc::now().to_rfc3339();
     iso_storage.add_link(&LinkRecord {
@@ -612,16 +612,16 @@ pub(crate) fn run_comp_c4_host_cli(storage: Arc<dyn StorageProvider>) -> Result<
         budget_tokens: 800,
     })?;
     let impact = ImpactAnalyzer::new(iso_storage).analyze_impact("worker.py", 3)?;
-    let stew_out = format!(
+    let body_out = format!(
         "{}\nimpact_dependents={}",
         brief.markdown, impact.total_dependents_count
     );
-    let stew_tok = estimate_tokens(&stew_out) as i64;
-    let stew_us = t_stew.elapsed().as_micros().max(1);
+    let body_tok = estimate_tokens(&body_out) as i64;
+    let body_us = t_body.elapsed().as_micros().max(1);
 
-    let speedup = round2(comp_us as f64 / stew_us as f64);
-    let savings = calc_savings_pct(comp_tok, stew_tok);
-    let stew_hits = [!brief.markdown.is_empty(), impact.total_dependents_count >= 2, true]
+    let speedup = round2(comp_us as f64 / body_us as f64);
+    let savings = calc_savings_pct(comp_tok, body_tok);
+    let body_hits = [!brief.markdown.is_empty(), impact.total_dependents_count >= 2, true]
         .iter()
         .filter(|&&b| b)
         .count();
@@ -629,7 +629,7 @@ pub(crate) fn run_comp_c4_host_cli(storage: Arc<dyn StorageProvider>) -> Result<
         ContextQualityInputs {
             required_facts_total: 3,
             baseline_facts_hit: 1,
-            body_facts_hit: stew_hits,
+            body_facts_hit: body_hits,
             baseline_signal_precision: 0.40,
             body_signal_precision: 0.95,
             baseline_actionability: 0.35,
@@ -638,7 +638,7 @@ pub(crate) fn run_comp_c4_host_cli(storage: Arc<dyn StorageProvider>) -> Result<
             body_safety: 1.0,
         },
         comp_tok,
-        stew_tok,
+        body_tok,
         85.0,
     );
 
@@ -649,10 +649,10 @@ pub(crate) fn run_comp_c4_host_cli(storage: Arc<dyn StorageProvider>) -> Result<
         competitor_name: "CLI 组合 (rg + psutil + ss 多子进程)".into(),
         evidence_tier: "LIVE_BENCHMARKED".into(),
         competitor_elapsed_us: comp_us,
-        body_elapsed_us: stew_us,
+        body_elapsed_us: body_us,
         speedup_factor: speedup,
         competitor_tokens: comp_tok,
-        body_tokens: stew_tok,
+        body_tokens: body_tok,
         token_savings_pct: savings,
         competitor_metric_label: "外部进程与跨跳".into(),
         competitor_metric_value: format!("{} 子进程 / 0 跳跨服务图", child_procs),
@@ -665,7 +665,7 @@ pub(crate) fn run_comp_c4_host_cli(storage: Arc<dyn StorageProvider>) -> Result<
         body_quality_score: qev.body_quality_score,
         quality_delta: qev.quality_delta,
         competitor_facts_hit: 1,
-        body_facts_hit: stew_hits,
+        body_facts_hit: body_hits,
         required_facts_total: 3,
         info_density_gain: qev.info_density_gain,
     })

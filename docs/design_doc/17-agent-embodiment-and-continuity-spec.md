@@ -10,7 +10,7 @@
 
 ### 1.1 为什么必须分层命名，而不能随意破坏工程契约？
 
-基于 **脑体分离（Brain-Body Separation）** 架构，本项目的本质定位是：**驻留在宿主机上的 Agent 本体（Agent Embodiment Substrate）**——大语言模型与各类客户端（Antigravity / Claude Code / Cursor / Codex / Cron Worker）是可随时切换的**瞬态大脑皮层（Ephemeral Cortex）**，而本系统是永驻物理主机、零云端推理税的**数字躯干与具身底座**；过去的“Agent 本体 / Agent 本体”则是本体对外的两大功能侧面。
+基于 **脑体分离（Brain-Body Separation）** 架构，本项目的本质定位是：**驻留在宿主机上的 Agent 本体（Agent Embodiment Substrate）**——大语言模型与各类客户端（Antigravity / Claude Code / Cursor / Codex / Cron Worker）是可随时切换的**瞬态大脑皮层（Ephemeral Cortex）**，而本系统是永驻物理主机、零云端推理税的**数字躯干与具身底座**，统筹感官、反射、海马体与自稳态六大生理器官。
 
 本仓库在 Phase 44~45 先行采用平滑兼容过渡，并于 Phase 48 完成全仓工程硬切，将现网部署契约统一稳定为 `~/.agent-body/`、`agent-body.service`、全局 `hooks.json` 与 `43` 个 `body_*` MCP 工具。因此本规格书确立 **三层命名兼容契约（严禁违背）**：
 

@@ -100,7 +100,7 @@ flowchart TD
 
 ### 4.1 轨道 A：11 大标准业务负载 (`W1 ~ W11`) 真值事实与质量对照表
 
-| 负载 ID | 场景名称 | 必含真值事实清单 (`required_facts_total`) | Baseline 上下文质量痛点 ($Q_{\text{base}}$ 预期区间) | Agent Body 质量提升机制 ($Q_{\text{stew}}$ 目标门禁) | 质量净收益 ($\Delta Q$) |
+| 负载 ID | 场景名称 | 必含真值事实清单 (`required_facts_total`) | Baseline 上下文质量痛点 ($Q_{\text{base}}$ 预期区间) | Agent Body 质量提升机制 ($Q_{\text{body}}$ 目标门禁) | 质量净收益 ($\Delta Q$) |
 |:---:|---|---|---|---|---|
 | **W1** | `capability_discovery`<br/>宿主工具能力发现 | **5 项**：5 类候选工具的①存在性、②绝对路径、③版本号、④能力语义标签、⑤推荐 CLI 调用参数模板 | `which + --help` 仅含原始帮助长文，无针对性推荐模板且 85%+ 为无关参数噪音（**`~52 分`**） | 100% 命中 5 类工具结构化路径+版本+推荐命令模板，零冗余行（**`>= 95 分`**） | **`+43 分`** |
 | **W2** | `port_collision_avoidance`<br/>端口防撞与选址 | **4 项**：①目标端口占用状态、②占用进程 PID/名称、③冲突事前告警、④可直接绑定的推荐空闲端口 | 盲目 `bind` 触发 `EADDRINUSE` 仅知端口忙（命中 `1/4`），不知占用者与可用端口（**`~35 分`**） | Pre-Hook + `PortChecker` 一次返回占用详情与验证可用的空闲端口（命中 `4/4`，**`>= 95 分`**） | **`+60 分`** |
@@ -116,7 +116,7 @@ flowchart TD
 
 ### 4.2 轨道 C：4 大热门竞品横向对标 (`COMP-C1 ~ COMP-C4`) 质量与密度拓展
 
-| 竞品轨道 | 对标基线 | 竞品上下文质量短板 ($Q_{\text{comp}}$) | Agent Body 上下文质量优势 ($Q_{\text{stew}}$) |
+| 竞品轨道 | 对标基线 | 竞品上下文质量短板 ($Q_{\text{comp}}$) | Agent Body 上下文质量优势 ($Q_{\text{body}}$) |
 |:---:|---|---|---|
 | **`COMP-C1`** | 裸文本记忆流水 (Mem0/JSON 无脱敏基线) | 全量返回 55 条匹配文本且 `5/5` 明文凭据泄露（信噪比低 + 安全失分，**`~48 分`**） | Top-5 FTS5 精准摘要召回 + `0/5` 凭据零泄露（**`>= 96 分`**） |
 | **`COMP-C2`** | OpenViking L0/L1 目录树 + 静态全量技能注入 | 60 个虚拟摘要文件 + 80 个技能全量塞入（`144,730 tok`），注意力严重稀释（**`~54 分`**） | 原位 L1 结构化提取 + `ContextBudgetRouter` Top-K 精准命中（**`>= 95 分`**） |
@@ -135,7 +135,7 @@ flowchart TD
 | **36.2** | **扩展 `WorkloadResult`、`CompetitorComparisonResult` 与 `BenchmarkReportPayload` (`v3.1`)** | `src/benchmark/workloads.rs`<br/>`src/benchmark/competitors.rs`<br/>`src/benchmark/report.rs`<br/>`src/benchmark/mod.rs` | 1. `BENCHMARK_SPEC_VERSION` 升至 `"3.1"`；<br/>2. `WorkloadResult` 与 `CompetitorComparisonResult` 新增 `baseline_quality_score: f64`、`body_quality_score: f64`、`quality_delta: f64`、`baseline_facts_hit: usize`、`body_facts_hit: usize`、`required_facts_total: usize`、`info_density_gain: f64`（均带 `#[serde(default)]` 向后兼容）；<br/>3. `BenchmarkReportPayload` 新增 `overall_baseline_quality_score`、`overall_quality_delta`、`overall_info_density_gain`、`quality_non_degraded: bool`。 | 兼容反序列化现网 `v1.0 ~ v3.0` 全部历史记录；`cargo check --tests` 0 warning。 |
 | **36.3** | **为 `W1 ~ W11` 全部 11 个工作负载实装真值事实核验与成对质量评分** | `src/benchmark/workloads.rs` | 1. 新增 `evaluate_context_quality()` 辅助计算器，按 $(R_{\text{fact}}, P_{\text{signal}}, A_{\text{action}}, S_{\text{safety}})$ 计算 `baseline_quality_score`、`body_quality_score`、`quality_delta` 与 `info_density_gain`；<br/>2. 为 `W1 ~ W11` 逐个落地真值事实断言（核验输出文本/结构中的必含事实命中数）；<br/>3. 将 `body_quality_score >= baseline_quality_score && body_facts_hit == required_facts_total` 写入每项 `sla_passed` 判定。 | `W1~W11` 全部具有非空成对质量分，且每项 `body_quality_score > baseline_quality_score`、`body_facts_hit == required_facts_total`。 |
 | **36.4** | **为 `COMP-C1 ~ COMP-C4` 竞品对标与 `PR-01~10` 补齐质量与信息密度度量** | `src/benchmark/competitors.rs`<br/>`src/benchmark/provenance.rs` | 1. 为 `COMP-C1 ~ COMP-C4` 实测计算 `competitor_quality_score`、`body_quality_score`、`quality_delta` 与 `info_density_gain`，并纳入 `passed` 门禁；<br/>2. 在 `ProvenanceRule` (`PR-01~10`) 的公式描述中显式补充“上下文质量/信噪比增益依据”。 | `cargo test benchmark::` 全部通过；4 条竞品轨道均体现“Token 缩减 + 质量提升”。 |
-| **36.5** | **升级 CLI/Markdown/CSV 报告与 WebUI「📊 实证基准与账本」帕累托双维视图** | `src/benchmark/report.rs`<br/>`src/web/assets/mod.rs` | 1. `render_markdown_report()` 总体表展示 `D6 上下文质量 (基线 X -> Agent 本体 Y, +ΔQ)` 与 `有效信息密度提升 (Nx)`，明细表与竞品表新增 `质量 (基线→Agent 本体)` 与 `事实完整度 (hit/total)` 列；<br/>2. WebUI 顶部 KPI 卡与 `W1~W11`、`COMP-C1~C4` 卡片同步渲染「省 Token 率 + 质量跃升 (`Q: Base → Stew (+ΔQ)` · `密度 Nx`)」双进度条/双徽章。 | CLI `bench report` 与 WebUI 昼夜双主题下直观呈现“既省 Token 又提质量”。 |
+| **36.5** | **升级 CLI/Markdown/CSV 报告与 WebUI「📊 实证基准与账本」帕累托双维视图** | `src/benchmark/report.rs`<br/>`src/web/assets/mod.rs` | 1. `render_markdown_report()` 总体表展示 `D6 上下文质量 (基线 X -> Agent 本体 Y, +ΔQ)` 与 `有效信息密度提升 (Nx)`，明细表与竞品表新增 `质量 (基线→Agent 本体)` 与 `事实完整度 (hit/total)` 列；<br/>2. WebUI 顶部 KPI 卡与 `W1~W11`、`COMP-C1~C4` 卡片同步渲染「省 Token 率 + 质量跃升 (`Q: Base → Body (+ΔQ)` · `密度 Nx`)」双进度条/双徽章。 | CLI `bench report` 与 WebUI 昼夜双主题下直观呈现“既省 Token 又提质量”。 |
 | **36.6** | **全量门禁测试、现网 `v3.1` 实跑存证、反馈闭环与热部署同步** | `tests/benchmarks.rs`<br/>`docs/manual/10-benchmark-and-roi.md`<br/>`README.md`, `user_feedback.md`<br/>`docs/src_doc/progress.md` | 1. 编写单元测试验证“若故意截断关键事实则 `sla_passed == false`（防截断负向测试）”；<br/>2. 运行 `make evolution-check && make lint-panic && make check && make test && make build`；<br/>3. 现网执行 `./target/release/agent-body bench run --suite full --save true` 存证，更新 `BENCH-06`/`REQ-10` 为 `✅ Verified`，重启服务并 `make sync-mirror`。 | 全部自动化测试 100% PASS，现网 `v3.1` 报告落库，镜像仓库完全同步。 |
 
 ---

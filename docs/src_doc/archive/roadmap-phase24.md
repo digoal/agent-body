@@ -10,7 +10,7 @@
 ## 一、目标与核心交付物
 
 1. **ISSUE #9（“比较优势”立意源起与 PostgreSQL 调研痛点补完）**：
-   - 新建 [docs/idea_doc/00-comparative-advantage-origin.md](../idea_doc/00-comparative-advantage-origin.md) 与配套工程蓝图 [docs/idea_doc/svg/comparative-advantage-body.svg](../idea_doc/svg/comparative-advantage-body.svg)，从“硅谷 101 负一楼创业者与园区物业、专业幕僚、家庭分工”三组隐喻提炼大卫·李嘉图「比较优势」原理，结合宿主机 `/root/new/src/`（110 个仓库、17+ 个 PG 源码树）实证“先问Agent 本体（Agent 本体）”省时间、省空间、省 Token 的核心价值；
+   - 新建 [docs/idea_doc/00-comparative-advantage-origin.md](../idea_doc/00-comparative-advantage-origin.md) 与配套工程蓝图 [docs/idea_doc/svg/comparative-advantage-body.svg](../idea_doc/svg/comparative-advantage-body.svg)，从“硅谷 101 负一楼创业者与园区物业、专业幕僚、家庭分工”三组隐喻提炼大卫·李嘉图「比较优势」原理，结合宿主机 `/root/new/src/`（110 个仓库、17+ 个 PG 源码树）实证“先问 Agent 本体”省时间、省空间、省 Token 的核心价值；
    - 有机融入 [docs/idea_doc/01-why-memory-management-failed.md](../idea_doc/01-why-memory-management-failed.md) 与 [docs/idea_doc/03-modular-body-architecture.md](../idea_doc/03-modular-body-architecture.md)，保持行文浑然一体，零拼凑感。
 2. **ISSUE #10（双 HTML 演说文件重构、讲稿联动与自动化自检）**：
    - 升级 [agent-body-deck.html](../agent-body-deck.html) 为 **22 页深度技术演讲版**：新增「比较优势与 PG 调研痛点」「三层语义元数据与 Ollama 双轨标注」两页，修正 `v0.3.3` / `39 个原生 MCP 工具` 全量一致性，22 页讲稿与页码严格对齐；

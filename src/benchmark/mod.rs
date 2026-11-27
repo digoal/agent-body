@@ -137,9 +137,9 @@ impl BenchmarkEngine {
         };
 
         let total_base_us: u128 = workloads.iter().map(|w| w.baseline_elapsed_us).sum();
-        let total_stew_us: u128 = workloads.iter().map(|w| w.body_elapsed_us).sum();
-        let arithmetic_speedup_factor = if total_stew_us > 0 && total_base_us > 0 {
-            ((total_base_us as f64 / total_stew_us as f64) * 100.0).round() / 100.0
+        let total_body_us: u128 = workloads.iter().map(|w| w.body_elapsed_us).sum();
+        let arithmetic_speedup_factor = if total_body_us > 0 && total_base_us > 0 {
+            ((total_base_us as f64 / total_body_us as f64) * 100.0).round() / 100.0
         } else {
             1.0
         };
@@ -166,7 +166,7 @@ impl BenchmarkEngine {
             .filter(|w| w.required_facts_total > 0)
             .map(|w| w.baseline_quality_score)
             .collect();
-        let stew_q_samples: Vec<f64> = workloads
+        let body_q_samples: Vec<f64> = workloads
             .iter()
             .filter(|w| w.required_facts_total > 0)
             .map(|w| w.body_quality_score)
@@ -176,10 +176,10 @@ impl BenchmarkEngine {
         } else {
             ((base_q_samples.iter().sum::<f64>() / base_q_samples.len() as f64) * 100.0).round() / 100.0
         };
-        let overall_body_quality_score = if stew_q_samples.is_empty() {
+        let overall_body_quality_score = if body_q_samples.is_empty() {
             d6_quality_score
         } else {
-            ((stew_q_samples.iter().sum::<f64>() / stew_q_samples.len() as f64) * 100.0).round() / 100.0
+            ((body_q_samples.iter().sum::<f64>() / body_q_samples.len() as f64) * 100.0).round() / 100.0
         };
         let overall_quality_delta = if base_q_samples.is_empty() {
             0.0
@@ -353,7 +353,7 @@ mod tests {
         assert!(report.total_noise_blocked >= 200);
         for w in &report.workloads {
             println!(
-                "[W] {} ({}): passed={}, base_tok={}, stew_tok={}, base_us={}, stew_us={}, haz={}, noise={}, detail={}",
+                "[W] {} ({}): passed={}, base_tok={}, body_tok={}, base_us={}, body_us={}, haz={}, noise={}, detail={}",
                 w.id, w.name, w.sla_passed, w.baseline_tokens, w.body_tokens,
                 w.baseline_elapsed_us, w.body_elapsed_us, w.hazards_intercepted,
                 w.blocked_noise, w.evidence_detail
@@ -365,7 +365,7 @@ mod tests {
                 m.id, m.name, m.passed, m.avg_us, m.sla_limit_us
             );
         }
-        assert!(report.sla_passed, "18 大负载 + 6 大微基准 + 9 项 DQ SLA 应全部通过");
+        assert!(report.sla_passed, "19 大负载 + 6 大微基准 + 10 项 DQ SLA 应全部通过");
 
         let fetched = provider
             .get_benchmark_run(&report.run_id)

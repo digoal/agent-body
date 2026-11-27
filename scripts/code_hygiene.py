@@ -105,7 +105,7 @@ def run_checks() -> tuple[list[str], list[str]]:
         )
 
     # 2. 活跃部署与配置禁止残留旧数据目录路径
-    legacy_dir = "/." + "stew" + "ard"
+    legacy_dir = "/." + "st" + "ew" + "ard"
     for rel in ("Dockerfile", "docker-compose.yml", "config.example.toml"):
         p = ROOT / rel
         if p.exists() and legacy_dir in p.read_text(encoding="utf-8"):
@@ -143,9 +143,17 @@ def run_checks() -> tuple[list[str], list[str]]:
                 errors.append(f"存在未埋点 WaitEventId 变体: {', '.join(missing_we)}")
             notes.append(f"WaitEventId 埋点覆盖: {len(variants) - len(missing_we)} / {len(variants)}")
 
-    # 6. 全仓统一命名检查（零旧称残留）
+    # 6. 全仓统一命名检查（零旧称、零缩写与零机械重复残留）
     legacy_re = re.compile(
-        r"(?:" + "stew" + "ard" + "|" + "大" + "管" + "家" + "|" + "管" + "家" + "|" + "秘" + "书" + r")",
+        r"(?:"
+        + "st" + "ew"
+        + "|" + "but" + "ler"
+        + "|" + "secre" + "tary"
+        + "|" + "大" + "管" + "家"
+        + "|" + "管" + "家"
+        + "|" + "秘" + "书"
+        + r"|Agent\s*本体\s*/\s*Agent\s*本体|Agent\s+Agent"
+        + r")",
         re.IGNORECASE,
     )
     skip_dirs = {".git", "target", ".codegraph", "node_modules", "__pycache__"}
@@ -158,7 +166,7 @@ def run_checks() -> tuple[list[str], list[str]]:
             if not p.is_file() or any(part in skip_dirs for part in p.parts):
                 continue
             rel = p.relative_to(ROOT).as_posix()
-            if "stew" + "ard" in p.name.lower():
+            if ("st" + "ew") in p.name.lower():
                 legacy_hits.append(f"{rel} (文件名)")
                 continue
             try:

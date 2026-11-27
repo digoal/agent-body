@@ -22,7 +22,7 @@
      - `effectiveness_ledger` 仅记录 **4 条**流水，CLI 与 Web API 调用均未入账；`memories` 长期记忆表仅 **2 条**，导致简报里占比高达 40% 的记忆预算长期饥饿；
      - **磁盘水位与 GC 盲区（现场捕获 `CON-06`）**：同步 `/root/new/shared_git/agent-body` 时暴露出 `work` 与 `shared_git` 两处 `target/` 构建缓存共占用 **`91GB`**（`53GB + 38GB`），直接将 233GB 根分区打满至 `100% (0 Avail)`，而Agent 本体事前未给出磁盘高水位预警或冗余构建产物 GC 建议。
    - **Benchmark 标准本身存在失真**：
-     - 算术总耗时比 `sum(base_us)/sum(stew_us)` 被单项 `W8` 拖垮至 **`0.38x`**；
+     - 算术总耗时比 `sum(base_us)/sum(body_us)` 被单项 `W8` 拖垮至 **`0.38x`**；
      - `W2`、`W3`、`W4`、`W7` 的 Without vs With 对照存在物理不等价（如 `W4` Baseline 仅拼 8 行短字符串 `119 tok` vs Agent Body JSON `177 tok`，出现 `-48.7%` 负优化假象）；
      - 五维指标（`D1~D5`）缺乏 **D6 质量与准确率（Recall@K / Precision / 覆盖率）** 门禁，且未覆盖 Phase 29 的向量检索与复杂模板抗误报回归。
 
@@ -60,7 +60,7 @@
 ### 3.3 原则 3：科学的综合加速比汇总口径
 - **主口径**：采用 **几何平均加速比 (`geometric_mean_speedup = (∏ speedup_i)^(1/N)`)**，消除单个重耗时负载对全局加速比的极端扭曲；
 - **分组口径**：同时报告 **只读认知/防撞类 (`Query/Guard`: W1, W2, W4, W6, W7, W8, W9)** 与 **索引/分析治理类 (`Governance/Index`: W3, W5, W10)** 两组子加速比；
-- **原口径保留**：保留 `arithmetic_total_speedup`（即 `sum(base_us)/sum(stew_us)`）作透明对照参考，绝不隐藏任何不利数字。
+- **原口径保留**：保留 `arithmetic_total_speedup`（即 `sum(base_us)/sum(body_us)`）作透明对照参考，绝不隐藏任何不利数字。
 
 ### 3.4 原则 4：反馈驱动的回归语料库 (`Feedback Regression Corpus`)
 - 每当 `user_feedback.md` 确认一条真实生产痛点（如 `CON-01` Brief `474ms` 慢查询、`CON-02` `%s`/f-string 断链误报），完成修复后**必须将其脱敏复现样本写入 Benchmark 回归负载**（如 `W10` 与 `DQ1~DQ3`），做到“踩过的坑永不再犯”。
@@ -106,7 +106,7 @@ flowchart LR
 | 步骤 ID | 原子任务 | 涉及文件 | 具体改造方案 | 验收门禁 (DoD) |
 |:---:|---|---|---|---|
 | **31.1** | **Benchmark `v2.0` 规格协议与六维模型扩展** | `src/benchmark/mod.rs`<br/>`src/benchmark/report.rs`<br/>`src/storage/{schema,pg_schema,duckdb_schema}.sql`<br/>`src/storage/models.rs` | 1. 在 `BenchmarkReportPayload` / `benchmark_runs` 增加 `spec_version`（默认 `"2.0"`）、`geometric_mean_speedup`、`query_guard_speedup` 与 `d6_quality_score`；<br/>2. 为 `WorkloadResult` 新增可选 `quality_score` / `precision_pct` / `recall_pct` 字段；<br/>3. 保证读取旧版 `"1.0"` 记录向后兼容反序列化。 | 兼容读取现网 3 条 `v1.0` 历史 `benchmark_runs` 记录；单测覆盖几何平均与旧版反序列化。 |
-| **31.2** | **`W1~W8` 物理等价基线校准（修复 `BENCH-02`）** | `src/benchmark/workloads.rs` | 1. **`W2`**：Baseline 改为等价外调探测 + 试错重连，Agent Body 合并单次 `/proc` 检查；<br/>2. **`W3`**：Baseline 改为在隔离内存库将 290 个文件全量读取并写入 SQLite+FTS5，对比 Agent Body 分级过滤入库；<br/>3. **`W4`**：Baseline 计量 8 个错放文件从发现违规、规范回溯到重命名搬移的真实返工上下文，消除 `-48.7%` 畸变；<br/>4. **`W7`**：Baseline 真实读取磁盘 `SKILL.md` 文件耗时（受控缓存/文件数），移除硬编码 `base_us.max(stew_us)`。 | `W1~W8` 全部物理等价、100% 真实运行，无硬编码拉平逻辑，SLA 全绿。 |
+| **31.2** | **`W1~W8` 物理等价基线校准（修复 `BENCH-02`）** | `src/benchmark/workloads.rs` | 1. **`W2`**：Baseline 改为等价外调探测 + 试错重连，Agent Body 合并单次 `/proc` 检查；<br/>2. **`W3`**：Baseline 改为在隔离内存库将 290 个文件全量读取并写入 SQLite+FTS5，对比 Agent Body 分级过滤入库；<br/>3. **`W4`**：Baseline 计量 8 个错放文件从发现违规、规范回溯到重命名搬移的真实返工上下文，消除 `-48.7%` 畸变；<br/>4. **`W7`**：Baseline 真实读取磁盘 `SKILL.md` 文件耗时（受控缓存/文件数），移除硬编码 `base_us.max(body_us)`。 | `W1~W8` 全部物理等价、100% 真实运行，无硬编码拉平逻辑，SLA 全绿。 |
 | **31.3** | **新增 `W9`（混合检索召回）与 `W10`（模板抗假阳性）** | `src/benchmark/workloads.rs`<br/>`tests/benchmarks.rs` | 1. **`W9 (hybrid_semantic_recall)`**：构建带中文语义近义词与概念错位样本库，对比纯关键词搜索 vs 语义向量 + 属性字典 RRF 混合检索的 `Recall@5`、`MRR` 与 Token 效率；<br/>2. **`W10 (link_precision_regression)`**：直接使用 `CON-02` 沉淀的 `%s`/f-string/`...`/`xxx`/`.json` 真实对抗样本 + 真依赖样本，实测抽取 `Precision` 与 `FPR <= 5%`。 | `W9 Recall@5 >= 90%`、`W10 Precision >= 95%`（FPR `<= 5%`）写入自动化门禁。 |
 | **31.4** | **新增 `DQ1~DQ3` 宿主机数据质量基准与跨版本对比** | `src/benchmark/dq.rs`（或子模块）<br/>`src/benchmark/ledger.rs`<br/>`src/benchmark/report.rs` | 1. **`DQ1`**：资产与事实节点 `description` 覆盖率（SLA `>= 99%`）；<br/>2. **`DQ2`**：`assets` / `fact_nodes` / `memories` 本地向量覆盖率（SLA `>= 99%`）；<br/>3. **`DQ3`**：当前宿主机 `links` 断链健康度与疑似假阳性率；<br/>4. 升级 `compare_runs()` 支持识别 `spec_version` 差异并输出分项回归报告。 | 现网运行 `agent-body bench run --suite full` 可输出 `W1~W10` + `M1~M5` + `DQ1~DQ3` 完整六维报告。 |
 | **31.5** | **WebUI v2.0 升级、四层文档同步与现网验收部署** | `src/web/assets/mod.rs`<br/>`docs/design_doc/10-benchmark-spec.md`<br/>`docs/manual/10-benchmark-and-roi.md`<br/>`skills/agent-body-*`<br/>`user_feedback.md` | 1. WebUI「📊 实证基准与效能账本」升级展示 `spec_version` 徽章、`Geomean` 加速比、D6 质量准确率柱条与 `DQ1~DQ3` 宿主机健康卡；<br/>2. 同步更新 `docs/design_doc/10`、`docs/manual/10`、3 处 `SKILL.md`；<br/>3. 全量 `make lint-panic`、`cargo check --tests`、`cargo test`、`cargo build --release`、实机重跑 `bench run --save`、热重启服务、并将 `CON-01~06` / `BENCH-01~04` 状态核验更新至 `✅ Verified` 并同步镜像。 | 全量门禁零违规零警告通过；现网报告与 WebUI 数据 100% 实测一致。 | |

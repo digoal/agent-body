@@ -45,9 +45,9 @@
 
 ---
 
-## 三、解法：给主战 Agent 配一个驻留本机的「Agent 本体 / Agent 本体」
+## 三、解法：给主战 Agent 配一个驻留本机的「Agent 本体」
 
-如果能给 Agent 配一个驻留在本机的Agent 本体（也就是 **Agent Body**），局面会立刻反转：
+如果能给 Agent 配一个驻留在本机的 **Agent 本体（Agent Body）**，局面会立刻反转：
 
 1. **开工先问Agent 本体（Compare Advantage 协同）**：  
    Agent 接到任务后，不再盲目 `git clone` 或全盘 `find`，而是先花不到 1 毫秒问一句Agent 本体：`body_brief`、`body_asset_search(query="postgres")` 或 `body_fact_query`。

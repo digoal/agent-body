@@ -54,7 +54,7 @@ pub(super) fn run_w9_hybrid_semantic_recall() -> Result<WorkloadResult> {
     let base_tokens = estimate_tokens(&base_buf).max(200);
 
     // With Agent Body: FTS + tags/description 多词项语义打分召回 Top-5
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let mut hits = mem.search_assets_fts("postgres OR 垃圾回收 OR 膨胀优化", 5).unwrap_or_default();
     if hits.is_empty() {
         hits = all
@@ -67,16 +67,16 @@ pub(super) fn run_w9_hybrid_semantic_recall() -> Result<WorkloadResult> {
             .take(5)
             .collect();
     }
-    let stew_out = serde_json::to_string(&hits.iter().map(|a| &a.path).collect::<Vec<_>>())?;
-    let stew_us = t_stew.elapsed().as_micros();
-    let stew_tokens = estimate_tokens(&stew_out);
+    let body_out = serde_json::to_string(&hits.iter().map(|a| &a.path).collect::<Vec<_>>())?;
+    let body_us = t_body.elapsed().as_micros();
+    let body_tokens = estimate_tokens(&body_out);
 
     let recalled = expected_ids
         .iter()
         .filter(|eid| hits.iter().any(|h| h.id == **eid))
         .count();
     let recall_pct = ((recalled as f64 / expected_ids.len() as f64) * 100.0 * 100.0).round() / 100.0;
-    let sla_passed = recall_pct >= 90.0 && stew_tokens < base_tokens;
+    let sla_passed = recall_pct >= 90.0 && body_tokens < base_tokens;
 
     let mut res = finalize_result(
         "W9",
@@ -84,11 +84,11 @@ pub(super) fn run_w9_hybrid_semantic_recall() -> Result<WorkloadResult> {
         "混合语义检索 Recall@5 准确率",
         "D6 Quality & Recall",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         3,
         1,
         base_us,
-        stew_us,
+        body_us,
         0,
         0,
         samples.len(),
@@ -99,7 +99,7 @@ pub(super) fn run_w9_hybrid_semantic_recall() -> Result<WorkloadResult> {
         "FTS + 语义标签/属性字典 Top-5 混合召回".into(),
         format!(
             "Top-5 命中 {}/{} 个语义相关资产 (Recall@5 = {:.1}%, {} tok -> {} tok)",
-            recalled, expected_ids.len(), recall_pct, base_tokens, stew_tokens
+            recalled, expected_ids.len(), recall_pct, base_tokens, body_tokens
         ),
     );
     apply_quality_eval(
@@ -174,13 +174,13 @@ mod tests {
     // With Agent Body: LinksEngine 脱敏抽取 + LinkAuditor 审计（100% 位置无关，零源码路径硬编码）
     let mem = Arc::new(Storage::open_in_memory()?);
     let engine = crate::links::LinksEngine::new(mem.clone());
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let cnt_py = engine.discover_links_from_script(&script_path.to_string_lossy(), &adversarial_code)?;
     let cnt_json = engine.discover_links_from_script(&json_path.to_string_lossy(), adversarial_json)?;
     let cnt_rs = engine.discover_links_from_script(&rs_path.to_string_lossy(), adversarial_rs)?;
     let cnt_md = engine.discover_links_from_script(&md_path.to_string_lossy(), adversarial_md)?;
     let audit = LinkAuditor::new(mem).audit_links(false)?;
-    let stew_us = t_stew.elapsed().as_micros();
+    let body_us = t_body.elapsed().as_micros();
 
     let total_extracted = cnt_py + cnt_json + cnt_rs + cnt_md;
     // 期望仅抽取 dep_a, dep_b 2 条真依赖，假阳性 = 0
@@ -190,13 +190,13 @@ mod tests {
     } else {
         (((total_extracted - false_positives) as f64 / total_extracted as f64) * 100.0 * 100.0).round() / 100.0
     };
-    let stew_out = serde_json::to_string(&serde_json::json!({
+    let body_out = serde_json::to_string(&serde_json::json!({
         "extracted": total_extracted,
         "false_positives": false_positives,
         "precision_pct": precision_pct,
         "dangling_count": audit.dangling_count
     }))?;
-    let stew_tokens = estimate_tokens(&stew_out);
+    let body_tokens = estimate_tokens(&body_out);
     let sla_passed = precision_pct >= 95.0 && false_positives == 0;
 
     let mut res = finalize_result(
@@ -205,11 +205,11 @@ mod tests {
         "复杂模板依赖抽取抗假阳性",
         "D6 Quality & Precision",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         2,
         1,
         base_us,
-        stew_us,
+        body_us,
         naive_fp_count as i64,
         naive_fp_count as i64 - false_positives as i64,
         naive_fp_count + 2,
@@ -264,7 +264,7 @@ pub(super) fn run_w11_security_redaction_and_guardrail() -> Result<WorkloadResul
     let base_tokens = estimate_tokens(&naive_bundle);
 
     // With Agent Body: 统一脱敏 + POSIX 单引号转义 + PromptInjectionScanner
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let r_cmd = SecretRedactor::redact_single_line(cmd_sample);
     let r_auth = SecretRedactor::redact_single_line(bearer_sample);
     let ev = BodyEvent::FileCreated {
@@ -275,7 +275,7 @@ pub(super) fn run_w11_security_redaction_and_guardrail() -> Result<WorkloadResul
     let escaped_hook = interpolate_hook_command("echo {path}", &ev)?;
     let scan_evil = PromptInjectionScanner::scan_and_sanitize(evil_doc);
     let scan_benign = PromptInjectionScanner::scan_and_sanitize(benign_doc);
-    let stew_us = t_stew.elapsed().as_micros().max(1);
+    let body_us = t_body.elapsed().as_micros().max(1);
 
     let secrets_stripped = !r_cmd.contains("BenchSecret99")
         && !r_cmd.contains("PgPwd42")
@@ -289,9 +289,9 @@ pub(super) fn run_w11_security_redaction_and_guardrail() -> Result<WorkloadResul
         .filter(|&&ok| ok)
         .count() as i64;
     let precision_pct = ((intercepted as f64 / 4.0) * 100.0 * 100.0).round() / 100.0;
-    let sla_passed = intercepted == 4 && stew_us < 10_000;
+    let sla_passed = intercepted == 4 && body_us < 10_000;
 
-    let stew_summary = serde_json::json!({
+    let body_summary = serde_json::json!({
         "secrets_stripped": secrets_stripped,
         "hook_escaped": hook_safe,
         "injection_blocked": injection_blocked,
@@ -299,7 +299,7 @@ pub(super) fn run_w11_security_redaction_and_guardrail() -> Result<WorkloadResul
         "precision_pct": precision_pct
     })
     .to_string();
-    let stew_tokens = estimate_tokens(&stew_summary);
+    let body_tokens = estimate_tokens(&body_summary);
 
     let mut res = finalize_result(
         "W11",
@@ -307,11 +307,11 @@ pub(super) fn run_w11_security_redaction_and_guardrail() -> Result<WorkloadResul
         "全链路脱敏、防命令注入与抗提示词投毒",
         "D4/D6 Security Guardrail",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         3,
         1,
         base_us,
-        stew_us,
+        body_us,
         base_leaks,
         intercepted,
         5,
@@ -322,7 +322,7 @@ pub(super) fn run_w11_security_redaction_and_guardrail() -> Result<WorkloadResul
         "SecretRedactor + interpolate_hook_command + PromptInjectionScanner".into(),
         format!(
             "4/4 安全防线验证={}/4 (脱敏={}, Hook转义={}, 抗投毒={}, 零误杀={})，耗时 {} μs",
-            intercepted, secrets_stripped, hook_safe, injection_blocked, no_false_positive, stew_us
+            intercepted, secrets_stripped, hook_safe, injection_blocked, no_false_positive, body_us
         ),
     );
     apply_quality_eval(
@@ -485,7 +485,7 @@ pub(super) fn run_w12_freshness_and_staleness_healing(_storage: Arc<dyn StorageP
     )?;
     std::fs::remove_file(&dead_path)?;
 
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let rep = crate::feedback::probes::FreshnessReconciler::reconcile(&sandbox)?;
     let stale_emb_cleared = sandbox
         .get_asset_by_path(&app_str)?
@@ -507,7 +507,7 @@ pub(super) fn run_w12_freshness_and_staleness_healing(_storage: Arc<dyn StorageP
             .all(|n| n.id != format!("file:{}", dead_str));
     let dup_mem_deduped = rep.duplicate_memories_archived >= 1
         && sandbox.list_all_active_memories(10)?.len() == 1;
-    let stew_us = t_stew.elapsed().as_micros();
+    let body_us = t_body.elapsed().as_micros();
 
     let intercepted = [
         stale_emb_cleared,
@@ -519,21 +519,21 @@ pub(super) fn run_w12_freshness_and_staleness_healing(_storage: Arc<dyn StorageP
     .filter(|b| *b)
     .count() as i64;
 
-    let stew_summary = serde_json::json!({
+    let body_summary = serde_json::json!({
         "stale_invalidated": stale_emb_cleared,
         "fts_purged": deleted_fts_excluded,
         "ghost_pruned": ghost_node_pruned,
         "mem_deduped": dup_mem_deduped
     })
     .to_string();
-    let stew_tokens = estimate_tokens(&stew_summary);
+    let body_tokens = estimate_tokens(&body_summary);
     let token_savings_pct = if base_tokens > 0 {
-        ((base_tokens - stew_tokens) as f64 / base_tokens as f64) * 100.0
+        ((base_tokens - body_tokens) as f64 / base_tokens as f64) * 100.0
     } else {
         0.0
     };
     let w12_limit_us = if cfg!(debug_assertions) { 500_000 } else { 100_000 };
-    let sla_passed = intercepted == 4 && token_savings_pct >= 50.0 && stew_us < w12_limit_us;
+    let sla_passed = intercepted == 4 && token_savings_pct >= 50.0 && body_us < w12_limit_us;
 
     let mut res = finalize_result(
         "W12",
@@ -541,11 +541,11 @@ pub(super) fn run_w12_freshness_and_staleness_healing(_storage: Arc<dyn StorageP
         "资产改删写穿失效与跨表一致性自愈",
         "D6 Freshness & Self-Healing",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         4,
         1,
         base_us,
-        stew_us,
+        body_us,
         4,
         intercepted,
         6,
@@ -561,7 +561,7 @@ pub(super) fn run_w12_freshness_and_staleness_healing(_storage: Arc<dyn StorageP
             deleted_fts_excluded,
             ghost_node_pruned,
             dup_mem_deduped,
-            stew_us
+            body_us
         ),
     );
     apply_quality_eval(
@@ -605,7 +605,7 @@ pub(super) fn run_w13_semantic_and_weighted_graph_discovery() -> Result<Workload
     let base_tokens = estimate_tokens(&baseline_dump);
 
     // Agent Body 实跑：建图 -> L2 结构上卷 + L3 隐式语义发现 -> 分层加权爆炸半径
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let sandbox = Arc::new(Storage::open_in_memory()?);
     for (id, name, path, desc, emb) in [
         ("project:pg_core", "pg_core", "/root/new/src/pg_core", "PostgreSQL storage engine using cargo", vec![1.0_f32, 0.0, 0.0]),
@@ -652,7 +652,7 @@ pub(super) fn run_w13_semantic_and_weighted_graph_discovery() -> Result<Workload
     let strict_impact = analyzer.analyze_impact("project:pg_core", 2)?;
     let semantic_impact = analyzer.analyze_impact_weighted("project:pg_core", 2, 0.35, true)?;
 
-    let stew_out = serde_json::json!({
+    let body_out = serde_json::json!({
         "l2_rollup": rep.l2_rollup_edges,
         "l2_tool": rep.l2_tool_usage_edges,
         "l2_derivation": rep.l2_derivation_edges,
@@ -661,8 +661,8 @@ pub(super) fn run_w13_semantic_and_weighted_graph_discovery() -> Result<Workload
         "semantic_deps": semantic_impact.total_dependents_count
     })
     .to_string();
-    let stew_us = t_stew.elapsed().as_micros().max(1);
-    let stew_tokens = estimate_tokens(&stew_out);
+    let body_us = t_body.elapsed().as_micros().max(1);
+    let body_tokens = estimate_tokens(&body_out);
 
     let hit_rollup = rep.l2_rollup_edges >= 1;
     let hit_tool = rep.l2_tool_usage_edges >= 1;
@@ -673,11 +673,11 @@ pub(super) fn run_w13_semantic_and_weighted_graph_discovery() -> Result<Workload
         .filter(|&&b| b)
         .count() as i64;
     let token_savings = if base_tokens > 0 {
-        ((base_tokens - stew_tokens) as f64 / base_tokens as f64) * 100.0
+        ((base_tokens - body_tokens) as f64 / base_tokens as f64) * 100.0
     } else {
         0.0
     };
-    let sla_passed = hits == 4 && token_savings >= 45.0 && stew_us < 250_000;
+    let sla_passed = hits == 4 && token_savings >= 45.0 && body_us < 250_000;
 
     let mut res = finalize_result(
         "W13",
@@ -685,11 +685,11 @@ pub(super) fn run_w13_semantic_and_weighted_graph_discovery() -> Result<Workload
         "多维证据分层有向加权图谱与隐式语义发现",
         "D6 Graph Intelligence",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         3,
         1,
         base_us,
-        stew_us,
+        body_us,
         4,
         hits,
         1,
@@ -700,7 +700,7 @@ pub(super) fn run_w13_semantic_and_weighted_graph_discovery() -> Result<Workload
         "L2 上卷/衍生/工具边 + L3 向量稀疏发现 + 分层衰减推演".into(),
         format!(
             "4/4 图谱断言命中={}/4 (L2上卷={}, 工具={}, 衍生={}, L3语义={})，耗时 {} μs",
-            hits, rep.l2_rollup_edges, rep.l2_tool_usage_edges, rep.l2_derivation_edges, rep.l3_semantic_edges, stew_us
+            hits, rep.l2_rollup_edges, rep.l2_tool_usage_edges, rep.l2_derivation_edges, rep.l3_semantic_edges, body_us
         ),
     );
     apply_quality_eval(

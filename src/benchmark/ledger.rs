@@ -110,7 +110,7 @@ impl EffectivenessLedger {
             return;
         }
         let session_id = format!("{}-live", channel);
-        let stew_tokens = estimate_tokens(output_text);
+        let body_tokens = estimate_tokens(output_text);
         let input = match tool_or_action {
             "body_skill_route" | "body_mcp_catalog" | "body_service_contact" => {
                 let skills_tok: i64 = storage
@@ -121,20 +121,20 @@ impl EffectivenessLedger {
                     .list_mcp_catalog()
                     .map(|v| v.iter().map(|m| m.est_total_tokens as i64).sum())
                     .unwrap_or(0);
-                let base = (skills_tok + mcps_tok).max(stew_tokens);
+                let base = (skills_tok + mcps_tok).max(body_tokens);
                 LedgerEventInput {
                     session_id,
                     source_channel: channel.into(),
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr01SkillMcpRouting,
                     baseline_tokens: base,
-                    body_tokens: stew_tokens,
+                    body_tokens,
                     baseline_rounds: 3,
                     body_rounds: 1,
                     hazard_intercepted: 0,
                     noise_blocked: 0,
                     elapsed_us,
-                    evidence_summary: format!("PR-01: 库内全量技能+MCP {} tok -> 路由输出 {} tok", base, stew_tokens),
+                    evidence_summary: format!("PR-01: 库内全量技能+MCP {} tok -> 路由输出 {} tok", base, body_tokens),
                 }
             }
             "body_asset_search" | "body_asset_register" => LedgerEventInput {
@@ -142,14 +142,14 @@ impl EffectivenessLedger {
                 source_channel: channel.into(),
                 tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr02ProgressiveAssetSearch,
-                baseline_tokens: stew_tokens.saturating_mul(4).max(400),
-                body_tokens: stew_tokens,
+                baseline_tokens: body_tokens.saturating_mul(4).max(400),
+                body_tokens,
                 baseline_rounds: 4,
                 body_rounds: 1,
                 hazard_intercepted: 0,
                 noise_blocked: 0,
                 elapsed_us,
-                evidence_summary: format!("PR-02: 渐进式元数据披露 {} tok（免全量读源码）", stew_tokens),
+                evidence_summary: format!("PR-02: 渐进式元数据披露 {} tok（免全量读源码）", body_tokens),
             },
             "body_hook_pre" => {
                 let blocked = output_text.contains("BLOCK")
@@ -166,7 +166,7 @@ impl EffectivenessLedger {
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr03PreHookInterception,
                     baseline_tokens: 600,
-                    body_tokens: stew_tokens,
+                    body_tokens,
                     baseline_rounds: 3,
                     body_rounds: 1,
                     hazard_intercepted: 1,
@@ -184,14 +184,14 @@ impl EffectivenessLedger {
                     source_channel: channel.into(),
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr04HostFactQuery,
-                    baseline_tokens: stew_tokens.saturating_mul(3).max(300),
-                    body_tokens: stew_tokens,
+                    baseline_tokens: body_tokens.saturating_mul(3).max(300),
+                    body_tokens,
                     baseline_rounds: 4,
                     body_rounds: 1,
                     hazard_intercepted: if occupied { 1 } else { 0 },
                     noise_blocked: 0,
                     elapsed_us,
-                    evidence_summary: format!("PR-04: 宿主机只读物理事实/放置查询 ({} tok, {} μs)", stew_tokens, elapsed_us),
+                    evidence_summary: format!("PR-04: 宿主机只读物理事实/放置查询 ({} tok, {} μs)", body_tokens, elapsed_us),
                 }
             }
             "body_links_impact" | "body_links_audit" | "body_links_repair" | "body_codegraph_bridge" => {
@@ -200,14 +200,14 @@ impl EffectivenessLedger {
                     source_channel: channel.into(),
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr05GraphImpactAndAudit,
-                    baseline_tokens: stew_tokens.saturating_mul(4).max(500),
-                    body_tokens: stew_tokens,
+                    baseline_tokens: body_tokens.saturating_mul(4).max(500),
+                    body_tokens,
                     baseline_rounds: 4,
                     body_rounds: 1,
                     hazard_intercepted: 0,
                     noise_blocked: 0,
                     elapsed_us,
-                    evidence_summary: format!("PR-05: 宏观拓扑/宏微联邦图分析 ({} tok)", stew_tokens),
+                    evidence_summary: format!("PR-05: 宏观拓扑/宏微联邦图分析 ({} tok)", body_tokens),
                 }
             }
             "body_lock_acquire" | "body_lock_wait" | "body_lock_deadlock_check" => {
@@ -245,7 +245,7 @@ impl EffectivenessLedger {
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr07LockDeadlockGuard,
                     baseline_tokens: 400,
-                    body_tokens: stew_tokens,
+                    body_tokens,
                     baseline_rounds: 3,
                     body_rounds: 1,
                     hazard_intercepted: 1,
@@ -259,42 +259,42 @@ impl EffectivenessLedger {
                 source_channel: channel.into(),
                 tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr08AdaptiveBriefColdStart,
-                baseline_tokens: stew_tokens.saturating_mul(3).max(1800),
-                body_tokens: stew_tokens,
+                baseline_tokens: body_tokens.saturating_mul(3).max(1800),
+                body_tokens,
                 baseline_rounds: 6,
                 body_rounds: 1,
                 hazard_intercepted: 0,
                 noise_blocked: 0,
                 elapsed_us,
-                evidence_summary: format!("PR-08: 冷启动自适应简报组装 ({} tok, 免 5 轮探查)", stew_tokens),
+                evidence_summary: format!("PR-08: 冷启动自适应简报组装 ({} tok, 免 5 轮探查)", body_tokens),
             },
             "body_memory_search" => LedgerEventInput {
                 session_id,
                 source_channel: channel.into(),
                 tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr09HybridSemanticSearch,
-                baseline_tokens: stew_tokens.saturating_mul(4).max(600),
-                body_tokens: stew_tokens,
+                baseline_tokens: body_tokens.saturating_mul(4).max(600),
+                body_tokens,
                 baseline_rounds: 3,
                 body_rounds: 1,
                 hazard_intercepted: 0,
                 noise_blocked: 0,
                 elapsed_us,
-                evidence_summary: format!("PR-09: 语义向量+FTS 混合检索 ({} tok)", stew_tokens),
+                evidence_summary: format!("PR-09: 语义向量+FTS 混合检索 ({} tok)", body_tokens),
             },
             "body_memory_add" | "body_session_close" | "body_feedback" => LedgerEventInput {
                 session_id,
                 source_channel: channel.into(),
                 tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr10FeedbackAndMemoryLoop,
-                baseline_tokens: stew_tokens.saturating_mul(3).max(450),
-                body_tokens: stew_tokens,
+                baseline_tokens: body_tokens.saturating_mul(3).max(450),
+                body_tokens,
                 baseline_rounds: 2,
                 body_rounds: 1,
                 hazard_intercepted: 0,
                 noise_blocked: 0,
                 elapsed_us,
-                evidence_summary: format!("PR-10: 实际反馈与长期记忆沉淀 ({} tok)", stew_tokens),
+                evidence_summary: format!("PR-10: 实际反馈与长期记忆沉淀 ({} tok)", body_tokens),
             },
             "body_hook_post" => {
                 let recovered = output_text.contains("recovery_prescription")
@@ -307,8 +307,8 @@ impl EffectivenessLedger {
                     source_channel: "hook".into(),
                     tool_or_action: tool_or_action.into(),
                     rule: ProvenanceRule::Pr11OptimisticLeaseAndRecovery,
-                    baseline_tokens: stew_tokens.saturating_mul(3).max(600),
-                    body_tokens: stew_tokens,
+                    baseline_tokens: body_tokens.saturating_mul(3).max(600),
+                    body_tokens,
                     baseline_rounds: 3,
                     body_rounds: 1,
                     hazard_intercepted: 1,
@@ -322,14 +322,14 @@ impl EffectivenessLedger {
                 source_channel: channel.into(),
                 tool_or_action: tool_or_action.into(),
                 rule: ProvenanceRule::Pr12AuditDrivenSelfEvolution,
-                baseline_tokens: stew_tokens.saturating_mul(3).max(500),
-                body_tokens: stew_tokens,
+                baseline_tokens: body_tokens.saturating_mul(3).max(500),
+                body_tokens,
                 baseline_rounds: 3,
                 body_rounds: 1,
                 hazard_intercepted: 0,
                 noise_blocked: 0,
                 elapsed_us,
-                evidence_summary: format!("PR-12: 双域行为审计溯源与自进化闭环 ({} tok)", stew_tokens),
+                evidence_summary: format!("PR-12: 双域行为审计溯源与自进化闭环 ({} tok)", body_tokens),
             },
             "body_state" | "body_perf_awr" => {
                 let is_perf_action = tool_or_action == "body_perf_awr"
@@ -347,14 +347,14 @@ impl EffectivenessLedger {
                         source_channel: channel.into(),
                         tool_or_action: tool_or_action.into(),
                         rule: ProvenanceRule::Pr14PerfAwrDiagnosticsSaved,
-                        baseline_tokens: stew_tokens.saturating_mul(4).max(1200),
-                        body_tokens: stew_tokens,
+                        baseline_tokens: body_tokens.saturating_mul(4).max(1200),
+                        body_tokens,
                         baseline_rounds: 5,
                         body_rounds: 1,
                         hazard_intercepted: 0,
                         noise_blocked: 0,
                         elapsed_us,
-                        evidence_summary: format!("PR-14: 内生等待事件与 AWR/ADDM 自诊断 ({} tok)", stew_tokens),
+                        evidence_summary: format!("PR-14: 内生等待事件与 AWR/ADDM 自诊断 ({} tok)", body_tokens),
                     }
                 } else {
                     LedgerEventInput {
@@ -362,14 +362,14 @@ impl EffectivenessLedger {
                         source_channel: channel.into(),
                         tool_or_action: tool_or_action.into(),
                         rule: ProvenanceRule::Pr13CrossBrainContinuitySaved,
-                        baseline_tokens: stew_tokens.saturating_mul(4).max(800),
-                        body_tokens: stew_tokens,
+                        baseline_tokens: body_tokens.saturating_mul(4).max(800),
+                        body_tokens,
                         baseline_rounds: 4,
                         body_rounds: 1,
                         hazard_intercepted: 0,
                         noise_blocked: 0,
                         elapsed_us,
-                        evidence_summary: format!("PR-13: Agent 本体器官自省与跨大脑接力 ({} tok)", stew_tokens),
+                        evidence_summary: format!("PR-13: Agent 本体器官自省与跨大脑接力 ({} tok)", body_tokens),
                     }
                 }
             }

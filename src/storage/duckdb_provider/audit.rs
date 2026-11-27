@@ -321,7 +321,7 @@ impl DuckDbStorageProvider {
         let cutoff = crate::storage::window_to_cutoff_iso(window).unwrap_or_default();
         let tool = tool_filter.unwrap_or("").to_string();
 
-        let (total_events, total_base, total_stew, total_saved, total_rounds, total_haz, total_noise, avg_us): (
+        let (total_events, total_base, total_body, total_saved, total_rounds, total_haz, total_noise, avg_us): (
             i64,
             i64,
             i64,
@@ -426,7 +426,7 @@ impl DuckDbStorageProvider {
             window: window.to_string(),
             total_events: total_events as usize,
             total_baseline_tokens: total_base,
-            total_body_tokens: total_stew,
+            total_body_tokens: total_body,
             total_tokens_saved: total_saved,
             token_savings_pct,
             total_rounds_saved: total_rounds,

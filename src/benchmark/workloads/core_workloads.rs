@@ -44,7 +44,7 @@ pub(super) fn run_w1_capability_discovery() -> Result<WorkloadResult> {
     let mut cap = CapabilityEngine::new();
     cap.scan_host();
     let intents = ["PDF 文本", "音视频转码", "代码搜索", "JSON", "Python"];
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let mut matched_json = Vec::new();
     for intent in &intents {
         let res = cap.query(intent);
@@ -56,22 +56,22 @@ pub(super) fn run_w1_capability_discovery() -> Result<WorkloadResult> {
             }));
         }
     }
-    let stew_str = serde_json::to_string(&matched_json)?;
-    let stew_us = t_stew.elapsed().as_micros();
-    let stew_tokens = estimate_tokens(&stew_str);
+    let body_str = serde_json::to_string(&matched_json)?;
+    let body_us = t_body.elapsed().as_micros();
+    let body_tokens = estimate_tokens(&body_str);
 
-    let sla_passed = stew_us < 100_000 && stew_tokens < base_tokens;
+    let sla_passed = body_us < 100_000 && body_tokens < base_tokens;
     let mut res = finalize_result(
         "W1",
         "capability_discovery",
         "宿主工具能力发现",
         "Host Reality Graph",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         5,
         1,
         base_us,
-        stew_us,
+        body_us,
         0,
         0,
         candidates.len(),
@@ -82,11 +82,11 @@ pub(super) fn run_w1_capability_discovery() -> Result<WorkloadResult> {
         "CapabilityEngine::scan_host + query_by_intent".into(),
         format!(
             "真实子进程探测 {} 个命中工具输出 {} tok ({} μs) vs Agent 本体语义能力图谱 {} tok ({} μs)",
-            found_base, base_tokens, base_us, stew_tokens, stew_us
+            found_base, base_tokens, base_us, body_tokens, body_us
         ),
     );
     let req_total = matched_json.len().max(1);
-    let stew_hits = matched_json
+    let body_hits = matched_json
         .iter()
         .filter(|v| v.get("tool").is_some() && v.get("best_practice").is_some())
         .count();
@@ -95,7 +95,7 @@ pub(super) fn run_w1_capability_discovery() -> Result<WorkloadResult> {
         ContextQualityInputs {
             required_facts_total: req_total,
             baseline_facts_hit: found_base.min(req_total),
-            body_facts_hit: stew_hits,
+            body_facts_hit: body_hits,
             baseline_signal_precision: 0.15,
             body_signal_precision: 1.0,
             baseline_actionability: 0.30,
@@ -156,7 +156,7 @@ pub(super) fn run_w2_port_collision(storage: Arc<dyn StorageProvider>) -> Result
     // With Agent Body: Pre-Hook 事前拦截 + PortChecker 推荐空闲端口并一次绑定成功
     let st = Storage::new(storage);
     let hook_engine = AgentHookEngine::new(st);
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let pre = hook_engine.pre_tool_call("bind_port", &serde_json::json!({"port": target_port}));
     let report = PortChecker::check_port(target_port, 3)?;
     let recommended = report
@@ -166,7 +166,7 @@ pub(super) fn run_w2_port_collision(storage: Arc<dyn StorageProvider>) -> Result
         .find(|&p| p >= 1024)
         .unwrap_or_else(|| target_port.saturating_add(1).max(1024));
     let bind_ok = TcpListener::bind(("127.0.0.1", recommended)).is_ok();
-    let stew_us = t_stew.elapsed().as_micros();
+    let body_us = t_body.elapsed().as_micros();
     let pre_decision = if !pre.allowed {
         "BLOCK"
     } else if pre.has_warnings {
@@ -174,12 +174,12 @@ pub(super) fn run_w2_port_collision(storage: Arc<dyn StorageProvider>) -> Result
     } else {
         "ALLOW"
     };
-    let stew_str = serde_json::to_string(&serde_json::json!({
+    let body_str = serde_json::to_string(&serde_json::json!({
         "pre_decision": pre_decision,
         "recommended_port": recommended,
         "bind_ok": bind_ok
     }))?;
-    let stew_tokens = estimate_tokens(&stew_str);
+    let body_tokens = estimate_tokens(&body_str);
     let intercepted = if !pre.allowed || pre.has_warnings { 1 } else { 0 };
 
     let sla_passed = intercepted >= 1 && bind_ok;
@@ -189,11 +189,11 @@ pub(super) fn run_w2_port_collision(storage: Arc<dyn StorageProvider>) -> Result
         "活跃端口防撞与空闲选址",
         "Pre-Hook & PortChecker",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         base_rounds.max(2),
         1,
         base_us,
-        stew_us,
+        body_us,
         base_failures.max(1),
         intercepted,
         1,
@@ -207,7 +207,7 @@ pub(super) fn run_w2_port_collision(storage: Arc<dyn StorageProvider>) -> Result
             target_port, base_failures, pre_decision, recommended, bind_ok
         ),
     );
-    let stew_hits = [intercepted >= 1, recommended >= 1024, bind_ok, !stew_str.is_empty()]
+    let body_hits = [intercepted >= 1, recommended >= 1024, bind_ok, !body_str.is_empty()]
         .iter()
         .filter(|&&b| b)
         .count();
@@ -216,7 +216,7 @@ pub(super) fn run_w2_port_collision(storage: Arc<dyn StorageProvider>) -> Result
         ContextQualityInputs {
             required_facts_total: 4,
             baseline_facts_hit: if base_failures >= 1 { 2 } else { 1 },
-            body_facts_hit: stew_hits,
+            body_facts_hit: body_hits,
             baseline_signal_precision: 0.30,
             body_signal_precision: 1.0,
             baseline_actionability: 0.25,
@@ -302,9 +302,9 @@ pub(super) fn run_w3_granularity_scan() -> Result<WorkloadResult> {
     // With Agent Body: Scanner 分级扫描（内存隔离库）
     let mem_storage = Storage::open_in_memory()?;
     let scanner = Scanner::new(mem_storage.clone())?;
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let report = scanner.scan_path(root)?;
-    let stew_us = t_stew.elapsed().as_micros();
+    let body_us = t_body.elapsed().as_micros();
 
     let assets = mem_storage.list_assets(1000)?;
     let escaped_blacklist = assets
@@ -320,8 +320,8 @@ pub(super) fn run_w3_granularity_scan() -> Result<WorkloadResult> {
 
     let kept_files = report.deep_indexed_files;
     let blocked_noise = raw_entries.saturating_sub(kept_files);
-    let stew_summary = serde_json::to_string(&report)?;
-    let stew_tokens = estimate_tokens(&stew_summary);
+    let body_summary = serde_json::to_string(&report)?;
+    let body_tokens = estimate_tokens(&body_summary);
     let noise_pct = if raw_entries > 0 {
         (blocked_noise as f64 / raw_entries as f64) * 100.0
     } else {
@@ -335,11 +335,11 @@ pub(super) fn run_w3_granularity_scan() -> Result<WorkloadResult> {
         "分级扫描与黑名单噪音阻断",
         "Granularity Tiering",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         1,
         1,
         base_us,
-        stew_us,
+        body_us,
         if escaped_blacklist > 0 { 1 } else { 0 },
         report.shallow_blocked_dirs.len() as i64,
         raw_entries,
@@ -408,9 +408,9 @@ pub(super) fn run_w4_placement_governance(storage: Arc<dyn StorageProvider>) -> 
     let engine = PlacementEngineV2::new(st.clone());
     let hook = AgentHookEngine::new(st);
 
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let mut intercepted = 0i64;
-    let mut stew_out = Vec::new();
+    let mut body_out = Vec::new();
     for (obj_type, name, intent, bad_path) in &cases {
         let _pre = hook.pre_tool_call("write_file", &serde_json::json!({"file_path": bad_path}));
         let sug = engine.suggest(&PlacementRequestV2 {
@@ -427,27 +427,27 @@ pub(super) fn run_w4_placement_governance(storage: Arc<dyn StorageProvider>) -> 
         if governed {
             intercepted += 1;
         }
-        stew_out.push(serde_json::json!({
+        body_out.push(serde_json::json!({
             "bad_path": bad_path,
             "target": sug.suggested_path,
             "governed": governed
         }));
     }
-    let stew_us = t_stew.elapsed().as_micros();
-    let stew_tokens = estimate_tokens(&serde_json::to_string(&stew_out)?);
+    let body_us = t_body.elapsed().as_micros();
+    let body_tokens = estimate_tokens(&serde_json::to_string(&body_out)?);
 
-    let sla_passed = intercepted == cases.len() as i64 && stew_us < 200_000;
+    let sla_passed = intercepted == cases.len() as i64 && body_us < 200_000;
     let mut res = finalize_result(
         "W4",
         "placement_governance",
         "8 类资产放置合规门禁",
         "Placement Governance",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         cases.len() as i64 * 2,
         cases.len() as i64,
         base_us,
-        stew_us,
+        body_us,
         base_violations,
         intercepted,
         cases.len(),

@@ -114,32 +114,32 @@ pub fn evaluate_context_quality(
 ) -> ContextQualityEval {
     let total = inp.required_facts_total.max(1) as f64;
     let r_base = (inp.baseline_facts_hit.min(inp.required_facts_total) as f64) / total;
-    let r_stew = (inp.body_facts_hit.min(inp.required_facts_total) as f64) / total;
+    let r_body = (inp.body_facts_hit.min(inp.required_facts_total) as f64) / total;
     let p_base = inp.baseline_signal_precision.clamp(0.0, 1.0);
-    let p_stew = inp.body_signal_precision.clamp(0.0, 1.0);
+    let p_body = inp.body_signal_precision.clamp(0.0, 1.0);
     let a_base = inp.baseline_actionability.clamp(0.0, 1.0);
-    let a_stew = inp.body_actionability.clamp(0.0, 1.0);
+    let a_body = inp.body_actionability.clamp(0.0, 1.0);
     let s_base = inp.baseline_safety.clamp(0.0, 1.0);
-    let s_stew = inp.body_safety.clamp(0.0, 1.0);
+    let s_body = inp.body_safety.clamp(0.0, 1.0);
 
     let q_base = ((0.40 * r_base + 0.30 * p_base + 0.20 * a_base + 0.10 * s_base) * 100.0 * 100.0).round() / 100.0;
-    let q_stew = ((0.40 * r_stew + 0.30 * p_stew + 0.20 * a_stew + 0.10 * s_stew) * 100.0 * 100.0).round() / 100.0;
-    let delta = ((q_stew - q_base) * 100.0).round() / 100.0;
+    let q_body = ((0.40 * r_body + 0.30 * p_body + 0.20 * a_body + 0.10 * s_body) * 100.0 * 100.0).round() / 100.0;
+    let delta = ((q_body - q_base) * 100.0).round() / 100.0;
 
     let rho_base = (inp.baseline_facts_hit as f64 / baseline_tokens.max(1) as f64) * 1000.0;
-    let rho_stew = (inp.body_facts_hit as f64 / body_tokens.max(1) as f64) * 1000.0;
-    let density_gain = ((rho_stew / rho_base.max(0.01)) * 100.0).round() / 100.0;
+    let rho_body = (inp.body_facts_hit as f64 / body_tokens.max(1) as f64) * 1000.0;
+    let density_gain = ((rho_body / rho_base.max(0.01)) * 100.0).round() / 100.0;
 
     let pareto_passed = inp.body_facts_hit == inp.required_facts_total
-        && q_stew >= q_base
-        && q_stew >= min_quality_sla;
+        && q_body >= q_base
+        && q_body >= min_quality_sla;
 
     ContextQualityEval {
         baseline_quality_score: q_base,
-        body_quality_score: q_stew,
+        body_quality_score: q_body,
         quality_delta: delta,
-        body_recall_pct: (r_stew * 100.0 * 100.0).round() / 100.0,
-        body_precision_pct: (p_stew * 100.0 * 100.0).round() / 100.0,
+        body_recall_pct: (r_body * 100.0 * 100.0).round() / 100.0,
+        body_precision_pct: (p_body * 100.0 * 100.0).round() / 100.0,
         info_density_gain: density_gain,
         pareto_passed,
     }

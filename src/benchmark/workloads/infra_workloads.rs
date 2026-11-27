@@ -99,33 +99,33 @@ pub(super) fn run_w5_dependency_impact() -> Result<WorkloadResult> {
 
     // With Agent Body: ImpactAnalyzer 3 跳图查询 + LinkAuditor 检出断链 + LinkRepairer 相似度推演
     let arc_st = Arc::new(mem);
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let impact = ImpactAnalyzer::new(arc_st.clone()).analyze_impact(&files[3], 3)?;
     let audit = LinkAuditor::new(arc_st).audit_links(false)?;
     let sim = LinkRepairer::levenshtein_similarity("deleted_target_0.py", "module_0.py");
-    let stew_us = t_stew.elapsed().as_micros();
+    let body_us = t_body.elapsed().as_micros();
 
-    let stew_out = serde_json::to_string(&serde_json::json!({
+    let body_out = serde_json::to_string(&serde_json::json!({
         "impact_nodes": impact.total_dependents_count,
         "broken_links": audit.dangling_count,
         "health_score": audit.health_score,
         "repair_similarity": sim,
     }))?;
-    let stew_tokens = estimate_tokens(&stew_out);
+    let body_tokens = estimate_tokens(&body_out);
     let broken_found = audit.dangling_count as i64;
 
-    let sla_passed = broken_found >= 2 && stew_tokens < base_tokens;
+    let sla_passed = broken_found >= 2 && body_tokens < base_tokens;
     let mut res = finalize_result(
         "W5",
         "dependency_impact_and_repair",
         "3 跳爆炸半径与断链自愈",
         "LinksEngine & Repair",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         4,
         1,
         base_us,
-        stew_us,
+        body_us,
         2,
         broken_found,
         files.len(),
@@ -136,16 +136,16 @@ pub(super) fn run_w5_dependency_impact() -> Result<WorkloadResult> {
         "ImpactAnalyzer(3-hop) + LinkAuditor + LinkRepairer".into(),
         format!(
             "3 跳图查询波及 {} 节点，检出 {} 条断链（全文扫描 {} tok vs 图查询 {} tok）",
-            impact.total_dependents_count, broken_found, base_tokens, stew_tokens
+            impact.total_dependents_count, broken_found, base_tokens, body_tokens
         ),
     );
-    let stew_hits = impact.total_dependents_count.min(3) + (broken_found as usize).min(2);
+    let body_hits = impact.total_dependents_count.min(3) + (broken_found as usize).min(2);
     apply_quality_eval(
         &mut res,
         ContextQualityInputs {
             required_facts_total: 5,
             baseline_facts_hit: 1,
-            body_facts_hit: stew_hits,
+            body_facts_hit: body_hits,
             baseline_signal_precision: 0.15,
             body_signal_precision: 1.0,
             baseline_actionability: 0.25,
@@ -168,7 +168,7 @@ pub(super) fn run_w6_deadlock_resolution() -> Result<WorkloadResult> {
     // With Agent Body: 内存隔离库内注入交叉持锁 + 排队，实跑 DeadlockDetector
     let mem_provider = Arc::new(crate::storage::SqliteStorageProvider::open_in_memory()?);
     let engine = CoordinationEngine::new(mem_provider.clone());
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let _lock_a = engine.try_acquire(&LockRequest {
         resource_type: ResourceType::Custom,
         resource_id: "bench:port:19991".into(),
@@ -215,11 +215,11 @@ pub(super) fn run_w6_deadlock_resolution() -> Result<WorkloadResult> {
     let locks = mem_provider.list_coordination_locks(None)?;
     let waits = mem_provider.list_lock_wait_queue(None, None)?;
     let report = DeadlockDetector::detect(&locks, &waits, None);
-    let stew_us = t_stew.elapsed().as_micros();
+    let body_us = t_body.elapsed().as_micros();
 
     let cycles = report.cycles.len() as i64;
-    let stew_tokens = estimate_tokens(&serde_json::to_string(&report)?);
-    let sla_passed = report.has_deadlock && cycles >= 1 && stew_us < 20_000;
+    let body_tokens = estimate_tokens(&serde_json::to_string(&report)?);
+    let sla_passed = report.has_deadlock && cycles >= 1 && body_us < 20_000;
 
     let mut res = finalize_result(
         "W6",
@@ -227,11 +227,11 @@ pub(super) fn run_w6_deadlock_resolution() -> Result<WorkloadResult> {
         "多 Agent 并发死锁破局",
         "Multi-Agent Coordination",
         400,
-        stew_tokens,
+        body_tokens,
         3,
         1,
         base_us,
-        stew_us,
+        body_us,
         1,
         cycles,
         2,
@@ -242,10 +242,10 @@ pub(super) fn run_w6_deadlock_resolution() -> Result<WorkloadResult> {
         "CoordinationEngine + DeadlockDetector WFG DFS".into(),
         format!(
             "检出 {} 条死锁环路，诊断耗时 {} μs vs 无协调超时 {} μs",
-            cycles, stew_us, base_us
+            cycles, body_us, base_us
         ),
     );
-    let stew_hits = [report.has_deadlock, cycles >= 1, !report.cycles.is_empty()]
+    let body_hits = [report.has_deadlock, cycles >= 1, !report.cycles.is_empty()]
         .iter()
         .filter(|&&b| b)
         .count();
@@ -254,7 +254,7 @@ pub(super) fn run_w6_deadlock_resolution() -> Result<WorkloadResult> {
         ContextQualityInputs {
             required_facts_total: 3,
             baseline_facts_hit: 1,
-            body_facts_hit: stew_hits,
+            body_facts_hit: body_hits,
             baseline_signal_precision: 0.30,
             body_signal_precision: 1.0,
             baseline_actionability: 0.20,
@@ -322,7 +322,7 @@ pub(super) fn run_w7_context_routing(storage: Arc<dyn StorageProvider>) -> Resul
     let base_us = t_base.elapsed().as_micros();
 
     let router = ContextBudgetRouter::new(st);
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let plan = router.route(&ContextRouteRequest {
         intent: "PostgreSQL 数据库调优与索引分析".into(),
         budget_tokens: 600,
@@ -330,15 +330,15 @@ pub(super) fn run_w7_context_routing(storage: Arc<dyn StorageProvider>) -> Resul
         max_mcps: 4,
         max_services: 3,
     })?;
-    let stew_us = t_stew.elapsed().as_micros();
-    let stew_tokens = (plan.route_tokens_used as i64).max(1);
+    let body_us = t_body.elapsed().as_micros();
+    let body_tokens = (plan.route_tokens_used as i64).max(1);
 
     let pct = if full_tokens > 0 {
-        ((full_tokens - stew_tokens) as f64 / full_tokens as f64) * 100.0
+        ((full_tokens - body_tokens) as f64 / full_tokens as f64) * 100.0
     } else {
         0.0
     };
-    let sla_passed = pct >= 85.0 && stew_tokens <= 1200;
+    let sla_passed = pct >= 85.0 && body_tokens <= 1200;
 
     let mut res = finalize_result(
         "W7",
@@ -346,11 +346,11 @@ pub(super) fn run_w7_context_routing(storage: Arc<dyn StorageProvider>) -> Resul
         "百级 SKILL 预算路由与渐进披露",
         "Context Budget Router",
         full_tokens,
-        stew_tokens,
+        body_tokens,
         3,
         1,
         base_us,
-        stew_us,
+        body_us,
         0,
         0,
         all_skills.len(),
@@ -364,14 +364,14 @@ pub(super) fn run_w7_context_routing(storage: Arc<dyn StorageProvider>) -> Resul
             all_skills.len(),
             full_tokens,
             plan.skills.len(),
-            stew_tokens,
+            body_tokens,
             pct
         ),
     );
-    let stew_hits = [
+    let body_hits = [
         !plan.skills.is_empty(),
         plan.skills.iter().all(|s| !s.skill_path.is_empty()),
-        stew_tokens <= 1200,
+        body_tokens <= 1200,
     ]
     .iter()
     .filter(|&&b| b)
@@ -382,7 +382,7 @@ pub(super) fn run_w7_context_routing(storage: Arc<dyn StorageProvider>) -> Resul
         ContextQualityInputs {
             required_facts_total: 3,
             baseline_facts_hit: 2,
-            body_facts_hit: stew_hits,
+            body_facts_hit: body_hits,
             baseline_signal_precision: base_sig,
             body_signal_precision: 1.0,
             baseline_actionability: 0.30,
@@ -417,27 +417,27 @@ pub(super) fn run_w8_adaptive_brief(storage: Arc<dyn StorageProvider>) -> Result
 
     let st = Storage::new(storage);
     let assembler = BriefAssembler::new(st, None);
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let brief = assembler.assemble(&BriefRequest {
         query: "冷启动接手当前宿主机与工程态势".into(),
         session_id: "bench:w8".into(),
         budget_tokens: 1500,
     })?;
-    let stew_us = t_stew.elapsed().as_micros();
-    let stew_tokens = estimate_tokens(&brief.markdown).min(base_tokens);
+    let body_us = t_body.elapsed().as_micros();
+    let body_tokens = estimate_tokens(&brief.markdown).min(base_tokens);
 
-    let sla_passed = stew_us < 2_000_000 && stew_tokens < base_tokens;
+    let sla_passed = body_us < 2_000_000 && body_tokens < base_tokens;
     let mut res = finalize_result(
         "W8",
         "adaptive_brief_assembly",
         "冷启动态势简报组装",
         "Adaptive Brief",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         6,
         1,
         base_us,
-        stew_us,
+        body_us,
         0,
         0,
         6,
@@ -448,14 +448,14 @@ pub(super) fn run_w8_adaptive_brief(storage: Arc<dyn StorageProvider>) -> Result
         "BriefAssembler::assemble(budget=1500)".into(),
         format!(
             "6 轮原生探查输出 {} tok ({} μs) vs 单次结构化简报 {} tok ({} μs, 质量分 {})",
-            base_tokens, base_us, stew_tokens, stew_us, brief.quality.overall
+            base_tokens, base_us, body_tokens, body_us, brief.quality.overall
         ),
     );
     let md_non_empty = !brief.markdown.is_empty();
     let has_pref = brief.quality.preference_compliance > 0 || brief.markdown.contains("规约") || brief.markdown.contains("偏好") || brief.markdown.contains("放置");
     let has_fact = brief.quality.fact_coverage > 0 || brief.markdown.contains("事实") || brief.markdown.contains("宿主") || brief.markdown.contains("环境");
-    let has_budget = stew_tokens <= 1500;
-    let stew_hits = [md_non_empty, has_fact, has_pref, has_budget]
+    let has_budget = body_tokens <= 1500;
+    let body_hits = [md_non_empty, has_fact, has_pref, has_budget]
         .iter()
         .filter(|&&b| b)
         .count();
@@ -464,7 +464,7 @@ pub(super) fn run_w8_adaptive_brief(storage: Arc<dyn StorageProvider>) -> Result
         ContextQualityInputs {
             required_facts_total: 4,
             baseline_facts_hit: 2,
-            body_facts_hit: stew_hits,
+            body_facts_hit: body_hits,
             baseline_signal_precision: 0.30,
             body_signal_precision: 0.92,
             baseline_actionability: 0.35,

@@ -24,7 +24,7 @@ pub(super) fn run_w14_mesh_protocol_security_and_collab() -> Result<WorkloadResu
     let base_us = t_base.elapsed().as_micros().max(1);
     let base_tokens = estimate_tokens(&baseline_dump);
 
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let cfg = MeshConfig::default();
     let secret = Some("w14-mesh-secret".to_string());
     let cache = NonceCache::new();
@@ -62,21 +62,21 @@ pub(super) fn run_w14_mesh_protocol_security_and_collab() -> Result<WorkloadResu
         && !cleaned_dlg.contains("sk-proj-abcdefghijklmnopqrstuvwxyz")
         && sensitive_file_blocked;
 
-    let stew_out = serde_json::json!({
+    let body_out = serde_json::json!({
         "valid_hmac": valid_ok,
         "replay_blocked": replay_blocked,
         "tamper_blocked": tamper_blocked,
         "sandbox_and_redaction": collab_guard_ok
     })
     .to_string();
-    let stew_us = t_stew.elapsed().as_micros().max(1);
-    let stew_tokens = estimate_tokens(&stew_out);
+    let body_us = t_body.elapsed().as_micros().max(1);
+    let body_tokens = estimate_tokens(&body_out);
 
     let hits = [valid_ok, replay_blocked, tamper_blocked, collab_guard_ok]
         .iter()
         .filter(|&&b| b)
         .count() as i64;
-    let sla_passed = hits == 4 && stew_us < 100_000;
+    let sla_passed = hits == 4 && body_us < 100_000;
 
     let mut res = finalize_result(
         "W14",
@@ -84,11 +84,11 @@ pub(super) fn run_w14_mesh_protocol_security_and_collab() -> Result<WorkloadResu
         "MeshEnvelope v1.0 零信任签名、防重放与受控沙盒协同",
         "D4/D6 Mesh Protocol",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         3,
         1,
         base_us,
-        stew_us,
+        body_us,
         4,
         hits,
         3,
@@ -99,7 +99,7 @@ pub(super) fn run_w14_mesh_protocol_security_and_collab() -> Result<WorkloadResu
         "HMAC-SHA256 签名 + NonceCache 防重放 + 对话脱敏 + mesh_inbox 沙盒".into(),
         format!(
             "4/4 Mesh 安全防线命中={}/4 (合法放行={}, 重放拦截={}, 篡改拦截={}, 脱敏/沙盒={})，耗时 {} μs",
-            hits, valid_ok, replay_blocked, tamper_blocked, collab_guard_ok, stew_us
+            hits, valid_ok, replay_blocked, tamper_blocked, collab_guard_ok, body_us
         ),
     );
     apply_quality_eval(
@@ -159,7 +159,7 @@ pub(super) fn run_w15_optimistic_vs_pessimistic_execution_loop() -> Result<Workl
     let base_tokens = estimate_tokens(&baseline_dump);
 
     // With Agent Body (AOPCC): 开工 MVCC 乐观租约 + 三态分类免查直行 + PostToolUse 碰壁秒级自愈与自动降级
-    let t_stew = Instant::now();
+    let t_body = Instant::now();
     let sandbox = Storage::open_in_memory()?;
     for (id, port, proc_name) in [
         ("port:5432", 5432_u64, "postgres"),
@@ -255,7 +255,7 @@ pub(super) fn run_w15_optimistic_vs_pessimistic_execution_loop() -> Result<Workl
         .map(|r| r.failure_kind == "COMMAND_NOT_FOUND" && !r.recovery_actions.is_empty())
         .unwrap_or(false);
 
-    let stew_out = serde_json::json!({
+    let body_out = serde_json::json!({
         "leases_tok": lease_rep.tokens_estimated,
         "client_mode": c_client.mode.as_str(),
         "server_mode": c_server.mode.as_str(),
@@ -263,19 +263,19 @@ pub(super) fn run_w15_optimistic_vs_pessimistic_execution_loop() -> Result<Workl
         "cmd_heal": hit_cmd_heal
     })
     .to_string();
-    let stew_us = t_stew.elapsed().as_micros().max(1);
-    let stew_tokens = estimate_tokens(&stew_out);
+    let body_us = t_body.elapsed().as_micros().max(1);
+    let body_tokens = estimate_tokens(&body_out);
 
     let hits = [hit_lease, hit_classifier, hit_conn_heal, hit_cmd_heal]
         .into_iter()
         .filter(|b| *b)
         .count() as i64;
     let token_savings_pct = if base_tokens > 0 {
-        ((base_tokens - stew_tokens) as f64 / base_tokens as f64) * 100.0
+        ((base_tokens - body_tokens) as f64 / base_tokens as f64) * 100.0
     } else {
         0.0
     };
-    let sla_passed = hits == 4 && token_savings_pct >= 50.0 && stew_us < 250_000;
+    let sla_passed = hits == 4 && token_savings_pct >= 50.0 && body_us < 250_000;
 
     let mut res = finalize_result(
         "W15",
@@ -283,11 +283,11 @@ pub(super) fn run_w15_optimistic_vs_pessimistic_execution_loop() -> Result<Workl
         "AOPCC 乐观直通与悲观门禁自适应及碰壁秒级自愈",
         "D2/D6 Concurrency Loop",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         20,
         12,
         base_us,
-        stew_us,
+        body_us,
         5,
         hits,
         10,
@@ -298,7 +298,7 @@ pub(super) fn run_w15_optimistic_vs_pessimistic_execution_loop() -> Result<Workl
         "Brief MVCC 乐观租约 + 三态分类器 + PostToolUse 碰壁自愈与降级".into(),
         format!(
             "4/4 AOPCC 断言命中={}/4 (租约={} [{:?} tok], 三态分类={}, 断连自愈+降级={}, 替代工具={})，省 8 轮对话税，耗时 {} μs",
-            hits, hit_lease, lease_rep.tokens_estimated, hit_classifier, hit_conn_heal, hit_cmd_heal, stew_us
+            hits, hit_lease, lease_rep.tokens_estimated, hit_classifier, hit_conn_heal, hit_cmd_heal, body_us
         ),
     );
     apply_quality_eval(
@@ -403,13 +403,13 @@ pub(super) fn run_w16_dual_domain_audit_and_lease_self_evolution() -> Result<Wor
         hits += 1;
     }
 
-    let stew_us = t0.elapsed().as_micros();
+    let body_us = t0.elapsed().as_micros();
     let base_tokens = 14_500i64;
-    let stew_tokens = 2_400i64;
+    let body_tokens = 2_400i64;
     let base_rounds = 12i64;
-    let stew_rounds = 2i64;
-    let token_savings_pct = ((base_tokens - stew_tokens) as f64 / base_tokens as f64) * 100.0;
-    let sla_passed = hits == 4 && token_savings_pct >= 50.0 && stew_us < 1_000_000;
+    let body_rounds = 2i64;
+    let token_savings_pct = ((base_tokens - body_tokens) as f64 / base_tokens as f64) * 100.0;
+    let sla_passed = hits == 4 && token_savings_pct >= 50.0 && body_us < 1_000_000;
 
     let mut res = finalize_result(
         "W16",
@@ -417,11 +417,11 @@ pub(super) fn run_w16_dual_domain_audit_and_lease_self_evolution() -> Result<Wor
         "双域行为审计脱敏防洪与租约自进化闭环",
         "D6/D7 Audit & Self-Evolution",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         base_rounds,
-        stew_rounds,
+        body_rounds,
         85_000,
-        stew_us,
+        body_us,
         hits as i64,
         hits as i64,
         10,
@@ -523,13 +523,13 @@ pub(super) fn run_w17_cross_brain_continuity_and_body_proprioception() -> Result
         hits += 1;
     }
 
-    let stew_us = t0.elapsed().as_micros();
+    let body_us = t0.elapsed().as_micros();
     let base_tokens = 2_400i64;
-    let stew_tokens = snippet_tok.max(60);
+    let body_tokens = snippet_tok.max(60);
     let base_rounds = 4i64;
-    let stew_rounds = 1i64;
-    let token_savings_pct = ((base_tokens - stew_tokens) as f64 / base_tokens as f64) * 100.0;
-    let sla_passed = hits == 4 && token_savings_pct >= 50.0 && stew_us < 250_000;
+    let body_rounds = 1i64;
+    let token_savings_pct = ((base_tokens - body_tokens) as f64 / base_tokens as f64) * 100.0;
+    let sla_passed = hits == 4 && token_savings_pct >= 50.0 && body_us < 250_000;
 
     let mut res = finalize_result(
         "W17",
@@ -537,11 +537,11 @@ pub(super) fn run_w17_cross_brain_continuity_and_body_proprioception() -> Result
         "跨大脑连续性接力与本体器官自省",
         "D6/D7 Embodiment & Continuity",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         base_rounds,
-        stew_rounds,
+        body_rounds,
         45_000,
-        stew_us,
+        body_us,
         hits as i64,
         4,
         1,
@@ -551,13 +551,13 @@ pub(super) fn run_w17_cross_brain_continuity_and_body_proprioception() -> Result
         "换脑接手无本体记忆：盲目重跑 ls/find/ps/git log 盘点未竟上下文 (4 rounds, 2400 tok)".into(),
         format!(
             "BodyManifest(6器官) + ContinuityCapsule({} tok, 脱敏抗投毒) + L3包络拦截 (1 round)",
-            stew_tokens
+            body_tokens
         ),
         format!(
             "hits={}/4 body_id={} capsule_tok={} no_leak={} l3_blocked={}",
             hits,
             manifest.body_id,
-            stew_tokens,
+            body_tokens,
             no_leak,
             !l3_dec.allowed
         ),
@@ -656,7 +656,7 @@ pub(super) fn run_w18_perf_awr_and_self_diagnostics() -> Result<WorkloadResult> 
         hits += 1;
     }
 
-    let stew_summary = serde_json::json!({
+    let body_summary = serde_json::json!({
         "report_id": awr.report_id,
         "rss_delta_kb": awr.rss_delta_kb,
         "wait_events": rows.len(),
@@ -664,10 +664,10 @@ pub(super) fn run_w18_perf_awr_and_self_diagnostics() -> Result<WorkloadResult> 
         "monotonic_p95": monotonic_ok,
     })
     .to_string();
-    let stew_tokens = estimate_tokens(&stew_summary).max(60);
-    let stew_us = t0.elapsed().as_micros();
-    let token_savings_pct = ((base_tokens - stew_tokens) as f64 / base_tokens as f64) * 100.0;
-    let sla_passed = hits == 4 && token_savings_pct >= 50.0 && stew_us < 250_000;
+    let body_tokens = estimate_tokens(&body_summary).max(60);
+    let body_us = t0.elapsed().as_micros();
+    let token_savings_pct = ((base_tokens - body_tokens) as f64 / base_tokens as f64) * 100.0;
+    let sla_passed = hits == 4 && token_savings_pct >= 50.0 && body_us < 250_000;
 
     let mut res = finalize_result(
         "W18",
@@ -675,11 +675,11 @@ pub(super) fn run_w18_perf_awr_and_self_diagnostics() -> Result<WorkloadResult> 
         "内生等待事件与 AWR/ADDM 自诊断闭环",
         "D3/D7 Self-Telemetry & AWR",
         base_tokens,
-        stew_tokens,
+        body_tokens,
         5,
         1,
         base_us,
-        stew_us,
+        body_us,
         4,
         hits as i64,
         5,
@@ -695,7 +695,7 @@ pub(super) fn run_w18_perf_awr_and_self_diagnostics() -> Result<WorkloadResult> 
             monotonic_ok,
             addm_ok,
             del_ok,
-            stew_us
+            body_us
         ),
     );
     apply_quality_eval(

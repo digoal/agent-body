@@ -315,7 +315,7 @@ impl PgStorageProvider {
 
         let total_events: i64 = agg.get(0);
         let total_base: i64 = agg.get(1);
-        let total_stew: i64 = agg.get(2);
+        let total_body: i64 = agg.get(2);
         let total_saved: i64 = agg.get(3);
         let total_rounds: i64 = agg.get(4);
         let total_haz: i64 = agg.get(5);
@@ -391,7 +391,7 @@ impl PgStorageProvider {
             window: window.to_string(),
             total_events: total_events as usize,
             total_baseline_tokens: total_base,
-            total_body_tokens: total_stew,
+            total_body_tokens: total_body,
             total_tokens_saved: total_saved,
             token_savings_pct,
             total_rounds_saved: total_rounds,

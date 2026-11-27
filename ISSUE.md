@@ -130,9 +130,9 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
    - **演进方案**：建立 **`IN_AGENT`（Brief/Hook/MCP/CLI/Web/Mesh）+ `OUT_OF_AGENT`（`PROACTIVE_DAEMON` / `REACTIVE_WATCHER` 60s 折叠防洪 / `GOVERNANCE_MAINTENANCE`）** 双域统一行为审计引擎（`audit_events` 表 + `SecretRedactor` 脱敏 + `before_after_delta` + `evidence_sha256` 存证），并打通 **Audit → AOPCC 租约动态升降级 / Placement 聚类 / 反馈自动闭环** 与 **DuckDB 多维 OLAP 导出**，同步交付 Benchmark `v3.6`（`W16` + `DQ7` + `PR-12`，详见 [16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md) 与 [roadmap-phase43.md](docs/src_doc/archive/roadmap-phase43.md)）。
   
 27. **产品定位升维：「脑体分离 · Agent 本体」及其功能/物料重塑** `✅ Phase 44~45 已全量落地（对应规约 #1, #2, #3, #8, #11, #13, #17, #27）`:
-    > 原始探讨：我有个新想法，Agent Agent 本体似乎很容易误导未接触这个项目的用户，Agent 本体容易被误以为是管理、驱动多个Agent干活的产品，而Agent 本体则容易误以为是面向人类用户的个人助理。而不是我的初衷：为 Agent 而设计的具身底座、Agent 本体。另一方面，容易把路走窄。所以我想突破一下，把项目升华为“Agent本体”。Agent 本体、Agent 本体其实是对本体的一部分功能的侧面体现。以此为新的奠基，是不是要改进一下相关的文档、代码里的注释、HTML 演示等物料？是不是也要重新思考一下产品的功能点？
+    > 核心探讨：为了让未接触项目的用户直观理解本系统定位（既非管理/驱动多个 Agent 的编排框架，也非面向人类用户的个人助理），从第一性原理彻底确立为“为 Agent 服务的物理宿主机具身底座——**Agent 本体（Agent Body）**”。所有感知盘点、规则防撞与跨脑连续性均统一收拢为本体的六大生理器官，并全面同步文档、代码注释、Web UI 与 HTML 演说物料。
 
-    - **核心收敛判断（方案 B）**：确立 **「脑体分离（Brain-Body Separation）」** 第一性原理——LLM/客户端是可热切换的瞬态大脑，本系统是永驻宿主机的 **Agent 本体（感官图谱 × 小脑反射 × 海马体记忆与接力 × 规约脊柱 × 代谢稳态 × 多体联邦）**；严守递弱代偿不内置主战规划循环，同时执行 **三层命名零破坏兼容**（品牌与文案升维为 Agent 本体，底层 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容）。
+    - **核心收敛判断（方案 B）**：确立 **「脑体分离（Brain-Body Separation）」** 第一性原理——LLM/客户端是可热切换的瞬态大脑，本系统是永驻宿主机的 **Agent 本体（感官图谱 × 小脑反射 × 海马体记忆与接力 × 规约脊柱 × 代谢稳态 × 多体联邦）**；严守递弱代偿不内置主战规划循环，并将工程标识（`agent-body` / `body_*` / `~/.agent-body/`）全面对齐为 Agent 本体语义。
     - **规划演进路线**：**Phase 44** 新增第 27 模块 `src/body/` 与第 27 张表 `body_checkpoints`，落地五大本体原语（`BodyManifest`、`ContinuityCapsule <=300 tok`、`HomeostasisVitals`、`AutonomyEnvelope L0~L3`、多体联邦名片发现）、第 43 原生工具 `body_state` 与 Benchmark `v3.7` (`W17` + `DQ8` + `PR-13`)；**Phase 45** 全面刷新注释/文档/`SKILL`/Web 路演剧场第 7 幕，并为 `#28` → `#29` 铺平零返工衔接序（详见 [04-agent-body-philosophy.md](docs/idea_doc/04-agent-body-philosophy.md)、[17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md) 与 [roadmap-phase44-45.md](docs/src_doc/archive/roadmap-phase44-45.md)）。
   
 28. **体系化演讲 HTML 矩阵与既有双 Deck 归拢终刷新 (`presentation/`)** `✅ Phase 46 已全量落地`:

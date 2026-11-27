@@ -284,7 +284,7 @@ def check_drift(manifest: dict) -> list[str]:
             )
 
     # 校验活跃部署与示例配置严禁残留旧路径前缀
-    legacy_dir = "/." + "stew" + "ard"
+    legacy_dir = "/." + "st" + "ew" + "ard"
     for deploy_rel in ("Dockerfile", "docker-compose.yml", "config.example.toml"):
         dp = ROOT / deploy_rel
         if dp.exists() and legacy_dir in dp.read_text(encoding="utf-8"):

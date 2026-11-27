@@ -11,7 +11,7 @@
 
 | 编号 | 现网/定位问题实证 | Phase 44~45 演进目标 | 关联 ISSUE |
 |---|---|---|---|
-| **`REQ-18` 「Agent 本体」定位失配与本体原生能力缺口** | ① 外部受众易将「Agent 本体」误读为多 Agent 编排调度器、将「Agent 本体」误读为面向人类的个人助理，导致核心定位（为 Agent 服务的宿主机底座）失焦且路走窄；② 既有系统已具备感官、反射、海马体、审计与联邦原型，但缺少统一的 **身体身份证 (`BodyManifest`)**、**跨大脑连续性接力胶囊 (`ContinuityCapsule`)**、**五维稳态体检与 L1 自愈 (`HomeostasisVitals`)**、**显式四级自治包络 (`AutonomyEnvelope`)** 与 **多体名片发现**。 | 按推荐 **方案 B（定位升维 + 三层命名零破坏兼容 + 五大本体原语增量演化）**：<br/>① Phase 44 新建第 27 模块 `src/body/` 与第 27 张表 `body_checkpoints`，贯通 `43/43` 黑白屏同步；<br/>② Phase 45 按三层兼容纪律全面刷新注释、文档、`SKILL`、Web 路演剧场第 7 幕，并为 ISSUE #28/#29 铺平零返工前置。 | **ISSUE #27** / Phase 44.1~45.3 |
+| **`REQ-18` 本体定位升维与本体原生能力补齐** | ① 外置辅助工具隐喻容易被误解为多 Agent 编排调度器或面向人类的个人助理，必须彻底锚定为“服务于 Agent 的宿主机具身底座”；② 既有系统已具备感官、反射、海马体、审计与联邦原型，需补齐统一的 **身体身份证 (`BodyManifest`)**、**跨大脑连续性接力胶囊 (`ContinuityCapsule`)**、**五维稳态体检与 L1 自愈 (`HomeostasisVitals`)**、**显式四级自治包络 (`AutonomyEnvelope`)** 与 **多体名片发现**。 | 按推荐 **方案 B（定位升维 + 五大本体原语增量演化）**：<br/>① Phase 44 新建第 27 模块 `src/body/` 与第 27 张表 `body_checkpoints`，贯通 `43/43` 黑白屏同步；<br/>② Phase 45 全面刷新注释、文档、`SKILL`、Web 路演剧场第 7 幕，并为 ISSUE #28/#29 铺平零返工前置。 | **ISSUE #27** / Phase 44.1~45.3 |
 | **`BENCH-13` 跨大脑连续性接力与本体稳态基准缺失** | Benchmark `v3.6` 已覆盖 `W1~W16` 与 `DQ1~DQ7`，但尚无针对「跨模型/跨客户端换脑接力省轮次与零泄露」及「五维本体生命体征 + `L0~L3` 自治权限防越权」的实证回归门禁。 | 升级 Benchmark 至 **`v3.7`**，新增 **`W17 (cross_brain_continuity_and_body_proprioception)`**、**`DQ8 (body_homeostasis_and_envelope_hygiene)`** 与 **`PR-13`**，守卫帕累托双门禁与零明文泄露。 | **ISSUE #27** / Phase 44.6 |
 
 ---
