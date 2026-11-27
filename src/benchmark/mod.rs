@@ -1,3 +1,4 @@
+pub(crate) mod competitor_tracks;
 pub mod competitors;
 pub mod dq;
 pub mod ledger;

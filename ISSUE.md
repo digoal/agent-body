@@ -238,3 +238,8 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - `src/web/parity_api/ops_endpoints.rs` 消除 `body_audit_query`/`body_state` 模糊前缀路由并精确锁定 `/api/v1/audit/events`、`/api/v1/body/manifest`，同时在 `src/web/mod.rs` 新增 43 工具 MCP ↔ CLI ↔ `server.rs` 交叉契约单测；
     - 升级 `scripts/evolution_manifest.py` 增加 `Cargo.toml` 版本对齐、活跃文档/SKILL 反引号源码路径 0 断链、`parity_api` 43 路由精确命中、9 份演说与 4 套生成脚本动态 SSoT 对齐四重硬门禁；
     - 重构 4 套 `scripts/build_*.py` 从 `evolution_manifest.py` 动态读取版本/规模/Bench 快照重生成全套 `presentation/*.html`，同步修复 `EVOLUTION_GUIDE.md`、`docs/arch/02`、3 份 `SKILL.md`、`README.md`、`INSTALL.md`、`docs/manual/{03,10}` 与 `v1.1.0.md` 漂移（详见 [roadmap-phase68.md](docs/src_doc/roadmap-phase68.md)）。
+
+51. **`[P1 · Phase 69]` Top-5 高水位生产模块 `<700L` 预防性拆分与 SQLite/DuckDB 共享 SPI 契约测试** `✅ 已全量落地`:
+    - 预防性拆分 `src/hooks/client_gen.rs`、`src/fact/property_graph.rs`、`src/scanner/multimodal.rs`、`src/benchmark/competitors.rs`、`src/api/mcp_schemas.rs` 为 10 个 `<700L` 高可读模块，彻底消除后续迭代触及 `1000L` 门禁风险；
+    - 升级 `scripts/evolution_manifest.py` 兼容 `mcp_schemas_ops.rs` 与 `competitor_tracks.rs` 提取；
+    - 新增 [tests/storage_spi_contract.rs](tests/storage_spi_contract.rs) 共享 12 域 `StorageProvider` SPI 契约测试套件，确保 SQLite 与 DuckDB 在放置/扫描/资产/向量/记忆/图谱/锁/审计/胶囊等核心方法上行为严格等价（详见 [roadmap-phase69.md](docs/src_doc/roadmap-phase69.md)）。

@@ -24,8 +24,12 @@ def extract_manifest() -> dict:
     modules = re.findall(r"^pub\s+mod\s+([a-zA-Z0-9_]+);", lib_rs, flags=re.MULTILINE)
 
     mcp_schemas_path = ROOT / "src/api/mcp_schemas.rs"
+    mcp_schemas_ops_path = ROOT / "src/api/mcp_schemas_ops.rs"
     if mcp_schemas_path.exists():
-        mcp_tools = re.findall(r'"name"\s*:\s*"(body_[a-zA-Z0-9_]+)"', mcp_schemas_path.read_text(encoding="utf-8"))
+        schemas_txt = mcp_schemas_path.read_text(encoding="utf-8")
+        if mcp_schemas_ops_path.exists():
+            schemas_txt += "\n" + mcp_schemas_ops_path.read_text(encoding="utf-8")
+        mcp_tools = re.findall(r'"name"\s*:\s*"(body_[a-zA-Z0-9_]+)"', schemas_txt)
     else:
         mcp_rs = (ROOT / "src/api/mcp_tools.rs").read_text(encoding="utf-8")
         list_tools_block = mcp_rs.split("pub fn call_tool")[0]
@@ -64,9 +68,12 @@ def extract_manifest() -> dict:
     )
 
     comp_path = ROOT / "src/benchmark/competitors.rs"
+    comp_tracks_path = ROOT / "src/benchmark/competitor_tracks.rs"
     competitors: list[str] = []
     if comp_path.exists():
         comp_rs = comp_path.read_text(encoding="utf-8")
+        if comp_tracks_path.exists():
+            comp_rs += "\n" + comp_tracks_path.read_text(encoding="utf-8")
         competitors = sorted(
             set(re.findall(r'id:\s*"(COMP-C\d+)"', comp_rs)),
             key=lambda x: int(x.split("C")[-1]),

@@ -4,6 +4,7 @@ pub mod importance;
 pub mod metadata;
 pub mod redactor;
 pub mod multimodal;
+pub mod multimodal_docs;
 pub mod multimodal_ext;
 pub mod asset_search;
 pub mod ollama_annotator;

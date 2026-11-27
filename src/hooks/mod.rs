@@ -3,6 +3,7 @@ use serde_json::Value;
 
 pub mod auto_sync;
 pub mod client_gen;
+pub(crate) mod client_templates;
 pub mod diagnoser;
 pub mod dispatcher;
 pub mod event_bus;

@@ -3,6 +3,7 @@ pub mod process_net;
 pub mod automation;
 pub mod assets_catalog;
 pub mod property_graph;
+pub(crate) mod property_graph_helpers;
 pub mod semantic_discovery;
 pub mod knowledge_graph;
 pub mod knowledge_terms;
