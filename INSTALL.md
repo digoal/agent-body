@@ -135,7 +135,7 @@ agent-body preflight
 ✅ PASS   OPTIONAL     Ollama 向量服务与模型           服务正常且已拉取嵌入模型 `nomic-embed-text`
 ✅ PASS   OPTIONAL     Ollama 元数据标注模型           服务正常且已拉取小模型 `qwen3.5:0.8b` (L2 自动语义标注就绪)
 ✅ PASS   INFO         系统内核 inotify watch 限制    max_user_watches = 123055 (建议大项目 >= 65536)
-✅ PASS   INFO         Agent Body 软件包版本      v0.4.0 (9ba7bca, linux/x86_64, built at 2026-11-19T07:53:18Z)
+✅ PASS   INFO         Agent Body 软件包版本      v1.1.0 (c80092a8, arm64/x86_64, built with release profile)
 --------------------------------------------------------------------------------------------
 🚀 结论: 所有 REQUIRED 基础环境依赖全部满足，Agent 本体可稳定上线运行。
 ```

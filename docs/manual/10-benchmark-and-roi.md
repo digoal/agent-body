@@ -79,7 +79,7 @@ agent-body bench reset
 
 ---
 
-## 五、Benchmark 标准 `v3.0 ~ v3.3` 演进（Phase 35 ~ 39）
+## 五、Benchmark 标准 `v3.0 ~ v3.9` 演进（Phase 35 ~ 64）
 
 - **`v3.0` 横向竞品轨道 C (`COMP-C1 ~ COMP-C4`)**：引入长期记忆、上下文数据库、AgentFS 与宿主机 CLI 探针四大开源赛道同场实跑，区分 `LIVE_BENCHMARKED` 与 `ARCH_VERIFIED`。
 - **`v3.1` 帕累托质量双门禁**：为全部 `W1 ~ W11` 与 `COMP-C1 ~ COMP-C4` 实装四维上下文质量评分（$Q = 40\% R_{\text{fact}} + 30\% P_{\text{signal}} + 20\% A_{\text{action}} + 10\% S_{\text{safety}}$）与有效信息密度倍数（`Facts / 1k Tokens`），确保“既省 Token 又提质量”。

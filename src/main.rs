@@ -129,6 +129,19 @@ mod tests {
         assert!(Cli::try_parse_from(["agent-body", "body", "perf-snapshot", "--label", "gold", "--set-baseline"]).is_ok());
         assert!(Cli::try_parse_from(["agent-body", "body", "perf-awr", "--vs-baseline", "true"]).is_ok());
         assert!(Cli::try_parse_from(["agent-body", "body", "perf-tune"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "body", "manifest"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "body", "vitals"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "place", "suggest", "-t", "script", "-n", "demo", "--intent", "test"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "place", "rules"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "place", "learn"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "env", "show"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "env", "port", "8080"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "memory", "audit"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "links", "audit"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "links", "graph"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "changes", "--since", "2026-11-15T00:00:00"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "gc", "--max-age-hours", "72"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "bench", "report"]).is_ok());
 
         // 验证 Clap 4 布尔标志支持显式 false 与隐式 true 写法
         let c1 = Cli::try_parse_from(["agent-body", "memory", "search", "pg", "--hybrid=false"]).expect("hybrid=false");

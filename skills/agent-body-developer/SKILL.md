@@ -11,7 +11,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 
 ## 零、零重扫三步开工协议（Zero-Rescan Protocol，必先执行）
 
-任何新会话接手迭代任务时，**严禁全仓 `grep` 或扫描历史 `docs/src_doc/roadmap-phase2..33.md` / `progress-phase*.md`**，必须先执行以下 3 步（2 轮内精准锁定改点）：
+任何新会话接手迭代任务时，**严禁全仓 `grep` 或扫描历史 `docs/src_doc/archive/roadmap-phase*.md` / `docs/src_doc/archive/progress-phase*.md`**，必须先执行以下 3 步（2 轮内精准锁定改点）：
 1. **读 `Tier-0` 入口（仅 2 文件）**：[EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md)（8 大演进场景 O(1) 变更触点矩阵）+ 当前活跃 `docs/src_doc/roadmap-phase*.md`；
 2. **跑确定性架构快照**：`make evolution-check`（`<200ms` 获取最新模块/MCP/SPI/表/Benchmark 计数与零漂移校验）；
 3. **查符号用 CodeGraph**：`codegraph explore "<SymbolName>"` 穿透源码定义与调用链。
@@ -108,7 +108,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 flowchart TD
     A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 docs/src_doc/roadmap-phase*.md)"]
     B --> C["步骤 3: 串行编码与单元测试驱动<br/>(TDD + cargo test 局部验证)"]
-    C --> D["步骤 4: 编译检查与全量回归<br/>(cargo test 320+ 项全绿 + release 构建)"]
+    C --> D["步骤 4: 编译检查与全量回归<br/>(cargo test 347+ 项全绿 + release 构建)"]
     D --> E["步骤 5: 文档同步与交付三段式小结<br/>(更新手册/README + 状态标记)"]
 ```
 
@@ -137,7 +137,7 @@ flowchart TD
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo test
    ```
-   **门禁要求**: 目前必须达到 **320+ 个 tests 全部 `ok`**，0 failed（另允许 1 项 doc-test ignored）。
+   **门禁要求**: 目前必须达到 **347+ 个 tests 全部 `ok`**，0 failed（另允许 1 项 doc-test ignored）。
 2. 运行 release 生产构建：
    ```bash
    export PATH="/root/.cargo/bin:$PATH" && cargo build --release
@@ -169,7 +169,7 @@ flowchart TD
 
 ### 场景 A: 新增一个 MCP 宿主感知工具
 1. 在 `src/api/mcp_schemas.rs` 的 `all_tool_schemas()` 向量中追加工具定义，给出清晰的 `description` 与 JSON Schema 参数校验。
-2. 在 `src/api/mcp_tools.rs` 的 `call_tool_inner()` `match name` 分支中注入执行代码。
+2. 在 `src/api/mcp_tools/mod.rs` 及其子模块（`core_handlers.rs` / `infra_handlers.rs` / `body_handlers.rs`）中注入执行代码。
 3. 在 `src/cli_args.rs` 与 `src/main.rs` 对应子命令中保持对等支持。
 4. 编写 `cargo test api::mcp::tests` 确保通过 mock stdio 测试。
 

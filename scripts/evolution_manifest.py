@@ -82,6 +82,10 @@ def extract_manifest() -> dict:
     spec_match = re.search(r'BENCHMARK_SPEC_VERSION\s*:\s*&str\s*=\s*"([^"]+)"', bench_mod)
     bench_spec_version = spec_match.group(1) if spec_match else "unknown"
 
+    cargo_toml = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
+    ver_match = re.search(r'^version\s*=\s*"([^"]+)"', cargo_toml, flags=re.MULTILINE)
+    app_version = ver_match.group(1) if ver_match else "unknown"
+
     cli_args_path = ROOT / "src/cli_args.rs"
     cli_src_text = (
         cli_args_path.read_text(encoding="utf-8")
@@ -92,6 +96,7 @@ def extract_manifest() -> dict:
     cli_commands = re.findall(r"^\s{4}([A-Z][A-Za-z0-9_]*)\s*(?:\{|,)", cmd_block, flags=re.MULTILINE)
 
     return {
+        "app_version": app_version,
         "counts": {
             "modules": len(modules),
             "mcp_tools": len(mcp_tools),
@@ -162,7 +167,7 @@ def check_drift(manifest: dict) -> list[str]:
         ROOT / "docs/manual/08-web-dashboard.md",
         ROOT / "docs/manual/10-benchmark-and-roi.md",
         ROOT / "docs/design_doc/06-api-spec.md",
-    ] + sorted((ROOT / "presentation").glob("0*.html"))
+    ] + sorted((ROOT / "presentation").glob("*.html")) + sorted((ROOT / "scripts").glob("build_*.py"))
     stale_checks = [
         (
             re.compile(r"(?<!第\s)(?<!第)\b(39|40|41|42)\s*(?:个)?\s*(?:原生)?\s*(?:MCP\s*)?(?:工具|Tools?)"),
@@ -223,10 +228,10 @@ def check_drift(manifest: dict) -> list[str]:
                 f"docs/README.md 活跃路线图漂移: 最新路线图为 {latest_roadmap}，但未更新指向"
             )
 
-    # 校验核心活跃非演说文档同步最新 Benchmark 版本、W1~W19/DQ1~DQ10 计数与规格书登记
+    # 校验核心活跃文档、演说与生成脚本同步最新 Benchmark 版本、W1~W19/DQ1~DQ10 计数与规格书登记
     bench_ver = manifest["bench_spec_version"]
     dq_cnt = counts["dq"]
-    bench_docs = [p for p in active_docs if p.parent.name != "presentation"] + [
+    bench_docs = active_docs + [
         ROOT / "INSTALL.md",
         ROOT / "docs/design_doc/10-benchmark-spec.md",
     ]
@@ -327,6 +332,74 @@ def check_drift(manifest: dict) -> list[str]:
             if not resolved.exists():
                 errors.append(f"{rel_s} 存在断链: ({target})")
 
+    # Check A: Cargo.toml app_version 跨端对齐校验 (Web UI / INSTALL / docs/README / 演说 HTML)
+    app_ver = manifest["app_version"]
+    idx_html = ROOT / "src/web/assets/index.html"
+    if idx_html.exists() and f"v{app_ver}" not in idx_html.read_text(encoding="utf-8"):
+        errors.append(f"src/web/assets/index.html 缺少当前版本号 v{app_ver}")
+    install_md = ROOT / "INSTALL.md"
+    if install_md.exists():
+        itxt = install_md.read_text(encoding="utf-8")
+        if f"v{app_ver}" not in itxt:
+            errors.append(f"INSTALL.md 缺少当前版本号 v{app_ver}")
+        if "软件包版本" in itxt and "v0.4.0" in itxt:
+            errors.append(f"INSTALL.md 示例输出仍残留旧版本 v0.4.0 (当前 v{app_ver})")
+    docs_readme_p = ROOT / "docs/README.md"
+    if docs_readme_p.exists() and f"v{app_ver}.md" not in docs_readme_p.read_text(encoding="utf-8"):
+        errors.append(f"docs/README.md 缺少最新 Release 说明链接 v{app_ver}.md")
+    for html_p in sorted((ROOT / "presentation").glob("*.html")):
+        htxt = html_p.read_text(encoding="utf-8")
+        if f"v{app_ver}" not in htxt:
+            errors.append(f"{html_p.relative_to(ROOT)} 缺少当前版本号 v{app_ver}")
+        if "v1.0.0" in htxt:
+            errors.append(f"{html_p.relative_to(ROOT)} 仍残留过时版本 v1.0.0 (当前 v{app_ver})")
+
+    # Check B: 核心活跃文档与 SKILL 中的反引号源码/脚本路径存在性校验
+    code_ref_re = re.compile(
+        r"`((?:src|scripts|skills|presentation|tests)/[A-Za-z0-9_./-]+\.(?:rs|py|md|html|svg|sql|toml|js))`"
+    )
+    code_ref_docs = (
+        [ROOT / "README.md", ROOT / "EVOLUTION_GUIDE.md", ROOT / "INSTALL.md", ROOT / "docs/README.md"]
+        + sorted((ROOT / "docs/arch").glob("*.md"))
+        + sorted((ROOT / "docs/manual").glob("*.md"))
+        + sorted((ROOT / "skills").rglob("*.md"))
+    )
+    for cd in code_ref_docs:
+        if not cd.exists():
+            continue
+        ctxt = cd.read_text(encoding="utf-8")
+        for m in code_ref_re.finditer(ctxt):
+            ref = m.group(1)
+            if any(ch in ref for ch in ("*", "{", "<")) or ".." in ref:
+                continue
+            if not (ROOT / ref).exists():
+                ln = ctxt[: m.start()].count("\n") + 1
+                errors.append(f"{cd.relative_to(ROOT)}:{ln} 引用了不存在的路径 `{ref}`")
+
+    # Check C: parity_api 43 工具与 src/web/server.rs 精确路由双向对齐校验
+    parity_ops = ROOT / "src/web/parity_api/ops_endpoints.rs"
+    server_rs = ROOT / "src/web/server.rs"
+    if parity_ops.exists() and server_rs.exists():
+        ptxt = parity_ops.read_text(encoding="utf-8")
+        stxt = server_rs.read_text(encoding="utf-8")
+        parity_entries = re.findall(r'"(body_[a-z0-9_]+)"\s*=>\s*\("([^"]+)",\s*"([^"]+)",', ptxt)
+        if len(parity_entries) != mcp_cnt:
+            errors.append(
+                f"parity_api 映射数 ({len(parity_entries)}) 与 MCP 工具数 ({mcp_cnt}) 不一致"
+            )
+        for tool_name, cli_cmd, web_ep in parity_entries:
+            if not cli_cmd.startswith("agent-body "):
+                errors.append(f"parity_api 工具 `{tool_name}` CLI 前缀异常: `{cli_cmd}`")
+            if "*" in web_ep:
+                errors.append(f"parity_api 工具 `{tool_name}` 禁止通配路由 `{web_ep}`")
+            m_ep = re.search(r"(/api/v1/[a-zA-Z0-9_/-]+)", web_ep)
+            if not m_ep:
+                errors.append(f"parity_api 工具 `{tool_name}` 缺少 /api/v1/ 路由: `{web_ep}`")
+            elif f'"{m_ep.group(1)}"' not in stxt:
+                errors.append(
+                    f"parity_api 工具 `{tool_name}` 路由 `{m_ep.group(1)}` 未在 src/web/server.rs 注册"
+                )
+
     return errors
 
 
@@ -343,7 +416,7 @@ def main() -> int:
 
     c = manifest["counts"]
     print(
-        f"📦 Agent Body 架构快照: {c['modules']} 模块 | {c['mcp_tools']} MCP工具 | "
+        f"📦 Agent Body v{manifest['app_version']} 架构快照: {c['modules']} 模块 | {c['mcp_tools']} MCP工具 | "
         f"{c['spi_methods']} SPI方法 | {c['tables']} SQLite表 | "
         f"Bench v{manifest['bench_spec_version']} (W:{c['workloads']}, M:{c['micro']}, DQ:{c['dq']}, COMP:{c['competitors']}, PR:{c['pr_rules']})"
     )

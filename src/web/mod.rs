@@ -382,6 +382,45 @@ mod tests {
         assert_eq!(data["synced_count"].as_u64(), Some(43));
         assert_eq!(data["missing_count"].as_u64(), Some(0));
         assert_eq!(data["coverage_pct"].as_f64(), Some(100.0));
+
+        // 交叉契约守卫：43 个工具的 CLI 前缀、Web 精确路由（禁通配符 *）与 server.rs 注册路由 100% 对齐
+        let server_src = include_str!("server.rs");
+        let items = data["items"].as_array().expect("items array");
+        assert_eq!(items.len(), 43);
+        for item in items {
+            let tool = item["mcp_tool"].as_str().unwrap_or("");
+            let cli_cmd = item["cli_command"].as_str().unwrap_or("");
+            let web_ep = item["web_endpoint"].as_str().unwrap_or("");
+            assert!(
+                cli_cmd.starts_with("agent-body "),
+                "tool `{}` CLI 映射缺失前缀: `{}`",
+                tool,
+                cli_cmd
+            );
+            assert!(
+                !web_ep.contains('*'),
+                "tool `{}` Web 映射严禁通配符 `*`: `{}`",
+                tool,
+                web_ep
+            );
+            let route_path = web_ep
+                .split_whitespace()
+                .find(|s| s.starts_with("/api/v1/"))
+                .unwrap_or("");
+            assert!(
+                !route_path.is_empty(),
+                "tool `{}` 缺少 /api/v1/ 路由: `{}`",
+                tool,
+                web_ep
+            );
+            let quoted = format!("\"{}\"", route_path);
+            assert!(
+                server_src.contains(&quoted),
+                "tool `{}` 路由 `{}` 未在 src/web/server.rs 注册",
+                tool,
+                route_path
+            );
+        }
     }
 
     #[test]

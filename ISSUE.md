@@ -233,3 +233,8 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
 49. **`[P1 · Phase 67]` 全仓生产文件 `< 1000L` 模块拆分、`prod_slice` 修复与 `let _ = <= 15` 吞错治理** `✅ 已全量落地`:
     - 拆分全部 `>= 1000L` 生产文件（`mcp_tools`、`benchmark/workloads`、`multimodal_ext`、`config`、`metadata`、`knowledge_graph`、`cli_args`、`awr_engine`、`preflight`），全仓所有生产 `.rs` 文件严格 `< 1000L`；
     - 修复 `scripts/code_hygiene.py` `prod_slice` 原始字符串误判并收紧门槛至 `>1000L = 0`、`let _ = <= 15`，清理全仓非 benchmark/核心路径静默吞错（详见 [roadmap-phase67.md](docs/src_doc/roadmap-phase67.md)）。
+
+50. **`[P0 · Phase 68]` 一等公民 SSoT 交叉对齐与防漂移门禁闭环** `✅ 已全量落地`:
+    - `src/web/parity_api/ops_endpoints.rs` 消除 `body_audit_query`/`body_state` 模糊前缀路由并精确锁定 `/api/v1/audit/events`、`/api/v1/body/manifest`，同时在 `src/web/mod.rs` 新增 43 工具 MCP ↔ CLI ↔ `server.rs` 交叉契约单测；
+    - 升级 `scripts/evolution_manifest.py` 增加 `Cargo.toml` 版本对齐、活跃文档/SKILL 反引号源码路径 0 断链、`parity_api` 43 路由精确命中、9 份演说与 4 套生成脚本动态 SSoT 对齐四重硬门禁；
+    - 重构 4 套 `scripts/build_*.py` 从 `evolution_manifest.py` 动态读取版本/规模/Bench 快照重生成全套 `presentation/*.html`，同步修复 `EVOLUTION_GUIDE.md`、`docs/arch/02`、3 份 `SKILL.md`、`README.md`、`INSTALL.md`、`docs/manual/{03,10}` 与 `v1.1.0.md` 漂移（详见 [roadmap-phase68.md](docs/src_doc/roadmap-phase68.md)）。

@@ -14,7 +14,7 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
 写技术文档不是堆砌名词，更不是凭空编造。编写本项目的任何文档，必须严格遵守以下 **六大铁律**：
 
 1. **代码真实性第一（Zero Hallucination）**：
-   - 所有的命令参数、子命令名称、配置项键名、MCP 工具名称（共 43 个）、JSON 返回结构，必须直接源自 `src/` 源码（如 `src/cli_args.rs`, `src/main.rs`, `src/api/mcp_schemas.rs`, `src/api/mcp_tools.rs`, `src/config/mod.rs`, `src/body/`），绝不允许擅自发明不存在的命令或参数。
+   - 所有的命令参数、子命令名称、配置项键名、MCP 工具名称（共 43 个）、JSON 返回结构，必须直接源自 `src/` 源码（如 `src/cli_args.rs`, `src/main.rs`, `src/api/mcp_schemas.rs`, `src/api/mcp_tools/mod.rs`, `src/config/mod.rs`, `src/body/`），绝不允许擅自发明不存在的命令或参数。
    - 遵循 **三层命名兼容纪律**：对外文档叙事统一围绕 **「脑体分离 · Agent 本体（宿主机具身底座）」**，同时工程标识（`agent-body`、`body_*`、`~/.agent-body/`）100% 保持原样不误导改动。
    - 凡涉及运行依赖、环境要求与部署配置，必须严格注明**“必选 (Required)”**与**“可选 (Optional)”**，并在 [INSTALL.md](../../INSTALL.md) 与 [config.example.toml](../../config.example.toml) 中保持事实对齐。
 2. **命令必须实跑验证（Execution-Verified）**：
@@ -78,7 +78,7 @@ flowchart TD
 在动笔前，Agent 必须快速查阅：
 - `EVOLUTION_GUIDE.md` & `ISSUE.md`：27 模块 / 43 工具 / 88 SPI 方法 / 27 表计数锚点与演进议题总账；
 - `src/cli_args.rs` & `src/cli_handlers/*`：当前支持的所有 30 个顶级子命令与 flags 参数；
-- `src/api/mcp_schemas.rs` & `src/api/mcp_tools.rs`：当前注册的全部 **43 个原生 MCP 工具** 名与 inputSchema；
+- `src/api/mcp_schemas.rs` & `src/api/mcp_tools/mod.rs`：当前注册的全部 **43 个原生 MCP 工具** 名与 inputSchema；
 - `src/body/`：Agent 本体中枢（`BodyManifest`、`ContinuityCapsule`、`HomeostasisVitals`、`AutonomyEnvelope`、`perf_awr/*`）；
 - `src/config/mod.rs`：当前的 `config.toml` 配置项结构体（含 `AGENT_BODY_CONFIG` 与 `[workspace]`）；
 - `src/storage/schema.sql`：预置的 8 大放置规则与 10+ 分级扫描策略；
@@ -132,7 +132,7 @@ flowchart TD
 ## 五、自检 Checklist（发布文档前必对）
 
 - [ ] 文档中的 CLI 命令是否与 `src/cli_args.rs` / `src/main.rs`（30 个顶级子命令）中的定义 100% 吻合？
-- [ ] 文档中的 MCP 工具名是否与 `src/api/mcp_schemas.rs` / `src/api/mcp_tools.rs`（共 43 个）100% 吻合？
+- [ ] 文档中的 MCP 工具名是否与 `src/api/mcp_schemas.rs` / `src/api/mcp_tools/mod.rs`（共 43 个）100% 吻合？
 - [ ] 文档中贴出的 JSON 输出是否经过实际命令运行捕获，而非凭空假想？
 - [ ] Mermaid 节点文字中的括号是否全部加了双引号（防渲染崩溃）？
 - [ ] 矢量 SVG 资源是否已独立落盘于 `docs/markdown/svg/` 并在 Markdown 中以标准语法正确引用？

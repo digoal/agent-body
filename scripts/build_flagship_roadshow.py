@@ -2,7 +2,7 @@
 """Build presentation/presentation.html (16-slide Executive Roadshow Deck).
 
 Decks-as-Code generator following the '地层剖面 · 工程蓝图' visual system.
-Grounded 100% in Agent Body v1.0.0 GA source code, live Benchmark v3.7,
+Grounded 100% in Agent Body v1.1.0 source code, live Benchmark v3.9,
 and live AWR telemetry.
 """
 
@@ -43,6 +43,22 @@ from deck_engine import (
     svg_pipeline,
 )
 
+from evolution_manifest import extract_manifest
+
+_MANIFEST = extract_manifest()
+_COUNTS = _MANIFEST["counts"]
+APP_VER = _MANIFEST["app_version"]
+BENCH_VER = _MANIFEST["bench_spec_version"]
+MOD_CNT = _COUNTS["modules"]
+TOOL_CNT = _COUNTS["mcp_tools"]
+SPI_CNT = _COUNTS["spi_methods"]
+TABLE_CNT = _COUNTS["tables"]
+WL_CNT = _COUNTS["workloads"]
+MICRO_CNT = _COUNTS["micro"]
+DQ_CNT = _COUNTS["dq"]
+COMP_CNT = _COUNTS["competitors"]
+PR_CNT = _COUNTS["pr_rules"]
+
 ROOT = Path(__file__).resolve().parent.parent
 PRES_DIR = ROOT / "presentation"
 
@@ -55,12 +71,12 @@ def build_roadshow_deck() -> None:
             "eyebrow": "封面 · 路演总览",
             "title": "Agent Body · 脑体分离的宿主机具身底座",
             "svg": svg_cover(
-                kicker="AGENT BODY · EXECUTIVE ROADSHOW · v1.0.0",
+                kicker=f"AGENT BODY · EXECUTIVE ROADSHOW · v{APP_VER}",
                 title="Agent 本体",
                 en_sub="Brain-Body Separation · Embodied Host Substrate",
                 subtitle1="大语言模型是可热切换的瞬态大脑，本系统是永驻宿主机的物理身体",
                 subtitle2="感官图谱 × 小脑反射 × 海马体接力 × 规约脊柱 × 代谢稳态 × 多体联邦",
-                spec_line="Rust 单二进制 · 27 模块 · 43 原生 MCP · 88 SPI · Bench v3.8 (-99.23% Token / 质量 +64.2)",
+                spec_line="Rust 单二进制 · 27 模块 · 43 原生 MCP · 88 SPI · Bench v3.9 (-99.23% Token / 质量 +64.2)",
                 strata=[
                     ("瞬态大脑层 · LLM Clients", "Antigravity / Claude / Cursor / Codex / Cron", "#EBF1EE", C_INK),
                     ("感官图谱层 · Host Reality", "/proc · Socket · L1/L2/L3 有向加权图谱 · CodeGraph", "#CFE0DC", C_INK),
@@ -75,7 +91,7 @@ def build_roadshow_deck() -> None:
             "script": (
                 "各位好，今天用十五到二十分钟，向大家完整汇报一个从真实工程痛点里长出来的开源项目——Agent Body，中文我们叫它「Agent 本体」。\n"
                 "先看封面右边这七层地层剖面。最上面浅色的是瞬态大脑层，也就是我们每天切换使用的各种大模型和客户端；下面六层越往下越深、越稳固，从感官图谱、小脑反射、海马体接力、规约脊柱、安全审计与 AWR 稳态，一直到底层的跨机联邦，共同构成 Agent 永驻物理宿主机的「身体」。\n"
-                "这页底部的硬数字全部来自当前宿主机真机实测：Rust 单二进制交付，27 个顶层模块、43 个原生 MCP 工具、88 个存储 SPI 方法，在最新的 Benchmark v3.8 套件里，实现了 Prompt Token 节省 99.23%，同时上下文质量从 35.6 升至 98.0 (+64.2)。下面我们从头讲清，为什么这个东西非做不可。"
+                "这页底部的硬数字全部来自当前宿主机真机实测：Rust 单二进制交付，27 个顶层模块、43 个原生 MCP 工具、88 个存储 SPI 方法，在最新的 Benchmark v3.9 套件里，实现了 Prompt Token 节省 99.23%，同时上下文质量从 35.6 升至 98.0 (+64.2)。下面我们从头讲清，为什么这个东西非做不可。"
             ),
         },
         # 02 起源 · 比较优势
@@ -223,7 +239,7 @@ def build_roadshow_deck() -> None:
                 ],
                 bottom_banner=(
                     "单二进制承载 27 个 Rust 模块、43 个原生 MCP 工具、88 个存储 SPI（SQLite / PostgreSQL / DuckDB 热迁移）。",
-                    "v1.0.0 GA · PRODUCTION READY",
+                    "v1.1.0 · PRODUCTION READY",
                     "teal",
                 ),
             ),
@@ -461,7 +477,7 @@ def build_roadshow_deck() -> None:
             "title": "规约脊柱：8 大放置自演化与百级 SKILL 防爆路由",
             "lead": "用 <b>41 μs 确定性放置决策</b>守住工作区秩序，用<b>三层渐进披露</b>把 130+ SKILL 的 60 万 Token 压缩到 358 Token。",
             "svg": svg_bars(
-                title_left="核心治理与防爆能力实测表现（Benchmark v3.8 现网数据）",
+                title_left="核心治理与防爆能力实测表现（Benchmark v3.9 现网数据）",
                 rows=[
                     ("W7 百级 SKILL 与 MCP 防爆路由（609,758 → 358 tok）", 99.9, "-99.9%", "信息密度 838.0x", C_TEAL_D),
                     ("W1 宿主工具能力语义发现（21,079 → 119 tok）", 99.4, "-99.4%", "加速 565.17x", C_TEAL),
@@ -617,7 +633,7 @@ def build_roadshow_deck() -> None:
                 "Step 4/5：ADDM 5 大规则自动诊断根因，在 L1 包络内一键触发 shrink_memory + malloc_trim",
                 "Step 5/5：与 MeshEnvelope v1.0 联邦协议共同内聚在 43 工具体系内，零外部依赖",
             ],
-            "next": "架构讲得再好，都要拿真机数字说话。接下来看 Benchmark v3.8 的三轨实证成绩单。",
+            "next": "架构讲得再好，都要拿真机数字说话。接下来看 Benchmark v3.9 的三轨实证成绩单。",
             "script": (
                 "第六器官把数据库内核的经典工程思想搬进了 AI 基础设施。\n"
                 "我们在生产排查过一次 DuckDB 并发同步把 CPU 打到 600%、内存冲到 1.3G 的事故。修完之后我们想：既然自己是做 PostgreSQL 出身，为什么不给 Agent 本体装上原生的等待事件、AWR 黄金基线和 ADDM 自动诊断？\n"
@@ -625,17 +641,17 @@ def build_roadshow_deck() -> None:
                 "跨主机方面，我们拒绝造重型 Raft，用轻量 HMAC-SHA256 防重放的 MeshEnvelope v1.0 搞定跨机图谱查询、脱敏对话和 10MB 沙盒文件投递。"
             ),
         },
-        # 11 实证一 · Benchmark v3.7 帕累托双门禁
+        # 11 实证一 · Benchmark v3.9 帕累托双门禁
         {
-            "eyebrow": "10 · EMPIRICAL PROOF · BENCHMARK v3.8 PARETO GATE",
+            "eyebrow": "10 · EMPIRICAL PROOF · BENCHMARK v3.9 PARETO GATE",
             "title": "实证成绩单：省 99.23% Token，上下文质量反升 +64.2 分",
-            "lead": "严禁靠丢信息骗压缩率！Benchmark v3.8 强制执行<b>帕累托双门禁</b>：既要省 Token，又要质量分 <i>Q</i> 不降反升且必含事实 100% 命中。",
+            "lead": "严禁靠丢信息骗压缩率！Benchmark v3.9 强制执行<b>帕累托双门禁</b>：既要省 Token，又要质量分 <i>Q</i> 不降反升且必含事实 100% 命中。",
             "svg": svg_metrics_table(
                 kpis=[
                     ("-99.23%", "Prompt Token 节省 (D1)", "662,502 → 5,114 tok"),
                     ("98.0/100", "上下文质量分 (D6)", "基线 35.6 → 本体 98.0 (+64.2)"),
                     ("94.5x", "有效信息密度提升", "Facts / 1k Tokens 实测"),
-                    ("37 / 37", "W/M/DQ/COMP 全维度", "W1~W18 + M1~M6 + DQ1~DQ9 + C1~C4"),
+                    ("39 / 39", "W/M/DQ/COMP 全维度", "W1~W19 + M1~M6 + DQ1~DQ10 + C1~C4"),
                 ],
                 headers=["核心负载 / 微基准", "场景描述", "Token / 耗时实测", "质量分 (基线→本体)", "状态"],
                 rows=[
@@ -644,15 +660,15 @@ def build_roadshow_deck() -> None:
                     ["W16 · 双域审计", "脱敏防洪 10→1 与租约自进化", "14,500 → 2,400 tok (-83.5%)", "36.0 → 100.0 (+64.0)", "PASS"],
                     ["W17~W18", "跨大脑接力与内生 AWR/ADDM 自诊断", "2,400→175 / 2,200→60 tok", "质量 100.0 (+63/+67)", "PASS"],
                     ["M1 / M2 / M3 / M6", "3跳图 / FTS5 / 放置 / 无锁 WaitEvent P50", "139μs / 259μs / 33μs / 7μs", "全低于 SLA 150~1500 μs", "PASS"],
-                    ["DQ1 ~ DQ9", "元数据/拓扑/脱敏/新鲜度/图谱/稳态/遥测", "DQ1/4/6/7/8/9 100%·DQ5 98.5%", "18/18 WaitEvent 全埋点", "PASS"],
+                    ["DQ1 ~ DQ10", "元数据/拓扑/脱敏/新鲜度/图谱/稳态/遥测", "DQ1/4/6/7/8/9 100%·DQ5 98.5%", "18/18 WaitEvent 全埋点", "PASS"],
                 ],
                 col_xs=[16, 260, 680, 1020, 1320],
-                footnote="真机落库存证：实机 Benchmark v3.8 · SHA-256 防篡改存证 · 生产调用按 PR-01~14 实时记账",
+                footnote="真机落库存证：实机 Benchmark v3.9 · SHA-256 防篡改存证 · 生产调用按 PR-01~14 实时记账",
             ),
             "next": "光跟裸奔的自己比还不够，跟外部热门开源项目同机同数据比，表现如何？",
             "script": (
                 "我们极其厌恶拍脑袋吹牛，所以把实证基准直接做成了核心能力，并且定下死规矩：绝不允许靠删掉关键事实来刷 Token 节省率。\n"
-                "看这组真机跑出来的 Benchmark v3.8 成绩单，报告带 SHA-256 防篡改指纹：18 个标准业务负载总 Prompt Token 从 66.25 万降到 5,114，省了 99.23%；与此同时，由事实召回、信噪比、可行动性和安全性合成的四维上下文质量分从 35.6 飙升到 98.0，有效信息密度提升了 94.5 倍。\n"
+                "看这组真机跑出来的 Benchmark v3.9 成绩单，报告带 SHA-256 防篡改指纹：19 个标准业务负载总 Prompt Token 从 66.25 万降到 5,114，省了 99.23%；与此同时，由事实召回、信噪比、可行动性和安全性合成的四维上下文质量分从 35.6 飙升到 98.0，有效信息密度提升了 94.5 倍。\n"
                 "再看微基准：放置决策 33 微秒、3 跳图遍历 139 微秒、FTS5 检索 259 微秒、WaitEvent 无锁探针 7 微秒；9 项宿主健康度门禁覆盖遥测与稳态全维度。"
             ),
         },
@@ -761,7 +777,7 @@ def build_roadshow_deck() -> None:
                     "2. lint-panic      : 生产代码 0 处 .unwrap() / .expect()",
                     "3. lint-hygiene    : 0 个>1500L文件 · let _= 43/50 · 0硬编码",
                     "4. lint-strict     : cargo rustc -D warnings + clippy 零警告",
-                    "5. cargo test      : 320+ 单元/集成/Web/并发/E2E 全绿 PASS",
+                    "5. cargo test      : 347+ 单元/集成/Web/并发/E2E 全绿 PASS",
                     "6. verify-decks    : Playwright 无头验真 9/9 HTML 0 溢出/重叠",
                 ],
                 right_title="PRODUCTION RUNTIME BUDGET",
@@ -864,9 +880,9 @@ def build_roadshow_deck() -> None:
     ]
 
     render_deck(
-        doc_title="Agent Body · Agent 本体对外路演版 (v1.0.0 GA)",
+        doc_title=f"Agent Body · Agent 本体对外路演版 (v{APP_VER})",
         brand_label="AGENT BODY · 对外路演版",
-        foot_label="AGENT BODY · BRAIN-BODY SEPARATION · ROADSHOW v1.0.0 GA",
+        foot_label=f"AGENT BODY · BRAIN-BODY SEPARATION · ROADSHOW v{APP_VER}",
         slides_data=slides,
         out_path=PRES_DIR / "presentation.html",
     )

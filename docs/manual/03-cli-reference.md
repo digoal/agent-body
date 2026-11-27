@@ -470,7 +470,7 @@ agent-body [OPTIONS] <COMMAND>
 
 ### 2.19 `mcp-catalog` / `skill` / `service` — 生态认知与 Context 防爆路由器 (Phase 16)
 - `agent-body mcp-catalog <scan|list|route>`: 扫描宿主机客户端 MCP 配置（强制脱敏密钥）、列清单与按意图检索（对应 `body_mcp_catalog`）。
-- `agent-body skill <scan|list|route>`: 扫描宿主机 130+ SKILL 目录，按 `--budget-tokens` 渐进式路由 Top-K SKILL 路径，防止 Context 膨胀（对应 `body_skill_route`）。
+- `agent-body skill <scan|list|route>`: 扫描宿主机 130+ SKILL 目录，按 `--budget-tokens` 渐进式路由 Top-K SKILL 路径，防止 Context 膨胀（对应 `body_skill_route`，示例：`agent-body skill route "PostgreSQL调优" --budget-tokens 500`）。
 - `agent-body service <register|list|query|check|bootstrap>`: 管理外部可用服务通讯录与轻量健康探活（对应 `body_service_contact`）。
 
 ---

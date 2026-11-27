@@ -37,6 +37,7 @@
 | **Phase 64** | **`v1.1.0` 一等公民大一统对齐 (Web UI / SKILL / 手册 / 门禁)** | 升级 `evolution_manifest.py` 防漂移门禁、`Cargo.toml` 升至 `1.1.0`、Web UI 补齐三态 `shadow_ab`/`H1~H5`/`kv_filter`/`backfill` Action-level 1:1:1 交互、同步 3 套 SKILL / 10 卷手册 / `arch` / `design_doc/{06,10}` / `README` / `INSTALL` / `v1.1.0` 发版说明 | `#46` | [roadmap-phase64.md](roadmap-phase64.md) | ✅ **已完成** |
 | **Phase 65~66** | **效果真实性与可信度量攻坚 + 跨平台打磨与 GitHub CI/CD** | 修复 `DQ2` 口径矛盾与 `DQ6`/`vitals` 十万边截断失真、优化 `expand_graph_for_query` 与 `AssetSearchEngine` 代码词 `exact_id` 召回/延迟、消除 macOS 预检/Daemon/Makefile Linux 残留并新增双平台 `.github/workflows/{ci,release}.yml` | `#47`, `#48` | [roadmap-phase65-66.md](roadmap-phase65-66.md) | ✅ **已完成** |
 | **Phase 67** | **全仓 `< 1000L` 模块化拆分与 `let _ = <= 15` 吞错治理** | 拆分全部 10 个 `>=1000L` 生产文件至 `<1000L`（`mcp_tools`/`workloads`/`multimodal_ext`/`config`/`metadata`/`knowledge_graph`/`cli_args`/`awr_engine`/`preflight`），修复 `prod_slice` 原始字符串漏检并收紧 `code_hygiene.py` 红线至 `>1000L = 0`、`let _ = <= 15` | `#49` | [roadmap-phase67.md](roadmap-phase67.md) | ✅ **已完成** |
+| **Phase 68** | **一等公民 SSoT 交叉对齐与防漂移门禁闭环** | `evolution_manifest.py` 新增 `Cargo.toml` 版本对齐、反引号源码路径存在性、`parity_api` 43 路由精确命中 `server.rs` 与全量演说/脚本 `Bench v3.9` 四重硬门禁；重构 4 套演说生成器动态读取快照；补齐 `src/web/mod.rs` 43 工具三端交叉契约单测并消除全部 SKILL/手册/路线图漂移 | `#50` | [roadmap-phase68.md](roadmap-phase68.md) | ✅ **已完成** |
 
 ---
 

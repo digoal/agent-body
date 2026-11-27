@@ -439,8 +439,8 @@ fn map_tool_parity(tool_name: &str) -> (&'static str, &'static str, &'static str
         "body_demo_scenario" => ("agent-body demo", "POST /api/v1/demo/run", "demo", "synced"),
         "body_benchmark" => ("agent-body bench", "POST /api/v1/benchmark/run", "benchmark", "synced"),
         "body_feedback" => ("agent-body feedback", "GET/POST /api/v1/feedback", "benchmark", "synced"),
-        "body_audit_query" => ("agent-body audit", "GET/POST /api/v1/audit/*", "audit", "synced"),
-        "body_state" => ("agent-body body", "GET/POST /api/v1/body/*", "body", "synced"),
+        "body_audit_query" => ("agent-body audit", "GET /api/v1/audit/events", "audit", "synced"),
+        "body_state" => ("agent-body body", "GET /api/v1/body/manifest", "body", "synced"),
         _ => ("", "", "", "missing"),
     }
 }

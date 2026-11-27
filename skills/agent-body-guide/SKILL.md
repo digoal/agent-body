@@ -64,7 +64,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 make build
 # 或: cargo build --release
 
-# 3. 运行全量测试验证环境 (320+ 项单元/集成测试全部通过，1 项文档示例忽略)
+# 3. 运行全量测试验证环境 (347+ 项单元/集成测试全部通过，1 项文档示例忽略)
 make test
 # 或: cargo test
 

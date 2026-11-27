@@ -116,9 +116,9 @@
   - 多 Agent 协作锁与层级互斥传播算法（Advisory Lock + 祖先后代路径检测）；
   - 工业级 NFR 指标（单二进制交付、冷启动 `<50ms`、空闲内存 `<25MB`）与递弱代偿边界。
 - 🛠️ **[02-for-developers.md](docs/arch/02-for-developers.md)**（面向研发工程师与贡献者）：
-  - 源码 27 大模块全景职责与依赖拓扑速查（Phase 56 全量模块化，0 `>1500L` God File）；
+  - 源码 27 大模块全景职责与依赖拓扑速查（Phase 67 全量 `<1000L` 模块化，0 `>1000L` God File）；
   - 核心扩展三大 How-To（添加原生 MCP 工具、实现新存储后端 SPI、新增环境预检项）；
-  - 320+ 项自动化测试套件与本地开发流；
+  - 347+ 项自动化测试套件与本地开发流；
   - 零 Panic 原则、四层贯通与断点续传检查点规范。
 - 🧭 **[03-for-users.md](docs/arch/03-for-users.md)**（面向人类主理人与 AI Agent 智能体）：
   - Agent 本体核心心智模型与物理世界哨兵定位；
@@ -141,7 +141,7 @@
 - 🛠️ **[07-troubleshooting.md](docs/manual/07-troubleshooting.md)**：故障诊断与常见问题 (FAQ)
 - 🌐 **[08-web-dashboard.md](docs/manual/08-web-dashboard.md)**：Web UI 与可视化监控大屏：基于浏览器的轻量级Agent 本体拓扑图与协作锁监控看板 (单二进制 100% 离线自包含)
 - 🪝 **[09-hooks-integration.md](docs/manual/09-hooks-integration.md)**：HOOK 驱动集成引擎：事件总线、Post-Hook 全自动回写、客户端 Hook 生成器、Session 生命周期与 Pipeline 编排
-- 🧪 **五重确定性质量门禁与 320+ 自动化测试**：`make quality-gate`（`evolution-check` 全仓防漂移/活跃文档 0 断链 + `0` `unwrap`/`expect` + `>1500L` 文件清零 + `18/18` `WaitEventId` 全埋点 + 非基准 `/root/new` 硬编码清零 + `-D warnings` 严格编译）+ `cargo test` 全绿；
+- 🧪 **六重确定性质量门禁与 347+ 自动化测试**：`make quality-gate`（`evolution-check` 全仓一等公民防漂移/活跃文档与源码路径 0 断链 + `0` `unwrap`/`expect` + `>1000L` 文件清零 + 静默 `let _ =` 0/15 + 全仓零旧命名残留 + `18/18` `WaitEventId` 全埋点 + `-D warnings` 严格编译）+ `cargo test` 全绿；
 - 📊 **[10-benchmark-and-roi.md](docs/manual/10-benchmark-and-roi.md)**：实证 Benchmark v3.9 与生产效能存证账本（`W1~W19` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ10` + `COMP-C1~C4` 竞品对标 + `PR-01~14` 溯源流水）
 
 ---
@@ -293,8 +293,8 @@ cargo build --release
     - 在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误，保证服务 7×24 稳定运行。
 
 13. **测试驱动、零警告与五重确定性门禁**：
-    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 320+ 项自动化测试，含 `mesh` / `audit` / `body_awr` / `hooks` / `cli_e2e` 跨模块集成套件）。
-    - 任何提交前必须通过一键五重确定性门禁 `make quality-gate && make test`：`make evolution-check`（架构计数、根目录核心文件自文档化、活跃文档 0 断链、活跃路线图、CLI 帮助与部署路径 0 漂移）、`make lint-panic`（生产代码 0 `unwrap`/`expect`）、`make lint-hygiene`（位置无关性、`>1500L` 文件清零、`let _ = <= 50` 且核心自治路径 `= 0`、`18/18` `WaitEventId` 埋点全覆盖与非基准 `/root/new` 硬编码清零）、`make lint-strict`（本 crate `-D warnings` 严格编译 + 自动联动 `clippy`）及 `cargo test` 全绿；凡修改 `presentation/` 或演说生成脚本时，必须追加通过 `make verify-decks` Playwright 无头视觉与交互门禁。
+    - 新增功能必须在 `tests/` 或对应模块内提供自动化测试（全库持续守卫 347+ 项自动化测试，含 `mesh` / `audit` / `body_awr` / `hooks` / `cli_e2e` 跨模块集成套件）。
+    - 任何提交前必须通过一键六重确定性门禁 `make quality-gate && make test`：`make evolution-check`（`Cargo.toml` 版本/架构计数/根目录核心文件自文档化/活跃文档与源码路径 0 断链/`parity_api` 43 路由精确命中/演说基准 0 漂移）、`make lint-panic`（生产代码 0 `unwrap`/`expect`）、`make lint-hygiene`（位置无关性、`>1000L` 文件清零、`let _ = <= 15` 且核心自治路径 `= 0`、`18/18` `WaitEventId` 埋点全覆盖、全仓 0 旧命名残留与非基准 `/root/new` 硬编码清零）、`make lint-strict`（本 crate `-D warnings` 严格编译 + 自动联动 `clippy`）及 `cargo test` 全绿；凡修改 `presentation/` 或演说生成脚本时，必须追加通过 `make verify-decks` Playwright 无头视觉与交互门禁。
     - MCP 工具与 CLI 子命令必须保持一一映射（Phase 44 已实现 43/43 同步）。
 
 14. **断点续传检查点机制**：

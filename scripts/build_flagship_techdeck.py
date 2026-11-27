@@ -2,7 +2,7 @@
 """Build presentation/agent-body-deck.html (24-slide Deep Technical Exchange Deck).
 
 Decks-as-Code generator following the '地层剖面 · 工程蓝图' visual system.
-Grounded 100% in Agent Body v1.0.0 GA source code, live Benchmark v3.8,
+Grounded 100% in Agent Body v1.1.0 source code, live Benchmark v3.9,
 and live AWR telemetry.
 """
 
@@ -43,6 +43,22 @@ from deck_engine import (
     svg_pipeline,
 )
 
+from evolution_manifest import extract_manifest
+
+_MANIFEST = extract_manifest()
+_COUNTS = _MANIFEST["counts"]
+APP_VER = _MANIFEST["app_version"]
+BENCH_VER = _MANIFEST["bench_spec_version"]
+MOD_CNT = _COUNTS["modules"]
+TOOL_CNT = _COUNTS["mcp_tools"]
+SPI_CNT = _COUNTS["spi_methods"]
+TABLE_CNT = _COUNTS["tables"]
+WL_CNT = _COUNTS["workloads"]
+MICRO_CNT = _COUNTS["micro"]
+DQ_CNT = _COUNTS["dq"]
+COMP_CNT = _COUNTS["competitors"]
+PR_CNT = _COUNTS["pr_rules"]
+
 ROOT = Path(__file__).resolve().parent.parent
 PRES_DIR = ROOT / "presentation"
 
@@ -55,12 +71,12 @@ def build_tech_deck() -> None:
             "eyebrow": "封面 · 深度技术架构全景",
             "title": "Agent Body · 深度技术架构与内核工程全景",
             "svg": svg_cover(
-                kicker="AGENT BODY · DEEP TECHNICAL EXCHANGE · v1.0.0",
+                kicker=f"AGENT BODY · DEEP TECHNICAL EXCHANGE · v{APP_VER}",
                 title="Agent 本体技术全景",
-                en_sub="27 Modules · 43 MCP · 88 SPI · 27 Tables · Bench v3.8 · 18 Wait Events",
+                en_sub="27 Modules · 43 MCP · 88 SPI · 27 Tables · Bench v3.9 · 18 Wait Events",
                 subtitle1="从「比较优势」到「脑体分离」：面向数据库与 AI Infra 工程师的深度拆解",
                 subtitle2="物理感官 × 分层图谱 × AOPCC 并发 × 写穿保鲜 × 纵深安全 × 双域审计 × 内生 AWR",
-                spec_line="Rust 1.99 单二进制 · SQLite / PG / DuckDB 三引擎 · 320+ 测试 · 五重质量门禁",
+                spec_line="Rust 1.99 单二进制 · SQLite / PG / DuckDB 三引擎 · 347+ 测试 · 五重质量门禁",
                 strata=[
                     ("接入与协议层 · Interface", "43 原生 MCP · 30 CLI · Session/Pre/Post Hooks · Web 9 工作台", "#EBF1EE", C_INK),
                     ("宿主机感官与图谱 · Fact/Links", "/proc · Socket · L1/L2/L3 有向加权图 · CodeGraph 联邦", "#CFE0DC", C_INK),
@@ -90,7 +106,7 @@ def build_tech_deck() -> None:
                     ("执行回路控制", "无执行前门禁，写崩端口与上游服务才报错", "AOPCC 三态并发：悲观拦截高危 + 乐观直通免对话税"),
                     ("数据新鲜度", "文件改删后旧向量长期残留形成僵尸召回", "content_hash 写穿失效 + 删除级联净化 + 现实对账"),
                     ("多客户端切换", "记忆与会话绑定在单一 IDE/CLI 厂商壳内", "Brain-Agnostic：<=300 tok 脱敏胶囊 10ms 跨大脑接力"),
-                    ("可观测与自演进", "黑盒运行，无性能归因与客观 ROI 存证", "双域审计 + P1~P5 探针 + 内生 AWR + Bench v3.8 存证"),
+                    ("可观测与自演进", "黑盒运行，无性能归因与客观 ROI 存证", "双域审计 + P1~P5 探针 + 内生 AWR + Bench v3.9 存证"),
                 ],
                 takeaway=(
                     "核心判据：LLM 是无状态算力大脑，宿主机需要一层永驻的、确定性的具身操作系统抽象。",
@@ -370,7 +386,7 @@ def build_tech_deck() -> None:
                         ],
                     },
                     {
-                        "title": "W15 & PR-11 实证结果（Benchmark v3.8）",
+                        "title": "W15 & PR-11 实证结果（Benchmark v3.9）",
                         "accent": C_GREEN,
                         "lines": [
                             "Token 消耗：174 → 28 tok (-83.9%) · 上下文质量：52.0 → 100.0 (+48.0)",
@@ -1010,16 +1026,16 @@ def build_tech_deck() -> None:
                     "teal",
                 ),
             ),
-            "next": "看完了六大器官与内核性能工程，下面我们用 Benchmark v3.8 完整数据审视整套系统的实证表现。",
+            "next": "看完了六大器官与内核性能工程，下面我们用 Benchmark v3.9 完整数据审视整套系统的实证表现。",
             "script": (
                 "这里分享一个非常真实的生产排障复盘：在 Phase 48 前后，我们观测到守护进程 CPU 一度飙到 600%、内存冲到 1.3G。一开始大家怀疑是本地 Ollama，实测排查发现 Ollama 跑在独立 cgroup，真正元凶是 Web 治理页并发触发 DuckDB 同步时开了 8 线程无内存上限，还对三万五千行跑了三万五千次独立自动提交事务。\n"
                 "我们用三层根治直接把 DuckDB 收敛到 2 线程、256MB 上限、单事务批量提交加 15 秒单飞缓存，并把这次经验沉淀成了 Phase 50 的 AWR 黄金基线和 ADDM 自调优：现在任何内存或锁争用苗头，一条 body perf-awr 立马现形，一条 perf-tune 直接在 L1 权限内回收 SQLite 缓存和 glibc 堆页。"
             ),
         },
-        # 20 实证评测① · Benchmark v3.8 帕累托双门禁
+        # 20 实证评测① · Benchmark v3.9 帕累托双门禁
         {
-            "eyebrow": "19 · BENCHMARK v3.8 · TOKEN-QUALITY PARETO DUAL-GATE",
-            "title": "实证评测①：Benchmark v3.8 帕累托双门禁与全量真机明细",
+            "eyebrow": "19 · BENCHMARK v3.9 · TOKEN-QUALITY PARETO DUAL-GATE",
+            "title": "实证评测①：Benchmark v3.9 帕累托双门禁与全量真机明细",
             "lead": "确定性四维质量函数 <b>Q = 40% R_fact + 30% P_signal + 20% A_action + 10% S_safety</b>，杜绝靠截断信息骗取高压缩率。",
             "svg": svg_metrics_table(
                 kpis=[
@@ -1034,11 +1050,11 @@ def build_tech_deck() -> None:
                     ["W9~W12 (质量)", "RRF召回 / 抗误报 / 安全脱敏 / 新鲜度", "767 → 107 tok (-86.0%)", "平均 35.3 → 100.0", "PASS"],
                     ["W13~W18 (高阶)", "分层图 / Mesh / AOPCC / 审计 / 接力 / AWR", "19,490 → 2,710 tok (-86.1%)", "平均 31.7 → 100.0", "PASS"],
                     ["M1~M6 (微基准)", "3跳图 / FTS5 / 放置 / 热力 / Parquet / Wait", "139μs / 259μs / 33μs / 4.8ms / 26.9ms / 7μs", "100% 远低于 SLA", "PASS"],
-                    ["DQ1~DQ9 (现网)", "元数据/拓扑/脱敏/新鲜/图/审计/稳态/遥测", "DQ1/4/6/7/8/9 100%·DQ5 98.5%", "18/18 WaitEvent 全覆盖", "PASS"],
+                    ["DQ1~DQ10 (现网)", "元数据/拓扑/脱敏/新鲜/图/审计/稳态/遥测", "DQ1/4/6/7/8/9 100%·DQ5 98.5%", "18/18 WaitEvent 全覆盖", "PASS"],
                     ["PR-01~14 (账本)", "生产运行态全渠道效能实时存证", "<100 μs 记账 + SHA-256 指纹", "含 BodyPerfAwrAnalyzed", "PASS"],
                 ],
                 col_xs=[16, 220, 620, 1020, 1320],
-                footnote="实机 Benchmark v3.8 (v1.0.0 GA) · 总耗时 ~3.7s · 阻断噪音 538 个 · 事前拦截风险 61 次",
+                footnote="实机 Benchmark v3.9 (v1.1.0) · 总耗时 ~3.7s · 阻断噪音 538 个 · 事前拦截风险 61 次",
             ),
             "next": "看完自对照和生产存证账本，再看轨道 C：四大赛道热门开源竞品的同机实测对比与定位差异。",
             "script": (
@@ -1099,7 +1115,7 @@ def build_tech_deck() -> None:
                             "lint-panic: 0 处生产 unwrap/expect",
                             "lint-hygiene: 0 处硬编码路径/控吞错",
                             "lint-strict: -D warnings + clippy",
-                            ("cargo test: 320+ 自动化测试全绿", True),
+                            ("cargo test: 347+ 自动化测试全绿", True),
                         ],
                         "foot_lbl": "一键联检",
                         "foot_val": "make quality-gate && make test",
@@ -1196,28 +1212,28 @@ def build_tech_deck() -> None:
             "title": "终局：从宿主机单二进制走向 OS 原生具身底座",
             "lead": "今天已跑通生产闭环；如果想把某个子系统再拆透 30 分钟，欢迎直接进入配套的 <b>6 讲体系化专题演说</b>。",
             "svg": svg_closing(
-                kicker="AGENT BODY · ARCHITECTURE COMPLETE · v1.0.0 GA",
+                kicker=f"AGENT BODY · ARCHITECTURE COMPLETE · v{APP_VER}",
                 headline="瞬态大脑千变万化，永驻本体稳如磐石",
                 pillars=[
                     ("专题 01~02 · 认知与感官", "脑体分离第一性原理 · L1~L3 分层图谱与宏微联邦", "01-brain-body · 02-host-reality-graph"),
                     ("专题 03~04 · 反射与记忆", "AOPCC 并发控制与锁 · 新鲜度治理与换脑不失忆", "03-cerebellum-aopcc · 04-hippocampus"),
-                    ("专题 05~06 · 免疫与实证", "纵深安全/双域审计/Mesh · Bench v3.8 与工程门禁", "05-security-audit-mesh · 06-benchmark"),
+                    ("专题 05~06 · 免疫与实证", "纵深安全/双域审计/Mesh · Bench v3.9 与工程门禁", "05-security-audit-mesh · 06-benchmark"),
                 ],
                 open_question="欢迎围绕「OS 原生具身原语」「数据库性能工程迁移至 AI Infra」「多本体联邦协议」展开深度 Q&A",
                 next_talk="返回总览导航：presentation/index.html · 路演精简版：presentation/presentation.html",
             ),
             "script": (
-                "以上就是 Agent Body v1.0.0 GA 的全部 24 页深度技术架构。\n"
+                "以上就是 Agent Body v1.1.0 的全部 24 页深度技术架构。\n"
                 "回过头看，这个项目其实只回答了一个本质问题：当大模型本身越来越强、切换越来越频繁时，宿主机侧需要沉淀一层怎样的确定性基础设施，才能让每个瞬态大脑一着陆就耳聪目明、不踩坑、不失忆、省 Token 且可审计？\n"
-                "我们用 Rust 单二进制、27 个模块、43 个原生工具、88 个存储 SPI、Benchmark v3.8 和内生 AWR 给出了第一份可复现的工程答卷。如果大家对其中某一个子系统——比如 AOPCC、分层图谱、或者 AWR 实现——想再深挖半小时，可以直接点开配套的 6 讲专题系列，或者直接拉代码跑一遍 make quality-gate 和 bench full。下面进入 Q&A，欢迎拍砖！"
+                "我们用 Rust 单二进制、27 个模块、43 个原生工具、88 个存储 SPI、Benchmark v3.9 和内生 AWR 给出了第一份可复现的工程答卷。如果大家对其中某一个子系统——比如 AOPCC、分层图谱、或者 AWR 实现——想再深挖半小时，可以直接点开配套的 6 讲专题系列，或者直接拉代码跑一遍 make quality-gate 和 bench full。下面进入 Q&A，欢迎拍砖！"
             ),
         },
     ]
 
     render_deck(
-        doc_title="Agent Body · Agent 本体深度技术交流版 (v1.0.0 GA)",
+        doc_title=f"Agent Body · Agent 本体深度技术交流版 (v{APP_VER})",
         brand_label="AGENT BODY · 深度技术交流版",
-        foot_label="AGENT BODY · DEEP TECHNICAL ARCHITECTURE · v1.0.0 GA",
+        foot_label=f"AGENT BODY · DEEP TECHNICAL ARCHITECTURE · v{APP_VER}",
         slides_data=slides,
         out_path=PRES_DIR / "agent-body-deck.html",
     )

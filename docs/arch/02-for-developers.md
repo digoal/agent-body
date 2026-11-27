@@ -123,7 +123,7 @@ cargo build --release
 
 系统原生注册了 43 个 MCP 工具。若需新增一个例如 `body_system_clean` 工具：
 
-1. **在 `src/api/mcp_schemas.rs` & `src/api/mcp_tools.rs` 中声明与分发工具**：
+1. **在 `src/api/mcp_schemas.rs` & `src/api/mcp_tools/mod.rs` 中声明与分发工具**：
    ```rust
    // 定义入参结构
    #[derive(Debug, Deserialize)]
@@ -214,7 +214,7 @@ pub fn check_custom_feature() -> CheckItem {
 1. **零 Panic 原则**：在非测试代码中，严禁在生产路径直接使用 `unwrap()` 或 `expect()`。一律使用 `anyhow::Result` 或 `thiserror` 向上冒泡错误（`make lint-panic` 门禁）。
 2. **四层贯通与防漂移门禁**：
    - 增加配置项 -> `src/config/` + `config.example.toml` + `INSTALL.md`；
-   - 增加或调整 MCP/CLI/Web 工具 -> `src/api/mcp_tools.rs` + `src/main.rs` + `src/web/` + `docs/manual/03,04,08` + `skills/` + `make evolution-check`。
+   - 增加或调整 MCP/CLI/Web 工具 -> `src/api/mcp_schemas.rs` + `src/api/mcp_tools/mod.rs` + `src/main.rs` + `src/web/` + `docs/manual/03,04,08` + `skills/` + `make evolution-check`。
 3. **零重扫与断点续传检查点机制**：
    - 新会话先读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃 `docs/src_doc/roadmap-phase*.md`，跑 `make evolution-check` 并用 `codegraph explore` 查符号；
    - 在 `docs/src_doc/roadmap-phase*.md` 与总表 `docs/src_doc/progress.md` 中维护原子检查点表格，确保中断后任何新会话均可瞬间恢复上下文无缝继续。
