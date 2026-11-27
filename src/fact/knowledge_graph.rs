@@ -969,33 +969,48 @@ pub fn expand_graph_for_query(
         return res;
     }
 
-    // 1. 索引下沉定向种子定位（O(log N) PK + 名称索引查找，避免全表扫 4w+ 节点导致 300ms 延迟与 4000 截断）
+    let is_code_identifier = !trimmed.contains(char::is_whitespace)
+        && trimmed.len() >= 5
+        && (trimmed.contains('_') || trimmed.chars().skip(1).any(|c| c.is_ascii_uppercase()));
+
+    // 1. 索引下沉定向种子定位（O(log N) PK 查找，命中主键时跳过 5w+ 节点全表 LIKE 扫表）
     let mut node_map: HashMap<String, FactNodeRecord> = HashMap::new();
     let mut all_edges_map: HashMap<(String, String, String), FactEdgeRecord> = HashMap::new();
     let mut seed_scores: HashMap<String, f64> = HashMap::new();
 
-    for qt in q_terms.iter().take(8) {
-        let tid = term_node_id(qt);
-        if let Ok(Some(exact_node)) = storage.get_fact_node(&tid) {
-            seed_scores
-                .entry(exact_node.id.clone())
-                .and_modify(|s| *s = s.max(1.0))
-                .or_insert(1.0);
+    if is_code_identifier {
+        let exact_id = term_node_id(&trimmed.to_ascii_lowercase());
+        if let Ok(Some(exact_node)) = storage.get_fact_node(&exact_id) {
+            seed_scores.insert(exact_node.id.clone(), 1.2);
             node_map.insert(exact_node.id.clone(), exact_node);
         }
-        if let Ok(matched) = storage.find_fact_nodes_by_name(qt) {
-            for n in matched
-                .into_iter()
-                .filter(|n| matches!(n.node_type.as_str(), "domain_term" | "knowhow" | "section"))
-                .take(8)
-            {
-                let name_lower = n.name.to_ascii_lowercase();
-                let sc = if name_lower == *qt { 1.0 } else { 0.65 };
+    }
+
+    if seed_scores.is_empty() {
+        for qt in q_terms.iter().take(6) {
+            let tid = term_node_id(qt);
+            if let Ok(Some(exact_node)) = storage.get_fact_node(&tid) {
                 seed_scores
-                    .entry(n.id.clone())
-                    .and_modify(|s| *s = s.max(sc))
-                    .or_insert(sc);
-                node_map.entry(n.id.clone()).or_insert(n);
+                    .entry(exact_node.id.clone())
+                    .and_modify(|s| *s = s.max(1.0))
+                    .or_insert(1.0);
+                node_map.insert(exact_node.id.clone(), exact_node);
+                continue;
+            }
+            if let Ok(matched) = storage.find_fact_nodes_by_name(qt) {
+                for n in matched
+                    .into_iter()
+                    .filter(|n| matches!(n.node_type.as_str(), "domain_term" | "knowhow" | "section"))
+                    .take(8)
+                {
+                    let name_lower = n.name.to_ascii_lowercase();
+                    let sc = if name_lower == *qt { 1.0 } else { 0.65 };
+                    seed_scores
+                        .entry(n.id.clone())
+                        .and_modify(|s| *s = s.max(sc))
+                        .or_insert(sc);
+                    node_map.entry(n.id.clone()).or_insert(n);
+                }
             }
         }
     }
@@ -1006,11 +1021,17 @@ pub fn expand_graph_for_query(
 
     let mut ranked_seeds: Vec<(String, f64)> = seed_scores.into_iter().collect();
     ranked_seeds.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    ranked_seeds.truncate(12);
+    ranked_seeds.truncate(6);
 
     let hops = max_hops.min(2);
     for (seed_id, _) in &ranked_seeds {
-        if let Ok(sub) = storage.traverse_fact_graph(seed_id, hops) {
+        if let Ok(sub1) = storage.traverse_fact_graph(seed_id, 1) {
+            let edge_cnt = sub1.edges.len();
+            let sub = if hops >= 2 && edge_cnt <= 40 {
+                storage.traverse_fact_graph(seed_id, 2).unwrap_or(sub1)
+            } else {
+                sub1
+            };
             for n in sub.nodes {
                 node_map.entry(n.id.clone()).or_insert(n);
             }

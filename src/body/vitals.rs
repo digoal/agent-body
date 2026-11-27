@@ -99,9 +99,16 @@ impl HomeostasisVitalsEngine {
             let conn_pct = if proj_nodes.is_empty() {
                 100.0
             } else {
+                // 十万级知识边下 list_all_fact_edges(4000) 会截断漏掉工程边，未命中采样边时走索引 1-hop 定向核查
                 let connected = proj_nodes
                     .iter()
-                    .filter(|pid| fact_edges.iter().any(|e| e.source_id == **pid || e.target_id == **pid))
+                    .filter(|pid| {
+                        fact_edges.iter().any(|e| e.source_id == **pid || e.target_id == **pid)
+                            || storage
+                                .traverse_fact_graph(pid, 1)
+                                .map(|sg| !sg.edges.is_empty())
+                                .unwrap_or(false)
+                    })
                     .count();
                 (connected as f64 / proj_nodes.len() as f64) * 100.0
             };
@@ -402,5 +409,52 @@ mod tests {
             .find(|d| d.key == "metabolic_health")
             .expect("metabolic_health");
         assert!(after_meta.detail.contains("过期锁 0 个"));
+    }
+
+    #[test]
+    fn test_vitals_sensory_clarity_checks_project_edges_without_truncation() {
+        let storage = Storage::open_in_memory().expect("open");
+        storage
+            .upsert_fact_node(&crate::storage::models::FactNodeRecord {
+                id: "project:alpha".to_string(),
+                node_type: "project".to_string(),
+                name: "alpha".to_string(),
+                label: "alpha".to_string(),
+                properties: serde_json::json!({}),
+                updated_at: None,
+            })
+            .expect("upsert proj");
+        storage
+            .upsert_fact_node(&crate::storage::models::FactNodeRecord {
+                id: "term:sqlite".to_string(),
+                node_type: "domain_term".to_string(),
+                name: "sqlite".to_string(),
+                label: "sqlite".to_string(),
+                properties: serde_json::json!({}),
+                updated_at: None,
+            })
+            .expect("upsert term");
+        storage
+            .upsert_fact_edge(&crate::storage::models::FactEdgeRecord::new_explicit(
+                "project:alpha".to_string(),
+                "term:sqlite".to_string(),
+                "depends_on".to_string(),
+                serde_json::json!({}),
+                0.9,
+            ))
+            .expect("upsert edge");
+
+        let rep = HomeostasisVitalsEngine::assess(&storage);
+        let sensory = rep
+            .dimensions
+            .iter()
+            .find(|d| d.key == "sensory_clarity")
+            .expect("sensory_clarity");
+        assert!(
+            sensory.score >= 85.0,
+            "project:alpha 已连通时感官清晰度应 >= 85.0，实测: {} ({})",
+            sensory.score,
+            sensory.detail
+        );
     }
 }

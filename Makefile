@@ -3,8 +3,15 @@
 # ==============================================================================
 
 SHELL := /bin/bash
+UNAME_S := $(shell uname -s)
 TARGET := target/release/agent-body
-INSTALL_PATH ?= /usr/local/bin/agent-body
+ifeq ($(UNAME_S),Darwin)
+  INSTALL_PATH ?= $(HOME)/.local/bin/agent-body
+  export CPLUS_INCLUDE_PATH ?= /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1
+else
+  INSTALL_PATH ?= /usr/local/bin/agent-body
+endif
+MIRROR_DIR ?= $(HOME)/new/shared_git/agent-body
 
 .PHONY: all build check test preflight install restart clean docker-build lint-panic lint-hygiene lint-strict quality-gate sync-mirror codegraph evolution-check verify-decks
 
@@ -47,10 +54,15 @@ install: build
 	install -m 755 $(TARGET) $(INSTALL_PATH)
 	@echo "✅ agent-body 已成功安装至 $(INSTALL_PATH)"
 
-# 重启本地 systemd 守护服务
+# 重启本地后台守护服务 (macOS LaunchAgent / Linux systemd)
 restart: install
+ifeq ($(UNAME_S),Darwin)
+	launchctl kickstart -k gui/$$(id -u)/com.digoal.agent-body
+	@echo "✅ com.digoal.agent-body LaunchAgent 已平滑重启"
+else
 	systemctl restart agent-body.service
 	@echo "✅ agent-body.service 守护服务已平滑重启"
+endif
 
 # 清理构建缓存产物
 clean:
@@ -58,8 +70,9 @@ clean:
 
 # 安全镜像同步至开源仓库（强制排除 target/ 避免占满根分区）
 sync-mirror:
-	rsync -a --delete --exclude 'target/' $(CURDIR)/ /root/new/shared_git/agent-body/
-	@echo "✅ 已安全镜像同步至 /root/new/shared_git/agent-body/"
+	mkdir -p $(MIRROR_DIR)
+	rsync -a --delete --exclude 'target/' $(CURDIR)/ $(MIRROR_DIR)/
+	@echo "✅ 已安全镜像同步至 $(MIRROR_DIR)/"
 
 # 构建生产 Docker 容器镜像
 docker-build:

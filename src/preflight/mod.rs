@@ -361,9 +361,35 @@ impl PreflightChecker {
         }
     }
 
-    /// 检查 inotify 内核事件机制
+    /// 检查文件系统实时监听内核事件机制 (Linux: inotify / macOS: FSEvents / Windows: ReadDirectoryChangesW)
     pub fn check_inotify(report: &mut PreflightReport) {
         use notify::{Config as NotifyConfig, RecommendedWatcher, Watcher};
+
+        let os = std::env::consts::OS;
+        let check_name = match os {
+            "macos" => "FSEvents 实时文件系统监听",
+            "windows" => "ReadDirectoryChangesW 实时文件系统监听",
+            _ => "inotify 实时文件系统监听",
+        }
+        .to_string();
+        let pass_msg = match os {
+            "macos" => "macOS FSEvents 文件系统事件机制就绪",
+            "windows" => "Windows 文件系统事件机制就绪",
+            _ => "内核 inotify 事件机制就绪",
+        }
+        .to_string();
+        let watch_remedy = match os {
+            "macos" => "请检查进程文件描述符上限 (ulimit -n) 或目录权限",
+            "windows" => "请检查目标工作区目录权限",
+            _ => "请检查 /proc/sys/fs/inotify/max_user_watches 是否耗尽",
+        }
+        .to_string();
+        let fail_remedy = match os {
+            "macos" => "确保 macOS FSEvents 服务可用且未触发文件描述符上限",
+            "windows" => "确保目标卷支持目录变更通知机制",
+            _ => "确保内核启用 CONFIG_INOTIFY_USER，且未超出系统 max_user_instances 限制",
+        }
+        .to_string();
 
         let temp_dir = std::env::temp_dir();
         let (tx, _rx) = std::sync::mpsc::channel();
@@ -372,30 +398,30 @@ impl PreflightChecker {
             Ok(mut watcher) => {
                 if let Err(e) = watcher.watch(&temp_dir, notify::RecursiveMode::NonRecursive) {
                     report.add(CheckItem {
-                        name: "inotify 实时文件系统监听".to_string(),
+                        name: check_name,
                         category: CheckCategory::Required,
                         status: CheckStatus::Warn,
                         message: format!("Watcher 初始化成功但监听临时目录失败: {}", e),
-                        remedy: Some("请检查 /proc/sys/fs/inotify/max_user_watches 是否耗尽".to_string()),
+                        remedy: Some(watch_remedy),
                     });
                 } else {
                     let _ = watcher.unwatch(&temp_dir);
                     report.add(CheckItem {
-                        name: "inotify 实时文件系统监听".to_string(),
+                        name: check_name,
                         category: CheckCategory::Required,
                         status: CheckStatus::Pass,
-                        message: "内核 inotify 事件机制就绪".to_string(),
+                        message: pass_msg,
                         remedy: None,
                     });
                 }
             }
             Err(e) => {
                 report.add(CheckItem {
-                    name: "inotify 实时文件系统监听".to_string(),
+                    name: check_name,
                     category: CheckCategory::Required,
                     status: CheckStatus::Fail,
-                    message: format!("创建 inotify Watcher 失败: {}", e),
-                    remedy: Some("确保内核启用 CONFIG_INOTIFY_USER，且未超出系统 max_user_instances 限制".to_string()),
+                    message: format!("创建文件系统 Watcher 失败: {}", e),
+                    remedy: Some(fail_remedy),
                 });
             }
         }
@@ -518,25 +544,52 @@ impl PreflightChecker {
         }
     }
 
-    /// 检查 Systemd 守护系统
+    /// 检查宿主后台守护系统 (Linux Systemd / macOS LaunchAgent / Windows Service)
     pub fn check_systemd(report: &mut PreflightReport) {
-        let systemd_dir = Path::new("/run/systemd/system");
-        if systemd_dir.exists() {
-            report.add(CheckItem {
-                name: "Systemd 守护环境".to_string(),
-                category: CheckCategory::Optional,
-                status: CheckStatus::Pass,
-                message: "系统由 Systemd 纳管，支持自动化拓扑采集与 service 后台运行".to_string(),
-                remedy: None,
-            });
-        } else {
-            report.add(CheckItem {
-                name: "Systemd 守护环境".to_string(),
-                category: CheckCategory::Optional,
-                status: CheckStatus::Warn,
-                message: "/run/systemd/system 不存在，当前系统可能使用 OpenRC、SysVinit 或处于 Docker 容器内".to_string(),
-                remedy: Some("若无需 Systemd 拓扑扫描可忽略此告警；后台运行建议采用 Docker 或 nohup/supervisor".to_string()),
-            });
+        match std::env::consts::OS {
+            "macos" => {
+                let launchctl_ready = Path::new("/bin/launchctl").exists();
+                report.add(CheckItem {
+                    name: "macOS LaunchAgent 守护环境".to_string(),
+                    category: CheckCategory::Optional,
+                    status: CheckStatus::Pass,
+                    message: if launchctl_ready {
+                        "系统由 launchd/LaunchAgent 纳管，支持后台常驻守护与自启".to_string()
+                    } else {
+                        "macOS 支持后台守护进程模式 (agent-body daemon)".to_string()
+                    },
+                    remedy: None,
+                });
+            }
+            "windows" => {
+                report.add(CheckItem {
+                    name: "Windows 守护服务环境".to_string(),
+                    category: CheckCategory::Optional,
+                    status: CheckStatus::Pass,
+                    message: "支持 Windows 任务计划与后台守护进程运行".to_string(),
+                    remedy: None,
+                });
+            }
+            _ => {
+                let systemd_dir = Path::new("/run/systemd/system");
+                if systemd_dir.exists() {
+                    report.add(CheckItem {
+                        name: "Systemd 守护环境".to_string(),
+                        category: CheckCategory::Optional,
+                        status: CheckStatus::Pass,
+                        message: "系统由 Systemd 纳管，支持自动化拓扑采集与 service 后台运行".to_string(),
+                        remedy: None,
+                    });
+                } else {
+                    report.add(CheckItem {
+                        name: "Systemd 守护环境".to_string(),
+                        category: CheckCategory::Optional,
+                        status: CheckStatus::Warn,
+                        message: "/run/systemd/system 不存在，当前系统可能使用 OpenRC、SysVinit 或处于 Docker 容器内".to_string(),
+                        remedy: Some("若无需 Systemd 拓扑扫描可忽略此告警；后台运行建议采用 Docker 或 nohup/supervisor".to_string()),
+                    });
+                }
+            }
         }
     }
 
@@ -966,23 +1019,44 @@ impl PreflightChecker {
 
     /// 收集系统信息
     pub fn collect_sys_info(report: &mut PreflightReport) {
-        // 读取 inotify max_user_watches
-        let inotify_watches = fs::read_to_string("/proc/sys/fs/inotify/max_user_watches")
-            .unwrap_or_else(|_| "未知".to_string())
-            .trim()
-            .to_string();
+        match std::env::consts::OS {
+            "macos" => {
+                report.add(CheckItem {
+                    name: "macOS 文件事件与句柄机制".to_string(),
+                    category: CheckCategory::Informational,
+                    status: CheckStatus::Pass,
+                    message: "使用 FSEvents 内核事件流（无需 Linux inotify max_user_watches 配置）".to_string(),
+                    remedy: None,
+                });
+            }
+            "windows" => {
+                report.add(CheckItem {
+                    name: "Windows 文件事件机制".to_string(),
+                    category: CheckCategory::Informational,
+                    status: CheckStatus::Pass,
+                    message: "使用 ReadDirectoryChangesW 文件监控机制".to_string(),
+                    remedy: None,
+                });
+            }
+            _ => {
+                let inotify_watches = fs::read_to_string("/proc/sys/fs/inotify/max_user_watches")
+                    .unwrap_or_else(|_| "未知".to_string())
+                    .trim()
+                    .to_string();
 
-        report.add(CheckItem {
-            name: "系统内核 inotify watch 限制".to_string(),
-            category: CheckCategory::Informational,
-            status: CheckStatus::Pass,
-            message: format!("max_user_watches = {} (建议大项目 >= 65536)", inotify_watches),
-            remedy: None,
-        });
+                report.add(CheckItem {
+                    name: "系统内核 inotify watch 限制".to_string(),
+                    category: CheckCategory::Informational,
+                    status: CheckStatus::Pass,
+                    message: format!("max_user_watches = {} (建议大项目 >= 65536)", inotify_watches),
+                    remedy: None,
+                });
+            }
+        }
 
         // 二进制版本与编译环境
         report.add(CheckItem {
-            name: "Agent Steward 软件包版本".to_string(),
+            name: "Agent Body 软件包版本".to_string(),
             category: CheckCategory::Informational,
             status: CheckStatus::Pass,
             message: crate::version_info(),
@@ -1124,5 +1198,33 @@ mod tests {
             "PG 错误信息禁止泄露明文密码: {}",
             rep_pg.items[0].message
         );
+    }
+
+    #[test]
+    fn test_preflight_platform_watcher_daemon_and_sysinfo_branching() {
+        let mut report = PreflightReport::new();
+        PreflightChecker::check_inotify(&mut report);
+        PreflightChecker::check_systemd(&mut report);
+        PreflightChecker::collect_sys_info(&mut report);
+
+        if std::env::consts::OS == "macos" {
+            let fs_item = report
+                .items
+                .iter()
+                .find(|i| i.name.contains("FSEvents"))
+                .expect("FSEvents item");
+            assert_eq!(fs_item.status, CheckStatus::Pass);
+            let daemon_item = report
+                .items
+                .iter()
+                .find(|i| i.name.contains("LaunchAgent"))
+                .expect("LaunchAgent item");
+            assert_eq!(daemon_item.status, CheckStatus::Pass);
+            assert!(
+                !report.items.iter().any(|i| i.name.contains("Systemd")),
+                "macOS 不应输出 Systemd WARN"
+            );
+        }
+        assert!(report.items.iter().any(|i| i.name.contains("Agent Body")));
     }
 }

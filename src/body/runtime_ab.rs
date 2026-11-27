@@ -296,10 +296,17 @@ impl ShadowAbEngine {
         );
 
         let t_body = Instant::now();
+        let is_code_id = !query.contains(char::is_whitespace)
+            && query.len() >= 5
+            && (query.contains('_') || query.chars().skip(1).any(|c| c.is_ascii_uppercase()));
         let mut body_opts = crate::scanner::AssetSearchOptions::new(query, limit);
         body_opts.hybrid = false;
         body_opts.fuzzy = true;
-        body_opts.graph_hops = cfg.knowledge_graph.default_search_hops.min(2);
+        body_opts.graph_hops = if is_code_id {
+            1
+        } else {
+            cfg.knowledge_graph.default_search_hops.min(2)
+        };
         body_opts.include_links = true;
         let body_hits: Vec<AssetRecord> = crate::scanner::AssetSearchEngine::search(
             storage.provider().as_ref(),
@@ -960,5 +967,71 @@ mod tests {
         ShadowAbEngine::record_lease_mislead_h5(&storage, "/tmp/stale_lease.rs", "stale sha256", "sess-heal");
         let rep = ShadowAbEngine::build_ab_report(&storage, &cfg, "7d", 50).expect("report");
         assert!(rep.shadow_comparisons >= 3);
+    }
+
+    #[test]
+    fn test_shadow_ab_camelcase_identifier_wins_without_lag() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let work_dir = tmp.path().join("work");
+        std::fs::create_dir_all(&work_dir).expect("mkdir");
+
+        let target_rs = work_dir.join("shadow_runner.rs");
+        std::fs::write(&target_rs, "pub struct ShadowAbEngine;\nimpl ShadowAbEngine {}\n")
+            .expect("write target");
+        // 第二份索引资产：顶部填充 >4KB 注释，live 4KB 截断扫不到而 body 元数据索引额外召回 (body_extra_count=1)
+        let deep_rs = work_dir.join("shadow_deep_ref.rs");
+        std::fs::write(
+            &deep_rs,
+            format!("{}pub struct ShadowAbEngineDeep;\n", "// header\n".repeat(500)),
+        )
+        .expect("write deep_rs");
+        let filler_a = work_dir.join("filler_engine_1.md");
+        let filler_b = work_dir.join("filler_engine_2.md");
+        std::fs::write(&filler_a, "workflow engine docs").expect("write filler_a");
+        std::fs::write(&filler_b, "layout engine docs").expect("write filler_b");
+
+        let storage = Storage::open_in_memory().expect("open_in_memory");
+        let cfg = test_config_with_root(&work_dir);
+
+        for (id, path, desc, syms) in [
+            ("a1", &target_rs, "ShadowAbEngine 真实世界 A/B 引擎", vec!["ShadowAbEngine"]),
+            ("a1b", &deep_rs, "ShadowAbEngine 深层实现引用", vec!["ShadowAbEngine"]),
+            ("a2", &filler_a, "workflow engine documentation", vec!["workflow"]),
+            ("a3", &filler_b, "layout engine documentation", vec!["layout"]),
+        ] {
+            storage
+                .upsert_asset(&AssetRecord {
+                    id: id.to_string(),
+                    path: path.to_string_lossy().to_string(),
+                    asset_type: "script".to_string(),
+                    owner: "user:test".to_string(),
+                    security_level: "internal".to_string(),
+                    scan_tier: "deep".to_string(),
+                    description: Some(desc.to_string()),
+                    desc_kv: serde_json::json!({"symbols": syms, "importance_score": 0.8}),
+                    usage: None,
+                    size_bytes: Some(40),
+                    file_count: None,
+                    tags: vec![],
+                    status: "active".to_string(),
+                })
+                .expect("upsert");
+        }
+
+        let (cmp, live_hits, body_hits) =
+            ShadowAbEngine::compare_asset_search(&storage, &cfg, "ShadowAbEngine", 5, "sess-id")
+                .expect("cmp");
+        assert!(!live_hits.is_empty());
+        assert!(body_hits.len() >= 2);
+        assert!(body_hits
+            .iter()
+            .take(2)
+            .all(|h| h.path.contains("shadow_")));
+        assert!(body_hits
+            .iter()
+            .any(|h| h.path == target_rs.to_string_lossy().as_ref()));
+        assert_eq!(cmp.verdict, "body_win");
+        assert!(!cmp.hindering_flags.contains(&"H1_RECALL_MISS".to_string()));
+        assert!(!cmp.hindering_flags.contains(&"H3_LATENCY_DRAG".to_string()));
     }
 }

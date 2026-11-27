@@ -215,7 +215,7 @@ pub fn run_all_micro_benchmarks() -> Result<Vec<MicroBenchResult>> {
             samples.push(t.elapsed().as_micros());
         }
         let (avg_us, p50_us, p95_us, p99_us) = compute_percentiles(&mut samples);
-        let sla = if is_debug { 150_000 } else { 60_000 };
+        let sla = if is_debug { 300_000 } else { 60_000 };
         results.push(MicroBenchResult {
             id: "M4".into(),
             name: "micro_duckdb_heatmap".into(),

@@ -37,13 +37,14 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
 
     // DQ2: 事实节点与资产本地 Embedding 向量覆盖率（采样检查）
     let fact_nodes = storage.list_all_fact_nodes(500).unwrap_or_default();
+    const DQ2_TARGET_PCT: f64 = 95.0;
     let dq2 = if fact_nodes.is_empty() && assets.is_empty() {
         DataQualityResult {
             id: "DQ2".into(),
             name: "embedding_vector_coverage".into(),
             title: "本地 Ollama Embedding 覆盖率".into(),
             measured_pct: 100.0,
-            target_pct: 99.0,
+            target_pct: DQ2_TARGET_PCT,
             passed: true,
             detail: "空沙盒库（0 节点），基线通过".into(),
         }
@@ -70,8 +71,8 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
             name: "embedding_vector_coverage".into(),
             title: "本地 Ollama Embedding 覆盖率".into(),
             measured_pct: pct,
-            target_pct: 99.0,
-            passed: pct >= 95.0,
+            target_pct: DQ2_TARGET_PCT,
+            passed: pct >= DQ2_TARGET_PCT,
             detail: format!("抽样 {} 个资产+事实节点中 {} 个已生成向量", total, ok),
         }
     };
@@ -352,17 +353,28 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
         .iter()
         .filter(|n| n.node_type == "project")
         .collect();
-    let mut connected_projects = std::collections::HashSet::new();
+    let mut connected_projects: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut valid_tier_edges = 0usize;
     for e in &dq_edges {
         if valid_tiers.contains(&e.evidence_tier.as_str()) && e.weight > 0.0 && e.weight <= 1.0 {
             valid_tier_edges += 1;
         }
         if e.source_id.starts_with("project:") {
-            connected_projects.insert(e.source_id.as_str());
+            connected_projects.insert(e.source_id.clone());
         }
         if e.target_id.starts_with("project:") {
-            connected_projects.insert(e.target_id.as_str());
+            connected_projects.insert(e.target_id.clone());
+        }
+    }
+    // 知识网络扩边后 fact_edges 可达十万级，list_all_fact_edges(5000) 会截断漏掉工程边；
+    // 对尚未出现在采样边中的 project 节点走索引 1-hop 定向核查，消除假孤岛。
+    for p in &dq_projects {
+        if !connected_projects.contains(&p.id) {
+            if let Ok(sg) = storage.traverse_fact_graph(&p.id, 1) {
+                if !sg.edges.is_empty() {
+                    connected_projects.insert(p.id.clone());
+                }
+            }
         }
     }
     let dq6 = if dq_edges.is_empty() && dq_projects.is_empty() {
@@ -701,5 +713,59 @@ mod tests {
         let results = run_data_quality_checks(&storage);
         let dq10 = results.iter().find(|r| r.id == "DQ10").expect("DQ10");
         assert!(!dq10.passed, "无 evidence_quote 的 Know-How 节点应被 DQ10 拦下");
+    }
+
+    #[test]
+    fn test_dq2_consistency_and_dq6_project_connectivity_beyond_edge_limit() {
+        let storage = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        // 1. 空库检查：所有 passed 项必须满足 measured_pct >= target_pct
+        for r in run_data_quality_checks(&storage) {
+            if r.passed {
+                assert!(
+                    r.measured_pct >= r.target_pct,
+                    "{} 判定与展示 SLA 口径矛盾: measured={} target={}",
+                    r.id,
+                    r.measured_pct,
+                    r.target_pct
+                );
+            }
+        }
+
+        // 2. 构造 1 个 project 节点 + 1 条连接边 + 验证 DQ2 与 DQ6 连通检查
+        storage
+            .upsert_fact_node(&crate::storage::models::FactNodeRecord {
+                id: "project:demo".into(),
+                node_type: "project".into(),
+                name: "demo".into(),
+                label: "demo".into(),
+                properties: serde_json::json!({}),
+                updated_at: None,
+            })
+            .expect("proj");
+        storage
+            .upsert_fact_node(&crate::storage::models::FactNodeRecord {
+                id: "term:rust".into(),
+                node_type: "domain_term".into(),
+                name: "rust".into(),
+                label: "rust".into(),
+                properties: serde_json::json!({}),
+                updated_at: None,
+            })
+            .expect("term");
+        storage
+            .upsert_fact_edge(&crate::storage::models::FactEdgeRecord::new_explicit(
+                "project:demo",
+                "term:rust",
+                "depends_on",
+                serde_json::json!({}),
+                0.9,
+            ))
+            .expect("edge");
+        let results = run_data_quality_checks(&storage);
+        let dq2 = results.iter().find(|r| r.id == "DQ2").expect("DQ2");
+        assert_eq!(dq2.target_pct, 95.0);
+        let dq6 = results.iter().find(|r| r.id == "DQ6").expect("DQ6");
+        assert!(dq6.passed, "DQ6 应识别 project:demo 连通: {}", dq6.detail);
+        assert!(dq6.detail.contains("1/1 (100.0%)"), "实测: {}", dq6.detail);
     }
 }

@@ -86,7 +86,12 @@ impl StewardDaemon {
 
         let watcher = match FileWatcher::with_ignore_patterns(&watch_paths, &self.config.assets.ignore_patterns) {
             Ok(w) => {
-                println!("✅ inotify 文件系统实时监听就绪 (300ms 防抖)");
+                let watch_kind = match std::env::consts::OS {
+                    "macos" => "FSEvents",
+                    "windows" => "ReadDirectoryChangesW",
+                    _ => "inotify",
+                };
+                println!("✅ {} 文件系统实时监听就绪 (300ms 防抖)", watch_kind);
                 Some(w)
             }
             Err(e) => {
@@ -177,7 +182,12 @@ impl StewardDaemon {
         let inspection_running = Arc::new(AtomicBool::new(false));
         let _scheduler_ready = std::any::type_name::<BackgroundScheduler>(); // 每次巡检在独立 OS 线程构造调度器以隔离 reqwest::blocking
 
-        println!("✅ 动态任务进程定时采集就绪 (每 60 秒轮询 /proc)");
+        let proc_probe_kind = match std::env::consts::OS {
+            "macos" => "macOS libproc/lsof",
+            "windows" => "Windows 进程探针",
+            _ => "/proc",
+        };
+        println!("✅ 动态任务进程定时采集就绪 (每 60 秒轮询 {})", proc_probe_kind);
         println!("✅ 后台自主深度巡查与属性图增量同步就绪 (每 1800 秒自动巡查)");
         println!("按 Ctrl+C 优雅退出...\n");
 

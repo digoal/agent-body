@@ -94,11 +94,16 @@ fn test_lock_then_hook_integration() {
     let acq = engine.try_acquire(&req).expect("acquire");
     assert!(matches!(acq, LockResult::Granted { .. }));
 
-    // 模拟第三方 Agent 调用工具前触发 PreHook
+    // 模拟第三方 Agent 调用工具前触发 PreHook（显式指定 BodyOnly，隔离宿主机 config.toml 运行态配置）
     let hook_engine = AgentHookEngine::new(storage);
-    let pre_res = hook_engine.pre_tool_call("bind_port", &serde_json::json!({
-        "port": 8089
-    }));
+    let pre_res = hook_engine.pre_tool_call_with_runtime(
+        "bind_port",
+        &serde_json::json!({
+            "port": 8089
+        }),
+        agent_body::config::RuntimeMode::BodyOnly,
+        "body",
+    );
 
     assert!(pre_res.has_warnings, "已加锁资源在 pre-hook 阶段必须产生告警");
     assert!(pre_res.warnings.iter().any(|w| w.contains("agent-owner")), "告警信息必须清晰呈现持有者 Agent 标识");

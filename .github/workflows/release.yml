@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build Release (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            asset_name: agent-body-linux-x86_64.tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            asset_name: agent-body-macos-arm64.tar.gz
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Configure macOS SDK C++ headers (DuckDB build)
+        if: runner.os == 'macOS'
+        run: echo "CPLUS_INCLUDE_PATH=$(xcrun --show-sdk-path)/usr/include/c++/v1" >> "$GITHUB_ENV"
+
+      - name: Verify architecture & hygiene gate
+        run: python3 scripts/evolution_manifest.py --check && python3 scripts/code_hygiene.py --check
+
+      - name: Build release binary
+        run: cargo build --release --bin agent-body
+
+      - name: Package tarball and SHA-256
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp target/release/agent-body dist/agent-body
+          chmod +x dist/agent-body
+          tar -C dist -czf "${{ matrix.asset_name }}" agent-body
+          if command -v shasum >/dev/null 2>&1; then
+            shasum -a 256 "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
+          else
+            sha256sum "${{ matrix.asset_name }}" > "${{ matrix.asset_name }}.sha256"
+          fi
+
+      - name: Upload GitHub Release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ matrix.asset_name }}
+            ${{ matrix.asset_name }}.sha256

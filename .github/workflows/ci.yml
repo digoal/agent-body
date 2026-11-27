@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  quality-and-test:
+    name: Build, Quality Gate & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Configure macOS SDK C++ headers (DuckDB build)
+        if: runner.os == 'macOS'
+        run: echo "CPLUS_INCLUDE_PATH=$(xcrun --show-sdk-path)/usr/include/c++/v1" >> "$GITHUB_ENV"
+
+      - name: Run quality gate (evolution, panic, hygiene, strict lint)
+        run: make quality-gate
+
+      - name: Run clippy with -D warnings
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run unit tests (--lib)
+        run: cargo test --lib
+
+      - name: Run integration tests (--tests)
+        run: cargo test --tests

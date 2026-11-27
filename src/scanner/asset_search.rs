@@ -121,29 +121,70 @@ fn char_bigrams(s: &str) -> HashSet<(char, char)> {
     set
 }
 
-/// 纯 Rust Fuzzy 模糊匹配打分（子串/前缀 + 字符 bigram Jaccard + 有界 Levenshtein 容错）
-pub fn fuzzy_text_score(query: &str, haystack: &str) -> f64 {
-    let q = query.trim().to_ascii_lowercase();
-    if q.is_empty() || haystack.trim().is_empty() {
+struct PreparedFuzzyQuery {
+    q_lower: String,
+    is_code_identifier: bool,
+    q_terms: Vec<String>,
+    q_words: Vec<Vec<char>>,
+    q_bigrams: HashSet<(char, char)>,
+}
+
+impl PreparedFuzzyQuery {
+    fn new(query: &str) -> Self {
+        let raw_trimmed = query.trim();
+        let q_lower = raw_trimmed.to_ascii_lowercase();
+        let is_code_identifier = !raw_trimmed.contains(char::is_whitespace)
+            && raw_trimmed.len() >= 5
+            && (raw_trimmed.contains('_')
+                || raw_trimmed.chars().skip(1).any(|c| c.is_ascii_uppercase()));
+        let aliases = AliasCanonicalizer::default();
+        let q_terms = if q_lower.is_empty() {
+            Vec::new()
+        } else {
+            tokenize_terms(&q_lower, &aliases)
+        };
+        let q_words = q_lower
+            .split(|c: char| !c.is_alphanumeric() && c != '_')
+            .filter(|w| w.len() >= 4)
+            .map(|w| w.chars().collect())
+            .collect();
+        let q_bigrams = char_bigrams(&q_lower);
+        Self {
+            q_lower,
+            is_code_identifier,
+            q_terms,
+            q_words,
+            q_bigrams,
+        }
+    }
+}
+
+fn fuzzy_text_score_prepared(prep: &PreparedFuzzyQuery, haystack: &str) -> f64 {
+    if prep.q_lower.is_empty() || haystack.trim().is_empty() {
         return 0.0;
     }
     let hay_lower = haystack.to_ascii_lowercase();
+    let exact_hit = hay_lower.contains(&prep.q_lower);
     let mut score = 0.0f64;
 
-    if hay_lower.contains(&q) {
+    if exact_hit {
         score += 0.65;
     }
 
-    let aliases = AliasCanonicalizer::default();
-    let q_terms = tokenize_terms(&q, &aliases);
-    if !q_terms.is_empty() {
-        let mut matched = 0usize;
-        for t in &q_terms {
+    let mut matched_terms = 0usize;
+    if !prep.q_terms.is_empty() {
+        for t in &prep.q_terms {
             if hay_lower.contains(t) {
-                matched += 1;
+                matched_terms += 1;
             }
         }
-        score += 0.35 * (matched as f64 / q_terms.len() as f64);
+        // 对于复合代码标识符（如 ShadowAbEngine），若未完整命中原串且只命中 1 个泛化子词（如 "engine"），
+        // 大幅降权避免泛词文档挤掉精确文件。
+        if prep.is_code_identifier && !exact_hit && matched_terms < 2 && prep.q_terms.len() >= 2 {
+            score += 0.08 * (matched_terms as f64 / prep.q_terms.len() as f64);
+        } else {
+            score += 0.35 * (matched_terms as f64 / prep.q_terms.len() as f64);
+        }
     }
 
     // 针对词长 >= 4 的查询词在候选词表上做 bounded Levenshtein 错别字匹配
@@ -152,24 +193,20 @@ pub fn fuzzy_text_score(query: &str, haystack: &str) -> f64 {
         .filter(|w| w.len() >= 4)
         .take(128)
         .collect();
-    for qt in q
-        .split(|c: char| !c.is_alphanumeric() && c != '_')
-        .filter(|w| w.len() >= 4)
-    {
-        let qc: Vec<char> = qt.chars().collect();
+    for qc in &prep.q_words {
         let tol = if qc.len() >= 8 { 2 } else { 1 };
         let mut best_edit_bonus = 0.0f64;
         for hw in &hay_words {
-            if *hw == qt {
+            let hc: Vec<char> = hw.chars().collect();
+            if &hc == qc {
                 best_edit_bonus = 0.65;
                 break;
             }
-            if hw.contains(qt) {
+            if hw.len() >= qc.len() && hc.windows(qc.len()).any(|w| w == qc.as_slice()) {
                 best_edit_bonus = best_edit_bonus.max(0.55);
                 continue;
             }
-            let hc: Vec<char> = hw.chars().collect();
-            if let Some(d) = bounded_levenshtein(&qc, &hc, tol) {
+            if let Some(d) = bounded_levenshtein(qc, &hc, tol) {
                 let ratio = 1.0 - (d as f64 / qc.len().max(hc.len()) as f64);
                 let typo_scale = if qc.len() >= 8 { 1.15 } else { 0.72 };
                 best_edit_bonus = best_edit_bonus.max(typo_scale * ratio);
@@ -179,19 +216,28 @@ pub fn fuzzy_text_score(query: &str, haystack: &str) -> f64 {
     }
 
     // 字符 bigram Jaccard（对中英文连写与碎片均有效）
-    let qb = char_bigrams(&q);
-    if !qb.is_empty() {
+    if !prep.q_bigrams.is_empty() {
         let hb = char_bigrams(&hay_lower.chars().take(800).collect::<String>());
         if !hb.is_empty() {
-            let inter = qb.intersection(&hb).count() as f64;
-            let jaccard = inter / qb.len().max(1) as f64;
+            let inter = prep.q_bigrams.intersection(&hb).count() as f64;
+            let jaccard = inter / prep.q_bigrams.len().max(1) as f64;
             if jaccard >= 0.35 {
                 score += 0.30 * jaccard.min(1.0);
             }
         }
     }
 
+    if prep.is_code_identifier && !exact_hit && matched_terms < 2 && prep.q_terms.len() >= 2 {
+        score *= 0.35;
+    }
+
     score
+}
+
+/// 纯 Rust Fuzzy 模糊匹配打分（子串/前缀 + 字符 bigram Jaccard + 有界 Levenshtein 容错）
+pub fn fuzzy_text_score(query: &str, haystack: &str) -> f64 {
+    let prep = PreparedFuzzyQuery::new(query);
+    fuzzy_text_score_prepared(&prep, haystack)
 }
 
 /// 事实标量软调制因子 $\Phi_{\text{scalar}}(d)$（重要度 + 30天近因衰减 + 权威清单 + 陈旧降权）
@@ -463,20 +509,39 @@ impl AssetSearchEngine {
             fallback_records.entry(a.path.clone()).or_insert(a);
         }
 
-        // 2. 路 2: Pure-Rust Fuzzy 模糊查询通道
+        // 2. 路 2: Pure-Rust Fuzzy 模糊查询 + 精确标识符识别（循环外预计算术语与 bigram）
+        let prep_q = PreparedFuzzyQuery::new(q);
+        let mut exact_ranks: HashMap<String, usize> = HashMap::new();
         let mut fuzzy_ranks: HashMap<String, usize> = HashMap::new();
         let mut fuzzy_strong: HashSet<String> = HashSet::new();
-        if opts.fuzzy {
+        if opts.fuzzy || prep_q.is_code_identifier {
             let mut fz_scored: Vec<(String, f64)> = Vec::new();
+            let mut ex_scored: Vec<(String, f64)> = Vec::new();
             for (p, a) in &by_path {
                 let hay = Self::build_searchable_haystack(a);
-                let sc = fuzzy_text_score(q, &hay);
-                if sc >= 0.70 {
-                    fuzzy_strong.insert(p.clone());
+                let hay_lower = hay.to_ascii_lowercase();
+                if !prep_q.q_lower.is_empty() && hay_lower.contains(&prep_q.q_lower) {
+                    let path_hit = a.path.to_ascii_lowercase().contains(&prep_q.q_lower);
+                    let imp = a.desc_kv.get("importance_score").and_then(|v| v.as_f64()).unwrap_or(0.5);
+                    ex_scored.push((p.clone(), if path_hit { 2.0 + imp } else { 1.0 + imp }));
                 }
-                if sc >= 0.30 {
-                    fz_scored.push((p.clone(), sc));
+                if opts.fuzzy {
+                    let sc = fuzzy_text_score_prepared(&prep_q, &hay);
+                    if sc >= 0.70 {
+                        fuzzy_strong.insert(p.clone());
+                    }
+                    if sc >= 0.30 {
+                        fz_scored.push((p.clone(), sc));
+                    }
                 }
+            }
+            ex_scored.sort_by(|x, y| {
+                y.1.partial_cmp(&x.1)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .then_with(|| x.0.cmp(&y.0))
+            });
+            for (rank, (p, _)) in ex_scored.into_iter().take((limit * 4).max(40)).enumerate() {
+                exact_ranks.insert(p, rank);
             }
             fz_scored.sort_by(|x, y| y.1.partial_cmp(&x.1).unwrap_or(std::cmp::Ordering::Equal));
             for (rank, (p, _)) in fz_scored.into_iter().take((limit * 5).max(50)).enumerate() {
@@ -620,6 +685,9 @@ impl AssetSearchEngine {
         let fuzzy_w = if bm25_ranks.is_empty() { 1.25 } else { 0.75 };
         // 7. 自适应权重重归一化 & Omni-RRF 融合
         let mut active_w = 0.0f64;
+        if !exact_ranks.is_empty() {
+            active_w += 2.20;
+        }
         if !bm25_ranks.is_empty() {
             active_w += 1.20;
         }
@@ -642,6 +710,7 @@ impl AssetSearchEngine {
 
         let mut all_hit_paths: HashSet<String> = HashSet::new();
         for map in [
+            &exact_ranks,
             &bm25_ranks,
             &fuzzy_ranks,
             &vec_ranks,
@@ -662,6 +731,10 @@ impl AssetSearchEngine {
             };
             let mut rrf_sum = 0.0f64;
             let mut channels = Vec::new();
+            if let Some(&r) = exact_ranks.get(&p) {
+                rrf_sum += (2.20 / norm_div) / (10.0 + r as f64);
+                channels.push("exact_id".to_string());
+            }
             if let Some(&r) = bm25_ranks.get(&p) {
                 rrf_sum += (1.20 / norm_div) / (k + r as f64);
                 channels.push("bm25_fts".to_string());
@@ -968,5 +1041,21 @@ mod tests {
             g_hits.iter().any(|h| h.asset.path == spec_str && h.matched_channels.contains(&"doc_links".to_string())),
             "DocLinks 通道应将 doc1 的引用扩展召回到 linked_spec"
         );
+
+        // D. 泛词噪音抑制：新增只含泛子词 "engine" 的文档，验证 "ShadowAbEngine" 仍精确命中 runtime_ab.rs
+        storage
+            .upsert_asset(&sample_asset(
+                "/tmp/omni/generic_engine_phase13.md",
+                "document",
+                "Execution engine phase architecture and scheduler engine runtime engine",
+                json!({"modality": "document", "importance_score": 0.9}),
+            ))
+            .expect("upsert noise");
+        let id_hits =
+            AssetSearchEngine::search_with_query_vec(storage.provider().as_ref(), &opts_camel, None)
+                .expect("id search");
+        assert!(!id_hits.is_empty());
+        assert_eq!(id_hits[0].asset.path, "/tmp/omni/runtime_ab.rs");
+        assert!(id_hits[0].matched_channels.contains(&"exact_id".to_string()));
     }
 }

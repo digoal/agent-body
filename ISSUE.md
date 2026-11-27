@@ -217,7 +217,15 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
     - `BenchmarkEngine` 升级至 **`v3.9`**（新增 **`W19` Multimodal Metadata & Know-How Backfill** 与 **`DQ10` Shadow A/B Falsification & Zero-Panic Probe**，门禁扩大至 `W:19, M:6, DQ:10, COMP:4, PR:14`）；
     - `ShadowAbEngine` 落地 `H1~H5` 自愈分类引擎，在 `ab_compare`/`ab_report` 中直接统计与触发驼峰切词/索引追平/记忆权重校准自愈（详见 [roadmap-phase63.md](docs/src_doc/roadmap-phase63.md)）。
 
-46. **`[P0 · Phase 64 · v1.1.0]` 一等公民全景齐步走、Web UI 交互补全与版本对齐** `🚧 收口验证中`:
+46. **`[P0 · Phase 64 · v1.1.0]` 一等公民全景齐步走、Web UI 交互补全与版本对齐** `✅ 已全量落地`:
     - `Cargo.toml` 正式升版为 **`1.1.0`**，发布 [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md) 与 [roadmap-phase64.md](docs/src_doc/roadmap-phase64.md)；
     - 补齐 Web UI 2.0（`index.html`、`02_topology_facts.js`、`05_body.js`）Phase 58~63 三态模式切换、`mcp_profile` 减税档位、Shadow A/B 对照面板及资产多维过滤（`modality`/`asset_type`/`kv_filter`/`fuzzy`/`include_links`/`backfill_multimodal`），统一默认端口 `8765`；
     - 升级 `scripts/evolution_manifest.py --check` 对活跃文档强制拦截过时 `Benchmark v3.8` / `W1~W18` / `DQ1~DQ9` 与错位 `docs/README.md` 指针，并完成 3 SKILL + 全量 `docs/manual/` + `docs/arch/` + `docs/design_doc/{06,10}*` + `INSTALL.md` + `EVOLUTION_GUIDE.md` + `README.md` 同步。
+
+47. **`[P0 · Phase 65]` Shadow A/B 代码标识符召回/延迟优化与 `DQ2`/`DQ6`/`vitals` 可信度量修复** `✅ 已全量落地`:
+    - 统一 `DQ2` 的 `target_pct` 与判定阈值为 `95.0%`；修复 `DQ6` 与 `HomeostasisVitalsEngine` 在十万级 `fact_edges` 下因 `LIMIT 4000/5000` 截断导致工程节点误报 `0/12` 与感官分 `60.0 [critical]` 的失真；
+    - `expand_graph_for_query` 主键命中跳过全表 `LIKE` 扫表、限制 Hub 2-hop 爆炸；`AssetSearchEngine` 新增 `PreparedFuzzyQuery` 预计算与 `exact_id` 精确标识符 RRF 通道，解决 `ShadowAbEngine` 延时拖拽 (`257ms`) 与泛词挤掉精确文件问题（详见 [roadmap-phase65-66.md](docs/src_doc/roadmap-phase65-66.md)）。
+
+48. **`[P1 · Phase 66]` macOS / Linux 跨平台体验打磨与 GitHub Actions CI/CD 工业化** `✅ 已全量落地`:
+    - `preflight` 与 `daemon` 按平台分支探测与展示 `FSEvents` / `LaunchAgent` / `libproc`（彻底消除 macOS 下 Systemd `WARN` 与 `max_user_watches = 未知`）；`Makefile` 支持 `Darwin`/`Linux` 双平台安装、重启与无硬编码镜像同步；
+    - 新增 `.github/workflows/ci.yml`（Ubuntu + macOS 全门禁 + Clippy + 全量测试）与 `.github/workflows/release.yml`（Tag 自动发布双平台二进制包与 SHA-256）。
