@@ -1,0 +1,11 @@
+[distribution]
+name = "kernel-minimal"
+binary_name = "agent-body-kernel-minimal"
+
+[kernel]
+storage_am = "sqlite"
+allow_out_of_process_fdw = true
+require_auth_for_reads = false
+
+[contrib]
+enable = []

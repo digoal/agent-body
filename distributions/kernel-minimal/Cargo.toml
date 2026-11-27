@@ -1,0 +1,15 @@
+[package]
+name = "agent-body-kernel-minimal"
+version = "2.0.0"
+edition = "2021"
+authors = ["digoal 德哥"]
+description = "Agent Body Pure Microkernel Minimal Distribution (0 contrib dependencies)"
+license = "Apache-2.0"
+
+[dependencies]
+agent-body-sdk = { path = "../../kernel/body-sdk" }
+agent-body-protocol = { path = "../../kernel/body-protocol" }
+agent-body-kernel = { path = "../../kernel/body-kernel" }
+clap = { version = "4.5", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"

@@ -1,0 +1,14 @@
+[package]
+name = "agent-body-protocol"
+version = "2.0.0"
+edition = "2021"
+authors = ["digoal 德哥"]
+description = "Agent Body Out-of-Process Extension Control Manifest & JSON-RPC 2.0 Wire Protocol"
+license = "Apache-2.0"
+
+[dependencies]
+agent-body-sdk = { path = "../body-sdk" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+anyhow = "1.0"

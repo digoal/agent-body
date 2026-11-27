@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 560" width="100%" height="auto" font-family="PingFang SC, Noto Sans CJK SC, system-ui, -apple-system, sans-serif">
+  <defs>
+    <marker id="arrTeal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#245A6B"/>
+    </marker>
+    <marker id="arrGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2F7A66"/>
+    </marker>
+    <marker id="arrTerra" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#BE653B"/>
+    </marker>
+  </defs>
+
+  <!-- 浅色暖纸工程蓝图底 -->
+  <rect x="0" y="0" width="1160" height="560" fill="#F7F6F2"/>
+  <rect x="14" y="14" width="1132" height="532" rx="6" fill="none" stroke="#D9D5CB" stroke-width="1.2"/>
+
+  <!-- 标题区 -->
+  <text x="34" y="44" fill="#1B2B33" font-size="20" font-weight="700">外部环境异动分层感知、O(1) 指纹短路与 Session Epoch 脑体同步架构</text>
+  <text x="34" y="65" fill="#46585F" font-size="11.5">Tiered Drift Sensing (contrib/) · Monotonic epoch_seq Watermark (kernel/) · Zero-Turn Hook Piggyback</text>
+  <line x1="34" y1="76" x2="1126" y2="76" stroke="#D9D5CB" stroke-width="1"/>
+
+  <!-- 第 1 栏：外部异动源 -->
+  <rect x="32" y="92" width="290" height="438" rx="6" fill="#F1EFE9" stroke="#BE653B" stroke-width="1.2"/>
+  <text x="48" y="114" fill="#BE653B" font-size="13" font-weight="700">1. 外部异动源 (OUT_OF_AGENT)</text>
+
+  <rect x="46" y="128" width="262" height="114" rx="5" fill="#F7E9DE" stroke="#BE653B" stroke-width="1"/>
+  <text x="60" y="149" fill="#BE653B" font-size="11.5" font-weight="700">A. 工作区文件 &amp; Git 仓库状态</text>
+  <text x="60" y="170" fill="#1B2B33" font-size="10">• 人类/脚本在外部编辑或删除源码文件</text>
+  <text x="60" y="188" fill="#1B2B33" font-size="10">• 外部执行 git checkout / pull 切换分支</text>
+  <text x="60" y="206" fill="#46585F" font-size="9.5">特征：高频局部，OS 内核可直接发事件</text>
+  <text x="60" y="224" fill="#BE653B" font-size="9.5" font-weight="600">痛点：若不通知大脑，长任务持过期视图</text>
+
+  <rect x="46" y="264" width="262" height="122" rx="5" fill="#F7E9DE" stroke="#BE653B" stroke-width="1"/>
+  <text x="60" y="285" fill="#BE653B" font-size="11.5" font-weight="700">B. 宿主机非文件动态与工具链</text>
+  <text x="60" y="306" fill="#1B2B33" font-size="10">• apt/brew 新装或卸载 CLI 二进制工具</text>
+  <text x="60" y="324" fill="#1B2B33" font-size="10">• 进程重启换 PID、监听端口抢占或离线</text>
+  <text x="60" y="342" fill="#1B2B33" font-size="10">• systemd / cron / Nginx 配置外部变更</text>
+  <text x="60" y="362" fill="#BE653B" font-size="9.5" font-weight="600">约束：inotify 盲区，全盘盲扫 CPU 爆炸</text>
+
+  <rect x="46" y="408" width="262" height="106" rx="5" fill="#F7E9DE" stroke="#BE653B" stroke-width="1"/>
+  <text x="60" y="429" fill="#BE653B" font-size="11.5" font-weight="700">C. 宿主机边界外远端依赖</text>
+  <text x="60" y="450" fill="#1B2B33" font-size="10">• 远端 PostgreSQL Schema 外部变更</text>
+  <text x="60" y="468" fill="#1B2B33" font-size="10">• 本地 SSH socks5h 隧道断连或 API 超时</text>
+  <text x="60" y="488" fill="#46585F" font-size="9.5">约束：不在本机 /proc，后台 ping 浪费连接</text>
+
+  <!-- 第 1 栏 -> 第 2 栏正交箭头 -->
+  <line x1="322" y1="185" x2="372" y2="185" stroke="#BE653B" stroke-width="1.5" marker-end="url(#arrTerra)"/>
+  <line x1="322" y1="325" x2="372" y2="325" stroke="#BE653B" stroke-width="1.5" marker-end="url(#arrTerra)"/>
+  <line x1="322" y1="461" x2="372" y2="461" stroke="#BE653B" stroke-width="1.5" marker-end="url(#arrTerra)"/>
+
+  <!-- 第 2 栏：contrib/ 感知策略 -->
+  <rect x="376" y="92" width="350" height="438" rx="6" fill="#EBF5F0" stroke="#2F7A66" stroke-width="1.2"/>
+  <text x="392" y="114" fill="#2F7A66" font-size="13" font-weight="700">2. contrib/ 分层低成本感知策略</text>
+
+  <rect x="390" y="128" width="322" height="114" rx="5" fill="#F7F6F2" stroke="#2F7A66" stroke-width="1"/>
+  <text x="404" y="149" fill="#2F7A66" font-size="11.5" font-weight="700">probe_fs_watcher（事件推送 + 折叠防洪）</text>
+  <text x="404" y="170" fill="#1B2B33" font-size="10">• inotify / FSEvents 500ms 防抖捕获改删</text>
+  <text x="404" y="188" fill="#1B2B33" font-size="10">• 盯 .git/HEAD 与 .git/index 识别整仓切分支</text>
+  <text x="404" y="206" fill="#1B2B33" font-size="10">• 写穿失效：旧向量清空 + 60s 审计折叠</text>
+  <text x="404" y="224" fill="#2F7A66" font-size="9.5" font-weight="600">产出：File / Repo 变更 Tuple → 推进 epoch_seq</text>
+
+  <rect x="390" y="264" width="322" height="122" rx="5" fill="#F7F6F2" stroke="#2F7A66" stroke-width="1"/>
+  <text x="404" y="285" fill="#2F7A66" font-size="11.5" font-weight="700">FdwRoutine::poll_drift（O(1) 指纹短路游标）</text>
+  <text x="404" y="306" fill="#1B2B33" font-size="10">• Stage 1 (&lt; 50 μs): 仅核对轻量指纹与 cursor</text>
+  <text x="404" y="324" fill="#46585F" font-size="9.5">  - $PATH 各目录 mtime (不遍历数千二进制)</text>
+  <text x="404" y="341" fill="#46585F" font-size="9.5">  - /proc/stat processes + 监听 socket inode 哈希</text>
+  <text x="404" y="358" fill="#1B2B33" font-size="10">• 未变直接短路返回；漂移才进入增量解析</text>
+  <text x="404" y="375" fill="#2F7A66" font-size="9.5" font-weight="600">守住空闲 CPU &lt; 0.5% 与零写放大底线</text>
+
+  <rect x="390" y="408" width="322" height="106" rx="5" fill="#F7F6F2" stroke="#2F7A66" stroke-width="1"/>
+  <text x="404" y="429" fill="#2F7A66" font-size="11.5" font-weight="700">AOPCC 懒探测与断路器（零保活盲 ping）</text>
+  <text x="404" y="450" fill="#1B2B33" font-size="10">• 后台严禁定时轮询远端数据库或外部 API</text>
+  <text x="404" y="468" fill="#1B2B33" font-size="10">• 正常路径按乐观租约直行，0 事前查询税</text>
+  <text x="404" y="488" fill="#2F7A66" font-size="9.5" font-weight="600">仅在报错瞬间唤醒，&lt; 2 ms 诊断隧道与端口</text>
+
+  <!-- 第 2 栏 -> 第 3 栏正交箭头 -->
+  <line x1="726" y1="185" x2="776" y2="185" stroke="#2F7A66" stroke-width="1.5" marker-end="url(#arrGreen)"/>
+  <line x1="726" y1="325" x2="776" y2="325" stroke="#2F7A66" stroke-width="1.5" marker-end="url(#arrGreen)"/>
+  <line x1="726" y1="461" x2="776" y2="461" stroke="#2F7A66" stroke-width="1.5" marker-end="url(#arrGreen)"/>
+
+  <!-- 第 3 栏：kernel/ 纪元同步与脑体闭环 -->
+  <rect x="780" y="92" width="348" height="438" rx="6" fill="#E5EFF0" stroke="#245A6B" stroke-width="1.3"/>
+  <text x="796" y="114" fill="#245A6B" font-size="13" font-weight="700">3. kernel/ 纪元水位与脑体零轮次同步</text>
+
+  <rect x="794" y="128" width="320" height="114" rx="5" fill="#F7F6F2" stroke="#245A6B" stroke-width="1"/>
+  <text x="808" y="149" fill="#245A6B" font-size="11.5" font-weight="700">纪元水位与游标基表（纯粹机制）</text>
+  <text x="808" y="170" fill="#1B2B33" font-size="10">• kernel_event_log: 单调递增 epoch_seq 主键</text>
+  <text x="808" y="188" fill="#1B2B33" font-size="10">• kernel_checkpoints: 存 session.seen_epoch</text>
+  <text x="808" y="206" fill="#1B2B33" font-size="10">• kv(ns="fdw_cursor"): 存各探针指纹游标</text>
+  <text x="808" y="224" fill="#46585F" font-size="9.5">开工 Brief 签发快照时锁定 seen_epoch = 1042</text>
+
+  <!-- 内部竖直箭头：水位推进 -->
+  <line x1="954" y1="242" x2="954" y2="260" stroke="#245A6B" stroke-width="1.5" marker-end="url(#arrTeal)"/>
+
+  <rect x="794" y="264" width="320" height="122" rx="5" fill="#F7F6F2" stroke="#245A6B" stroke-width="1.1"/>
+  <text x="808" y="285" fill="#245A6B" font-size="11.5" font-weight="700">ExecutorStartHook（&lt; 50 μs 顺风车注入）</text>
+  <text x="808" y="306" fill="#1B2B33" font-size="10">• 工具调用紧前比对 seen_epoch vs current_epoch</text>
+  <text x="808" y="324" fill="#1B2B33" font-size="10">• 水位一致：0 Token 静默放行，零额外打扰</text>
+  <text x="808" y="342" fill="#1B2B33" font-size="10">• 命中亲和漂移：顺风车捎带 EpochDeltaNotice</text>
+  <text x="808" y="360" fill="#BE653B" font-size="9.5" font-weight="600">  (&lt;= 50 tok, 经 TupleRedactHook 脱敏并追平水位)</text>
+  <text x="808" y="376" fill="#245A6B" font-size="9.5" font-weight="600">效果：体知即脑知，0 额外对话轮次税</text>
+
+  <rect x="794" y="408" width="320" height="106" rx="5" fill="#F7F6F2" stroke="#245A6B" stroke-width="1"/>
+  <text x="808" y="429" fill="#245A6B" font-size="11.5" font-weight="700">ExecutorEndHook（碰壁自愈 &amp; 租约熔断）</text>
+  <text x="808" y="450" fill="#1B2B33" font-size="10">• 捕获 ECONNREFUSED / 127 / 认证失效</text>
+  <text x="808" y="468" fill="#1B2B33" font-size="10">• 触发本地代理/端口探活并注入替代处方</text>
+  <text x="808" y="488" fill="#245A6B" font-size="9.5" font-weight="600">同步降级失效乐观租约置信度并记入审计流</text>
+</svg>

@@ -1,0 +1,14 @@
+[package]
+name = "agent-body-sdk"
+version = "2.0.0"
+edition = "2021"
+authors = ["digoal 德哥"]
+description = "Agent Body Microkernel SDK — 6 Routine Traits, 7 Lifecycle Hooks, EvidenceTuple & Extension ABI"
+license = "Apache-2.0"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+sha2 = "0.11"
+chrono = { version = "0.4", features = ["serde"] }

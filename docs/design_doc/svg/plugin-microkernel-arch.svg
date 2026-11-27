@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 740" width="100%" height="auto" font-family="PingFang SC, Noto Sans CJK SC, system-ui, -apple-system, sans-serif">
+  <defs>
+    <marker id="arrIndigo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#245A6B"/>
+    </marker>
+    <marker id="arrTerra" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#BE653B"/>
+    </marker>
+    <marker id="arrJade" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2F7A66"/>
+    </marker>
+  </defs>
+
+  <!-- 浅色暖纸背景 -->
+  <rect x="0" y="0" width="1160" height="740" fill="#F7F6F2"/>
+  <rect x="14" y="14" width="1132" height="712" rx="6" fill="none" stroke="#D9D5CB" stroke-width="1.2"/>
+
+  <!-- 标题区 -->
+  <text x="36" y="44" fill="#1B2B33" font-size="20" font-weight="700">Agent 本体微内核 (kernel/) 与周边扩展生态 (contrib/) 分层架构图</text>
+  <text x="36" y="65" fill="#46585F" font-size="11.5">Pure Mechanism Microkernel (8 Catalogs + 7 Hook Slots + 6 Routine SPIs) · Zero Reverse Dependency to contrib/</text>
+  <line x1="36" y1="76" x2="1124" y2="76" stroke="#D9D5CB" stroke-width="1"/>
+
+  <!-- 上半部：kernel/ 纯机制微内核边框 -->
+  <rect x="36" y="88" width="1088" height="338" rx="6" fill="#F1EFE9" stroke="#245A6B" stroke-width="1.6"/>
+  <text x="52" y="109" fill="#245A6B" font-size="13" font-weight="700">kernel/ — 纯机制微内核（100% 领域无关 / OS 发行版无关 / 中间件无关 / 行业无关）</text>
+
+  <!-- 1. 统一协议外壳 -->
+  <rect x="52" y="120" width="1056" height="54" rx="5" fill="#E5EFF0" stroke="#245A6B" stroke-width="1"/>
+  <text x="66" y="139" fill="#245A6B" font-size="11.5" font-weight="700">统一协议外壳（由 body_cat_proc 目录单点声明自动派生，不写死业务逻辑）</text>
+  <rect x="66" y="146" width="242" height="22" rx="3" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.8"/>
+  <text x="187" y="161" text-anchor="middle" fill="#1B2B33" font-size="10.5" font-weight="600">MCP JSON-RPC (stdio / HTTP)</text>
+  <rect x="326" y="146" width="242" height="22" rx="3" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.8"/>
+  <text x="447" y="161" text-anchor="middle" fill="#1B2B33" font-size="10.5" font-weight="600">CLI Subcommands Dispatcher</text>
+  <rect x="586" y="146" width="242" height="22" rx="3" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.8"/>
+  <text x="707" y="161" text-anchor="middle" fill="#1B2B33" font-size="10.5" font-weight="600">HTTP REST / SSE Gateway</text>
+  <rect x="846" y="146" width="246" height="22" rx="3" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.8"/>
+  <text x="969" y="161" text-anchor="middle" fill="#1B2B33" font-size="10.5" font-weight="600">Parity Matrix &amp; Schema Registry</text>
+
+  <line x1="580" y1="174" x2="580" y2="188" stroke="#245A6B" stroke-width="1.4" marker-end="url(#arrIndigo)"/>
+
+  <!-- 2. 7 大生命周期 Hook 插槽链 -->
+  <rect x="52" y="191" width="1056" height="62" rx="5" fill="#F7E9DE" stroke="#BE653B" stroke-width="1.1"/>
+  <text x="66" y="209" fill="#BE653B" font-size="11.5" font-weight="700">7 大内核生命周期 Hook 插槽（body_cat_hook · 仅定义槽位、优先级排序与 Fail-Closed 语义，具体策略由 contrib/ 挂载）</text>
+
+  <rect x="64" y="218" width="136" height="27" rx="3" fill="#F7F6F2" stroke="#BE653B" stroke-width="0.9"/>
+  <text x="132" y="235" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">1. client_auth</text>
+
+  <rect x="212" y="218" width="136" height="27" rx="3" fill="#F7F6F2" stroke="#BE653B" stroke-width="0.9"/>
+  <text x="280" y="235" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">2. object_access (RLS)</text>
+
+  <rect x="360" y="218" width="142" height="27" rx="3" fill="#F7F6F2" stroke="#BE653B" stroke-width="0.9"/>
+  <text x="431" y="235" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">3. planner_rewrite</text>
+
+  <rect x="514" y="218" width="136" height="27" rx="3" fill="#F7F6F2" stroke="#BE653B" stroke-width="0.9"/>
+  <text x="582" y="235" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">4. executor_start</text>
+
+  <rect x="662" y="218" width="136" height="27" rx="3" fill="#F7F6F2" stroke="#BE653B" stroke-width="0.9"/>
+  <text x="730" y="235" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">5. executor_end</text>
+
+  <rect x="810" y="218" width="136" height="27" rx="3" fill="#F7F6F2" stroke="#BE653B" stroke-width="0.9"/>
+  <text x="878" y="235" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">6. tuple_redact</text>
+
+  <rect x="958" y="218" width="138" height="27" rx="3" fill="#F7F6F2" stroke="#BE653B" stroke-width="0.9"/>
+  <text x="1027" y="235" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">7. emit_audit</text>
+
+  <line x1="580" y1="253" x2="580" y2="267" stroke="#245A6B" stroke-width="1.4" marker-end="url(#arrIndigo)"/>
+
+  <!-- 3. 微内核核心引擎机制 -->
+  <rect x="52" y="270" width="1056" height="72" rx="5" fill="#F7F6F2" stroke="#245A6B" stroke-width="1"/>
+  <text x="66" y="289" fill="#245A6B" font-size="11.5" font-weight="700">微内核纯粹机制引擎（System Catalog + 核心状态机 + 合并执行器）</text>
+
+  <rect x="66" y="298" width="246" height="36" rx="4" fill="#E5EFF0" stroke="#245A6B" stroke-width="0.9"/>
+  <text x="189" y="314" text-anchor="middle" fill="#1B2B33" font-size="10.5" font-weight="700">System Catalog (8 张 body_cat_*)</text>
+  <text x="189" y="328" text-anchor="middle" fill="#46585F" font-size="9.5">extension / type / opclass / am / fdw / proc / hook / bgw</text>
+
+  <rect x="326" y="298" width="246" height="36" rx="4" fill="#E5EFF0" stroke="#245A6B" stroke-width="0.9"/>
+  <text x="449" y="314" text-anchor="middle" fill="#1B2B33" font-size="10.5" font-weight="700">LockManager &amp; AOPCC 并发机</text>
+  <text x="449" y="328" text-anchor="middle" fill="#46585F" font-size="9.5">WFG 死锁消解 · L0~L3 包络 · 接力胶囊槽</text>
+
+  <rect x="586" y="298" width="246" height="36" rx="4" fill="#E5EFF0" stroke="#245A6B" stroke-width="0.9"/>
+  <text x="709" y="314" text-anchor="middle" fill="#1B2B33" font-size="10.5" font-weight="700">RrfMergeExecutor 融合调度器</text>
+  <text x="709" y="328" text-anchor="middle" fill="#46585F" font-size="9.5">多通道 RRF 合并 · 离线权重自适应重归一化</text>
+
+  <rect x="846" y="298" width="246" height="36" rx="4" fill="#E5EFF0" stroke="#245A6B" stroke-width="0.9"/>
+  <text x="969" y="314" text-anchor="middle" fill="#1B2B33" font-size="10.5" font-weight="700">Extension Loader &amp; WaitEvents</text>
+  <text x="969" y="328" text-anchor="middle" fill="#46585F" font-size="9.5">DAG 安装/升级状态机 · &lt;100ns 原子直方图</text>
+
+  <!-- 4. body-sdk 6 大底层开放 Routine SPI -->
+  <rect x="52" y="352" width="1056" height="62" rx="5" fill="#E5EFF0" stroke="#245A6B" stroke-width="1.2"/>
+  <text x="66" y="370" fill="#245A6B" font-size="11.5" font-weight="700">kernel/body-sdk — 唯一对外契约面（6 大开放 Routine Trait + ScopedSqlExecutor 沙盒）</text>
+
+  <rect x="64" y="379" width="160" height="27" rx="3" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.9"/>
+  <text x="144" y="396" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">Type / OpRoutine</text>
+
+  <rect x="236" y="379" width="164" height="27" rx="3" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.9"/>
+  <text x="318" y="396" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">TableAmRoutine</text>
+
+  <rect x="412" y="379" width="172" height="27" rx="3" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.9"/>
+  <text x="498" y="396" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">IndexAm / OpClass</text>
+
+  <rect x="596" y="379" width="160" height="27" rx="3" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.9"/>
+  <text x="676" y="396" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">FdwRoutine</text>
+
+  <rect x="768" y="379" width="160" height="27" rx="3" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.9"/>
+  <text x="848" y="396" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">ProcRoutine (UDF)</text>
+
+  <rect x="940" y="379" width="156" height="27" rx="3" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.9"/>
+  <text x="1018" y="396" text-anchor="middle" fill="#1B2B33" font-size="10" font-weight="600">BgWorkerRoutine</text>
+
+  <!-- 严格单向隔离边界红线 -->
+  <line x1="36" y1="444" x2="1124" y2="444" stroke="#BE653B" stroke-width="2" stroke-dasharray="7,5"/>
+  <rect x="330" y="431" width="500" height="24" rx="12" fill="#BE653B"/>
+  <text x="580" y="447" text-anchor="middle" fill="#F7F6F2" font-size="11" font-weight="700">物理与编译单向隔离红线：contrib/* -&gt; body-sdk，kernel/ 禁止反向依赖 contrib/</text>
+
+  <!-- 向下挂载箭头（正交） -->
+  <line x1="150" y1="455" x2="150" y2="472" stroke="#2F7A66" stroke-width="1.4" marker-end="url(#arrJade)"/>
+  <line x1="365" y1="455" x2="365" y2="472" stroke="#2F7A66" stroke-width="1.4" marker-end="url(#arrJade)"/>
+  <line x1="580" y1="455" x2="580" y2="472" stroke="#2F7A66" stroke-width="1.4" marker-end="url(#arrJade)"/>
+  <line x1="795" y1="455" x2="795" y2="472" stroke="#2F7A66" stroke-width="1.4" marker-end="url(#arrJade)"/>
+  <line x1="1010" y1="455" x2="1010" y2="472" stroke="#2F7A66" stroke-width="1.4" marker-end="url(#arrJade)"/>
+
+  <!-- 下半部：contrib/ 周边扩展五大模块族 -->
+  <rect x="36" y="476" width="1088" height="174" rx="6" fill="#EBF5F0" stroke="#2F7A66" stroke-width="1.4"/>
+  <text x="52" y="497" fill="#2F7A66" font-size="13" font-weight="700">contrib/ — 周边功能独立扩展目录（存量业务剥离 + 未来领域扩展均在此落地，按发行版自由组装）</text>
+
+  <!-- 5 个族卡片 -->
+  <rect x="52" y="509" width="200" height="128" rx="5" fill="#F7F6F2" stroke="#2F7A66" stroke-width="1"/>
+  <text x="152" y="529" text-anchor="middle" fill="#2F7A66" font-size="11.5" font-weight="700">1. 存储与索引族</text>
+  <line x1="64" y1="536" x2="240" y2="536" stroke="#C5DFD5" stroke-width="1"/>
+  <text x="64" y="554" fill="#1B2B33" font-size="10">• am_postgres (+pgvector)</text>
+  <text x="64" y="571" fill="#1B2B33" font-size="10">• am_duckdb_olap (C++ 隔离)</text>
+  <text x="64" y="588" fill="#1B2B33" font-size="10">• idx_ollama_vec / multimodal</text>
+  <text x="64" y="605" fill="#1B2B33" font-size="10">• idx_knowhow_graph (PMI)</text>
+  <text x="64" y="622" fill="#46585F" font-size="9.5">• mem_external_spi (Mem0)</text>
+
+  <rect x="266" y="509" width="200" height="128" rx="5" fill="#F7F6F2" stroke="#2F7A66" stroke-width="1"/>
+  <text x="366" y="529" text-anchor="middle" fill="#2F7A66" font-size="11.5" font-weight="700">2. 探针与 FDW 族</text>
+  <line x1="278" y1="536" x2="454" y2="536" stroke="#C5DFD5" stroke-width="1"/>
+  <text x="278" y="554" fill="#1B2B33" font-size="10">• probe_host_basic (开发态)</text>
+  <text x="278" y="571" fill="#BE653B" font-size="10" font-weight="600">• probe_linux_ops (K4 新增)</text>
+  <text x="278" y="588" fill="#BE653B" font-size="10" font-weight="600">• probe_jvm_middleware (K4)</text>
+  <text x="278" y="605" fill="#1B2B33" font-size="10">• probe_db_engines (PG/DM)</text>
+  <text x="278" y="622" fill="#BE653B" font-size="9.5" font-weight="600">• fdw_cmdb_ticket / codegraph</text>
+
+  <rect x="480" y="509" width="200" height="128" rx="5" fill="#F7F6F2" stroke="#BE653B" stroke-width="1.1"/>
+  <text x="580" y="529" text-anchor="middle" fill="#BE653B" font-size="11.5" font-weight="700">3. 安全与合规 Hook 族</text>
+  <line x1="492" y1="536" x2="668" y2="536" stroke="#E8C9B8" stroke-width="1"/>
+  <text x="492" y="554" fill="#BE653B" font-size="10" font-weight="600">• hook_auth_mtls_rbac (K4)</text>
+  <text x="492" y="571" fill="#46585F" font-size="9.5">  mTLS + 读鉴权 + 租户 RLS</text>
+  <text x="492" y="588" fill="#BE653B" font-size="10" font-weight="600">• hook_gov_compliance (K4)</text>
+  <text x="492" y="605" fill="#46585F" font-size="9.5">  PII 脱敏 / Java -D / host_labels</text>
+  <text x="492" y="622" fill="#BE653B" font-size="10" font-weight="600">• hook_audit_siem (Syslog/OTLP)</text>
+
+  <rect x="694" y="509" width="200" height="128" rx="5" fill="#F7F6F2" stroke="#2F7A66" stroke-width="1"/>
+  <text x="794" y="529" text-anchor="middle" fill="#2F7A66" font-size="11.5" font-weight="700">4. 治理与联邦协同族</text>
+  <line x1="706" y1="536" x2="882" y2="536" stroke="#C5DFD5" stroke-width="1"/>
+  <text x="706" y="554" fill="#1B2B33" font-size="10">• gov_placement (个人目录规约)</text>
+  <text x="706" y="571" fill="#1B2B33" font-size="10">• gov_host_gc (孤儿清理)</text>
+  <text x="706" y="588" fill="#1B2B33" font-size="10">• gov_ecosystem (MCP/SKILL)</text>
+  <text x="706" y="605" fill="#1B2B33" font-size="10">• fed_peer_mesh (Mesh v1.0)</text>
+  <text x="706" y="622" fill="#46585F" font-size="9.5">• diag_awr_addm (性能报表)</text>
+
+  <rect x="908" y="509" width="200" height="128" rx="5" fill="#F7F6F2" stroke="#2F7A66" stroke-width="1"/>
+  <text x="1008" y="529" text-anchor="middle" fill="#2F7A66" font-size="11.5" font-weight="700">5. 界面、路演与评测族</text>
+  <line x1="920" y1="536" x2="1096" y2="536" stroke="#C5DFD5" stroke-width="1"/>
+  <text x="920" y="554" fill="#1B2B33" font-size="10">• ui_web_console (Web 2.0)</text>
+  <text x="920" y="571" fill="#1B2B33" font-size="10">• ui_tui_dashboard (终端看板)</text>
+  <text x="920" y="588" fill="#1B2B33" font-size="10">• demo_roadshow (7 大剧目)</text>
+  <text x="920" y="605" fill="#1B2B33" font-size="10">• bench_empirical (v3.9 套件)</text>
+  <text x="920" y="622" fill="#46585F" font-size="9.5">• shadow_ab_probe (A/B 自愈)</text>
+
+  <!-- 底部加载机制 -->
+  <rect x="36" y="662" width="534" height="50" rx="5" fill="#F1EFE9" stroke="#245A6B" stroke-width="1"/>
+  <text x="52" y="682" fill="#245A6B" font-size="11.5" font-weight="700">轨 A：编译期静态注册（Cargo Workspace · Feature 裁剪）</text>
+  <text x="52" y="700" fill="#46585F" font-size="10">零序列化损耗、零 Rust ABI 风险、支持纯静态无 C++ 极简裁剪</text>
+
+  <rect x="590" y="662" width="534" height="50" rx="5" fill="#F1EFE9" stroke="#AE8A3E" stroke-width="1.1"/>
+  <text x="606" y="682" fill="#8A6914" font-size="11.5" font-weight="700">轨 B：运行期进程外沙盒（.control.toml + stdio JSON-RPC / UDS）</text>
+  <text x="606" y="700" fill="#46585F" font-size="10">免重编热挂载企业 CMDB/工单扩展；超时强杀隔离 + L0 只读 + 强制脱敏</text>
+</svg>

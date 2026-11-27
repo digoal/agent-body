@@ -1,0 +1,23 @@
+[package]
+name = "agent-body-kernel"
+version = "2.0.0"
+edition = "2021"
+authors = ["digoal 德哥"]
+description = "Agent Body Microkernel Core — System Catalog, Hook Dispatch Chain & Lock-Free Wait Events"
+license = "Apache-2.0"
+
+[dependencies]
+agent-body-sdk = { path = "../body-sdk" }
+agent-body-protocol = { path = "../body-protocol" }
+rusqlite = { version = "0.31", features = ["bundled", "chrono"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+anyhow = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.8", features = ["v4", "serde"] }
+sha2 = "0.11"
+regex = "1.10"
+
+[dev-dependencies]
+tempfile = "3.10"

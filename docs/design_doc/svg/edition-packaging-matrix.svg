@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 500" width="100%" height="auto" font-family="PingFang SC, Noto Sans CJK SC, system-ui, -apple-system, sans-serif">
+  <defs>
+    <marker id="arrE1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#245A6B"/>
+    </marker>
+    <marker id="arrE2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#BE653B"/>
+    </marker>
+    <marker id="arrE3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2F7A66"/>
+    </marker>
+  </defs>
+
+  <!-- 背景 -->
+  <rect x="0" y="0" width="1160" height="500" fill="#F7F6F2"/>
+  <rect x="14" y="14" width="1132" height="472" rx="6" fill="none" stroke="#D9D5CB" stroke-width="1.2"/>
+
+  <!-- 标题 -->
+  <text x="36" y="44" fill="#1B2B33" font-size="20" font-weight="700">基于同一纯净微内核的四大多发行版组装矩阵（distributions/）</text>
+  <text x="36" y="65" fill="#46585F" font-size="11.5">One Clean kernel/body-kernel + Selective contrib/* Bundles = Tailored Single-Binary Distributions</text>
+  <line x1="36" y1="76" x2="1124" y2="76" stroke="#D9D5CB" stroke-width="1"/>
+
+  <!-- 上层接入消费者 -->
+  <rect x="36" y="92" width="256" height="54" rx="5" fill="#F1EFE9" stroke="#245A6B" stroke-width="1"/>
+  <text x="164" y="114" text-anchor="middle" fill="#245A6B" font-size="11.5" font-weight="700">CI 内核防腐校验器</text>
+  <text x="164" y="132" text-anchor="middle" fill="#46585F" font-size="10">验证微内核脱离一切周边可独立运行</text>
+
+  <rect x="312" y="92" width="256" height="54" rx="5" fill="#F1EFE9" stroke="#245A6B" stroke-width="1"/>
+  <text x="440" y="114" text-anchor="middle" fill="#245A6B" font-size="11.5" font-weight="700">个人工作站 / IDE 大脑</text>
+  <text x="440" y="132" text-anchor="middle" fill="#46585F" font-size="10">Antigravity · Claude Code · Cursor</text>
+
+  <rect x="588" y="92" width="268" height="54" rx="5" fill="#F7E9DE" stroke="#BE653B" stroke-width="1.2"/>
+  <text x="722" y="114" text-anchor="middle" fill="#BE653B" font-size="11.5" font-weight="700">政务云 AIOps 中台控制面（外置）</text>
+  <text x="722" y="132" text-anchor="middle" fill="#46585F" font-size="10">IAM · CMDB · 堡垒机 · K8s/SLB · SIEM</text>
+
+  <rect x="876" y="92" width="248" height="54" rx="5" fill="#EBF5F0" stroke="#2F7A66" stroke-width="1"/>
+  <text x="1000" y="114" text-anchor="middle" fill="#2F7A66" font-size="11.5" font-weight="700">DBA / SRE 跳板机与脚本</text>
+  <text x="1000" y="132" text-anchor="middle" fill="#46585F" font-size="10">数据库诊断大脑 · AWR 基线分析</text>
+
+  <!-- 垂直连线 -->
+  <line x1="164" y1="146" x2="164" y2="166" stroke="#245A6B" stroke-width="1.4" marker-end="url(#arrE1)"/>
+  <line x1="440" y1="146" x2="440" y2="166" stroke="#245A6B" stroke-width="1.4" marker-end="url(#arrE1)"/>
+  <line x1="722" y1="146" x2="722" y2="166" stroke="#BE653B" stroke-width="1.4" marker-end="url(#arrE2)"/>
+  <line x1="1000" y1="146" x2="1000" y2="166" stroke="#2F7A66" stroke-width="1.4" marker-end="url(#arrE3)"/>
+
+  <!-- 4 个发行版卡片 -->
+  <!-- Card 1: kernel-minimal -->
+  <rect x="36" y="170" width="256" height="222" rx="6" fill="#F1EFE9" stroke="#245A6B" stroke-width="1.2"/>
+  <text x="50" y="193" fill="#245A6B" font-size="13" font-weight="700">1. kernel-minimal</text>
+  <text x="50" y="210" fill="#46585F" font-size="10">零 contrib 纯内核验证发行版</text>
+  <line x1="50" y1="218" x2="278" y2="218" stroke="#D9D5CB" stroke-width="1"/>
+  <text x="50" y="238" fill="#1B2B33" font-size="10.5">• 仅含 kernel/body-kernel</text>
+  <text x="50" y="256" fill="#1B2B33" font-size="10.5">• 默认 SQLite / 内存 TableAM</text>
+  <text x="50" y="274" fill="#1B2B33" font-size="10.5">• 默认 FTS5 + 锁 + 接力胶囊</text>
+  <text x="50" y="292" fill="#1B2B33" font-size="10.5">• 0 个 contrib/ 扩展包</text>
+  <text x="50" y="310" fill="#1B2B33" font-size="10.5">• 作用：CI 守护微内核纯洁性</text>
+  <rect x="50" y="352" width="228" height="26" rx="4" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.8"/>
+  <text x="164" y="369" text-anchor="middle" fill="#245A6B" font-size="10" font-weight="600">体积 &lt; 6MB · RSS &lt; 10MB</text>
+
+  <!-- Card 2: personal-flagship -->
+  <rect x="312" y="170" width="256" height="222" rx="6" fill="#E5EFF0" stroke="#245A6B" stroke-width="1.4"/>
+  <text x="326" y="193" fill="#245A6B" font-size="13" font-weight="700">2. agent-body (个人旗舰)</text>
+  <text x="326" y="210" fill="#46585F" font-size="10">100% 向后兼容 v1.1.0 全功能体验</text>
+  <line x1="326" y1="218" x2="554" y2="218" stroke="#B7CED3" stroke-width="1"/>
+  <text x="326" y="238" fill="#1B2B33" font-size="10.5">• contrib/am_{postgres,duckdb_olap}</text>
+  <text x="326" y="256" fill="#1B2B33" font-size="10.5">• contrib/idx_{ollama_vec,knowhow}</text>
+  <text x="326" y="274" fill="#1B2B33" font-size="10.5">• contrib/gov_{placement,host_gc}</text>
+  <text x="326" y="292" fill="#1B2B33" font-size="10.5">• contrib/probe_host_basic + mesh</text>
+  <text x="326" y="310" fill="#1B2B33" font-size="10.5">• contrib/ui_web + demo + bench</text>
+  <rect x="326" y="352" width="228" height="26" rx="4" fill="#F7F6F2" stroke="#245A6B" stroke-width="0.8"/>
+  <text x="440" y="369" text-anchor="middle" fill="#245A6B" font-size="10" font-weight="600">43 MCP 兼容 · RSS &lt; 90MB</text>
+
+  <!-- Card 3: aiops-probe -->
+  <rect x="588" y="170" width="268" height="222" rx="6" fill="#F7E9DE" stroke="#BE653B" stroke-width="1.5"/>
+  <text x="602" y="193" fill="#BE653B" font-size="13" font-weight="700">3. agent-body-probe (AIOps)</text>
+  <text x="602" y="210" fill="#46585F" font-size="10">政务云 / 生产 VM 极简静态探针包</text>
+  <line x1="602" y1="218" x2="842" y2="218" stroke="#DFC0AE" stroke-width="1"/>
+  <text x="602" y="238" fill="#1B2B33" font-size="10.5">• 零 DuckDB/C++ · 零 Ollama/WebUI</text>
+  <text x="602" y="256" fill="#1B2B33" font-size="10.5">• contrib/probe_linux_ops (K4)</text>
+  <text x="602" y="274" fill="#1B2B33" font-size="10.5">• contrib/probe_jvm_middleware (K4)</text>
+  <text x="602" y="292" fill="#1B2B33" font-size="10.5">• contrib/hook_auth_mtls_rbac (K4)</text>
+  <text x="602" y="310" fill="#1B2B33" font-size="10.5">• contrib/hook_{gov_compliance,siem}</text>
+  <text x="602" y="328" fill="#1B2B33" font-size="10.5">• contrib/fdw_cmdb_ticket (轨 B)</text>
+  <rect x="602" y="352" width="240" height="26" rx="4" fill="#F7F6F2" stroke="#BE653B" stroke-width="0.8"/>
+  <text x="722" y="369" text-anchor="middle" fill="#BE653B" font-size="10" font-weight="600">ARM64/x86_64 · 体积 &lt;12MB · RSS &lt;20MB</text>
+
+  <!-- Card 4: dba-sentinel -->
+  <rect x="876" y="170" width="248" height="222" rx="6" fill="#EBF5F0" stroke="#2F7A66" stroke-width="1.4"/>
+  <text x="890" y="193" fill="#2F7A66" font-size="13" font-weight="700">4. agent-body-dba (DBA)</text>
+  <text x="890" y="210" fill="#46585F" font-size="10">数据库与中间件深度排障发行版</text>
+  <line x1="890" y1="218" x2="1110" y2="218" stroke="#B4D4C9" stroke-width="1"/>
+  <text x="890" y="238" fill="#1B2B33" font-size="10.5">• contrib/am_postgres (+pgvector)</text>
+  <text x="890" y="256" fill="#1B2B33" font-size="10.5">• contrib/probe_linux_ops</text>
+  <text x="890" y="274" fill="#1B2B33" font-size="10.5">• contrib/probe_db_engines (PG/DM)</text>
+  <text x="890" y="292" fill="#1B2B33" font-size="10.5">• contrib/diag_awr_addm</text>
+  <text x="890" y="310" fill="#1B2B33" font-size="10.5">• contrib/idx_knowhow_graph</text>
+  <rect x="890" y="352" width="220" height="26" rx="4" fill="#F7F6F2" stroke="#2F7A66" stroke-width="0.8"/>
+  <text x="1000" y="369" text-anchor="middle" fill="#2F7A66" font-size="10" font-weight="600">RSS &lt; 45MB · 冷启动 &lt; 15ms</text>
+
+  <!-- 汇总连接至内核底座 -->
+  <line x1="164" y1="392" x2="164" y2="416" stroke="#245A6B" stroke-width="1.4"/>
+  <line x1="440" y1="392" x2="440" y2="416" stroke="#245A6B" stroke-width="1.4"/>
+  <line x1="722" y1="392" x2="722" y2="416" stroke="#BE653B" stroke-width="1.4"/>
+  <line x1="1000" y1="392" x2="1000" y2="416" stroke="#2F7A66" stroke-width="1.4"/>
+
+  <rect x="36" y="418" width="1088" height="52" rx="6" fill="#245A6B" stroke="#1B2B33" stroke-width="1"/>
+  <text x="580" y="440" text-anchor="middle" fill="#F7F6F2" font-size="13.5" font-weight="700">共享微内核底座：kernel/body-kernel + kernel/body-sdk（100% 机制，0 周边功能）</text>
+  <text x="580" y="458" text-anchor="middle" fill="#E5EFF0" font-size="11">8 张 body_cat_* 系统目录 · 7 大 Hook 插槽 · 6 大 Routine SPI · 核心锁 / 接力 / RRF / WaitEvents</text>
+</svg>

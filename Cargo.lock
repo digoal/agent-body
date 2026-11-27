@@ -36,6 +36,98 @@ dependencies = [
 ]
 
 [[package]]
+name = "agent-body-dba"
+version = "2.0.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-protocol",
+ "agent-body-sdk",
+ "anyhow",
+ "clap",
+ "ext-hook-audit-siem",
+ "ext-hook-gov-compliance",
+ "ext-idx-fts-fuzzy",
+ "ext-probe-db-engines",
+ "ext-probe-linux-ops",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "agent-body-kernel"
+version = "2.0.0"
+dependencies = [
+ "agent-body-protocol",
+ "agent-body-sdk",
+ "anyhow",
+ "chrono",
+ "regex",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "toml",
+ "uuid",
+]
+
+[[package]]
+name = "agent-body-kernel-minimal"
+version = "2.0.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-protocol",
+ "agent-body-sdk",
+ "anyhow",
+ "clap",
+ "serde_json",
+]
+
+[[package]]
+name = "agent-body-probe"
+version = "2.0.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-protocol",
+ "agent-body-sdk",
+ "anyhow",
+ "clap",
+ "ext-fdw-cmdb-ticket",
+ "ext-hook-audit-siem",
+ "ext-hook-auth-mtls-rbac",
+ "ext-hook-gov-compliance",
+ "ext-idx-fts-fuzzy",
+ "ext-probe-jvm-middleware",
+ "ext-probe-linux-ops",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "agent-body-protocol"
+version = "2.0.0"
+dependencies = [
+ "agent-body-sdk",
+ "anyhow",
+ "serde",
+ "serde_json",
+ "toml",
+]
+
+[[package]]
+name = "agent-body-sdk"
+version = "2.0.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -678,6 +770,115 @@ checksum = "e35d6e78f4cebb90e51d543db8fe41528851d6deeef6ef21ebd4bfdc1e784776"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "ext-fdw-cmdb-ticket"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-protocol",
+ "agent-body-sdk",
+ "anyhow",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+]
+
+[[package]]
+name = "ext-gov-placement"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-sdk",
+ "anyhow",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "ext-hook-audit-siem"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-sdk",
+ "anyhow",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "ext-hook-auth-mtls-rbac"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-sdk",
+ "anyhow",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "ext-hook-gov-compliance"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-sdk",
+ "anyhow",
+ "regex",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "ext-idx-fts-fuzzy"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-sdk",
+ "anyhow",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "ext-probe-db-engines"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-sdk",
+ "anyhow",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "ext-probe-jvm-middleware"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-sdk",
+ "anyhow",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "ext-probe-linux-ops"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-sdk",
+ "anyhow",
+ "chrono",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]
