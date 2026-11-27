@@ -6,13 +6,13 @@
 
 ## 1. 守护进程主循环架构
 
-Agent 本体支持常驻后台运行（`agent-body daemon`）。守护进程采用 Tokio 异步运行时，驱动两大核心任务：
+Agent 本体支持常驻后台运行（`agent-body daemon`）。守护进程采用 Tokio 异步运行时，驱动三大核心协同任务（实时监听、双频巡检与可选 Web/SSE）：
 
 ```mermaid
 flowchart LR
     Daemon["Agent Body Daemon 主循环"] --> Pre["启动门禁: PreflightChecker 运行预检"]
     Daemon --> TaskA["任务 A: inotify 实时监听器<br/>(notify crate / 300ms 智能防抖)"]
-    Daemon --> TaskB["任务 B: 60s 定时巡检轮询<br/>(BackgroundScheduler)"]
+    Daemon --> TaskB["任务 B: 双频后台巡检<br/>(60s 进程轮询 + 1800s 深度巡检)"]
     Daemon --> WebSSE["任务 C: 内嵌 Web 大屏 + SSE 事件流<br/>(当 web.enabled = true)"]
 
     TaskA --> Sync["变更同步流水线<br/>(watcher/handler.rs)"]
@@ -39,7 +39,7 @@ Agent 本体在 `src/watcher/mod.rs` 中实现了 **300 毫秒批处理防抖队
 3. 将最终稳定态分发给 `src/watcher/handler.rs`：
    - **新增/修改文件**：先经 `PolicyMatcher`（黑名单目录仅记目录本身，子文件直接跳过）与 `NoiseFilter` 去噪；再通过 `HeuristicMetadataExtractor` 生成 L1 语义元数据、更新 `assets` 与 FTS5；若内容哈希/尺寸变化，执行写穿失效（将旧向量重置为 `'[]'` 并标 `embedding_status="stale"`、旧 L2 标注标为 `"needs_re_enrich"`）；若属于 `deep` 白名单目录，同步触发 `LinksEngine::refresh_links_for_asset` 幂等刷新依赖边，并记录 `changes` 与推送 `EventBus`；
    - **删除文件**：将 `assets` 对应记录置为 `missing`（`search_assets_fts` 三后端强制仅召回 `status = 'active'` 零僵尸返回），级联清理 `fact_nodes`、`links` 入出边（`delete_auto_links_for_source` & `delete_links_for_target`）与同路径关联 `auto_sync` 记忆，记录 `file_deleted` 并推送 `EventBus`。
-4. **后台巡检协同（`src/daemon/scheduler.rs`）**：每 60 秒执行一次 `run_inspection_cycle`，自动刷新 `/proc` 动态进程、构建多层属性图（含 `L2` 结构上卷与 `L3` 语义发现）、审计记忆冲突、推进断点扫描任务、回收过期协作锁、刷新 MCP/SKILL 生态目录，每 30 分钟运行 `FreshnessReconciler::reconcile` 核对磁盘存在性/剪除幽灵端口节点/检验 `.codegraph` 时效，并按 `annotation.auto_enrich_batch_size` 调用本地 Ollama（`qwen3.5:0.8b`）异步精炼待标注资产的 L2 语义元数据。
+4. **双频后台巡检协同（`src/daemon/mod.rs` & `src/daemon/scheduler.rs`）**：每 **60 秒**轻量轮询 `/proc`（macOS 下为 `libproc/lsof`）刷新动态任务进程；每 **1800 秒（30 分钟）**在独立 OS 线程运行 `BackgroundScheduler::run_inspection_cycle`，构建多层属性图（含 `L2` 结构上卷与 `L3` 语义发现）、审计记忆冲突、推进断点扫描任务、回收过期协作锁、刷新 MCP/SKILL 生态目录、运行 `FreshnessReconciler::reconcile` 核对磁盘存在性/剪除幽灵端口节点/检验 `.codegraph` 时效，并按 `annotation.auto_enrich_batch_size` 调用本地 Ollama（`qwen3.5:0.8b`）异步精炼待标注资产的 L2 语义元数据。
 
 ---
 
@@ -51,15 +51,18 @@ Agent 本体在 `src/watcher/mod.rs` 中实现了 **300 毫秒批处理防抖队
 agent-body daemon
 ```
 
-**启动输出示例（对齐 `src/daemon/mod.rs`）**:
+**启动输出示例（对齐 `src/daemon/mod.rs`，Linux/macOS/Windows 分别自动选用 `inotify`/`FSEvents`/`ReadDirectoryChangesW` 与 `/proc`/`libproc/lsof`/Windows 进程探针）**:
 ```text
 ╔═══════════════════════════════════════════════════════╗
 ║      Agent Body Daemon 已在后台启动运行       ║
 ╚═══════════════════════════════════════════════════════╝
-数据目录:       "/root/.agent-body"
-数据库路径:     "/root/.agent-body/body.db"
-实时监听目录:   ["/root/new/work", "/root/new/shared_proj"]
+数据目录:       "~/.agent-body"
+数据库路径:     "~/.agent-body/body.db"
+实时监听目录:   ["<workspace>/work", "<workspace>/shared_proj"]
 ✅ inotify 文件系统实时监听就绪 (300ms 防抖)
+✅ 事件驱动 Hook 分发器与编排流水线就绪 (hooks: 0, pipelines: 0)
+✅ 动态任务进程定时采集就绪 (每 60 秒轮询 /proc)
+✅ 后台自主深度巡查与属性图增量同步就绪 (每 1800 秒自动巡查)
 ```
 
 ---
