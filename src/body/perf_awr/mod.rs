@@ -3,9 +3,11 @@
 
 pub mod addm_tuner;
 pub mod awr_engine;
+pub mod metrics_export;
 pub mod wait_events;
 
 pub use awr_engine::*;
+pub use metrics_export::*;
 pub use wait_events::*;
 
 #[cfg(test)]

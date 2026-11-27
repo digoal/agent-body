@@ -13,4 +13,5 @@ enable = [
     "hook_gov_compliance",
     "hook_audit_siem",
     "fdw_cmdb_ticket",
+    "obs_telemetry",
 ]

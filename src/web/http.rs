@@ -191,7 +191,14 @@ impl HttpResponse {
         );
         headers.insert("Vary".to_string(), "Origin".to_string());
         headers.insert("Access-Control-Allow-Methods".to_string(), "GET, POST, DELETE, OPTIONS".to_string());
-        headers.insert("Access-Control-Allow-Headers".to_string(), "Content-Type, Authorization".to_string());
+        headers.insert(
+            "Access-Control-Allow-Headers".to_string(),
+            "Content-Type, Authorization, X-Trace-Id, traceparent".to_string(),
+        );
+        headers.insert(
+            "Access-Control-Expose-Headers".to_string(),
+            "X-Trace-Id, traceparent".to_string(),
+        );
         Self {
             status,
             headers,
@@ -282,6 +289,13 @@ impl HttpResponse {
             .header("Content-Type", "application/javascript; charset=utf-8")
             .header("Cache-Control", "no-cache, no-store, must-revalidate")
             .body_str(js)
+    }
+
+    pub fn prometheus(text: &str) -> Self {
+        Self::new(StatusCode::OK)
+            .header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+            .header("Cache-Control", "no-cache, no-store, must-revalidate")
+            .body_str(text)
     }
 
     /// 序列化为标准的 HTTP/1.1 响应报文

@@ -20,6 +20,7 @@ use ext_hook_auth_mtls_rbac::{
 };
 use ext_hook_gov_compliance::{GovComplianceConfig, HookGovComplianceExtension};
 use ext_idx_fts_fuzzy::{FtsFuzzyIndexAm, IdxFtsFuzzyExtension};
+use ext_obs_telemetry::{ObsTelemetryConfig, ObsTelemetryExtension};
 use ext_probe_jvm_middleware::ProbeJvmMiddlewareExtension;
 use ext_probe_linux_ops::ProbeLinuxOpsExtension;
 
@@ -113,6 +114,11 @@ pub fn build_aiops_runtime(
         Box::new(ProbeLinuxOpsExtension::new(&cfg.root_path)),
         Box::new(ProbeJvmMiddlewareExtension::new(&cfg.root_path)),
         Box::new(FdwCmdbTicketExtension::new()),
+        Box::new(ObsTelemetryExtension::new(ObsTelemetryConfig {
+            service_name: "agent-body-probe".to_string(),
+            host_id: cfg.host_id.clone(),
+            ..Default::default()
+        })),
     ];
     runtime.install_extensions(&exts)?;
 
@@ -126,7 +132,8 @@ pub fn build_aiops_runtime(
             manifest,
             None,
             Some(Arc::clone(runtime.waits())),
-        )?;
+        )?
+        .with_observability(Arc::clone(runtime.observability()));
         runtime.register_fdw(Arc::new(adapter));
     }
 
@@ -262,7 +269,7 @@ fn run_self_check_inner(tmp: &Path) -> anyhow::Result<()> {
         bail!("检测到未脱敏凭据泄露");
     }
 
-    // 4. 证据包算子派发校验
+    // 4. 证据包算子派发校验 + 全链路 trace_id 一致性校验
     let pack = probe_rt.runtime.handle_http(&HttpRequest {
         method: "POST".to_string(),
         path: "/api/v1/aiops/evidence-pack".to_string(),
@@ -273,10 +280,49 @@ fn run_self_check_inner(tmp: &Path) -> anyhow::Result<()> {
     if pack.status_code != 200 || pack.body["data"]["tuple_count"].as_u64().unwrap_or(0) < 5 {
         bail!("证据包算子返回异常: {:?}", pack);
     }
+    let pack_trace = pack.body["trace_id"]
+        .as_str()
+        .ok_or_else(|| anyhow::anyhow!("证据包响应缺少 trace_id"))?;
+    let siem_snap = probe_rt.audit_buffer.snapshot();
+    if !siem_snap.iter().any(|e| e.trace_id == pack_trace) {
+        bail!("SIEM 审计缓冲未关联到相同的 trace_id ({pack_trace})");
+    }
+
+    // 5. 可观测指标与自诊断校验
+    let metrics_resp = probe_rt.runtime.handle_http(&HttpRequest {
+        method: "GET".to_string(),
+        path: "/api/v1/obs/metrics".to_string(),
+        bearer_token: Some("local-probe-token".to_string()),
+        is_loopback: true,
+        body: serde_json::json!({"format": "prometheus"}),
+    });
+    let metrics_text = metrics_resp.body["data"]["metrics_text"]
+        .as_str()
+        .unwrap_or("");
+    if metrics_resp.status_code != 200
+        || !metrics_text.contains("agent_body_kernel_wait_duration_seconds_bucket")
+    {
+        bail!("obs metrics 返回异常: {:?}", metrics_resp);
+    }
+    let diag_resp = probe_rt.runtime.handle_http(&HttpRequest {
+        method: "POST".to_string(),
+        path: "/api/v1/obs/diagnose".to_string(),
+        bearer_token: Some("local-probe-token".to_string()),
+        is_loopback: true,
+        body: serde_json::json!({"limit": 10}),
+    });
+    if diag_resp.status_code != 200
+        || !diag_resp.body["data"]["anomalies"]
+            .as_array()
+            .map(|arr| arr.iter().any(|a| a["rule_id"] == "OBS-01"))
+            .unwrap_or(false)
+    {
+        bail!("obs diagnose 应检出前置 401 鉴权拒绝 (OBS-01): {:?}", diag_resp);
+    }
 
     let audit_count = probe_rt.audit_buffer.len();
     println!(
-        "✅ aiops-probe self-check passed (ext={}, tuples={}, audit={audit_count})",
+        "✅ aiops-probe self-check passed (ext={}, tuples={}, audit={audit_count}, trace={pack_trace})",
         probe_rt.runtime.installed_metas().len(),
         ingested
     );

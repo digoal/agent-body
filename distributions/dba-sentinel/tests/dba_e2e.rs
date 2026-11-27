@@ -4,6 +4,7 @@ use std::fs;
 use std::path::Path;
 
 use agent_body_dba::{build_dba_runtime, ingest_tuples, run_self_check, DbaSentinelConfig};
+use agent_body_kernel::dispatcher::HttpRequest;
 use agent_body_sdk::{ClientAuthContext, ProbeContext, TransportKind};
 use ext_hook_audit_siem::format_rfc5424;
 
@@ -79,6 +80,29 @@ fn parses_pg_dm_kingbase_with_redaction_and_siem_audit() {
     assert!(snap.len() >= 2);
     let rfc = format_rfc5424(&snap[0], "dba-host-01", "agent-body-dba");
     assert!(rfc.starts_with("<134>1 "));
+
+    let metrics = dba_rt.runtime.handle_http(&HttpRequest {
+        method: "GET".to_string(),
+        path: "/api/v1/obs/metrics".to_string(),
+        bearer_token: None,
+        is_loopback: true,
+        body: serde_json::json!({"format": "prometheus"}),
+    });
+    assert_eq!(metrics.status_code, 200);
+    assert!(metrics.body["data"]["metrics_text"]
+        .as_str()
+        .unwrap()
+        .contains("agent_body_kernel_wait_duration_seconds_bucket"));
+
+    let diag = dba_rt.runtime.handle_http(&HttpRequest {
+        method: "POST".to_string(),
+        path: "/api/v1/obs/diagnose".to_string(),
+        bearer_token: None,
+        is_loopback: true,
+        body: serde_json::json!({"limit": 10}),
+    });
+    assert_eq!(diag.status_code, 200);
+    assert_eq!(diag.body["data"]["health_grade"], "healthy");
 
     run_self_check().unwrap();
 }

@@ -305,6 +305,7 @@ fn verifies_full_gov_cloud_aiops_scenario_end_to_end() {
         body: serde_json::json!({"host_id": "health-node-01"}),
     });
     assert_eq!(pack_resp.status_code, 200);
+    let pack_trace = pack_resp.body["trace_id"].as_str().unwrap().to_string();
     assert!(!pack_resp.body["data"]["pack_sha256"]
         .as_str()
         .unwrap()
@@ -314,11 +315,16 @@ fn verifies_full_gov_cloud_aiops_scenario_end_to_end() {
         .unwrap()
         .is_empty());
 
-    // 断言 8: RFC5424 SIEM 审计记录产生 + 轨 B 超时强杀不拖垮内核
+    // 断言 8: RFC5424 SIEM 审计记录产生 + trace_id 贯通 + 轨 B 超时强杀不拖垮内核
     let siem_snap = probe_rt.audit_buffer.snapshot();
     assert!(siem_snap.len() >= 4);
-    let rfc_line = format_rfc5424(&siem_snap[0], "health-node-01", "agent-body-probe");
+    let pack_env = siem_snap
+        .iter()
+        .find(|e| e.trace_id == pack_trace)
+        .expect("SIEM buffer must retain the exact DispatchSuccess trace_id");
+    let rfc_line = format_rfc5424(pack_env, "health-node-01", "agent-body-probe");
     assert!(rfc_line.starts_with("<134>1 "));
+    assert!(rfc_line.contains(&format!("trace_id=\"{pack_trace}\"")));
 
     let slow_fix = tmp.path().join("slow.json");
     write_file(&slow_fix, r#"{"sleep_ms": 2000}"#);
@@ -328,7 +334,8 @@ fn verifies_full_gov_cloud_aiops_scenario_end_to_end() {
         None,
         Some(Arc::clone(probe_rt.runtime.waits())),
     )
-    .unwrap();
+    .unwrap()
+    .with_observability(Arc::clone(probe_rt.runtime.observability()));
     probe_rt.runtime.register_fdw(Arc::new(slow_adapter));
     let mut slow_ctx = ProbeContext {
         target_host: Some("health-node-01".to_string()),
@@ -340,6 +347,37 @@ fn verifies_full_gov_cloud_aiops_scenario_end_to_end() {
         .scan_fdw("fdw:cmdb_ticket", None, &mut slow_ctx, &auth_mtls)
         .unwrap_err();
     assert!(timeout_err.to_string().contains("超时"));
+
+    // 断言 9: 校验 Prometheus /metrics 与 body_obs_diagnose 自动检出 401 (OBS-01) 与沙盒超时 (OBS-02)
+    let obs_metrics = probe_rt.runtime.handle_http(&HttpRequest {
+        method: "GET".to_string(),
+        path: "/api/v1/obs/metrics".to_string(),
+        bearer_token: Some("tok-duty-b".to_string()),
+        is_loopback: true,
+        body: serde_json::json!({"format": "prometheus"}),
+    });
+    assert_eq!(obs_metrics.status_code, 200);
+    let prom = obs_metrics.body["data"]["metrics_text"].as_str().unwrap();
+    assert!(prom.contains("agent_body_kernel_wait_duration_seconds_bucket"));
+    assert!(prom.contains("outcome=\"timeout\""));
+
+    let obs_diag = probe_rt.runtime.handle_http(&HttpRequest {
+        method: "POST".to_string(),
+        path: "/api/v1/obs/diagnose".to_string(),
+        bearer_token: Some("tok-duty-b".to_string()),
+        is_loopback: true,
+        body: serde_json::json!({"limit": 20}),
+    });
+    assert_eq!(obs_diag.status_code, 200);
+    assert_eq!(obs_diag.body["data"]["health_grade"], "critical");
+    let rules: Vec<&str> = obs_diag.body["data"]["anomalies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|a| a["rule_id"].as_str())
+        .collect();
+    assert!(rules.contains(&"OBS-01"));
+    assert!(rules.contains(&"OBS-02"));
 
     // 校验内核在沙盒超时后依然健康响应
     let parity_ok = probe_rt.runtime.handle_http(&HttpRequest {

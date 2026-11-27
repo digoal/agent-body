@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-body-perf-base")?.addEventListener("click", () => triggerBodyPerfSnapshot(true));
   document.getElementById("btn-body-perf-awr")?.addEventListener("click", () => generateSelectedBodyPerfAwr());
   document.getElementById("btn-body-perf-tune")?.addEventListener("click", triggerBodyPerfTune);
+  document.getElementById("btn-body-perf-metrics")?.addEventListener("click", loadBodyPrometheusMetrics);
   document.getElementById("body-perf-report-select")?.addEventListener("change", (ev) => {
     const rid = ev.target.value;
     if (rid) loadSavedBodyPerfReport(rid);
@@ -461,6 +462,32 @@ async function copyBodyPerfMarkdown() {
     showToast(`📋 已复制 AWR Markdown 报告 (${md.length} 字符)`, false);
   } catch (e) {
     showToast(`复制失败: ${e.message}`, true);
+  }
+}
+
+async function loadBodyPrometheusMetrics() {
+  const box = document.getElementById("body-perf-metrics-box");
+  if (!box) return;
+  if (box.style.display === "block" && box.dataset.loaded === "1") {
+    box.style.display = "none";
+    return;
+  }
+  box.style.display = "block";
+  box.innerHTML = `<div class="muted-text">⏳ 正在拉取 /metrics (OpenMetrics 0.0.4)...</div>`;
+  try {
+    const resp = await fetch("/metrics");
+    const text = await resp.text();
+    const traceId = resp.headers.get("X-Trace-Id") || "-";
+    const traceparent = resp.headers.get("traceparent") || "-";
+    box.dataset.loaded = "1";
+    box.innerHTML = `<div class="item-top" style="flex-wrap:wrap;gap:6px;">
+        <strong>📊 Prometheus OpenMetrics 0.0.4 实时暴露</strong>
+        <span class="badge mono" style="font-size:11px;">X-Trace-Id: ${esc(traceId)}</span>
+      </div>
+      <div class="muted-text mono mt-4" style="font-size:11px;">traceparent: ${esc(traceparent)}</div>
+      <pre class="md-pre mt-8" style="max-height:240px;overflow:auto;padding:8px;font-size:11px;background:var(--panel);border:1px solid var(--border);border-radius:6px;">${esc(text)}</pre>`;
+  } catch (e) {
+    box.innerHTML = `<div class="empty">拉取 /metrics 失败: ${esc(e.message)}</div>`;
   }
 }
 

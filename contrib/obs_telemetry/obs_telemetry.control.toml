@@ -1,0 +1,13 @@
+[extension]
+id = "obs_telemetry"
+version = "0.1.0"
+kind = "compiled_crate"
+min_sdk_version = "2.0"
+description = "标准可观测性导出与自动诊断扩展（Prometheus / OpenMetrics 0.0.4 / W3C traceparent / JSONL）"
+
+[schema]
+table_prefix = "ext_obs_telemetry__"
+default_autonomy = "L0_OBSERVE"
+
+[capabilities]
+provides_procs = ["body_obs_metrics", "body_obs_diagnose"]

@@ -18,6 +18,7 @@ clap = { version = "4.5", features = ["derive"] }
 ext-hook-audit-siem = { path = "../../contrib/hook_audit_siem" }
 ext-hook-gov-compliance = { path = "../../contrib/hook_gov_compliance" }
 ext-idx-fts-fuzzy = { path = "../../contrib/idx_fts_fuzzy" }
+ext-obs-telemetry = { path = "../../contrib/obs_telemetry" }
 ext-probe-db-engines = { path = "../../contrib/probe_db_engines" }
 ext-probe-linux-ops = { path = "../../contrib/probe_linux_ops" }
 serde = { version = "1.0", features = ["derive"] }

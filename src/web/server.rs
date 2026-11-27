@@ -4,6 +4,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
 
+use crate::body::obs_log::{emit_obs_log, is_json_log_mode, resolve_trace_context};
 use crate::storage::StorageProvider;
 use crate::web::http::{HttpRequest, HttpResponse, Method, StatusCode};
 use crate::web::api;
@@ -137,9 +138,16 @@ impl WebServer {
             .map(|s| !s.trim().is_empty())
             .unwrap_or(false);
         if non_loopback && !has_token {
-            eprintln!(
-                "[Web][SECURITY WARN] 服务绑定在非回环地址 `{}` 且未配置 [web].auth_token，所有写端点与 /api/v1/env/gc 将强制返回 403 Forbidden！",
-                self.config.host
+            emit_obs_log(
+                "WARN",
+                "web",
+                None,
+                &format!(
+                    "服务绑定在非回环地址 `{}` 且未配置 [web].auth_token，所有写端点与 /api/v1/env/gc 将强制返回 403 Forbidden！",
+                    self.config.host
+                ),
+                None,
+                None,
             );
         }
 
@@ -325,6 +333,10 @@ impl WebServer {
         enforce_token_for_writes: bool,
     ) -> HttpResponse {
         let t0 = Instant::now();
+        let (trace_id, traceparent) = resolve_trace_context(
+            req.headers.get("traceparent").map(String::as_str),
+            req.headers.get("x-trace-id").map(String::as_str),
+        );
         let should_audit = matches!(req.method, Method::Post | Method::Put | Method::Delete)
             || req.path == "/api/v1/env/gc"
             || req.path == "/api/v1/links/repair"
@@ -338,7 +350,7 @@ impl WebServer {
             "/api/v1/mesh/dialogue" | "/api/v1/mesh/transfer"
         );
         if !uses_envelope_auth {
-            if let Some(err_resp) =
+            if let Some(mut err_resp) =
                 check_write_or_sensitive_auth(req, auth_token, enforce_token_for_writes)
             {
                 if should_audit {
@@ -353,13 +365,29 @@ impl WebServer {
                         .with_target("endpoint", req.path.clone())
                         .with_outcome("blocked")
                         .with_elapsed_us(t0.elapsed().as_micros() as i64)
-                        .with_delta(serde_json::json!({"status": err_resp.status.0})),
+                        .with_delta(serde_json::json!({
+                            "status": err_resp.status.0,
+                            "trace_id": trace_id,
+                            "traceparent": traceparent,
+                        })),
+                    );
+                }
+                err_resp.headers.insert("X-Trace-Id".to_string(), trace_id.clone());
+                err_resp.headers.insert("traceparent".to_string(), traceparent.clone());
+                if is_json_log_mode() {
+                    emit_obs_log(
+                        "WARN",
+                        "web",
+                        Some(&trace_id),
+                        &format!("{} {} -> {}", req.method.as_str(), req.path, err_resp.status.0),
+                        Some(t0.elapsed().as_micros() as u64),
+                        None,
                     );
                 }
                 return err_resp;
             }
         }
-        let resp = match (req.method.clone(), req.path.as_str()) {
+        let mut resp = match (req.method.clone(), req.path.as_str()) {
             (Method::Get, "/api/v1/brief") => parity_api::handle_brief(req, storage),
             (Method::Post, "/api/v1/placement/suggest") => parity_api::handle_placement_suggest(req, storage),
             (Method::Get, "/api/v1/placement/learn") => parity_api::handle_placement_learn(req, storage),
@@ -424,8 +452,16 @@ impl WebServer {
             (Method::Get, "/api/v1/body/ab-report") => parity_api::handle_body_ab_report(req, storage.clone()),
             (Method::Post, "/api/v1/body/ab-compare") => parity_api::handle_body_ab_compare(req, storage.clone()),
             (Method::Post, "/api/v1/mesh/locks/acquire") => crate::mesh::handle_mesh_lock_acquire(req, storage, auth_token),
+            (Method::Get, "/metrics") | (Method::Get, "/api/v1/metrics") => {
+                let text = crate::body::perf_awr::render_flagship_prometheus_metrics(
+                    storage.as_ref(),
+                    start_time.elapsed().as_secs_f64(),
+                );
+                HttpResponse::prometheus(&text)
+            }
             _ => Self::route_request(req, storage.as_ref(), start_time, auth_token),
         };
+        let elapsed_us = t0.elapsed().as_micros() as u64;
         if let Some(st_arc) = audit_storage {
             let status_code = resp.status.0;
             let outcome = if status_code == 401 || status_code == 403 {
@@ -447,8 +483,31 @@ impl WebServer {
                 )
                 .with_target("endpoint", req.path.clone())
                 .with_outcome(outcome)
-                .with_elapsed_us(t0.elapsed().as_micros() as i64)
-                .with_delta(serde_json::json!({"status": status_code})),
+                .with_elapsed_us(elapsed_us as i64)
+                .with_delta(serde_json::json!({
+                    "status": status_code,
+                    "trace_id": trace_id,
+                    "traceparent": traceparent,
+                })),
+            );
+        }
+        resp.headers.insert("X-Trace-Id".to_string(), trace_id.clone());
+        resp.headers.insert("traceparent".to_string(), traceparent);
+        if is_json_log_mode() {
+            let lvl = if resp.status.0 >= 500 {
+                "ERROR"
+            } else if resp.status.0 >= 400 {
+                "WARN"
+            } else {
+                "INFO"
+            };
+            emit_obs_log(
+                lvl,
+                "web",
+                Some(&trace_id),
+                &format!("{} {} -> {}", req.method.as_str(), req.path, resp.status.0),
+                Some(elapsed_us),
+                None,
             );
         }
         resp

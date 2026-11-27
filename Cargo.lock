@@ -47,6 +47,7 @@ dependencies = [
  "ext-hook-audit-siem",
  "ext-hook-gov-compliance",
  "ext-idx-fts-fuzzy",
+ "ext-obs-telemetry",
  "ext-probe-db-engines",
  "ext-probe-linux-ops",
  "serde",
@@ -98,6 +99,7 @@ dependencies = [
  "ext-hook-auth-mtls-rbac",
  "ext-hook-gov-compliance",
  "ext-idx-fts-fuzzy",
+ "ext-obs-telemetry",
  "ext-probe-jvm-middleware",
  "ext-probe-linux-ops",
  "serde",
@@ -834,6 +836,17 @@ dependencies = [
 
 [[package]]
 name = "ext-idx-fts-fuzzy"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-sdk",
+ "anyhow",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "ext-obs-telemetry"
 version = "0.1.0"
 dependencies = [
  "agent-body-kernel",

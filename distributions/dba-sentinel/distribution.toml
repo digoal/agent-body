@@ -11,4 +11,5 @@ enable = [
     "probe_db_engines",
     "hook_gov_compliance",
     "hook_audit_siem",
+    "obs_telemetry",
 ]

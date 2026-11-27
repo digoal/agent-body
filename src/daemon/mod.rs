@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use anyhow::Result;
 use tokio::time::{interval, interval_at, Instant};
+use crate::body::obs_log::emit_obs_log;
 use crate::config::Config;
 use crate::storage::Storage;
 use crate::env::EnvCollector;
@@ -205,7 +206,14 @@ impl BodyDaemon {
                         if !events.is_empty() {
                             if let Ok(count) = handler.process_events(&events) {
                                 if count > 0 {
-                                    println!("[Watcher] 自动感知并增量同步 {} 个文件变更事件", count);
+                                    emit_obs_log(
+                                        "INFO",
+                                        "watcher",
+                                        None,
+                                        &format!("自动感知并增量同步 {count} 个文件变更事件"),
+                                        None,
+                                        None,
+                                    );
                                 }
                             }
                         }
@@ -253,11 +261,18 @@ impl BodyDaemon {
                             let scheduler = BackgroundScheduler::new(storage_for_cycle);
                             match scheduler.run_inspection_cycle() {
                                 Ok(report) => {
-                                    println!(
-                                        "[Scheduler] 深度巡检完成: 同步进程 {}, 属性图节点更新 {}, 边更新 {}",
-                                        report.synced_processes,
-                                        report.graph_nodes_updated,
-                                        report.graph_edges_updated
+                                    emit_obs_log(
+                                        "INFO",
+                                        "scheduler",
+                                        None,
+                                        &format!(
+                                            "深度巡检完成: 同步进程 {}, 属性图节点更新 {}, 边更新 {}",
+                                            report.synced_processes,
+                                            report.graph_nodes_updated,
+                                            report.graph_edges_updated
+                                        ),
+                                        None,
+                                        None,
                                     );
                                     if let Some(ref tx) = sse_for_cycle {
                                         let msg = serde_json::json!({
@@ -272,12 +287,12 @@ impl BodyDaemon {
                                             }
                                         });
                                         if tx.receiver_count() > 0 && tx.send(msg.to_string()).is_err() {
-                                            eprintln!("[Daemon][WARN] SSE SchedulerCycle 广播失败");
+                                            emit_obs_log("WARN", "daemon", None, "SSE SchedulerCycle 广播失败", None, None);
                                         }
                                     }
                                 }
                                 Err(e) => {
-                                    eprintln!("[Daemon][WARN] 后台深度巡检失败: {}", e);
+                                    emit_obs_log("WARN", "daemon", None, &format!("后台深度巡检失败: {e}"), None, None);
                                 }
                             }
                         });

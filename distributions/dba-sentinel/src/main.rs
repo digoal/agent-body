@@ -33,6 +33,16 @@ enum Commands {
     },
     /// 启动 stdio MCP JSON-RPC 2.0 派发循环
     Mcp,
+    /// 输出 Prometheus / OpenMetrics 或 JSON 格式实时内核指标
+    Metrics {
+        #[arg(long, default_value = "prometheus")]
+        format: String,
+    },
+    /// 执行内置异常规则与热点链路自诊断
+    Diagnose {
+        #[arg(long, default_value_t = 20)]
+        limit: u64,
+    },
     /// 执行 PG / 达梦 / 人大金仓配置解析与合规脱敏离线自检
     SelfCheck,
 }
@@ -44,6 +54,8 @@ fn main() -> anyhow::Result<()> {
         Commands::Catalog => cmd_catalog(),
         Commands::Probe { db_root, os_root } => cmd_probe(db_root, os_root),
         Commands::Mcp => cmd_mcp(),
+        Commands::Metrics { format } => cmd_metrics(format),
+        Commands::Diagnose { limit } => cmd_diagnose(limit),
         Commands::SelfCheck => run_self_check(),
     }
 }
@@ -134,5 +146,43 @@ fn cmd_mcp() -> anyhow::Result<()> {
         writeln!(stdout, "{}", serde_json::to_string(&resp)?)?;
         stdout.flush()?;
     }
+    Ok(())
+}
+
+fn cmd_metrics(format: String) -> anyhow::Result<()> {
+    let cfg = DbaSentinelConfig::default();
+    let dba_rt = build_dba_runtime(&cfg, None)?;
+    let auth = loopback_auth(TransportKind::Cli, "GET", "/api/v1/obs/metrics", true);
+    let ok = dba_rt
+        .runtime
+        .handle_cli(
+            &["obs".to_string(), "metrics".to_string()],
+            Some(serde_json::json!({ "format": format })),
+            &auth,
+        )
+        .map_err(|e| anyhow::anyhow!("metrics 查询失败: {}", e.message()))?;
+    if format.eq_ignore_ascii_case("json") {
+        println!("{}", serde_json::to_string_pretty(&ok.data)?);
+    } else if let Some(txt) = ok.data["metrics_text"].as_str() {
+        print!("{txt}");
+    } else {
+        println!("{}", serde_json::to_string_pretty(&ok.data)?);
+    }
+    Ok(())
+}
+
+fn cmd_diagnose(limit: u64) -> anyhow::Result<()> {
+    let cfg = DbaSentinelConfig::default();
+    let dba_rt = build_dba_runtime(&cfg, None)?;
+    let auth = loopback_auth(TransportKind::Cli, "POST", "/api/v1/obs/diagnose", true);
+    let ok = dba_rt
+        .runtime
+        .handle_cli(
+            &["obs".to_string(), "diagnose".to_string()],
+            Some(serde_json::json!({ "limit": limit })),
+            &auth,
+        )
+        .map_err(|e| anyhow::anyhow!("diagnose 失败: {}", e.message()))?;
+    println!("{}", serde_json::to_string_pretty(&ok.data)?);
     Ok(())
 }

@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use agent_body_kernel::dispatcher::HttpRequest;
 use agent_body_kernel::KernelRuntime;
 use agent_body_sdk::{
     BodyExtension, ClientAuthContext, EvidenceTuple, ProbeContext, TransportKind,
@@ -13,6 +14,7 @@ use anyhow::{bail, Context};
 use ext_hook_audit_siem::{HookAuditSiemExtension, SiemAuditBuffer, SiemFormat, SiemSinkConfig};
 use ext_hook_gov_compliance::{GovComplianceConfig, HookGovComplianceExtension};
 use ext_idx_fts_fuzzy::{FtsFuzzyIndexAm, IdxFtsFuzzyExtension};
+use ext_obs_telemetry::{ObsTelemetryConfig, ObsTelemetryExtension};
 use ext_probe_db_engines::ProbeDbEnginesExtension;
 use ext_probe_linux_ops::ProbeLinuxOpsExtension;
 
@@ -73,6 +75,11 @@ pub fn build_dba_runtime(
         Box::new(siem_ext),
         Box::new(ProbeLinuxOpsExtension::new(&cfg.os_root)),
         Box::new(ProbeDbEnginesExtension::with_roots(cfg.db_roots.clone())),
+        Box::new(ObsTelemetryExtension::new(ObsTelemetryConfig {
+            service_name: "agent-body-dba".to_string(),
+            host_id: cfg.host_id.clone(),
+            ..Default::default()
+        })),
     ];
     runtime.install_extensions(&exts)?;
 
@@ -178,6 +185,35 @@ fn run_self_check_inner(tmp: &Path) -> anyhow::Result<()> {
         bail!("检测到数据库配置 URI 密码未脱敏");
     }
     let ingested = ingest_tuples(&dba_rt, &db_tuples)?;
+
+    let metrics_resp = dba_rt.runtime.handle_http(&HttpRequest {
+        method: "GET".to_string(),
+        path: "/api/v1/obs/metrics".to_string(),
+        bearer_token: None,
+        is_loopback: true,
+        body: serde_json::json!({"format": "prometheus"}),
+    });
+    if metrics_resp.status_code != 200
+        || !metrics_resp.body["data"]["metrics_text"]
+            .as_str()
+            .unwrap_or("")
+            .contains("agent_body_kernel_wait_duration_seconds_bucket")
+    {
+        bail!("dba-sentinel obs metrics 返回异常: {:?}", metrics_resp);
+    }
+
+    let diag_resp = dba_rt.runtime.handle_http(&HttpRequest {
+        method: "POST".to_string(),
+        path: "/api/v1/obs/diagnose".to_string(),
+        bearer_token: None,
+        is_loopback: true,
+        body: serde_json::json!({"limit": 10}),
+    });
+    if diag_resp.status_code != 200
+        || diag_resp.body["data"]["health_grade"].as_str().unwrap_or("") != "healthy"
+    {
+        bail!("dba-sentinel obs diagnose 状态异常: {:?}", diag_resp);
+    }
 
     println!(
         "✅ dba-sentinel self-check passed (ext={}, db_instances={ingested}, audit={})",

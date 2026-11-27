@@ -616,4 +616,40 @@ mod tests {
         );
         assert_eq!(r_health.status, StatusCode::OK);
     }
+
+    #[test]
+    fn test_metrics_endpoint_prometheus_format_and_trace_headers() {
+        let storage = std::sync::Arc::new(SqliteStorageProvider::open_in_memory().expect("sqlite mem"));
+        storage.init().expect("init");
+        let start_time = Instant::now();
+
+        let mut headers = std::collections::HashMap::new();
+        headers.insert(
+            "traceparent".to_string(),
+            "00-abcdef0123456789abcdef0123456789-1122334455667788-01".to_string(),
+        );
+        let req = HttpRequest {
+            method: Method::Get,
+            path: "/metrics".to_string(),
+            raw_query: String::new(),
+            query_params: Default::default(),
+            headers,
+            body: Vec::new(),
+        };
+        let resp = server::WebServer::route_request_arc(&req, storage, &start_time, &None);
+        assert_eq!(resp.status, StatusCode::OK);
+        assert_eq!(
+            resp.headers.get("Content-Type").map(String::as_str),
+            Some("text/plain; version=0.0.4; charset=utf-8")
+        );
+        assert_eq!(
+            resp.headers.get("X-Trace-Id").map(String::as_str),
+            Some("abcdef0123456789abcdef0123456789")
+        );
+        let tp_out = resp.headers.get("traceparent").expect("traceparent header");
+        assert!(tp_out.starts_with("00-abcdef0123456789abcdef0123456789-"));
+        let body = std::str::from_utf8(&resp.body).expect("utf8");
+        assert!(body.contains("agent_body_wait_event_duration_seconds_bucket"));
+        assert!(body.contains("agent_body_process_rss_bytes"));
+    }
 }
