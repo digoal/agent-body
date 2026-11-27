@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agent Body 2.0 — 宿主环境全景指挥舱</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23245A6B'/%3E%3Ctext x='16' y='21' font-size='16' text-anchor='middle' fill='white'%3EB%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%231F5D6E'/%3E%3Ctext x='16' y='21' font-size='16' text-anchor='middle' fill='white'%3EB%3C/text%3E%3C/svg%3E">
   <script>
     try {
-      var savedTheme = localStorage.getItem("agent_body_ui_theme") || "dark";
-      document.documentElement.setAttribute("data-theme", savedTheme === "light" ? "light" : "dark");
+      var savedTheme = localStorage.getItem("agent_body_ui_theme") || "light";
+      document.documentElement.setAttribute("data-theme", savedTheme === "dark" ? "dark" : "light");
     } catch (e) {}
   </script>
   <link rel="stylesheet" href="/app.css">
@@ -17,7 +17,14 @@
   <div id="app">
     <header class="topbar">
       <div class="brand">
-        <span class="pulse-dot"></span>
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L20 6.5V17.5L12 22L4 17.5V6.5L12 2Z" />
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v7M20 6.5l-5.4 3.2M4 6.5l5.4 3.2" />
+          </svg>
+          <span class="pulse-dot"></span>
+        </span>
         <div>
           <h1>Agent Body <span class="ver-badge">v1.1.0 · Agent 本体</span></h1>
           <p class="subtitle">脑体分离具身底座 · 宿主机感官 × 小脑反射 × 海马体接力 × 五维稳态</p>
@@ -34,57 +41,84 @@
       </div>
 
       <div class="topbar-actions">
-        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 43/43 能力对齐矩阵">✅ 43/43</span>
+        <span id="parity-badge" class="sse-pill" style="cursor:pointer;" title="点击查看黑白屏 43/43 能力对齐矩阵">43/43 对齐</span>
         <span id="sse-badge" class="sse-pill connecting">SSE</span>
-        <button id="btn-auth-token" class="btn btn-ghost btn-sm" title="配置 [web].auth_token 用于写操作与 GC 鉴权">🔑 Token</button>
-        <button id="btn-theme-toggle" class="btn btn-theme btn-sm" title="切换白天工程蓝图 / 夜间深空指挥舱 (快捷键 T)">☀️ 蓝图</button>
-        <button id="btn-toggle-mirror" class="btn btn-ghost btn-sm" title="展开/收起黑屏命令镜像器">⌨️ 镜像</button>
-        <button id="btn-toggle-sse" class="btn btn-ghost btn-sm" title="展开/收起实时事件流">⚡ 事件 <span id="sse-unread-badge" class="badge hidden">0</span></button>
-        <button id="btn-global-refresh" class="btn btn-primary btn-sm">↻ 刷新</button>
+        <button id="btn-auth-token" class="btn btn-ghost btn-sm" title="配置 [web].auth_token 用于写操作与 GC 鉴权">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M21 2l-9.6 9.6M15.5 7.5l3 3"/></svg>
+          <span class="btn-label">Token</span>
+        </button>
+        <button id="btn-theme-toggle" class="btn btn-theme btn-sm" title="切换白天工程蓝图 / 夜间深空指挥舱 (快捷键 T)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <span class="btn-label">深空</span>
+        </button>
+        <button id="btn-toggle-mirror" class="btn btn-ghost btn-sm" title="展开/收起黑屏命令镜像器">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span class="btn-label">镜像</span>
+        </button>
+        <button id="btn-toggle-sse" class="btn btn-ghost btn-sm" title="展开/收起实时事件流">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span class="btn-label">事件</span>
+          <span id="sse-unread-badge" class="badge hidden">0</span>
+        </button>
+        <button id="btn-global-refresh" class="btn btn-primary btn-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          <span class="btn-label">刷新</span>
+        </button>
       </div>
     </header>
 
     <div class="workspace">
       <nav class="sidenav">
+        <div class="nav-group-label">感知与事实</div>
         <button class="nav-btn active" data-view="topology">
-          <span class="nav-ico">🕸️</span>
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M10.8 7.2L6.2 15.8M13.2 7.2l4.6 8.6M7.5 18h9"/></svg></span>
           <span>事实拓扑图谱</span>
         </button>
         <button class="nav-btn" data-view="facts">
-          <span class="nav-ico">📡</span>
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 010 8.49M7.76 16.24a6 6 0 010-8.49M19.07 4.93a10 10 0 010 14.14M4.93 19.07a10 10 0 010-14.14"/></svg></span>
           <span>运行时事实雷达</span>
         </button>
+
+        <div class="nav-group-label">协作与治理</div>
         <button class="nav-btn" data-view="locks">
-          <span class="nav-ico">🔒</span>
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
           <span>协作锁与死锁</span>
         </button>
         <button class="nav-btn" data-view="ecosystem">
-          <span class="nav-ico">🧭</span>
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span>
           <span>生态防爆路由</span>
         </button>
         <button class="nav-btn" data-view="governance">
-          <span class="nav-ico">📐</span>
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
           <span>规约 · 记忆 · Mesh</span>
         </button>
-        <button class="nav-btn nav-btn-demo" data-view="demo">
-          <span class="nav-ico">🎬</span>
-          <span>路演演示剧场</span>
-        </button>
-        <button class="nav-btn" data-view="benchmark">
-          <span class="nav-ico">📊</span>
-          <span>实证基准与账本</span>
-        </button>
-        <button class="nav-btn" data-view="audit">
-          <span class="nav-ico">📜</span>
-          <span>双域审计与进化</span>
-        </button>
+
+        <div class="nav-group-label">本体与实证</div>
         <button class="nav-btn" data-view="body">
-          <span class="nav-ico">🧬</span>
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
           <span>本体中枢与稳态</span>
         </button>
+        <button class="nav-btn" data-view="audit">
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+          <span>双域审计与进化</span>
+        </button>
+        <button class="nav-btn" data-view="benchmark">
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+          <span>实证基准与账本</span>
+        </button>
+        <button class="nav-btn nav-btn-demo" data-view="demo">
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
+          <span>路演演示剧场</span>
+        </button>
         <div class="sidenav-footer">
-          <a href="/deck" target="_blank" class="btn btn-ghost btn-xs sidenav-link">📽️ 路演 PPT (/deck)</a>
-          <a href="/presentation" target="_blank" class="btn btn-ghost btn-xs sidenav-link">🎨 架构 PPT</a>
+          <a href="/deck" target="_blank" class="btn btn-ghost btn-xs sidenav-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span class="btn-label">路演 PPT (/deck)</span>
+          </a>
+          <a href="/presentation" target="_blank" class="btn btn-ghost btn-xs sidenav-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            <span class="btn-label">架构 PPT</span>
+          </a>
         </div>
       </nav>
 

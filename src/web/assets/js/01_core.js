@@ -1,6 +1,6 @@
 // Agent Body 2.0 Web Console (Zero External Dependencies)
 const state = {
-  theme: "dark",
+  theme: "light",
   activeView: "topology",
   factsTab: "ports",
   govTab: "brief",
@@ -48,13 +48,13 @@ const NODE_COLORS_DARK = {
 };
 
 const NODE_COLORS_LIGHT = {
-  process: "#245A6B",
-  port: "#BE653B",
-  service: "#5B4B8A",
+  process: "#1F5D6E",
+  port: "#C25E32",
+  service: "#5C4C8E",
   cron: "#A84A6C",
-  git: "#2F7A66",
-  file: "#64747B",
-  memory: "#9A7422",
+  git: "#21735C",
+  file: "#64767E",
+  memory: "#A1741B",
   domain_term: "#1E6F68",
   knowhow: "#B45309",
   section: "#475569",
@@ -74,7 +74,7 @@ function rawJsonDrawer(data, title) {
 }
 
 function initTheme() {
-  let saved = "dark";
+  let saved = "light";
   try {
     const v = localStorage.getItem("agent_body_ui_theme");
     if (v === "light" || v === "dark") saved = v;
@@ -83,7 +83,7 @@ function initTheme() {
 }
 
 function applyTheme(theme, persist) {
-  const next = theme === "light" ? "light" : "dark";
+  const next = theme === "dark" ? "dark" : "light";
   state.theme = next;
   document.documentElement.setAttribute("data-theme", next);
   if (persist !== false) {
@@ -91,7 +91,18 @@ function applyTheme(theme, persist) {
   }
   const btn = document.getElementById("btn-theme-toggle");
   if (btn) {
-    btn.innerText = next === "light" ? "🌙 深空" : "☀️ 蓝图";
+    const label = btn.querySelector(".btn-label");
+    if (label) {
+      label.innerText = next === "light" ? "深空" : "蓝图";
+      const svg = btn.querySelector("svg");
+      if (svg) {
+        svg.innerHTML = next === "light"
+          ? '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>'
+          : '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+      }
+    } else {
+      btn.innerText = next === "light" ? "深空" : "蓝图";
+    }
   }
   if (state.simNodes.length > 0) {
     drawTopology();
@@ -114,7 +125,13 @@ function updateAuthTokenButton() {
   const btn = document.getElementById("btn-auth-token");
   if (!btn) return;
   const has = getStoredAuthToken().length > 0;
-  btn.innerText = has ? "🔑 已鉴权" : "🔑 Token";
+  btn.classList.toggle("is-authed", has);
+  const label = btn.querySelector(".btn-label");
+  if (label) {
+    label.innerText = has ? "已鉴权" : "Token";
+  } else {
+    btn.innerText = has ? "已鉴权" : "Token";
+  }
   btn.title = has
     ? "已配置 Web Bearer Token (点击修改或留空清除)"
     : "配置 [web].auth_token 用于写操作与 GC 鉴权";
@@ -166,18 +183,17 @@ function showToast(msg, isError) {
   if (!el) {
     el = document.createElement("div");
     el.id = "global-toast-banner";
-    el.style.cssText = "position:fixed;top:64px;right:20px;z-index:9999;max-width:460px;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.45);transition:opacity 0.2s;";
+    el.className = "global-toast";
     document.body.appendChild(el);
   }
   const err = Boolean(isError) || /失败|错误|Unauthorized|401|403/.test(String(msg));
-  el.style.background = err ? "var(--orange)" : "var(--green)";
-  el.style.color = "#fff";
+  el.classList.toggle("is-error", err);
   el.innerText = String(msg);
-  el.style.opacity = "1";
   el.style.display = "block";
+  requestAnimationFrame(() => el.classList.add("is-visible"));
   clearTimeout(window.__toastTimer);
   window.__toastTimer = setTimeout(() => {
-    el.style.opacity = "0";
+    el.classList.remove("is-visible");
     setTimeout(() => { el.style.display = "none"; }, 220);
   }, 4500);
 }

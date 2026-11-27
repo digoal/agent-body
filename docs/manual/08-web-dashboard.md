@@ -36,9 +36,9 @@
    - 展示确定性 `body_id`、六大生理器官实时自省、五维生命体征雷达与一键 `L1_AUTONOMIC` 稳态自愈、`L0~L3` 四级自治权限包络表、跨大脑 `ContinuityCapsule (<=300 tok)` 接力保存/恢复表单、内生 Wait Events (18/18) + `/proc/self` + AWR 快照黄金基线差分/报告库（含 `delete_snapshot` / `delete_awr_report`）、`ADDM` `L1` 自调优、多本体 `/api/v1/mesh/body_manifest` 联邦名片视图，以及 **Phase 58/63 三态运行模式（`bypass`/`shadow_ab`/`body_only`）、MCP Schema 减税档位（`core`/`dev`/`ops`/`full`）与 Shadow A/B 证伪自愈（`H1~H5`）交互控制台**；
    - 拓扑/资产雷达同步支持按 `modality`、`asset_type`、`kv_filter`（如 `schema_version=2.0`）、`fuzzy`、`include_links` 过滤 Omni-RRF 召回，并支持一键触发 `--extract-knowhow` / `--backfill-multimodal` 扫描。
 
-### 1.1 ☀️ 白天工程蓝图 / 🌙 夜间深空双色调切换 (Phase 25)
+### 1.1 ☀️ 白天工程蓝图（默认） / 🌙 夜间深空双色调切换 (Phase 25+)
 - 顶栏右侧提供 `#btn-theme-toggle` 一键昼夜主题切换（非输入焦点时可按快捷键 **`T`** 瞬间切换，状态自动持久化至 `localStorage`）；
-- **白天模式**采用暖纸工程蓝图色系（`#F7F6F2` 暖纸底 + `#245A6B` 深靛青 + `#BE653B` 陶橙 + `#2F7A66` 青绿），**夜间模式**采用深空指挥舱高对比暗色系；切换瞬间 Canvas 拓扑图节点标签、连边与选中外环自动同步重绘；
+- **白天模式（默认）**采用暖纸工程蓝图色系（`#F6F4EF` 暖纸底 + 纯白 `#FFFFFF` 卡片 + `#1F5D6E` 深蓝图青 + `#C25E32` 暖陶橙 + `#21735C` 松林绿），久看护眼；**夜间模式**采用深空指挥舱高对比暗色系；切换瞬间 Canvas 拓扑图节点描边、文字底衬、连边与选中外环自动同步重绘；
 - 端口防撞、Pre-Hook、放置推导、DuckDB 热力图与趋势、宿主 GC 等交互结果默认展示可视化摘要卡片与进度条，原始 JSON 收纳在可折叠 `<details>` 抽屉中。
 
 ---

@@ -722,12 +722,12 @@ function drawTopology() {
 
   const isLight = state.theme === "light";
   const palette = isLight ? NODE_COLORS_LIGHT : NODE_COLORS_DARK;
-  const edgeNormal = isLight ? "rgba(36, 90, 107, 0.22)" : "rgba(148, 163, 184, 0.22)";
-  const edgeFocus = isLight ? "#245A6B" : "#38bdf8";
-  const edgeLabelNormal = isLight ? "rgba(70, 88, 95, 0.78)" : "rgba(148, 163, 184, 0.72)";
-  const edgeLabelFocus = isLight ? "#1E4B5A" : "#7dd3fc";
-  const nodeOutline = isLight ? "#BE653B" : "#ffffff";
-  const nodeLabelColor = isLight ? "#1B2B33" : "#e2e8f0";
+  const edgeNormal = isLight ? "rgba(31, 93, 110, 0.24)" : "rgba(148, 163, 184, 0.22)";
+  const edgeFocus = isLight ? "#C25E32" : "#38bdf8";
+  const edgeLabelNormal = isLight ? "rgba(52, 71, 80, 0.80)" : "rgba(148, 163, 184, 0.72)";
+  const edgeLabelFocus = isLight ? "#9E4720" : "#7dd3fc";
+  const nodeOutline = isLight ? "#C25E32" : "#ffffff";
+  const nodeLabelColor = isLight ? "#17252B" : "#e2e8f0";
 
   const kw = (document.getElementById("topo-search")?.value || "").trim().toLowerCase();
   const focusId = state.hoverNodeId || state.selectedNodeId;
@@ -791,17 +791,46 @@ function drawTopology() {
       ctx.strokeStyle = nodeOutline;
       ctx.lineWidth = 2.4;
       ctx.stroke();
+    } else if (isLight) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.88)";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
     }
 
     if (state.cam.zoom > 0.45 || n.inDeg > 0 || isSelected || (kw && matched)) {
-      ctx.fillStyle = nodeLabelColor;
-      ctx.font = isSelected ? "bold 11px sans-serif" : "10px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(n.label.slice(0, 26), n.x, n.y + n.radius + 12);
+      drawNodeLabelPill(ctx, n.label.slice(0, 26), n.x, n.y + n.radius + 12, isSelected, isLight, nodeLabelColor);
     }
   }
   ctx.globalAlpha = 1;
   ctx.restore();
+}
+
+function drawNodeLabelPill(ctx, text, x, baselineY, isSelected, isLight, labelColor, fontStr) {
+  ctx.font = fontStr || (isSelected ? "bold 11px sans-serif" : "10px monospace");
+  const metrics = ctx.measureText(text);
+  const padX = 5;
+  const w = metrics.width + padX * 2;
+  const h = 15;
+  const rx = x - w / 2;
+  const ry = baselineY - 11;
+
+  ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.88)" : "rgba(11, 17, 32, 0.78)";
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(rx, ry, w, h, 4);
+  else ctx.rect(rx, ry, w, h);
+  ctx.fill();
+
+  if (isSelected || isLight) {
+    ctx.strokeStyle = isSelected
+      ? (isLight ? "rgba(194, 94, 50, 0.45)" : "rgba(56, 189, 248, 0.45)")
+      : "rgba(200, 193, 180, 0.55)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = labelColor;
+  ctx.textAlign = "center";
+  ctx.fillText(text, x, baselineY);
 }
 
 function drawSphereTopology(ctx, w, h, theme) {
@@ -948,6 +977,10 @@ function drawSphereTopology(ctx, w, h, theme) {
       ctx.strokeStyle = theme.nodeOutline;
       ctx.lineWidth = isSelected ? 2.6 : 1.8;
       ctx.stroke();
+    } else if (theme.isLight) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.90)";
+      ctx.lineWidth = 1.25;
+      ctx.stroke();
     }
 
     // 高引用计数角标 (×N)
@@ -957,14 +990,14 @@ function drawSphereTopology(ctx, w, h, theme) {
       const tw = ctx.measureText(tag).width + 6;
       const bx = n.screenX + n.screenR * 0.7;
       const by = n.screenY - n.screenR * 0.9;
-      ctx.fillStyle = theme.isLight ? "#1B2B33" : "#0f172a";
+      ctx.fillStyle = theme.isLight ? "#17252B" : "#0f172a";
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(bx, by - 7, tw, 13, 4) : ctx.rect(bx, by - 7, tw, 13);
       ctx.fill();
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
       ctx.stroke();
-      ctx.fillStyle = theme.isLight ? "#ffffff" : "#f8fafc";
+      ctx.fillStyle = "#ffffff";
       ctx.textAlign = "left";
       ctx.fillText(tag, bx + 3, by + 3);
     }
@@ -972,10 +1005,8 @@ function drawSphereTopology(ctx, w, h, theme) {
     // 仅正面、高重要度或选中/搜索节点显示文字标签，防止背面文字穿透叠字
     const showLabel = isSelected || (theme.kw && matched) || (n.pz > 0.25 && (n.inDeg > 0 || state.cam.zoom > 0.95 || state.simNodes.length < 70));
     if (showLabel) {
-      ctx.fillStyle = theme.nodeLabelColor;
-      ctx.font = isSelected ? "bold 11px sans-serif" : (n.pz > 0.6 ? "600 10px monospace" : "9px monospace");
-      ctx.textAlign = "center";
-      ctx.fillText(n.label.slice(0, 26), n.screenX, n.screenY + n.screenR + 12);
+      const lblFont = isSelected ? "bold 11px sans-serif" : (n.pz > 0.6 ? "600 10px monospace" : "9px monospace");
+      drawNodeLabelPill(ctx, n.label.slice(0, 26), n.screenX, n.screenY + n.screenR + 12, isSelected, theme.isLight, theme.nodeLabelColor, lblFont);
     }
     ctx.restore();
   }
