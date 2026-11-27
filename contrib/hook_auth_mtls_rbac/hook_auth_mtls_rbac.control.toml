@@ -1,0 +1,16 @@
+[extension]
+id = "hook_auth_mtls_rbac"
+version = "0.1.0"
+kind = "compiled_crate"
+min_sdk_version = "2.0"
+requires = []
+relocatable = true
+description = "全量读/写强制鉴权、mTLS 证书映射与多租户/环境 RLS 行级隔离拦截器"
+
+[schema]
+migration_dir = "sql/"
+table_prefix = "ext_hook_auth_mtls_rbac__"
+default_autonomy = "L0_OBSERVE"
+
+[capabilities]
+provides_hooks = ["client_auth", "object_access", "planner_rewrite"]

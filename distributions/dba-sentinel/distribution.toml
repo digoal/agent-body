@@ -1,0 +1,14 @@
+[distribution]
+name = "agent-body-dba"
+edition = "dba-sentinel"
+kernel = "2.0"
+description = "跨平台数据库配置与宿主机协同诊断发行版 (PG / 达梦 DM8 / 人大金仓 + 脱敏 + SIEM)"
+
+[contrib]
+enable = [
+    "idx_fts_fuzzy",
+    "probe_linux_ops",
+    "probe_db_engines",
+    "hook_gov_compliance",
+    "hook_audit_siem",
+]

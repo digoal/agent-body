@@ -1,0 +1,17 @@
+[package]
+name = "ext-gov-placement"
+version = "0.1.0"
+edition = "2021"
+authors = ["digoal 德哥"]
+description = "Agent Body Contrib Extension — Workspace Placement Governance & Temp Script Guard Hook"
+license = "Apache-2.0"
+
+[dependencies]
+agent-body-sdk = { path = "../../kernel/body-sdk" }
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+agent-body-kernel = { path = "../../kernel/body-kernel" }
+tempfile = "3.10"

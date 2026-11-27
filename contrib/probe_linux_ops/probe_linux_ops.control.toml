@@ -1,0 +1,18 @@
+[extension]
+id = "probe_linux_ops"
+version = "0.1.0"
+kind = "compiled_crate"
+min_sdk_version = "2.0"
+requires = []
+relocatable = true
+description = "Linux/信创运维深度探针（started_at/长命令/ESTABLISHED/RHEL Cron/Systemd 运行态/CapEff/漂移 Worker）"
+
+[schema]
+migration_dir = "sql/"
+table_prefix = "ext_probe_linux_ops__"
+default_autonomy = "L0_OBSERVE"
+
+[capabilities]
+provides_types = ["entity:linux_process", "entity:linux_socket", "entity:linux_unit", "entity:linux_cron"]
+provides_fdws = ["fdw:linux_ops"]
+provides_workers = ["worker:proc_port_drift"]

@@ -1,0 +1,16 @@
+[distribution]
+name = "agent-body-probe"
+edition = "aiops-probe"
+kernel = "2.0"
+description = "政务云 / 企业 AIOps 极简可观测探针发行版（零 DuckDB / 零 C++ 运行时 / 强制读鉴权 + RLS + 合规脱敏 + SIEM）"
+
+[contrib]
+enable = [
+    "idx_fts_fuzzy",
+    "probe_linux_ops",
+    "probe_jvm_middleware",
+    "hook_auth_mtls_rbac",
+    "hook_gov_compliance",
+    "hook_audit_siem",
+    "fdw_cmdb_ticket",
+]

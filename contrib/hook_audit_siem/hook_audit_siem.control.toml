@@ -1,0 +1,16 @@
+[extension]
+id = "hook_audit_siem"
+version = "0.1.0"
+kind = "compiled_crate"
+min_sdk_version = "2.0"
+requires = []
+relocatable = true
+
+[schema]
+migration_dir = "sql"
+table_prefix = "ext_hook_audit_siem__"
+default_autonomy = "L1_AUTONOMIC"
+
+[capabilities]
+provides_hooks = ["emit_audit"]
+provides_workers = ["worker:siem_flush"]

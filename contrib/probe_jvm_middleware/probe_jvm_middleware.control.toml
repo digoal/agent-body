@@ -1,0 +1,17 @@
+[extension]
+id = "probe_jvm_middleware"
+version = "0.1.0"
+kind = "compiled_crate"
+min_sdk_version = "2.0"
+requires = ["probe_linux_ops"]
+relocatable = true
+description = "Java/SpringBoot/Tomcat/东方通与 Nginx include/upstream 后端转发拓扑探针"
+
+[schema]
+migration_dir = "sql/"
+table_prefix = "ext_probe_jvm_middleware__"
+default_autonomy = "L0_OBSERVE"
+
+[capabilities]
+provides_types = ["entity:jvm_app", "entity:nginx_upstream", "edge:proxies_to"]
+provides_fdws = ["fdw:jvm_middleware"]

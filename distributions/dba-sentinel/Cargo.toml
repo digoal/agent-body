@@ -1,0 +1,27 @@
+[package]
+name = "agent-body-dba"
+version = "2.0.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Agent Body 数据库专项诊断发行版 (PostgreSQL / 达梦 / 人大金仓 + OS + 合规脱敏 + SIEM)"
+
+[[bin]]
+name = "agent-body-dba"
+path = "src/main.rs"
+
+[dependencies]
+agent-body-kernel = { path = "../../kernel/body-kernel" }
+agent-body-protocol = { path = "../../kernel/body-protocol" }
+agent-body-sdk = { path = "../../kernel/body-sdk" }
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+ext-hook-audit-siem = { path = "../../contrib/hook_audit_siem" }
+ext-hook-gov-compliance = { path = "../../contrib/hook_gov_compliance" }
+ext-idx-fts-fuzzy = { path = "../../contrib/idx_fts_fuzzy" }
+ext-probe-db-engines = { path = "../../contrib/probe_db_engines" }
+ext-probe-linux-ops = { path = "../../contrib/probe_linux_ops" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+tempfile = "3.10"

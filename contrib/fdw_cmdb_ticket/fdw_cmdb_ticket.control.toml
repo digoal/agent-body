@@ -1,0 +1,16 @@
+[extension]
+id = "fdw_cmdb_ticket"
+version = "0.1.0"
+kind = "compiled_crate"
+min_sdk_version = "2.0"
+requires = []
+relocatable = true
+
+[schema]
+migration_dir = "sql"
+table_prefix = "ext_fdw_cmdb_ticket__"
+default_autonomy = "L0_OBSERVE"
+
+[capabilities]
+provides_types = ["entity:cmdb_ci", "entity:change_ticket"]
+provides_procs = ["body_aiops_evidence_pack"]

@@ -1,0 +1,15 @@
+[extension]
+id = "hook_gov_compliance"
+version = "0.1.0"
+kind = "compiled_crate"
+min_sdk_version = "2.0"
+requires = []
+relocatable = true
+
+[schema]
+migration_dir = "sql"
+table_prefix = "ext_hook_gov_compliance__"
+default_autonomy = "L0_OBSERVE"
+
+[capabilities]
+provides_hooks = ["tuple_redact", "planner_rewrite"]
