@@ -5,14 +5,14 @@ use std::time::Duration;
 
 use agent_body_kernel::{
     catalog::{compute_control_hash, new_catalog_trace_id, validate_scoped_table_name},
-    topo_sort_extensions, CatalogStore, ExtensionState,
+    topo_sort_extensions, CatalogStore, ExtensionState, KernelRuntime,
 };
 use agent_body_sdk::{
-    AuthVerdict, AutonomyLevel, BgWorkerRoutine, CancellationToken, ClientAuthContext,
-    ClientAuthHook, EvidenceTuple, ExtensionKind, ExtensionMeta, ExtensionRegistrar, FdwRoutine,
-    FdwScanState, FdwSourceHealth, FunctionCallInfo, HookRegistration, KernelServices,
-    OperatorRoutine, ProbeContext, ProcRoutine, ProcSpec, ProcVolatility, TypeRoutine,
-    WorkerTickOutcome, WorkerTrigger,
+    AuditEnvelope, AuthVerdict, AutonomyLevel, BgWorkerRoutine, BodyExtension, CancellationToken,
+    ClientAuthContext, ClientAuthHook, EmitAuditHook, EvidenceTuple, ExtensionKind, ExtensionMeta,
+    ExtensionRegistrar, FailPolicy, FdwRoutine, FdwScanState, FdwSourceHealth, FunctionCallInfo,
+    HookRegistration, KernelServices, OperatorRoutine, ProbeContext, ProcRoutine, ProcSpec,
+    ProcVolatility, TransportKind, TypeRoutine, WorkerTickOutcome, WorkerTrigger, SDK_API_VERSION,
 };
 use anyhow::bail;
 use rusqlite::Connection;
@@ -218,4 +218,79 @@ default_autonomy = "L0_OBSERVE"
             .unwrap();
         assert_eq!(count, 1, "expected 1 row in {tbl}");
     }
+}
+
+struct CaptureAuditHook(Arc<std::sync::Mutex<Vec<AuditEnvelope>>>);
+impl EmitAuditHook for CaptureAuditHook {
+    fn hook_id(&self) -> &'static str {
+        "hook:capture_audit"
+    }
+    fn fail_policy(&self) -> FailPolicy {
+        FailPolicy::FailOpen
+    }
+    fn emit(&self, envelope: &AuditEnvelope) -> anyhow::Result<()> {
+        self.0.lock().unwrap().push(envelope.clone());
+        Ok(())
+    }
+}
+
+struct TraceProbeExt;
+impl BodyExtension for TraceProbeExt {
+    fn meta(&self) -> ExtensionMeta {
+        ExtensionMeta {
+            ext_id: "trace_probe".to_string(),
+            version: "0.1.0".to_string(),
+            kind: ExtensionKind::CompiledCrate,
+            min_sdk_version: SDK_API_VERSION.to_string(),
+            table_prefix: "ext_trace_probe__".to_string(),
+            requires: vec![],
+        }
+    }
+    fn register(&self, reg: &mut ExtensionRegistrar) -> anyhow::Result<()> {
+        reg.register_proc(Arc::new(DummyProc));
+        Ok(())
+    }
+}
+
+#[test]
+fn verifies_trace_id_parity_across_dispatch_audit_and_observability() {
+    let mut rt = KernelRuntime::open_sqlite_in_memory(None).unwrap();
+    let captured = Arc::new(std::sync::Mutex::new(Vec::new()));
+    rt.register_hook(HookRegistration::EmitAudit(Arc::new(CaptureAuditHook(
+        Arc::clone(&captured),
+    ))));
+    rt.install_extensions(&[Box::new(TraceProbeExt)]).unwrap();
+    rt.observability().set_slow_threshold_us(0);
+
+    let auth = ClientAuthContext {
+        transport: TransportKind::Cli,
+        cert: None,
+        bearer_token: None,
+        method: "GET".to_string(),
+        path: "/api/v1/sample/ping".to_string(),
+        is_loopback: true,
+        is_read_only: true,
+    };
+    let ok = rt
+        .handle_cli(&["sample".to_string(), "ping".to_string()], None, &auth)
+        .unwrap();
+    let audit_list = captured.lock().unwrap().clone();
+    assert_eq!(audit_list.len(), 1);
+    assert_eq!(
+        audit_list[0].trace_id, ok.trace_id,
+        "DispatchSuccess.trace_id 与 AuditEnvelope.trace_id 必须完全一致"
+    );
+
+    let snap = rt.observability_snapshot();
+    assert!(snap.in_flight.is_empty());
+    assert!(
+        snap.slow_ops
+            .iter()
+            .any(|s| s.trace_id == ok.trace_id && s.target == "sample_ping"),
+        "SlowOpRecord 必须延续同一个 trace_id"
+    );
+    assert!(snap
+        .op_stats
+        .iter()
+        .any(|s| s.kind == "proc" && s.target == "sample_ping" && s.ok_count == 1));
 }

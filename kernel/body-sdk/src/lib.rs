@@ -8,6 +8,7 @@
 
 pub mod extension;
 pub mod hooks;
+pub mod observability;
 pub mod routines;
 pub mod types;
 
@@ -47,6 +48,11 @@ pub use hooks::{
     FieldPathContext, GuardVerdict, ObjectAccessContext, ObjectAccessHook, PlanRewriteVerdict,
     PlannerRewriteHook, RecoveryPrescription, RedactDirection, RedactVerdict, SearchPlan,
     TransportKind, TupleRedactHook,
+};
+pub use observability::{
+    InFlightOpSnapshot, KernelObservabilitySnapshot, KernelOpStatsRow, KernelWaitSnapshotRow,
+    ObservabilityProvider, SlowOpRecord, KERNEL_LATENCY_BUCKET_BOUNDS_US,
+    KERNEL_LATENCY_BUCKET_LABELS,
 };
 pub use routines::{
     BgWorkerRoutine, CancellationToken, FdwRoutine, FdwScanState, FdwSourceHealth,

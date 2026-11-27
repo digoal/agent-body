@@ -31,6 +31,11 @@ BANNED_KERNEL_BUSINESS_WORDS = (
     "kingbase",
     "dameng",
     "placement",
+    "prometheus",
+    "otlp",
+    "grafana",
+    "loki",
+    "jaeger",
 )
 
 

@@ -18,6 +18,7 @@ pub mod engine;
 mod engine_fdw;
 pub mod hook_chain;
 pub mod mem_am;
+pub mod observability;
 pub mod oop_sandbox;
 pub mod rrf_executor;
 pub mod scoped_sql;
@@ -33,6 +34,9 @@ pub use dispatcher::{
 pub use engine::KernelRuntime;
 pub use hook_chain::{HookChain, LoopbackOrTokenAuthHook};
 pub use mem_am::MemoryTableAm;
+pub use observability::{
+    InFlightGuard, InFlightRegistry, KernelObservability, KernelStatsRegistry, SlowOpRing,
+};
 pub use oop_sandbox::{sanitize_prompt_injection, OutOfProcessFdwAdapter};
 pub use rrf_executor::{
     FusedHit, RrfMergeExecutor, RrfSearchResult, SearchQuery, DEFAULT_RRF_K,

@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
+use crate::observability::{KernelObservabilitySnapshot, ObservabilityProvider};
 use crate::types::{
     AutonomyLevel, CallerIdentity, EntityScanFilter, EventQueryFilter, EvidenceTuple, KernelEdge,
     KernelEventRecord, KernelLease, KernelSubGraph, LeaseAcquireReq, LeaseOutcome, ProcVolatility,
@@ -281,6 +282,7 @@ pub struct KernelServices {
     pub caller: CallerIdentity,
     pub trace_id: String,
     pub table_am: Arc<dyn TableAmRoutine>,
+    pub observability: Option<Arc<dyn ObservabilityProvider>>,
 }
 
 impl KernelServices {
@@ -293,10 +295,22 @@ impl KernelServices {
             caller,
             trace_id: trace_id.into(),
             table_am,
+            observability: None,
         }
+    }
+
+    /// 挂载只读内核可观测快照提供器（保持与 `KernelServices::new` 向后兼容）
+    pub fn with_observability(mut self, provider: Arc<dyn ObservabilityProvider>) -> Self {
+        self.observability = Some(provider);
+        self
     }
 
     pub fn table_am(&self) -> &dyn TableAmRoutine {
         self.table_am.as_ref()
+    }
+
+    /// 获取当前内核实时可观测快照（若运行时未挂载则返回 `None`）
+    pub fn observability_snapshot(&self) -> Option<KernelObservabilitySnapshot> {
+        self.observability.as_ref().map(|p| p.snapshot())
     }
 }

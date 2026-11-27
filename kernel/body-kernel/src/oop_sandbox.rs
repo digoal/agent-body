@@ -18,8 +18,10 @@ use agent_body_sdk::{
     FdwSourceHealth, FieldPathContext, ProbeContext, RedactDirection, RedactVerdict,
 };
 use anyhow::{anyhow, bail, Context};
+use uuid::Uuid;
 
 use crate::hook_chain::HookChain;
+use crate::observability::KernelObservability;
 use crate::wait_events::{KernelWaitEventId, KernelWaitRegistry};
 pub use sanitize::sanitize_prompt_injection;
 
@@ -67,6 +69,7 @@ pub struct OutOfProcessFdwAdapter {
     supported_types_static: &'static [&'static str],
     hooks: Arc<HookChain>,
     waits: Arc<KernelWaitRegistry>,
+    obs: Option<Arc<KernelObservability>>,
 }
 
 impl OutOfProcessFdwAdapter {
@@ -98,7 +101,14 @@ impl OutOfProcessFdwAdapter {
             supported_types_static,
             hooks: hooks.unwrap_or_else(|| Arc::new(HookChain::new())),
             waits: waits.unwrap_or_else(|| Arc::new(KernelWaitRegistry::new())),
+            obs: None,
         })
+    }
+
+    /// 挂载内核统一可观测注册表
+    pub fn with_observability(mut self, obs: Arc<KernelObservability>) -> Self {
+        self.obs = Some(obs);
+        self
     }
 
     pub fn manifest(&self) -> &ExtensionControlManifest {
@@ -107,6 +117,36 @@ impl OutOfProcessFdwAdapter {
 
     /// 在 `env_clear()`（仅保留 `PATH`/`LANG`/`TZ`）沙盒中执行单次 JSON-RPC 2.0 进程调用
     fn call_sandbox(
+        &self,
+        method: &str,
+        params: serde_json::Value,
+        timeout_override_ms: Option<u64>,
+    ) -> anyhow::Result<serde_json::Value> {
+        let trace_id = Uuid::new_v4().to_string();
+        let target_name = format!("{}:{method}", self.fdw_id_static);
+        let started = Instant::now();
+        let res = self.call_sandbox_inner(method, params, timeout_override_ms);
+        if let Some(ref obs) = self.obs {
+            let elapsed_us = started.elapsed().as_micros() as u64;
+            match &res {
+                Ok(_) => {
+                    obs.record_outcome(&trace_id, "sandbox", &target_name, "sandbox", "ok", elapsed_us, None);
+                }
+                Err(err) => {
+                    let msg = err.to_string();
+                    let outcome = if msg.contains("超时") || msg.to_ascii_lowercase().contains("timeout") {
+                        "timeout"
+                    } else {
+                        "error"
+                    };
+                    obs.record_outcome(&trace_id, "sandbox", &target_name, "sandbox", outcome, elapsed_us, Some(msg));
+                }
+            }
+        }
+        res
+    }
+
+    fn call_sandbox_inner(
         &self,
         method: &str,
         params: serde_json::Value,

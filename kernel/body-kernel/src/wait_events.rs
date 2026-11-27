@@ -3,33 +3,12 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
-use serde::{Deserialize, Serialize};
-
-/// 8 档对数分位延迟桶边界（单位：微秒）
-pub const KERNEL_LATENCY_BUCKET_BOUNDS_US: [u64; 8] = [
-    100,
-    500,
-    2_000,
-    10_000,
-    50_000,
-    250_000,
-    1_000_000,
-    u64::MAX,
-];
-
-pub const KERNEL_LATENCY_BUCKET_LABELS: [&str; 8] = [
-    "<100us",
-    "100~500us",
-    "0.5~2ms",
-    "2~10ms",
-    "10~50ms",
-    "50~250ms",
-    "250ms~1s",
-    ">=1s",
-];
+pub use agent_body_sdk::{
+    KernelWaitSnapshotRow, KERNEL_LATENCY_BUCKET_BOUNDS_US, KERNEL_LATENCY_BUCKET_LABELS,
+};
 
 /// 微内核机制层标准等待事件枚举（领域与扩展无关）
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[repr(usize)]
 pub enum KernelWaitEventId {
     CatalogRead = 0,
@@ -155,18 +134,6 @@ const fn bucket_index(elapsed_us: u64) -> usize {
     } else {
         7
     }
-}
-
-/// 等待事件快照单行数据
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct KernelWaitSnapshotRow {
-    pub event_name: String,
-    pub calls: u64,
-    pub total_us: u64,
-    pub avg_us: f64,
-    pub max_us: u64,
-    pub est_p95_us: u64,
-    pub histogram_buckets: [u64; 8],
 }
 
 /// 纯无锁原子耗时直方图注册表

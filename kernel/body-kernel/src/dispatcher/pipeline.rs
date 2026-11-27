@@ -1,12 +1,13 @@
 //! `KernelDispatcher` 全链路 Hook 执行流水线与 CLI 参数解析辅助
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use agent_body_sdk::{
     derive_aopcc_mode, AccessOp, AccessVerdict, AopccMode, AuditEnvelope, AuthVerdict,
     AutonomyLevel, CallerIdentity, ClientAuthContext, FieldPathContext, FunctionCallInfo,
-    GuardVerdict, KernelServices, ObjectAccessContext, ProcRoutine, ProcVolatility,
-    RedactDirection, RedactVerdict, TableAmRoutine,
+    GuardVerdict, KernelServices, ObjectAccessContext, ObservabilityProvider, ProcRoutine,
+    ProcVolatility, RedactDirection, RedactVerdict, TableAmRoutine,
 };
 use anyhow::Context;
 use chrono::Utc;
@@ -16,7 +17,30 @@ use uuid::Uuid;
 
 use super::{DispatchError, DispatchSuccess};
 use crate::hook_chain::HookChain;
+use crate::observability::KernelObservability;
 use crate::wait_events::{KernelWaitEventId, KernelWaitRegistry};
+
+fn record_proc_outcome(
+    obs: Option<&Arc<KernelObservability>>,
+    trace_id: &str,
+    proc_name: &str,
+    caller_id: &str,
+    outcome: &str,
+    op_start: Instant,
+    detail: Option<String>,
+) {
+    if let Some(o) = obs {
+        o.record_outcome(
+            trace_id,
+            "proc",
+            proc_name,
+            caller_id,
+            outcome,
+            op_start.elapsed().as_micros() as u64,
+            detail,
+        );
+    }
+}
 
 pub(crate) fn execute_proc_pipeline(
     routine: &dyn ProcRoutine,
@@ -25,11 +49,42 @@ pub(crate) fn execute_proc_pipeline(
     hooks: &HookChain,
     table_am: &Arc<dyn TableAmRoutine>,
     waits: &KernelWaitRegistry,
+    obs: Option<&Arc<KernelObservability>>,
 ) -> Result<DispatchSuccess, DispatchError> {
     let spec = routine.spec();
     let trace_id = Uuid::new_v4().to_string();
+    let op_start = Instant::now();
+    let _in_flight = obs.map(|o| o.enter_op(&trace_id, "proc", spec.proc_name, "pending"));
 
-    let caller = run_auth_gate(auth_ctx, hooks, waits)?;
+    let caller = match run_auth_gate(auth_ctx, hooks, waits) {
+        Ok(c) => c,
+        Err(err) => {
+            let reason = err.message();
+            let anon = CallerIdentity::default();
+            emit_kernel_audit(
+                hooks,
+                waits,
+                &trace_id,
+                &anon,
+                "proc_exec",
+                spec.proc_name,
+                "auth_denied",
+                Some(serde_json::json!({ "status": err.status_code(), "reason": reason })),
+                "",
+            );
+            record_proc_outcome(
+                obs,
+                &trace_id,
+                spec.proc_name,
+                &anon.caller_id,
+                "auth_denied",
+                op_start,
+                Some(reason),
+            );
+            return Err(err);
+        }
+    };
+
     let op = if spec.autonomy_level == AutonomyLevel::L0Observe
         && spec.volatility != ProcVolatility::Volatile
     {
@@ -45,7 +100,27 @@ pub(crate) fn execute_proc_pipeline(
         hooks,
         waits,
     ) {
-        emit_kernel_audit(hooks, waits, &caller, "proc_exec", spec.proc_name, "access_denied", None, "");
+        let reason = err.message();
+        emit_kernel_audit(
+            hooks,
+            waits,
+            &trace_id,
+            &caller,
+            "proc_exec",
+            spec.proc_name,
+            "access_denied",
+            Some(serde_json::json!({ "reason": reason })),
+            "",
+        );
+        record_proc_outcome(
+            obs,
+            &trace_id,
+            spec.proc_name,
+            &caller.caller_id,
+            "access_denied",
+            op_start,
+            Some(reason),
+        );
         return Err(err);
     }
 
@@ -55,7 +130,26 @@ pub(crate) fn execute_proc_pipeline(
             "proc '{}' blocked by AOPCC ({:?}, {:?})",
             spec.proc_name, spec.volatility, spec.autonomy_level
         );
-        emit_kernel_audit(hooks, waits, &caller, "proc_exec", spec.proc_name, "aopcc_denied", None, "");
+        emit_kernel_audit(
+            hooks,
+            waits,
+            &trace_id,
+            &caller,
+            "proc_exec",
+            spec.proc_name,
+            "aopcc_denied",
+            Some(serde_json::json!({ "reason": reason })),
+            "",
+        );
+        record_proc_outcome(
+            obs,
+            &trace_id,
+            spec.proc_name,
+            &caller.caller_id,
+            "aopcc_denied",
+            op_start,
+            Some(reason.clone()),
+        );
         return Err(DispatchError::Forbidden { reason });
     }
 
@@ -64,11 +158,49 @@ pub(crate) fn execute_proc_pipeline(
         match hooks.run_executor_start(&spec, &args, &caller) {
             GuardVerdict::Proceed => {}
             GuardVerdict::Block { reason } => {
-                emit_kernel_audit(hooks, waits, &caller, "proc_exec", spec.proc_name, "guard_blocked", None, "");
+                emit_kernel_audit(
+                    hooks,
+                    waits,
+                    &trace_id,
+                    &caller,
+                    "proc_exec",
+                    spec.proc_name,
+                    "guard_blocked",
+                    Some(serde_json::json!({ "reason": reason })),
+                    "",
+                );
+                record_proc_outcome(
+                    obs,
+                    &trace_id,
+                    spec.proc_name,
+                    &caller.caller_id,
+                    "guard_blocked",
+                    op_start,
+                    Some(reason.clone()),
+                );
                 return Err(DispatchError::Forbidden { reason });
             }
             GuardVerdict::RequireConfirm { prompt } => {
-                emit_kernel_audit(hooks, waits, &caller, "proc_exec", spec.proc_name, "require_confirm", None, "");
+                emit_kernel_audit(
+                    hooks,
+                    waits,
+                    &trace_id,
+                    &caller,
+                    "proc_exec",
+                    spec.proc_name,
+                    "require_confirm",
+                    Some(serde_json::json!({ "prompt": prompt })),
+                    "",
+                );
+                record_proc_outcome(
+                    obs,
+                    &trace_id,
+                    spec.proc_name,
+                    &caller.caller_id,
+                    "denied",
+                    op_start,
+                    Some(prompt.clone()),
+                );
                 return Err(DispatchError::RequireConfirm { prompt });
             }
         }
@@ -80,7 +212,11 @@ pub(crate) fn execute_proc_pipeline(
         caller: caller.clone(),
         trace_id: trace_id.clone(),
     };
-    let services = KernelServices::new(caller.clone(), trace_id.clone(), Arc::clone(table_am));
+    let mut services = KernelServices::new(caller.clone(), trace_id.clone(), Arc::clone(table_am));
+    if let Some(o) = obs {
+        let provider: Arc<dyn ObservabilityProvider> = Arc::clone(o) as Arc<dyn ObservabilityProvider>;
+        services = services.with_observability(provider);
+    }
 
     match routine.invoke(fcinfo, &services) {
         Ok(mut output) => {
@@ -94,11 +230,41 @@ pub(crate) fn execute_proc_pipeline(
                 hooks.run_tuple_redact(&mut output, &path_ctx, &caller)
             };
             if let RedactVerdict::Blocked { reason } = redact_verdict {
-                emit_kernel_audit(hooks, waits, &caller, "proc_exec", spec.proc_name, "redact_blocked", None, "");
+                emit_kernel_audit(
+                    hooks,
+                    waits,
+                    &trace_id,
+                    &caller,
+                    "proc_exec",
+                    spec.proc_name,
+                    "redact_blocked",
+                    Some(serde_json::json!({ "reason": reason })),
+                    "",
+                );
+                record_proc_outcome(
+                    obs,
+                    &trace_id,
+                    spec.proc_name,
+                    &caller.caller_id,
+                    "redact_blocked",
+                    op_start,
+                    Some(reason.clone()),
+                );
                 return Err(DispatchError::Forbidden { reason });
             }
             let digest = sha256_json(&output);
-            emit_kernel_audit(hooks, waits, &caller, "proc_exec", spec.proc_name, "ok", None, &digest);
+            emit_kernel_audit(
+                hooks,
+                waits,
+                &trace_id,
+                &caller,
+                "proc_exec",
+                spec.proc_name,
+                "ok",
+                None,
+                &digest,
+            );
+            record_proc_outcome(obs, &trace_id, spec.proc_name, &caller.caller_id, "ok", op_start, None);
             Ok(DispatchSuccess {
                 proc_name: spec.proc_name.to_string(),
                 trace_id,
@@ -115,12 +281,22 @@ pub(crate) fn execute_proc_pipeline(
             emit_kernel_audit(
                 hooks,
                 waits,
+                &trace_id,
                 &caller,
                 "proc_exec",
                 spec.proc_name,
                 "error",
                 Some(serde_json::json!({"error": err_msg, "recovery": recovery})),
                 "",
+            );
+            record_proc_outcome(
+                obs,
+                &trace_id,
+                spec.proc_name,
+                &caller.caller_id,
+                "error",
+                op_start,
+                Some(err_msg.clone()),
             );
             Err(DispatchError::ExecutionFailed {
                 message: err_msg,
@@ -174,6 +350,7 @@ pub(crate) fn run_object_access_gate(
 pub(crate) fn emit_kernel_audit(
     hooks: &HookChain,
     waits: &KernelWaitRegistry,
+    trace_id: &str,
     caller: &CallerIdentity,
     operation: &str,
     target: &str,
@@ -183,7 +360,7 @@ pub(crate) fn emit_kernel_audit(
 ) {
     let _guard = waits.enter(KernelWaitEventId::AuditEmit);
     let _errs = hooks.run_emit_audit(&AuditEnvelope {
-        trace_id: Uuid::new_v4().to_string(),
+        trace_id: trace_id.to_string(),
         caller: caller.clone(),
         domain: "IN_AGENT".to_string(),
         operation: operation.to_string(),

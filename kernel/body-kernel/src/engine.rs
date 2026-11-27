@@ -4,13 +4,14 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use agent_body_sdk::{
     AuditEnvelope, BgWorkerRoutine, BodyExtension, CallerIdentity, CancellationToken,
     ClientAuthContext, ClientAuthHook, EvidenceTuple, ExtensionMeta, ExtensionRegistrar,
-    FdwRoutine, FdwSourceHealth, HookRegistration, ProbeContext, TableAmRoutine, WorkerTickOutcome,
-    WorkerTrigger, SDK_API_VERSION,
+    FdwRoutine, FdwSourceHealth, HookRegistration, KernelObservabilitySnapshot,
+    ObservabilityProvider, ProbeContext, TableAmRoutine, WorkerTickOutcome, WorkerTrigger,
+    SDK_API_VERSION,
 };
 use anyhow::{anyhow, bail, Context};
 use chrono::Utc;
@@ -24,6 +25,7 @@ use crate::catalog::{
 use crate::dispatcher::{DispatchError, DispatchSuccess, HttpRequest, HttpResponse, KernelDispatcher};
 use crate::hook_chain::{HookChain, LoopbackOrTokenAuthHook};
 use crate::mem_am::MemoryTableAm;
+use crate::observability::KernelObservability;
 use crate::rrf_executor::{RrfMergeExecutor, RrfSearchResult, SearchQuery};
 use crate::sqlite_am::SqliteCoreTableAm;
 use crate::wait_events::{KernelWaitEventId, KernelWaitRegistry};
@@ -36,6 +38,7 @@ pub struct KernelRuntime {
     rrf: RrfMergeExecutor,
     dispatcher: KernelDispatcher,
     waits: Arc<KernelWaitRegistry>,
+    obs: Arc<KernelObservability>,
     fdws: BTreeMap<String, Arc<dyn FdwRoutine>>,
     bgworkers: Vec<Arc<dyn BgWorkerRoutine>>,
     extensions: Vec<ExtensionMeta>,
@@ -77,13 +80,16 @@ impl KernelRuntime {
             .unwrap_or_else(|| Arc::new(LoopbackOrTokenAuthHook::new(false, None)));
         hooks.register(HookRegistration::ClientAuth(default_auth));
 
+        let waits = Arc::new(KernelWaitRegistry::new());
+        let obs = Arc::new(KernelObservability::new(Arc::clone(&waits)));
         let runtime = Self {
             catalog_conn,
             table_am,
             hooks,
             rrf: RrfMergeExecutor::default(),
             dispatcher: KernelDispatcher::new(),
-            waits: Arc::new(KernelWaitRegistry::new()),
+            waits,
+            obs,
             fdws: BTreeMap::new(),
             bgworkers: Vec::new(),
             extensions: Vec::new(),
@@ -214,6 +220,7 @@ impl KernelRuntime {
             &self.fdws,
             &self.hooks,
             &self.waits,
+            Some(&self.obs),
             fdw_id,
             target,
             ctx,
@@ -239,32 +246,75 @@ impl KernelRuntime {
             is_loopback: true,
             ..Default::default()
         };
+        let obs_provider: Arc<dyn ObservabilityProvider> =
+            Arc::clone(&self.obs) as Arc<dyn ObservabilityProvider>;
         for worker in &self.bgworkers {
             if cancel.is_cancelled() {
                 break;
             }
+            let wid = worker.worker_id();
             let trace_id = Uuid::new_v4().to_string();
+            let started = Instant::now();
+            let _in_flight = self.obs.enter_op(&trace_id, "bgworker", wid, &worker_caller.caller_id);
             let ctx = agent_body_sdk::KernelServices::new(
                 worker_caller.clone(),
                 trace_id.clone(),
                 Arc::clone(&self.table_am),
-            );
-            let outcome = {
+            )
+            .with_observability(Arc::clone(&obs_provider));
+            let tick_res = {
                 let _guard = self.waits.enter(KernelWaitEventId::BgWorkerTick);
-                worker.run_tick(&ctx, cancel)?
+                worker.run_tick(&ctx, cancel)
             };
-            let _audit_errs = self.hooks.run_emit_audit(&AuditEnvelope {
-                trace_id,
-                caller: worker_caller.clone(),
-                domain: "OUT_OF_AGENT".to_string(),
-                operation: "bgworker_tick".to_string(),
-                target: worker.worker_id().to_string(),
-                outcome: "ok".to_string(),
-                before_after_delta: serde_json::to_value(&outcome).ok(),
-                evidence_sha256: String::new(),
-                recorded_at: Utc::now().to_rfc3339(),
-            });
-            outcomes.push((worker.worker_id().to_string(), outcome));
+            match tick_res {
+                Ok(outcome) => {
+                    let _audit_errs = self.hooks.run_emit_audit(&AuditEnvelope {
+                        trace_id: trace_id.clone(),
+                        caller: worker_caller.clone(),
+                        domain: "OUT_OF_AGENT".to_string(),
+                        operation: "bgworker_tick".to_string(),
+                        target: wid.to_string(),
+                        outcome: "ok".to_string(),
+                        before_after_delta: serde_json::to_value(&outcome).ok(),
+                        evidence_sha256: String::new(),
+                        recorded_at: Utc::now().to_rfc3339(),
+                    });
+                    self.obs.record_outcome(
+                        &trace_id,
+                        "bgworker",
+                        wid,
+                        &worker_caller.caller_id,
+                        "ok",
+                        started.elapsed().as_micros() as u64,
+                        outcome.note.clone(),
+                    );
+                    outcomes.push((wid.to_string(), outcome));
+                }
+                Err(err) => {
+                    let err_msg = err.to_string();
+                    let _audit_errs = self.hooks.run_emit_audit(&AuditEnvelope {
+                        trace_id: trace_id.clone(),
+                        caller: worker_caller.clone(),
+                        domain: "OUT_OF_AGENT".to_string(),
+                        operation: "bgworker_tick".to_string(),
+                        target: wid.to_string(),
+                        outcome: "error".to_string(),
+                        before_after_delta: Some(serde_json::json!({ "error": err_msg })),
+                        evidence_sha256: String::new(),
+                        recorded_at: Utc::now().to_rfc3339(),
+                    });
+                    self.obs.record_outcome(
+                        &trace_id,
+                        "bgworker",
+                        wid,
+                        &worker_caller.caller_id,
+                        "error",
+                        started.elapsed().as_micros() as u64,
+                        Some(err_msg),
+                    );
+                    return Err(err);
+                }
+            }
         }
         Ok(outcomes)
     }
@@ -280,6 +330,7 @@ impl KernelRuntime {
             let worker_ref = Arc::clone(worker);
             let table_am = Arc::clone(&self.table_am);
             let waits = Arc::clone(&self.waits);
+            let obs = Arc::clone(&self.obs);
             let token = cancel.clone();
             let handle = thread::spawn(move || {
                 let caller = CallerIdentity {
@@ -289,14 +340,45 @@ impl KernelRuntime {
                     is_loopback: true,
                     ..Default::default()
                 };
+                let obs_provider: Arc<dyn ObservabilityProvider> =
+                    Arc::clone(&obs) as Arc<dyn ObservabilityProvider>;
                 while !token.is_cancelled() {
+                    let wid = worker_ref.worker_id();
+                    let trace_id = Uuid::new_v4().to_string();
+                    let started = Instant::now();
+                    let _in_flight = obs.enter_op(&trace_id, "bgworker", wid, &caller.caller_id);
                     let ctx = agent_body_sdk::KernelServices::new(
                         caller.clone(),
-                        Uuid::new_v4().to_string(),
+                        trace_id.clone(),
                         Arc::clone(&table_am),
-                    );
-                    let _guard = waits.enter(KernelWaitEventId::BgWorkerTick);
-                    let _res = worker_ref.run_tick(&ctx, &token);
+                    )
+                    .with_observability(Arc::clone(&obs_provider));
+                    let res = {
+                        let _guard = waits.enter(KernelWaitEventId::BgWorkerTick);
+                        worker_ref.run_tick(&ctx, &token)
+                    };
+                    let elapsed_us = started.elapsed().as_micros() as u64;
+                    match res {
+                        Ok(out) => obs.record_outcome(
+                            &trace_id,
+                            "bgworker",
+                            wid,
+                            &caller.caller_id,
+                            "ok",
+                            elapsed_us,
+                            out.note,
+                        ),
+                        Err(e) => obs.record_outcome(
+                            &trace_id,
+                            "bgworker",
+                            wid,
+                            &caller.caller_id,
+                            "error",
+                            elapsed_us,
+                            Some(e.to_string()),
+                        ),
+                    }
+                    drop(_in_flight);
                     let mut slept = Duration::ZERO;
                     let step = Duration::from_millis(50);
                     while slept < interval && !token.is_cancelled() {
@@ -316,8 +398,14 @@ impl KernelRuntime {
         raw_req: &serde_json::Value,
         auth_ctx: &ClientAuthContext,
     ) -> serde_json::Value {
-        self.dispatcher
-            .dispatch_mcp_jsonrpc(raw_req, auth_ctx, &self.hooks, &self.table_am, &self.waits)
+        self.dispatcher.dispatch_mcp_jsonrpc_with_obs(
+            raw_req,
+            auth_ctx,
+            &self.hooks,
+            &self.table_am,
+            &self.waits,
+            Some(&self.obs),
+        )
     }
 
     pub fn handle_cli(
@@ -326,17 +414,25 @@ impl KernelRuntime {
         json_args: Option<serde_json::Value>,
         auth_ctx: &ClientAuthContext,
     ) -> Result<DispatchSuccess, DispatchError> {
-        self.dispatcher
-            .dispatch_cli(args, json_args, auth_ctx, &self.hooks, &self.table_am, &self.waits)
+        self.dispatcher.dispatch_cli_with_obs(
+            args,
+            json_args,
+            auth_ctx,
+            &self.hooks,
+            &self.table_am,
+            &self.waits,
+            Some(&self.obs),
+        )
     }
 
     pub fn handle_http(&self, req: &HttpRequest) -> HttpResponse {
-        self.dispatcher.dispatch_http(
+        self.dispatcher.dispatch_http_with_obs(
             req,
             Some(self.catalog_conn.as_ref()),
             &self.hooks,
             &self.table_am,
             &self.waits,
+            Some(&self.obs),
         )
     }
 
@@ -373,6 +469,14 @@ impl KernelRuntime {
 
     pub fn waits(&self) -> &Arc<KernelWaitRegistry> {
         &self.waits
+    }
+
+    pub fn observability(&self) -> &Arc<KernelObservability> {
+        &self.obs
+    }
+
+    pub fn observability_snapshot(&self) -> KernelObservabilitySnapshot {
+        self.obs.snapshot()
     }
 
     pub fn installed_metas(&self) -> &[ExtensionMeta] {

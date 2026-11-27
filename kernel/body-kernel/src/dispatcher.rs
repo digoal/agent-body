@@ -4,17 +4,20 @@ mod pipeline;
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use agent_body_protocol::{RpcError, RpcId, RpcRequest, RpcResponse, JSONRPC_VERSION};
 use agent_body_sdk::{
-    derive_aopcc_mode, AccessOp, AopccMode, AutonomyLevel, ClientAuthContext, ExtensionRegistrar,
-    ProcRoutine, ProcSpec, ProcVolatility, TableAmRoutine, TransportKind,
+    derive_aopcc_mode, AccessOp, AopccMode, AutonomyLevel, CallerIdentity, ClientAuthContext,
+    ExtensionRegistrar, ProcRoutine, ProcSpec, ProcVolatility, TableAmRoutine, TransportKind,
 };
 use anyhow::bail;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::hook_chain::HookChain;
+use crate::observability::KernelObservability;
 use crate::wait_events::KernelWaitRegistry;
 use pipeline::{
     emit_kernel_audit, execute_proc_pipeline, parse_cli_tail_args, query_catalog_extensions,
@@ -211,6 +214,18 @@ impl KernelDispatcher {
         table_am: &Arc<dyn TableAmRoutine>,
         waits: &KernelWaitRegistry,
     ) -> serde_json::Value {
+        self.dispatch_mcp_jsonrpc_with_obs(raw_req, auth_ctx, hooks, table_am, waits, None)
+    }
+
+    pub fn dispatch_mcp_jsonrpc_with_obs(
+        &self,
+        raw_req: &serde_json::Value,
+        auth_ctx: &ClientAuthContext,
+        hooks: &HookChain,
+        table_am: &Arc<dyn TableAmRoutine>,
+        waits: &KernelWaitRegistry,
+        obs: Option<&Arc<KernelObservability>>,
+    ) -> serde_json::Value {
         let req: RpcRequest = match serde_json::from_value(raw_req.clone()) {
             Ok(r) => r,
             Err(err) => {
@@ -229,30 +244,45 @@ impl KernelDispatcher {
             return serde_json::to_value(resp).unwrap_or_default();
         }
 
+        let trace_id = Uuid::new_v4().to_string();
+        let started = Instant::now();
         let resp = match req.method.as_str() {
             "initialize" => match run_auth_gate(auth_ctx, hooks, waits) {
-                Ok(_) => RpcResponse::ok(
-                    req.id,
-                    serde_json::json!({
-                        "protocolVersion": "2024-11-05",
-                        "capabilities": { "tools": {} },
-                        "serverInfo": {
-                            "name": "agent-body-kernel",
-                            "version": env!("CARGO_PKG_VERSION"),
-                        }
-                    }),
-                ),
-                Err(err) => RpcResponse::err(req.id, RpcError::new(-32001, err.message())),
+                Ok(caller) => {
+                    record_transport_obs(obs, &trace_id, "mcp", "initialize", &caller.caller_id, "ok", started, None);
+                    RpcResponse::ok(
+                        req.id,
+                        serde_json::json!({
+                            "protocolVersion": "2024-11-05",
+                            "capabilities": { "tools": {} },
+                            "serverInfo": {
+                                "name": "agent-body-kernel",
+                                "version": env!("CARGO_PKG_VERSION"),
+                            }
+                        }),
+                    )
+                }
+                Err(err) => {
+                    record_transport_obs(obs, &trace_id, "mcp", "initialize", "anonymous", "auth_denied", started, Some(err.message()));
+                    RpcResponse::err(req.id, RpcError::new(-32001, err.message()))
+                }
             },
             "ping" => match run_auth_gate(auth_ctx, hooks, waits) {
-                Ok(_) => RpcResponse::ok(req.id, serde_json::json!({})),
-                Err(err) => RpcResponse::err(req.id, RpcError::new(-32001, err.message())),
+                Ok(caller) => {
+                    record_transport_obs(obs, &trace_id, "mcp", "ping", &caller.caller_id, "ok", started, None);
+                    RpcResponse::ok(req.id, serde_json::json!({}))
+                }
+                Err(err) => {
+                    record_transport_obs(obs, &trace_id, "mcp", "ping", "anonymous", "auth_denied", started, Some(err.message()));
+                    RpcResponse::err(req.id, RpcError::new(-32001, err.message()))
+                }
             },
             "tools/list" => match run_auth_gate(auth_ctx, hooks, waits) {
                 Ok(caller) => {
                     emit_kernel_audit(
                         hooks,
                         waits,
+                        &trace_id,
                         &caller,
                         "mcp_tools_list",
                         "body_cat_proc",
@@ -260,12 +290,16 @@ impl KernelDispatcher {
                         None,
                         "",
                     );
+                    record_transport_obs(obs, &trace_id, "mcp", "tools/list", &caller.caller_id, "ok", started, None);
                     RpcResponse::ok(req.id, self.mcp_tools_list())
                 }
-                Err(err) => RpcResponse::err(req.id, RpcError::new(-32001, err.message())),
+                Err(err) => {
+                    record_transport_obs(obs, &trace_id, "mcp", "tools/list", "anonymous", "auth_denied", started, Some(err.message()));
+                    RpcResponse::err(req.id, RpcError::new(-32001, err.message()))
+                }
             },
             "tools/call" => {
-                self.handle_mcp_tool_call(req.id, &req.params, auth_ctx, hooks, table_am, waits)
+                self.handle_mcp_tool_call(req.id, &req.params, auth_ctx, hooks, table_am, waits, obs)
             }
             other => RpcResponse::err(
                 req.id,
@@ -275,6 +309,7 @@ impl KernelDispatcher {
         serde_json::to_value(resp).unwrap_or_default()
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn handle_mcp_tool_call(
         &self,
         id: RpcId,
@@ -283,6 +318,7 @@ impl KernelDispatcher {
         hooks: &HookChain,
         table_am: &Arc<dyn TableAmRoutine>,
         waits: &KernelWaitRegistry,
+        obs: Option<&Arc<KernelObservability>>,
     ) -> RpcResponse {
         let Some(name) = params.get("name").and_then(|v| v.as_str()) else {
             return RpcResponse::err(id, RpcError::new(-32602, "missing params.name"));
@@ -294,7 +330,7 @@ impl KernelDispatcher {
             .get("arguments")
             .cloned()
             .unwrap_or_else(|| serde_json::json!({}));
-        match execute_proc_pipeline(routine.as_ref(), args, auth_ctx, hooks, table_am, waits) {
+        match execute_proc_pipeline(routine.as_ref(), args, auth_ctx, hooks, table_am, waits, obs) {
             Ok(ok) => {
                 let text = serde_json::to_string(&ok.data).unwrap_or_else(|_| "{}".to_string());
                 RpcResponse::ok(
@@ -302,6 +338,7 @@ impl KernelDispatcher {
                     serde_json::json!({
                         "content": [{ "type": "text", "text": text }],
                         "structuredContent": ok.data,
+                        "trace_id": ok.trace_id,
                         "isError": false
                     }),
                 )
@@ -322,6 +359,20 @@ impl KernelDispatcher {
         hooks: &HookChain,
         table_am: &Arc<dyn TableAmRoutine>,
         waits: &KernelWaitRegistry,
+    ) -> Result<DispatchSuccess, DispatchError> {
+        self.dispatch_cli_with_obs(cli_args, json_args, auth_ctx, hooks, table_am, waits, None)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn dispatch_cli_with_obs(
+        &self,
+        cli_args: &[String],
+        json_args: Option<serde_json::Value>,
+        auth_ctx: &ClientAuthContext,
+        hooks: &HookChain,
+        table_am: &Arc<dyn TableAmRoutine>,
+        waits: &KernelWaitRegistry,
+        obs: Option<&Arc<KernelObservability>>,
     ) -> Result<DispatchSuccess, DispatchError> {
         let mut best_match: Option<(&Arc<dyn ProcRoutine>, usize)> = None;
         for routine in self.procs.values() {
@@ -365,6 +416,7 @@ impl KernelDispatcher {
             hooks,
             table_am,
             waits,
+            obs,
         )
     }
 
@@ -377,6 +429,19 @@ impl KernelDispatcher {
         table_am: &Arc<dyn TableAmRoutine>,
         waits: &KernelWaitRegistry,
     ) -> HttpResponse {
+        self.dispatch_http_with_obs(req, catalog_conn, hooks, table_am, waits, None)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn dispatch_http_with_obs(
+        &self,
+        req: &HttpRequest,
+        catalog_conn: Option<&Mutex<Connection>>,
+        hooks: &HookChain,
+        table_am: &Arc<dyn TableAmRoutine>,
+        waits: &KernelWaitRegistry,
+        obs: Option<&Arc<KernelObservability>>,
+    ) -> HttpResponse {
         let is_read_only =
             req.method.eq_ignore_ascii_case("GET") || req.method.eq_ignore_ascii_case("HEAD");
         let auth_ctx = ClientAuthContext {
@@ -388,22 +453,27 @@ impl KernelDispatcher {
             is_loopback: req.is_loopback,
             is_read_only,
         };
+        let trace_id = Uuid::new_v4().to_string();
+        let started = Instant::now();
 
         if req.method.eq_ignore_ascii_case("GET") && req.path == "/api/v1/health" {
             return match run_auth_gate(&auth_ctx, hooks, waits) {
                 Ok(caller) => {
-                    emit_kernel_audit(hooks, waits, &caller, "http_health", "/api/v1/health", "ok", None, "");
+                    emit_kernel_audit(hooks, waits, &trace_id, &caller, "http_health", "/api/v1/health", "ok", None, "");
+                    record_transport_obs(obs, &trace_id, "http", "/api/v1/health", &caller.caller_id, "ok", started, None);
                     HttpResponse::json(
                         200,
                         serde_json::json!({
                             "status": "ok",
                             "kernel": "agent-body-kernel",
                             "proc_count": self.procs.len(),
+                            "trace_id": trace_id,
                         }),
                     )
                 }
                 Err(err) => {
-                    HttpResponse::json(err.status_code(), serde_json::json!({ "error": err.message() }))
+                    record_http_deny_audit_and_obs(hooks, waits, obs, &trace_id, "/api/v1/health", "auth_denied", &err, started);
+                    HttpResponse::json(err.status_code(), serde_json::json!({ "error": err.message(), "trace_id": trace_id }))
                 }
             };
         }
@@ -419,15 +489,17 @@ impl KernelDispatcher {
                         hooks,
                         waits,
                     ) {
+                        record_transport_obs(obs, &trace_id, "http", "/api/v1/catalog/extensions", &caller.caller_id, "access_denied", started, Some(err.message()));
                         return HttpResponse::json(
                             err.status_code(),
-                            serde_json::json!({ "error": err.message() }),
+                            serde_json::json!({ "error": err.message(), "trace_id": trace_id }),
                         );
                     }
                     let extensions = query_catalog_extensions(catalog_conn);
                     emit_kernel_audit(
                         hooks,
                         waits,
+                        &trace_id,
                         &caller,
                         "http_catalog_extensions",
                         "/api/v1/catalog/extensions",
@@ -435,10 +507,12 @@ impl KernelDispatcher {
                         None,
                         "",
                     );
-                    HttpResponse::json(200, serde_json::json!({ "extensions": extensions }))
+                    record_transport_obs(obs, &trace_id, "http", "/api/v1/catalog/extensions", &caller.caller_id, "ok", started, None);
+                    HttpResponse::json(200, serde_json::json!({ "trace_id": trace_id, "extensions": extensions }))
                 }
                 Err(err) => {
-                    HttpResponse::json(err.status_code(), serde_json::json!({ "error": err.message() }))
+                    record_http_deny_audit_and_obs(hooks, waits, obs, &trace_id, "/api/v1/catalog/extensions", "auth_denied", &err, started);
+                    HttpResponse::json(err.status_code(), serde_json::json!({ "error": err.message(), "trace_id": trace_id }))
                 }
             };
         }
@@ -454,15 +528,17 @@ impl KernelDispatcher {
                         hooks,
                         waits,
                     ) {
+                        record_transport_obs(obs, &trace_id, "http", "/api/v1/parity/matrix", &caller.caller_id, "access_denied", started, Some(err.message()));
                         return HttpResponse::json(
                             err.status_code(),
-                            serde_json::json!({ "error": err.message() }),
+                            serde_json::json!({ "error": err.message(), "trace_id": trace_id }),
                         );
                     }
                     let matrix = self.parity_matrix();
                     emit_kernel_audit(
                         hooks,
                         waits,
+                        &trace_id,
                         &caller,
                         "http_parity_matrix",
                         "/api/v1/parity/matrix",
@@ -470,16 +546,19 @@ impl KernelDispatcher {
                         None,
                         "",
                     );
+                    record_transport_obs(obs, &trace_id, "http", "/api/v1/parity/matrix", &caller.caller_id, "ok", started, None);
                     HttpResponse::json(
                         200,
                         serde_json::json!({
+                            "trace_id": trace_id,
                             "total": matrix.len(),
                             "matrix": matrix,
                         }),
                     )
                 }
                 Err(err) => {
-                    HttpResponse::json(err.status_code(), serde_json::json!({ "error": err.message() }))
+                    record_http_deny_audit_and_obs(hooks, waits, obs, &trace_id, "/api/v1/parity/matrix", "auth_denied", &err, started);
+                    HttpResponse::json(err.status_code(), serde_json::json!({ "error": err.message(), "trace_id": trace_id }))
                 }
             };
         }
@@ -495,6 +574,7 @@ impl KernelDispatcher {
                     hooks,
                     table_am,
                     waits,
+                    obs,
                 ) {
                     Ok(ok) => HttpResponse::json(
                         200,
@@ -518,4 +598,55 @@ impl KernelDispatcher {
             serde_json::json!({ "error": format!("route '{} {}' not found", req.method, req.path) }),
         )
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn record_transport_obs(
+    obs: Option<&Arc<KernelObservability>>,
+    trace_id: &str,
+    kind: &str,
+    target: &str,
+    caller_id: &str,
+    outcome: &str,
+    started: Instant,
+    detail: Option<String>,
+) {
+    if let Some(o) = obs {
+        o.record_outcome(
+            trace_id,
+            kind,
+            target,
+            caller_id,
+            outcome,
+            started.elapsed().as_micros() as u64,
+            detail,
+        );
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn record_http_deny_audit_and_obs(
+    hooks: &HookChain,
+    waits: &KernelWaitRegistry,
+    obs: Option<&Arc<KernelObservability>>,
+    trace_id: &str,
+    path: &str,
+    outcome: &str,
+    err: &DispatchError,
+    started: Instant,
+) {
+    let anon = CallerIdentity::default();
+    let msg = err.message();
+    emit_kernel_audit(
+        hooks,
+        waits,
+        trace_id,
+        &anon,
+        "http_dispatch",
+        path,
+        outcome,
+        Some(serde_json::json!({ "status": err.status_code(), "reason": msg })),
+        "",
+    );
+    record_transport_obs(obs, trace_id, "http", path, &anon.caller_id, outcome, started, Some(msg));
 }
