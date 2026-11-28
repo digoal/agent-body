@@ -28,6 +28,7 @@ pub fn dispatch(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> {
         | Commands::Preflight { .. }
         | Commands::Web { .. }
         | Commands::Hooks { .. }
+        | Commands::Distill { .. }
         | Commands::Analytics { .. }
         | Commands::McpCatalog { .. }
         | Commands::Skill { .. }

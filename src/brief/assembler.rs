@@ -15,9 +15,12 @@
 //!
 //! 使用 `chars / 4` 快速近似（1 token ≈ 4 chars ASCII；中文字符按 1.5x 计）。
 
+use std::collections::HashSet;
+
 use anyhow::Result;
 use chrono::Local;
 
+use crate::brief::format;
 use crate::brief::optimistic::{OptimisticLease, OptimisticLeaseEngine};
 use crate::fact::FactFacade;
 use crate::memory::{MemoryFilter, MemoryProvider};
@@ -277,7 +280,7 @@ impl BriefAssembler {
                         .get("description")
                         .and_then(|v| v.as_str())
                         .unwrap_or(&n.label);
-                    format!("{} ({})", n.name, desc.chars().take(30).collect::<String>())
+                    format!("{} ({})", n.name, format::truncate_clean(desc, 36))
                 })
                 .collect::<Vec<_>>()
                 .join(", ");
@@ -293,7 +296,7 @@ impl BriefAssembler {
                     .all_matching_tools
                     .iter()
                     .take(5)
-                    .map(|t| format!("{} ({})", t.tool_name, t.description.chars().take(30).collect::<String>()))
+                    .map(|t| format!("{} ({})", t.tool_name, format::truncate_clean(&t.description, 36)))
                     .collect::<Vec<_>>()
                     .join(", ");
                 lines.push(format!("- **可用工具**: {}\n", tool_line));
@@ -392,7 +395,7 @@ impl BriefAssembler {
                     } else {
                         ""
                     };
-                    format!("{}{}", path_str.chars().take(50).collect::<String>(), cg)
+                    format!("{}{}", format::truncate_clean(path_str, 64), cg)
                 })
                 .collect::<Vec<_>>()
                 .join(", ");
@@ -414,7 +417,7 @@ impl BriefAssembler {
                     let repo_line = repos
                         .iter()
                         .take(3)
-                        .map(|a| a.path.chars().take(50).collect::<String>())
+                        .map(|a| format::truncate_clean(&a.path, 64))
                         .collect::<Vec<_>>()
                         .join(", ");
                     lines.push(format!("- **相关仓库**: {}\n", repo_line));
@@ -436,7 +439,7 @@ impl BriefAssembler {
             }
         }
 
-        let section = truncate_to_budget(lines.join(""), budget_tokens);
+        let section = format::truncate_to_budget_clean(lines.join(""), budget_tokens);
         (section, score.min(100))
     }
 
@@ -451,7 +454,7 @@ impl BriefAssembler {
         // 核心工程纪律（取前 3 条最相关）
         for conv in conventions.iter().take(3) {
             let desc = format!("{}: {}", conv.rule_title, conv.requirement);
-            let short: String = desc.chars().take(80).collect();
+            let short = format::truncate_clean(&desc, 96);
             lines.push(format!("- {}\n", short));
             score = score.saturating_add(10);
         }
@@ -459,11 +462,14 @@ impl BriefAssembler {
         // 放置规则摘要（从引擎获取核心规则提示）
         let rules_summary = placement_engine.get_rules_summary();
         if !rules_summary.is_empty() {
-            lines.push(format!("- **放置规则摘要**: {}\n", rules_summary.chars().take(120).collect::<String>()));
+            lines.push(format!(
+                "- **放置规则摘要**: {}\n",
+                format::truncate_clean(&rules_summary, 140)
+            ));
             score = score.saturating_add(20);
         }
 
-        let section = truncate_to_budget(lines.join(""), budget_tokens);
+        let section = format::truncate_to_budget_clean(lines.join(""), budget_tokens);
         (section, score.min(100))
     }
 
@@ -483,13 +489,52 @@ impl BriefAssembler {
             return (lines.join(""), score);
         };
 
+        let mut seen_ids: HashSet<String> = HashSet::new();
+        let mut seen_norm_keys: HashSet<String> = HashSet::new();
+        let mut seen_targets: HashSet<String> = HashSet::new();
+        let mut shown_count: usize = 0;
+
+        let mut accept_memory = |id: &str, clean_text: &str| -> bool {
+            if !id.is_empty() && seen_ids.contains(id) {
+                return false;
+            }
+            let (norm_key, target_key) = format::memory_dedup_keys(clean_text);
+            if !norm_key.is_empty() && seen_norm_keys.contains(&norm_key) {
+                return false;
+            }
+            if let Some(ref tk) = target_key {
+                if seen_targets.contains(tk) {
+                    return false;
+                }
+            }
+            if !id.is_empty() {
+                seen_ids.insert(id.to_string());
+            }
+            if !norm_key.is_empty() {
+                seen_norm_keys.insert(norm_key);
+            }
+            if let Some(tk) = target_key {
+                seen_targets.insert(tk);
+            }
+            true
+        };
+
         // 1. 历史决策（按 session_id 过滤）
         if !session_id.is_empty() {
             if let Ok(ctx) = provider.get_context(session_id) {
-                for (i, item) in ctx.key_decisions.iter().take(3).enumerate() {
+                let mut dec_shown = 0usize;
+                for item in ctx.key_decisions.iter() {
+                    if dec_shown >= 3 {
+                        break;
+                    }
                     let clean = crate::scanner::metadata::PromptInjectionScanner::scan_and_sanitize(&item.content).sanitized;
-                    let preview = clean.chars().take(80).collect::<String>();
-                    lines.push(format!("{}. [决策] {}\n", i + 1, preview));
+                    if !accept_memory(&item.id, &clean) {
+                        continue;
+                    }
+                    shown_count += 1;
+                    dec_shown += 1;
+                    let preview = format::truncate_clean(&clean, 120);
+                    lines.push(format!("{}. [决策] {}\n", shown_count, preview));
                     score = score.saturating_add(10);
                 }
             }
@@ -503,7 +548,7 @@ impl BriefAssembler {
             source_session: None,
             min_score: Some(0.1),
         };
-        if let Ok(mut items) = provider.search(search_query, 6, Some(&filter)) {
+        if let Ok(mut items) = provider.search(search_query, 20, Some(&filter)) {
             let summaries: Vec<String> = items
                 .iter()
                 .filter(|it| {
@@ -531,14 +576,22 @@ impl BriefAssembler {
                     });
                 }
             }
-            let offset = lines.len() - 1; // 已添加的决策条数
-            for (i, item) in items.iter().take(5).enumerate() {
+            let mut search_shown = 0usize;
+            for item in items.iter() {
+                if search_shown >= 5 {
+                    break;
+                }
                 let clean = crate::scanner::metadata::PromptInjectionScanner::scan_and_sanitize(&item.content).sanitized;
-                let preview = clean.chars().take(80).collect::<String>();
+                if !accept_memory(&item.id, &clean) {
+                    continue;
+                }
+                shown_count += 1;
+                search_shown += 1;
+                let preview = format::truncate_clean(&clean, 120);
                 let score_str = item.score.map(|s| format!(" ({:.2})", s)).unwrap_or_default();
                 lines.push(format!(
                     "{}. [{}]{} {}\n",
-                    offset + i + 1,
+                    shown_count,
                     item.memory_type,
                     score_str,
                     preview
@@ -551,7 +604,7 @@ impl BriefAssembler {
             lines.push("- 暂无相关历史经验\n".to_string());
         }
 
-        let section = truncate_to_budget(lines.join(""), budget_tokens);
+        let section = format::truncate_to_budget_clean(lines.join(""), budget_tokens);
         (section, score.min(100))
     }
 
@@ -592,16 +645,6 @@ pub fn estimate_tokens(text: &str) -> usize {
         }
     }
     tokens / 4 + 1
-}
-
-/// 将文本截断至 budget_tokens 以内（按 UTF-8 chars 粒度）
-fn truncate_to_budget(text: String, budget_tokens: usize) -> String {
-    let max_chars = budget_tokens * 4; // 粗略估算
-    if text.chars().count() <= max_chars {
-        return text;
-    }
-    let truncated: String = text.chars().take(max_chars).collect();
-    format!("{}…（已截断）\n", truncated)
 }
 
 // ─── 单元测试 ─────────────────────────────────────────────────────────────────
@@ -803,5 +846,92 @@ mod tests {
 
         assert!(output.markdown.contains("活跃任务"));
         assert!(output.markdown.contains("uvicorn (PID 1234)"));
+    }
+
+    #[test]
+    fn test_brief_memory_dedup_and_clean_truncation() {
+        use crate::memory::builtin_provider::BuiltinMemoryProvider;
+        use crate::memory::spi::MemoryItem;
+        use std::collections::HashMap;
+        use std::sync::Arc;
+
+        let storage = Storage::open_in_memory().expect("in-memory");
+        let provider = Arc::new(BuiltinMemoryProvider::new(storage.clone()));
+
+        let samples = vec![
+            (
+                "mem-dup-1",
+                "task",
+                "会话 [7e171592-8786-4328-8bf1-8e5f593a260a] 完工环境总结 (dry_run: false):\n- 清理/待清理临时文件数: 0\n- 环境变更: agent-body",
+                vec!["session".to_string(), "close".to_string()],
+            ),
+            (
+                "mem-dup-2",
+                "task",
+                "会话 [7e171592-8786-4328-8bf1-8e5f593a260a] 完工环境总结 (dry_run: false):\n- 清理/待清理临时文件数: 0\n- 环境变更: agent-body",
+                vec!["session".to_string(), "close".to_string()],
+            ),
+            (
+                "mem-dup-sleep",
+                "experience",
+                "[sleep_summary:session] 会话 [7e171592-8786-4328-8bf1-8e5f593a260a] 完工环境总结 (dry_run: false) agent-body",
+                vec!["sleep_summary".to_string()],
+            ),
+            (
+                "mem-note-toml",
+                "note",
+                "产出文件 `/root/new/src/agent-body/config.example.toml` 摘要:\n# ======================\n# agent-body 配置示例说明",
+                vec!["auto_sync".to_string()],
+            ),
+            (
+                "mem-md-sleep",
+                "experience",
+                "[sleep_summary:md] 产出文件 `/root/new/src/agent-body/docs/src_doc/roadmap-phase80.md` 完成阶段80开发、测试与一等公民同步",
+                vec!["sleep_summary".to_string()],
+            ),
+        ];
+
+        for (id, mtype, content, tags) in samples {
+            provider
+                .store(&MemoryItem {
+                    id: id.to_string(),
+                    memory_type: mtype.to_string(),
+                    content: content.to_string(),
+                    summary: None,
+                    tags,
+                    source_agent: Some("test".to_string()),
+                    source_session: None,
+                    created_at: "2026-11-28 22:00:00".to_string(),
+                    score: Some(1.0),
+                    extra: HashMap::new(),
+                })
+                .expect("store sample");
+        }
+
+        let assembler = BriefAssembler::new(storage, Some(provider));
+        let output = assembler
+            .assemble(&BriefRequest {
+                query: "agent body".to_string(),
+                session_id: String::new(),
+                budget_tokens: 1500,
+            })
+            .expect("assemble");
+
+        let mem_block = output
+            .markdown
+            .split("## 🧠 相关历史经验")
+            .nth(1)
+            .expect("memory section");
+        let occ = mem_block
+            .matches("7e171592-8786-4328-8bf1-8e5f593a260a")
+            .count();
+        assert_eq!(occ, 1, "同一会话总结与睡眠摘要应只出现 1 次:\n{}", mem_block);
+        assert!(!mem_block.contains("==="), "不应包含装饰等号:\n{}", mem_block);
+        assert!(
+            mem_block.contains("roadmap-phase80.md`"),
+            "反引号路径应完整闭合:\n{}",
+            mem_block
+        );
+        assert!(mem_block.contains("1. ") && mem_block.contains("2. ") && mem_block.contains("3. "));
     }
 }

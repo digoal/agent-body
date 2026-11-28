@@ -4,18 +4,18 @@ pub(crate) const AGY_HOOKS_JSON_TEMPLATE: &str = r#"{
     "SessionStart": [
       {
         "type": "command",
-        "command": "python3 ./hooks/body_bridge.py session_start",
+        "command": "agent-body hooks bridge session_start",
         "timeout": 5
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "write_file|edit_file|run_command",
+        "matcher": "read_file|view_file|write_file|edit_file|run_command|grep_search|find_by_name",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./hooks/body_bridge.py pre_tool",
-            "timeout": 5
+            "command": "agent-body hooks bridge pre_tool",
+            "timeout": 3
           }
         ]
       }
@@ -26,8 +26,8 @@ pub(crate) const AGY_HOOKS_JSON_TEMPLATE: &str = r#"{
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./hooks/body_bridge.py post_tool",
-            "timeout": 5
+            "command": "agent-body hooks bridge post_tool",
+            "timeout": 3
           }
         ]
       }
@@ -35,30 +35,15 @@ pub(crate) const AGY_HOOKS_JSON_TEMPLATE: &str = r#"{
     "PreInvocation": [
       {
         "type": "command",
-        "command": "python3 ./hooks/body_bridge.py pre_invocation",
+        "command": "agent-body hooks bridge pre_invocation",
         "timeout": 2
       }
     ],
     "Stop": [
       {
         "type": "command",
-        "command": "python3 ./hooks/body_bridge.py stop",
-        "timeout": 3
-      }
-    ]
-  },
-  "token-optimizer": {
-    "enabled": true,
-    "PreToolUse": [
-      {
-        "matcher": "read_file|view_file|run_command|grep_search|find_by_name",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ./hooks/token_optimizer.py",
-            "timeout": 3
-          }
-        ]
+        "command": "agent-body hooks bridge stop",
+        "timeout": 2
       }
     ]
   }

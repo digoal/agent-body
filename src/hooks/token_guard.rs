@@ -15,6 +15,7 @@ use std::path::Path;
 use serde_json::{json, Value};
 
 use crate::config::Config;
+use crate::hooks::distill::DistillKind;
 
 const NOISE_DIR_SEGMENTS: &[&str] = &[
     "node_modules",
@@ -77,6 +78,9 @@ pub struct TokenGuardPolicy {
     pub max_full_read_lines: usize,
     pub auto_slice_lines: usize,
     pub search_max_lines: usize,
+    pub distill_enabled: bool,
+    pub distill_max_lines: usize,
+    pub distill_max_bytes: usize,
     pub extra_ignore_dirs: Vec<String>,
 }
 
@@ -88,6 +92,9 @@ impl Default for TokenGuardPolicy {
             max_full_read_lines: 600,
             auto_slice_lines: 250,
             search_max_lines: 180,
+            distill_enabled: true,
+            distill_max_lines: 120,
+            distill_max_bytes: 6144,
             extra_ignore_dirs: Vec::new(),
         }
     }
@@ -115,6 +122,9 @@ impl TokenGuardPolicy {
             max_full_read_lines: cfg.runtime.token_guard_max_full_read_lines.max(50),
             auto_slice_lines: cfg.runtime.token_guard_auto_slice_lines.max(20),
             search_max_lines: cfg.runtime.token_guard_search_max_lines.max(20),
+            distill_enabled: cfg.runtime.token_guard_distill_enabled,
+            distill_max_lines: cfg.runtime.token_guard_distill_max_lines.clamp(20, 2000),
+            distill_max_bytes: cfg.runtime.token_guard_distill_max_bytes.clamp(1024, 65536),
             extra_ignore_dirs: extra,
         }
     }
@@ -437,6 +447,179 @@ fn ripgreprc_exists() -> bool {
     false
 }
 
+fn is_distill_env_disabled() -> bool {
+    if let Ok(val) = env::var("AGENT_BODY_DISTILL") {
+        let norm = val.trim().to_ascii_lowercase();
+        if matches!(norm.as_str(), "0" | "off" | "false" | "no") {
+            return true;
+        }
+    }
+    false
+}
+
+fn is_daemon_invocation(args: &Value) -> bool {
+    args.get("IsDaemon").and_then(|v| v.as_bool()) == Some(true)
+}
+
+fn should_skip_distill(cmd: &str) -> bool {
+    let lower = cmd.to_ascii_lowercase();
+    if lower.contains("agent-body distill") || lower.contains("agent-body hooks") {
+        return true;
+    }
+    if cmd.contains("<<") {
+        return true;
+    }
+    let trimmed = cmd.trim_end();
+    if trimmed.ends_with('&') && !trimmed.ends_with("&&") {
+        let bytes = trimmed.as_bytes();
+        let before = if bytes.len() >= 2 { bytes[bytes.len() - 2] } else { b' ' };
+        if before.is_ascii_whitespace() {
+            return true;
+        }
+    }
+    for tok in cmd.split_whitespace() {
+        let clean = tok.trim_matches(|c: char| matches!(c, ';' | '&' | '|'));
+        if matches!(
+            clean,
+            "vim" | "vi" | "nano" | "less" | "more" | "top" | "htop" | "tmux"
+        ) {
+            return true;
+        }
+    }
+    false
+}
+
+fn strip_leading_env_assignments(segment: &str) -> &str {
+    let mut cur = segment.trim_start();
+    loop {
+        let Some(first) = cur.split_whitespace().next() else {
+            return "";
+        };
+        if let Some((k, _)) = first.split_once('=') {
+            if !k.is_empty() && k.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                cur = cur[first.len()..].trim_start();
+                continue;
+            }
+        }
+        return cur;
+    }
+}
+
+fn split_shell_segments(cmd: &str) -> Vec<&str> {
+    let mut segments = Vec::new();
+    let bytes = cmd.as_bytes();
+    let mut start = 0usize;
+    let mut i = 0usize;
+    let mut in_single = false;
+    let mut in_double = false;
+
+    while i < bytes.len() {
+        let b = bytes[i];
+        if b == b'\'' && !in_double {
+            in_single = !in_single;
+            i += 1;
+            continue;
+        }
+        if b == b'"' && !in_single {
+            in_double = !in_double;
+            i += 1;
+            continue;
+        }
+        if !in_single && !in_double {
+            let is_two = i + 1 < bytes.len()
+                && ((b == b'&' && bytes[i + 1] == b'&') || (b == b'|' && bytes[i + 1] == b'|'));
+            if is_two {
+                segments.push(&cmd[start..i]);
+                i += 2;
+                start = i;
+                continue;
+            }
+            if matches!(b, b';' | b'|' | b'\n') {
+                segments.push(&cmd[start..i]);
+                i += 1;
+                start = i;
+                continue;
+            }
+        }
+        i += 1;
+    }
+    if start <= cmd.len() {
+        segments.push(&cmd[start..]);
+    }
+    segments
+}
+
+fn detect_distill_target(cmd: &str) -> Option<DistillKind> {
+    let is_compound = ["\n", ";", "&&", "||"]
+        .iter()
+        .any(|op| cmd.contains(op));
+
+    for seg in split_shell_segments(cmd) {
+        let s = strip_leading_env_assignments(seg);
+        if s.is_empty() {
+            continue;
+        }
+        if starts_with_word(s, "cargo") {
+            let sub = s["cargo".len()..].trim_start();
+            if ["test", "nextest", "build", "check", "clippy"]
+                .iter()
+                .any(|w| starts_with_word(sub, w))
+            {
+                return Some(DistillKind::BuildTest);
+            }
+        }
+        if starts_with_word(s, "make")
+            || starts_with_word(s, "pytest")
+            || starts_with_word(s, "python3 -m pytest")
+            || (starts_with_word(s, "go") && starts_with_word(s["go".len()..].trim_start(), "test"))
+            || (starts_with_word(s, "npm") && starts_with_word(s["npm".len()..].trim_start(), "test"))
+            || (starts_with_word(s, "pnpm") && starts_with_word(s["pnpm".len()..].trim_start(), "test"))
+            || (starts_with_word(s, "yarn") && starts_with_word(s["yarn".len()..].trim_start(), "test"))
+        {
+            return Some(DistillKind::BuildTest);
+        }
+        if starts_with_word(s, "git") {
+            let sub = s["git".len()..].trim_start();
+            if ["diff", "show", "log"]
+                .iter()
+                .any(|w| starts_with_word(sub, w))
+            {
+                return Some(DistillKind::GitDiff);
+            }
+        }
+        if starts_with_word(s, "curl") || starts_with_word(s, "wget") {
+            return Some(DistillKind::HttpFetch);
+        }
+        if starts_with_word(s, "codegraph")
+            && starts_with_word(s["codegraph".len()..].trim_start(), "explore")
+        {
+            return Some(DistillKind::SearchList);
+        }
+        if is_compound
+            && ["rg", "grep", "egrep", "fgrep", "find"]
+                .iter()
+                .any(|w| starts_with_word(s, w))
+        {
+            return Some(DistillKind::SearchList);
+        }
+    }
+    None
+}
+
+fn shell_single_quote(input: &str) -> String {
+    format!("'{}'", input.replace('\'', "'\\''"))
+}
+
+fn wrap_with_distill(cmd: &str, kind: DistillKind, max_lines: usize, max_bytes: usize) -> String {
+    format!(
+        "agent-body distill --kind {} --max-lines {} --max-bytes {} --shell {}",
+        kind.as_str(),
+        max_lines,
+        max_bytes,
+        shell_single_quote(cmd)
+    )
+}
+
 fn evaluate_command(args: &Value, policy: &TokenGuardPolicy) -> TokenGuardDecision {
     let cmd_key = if args.get("CommandLine").is_some() {
         "CommandLine"
@@ -457,46 +640,44 @@ fn evaluate_command(args: &Value, policy: &TokenGuardPolicy) -> TokenGuardDecisi
     }
 
     let cap_pipe = awk_cap_pipe(policy.search_max_lines);
+    let has_compound = ["\n", ";", "&&", "||"]
+        .iter()
+        .any(|sep| stripped.contains(sep));
 
-    if starts_with_word(stripped, "rg") {
-        if !["\n", ";", "&&", "||"]
-            .iter()
-            .any(|sep| stripped.contains(sep))
+    if starts_with_word(stripped, "rg") && !has_compound {
+        let mut new_cmd = stripped.to_string();
+        let env_has_rc = env::var("RIPGREP_CONFIG_PATH")
+            .map(|v| !v.trim().is_empty())
+            .unwrap_or(false);
+        if !env_has_rc
+            && !new_cmd.contains("RIPGREP_CONFIG_PATH")
+            && !new_cmd.contains("--no-config")
+            && ripgreprc_exists()
         {
-            let mut new_cmd = stripped.to_string();
-            let env_has_rc = env::var("RIPGREP_CONFIG_PATH")
-                .map(|v| !v.trim().is_empty())
-                .unwrap_or(false);
-            if !env_has_rc
-                && !new_cmd.contains("RIPGREP_CONFIG_PATH")
-                && !new_cmd.contains("--no-config")
-                && ripgreprc_exists()
-            {
-                new_cmd = format!("RIPGREP_CONFIG_PATH=\"$HOME/.ripgreprc\" {}", new_cmd);
-            }
+            new_cmd = format!("RIPGREP_CONFIG_PATH=\"$HOME/.ripgreprc\" {}", new_cmd);
+        }
 
-            let is_simple = !has_complex_shell_ops(stripped, false);
-            let has_summary = has_token(
-                stripped,
-                &[
-                    "--files",
-                    "--count",
-                    "-c",
-                    "-l",
-                    "--files-with-matches",
-                    "--json",
-                ],
-            );
-            if is_simple && !has_summary {
-                new_cmd.push_str(&cap_pipe);
-            }
-            if new_cmd != stripped {
-                return TokenGuardDecision::Overwrite {
-                    overwrite: json!({ cmd_key: new_cmd }),
-                    suggestion: "已为 `rg` 注入全局忽略配置与输出行数上限。".to_string(),
-                    target: stripped.chars().take(120).collect(),
-                };
-            }
+        let is_simple = !has_complex_shell_ops(stripped, false);
+        let has_summary = has_token(
+            stripped,
+            &[
+                "--files",
+                "--count",
+                "-c",
+                "-l",
+                "--files-with-matches",
+                "--json",
+            ],
+        );
+        if is_simple && !has_summary {
+            new_cmd.push_str(&cap_pipe);
+        }
+        if new_cmd != stripped {
+            return TokenGuardDecision::Overwrite {
+                overwrite: json!({ cmd_key: new_cmd }),
+                suggestion: "已为 `rg` 注入全局忽略配置与输出行数上限。".to_string(),
+                target: stripped.chars().take(120).collect(),
+            };
         }
         return TokenGuardDecision::Pass;
     }
@@ -506,9 +687,9 @@ fn evaluate_command(args: &Value, policy: &TokenGuardPolicy) -> TokenGuardDecisi
         .copied()
         .find(|b| starts_with_word(stripped, b));
     if let Some(bin) = grep_bin {
-        if !["\n", ";", "&&", "||", "$(", "`"]
-            .iter()
-            .any(|sep| stripped.contains(sep))
+        if !has_compound
+            && !stripped.contains("$(")
+            && !stripped.contains('`')
             && is_recursive_grep_cmd(stripped)
             && !stripped.contains("--exclude-dir")
         {
@@ -525,7 +706,9 @@ fn evaluate_command(args: &Value, policy: &TokenGuardPolicy) -> TokenGuardDecisi
                 target: stripped.chars().take(120).collect(),
             };
         }
-        return TokenGuardDecision::Pass;
+        if !has_compound {
+            return TokenGuardDecision::Pass;
+        }
     }
 
     if starts_with_word(stripped, "find") && !has_complex_shell_ops(stripped, false) {
@@ -542,6 +725,29 @@ fn evaluate_command(args: &Value, policy: &TokenGuardPolicy) -> TokenGuardDecisi
             suggestion: "已为独立 `find` 自动追加输出行数上限保护。".to_string(),
             target: stripped.chars().take(120).collect(),
         };
+    }
+
+    if policy.distill_enabled
+        && !is_distill_env_disabled()
+        && !is_daemon_invocation(args)
+        && !should_skip_distill(stripped)
+    {
+        if let Some(kind) = detect_distill_target(stripped) {
+            let wrapped = wrap_with_distill(
+                stripped,
+                kind,
+                policy.distill_max_lines,
+                policy.distill_max_bytes,
+            );
+            return TokenGuardDecision::Overwrite {
+                overwrite: json!({ cmd_key: wrapped }),
+                suggestion: format!(
+                    "已自动包装高噪/复合命令为 `agent-body distill` ({}) 流式输出蒸馏（无损落盘 + 退出码保真）。",
+                    kind.as_str()
+                ),
+                target: stripped.chars().take(120).collect(),
+            };
+        }
     }
 
     TokenGuardDecision::Pass
@@ -738,5 +944,65 @@ mod tests {
             &policy,
         );
         assert!(matches!(d_search, TokenGuardDecision::Deny { .. }));
+    }
+
+    #[test]
+    fn test_distill_wrapping_for_compound_and_high_noise_commands() {
+        let policy = TokenGuardPolicy::default();
+
+        let d_cargo = TokenGuardEngine::evaluate(
+            "run_command",
+            &json!({"CommandLine": "RUST_TEST_THREADS=1 cargo test && make lint-hygiene"}),
+            &policy,
+        );
+        match d_cargo {
+            TokenGuardDecision::Overwrite { overwrite, .. } => {
+                let cmd = overwrite["CommandLine"].as_str().unwrap_or("");
+                assert!(cmd.starts_with("agent-body distill --kind build_test"));
+                assert!(cmd.contains("--shell "));
+            }
+            other => panic!("expected distill Overwrite for cargo test, got {:?}", other),
+        }
+
+        let d_curl = TokenGuardEngine::evaluate(
+            "run_command",
+            &json!({"CommandLine": "curl -sSf https://example.com/a.json"}),
+            &policy,
+        );
+        match d_curl {
+            TokenGuardDecision::Overwrite { overwrite, .. } => {
+                let cmd = overwrite["CommandLine"].as_str().unwrap_or("");
+                assert!(cmd.contains("--kind http_fetch"));
+            }
+            other => panic!("expected distill Overwrite for curl, got {:?}", other),
+        }
+
+        let d_compound_rg = TokenGuardEngine::evaluate(
+            "run_command",
+            &json!({"CommandLine": "rg -n foo src/ && echo done"}),
+            &policy,
+        );
+        match d_compound_rg {
+            TokenGuardDecision::Overwrite { overwrite, .. } => {
+                let cmd = overwrite["CommandLine"].as_str().unwrap_or("");
+                assert!(cmd.contains("--kind search_list"));
+            }
+            other => panic!("expected distill Overwrite for compound rg, got {:?}", other),
+        }
+
+        // 防递归跳过、守护进程跳过
+        let d_skip_self = TokenGuardEngine::evaluate(
+            "run_command",
+            &json!({"CommandLine": "agent-body distill --kind auto --shell 'cargo test'"}),
+            &policy,
+        );
+        assert_eq!(d_skip_self, TokenGuardDecision::Pass);
+
+        let d_daemon = TokenGuardEngine::evaluate(
+            "run_command",
+            &json!({"CommandLine": "cargo test", "IsDaemon": true}),
+            &policy,
+        );
+        assert_eq!(d_daemon, TokenGuardDecision::Pass);
     }
 }

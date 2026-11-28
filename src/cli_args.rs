@@ -154,6 +154,24 @@ pub(crate) enum Commands {
         action: HooksCommands,
     },
 
+    #[command(about = "确定性命令输出流式蒸馏器（压缩超阈值刷屏，100% 透传退出码并无损落盘）")]
+    Distill {
+        #[arg(long, default_value = "auto", help = "输出类型: auto | build_test | git_diff | search_list | http_fetch | generic")]
+        kind: String,
+
+        #[arg(long, default_value_t = 120, help = "蒸馏输出最大保留行数")]
+        max_lines: usize,
+
+        #[arg(long, default_value_t = 6144, help = "蒸馏输出最大保留字节数")]
+        max_bytes: usize,
+
+        #[arg(long, help = "通过 bash -c 执行整段命令字符串")]
+        shell: Option<String>,
+
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, help = "直接执行的命令与参数（与 --shell 二选一）")]
+        cmd: Vec<String>,
+    },
+
     #[command(about = "基于 DuckDB 列存分析引擎的宿主机时序统计与数据导出")]
     Analytics {
         #[command(subcommand)]

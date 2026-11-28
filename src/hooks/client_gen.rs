@@ -312,16 +312,36 @@ mod tests {
         let parsed: serde_json::Value =
             serde_json::from_str(&res.content).expect("AGY hooks.json 必须是合法 JSON");
         assert!(parsed["agent-body"]["PreToolUse"].is_array());
+        assert_eq!(
+            parsed["agent-body"]["PreToolUse"][0]["matcher"],
+            "read_file|view_file|write_file|edit_file|run_command|grep_search|find_by_name"
+        );
+        assert_eq!(
+            parsed["agent-body"]["PreToolUse"][0]["hooks"][0]["command"],
+            "agent-body hooks bridge pre_tool"
+        );
         assert!(parsed["agent-body"]["PostToolUse"].is_array());
         assert_eq!(
             parsed["agent-body"]["PostToolUse"][0]["matcher"],
             "write_file|edit_file|run_command"
         );
-        assert!(parsed["agent-body"]["SessionStart"].is_array());
-        assert!(parsed["agent-body"]["PreInvocation"].is_array());
-        assert!(parsed["agent-body"]["Stop"].is_array());
-        assert_eq!(parsed["token-optimizer"]["enabled"], true);
-        assert!(parsed["token-optimizer"]["PreToolUse"].is_array());
+        assert_eq!(
+            parsed["agent-body"]["PostToolUse"][0]["hooks"][0]["command"],
+            "agent-body hooks bridge post_tool"
+        );
+        assert_eq!(
+            parsed["agent-body"]["SessionStart"][0]["command"],
+            "agent-body hooks bridge session_start"
+        );
+        assert_eq!(
+            parsed["agent-body"]["PreInvocation"][0]["command"],
+            "agent-body hooks bridge pre_invocation"
+        );
+        assert_eq!(
+            parsed["agent-body"]["Stop"][0]["command"],
+            "agent-body hooks bridge stop"
+        );
+        assert!(parsed.get("token-optimizer").is_none());
         assert_eq!(res.companion_files.len(), 3);
         assert_eq!(
             res.companion_files[0].relative_path,
@@ -369,7 +389,10 @@ mod tests {
         let parsed: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(&hooks_file).unwrap()).unwrap();
         assert_eq!(parsed["agent-body"]["enabled"], true);
-        assert_eq!(parsed["token-optimizer"]["enabled"], true);
+        assert_eq!(
+            parsed["agent-body"]["PreToolUse"][0]["hooks"][0]["command"],
+            "agent-body hooks bridge pre_tool"
+        );
 
         #[cfg(unix)]
         {

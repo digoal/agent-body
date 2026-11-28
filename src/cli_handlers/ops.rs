@@ -281,90 +281,33 @@ pub fn handle_ops(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> {
                     if let Err(e) = std::io::stdin().read_to_string(&mut raw_stdin) {
                         eprintln!("[HooksBridge][WARN] 读取 stdin 失败: {}", e);
                     }
-                    let mode = cfg.effective_runtime_mode();
-                    let ev_norm = event.trim().to_ascii_lowercase();
-                    if mode == agent_body::config::RuntimeMode::Bypass {
-                        agent_body::body::ShadowAbEngine::record_bypass_event(
-                            &storage,
-                            "hook_bridge",
-                            &ev_norm,
-                            "hook-bridge",
-                            "",
-                        );
-                        if ev_norm == "pre_tool" {
-                            println!(r#"{{"decision":"allow"}}"#);
-                        } else {
-                            println!("{{}}");
-                        }
-                        return Ok(());
-                    }
-                    let payload: serde_json::Value = serde_json::from_str(raw_stdin.trim())
-                        .unwrap_or_else(|_| serde_json::json!({}));
-                    match ev_norm.as_str() {
-                        "session_start" => {
-                            let provider = cfg.build_memory_provider(storage.clone());
-                            let assembler = agent_body::brief::BriefAssembler::new(storage, Some(provider));
-                            let out = assembler.assemble(&agent_body::brief::BriefRequest::default())?;
-                            let truncated: String = out.markdown.chars().take(2500).collect();
-                            println!("{}", serde_json::to_string(&serde_json::json!({
-                                "injectSteps": [{
-                                    "systemMessage": {
-                                        "systemMessage": format!("[Agent Body 自动开工简报]\n{}", truncated)
-                                    }
-                                }]
-                            }))?);
-                        }
-                        "pre_tool" => {
-                            let tc = payload.get("toolCall").cloned().unwrap_or_else(|| serde_json::json!({}));
-                            let tname = tc.get("name").and_then(|v| v.as_str()).unwrap_or("run_command");
-                            let args = tc.get("args").cloned().unwrap_or_else(|| serde_json::json!({}));
-                            let engine = agent_body::api::hooks::AgentHookEngine::new(storage);
-                            let res = engine.pre_tool_call(tname, &args);
-                            if !res.allowed {
-                                let reason = res.warnings.into_iter().chain(res.suggestions).collect::<Vec<_>>().join(" ; ");
-                                println!("{}", serde_json::to_string(&serde_json::json!({
-                                    "decision": "deny",
-                                    "reason": format!("[agent-body 阻断] {}", reason)
-                                }))?);
-                            } else if res.has_warnings {
-                                let reason = res.warnings.into_iter().chain(res.suggestions).collect::<Vec<_>>().join(" ; ");
-                                println!("{}", serde_json::to_string(&serde_json::json!({
-                                    "decision": "ask",
-                                    "reason": format!("[agent-body 风险预警] {}", reason)
-                                }))?);
-                            } else if let Some(ow) = res.overwrite {
-                                println!("{}", serde_json::to_string(&serde_json::json!({
-                                    "decision": "allow",
-                                    "overwrite": ow
-                                }))?);
-                            } else {
-                                println!(r#"{{"decision":"allow"}}"#);
-                            }
-                        }
-                        "post_tool" => {
-                            let tc = payload.get("toolCall").cloned().unwrap_or_else(|| serde_json::json!({}));
-                            let tname = tc.get("name").and_then(|v| v.as_str()).unwrap_or("run_command");
-                            let args = tc.get("args").cloned().unwrap_or_else(|| serde_json::json!({}));
-                            let err_text = payload
-                                .get("error")
-                                .and_then(|v| v.as_str().map(|s| s.to_string()).or_else(|| Some(v.to_string())));
-                            let engine = agent_body::api::hooks::AgentHookEngine::new(storage);
-                            let res = engine.post_tool_call_with_error(tname, &args, err_text.is_none(), err_text.as_deref());
-                            if let Some(rx) = res.recovery_prescription {
-                                let hint = format!(
-                                    "[agent-body AOPCC 自愈处方 | {}] {} | 建议动作: {}",
-                                    rx.failure_kind,
-                                    rx.root_cause,
-                                    rx.recovery_actions.into_iter().take(3).collect::<Vec<_>>().join(" ; ")
-                                );
-                                println!("{}", serde_json::to_string(&serde_json::json!({ "additionalContext": hint }))?);
-                            } else {
-                                println!("{{}}");
-                            }
-                        }
-                        _ => println!("{{}}"),
-                    }
+                    let out = agent_body::hooks::bridge::handle_bridge_with_storage(
+                        &event,
+                        &raw_stdin,
+                        cfg,
+                        &storage,
+                    )?;
+                    println!("{}", serde_json::to_string(&out)?);
                 }
+            }
+        }
+
+        Commands::Distill {
+            kind,
+            max_lines,
+            max_bytes,
+            shell,
+            cmd,
+        } => {
+            let code = agent_body::hooks::run_distill_cli(
+                &kind,
+                max_lines,
+                max_bytes,
+                shell.as_deref(),
+                &cmd,
+            )?;
+            if code != 0 {
+                std::process::exit(code);
             }
         }
 

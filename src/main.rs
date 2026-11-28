@@ -21,6 +21,36 @@ fn main() -> Result<()> {
 
     let cli = Cli::parse();
     let cfg = Config::load_or_default(cli.config.as_deref())?;
+
+    // 极速零 DB 快路径：distill 包装器与 hooks bridge 无 DB 事件不打开 SQLite
+    match &cli.command {
+        Commands::Distill {
+            kind,
+            max_lines,
+            max_bytes,
+            shell,
+            cmd,
+        } => {
+            let code = agent_body::hooks::run_distill_cli(
+                kind,
+                *max_lines,
+                *max_bytes,
+                shell.as_deref(),
+                cmd,
+            )?;
+            if code != 0 {
+                std::process::exit(code);
+            }
+            return Ok(());
+        }
+        Commands::Hooks {
+            action: HooksCommands::Bridge { event },
+        } => {
+            return agent_body::hooks::bridge::handle_cli_bridge(event, &cfg);
+        }
+        _ => {}
+    }
+
     let storage = Storage::from_config(&cfg)?;
     let audit_storage = storage.clone();
     let cli_t0 = std::time::Instant::now();
@@ -77,6 +107,7 @@ fn cli_command_label(cmd: &Commands) -> &'static str {
         Commands::Preflight { .. } => "preflight",
         Commands::Web { .. } => "web",
         Commands::Hooks { .. } => "hooks",
+        Commands::Distill { .. } => "distill",
         Commands::Storage { .. } => "storage",
         Commands::Coordination { .. } => "coordination",
         Commands::Analytics { .. } => "analytics",
@@ -102,6 +133,8 @@ mod tests {
         assert!(Cli::try_parse_from(["agent-body", "asset", "register", "--path", "/root/new/tmp/a.py", "--type", "script"]).is_ok());
         assert!(Cli::try_parse_from(["agent-body", "hooks", "pre", "--tool-name", "bind_port", "--args", "{\"port\":8080}"]).is_ok());
         assert!(Cli::try_parse_from(["agent-body", "hooks", "post", "--tool-name", "write_file", "--args", "{\"path\":\"/tmp/a\"}"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "hooks", "bridge", "pre_invocation"]).is_ok());
+        assert!(Cli::try_parse_from(["agent-body", "distill", "--kind", "build_test", "--max-lines", "80", "--shell", "cargo test"]).is_ok());
         assert!(Cli::try_parse_from(["agent-body", "coordination", "acquire", "-t", "port", "-i", "9090"]).is_ok());
         assert!(Cli::try_parse_from(["agent-body", "analytics", "heatmap", "--days", "7"]).is_ok());
         assert!(Cli::try_parse_from(["agent-body", "analytics", "trend", "--metric", "assets", "--days", "14"]).is_ok());

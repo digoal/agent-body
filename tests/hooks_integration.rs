@@ -60,7 +60,8 @@ fn test_client_hook_generator_all_supported_clients() {
         }
         if client == ClientType::Agy {
             assert_eq!(gen.companion_files.len(), 3);
-            assert!(gen.content.contains("token-optimizer"));
+            assert!(gen.content.contains("agent-body hooks bridge pre_tool"));
+            assert!(gen.content.contains("read_file|view_file|write_file|edit_file|run_command|grep_search|find_by_name"));
             assert!(gen.companion_files.iter().any(|c| c.relative_path.ends_with("token_optimizer.py")));
             assert!(gen.companion_files.iter().any(|c| c.relative_path == ".ripgreprc"));
         }

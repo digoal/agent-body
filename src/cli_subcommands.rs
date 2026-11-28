@@ -240,9 +240,9 @@ pub(crate) enum HooksCommands {
         #[arg(short = 'e', long, help = "可选失败错误输出（触发 AOPCC 秒级自愈处方）")]
         error_output: Option<String>,
     },
-    #[command(about = "原生 Rust Hook 桥接器（替代 Python 桥接，读取 stdin JSON 并输出客户端协议）")]
+    #[command(about = "原生 Rust Hook 单入口桥接器（读取 stdin JSON 并输出客户端协议）")]
     Bridge {
-        #[arg(help = "Hook 事件名: session_start | pre_tool | post_tool")]
+        #[arg(help = "Hook 事件名: session_start | pre_tool | post_tool | pre_invocation | stop")]
         event: String,
     },
 }

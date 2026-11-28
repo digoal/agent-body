@@ -2,10 +2,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub mod auto_sync;
+pub mod bridge;
 pub mod client_gen;
 pub(crate) mod client_templates;
 pub mod diagnoser;
 pub mod dispatcher;
+pub mod distill;
 pub mod event_bus;
 pub mod pipeline;
 pub mod push;
@@ -21,6 +23,7 @@ pub use diagnoser::{
     FailureRecoveryPrescription, OptimisticFailureDiagnoser,
 };
 pub use dispatcher::{HookAction, HookDispatcher, HookFilter, HookRule};
+pub use distill::{distill_output, run_distill_cli, DistillKind, DistillOutput};
 pub use event_bus::{EventBus, EventBusHandle};
 pub use pipeline::{
     HookAuditRecord, HookPipeline, HookPipelineEngine, HookStep, OnFailureStrategy,

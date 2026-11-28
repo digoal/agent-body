@@ -438,6 +438,18 @@ pub struct RuntimeConfig {
     /// Phase 80: 独立 rg / grep -r / find 搜索命令自动注入的最多输出行数（默认 180）
     #[serde(default = "default_token_guard_search_max_lines")]
     pub token_guard_search_max_lines: usize,
+
+    /// Phase 81: 是否启用对复合/高噪 `run_command` 自动注入 `agent-body distill` 输出蒸馏包装
+    #[serde(default = "default_true_flag")]
+    pub token_guard_distill_enabled: bool,
+
+    /// Phase 81: `agent-body distill` 蒸馏输出的最大保留行数（默认 120）
+    #[serde(default = "default_token_guard_distill_max_lines")]
+    pub token_guard_distill_max_lines: usize,
+
+    /// Phase 81: `agent-body distill` 蒸馏输出的最大保留字节数（默认 6144 = 6KB）
+    #[serde(default = "default_token_guard_distill_max_bytes")]
+    pub token_guard_distill_max_bytes: usize,
 }
 
 /// 行业 Know-How 知识网络与 Omni-RRF 多路融合检索配置 (`[knowledge_graph]`, Phase 61 / ISSUE #44)
@@ -634,6 +646,14 @@ pub(super) fn default_token_guard_search_max_lines() -> usize {
     180
 }
 
+pub(super) fn default_token_guard_distill_max_lines() -> usize {
+    120
+}
+
+pub(super) fn default_token_guard_distill_max_bytes() -> usize {
+    6144
+}
+
 impl Default for RuntimeConfig {
     fn default() -> Self {
         Self {
@@ -648,6 +668,9 @@ impl Default for RuntimeConfig {
             token_guard_max_full_read_lines: default_token_guard_max_full_read_lines(),
             token_guard_auto_slice_lines: default_token_guard_auto_slice_lines(),
             token_guard_search_max_lines: default_token_guard_search_max_lines(),
+            token_guard_distill_enabled: default_true_flag(),
+            token_guard_distill_max_lines: default_token_guard_distill_max_lines(),
+            token_guard_distill_max_bytes: default_token_guard_distill_max_bytes(),
         }
     }
 }

@@ -4,6 +4,7 @@
 //! 自适应组装为 Agent 开工情境简报。
 
 pub mod assembler;
+mod format;
 pub mod optimistic;
 
 pub use assembler::{BriefAssembler, BriefOutput, BriefQuality, BriefRequest, estimate_tokens};

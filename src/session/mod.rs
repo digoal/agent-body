@@ -92,6 +92,21 @@ impl SessionManager {
         let changes_engine = ChangesEngine::new(self.storage.clone());
         let changes_summary = changes_engine.generate_summary_markdown(None, 10)?;
 
+        // 幂等归档同会话历史完工总结，避免 Stop hook 重复触发导致记忆膨胀 (规约 #21)
+        let session_prefix = format!("会话 [{}] 完工环境总结", session_id);
+        if let Ok(active_mems) = self.storage.list_all_active_memories(500) {
+            for old_mem in active_mems {
+                if old_mem.content.starts_with(&session_prefix) {
+                    if let Err(e) = self.storage.update_memory_status(&old_mem.id, "archived") {
+                        eprintln!(
+                            "[Session][WARN] 归档旧会话完工总结失败 ({}): {}",
+                            old_mem.id, e
+                        );
+                    }
+                }
+            }
+        }
+
         // 沉淀进长期记忆
         let mem_content = format!(
             "会话 [{}] 完工环境总结 (dry_run: {}):\n- 清理/待清理临时文件数: {}\n- 涉及空间: {} 字节\n- 环境变更:\n{}",
@@ -182,5 +197,31 @@ mod tests {
         let mems = storage.search_memories_fts("\"session-test-01\"", 5).unwrap();
         assert_eq!(mems.len(), 1);
         assert!(mems[0].content.contains("完工环境总结"));
+    }
+
+    #[test]
+    fn test_close_session_idempotent_archives_previous_summary() {
+        let storage = Arc::new(Storage::open_in_memory().expect("open_in_memory"));
+        let sm = SessionManager::new(storage.clone());
+
+        let first = sm.close_session("session-dup-01", false).expect("first close");
+        let second = sm.close_session("session-dup-01", false).expect("second close");
+        assert_ne!(first.saved_memory_id, second.saved_memory_id);
+
+        let active = storage.list_all_active_memories(100).expect("list active");
+        let active_matches: Vec<_> = active
+            .iter()
+            .filter(|m| m.content.starts_with("会话 [session-dup-01] 完工环境总结"))
+            .collect();
+        assert_eq!(
+            active_matches.len(),
+            1,
+            "重复调用 close_session 后 active 完工总结应仅有 1 条"
+        );
+        assert_eq!(
+            Some(active_matches[0].id.clone()),
+            second.saved_memory_id,
+            "保留的应为最新一次结算记录"
+        );
     }
 }
