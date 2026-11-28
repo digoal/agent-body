@@ -151,7 +151,10 @@ impl McpToolRegistry {
             "body_lock_acquire" => {
                 use crate::coordination::{CoordinationEngine, LockRequest, ResourceType, LockScope};
                 let rt_str = args.get("resource_type").and_then(|v| v.as_str()).unwrap_or("custom");
-                let res_id = args.get("resource_id").and_then(|v| v.as_str()).unwrap_or("");
+                let res_id = args.get("resource_id").and_then(|v| v.as_str()).unwrap_or("").trim();
+                if res_id.is_empty() {
+                    bail!("缺少必填参数 resource_id（资源标识不能为空）");
+                }
                 let scope_str = args.get("scope").and_then(|v| v.as_str()).unwrap_or("exclusive");
                 let holder = args.get("holder_agent").and_then(|v| v.as_str()).unwrap_or("current-agent");
                 let pid = args.get("holder_pid").and_then(|v| v.as_u64()).map(|p| p as u32);

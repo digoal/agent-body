@@ -244,7 +244,7 @@ impl SqliteStorageProvider {
         let conn = self.lock_conn()?;
         if run_id == "awr:pragma_optimize" {
             if let Err(e) = conn.execute_batch(
-                "PRAGMA optimize; PRAGMA wal_checkpoint(PASSIVE); PRAGMA shrink_memory;",
+                "PRAGMA optimize; PRAGMA wal_checkpoint(TRUNCATE); PRAGMA shrink_memory;",
             ) {
                 eprintln!("[SQLite][WARN] 执行 AWR PRAGMA optimize/shrink_memory 失败: {}", e);
             }

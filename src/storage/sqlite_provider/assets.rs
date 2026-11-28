@@ -8,22 +8,9 @@ impl SqliteStorageProvider {
         let conn = self.lock_conn()?;
         conn.execute_batch(SCHEMA_SQL)
             .context("执行内置 SQLite Schema 批处理失败")?;
-        // 增量热迁移兼容已存在数据库（已存在列会报 duplicate column，其余异常显式记录）
-        for alter_sql in [
-            "ALTER TABLE memories ADD COLUMN embedding TEXT DEFAULT '[]'",
-            "ALTER TABLE assets ADD COLUMN embedding TEXT DEFAULT '[]'",
-            "ALTER TABLE fact_nodes ADD COLUMN embedding TEXT DEFAULT '[]'",
-            "ALTER TABLE links ADD COLUMN line_number INTEGER DEFAULT NULL",
-            "ALTER TABLE links ADD COLUMN snippet TEXT DEFAULT NULL",
-            "ALTER TABLE links ADD COLUMN provenance TEXT DEFAULT 'static_scan'",
-        ] {
-            if let Err(e) = conn.execute(alter_sql, []) {
-                let msg = e.to_string();
-                if !msg.contains("duplicate column") {
-                    eprintln!("[SQLite][WARN] 增量列迁移跳过 ({}): {}", alter_sql, msg);
-                }
-            }
-        }
+        // 幂等无损迁移兼容已存在历史数据库（自动识别重命名列并补齐缺失列）
+        super::schema_reconcile::reconcile_sqlite_schema(&conn)
+            .context("执行 SQLite Schema 历史库自愈迁移失败")?;
         conn.execute("CREATE TABLE IF NOT EXISTS scan_jobs (
             id              TEXT PRIMARY KEY,
             root_path       TEXT NOT NULL,

@@ -140,9 +140,13 @@ pub fn handle_memories_add(req: &HttpRequest, storage: Arc<dyn StorageProvider>)
         return WebResponse::error(StatusCode::BAD_REQUEST, "content must not be empty");
     }
     let mm = MemoryManager::new(Storage::new(storage));
-    let mem_type = body.memory_type.unwrap_or_else(|| "decision".to_string());
+    let raw_type = body.memory_type.unwrap_or_else(|| "decision".to_string());
+    let canonical_type = match MemoryManager::normalize_memory_type(&raw_type) {
+        Ok(t) => t,
+        Err(e) => return WebResponse::error(StatusCode::BAD_REQUEST, &e.to_string()),
+    };
     match mm.add(
-        &mem_type,
+        canonical_type,
         body.content.trim(),
         body.summary.as_deref(),
         Some("web_console"),
@@ -150,7 +154,7 @@ pub fn handle_memories_add(req: &HttpRequest, storage: Arc<dyn StorageProvider>)
     ) {
         Ok(id) => WebResponse::success(serde_json::json!({
             "id": id,
-            "memory_type": mem_type,
+            "memory_type": canonical_type,
             "saved": true,
         })),
         Err(e) => WebResponse::error(
@@ -364,7 +368,7 @@ pub fn handle_service_check(req: &HttpRequest, storage: Arc<dyn StorageProvider>
     }
 }
 
-pub fn handle_mesh_query(req: &HttpRequest) -> HttpResponse {
+pub fn handle_mesh_query(req: &HttpRequest, storage: &dyn StorageProvider) -> HttpResponse {
     let action = query_str(req, "action", "ping");
     let cfg = Config::load_or_default(None).unwrap_or_default();
     let client = MeshClient::new(&cfg.mesh, cfg.web.auth_token.clone());
@@ -380,18 +384,14 @@ pub fn handle_mesh_query(req: &HttpRequest) -> HttpResponse {
             let hops = query_str(req, "hops", "2").parse::<usize>().unwrap_or(2).clamp(1, 4);
             WebResponse::success(client.federated_graph_query(&q, hops))
         }
-        "dialogue_inbox" => {
-            match Storage::open(&cfg.db_path) {
-                Ok(st) => WebResponse::success(st.list_mesh_dialogues(30).unwrap_or_default()),
-                Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
-            }
-        }
-        "transfer_inbox" => {
-            match Storage::open(&cfg.db_path) {
-                Ok(st) => WebResponse::success(st.list_mesh_transfers(30).unwrap_or_default()),
-                Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
-            }
-        }
+        "dialogue_inbox" => match storage.list_mesh_dialogues(30) {
+            Ok(items) => WebResponse::success(items),
+            Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+        },
+        "transfer_inbox" => match storage.list_mesh_transfers(30) {
+            Ok(items) => WebResponse::success(items),
+            Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+        },
         _ => WebResponse::success(client.ping_all()),
     }
 }
@@ -573,9 +573,25 @@ pub fn handle_benchmark_run(req: &HttpRequest, storage: Arc<dyn StorageProvider>
 
 pub fn handle_benchmark_report(req: &HttpRequest, storage: &dyn StorageProvider) -> HttpResponse {
     let run_id = req.query_params.get("run_id").map(|s| s.as_str());
-    let history = storage.list_benchmark_runs(20).unwrap_or_default();
+    let history = match storage.list_benchmark_runs(20) {
+        Ok(list) => list,
+        Err(e) => {
+            return WebResponse::error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &format!("Failed to list benchmark runs: {}", e),
+            )
+        }
+    };
     let rec_opt = if let Some(id) = run_id {
-        storage.get_benchmark_run(id).ok().flatten()
+        match storage.get_benchmark_run(id) {
+            Ok(opt) => opt,
+            Err(e) => {
+                return WebResponse::error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &format!("Failed to load benchmark run {}: {}", id, e),
+                )
+            }
+        }
     } else {
         history.first().cloned()
     };

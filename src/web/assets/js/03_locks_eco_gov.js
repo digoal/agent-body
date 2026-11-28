@@ -71,21 +71,17 @@ async function loadLocks() {
 
 window.releaseLock = async function (resourceType, resourceId) {
   const token = (document.getElementById("lock-auth-token")?.value || "").trim();
-  const headers = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
   try {
-    const res = await fetch("/api/v1/locks/release", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ resource_type: resourceType, resource_id: resourceId, agent_id: "admin_web" }),
-    });
-    const json = await res.json();
-    if (json.code !== 200) throw new Error(json.message);
+    await apiPost(
+      "/api/v1/locks/release",
+      { resource_type: resourceType, resource_id: resourceId, agent_id: "admin_web", force: true },
+      token
+    );
     mirrorBlackScreen(`agent-body coordination release --resource-type ${resourceType} --resource-id "${resourceId}"`, "body_lock_release", { resource_type: resourceType, resource_id: resourceId });
     loadLocks();
     loadOverview();
   } catch (e) {
-    alert("释放失败: " + e.message);
+    showToast("释放失败: " + e.message, true);
   }
 };
 

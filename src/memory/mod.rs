@@ -25,6 +25,24 @@ impl MemoryManager {
         Self { storage }
     }
 
+    /// 规范化记忆类型，兼容常见语义别名（如 troubleshooting -> experience），拒绝非法值避免触碰数据库 CHECK 约束
+    pub fn normalize_memory_type(raw: &str) -> Result<&'static str> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "decision" => Ok("decision"),
+            "task" | "todo" | "plan" => Ok("task"),
+            "experience" | "troubleshooting" | "debug" | "lesson" | "incident" | "bugfix" => {
+                Ok("experience")
+            }
+            "preference" | "style" | "rule" => Ok("preference"),
+            "fact" | "knowledge" => Ok("fact"),
+            "note" => Ok("note"),
+            other => anyhow::bail!(
+                "不支持的记忆类型 '{}'，仅支持: decision, task, experience, preference, fact, note",
+                other
+            ),
+        }
+    }
+
     /// 写入一条新记忆（入库前强制经 SecretRedactor 全链路脱敏）
     pub fn add(
         &self,
@@ -34,13 +52,14 @@ impl MemoryManager {
         source_agent: Option<&str>,
         tags: Vec<String>,
     ) -> Result<String> {
+        let canonical_type = Self::normalize_memory_type(memory_type)?;
         let sanitized_content = crate::scanner::metadata::SecretRedactor::redact_preserving_newlines(content);
         let sanitized_summary = summary.map(crate::scanner::metadata::SecretRedactor::redact_single_line);
         let filter = MemoryIntakeFilter::default();
-        let eval = filter.evaluate(memory_type, &sanitized_content);
+        let eval = filter.evaluate(canonical_type, &sanitized_content);
         let weight = if eval.accepted { eval.calculated_weight } else { 0.5 };
         self.insert_sanitized_record(
-            memory_type,
+            canonical_type,
             sanitized_content,
             sanitized_summary,
             source_agent,
@@ -58,16 +77,17 @@ impl MemoryManager {
         source_agent: Option<&str>,
         tags: Vec<String>,
     ) -> Result<(Option<String>, MemoryIntakeEvaluation)> {
+        let canonical_type = Self::normalize_memory_type(memory_type)?;
         let sanitized_content = crate::scanner::metadata::SecretRedactor::redact_preserving_newlines(content);
         let sanitized_summary = summary.map(crate::scanner::metadata::SecretRedactor::redact_single_line);
         let filter = MemoryIntakeFilter::default();
-        let eval = filter.evaluate(memory_type, &sanitized_content);
+        let eval = filter.evaluate(canonical_type, &sanitized_content);
         if !eval.accepted {
             return Ok((None, eval));
         }
 
         let id = self.insert_sanitized_record(
-            memory_type,
+            canonical_type,
             sanitized_content,
             sanitized_summary,
             source_agent,

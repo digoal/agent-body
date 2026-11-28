@@ -518,7 +518,7 @@ pub(crate) enum DemoCommands {
     },
     #[command(about = "核算宿主机实时商业价值 ROI 指标")]
     Roi,
-    #[command(about = "输出黑白屏 41 工具对齐自检列表")]
+    #[command(about = "输出黑白屏 43 工具对齐自检列表")]
     Parity,
     #[command(about = "一键清理 demo:* 沙盒隔离锁与等待队列")]
     Reset,

@@ -13,7 +13,7 @@ else
 endif
 MIRROR_DIR ?= $(HOME)/new/shared_git/agent-body
 
-.PHONY: all build check test preflight install restart clean docker-build lint-panic lint-hygiene lint-strict arch-check quality-gate sync-mirror codegraph evolution-check verify-decks
+.PHONY: all build check test preflight install restart clean docker-build lint-panic lint-hygiene lint-strict arch-check quality-gate sync-mirror codegraph evolution-check verify-decks verify-webui
 
 all: build
 
@@ -93,3 +93,7 @@ evolution-check:
 # Playwright 无头演说视觉与交互全量门禁（规约 #13 & #17）
 verify-decks:
 	@if python3 -c "import playwright" >/dev/null 2>&1; then python3 scripts/verify_presentations.py; else uv run --with playwright python3 scripts/verify_presentations.py; fi
+
+# Playwright 无头 WebUI 9 大工作台 + 老库迁移 E2E 回归门禁
+verify-webui:
+	@export PATH="$$HOME/.cargo/bin:$$PATH" && if [ ! -x target/debug/agent-body ] && [ ! -x target/release/agent-body ]; then cargo test --no-run --test cli_e2e; fi && if python3 -c "import playwright" >/dev/null 2>&1; then python3 scripts/verify_webui_e2e.py; else uv run --with playwright python3 scripts/verify_webui_e2e.py; fi

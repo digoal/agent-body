@@ -21,9 +21,14 @@ impl SqliteStorageProvider {
         }
         let conn = Connection::open(path)
             .with_context(|| format!("打开 SQLite 数据库失败: {:?}", path))?;
-        // 收敛 SQLite 页缓存至 8MB，防止常驻守护进程 RSS 突破规约 #9 (<90MB) 红线
-        if let Err(e) = conn.execute_batch("PRAGMA cache_size = -8000; PRAGMA temp_store = FILE;") {
-            eprintln!("[SQLite][WARN] 设置内存收敛 PRAGMA 失败: {}", e);
+        // 收敛 SQLite 页缓存至 8MB，并设置 WAL 自动检查点与 64MB 尺寸上限，防止常驻进程 RSS 与 WAL 文件无限膨胀
+        if let Err(e) = conn.execute_batch(
+            "PRAGMA cache_size = -8000;
+             PRAGMA temp_store = FILE;
+             PRAGMA wal_autocheckpoint = 1000;
+             PRAGMA journal_size_limit = 67108864;",
+        ) {
+            eprintln!("[SQLite][WARN] 设置内存与 WAL 收敛 PRAGMA 失败: {}", e);
         }
         crate::config::restrict_private_permissions(path, false);
         let provider = Self {
@@ -134,6 +139,7 @@ mod audit;
 mod facts;
 mod locks;
 mod memory;
+mod schema_reconcile;
 
 impl StorageProvider for SqliteStorageProvider {
     fn init(&self) -> Result<()> {

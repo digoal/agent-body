@@ -63,7 +63,9 @@ impl BodyExtension for GovPlacementExtension {
             config: self.config.clone(),
         }));
         reg.register_hook(HookRegistration::ExecutorStart(Arc::new(
-            TempScriptPlacementHook,
+            TempScriptPlacementHook {
+                config: self.config.clone(),
+            },
         )));
         Ok(())
     }
@@ -270,7 +272,9 @@ impl ProcRoutine for PlacementSuggestProc {
 }
 
 /// 非 `tmp` 目录临时脚本放置拦截 Hook (`ExecutorStartHook`)
-pub struct TempScriptPlacementHook;
+pub struct TempScriptPlacementHook {
+    config: PlacementConfig,
+}
 
 impl ExecutorStartHook for TempScriptPlacementHook {
     fn hook_id(&self) -> &'static str {
@@ -299,7 +303,13 @@ impl ExecutorStartHook for TempScriptPlacementHook {
             return Ok(GuardVerdict::Proceed);
         }
 
-        if path_contains_tmp_dir(Path::new(target_path)) {
+        let explicit_base = args.get("base_dir").and_then(|v| v.as_str());
+        let workspace_base = resolve_workspace_base(explicit_base, self.config.base_dir.as_deref());
+        let check_path = Path::new(target_path)
+            .strip_prefix(&workspace_base)
+            .unwrap_or_else(|_| Path::new(target_path));
+
+        if path_contains_tmp_dir(check_path) {
             return Ok(GuardVerdict::Proceed);
         }
 

@@ -414,7 +414,7 @@ impl WebServer {
             (Method::Post, "/api/v1/locks/acquire") => parity_api::handle_locks_acquire(req, storage, auth_token),
             (Method::Post, "/api/v1/locks/wait") => parity_api::handle_locks_wait(req, storage, auth_token),
             (Method::Get, "/api/v1/ecosystem/service-check") => parity_api::handle_service_check(req, storage),
-            (Method::Get, "/api/v1/mesh/query") => parity_api::handle_mesh_query(req),
+            (Method::Get, "/api/v1/mesh/query") => parity_api::handle_mesh_query(req, storage.as_ref()),
             (Method::Get, "/api/v1/parity/matrix") => parity_api::handle_parity_matrix(storage),
             (Method::Get, "/api/v1/demo/scenarios") => parity_api::handle_demo_scenarios(),
             (Method::Post, "/api/v1/demo/run") => parity_api::handle_demo_run(req, storage),

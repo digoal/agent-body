@@ -178,7 +178,10 @@ impl McpToolRegistry {
             }
 
             "body_asset_register" => {
-                let path = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                let path = args.get("path").and_then(|v| v.as_str()).unwrap_or("").trim();
+                if path.is_empty() {
+                    bail!("缺少必填参数 path（资产绝对路径不能为空）");
+                }
                 let asset_type = args.get("type").and_then(|v| v.as_str()).unwrap_or("other");
                 let default_owner = crate::config::Config::load_effective_or_default().effective_default_owner();
                 let owner = args.get("owner").and_then(|v| v.as_str()).unwrap_or(&default_owner);
@@ -280,7 +283,10 @@ impl McpToolRegistry {
             "body_memory_add" => {
                 let mm = MemoryManager::new(self.storage.clone());
                 let mem_type = args.get("type").and_then(|v| v.as_str()).unwrap_or("decision");
-                let content = args.get("content").and_then(|v| v.as_str()).unwrap_or("");
+                let content = args.get("content").and_then(|v| v.as_str()).unwrap_or("").trim();
+                if content.is_empty() {
+                    bail!("缺少必填参数 content（记忆正文不能为空）");
+                }
                 let summary = args.get("summary").and_then(|v| v.as_str());
 
                 let id = mm.add(mem_type, content, summary, Some("mcp"), vec![])?;
@@ -385,7 +391,14 @@ impl McpToolRegistry {
             }
 
             "body_port_check" => {
-                let port = args.get("port").and_then(|v| v.as_u64()).unwrap_or(8080) as u16;
+                let Some(port_u64) = args
+                    .get("port")
+                    .and_then(|v| v.as_u64())
+                    .filter(|&p| (1..=65535).contains(&p))
+                else {
+                    bail!("缺少合法必填参数 port (1-65535)");
+                };
+                let port = port_u64 as u16;
                 let suggest_count = args.get("suggest_count").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
                 let res = crate::env::port::PortChecker::check_port(port, suggest_count)?;
                 Ok(serde_json::to_string_pretty(&res)?)

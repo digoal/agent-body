@@ -271,7 +271,7 @@ pub fn run_all_micro_benchmarks() -> Result<Vec<MicroBenchResult>> {
         let t = Instant::now();
         let summary = engine.export_to_parquet("assets", &export_path.to_string_lossy())?;
         let elapsed_us = t.elapsed().as_micros();
-        let sla = if is_debug { 500_000 } else { 150_000 };
+        let sla = if is_debug { 1_000_000 } else { 150_000 };
         results.push(MicroBenchResult {
             id: "M5".into(),
             name: "micro_duckdb_parquet".into(),

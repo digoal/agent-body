@@ -18,6 +18,34 @@ impl DuckDbStorageProvider {
         )
         .context("执行 DuckDB 增量列迁移失败")?;
 
+        // 幂等无损重命名历史 DuckDB 库中的旧版列名（benchmark_runs / effectiveness_ledger）
+        let rename_duckdb_legacy = |table: &str, canonical: &str, predicate: &dyn Fn(&str) -> bool| -> Result<()> {
+            let mut stmt = conn.prepare(&format!("PRAGMA table_info('{}')", table))?;
+            let cols: Vec<String> = stmt
+                .query_map([], |row| row.get::<_, String>(1))?
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+            if cols.is_empty() || cols.iter().any(|c| c == canonical) {
+                return Ok(());
+            }
+            if let Some(old_col) = cols.iter().find(|c| predicate(c.as_str())) {
+                if old_col.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                    let ddl = format!("ALTER TABLE {} RENAME COLUMN {} TO {}", table, old_col, canonical);
+                    conn.execute(&ddl, [])
+                        .with_context(|| format!("DuckDB 重命名历史列失败: {}.{} -> {}", table, old_col, canonical))?;
+                }
+            }
+            Ok(())
+        };
+        rename_duckdb_legacy("benchmark_runs", "total_body_tokens", &|c| {
+            c.starts_with("total_") && c.ends_with("_tokens") && c != "total_baseline_tokens" && c != "total_body_tokens"
+        })?;
+        rename_duckdb_legacy("effectiveness_ledger", "body_tokens", &|c| {
+            c.ends_with("_tokens") && c != "baseline_tokens" && c != "body_tokens"
+        })?;
+        rename_duckdb_legacy("effectiveness_ledger", "body_rounds", &|c| {
+            c.ends_with("_rounds") && c != "baseline_rounds" && c != "body_rounds"
+        })?;
+
         let now = chrono::Utc::now().to_rfc3339();
         let base = crate::config::default_workspace_base();
         let home = crate::config::home_dir();

@@ -96,6 +96,46 @@ impl SqliteStorageProvider {
             }
         }
 
+        if merged.is_empty() {
+            let kw = format!("%{}%", query.trim().to_lowercase());
+            let mut like_stmt = conn.prepare(
+                "SELECT id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding
+                 FROM memories
+                 WHERE status = 'active'
+                   AND (lower(content) LIKE ?1 OR lower(COALESCE(summary, '')) LIKE ?1 OR lower(tags) LIKE ?1)
+                 ORDER BY updated_at DESC
+                 LIMIT ?2",
+            )?;
+            let rows = like_stmt.query_map(params![kw, limit as i64], |row| {
+                let tags_str: String = row.get(6)?;
+                let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
+                let emb_str: String = row.get(10)?;
+                let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+                Ok(MemoryRecord {
+                    id: row.get(0)?,
+                    memory_type: row.get(1)?,
+                    content: row.get(2)?,
+                    summary: row.get(3)?,
+                    source_agent: row.get(4)?,
+                    source_session: row.get(5)?,
+                    tags,
+                    weight: row.get(7)?,
+                    pinned: row.get(8)?,
+                    status: row.get(9)?,
+                    embedding,
+                })
+            })?;
+            for r in rows {
+                let rec = r?;
+                if seen_ids.insert(rec.id.clone()) {
+                    merged.push(rec);
+                    if merged.len() >= limit {
+                        break;
+                    }
+                }
+            }
+        }
+
         Ok(merged)
     }
 

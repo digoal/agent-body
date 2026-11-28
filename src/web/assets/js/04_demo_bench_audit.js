@@ -433,7 +433,10 @@ async function loadBenchmarkReport() {
       selB.innerHTML = opts;
       if (hist.length >= 2) selB.selectedIndex = 1;
     }
-  } catch (_) {}
+  } catch (e) {
+    const wbox = document.getElementById("bench-workloads-box");
+    if (wbox) wbox.innerHTML = `<div class="empty">加载基准报告失败: ${esc(e.message)}</div>`;
+  }
 }
 
 function renderBenchmarkReportPayload(rep) {

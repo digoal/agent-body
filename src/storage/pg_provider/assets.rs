@@ -14,7 +14,48 @@ impl PgStorageProvider {
              ALTER TABLE fact_edges ADD COLUMN IF NOT EXISTS evidence_tier TEXT NOT NULL DEFAULT 'L1_EXPLICIT';
              ALTER TABLE fact_edges ADD COLUMN IF NOT EXISTS weight REAL NOT NULL DEFAULT 1.0;
              ALTER TABLE fact_edges ADD COLUMN IF NOT EXISTS direction_kind TEXT NOT NULL DEFAULT 'forward_dependency';
-             CREATE INDEX IF NOT EXISTS idx_pg_fact_edges_tier ON fact_edges(evidence_tier);"
+             CREATE INDEX IF NOT EXISTS idx_pg_fact_edges_tier ON fact_edges(evidence_tier);
+             DO $$
+             DECLARE
+                 old_col TEXT;
+             BEGIN
+                 IF NOT EXISTS (
+                     SELECT 1 FROM information_schema.columns
+                     WHERE table_schema = current_schema() AND table_name = 'benchmark_runs' AND column_name = 'total_body_tokens'
+                 ) THEN
+                     SELECT column_name INTO old_col FROM information_schema.columns
+                     WHERE table_schema = current_schema() AND table_name = 'benchmark_runs'
+                       AND column_name LIKE 'total_%_tokens' AND column_name <> 'total_baseline_tokens'
+                     LIMIT 1;
+                     IF old_col IS NOT NULL THEN
+                         EXECUTE format('ALTER TABLE benchmark_runs RENAME COLUMN %I TO total_body_tokens', old_col);
+                     END IF;
+                 END IF;
+                 IF NOT EXISTS (
+                     SELECT 1 FROM information_schema.columns
+                     WHERE table_schema = current_schema() AND table_name = 'effectiveness_ledger' AND column_name = 'body_tokens'
+                 ) THEN
+                     SELECT column_name INTO old_col FROM information_schema.columns
+                     WHERE table_schema = current_schema() AND table_name = 'effectiveness_ledger'
+                       AND column_name LIKE '%_tokens' AND column_name <> 'baseline_tokens'
+                     LIMIT 1;
+                     IF old_col IS NOT NULL THEN
+                         EXECUTE format('ALTER TABLE effectiveness_ledger RENAME COLUMN %I TO body_tokens', old_col);
+                     END IF;
+                 END IF;
+                 IF NOT EXISTS (
+                     SELECT 1 FROM information_schema.columns
+                     WHERE table_schema = current_schema() AND table_name = 'effectiveness_ledger' AND column_name = 'body_rounds'
+                 ) THEN
+                     SELECT column_name INTO old_col FROM information_schema.columns
+                     WHERE table_schema = current_schema() AND table_name = 'effectiveness_ledger'
+                       AND column_name LIKE '%_rounds' AND column_name <> 'baseline_rounds'
+                     LIMIT 1;
+                     IF old_col IS NOT NULL THEN
+                         EXECUTE format('ALTER TABLE effectiveness_ledger RENAME COLUMN %I TO body_rounds', old_col);
+                     END IF;
+                 END IF;
+             END $$;",
         ) { eprintln!("[PG][WARN] 增量列/索引热迁移告警: {}", e); }
 
         let base = crate::config::default_workspace_base();

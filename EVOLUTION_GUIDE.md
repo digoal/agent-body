@@ -1,6 +1,6 @@
 # Agent Body — 零重扫项目演进指南 (`EVOLUTION_GUIDE.md`)
 
-<!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=88 tables=27 workloads=19 micro=6 dq=10 pr_rules=14 kernel_crates=3 contrib_exts=10 distributions=3 verified_tests=396 -->
+<!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=88 tables=27 workloads=19 micro=6 dq=10 pr_rules=14 kernel_crates=3 contrib_exts=10 distributions=3 verified_tests=414 -->
 
 > **核心定位（解决 ISSUE #17）**：让任何新接手的 AI Agent 或开发者在 **不重复扫描 3.8 万行源码与 48 份历史 `docs/src_doc/` 文档** 的前提下，**2 轮以内**完成需求定位、触点锁定与规范演进。
 
