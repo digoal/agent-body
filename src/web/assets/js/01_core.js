@@ -212,8 +212,61 @@ function setPerfActionBanner(msg, isError) {
 function mirrorBlackScreen(cliCmd, mcpTool, mcpArgs) {
   const cliEl = document.getElementById("mirror-cli");
   const mcpEl = document.getElementById("mirror-mcp");
-  if (cliEl) cliEl.innerText = cliCmd;
-  if (mcpEl) mcpEl.innerText = JSON.stringify({ name: mcpTool, arguments: mcpArgs || {} });
+  if (cliEl) cliEl.textContent = cliCmd;
+  if (mcpEl) mcpEl.textContent = JSON.stringify({ name: mcpTool, arguments: mcpArgs || {} });
+}
+
+async function copyTextToClipboard(text) {
+  if (!text) return false;
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_) {
+      // 非安全上下文或权限被拒绝时降级到 execCommand
+    }
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.left = "-9999px";
+  ta.style.top = "0";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch (_) {
+    ok = false;
+  }
+  document.body.removeChild(ta);
+  return ok;
+}
+
+function bindMirrorCopyButton(btnId, sourceId) {
+  document.getElementById(btnId)?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const el = document.getElementById(sourceId);
+    const txt = (el?.textContent || el?.innerText || "").trim();
+    if (!txt) return;
+    const ok = await copyTextToClipboard(txt);
+    if (!ok) {
+      if (typeof showToast === "function") showToast("复制失败，请手动选中命令复制", true);
+      return;
+    }
+    if (btn) {
+      if (!btn.dataset.origText) btn.dataset.origText = btn.textContent || "复制";
+      btn.textContent = "✅";
+      clearTimeout(btn._copyTimer);
+      btn._copyTimer = setTimeout(() => {
+        btn.textContent = btn.dataset.origText || "复制";
+      }, 1000);
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -292,18 +345,8 @@ function bindOtherControls() {
     switchView("governance");
     document.querySelector('#gov-subtabs .subtab[data-sub="mesh"]')?.click();
   });
-  document.getElementById("btn-copy-cli")?.addEventListener("click", (e) => {
-    const txt = document.getElementById("mirror-cli")?.innerText || "";
-    navigator.clipboard?.writeText(txt);
-    const b = e.currentTarget;
-    if (b) { const old = b.innerText; b.innerText = "✅"; setTimeout(() => { b.innerText = old; }, 1000); }
-  });
-  document.getElementById("btn-copy-mcp")?.addEventListener("click", (e) => {
-    const txt = document.getElementById("mirror-mcp")?.innerText || "";
-    navigator.clipboard?.writeText(txt);
-    const b = e.currentTarget;
-    if (b) { const old = b.innerText; b.innerText = "✅"; setTimeout(() => { b.innerText = old; }, 1000); }
-  });
+  bindMirrorCopyButton("btn-copy-cli", "mirror-cli");
+  bindMirrorCopyButton("btn-copy-mcp", "mirror-mcp");
   document.getElementById("btn-clear-sse")?.addEventListener("click", () => {
     const el = document.getElementById("event-stream");
     if (el) el.innerHTML = "";

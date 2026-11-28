@@ -221,7 +221,23 @@ impl CapabilityEngine {
                 version: None,
                 best_practice_args: "duckdb -c \"SELECT * FROM read_parquet('data.parquet') LIMIT 10;\"".to_string(),
                 notes: "适合百万至千万级数据的单机极速统计，避免启动大型数据库服务".to_string(),
-                alternatives: vec!["jq".to_string()],
+                alternatives: vec!["jq".to_string(), "sqlite3".to_string()],
+            },
+            ToolCapability {
+                tool_name: "sqlite3".to_string(),
+                category: "database".to_string(),
+                description: "轻量级嵌入式关系型数据库 SQLite 命令行客户端，支持本地 .db 文件建表、SQL 查询与导出".to_string(),
+                tags: vec![
+                    "sqlite".to_string(), "sqlite3".to_string(), "sql".to_string(),
+                    "db".to_string(), "database".to_string(), "数据库".to_string(),
+                    "嵌入式".to_string(), "查询".to_string(),
+                ],
+                installed: false,
+                path: None,
+                version: None,
+                best_practice_args: "sqlite3 -header -column data.db \"SELECT * FROM sqlite_master;\"".to_string(),
+                notes: "适合本地单文件关系型数据库调试与轻量持久化，使用 .mode box 或 -header -column 可获得清晰表格输出".to_string(),
+                alternatives: vec!["duckdb".to_string()],
             },
 
             // 4. 文本检索与代码分析族谱
@@ -340,6 +356,21 @@ impl CapabilityEngine {
                 notes: "单测调试使用 cargo test -- --nocapture 显示详细输出".to_string(),
                 alternatives: vec!["rustc".to_string()],
             },
+            ToolCapability {
+                tool_name: "python3".to_string(),
+                category: "dev_build".to_string(),
+                description: "Python 3 解释器，适合快速脚本编排、数据处理与自动化原型".to_string(),
+                tags: vec![
+                    "python".to_string(), "python3".to_string(), "py".to_string(),
+                    "script".to_string(), "脚本".to_string(),
+                ],
+                installed: false,
+                path: None,
+                version: None,
+                best_practice_args: "python3 -m json.tool input.json".to_string(),
+                notes: "系统级脚本优先使用标准库，避免污染全局 pip 环境".to_string(),
+                alternatives: vec!["jq".to_string()],
+            },
         ];
 
         for item in builtins {
@@ -430,57 +461,101 @@ impl CapabilityEngine {
 
     /// 根据自然语言或关键词意图进行打分与语义推荐
     pub fn query(&self, intent: &str) -> CapabilityQueryResult {
-        let normalized = intent.to_lowercase();
+        let normalized = intent.trim().to_lowercase();
+        if normalized.is_empty() {
+            return CapabilityQueryResult {
+                query: intent.to_string(),
+                matched_category: None,
+                top_recommendation: None,
+                alternatives: Vec::new(),
+                all_matching_tools: Vec::new(),
+            };
+        }
+
         let tokens: Vec<&str> = normalized
             .split(|c: char| c.is_whitespace() || c == ',' || c == '，' || c == '。' || c == '/' || c == '-' || c == '_')
             .filter(|s| !s.is_empty())
             .collect();
 
         let mut scored_tools: Vec<(i32, ToolCapability)> = Vec::new();
+        let mut exact_tool_hit = false;
 
         for cap in self.registry.values() {
-            let mut score = 0;
+            let mut semantic_score = 0;
+            let tool_lower = cap.tool_name.to_lowercase();
 
-            // 1. 精确工具名匹配 (+50)
-            if normalized.contains(&cap.tool_name) {
-                score += 50;
+            // 1. 工具名匹配：精确词匹配 (+80) 或前缀/包含匹配 (+50)
+            if normalized == tool_lower || tokens.iter().any(|t| *t == tool_lower) {
+                semantic_score += 80;
+                exact_tool_hit = true;
+            } else if normalized.contains(&tool_lower)
+                || (normalized.len() >= 3 && tool_lower.contains(&normalized))
+                || tokens.iter().any(|t| t.len() >= 3 && tool_lower.contains(*t))
+            {
+                semantic_score += 50;
             }
 
             // 2. 类别名匹配 (+30)
-            if normalized.contains(&cap.category) {
-                score += 30;
+            if normalized.contains(&cap.category.to_lowercase()) {
+                semantic_score += 30;
             }
 
-            // 3. 标签匹配 (+15/个)
+            // 3. 标签匹配
             for tag in &cap.tags {
                 let tag_lower = tag.to_lowercase();
-                if normalized.contains(&tag_lower) {
-                    score += 20;
-                }
-                for token in &tokens {
-                    if *token == tag_lower {
-                        score += 15;
-                    }
+                if tokens.iter().any(|t| *t == tag_lower) {
+                    semantic_score += 25;
+                } else if normalized.contains(&tag_lower) {
+                    semantic_score += 15;
                 }
             }
 
-            // 4. 描述与备注包含匹配 (+10)
+            // 4. 描述与备注包含匹配 (+15)
             if cap.description.to_lowercase().contains(&normalized) {
-                score += 15;
+                semantic_score += 15;
             }
 
-            // 5. 物理就绪加权：已在宿主机安装的工具给予加权 (+40)，未安装的降级
-            if cap.installed {
-                score += 40;
-            }
-
-            if score > 0 {
-                scored_tools.push((score, cap.clone()));
+            // 5. 物理就绪加权：仅在存在语义匹配时才对已安装工具加权 (+40)，
+            // 避免零匹配的已安装工具凭空拿分并在 HashMap 随机序下抖动返回。
+            if semantic_score > 0 {
+                let total_score = semantic_score + if cap.installed { 40 } else { 0 };
+                scored_tools.push((total_score, cap.clone()));
             }
         }
 
-        // 按得分降序排序
-        scored_tools.sort_by_key(|a| std::cmp::Reverse(a.0));
+        // 若内置字典未精确命中工具名，尝试按单命令 token 在宿主机 $PATH 中直接探测真实二进制
+        if !exact_tool_hit {
+            for token in &tokens {
+                let valid_cmd = token.len() >= 2
+                    && token.len() <= 32
+                    && token.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'+'));
+                if valid_cmd && !self.registry.contains_key(*token) {
+                    if let Some(abs_path) = Self::find_binary_in_paths(token, &self.path_dirs) {
+                        let dyn_cap = ToolCapability {
+                            tool_name: (*token).to_string(),
+                            category: "host_binary".to_string(),
+                            description: format!("宿主机 $PATH 中探测到的本地可执行工具 `{}`", token),
+                            tags: vec![(*token).to_string()],
+                            installed: true,
+                            path: Some(abs_path.to_string_lossy().to_string()),
+                            version: Self::probe_version(&abs_path),
+                            best_practice_args: format!("{} --help", token),
+                            notes: "通过动态 PATH 探测发现的本地工具，请结合 --help 确认具体参数".to_string(),
+                            alternatives: Vec::new(),
+                        };
+                        scored_tools.push((120, dyn_cap));
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 确定性排序：总分降序 -> 已安装优先 -> 工具名字典序升序，消除 HashMap 随机迭代顺序影响
+        scored_tools.sort_by(|a, b| {
+            b.0.cmp(&a.0)
+                .then_with(|| b.1.installed.cmp(&a.1.installed))
+                .then_with(|| a.1.tool_name.cmp(&b.1.tool_name))
+        });
 
         let all_matching_tools: Vec<ToolCapability> = scored_tools.into_iter().map(|(_, c)| c).collect();
 
@@ -617,5 +692,38 @@ mod tests {
         assert!(result.top_recommendation.is_some());
         let top = result.top_recommendation.unwrap();
         assert_eq!(top.tool_name, "ffmpeg");
+    }
+
+    #[test]
+    fn test_query_sqlite_determinism_and_relevance() {
+        let mut first_top = None;
+        let mut first_alts: Option<Vec<String>> = None;
+        for _ in 0..10 {
+            let mut engine = CapabilityEngine::new();
+            engine.scan_host_paths_only();
+            let result = engine.query("sqlite");
+            let top = result.top_recommendation.expect("sqlite 应命中 sqlite3");
+            assert_eq!(top.tool_name, "sqlite3");
+            let alt_names: Vec<String> = result.alternatives.iter().map(|t| t.tool_name.clone()).collect();
+            if let Some(ref prev) = first_top {
+                assert_eq!(&top.tool_name, prev);
+            } else {
+                first_top = Some(top.tool_name.clone());
+            }
+            if let Some(ref prev_alts) = first_alts {
+                assert_eq!(&alt_names, prev_alts);
+            } else {
+                first_alts = Some(alt_names);
+            }
+        }
+    }
+
+    #[test]
+    fn test_query_unmatched_does_not_return_random_installed_tools() {
+        let mut engine = CapabilityEngine::new();
+        engine.scan_host_paths_only();
+        let result = engine.query("definitely_nonexistent_tool_xyz_123");
+        assert!(result.top_recommendation.is_none());
+        assert!(result.all_matching_tools.is_empty());
     }
 }

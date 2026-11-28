@@ -455,8 +455,10 @@ async function copyBodyPerfMarkdown() {
     return;
   }
   try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(md);
+    const ok = await copyTextToClipboard(md);
+    if (!ok) {
+      showToast("复制失败，请手动选中内容复制", true);
+      return;
     }
     setPerfActionBanner(`📋 已复制完整 AWR Markdown 报告 (${md.length} 字符) 到剪贴板`, false);
     showToast(`📋 已复制 AWR Markdown 报告 (${md.length} 字符)`, false);
