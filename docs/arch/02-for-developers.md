@@ -54,7 +54,7 @@ graph TD
 
 | 目录/模块 | 核心职责 | 关键数据类型 / 入口结构 |
 |:---|:---|:---|
-| `src/storage/` | 存储中枢与多后端分域 SPI 抽象 (88 方法，27 张表，`{assets,facts,memory,locks,audit}.rs`) | `StorageProvider`, `SqliteStorageProvider`, `PgStorageProvider`, `DuckDbStorageProvider` |
+| `src/storage/` | 存储中枢、多后端分域 SPI (88 方法，27 表) 与事务式老库无损自愈 (`schema_reconcile.rs`) | `StorageProvider`, `SqliteStorageProvider`, `PgStorageProvider`, `DuckDbStorageProvider` |
 | `src/body/` | Agent 本体中枢（身份证、跨大脑接力胶囊、五维稳态、`L0~L3` 包络、三态运行模式与 Shadow A/B 证伪、`18/18` Wait Events AWR/ADDM） | `BodyManifestEngine`, `ContinuityManager`, `HomeostasisVitalsEngine`, `AutonomyEnvelope`, `BodyPerfEngine`, `ShadowAbEngine` |
 | `src/audit/` | 双域全链路行为审计（`IN_AGENT`/`OUT_OF_AGENT`）、60s 折叠与自进化 | `AuditLogger`, `AuditEvolutionAnalyzer` |
 | `src/fact/` | 宿主机只读物理事实采集、L1~L3 属性图与行业 Know-How/Hierarchy 知识网络 | `FactFacade`, `CapabilityAnnotation`, `AutomationScanner`, `PropertyGraphOrganizer`, `KnowledgeNetworkEngine` |
@@ -94,7 +94,7 @@ graph TD
 apt-get update && apt-get install -y gcc g++ make cmake libstdc++6
 
 # 确保 Cargo 工具链生效
-export PATH="/root/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
 ```
 
 ### 2. 常用开发命令流
@@ -103,19 +103,21 @@ export PATH="/root/.cargo/bin:$PATH"
 # 1. 快速语法与类型检查 (耗时约 2~4 秒)
 cargo check
 
-# 2. 运行全工作区 396 项自动化测试套件（含旗舰版 353 + kernel 26 + contrib 13 + distributions 4）
+# 2. 运行全工作区 414 项自动化测试套件（含旗舰版 371 + kernel 26 + contrib 13 + distributions 4）
 RUST_TEST_THREADS=1 cargo test --workspace
 
-# 2b. 单独校验微内核防腐边界与精简发行版自检
-make arch-check
+# 2b. 单独校验微内核防腐边界、Playwright WebUI 9 工作台 + 老库迁移 E2E 与精简发行版自检
+make arch-check && make verify-webui
 cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba
 ./target/release/agent-body-probe self-check && ./target/release/agent-body-dba self-check
 
 # 3. 运行特定模块的单元测试 (如测试 web 模块)
 cargo test web::tests
 
-# 4. 运行端到端集成测试
-cargo test --test test_web_dashboard
+# 4. 运行核心端到端与回归集成测试
+cargo test --test schema_migration_regression
+cargo test --test mcp_all_tools_e2e
+cargo test --test web_full_e2e
 cargo test --test coordination_integration
 
 # 5. 运行微基准压测

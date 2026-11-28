@@ -118,7 +118,7 @@ def extract_manifest() -> dict:
     ) if (ROOT / "docs/design_doc").is_dir() else []
     latest_design_spec = design_specs[-1].name if design_specs else ""
 
-    verified_test_count = 396
+    verified_test_count = 414
     guide_p = ROOT / "EVOLUTION_GUIDE.md"
     if guide_p.exists():
         gm = re.search(r"verified_tests=(\d+)", guide_p.read_text(encoding="utf-8"))

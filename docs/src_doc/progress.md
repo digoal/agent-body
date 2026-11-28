@@ -1,6 +1,6 @@
 # Agent Body 演进进度总表 (Progress Tracker)
 
-> **当前版本**：`v1.1.0` | **演进策略**：Phase 1~51 历史规划与进度明细已归档至 [docs/src_doc/archive/](archive/)，本表聚焦主线里程碑、近期 Phase 52~64 交付台账与断点恢复入口。
+> **当前版本**：`v1.1.0` | **演进策略**：Phase 1~51 历史规划与进度明细已归档至 [docs/src_doc/archive/](archive/)，本表聚焦主线里程碑、Phase 52~75 及品质巩固交付台账与断点恢复入口。
 
 ---
 
@@ -14,39 +14,41 @@
 | **Phase 21~28** | 黑白屏 1:1 Parity、7 幕路演演示剧场、Ollama L1/L2 分层语义、比较优势思想起源、实证 Benchmark 内核 | Benchmark `v1.0` / `COMP` 基础框架 / 昼夜蓝图主题 | [archive/roadmap-phase21-22.md](archive/roadmap-phase21-22.md) ~ [28](archive/roadmap-phase27-28.md) |
 | **Phase 29~39** | 全景属性字典、反馈总账与新鲜度写穿 (`FreshnessReconciler`)、`SecretRedactor` & 抗投毒、`EVOLUTION_GUIDE.md`、竞品对标 `v3.0`、帕累托双门禁 `v3.1~v3.3` | 零重扫活地图 + `P1~P5` 五点探针 + `DQ1~DQ5` | [archive/roadmap-phase29.md](archive/roadmap-phase29.md) ~ [39](archive/roadmap-phase38-39.md) |
 | **Phase 40~43** | 多维证据分层图谱 (`L1~L3`)、`MeshEnvelope v1.0` HMAC 防重放、AOPCC 乐观-悲观并发控制 (`<2ms` 自愈)、双域全链路审计与 Watcher 60s 折叠 | `W13~W16` / `DQ6~DQ7` / `PR-11~12` | [archive/roadmap-phase40-41.md](archive/roadmap-phase40-41.md) ~ [43](archive/roadmap-phase43.md) |
-| **Phase 44~51** | 升维「脑体分离 · Agent 本体」(`src/body/` 第 43 工具)、全面硬切 `agent-body`、600% CPU 根治、内生 18 Wait Events + AWR/ADDM、体系化演说 HTML 矩阵 | 9 份演说 HTML + 5 重门禁 + `W17` / `DQ8` | [archive/roadmap-phase44-45.md](archive/roadmap-phase44-45.md) ~ [51](archive/roadmap-phase51.md) |
+| **Phase 44~51** | 升维「脑体分离 · Agent 本体」(`src/body/` 第 43 工具)、全面硬切 `agent-body`、600% CPU 根治、内生 18 Wait Events + AWR/ADDM、体系化演说 HTML 矩阵 | 9 份演说 HTML + 确定性质量门禁 + `W17` / `DQ8` | [archive/roadmap-phase44-45.md](archive/roadmap-phase44-45.md) ~ [51](archive/roadmap-phase51.md) |
 
 ---
 
-## 二、近期冲刺交付记录（Phase 52 ~ 57 · `v1.0.0 GA` 主线）
+## 二、近期冲刺与品质巩固交付台账（Phase 52 ~ 75+ · `v1.0.0` → `v1.1.0`）
 
-| Phase | 主题 | 核心交付摘要 | 对应 ISSUE | 路线图 | 状态 |
+| Phase / 里程碑 | 主题 | 核心交付摘要 | 对应 ISSUE | 路线图 / 凭证 | 状态 |
 |:---:|---|---|---:|---|:---:|
 | **Phase 52** | 方案 A Stage 1 — P0 安全止血与运行时排雷 | 修复 `Dockerfile`/`docker-compose`/`build.rs`、MCP `spawn_blocking` 与防 Panic、`body_bridge.py` 破坏命令与 Web `GET` 写库鉴权、`ledger` 死锁误报/拒锁、`cli_args` 布尔参数与文档断链 | `#36` | [roadmap-phase52.md](roadmap-phase52.md) | ✅ **已完成** |
 | **Phase 53** | 方案 A Stage 2 — 三后端存储对齐与 OLAP 真修复 | SPI `82→87`，消除 PG `pgvector` 强依赖、`memories.sensitive` 对齐、`awr:%` 隔离与淘汰、20 实体热迁移、`SyncPipeline` 10 表与真实 DuckDB 时间窗分析 | `#37` | [roadmap-phase53.md](roadmap-phase53.md) | ✅ **已完成** |
 | **Phase 54** | 方案 A Stage 3 — Telemetry 18/18 与动作级真 Parity | SPI #88 修复过期锁检测、18/18 WaitEvent 全埋点、`perf-delete`/AWR 报告检索全端 1:1:1、Web DQ1~9、`codex`/`hermes` Hook、全维 TUI 与 Benchmark `v3.8` (`W18`/`M6`/`DQ9`/`PR-14`) | `#38` | [roadmap-phase54.md](roadmap-phase54.md) | ✅ **已完成** |
 | **Phase 55** | 方案 A Stage 4 — 可移植解耦与跨平台加固 | `[workspace]` 抽象、三后端动态种子去硬编码、打通 `AGENT_BODY_CONFIG`/`MemoryFactory`/`[[hooks]]`/`[[pipelines]]`/`ignore_patterns`、`gnu` 条件编译、Windows `netstat` 与 32KB 有界 HTTP 读取 | `#39` | [roadmap-phase55.md](roadmap-phase55.md) | ✅ **已完成** |
-| **Phase 56** | 架构治理 — 拆 God File、压吞错、补集成测试与升级门禁 | `>1500L` 生产文件 `7→0` (`assets`/`parity_api`/`perf_awr`/`cli_handlers`/`sqlite|pg|duckdb_provider`)；`let _ =` 降为 `43/50`（核心自治模块 `0`）+ `RunningFlagGuard`；新增 5 组跨模块集成测试；五重确定性门禁升级 | `#40` | [roadmap-phase56.md](roadmap-phase56.md) | ✅ **已完成** |
+| **Phase 56** | 架构治理 — 拆 God File、压吞错、补集成测试与升级门禁 | `>1500L` 生产文件 `7→0`；`let _ =` 降为 `43/50`（核心自治模块 `0`）+ `RunningFlagGuard`；新增 5 组跨模块集成测试；质量门禁升级 | `#40` | [roadmap-phase56.md](roadmap-phase56.md) | ✅ **已完成** |
 | **Phase 57** | **全物料大一统与 `v1.0.0 GA` 正式发版** | 损毁规格修复、3 SKILL + 10 卷手册 + 架构文档刷新、历史文档归档、9/9 演说对齐与公众长文重写、`Cargo.toml` 升 `1.0.0` + `v1.0.0.md` 发布验收 | `#41` | [roadmap-phase57.md](roadmap-phase57.md) | ✅ **已完成** |
 | **Phase 58** | **三态运行模式与真实 A/B 证伪 + MCP Profile 减税** | `[runtime]` 三态模式 (`body_only`/`bypass`/`shadow_ab`)、`ShadowAbEngine` 真实对照与帮倒忙率诊断、MCP `core` 10 工具档位省 ~78% Schema 税、原生 `hooks bridge`、Web CORS 收敛与 `HybridSearch` 单次查库 | `#43` | [roadmap-phase58.md](roadmap-phase58.md) | ✅ **已完成** |
 | **Phase 59** | **多模态对象理解深化与资产 RRF+KV 混合检索** | `multimodal.rs` 三层级多模态 L1/L2 提取、`vision_enabled` 可选图像视觉理解、解除 `3000/5000` 后台截断、`AssetSearchEngine` FTS5+Vector RRF+`modality/domain/kv` 1:1:1 对齐 CLI/MCP/Web | `#42` | [roadmap-phase59.md](roadmap-phase59.md) | ✅ **已完成** |
-| **Phase 60** | **跨平台 100% 全绿测试基线与 Clippy 零告警收口** | 修复 `links/audit` 临时目录、`upsert_scan_policy` 三后端幂等、`W15`/`diagnoser`/`placement`/`state_machine`/`watcher`/`fact` 等 14+2 项非 Linux 测试失败、清理 `thiserror`/`glob` 死依赖并达成 `clippy --all-targets -D warnings` 零告警 | `v1.3` | [roadmap-phase60.md](roadmap-phase60.md) | ✅ **已完成** |
-| **Phase 61** | **Know-How 知识网络 (Stage 1) 与 Omni-RRF 多路融合召回** | 扩展 `fact_nodes`/`fact_edges` 知识节点与 SQLite 热迁移、`HeadingChunker` + 别名归一 + PMI 共现图、加权 `bm25` + 驼峰拆词 + Pure-Rust `fuzzy` + 图 1~2 跳 + 层级 + 互链 + 标量调制 Omni-RRF，修复 `ShadowAbEngine` 0 命中回退 | `#44` | [roadmap-phase61.md](roadmap-phase61.md) | ✅ **已完成** |
-| **Phase 62** | **Know-How 知识网络 (Stage 2)：索引子图下沉、小模型 L2 抽取与 `v3.9` 基准** | 索引下沉定向 1~2 跳子图与枢纽阻尼、写穿级联清理 (`FreshnessReconciler`)、`qwen3.5:0.8b` (`think=false`) 章节 L2 Know-How 原文锚定抽取、Web 通道/推理可视化与 Benchmark `v3.9` (`W19`/`DQ10`) | `#44` | [roadmap-phase62.md](roadmap-phase62.md) | ✅ **已完成** |
-| **Phase 63** | **多模态解析深化、三通道统一与 Shadow A/B `H1~H5` 自愈 (`v1.6`)** | `multimodal_ext.rs` 纯 Rust HTML/Parquet/CSV/JSONL/音频 L1A、`run_command_bounded` 有界探针、三大入口统一魔数分类与 `schema_version=2.0`、`kv_filter`+无损回填全端 1:1:1、运行模式 `.override` 热切与 `ShadowAbEngine` `H1~H5` 自动写穿自愈 | `v1.6` | [roadmap-phase63.md](roadmap-phase63.md) | ✅ **已完成** |
-| **Phase 64** | **`v1.1.0` 一等公民大一统对齐 (Web UI / SKILL / 手册 / 门禁)** | 升级 `evolution_manifest.py` 防漂移门禁、`Cargo.toml` 升至 `1.1.0`、Web UI 补齐三态 `shadow_ab`/`H1~H5`/`kv_filter`/`backfill` Action-level 1:1:1 交互、同步 3 套 SKILL / 10 卷手册 / `arch` / `design_doc/{06,10}` / `README` / `INSTALL` / `v1.1.0` 发版说明 | `#46` | [roadmap-phase64.md](roadmap-phase64.md) | ✅ **已完成** |
-| **Phase 65~66** | **效果真实性与可信度量攻坚 + 跨平台打磨与 GitHub CI/CD** | 修复 `DQ2` 口径矛盾与 `DQ6`/`vitals` 十万边截断失真、优化 `expand_graph_for_query` 与 `AssetSearchEngine` 代码词 `exact_id` 召回/延迟、消除 macOS 预检/Daemon/Makefile Linux 残留并新增双平台 `.github/workflows/{ci,release}.yml` | `#47`, `#48` | [roadmap-phase65-66.md](roadmap-phase65-66.md) | ✅ **已完成** |
-| **Phase 67** | **全仓 `< 1000L` 模块化拆分与 `let _ = <= 15` 吞错治理** | 拆分全部 10 个 `>=1000L` 生产文件至 `<1000L`（`mcp_tools`/`workloads`/`multimodal_ext`/`config`/`metadata`/`knowledge_graph`/`cli_args`/`awr_engine`/`preflight`），修复 `prod_slice` 原始字符串漏检并收紧 `code_hygiene.py` 红线至 `>1000L = 0`、`let _ = <= 15` | `#49` | [roadmap-phase67.md](roadmap-phase67.md) | ✅ **已完成** |
-| **Phase 68** | **一等公民 SSoT 交叉对齐与防漂移门禁闭环** | `evolution_manifest.py` 新增 `Cargo.toml` 版本对齐、反引号源码路径存在性、`parity_api` 43 路由精确命中 `server.rs` 与全量演说/脚本 `Bench v3.9` 四重硬门禁；重构 4 套演说生成器动态读取快照；补齐 `src/web/mod.rs` 43 工具三端交叉契约单测并消除全部 SKILL/手册/路线图漂移 | `#50` | [roadmap-phase68.md](roadmap-phase68.md) | ✅ **已完成** |
-| **Phase 69** | **Top-5 高水位模块预防性拆分与 SQLite/DuckDB 共享 SPI 契约测试** | 将逼近 `1000L` 红线的 `client_gen` / `property_graph` / `multimodal` / `competitors` / `mcp_schemas` 全部拆至 `<700L`（留足演进余量）；新增 `tests/storage_spi_contract.rs` 对 SQLite 与 DuckDB 同套 12 域 SPI 契约等价验证 | `#51` | [roadmap-phase69.md](roadmap-phase69.md) | ✅ **已完成** |
-| **Phase 70~73** | **微内核 (`kernel/`) 与周边 (`contrib/`) 分离重构、政务云 AIOps/DBA 周边生态与三大精简发行版 (`distributions/`)** | 构建 `body-sdk` / `body-protocol` / `body-kernel` 纯机制微内核与防腐门禁；在 `contrib/` 落地 9 个标准五件套扩展（含 Linux/JVM/Nginx、PG/达梦/金仓、mTLS/RLS、合规脱敏、SIEM、轨 B CMDB 工单沙盒与 AIOps 证据包）；组装验证 `kernel-minimal` / `aiops-probe` / `dba-sentinel` | `#52` | [roadmap-phase70-73.md](roadmap-phase70-73.md) | ✅ **已完成** |
-| **Phase 74** | **全栈工业级可观测闭环 (`kernel/` 纯机制原语 + `contrib/obs_telemetry` + Prometheus `/metrics` + W3C Trace + JSONL)** | 修复 `pipeline.rs` `trace_id` 断链并落地 `KernelStatsRegistry` / `InFlightRegistry` / `SlowOpRing` / `ObservabilityProvider`；新增第 10 个 `contrib/obs_telemetry/` 标准五件套并接入 `aiops-probe` / `dba-sentinel`；旗舰版新增 `GET /metrics`、`X-Trace-Id`/`traceparent` 透传、`AGENT_BODY_LOG_FORMAT=json` 与 Web UI 预览面板；扩展 `arch_boundary_check.py` 禁词守卫 | `#53` | [roadmap-phase74.md](roadmap-phase74.md) | ✅ **已完成** |
-| **Phase 75** | **全一等公民交叉验证与大一统（门禁 Check D~G + CI/Release/Docker + `body metrics` 四端 1:1:1 + 手册/演说/长文齐平）** | 升级 `evolution_manifest.py` Check D~G 交叉校验；加固 `Makefile`、`ci.yml`、`release.yml`、`Dockerfile --target probe`；补齐旗舰 `body metrics` CLI/MCP；更新 6 卷手册、3 架构文档、`development.md`、4 套 `build_*.py` 重生 9 份演说及升级 `why-agent-needs-agent-body.md` + `architecture.svg` | `#54` | [roadmap-phase75.md](roadmap-phase75.md) | ✅ **已完成** |
+| **Phase 60** | **跨平台 100% 全绿测试基线与 Clippy 零告警收口** | 修复跨平台测试失败、清理死依赖并达成 `clippy --all-targets -D warnings` 零告警 | `v1.3` | [roadmap-phase60.md](roadmap-phase60.md) | ✅ **已完成** |
+| **Phase 61** | **Know-How 知识网络 (Stage 1) 与 Omni-RRF 多路融合召回** | 扩展 `fact_nodes`/`fact_edges` 知识节点、`HeadingChunker` + 别名归一 + PMI 共现图、加权 `bm25` + 驼峰拆词 + Pure-Rust `fuzzy` + 图/层级/互链/标量 Omni-RRF | `#44` | [roadmap-phase61.md](roadmap-phase61.md) | ✅ **已完成** |
+| **Phase 62** | **Know-How 知识网络 (Stage 2)：索引子图下沉与 `v3.9` 基准** | 索引下沉定向 1~2 跳子图与枢纽阻尼、写穿级联清理、`qwen3.5:0.8b` 章节 L2 Know-How 原文锚定抽取与 Benchmark `v3.9` (`W19`/`DQ10`) | `#44` | [roadmap-phase62.md](roadmap-phase62.md) | ✅ **已完成** |
+| **Phase 63** | **多模态解析深化、三通道统一与 Shadow A/B `H1~H5` 自愈 (`v1.6`)** | `multimodal_ext.rs` 纯 Rust 解析、三大入口统一魔数分类与 `schema_version=2.0`、`kv_filter`+无损回填全端 1:1:1、运行模式 `.override` 热切与 `ShadowAbEngine` `H1~H5` 自动写穿自愈 | `v1.6` | [roadmap-phase63.md](roadmap-phase63.md) | ✅ **已完成** |
+| **Phase 64** | **`v1.1.0` 一等公民大一统对齐 (Web UI / SKILL / 手册 / 门禁)** | 升级 `evolution_manifest.py` 防漂移门禁、`Cargo.toml` 升至 `1.1.0`、Web UI 补齐 Action-level 1:1:1 交互，全量同步 SKILL / 手册 / 文档与 `v1.1.0` 发版说明 | `#46` | [roadmap-phase64.md](roadmap-phase64.md) | ✅ **已完成** |
+| **Phase 65~66** | **效果真实性与可信度量攻坚 + 跨平台打磨与 GitHub CI/CD** | 修复 `DQ2`/`DQ6`/`vitals` 十万边截断失真、优化代码标识符 `exact_id` 召回/延迟、消除 macOS 残留并新增双平台 `.github/workflows/{ci,release}.yml` | `#47`, `#48` | [roadmap-phase65-66.md](roadmap-phase65-66.md) | ✅ **已完成** |
+| **Phase 67** | **全仓 `< 1000L` 模块化拆分与 `let _ = <= 15` 吞错治理** | 拆分全部 10 个 `>=1000L` 生产文件至 `<1000L`，修复 `prod_slice` 原始字符串漏检并收紧 `code_hygiene.py` 红线至 `>1000L = 0`、`let _ = <= 15` | `#49` | [roadmap-phase67.md](roadmap-phase67.md) | ✅ **已完成** |
+| **Phase 68** | **一等公民 SSoT 交叉对齐与防漂移门禁闭环** | `evolution_manifest.py` 新增版本号/反引号源码路径/`parity_api` 43 路由/演说 SSoT 四重硬门禁；重构 4 套演说生成器动态读取快照；补齐 `src/web/mod.rs` 三端交叉契约单测 | `#50` | [roadmap-phase68.md](roadmap-phase68.md) | ✅ **已完成** |
+| **Phase 69** | **Top-5 高水位模块预防性拆分与 SQLite/DuckDB 共享 SPI 契约测试** | 预防性拆分 5 个高水位模块至 `<700L`；新增 `tests/storage_spi_contract.rs` 对 SQLite 与 DuckDB 同套 12 域 SPI 契约等价验证 | `#51` | [roadmap-phase69.md](roadmap-phase69.md) | ✅ **已完成** |
+| **Phase 70~73** | **微内核 (`kernel/`) 与周边 (`contrib/`) 分离重构与三大精简发行版** | 构建 `body-sdk`/`body-protocol`/`body-kernel` 纯机制微内核与防腐门禁；落地 9 个标准五件套周边扩展；组装验证 `kernel-minimal`/`aiops-probe`/`dba-sentinel` | `#52` | [roadmap-phase70-73.md](roadmap-phase70-73.md) | ✅ **已完成** |
+| **Phase 74** | **全栈工业级可观测闭环 (`obs_telemetry` + `/metrics` + W3C Trace)** | 修复 `pipeline.rs` `trace_id` 断链并落地微内核纯机制原语；新增第 10 个 `contrib/obs_telemetry/`；旗舰版新增 `GET /metrics`、`X-Trace-Id`/`traceparent` 与 `AGENT_BODY_LOG_FORMAT=json` | `#53` | [roadmap-phase74.md](roadmap-phase74.md) | ✅ **已完成** |
+| **Phase 75** | **全一等公民交叉验证与大一统（Check D~G + `body metrics` 1:1:1）** | 升级 `evolution_manifest.py` Check D~G；加固 CI/Release/Docker (`--target probe`)；补齐旗舰 `body metrics` CLI/MCP；全面刷新手册、架构文档、9 份演说与 `architecture.svg` | `#54` | [roadmap-phase75.md](roadmap-phase75.md) | ✅ **已完成** |
+| **v1.1.0 视觉重塑** | **9 份演说 HTML 形象化 SVG 图解引擎重构 (`225fb2c`)** | 新增 `scripts/deck_visuals.py`（28+ 矢量图标与 20 套专属领域架构图）、舞台画布扩至 `1472×640`（72%+ 图示占比），9/9 通过 `make verify-decks` Playwright 无头验真 | — | [presentation/index.html](../../presentation/index.html) | ✅ **已完成** |
+| **v1.1.0 品质硬化** | **老库无损 Schema 自愈、11 处缺陷根治与全栈 414 测 + WebUI E2E (`ce7c828`)** | 落地 `schema_reconcile.rs` 事务式老库列改名/补列与 FTS5 脱同步重建、SQLite WAL `64MB` 控容与 CJK 回退检索；修复 Benchmark 报错吞错、记忆类型归一、Mesh 路由、锁 Token 与 MCP 必填校验；新增 18 项测试（全工作区 **414 测**）与 `make verify-webui` Playwright 9 工作台 E2E 门禁 | — | [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) | ✅ **已完成** |
 
 ---
 
 ## 三、断点恢复指引
 
-1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与最近活跃路线图 [roadmap-phase75.md](roadmap-phase75.md)；
+1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase75.md](roadmap-phase75.md)；
 2. 严禁全仓扫描 `docs/src_doc/archive/` 内已冻结的历史路线图；
-3. 每次代码/文档改动收口前执行 `make quality-gate && make test && make verify-decks` 与 `make sync-mirror` 校验零漂移。
+3. 每次代码/文档改动收口前执行 `make quality-gate && RUST_TEST_THREADS=1 make test`（改动 Web/演说时追加 `make verify-webui` / `make verify-decks`）与 `make sync-mirror` 校验零漂移。

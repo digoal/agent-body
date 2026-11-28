@@ -12,7 +12,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 ## 零、零重扫三步开工协议（Zero-Rescan Protocol，必先执行）
 
 任何新会话接手迭代任务时，**严禁全仓 `grep` 或扫描历史 `docs/src_doc/archive/roadmap-phase*.md` / `docs/src_doc/archive/progress-phase*.md`**，必须先执行以下 3 步（2 轮内精准锁定改点）：
-1. **读 `Tier-0` 入口（仅 2 文件）**：[EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md)（8 大演进场景 O(1) 变更触点矩阵）+ 当前活跃 `docs/src_doc/roadmap-phase*.md`；
+1. **读 `Tier-0` 入口（仅 2 文件）**：[EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md)（双引擎自进化架构 + 10 大演进场景 O(1) 变更触点矩阵）+ 当前活跃 `docs/src_doc/roadmap-phase*.md`；
 2. **跑确定性架构快照**：`make evolution-check`（`<200ms` 获取最新模块/MCP/SPI/表/Benchmark 计数与零漂移校验）；
 3. **查符号用 CodeGraph**：`codegraph explore "<SymbolName>"` 穿透源码定义与调用链。
 
@@ -54,6 +54,8 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 13. **微内核 (`kernel/`) 与周边 (`contrib/`) 物理分离红线（对齐 ISSUE #52）**:
     - `kernel/`（`body-sdk` / `body-protocol` / `body-kernel`）仅承载领域无关机制（8 张 `body_cat_*` 目录表 + 6 大 Routine + 7 大 Hook + `OutOfProcessFdwAdapter`），严禁混入周边业务/OS/行业词与跨层依赖；
     - 新行业与运维能力一律在 `contrib/<ext>/` 以标准五件套（`Cargo.toml` + `<ext>.control.toml` + `sql/` `ext_<ext>__*` + `body_module_magic!()` + `contrib/<ext>/tests/regress.rs`）落地，并按需组装至 `distributions/`，由 [arch_boundary_check.py](../../scripts/arch_boundary_check.py) 强制守卫。
+14. **存量数据库无损 Schema 自愈与三后端契约红线（对齐规约 #13 & #21）**:
+    - 严禁只改 `schema.sql` 却不兼容已部署的老版本 `body.db`；任何新增或改名表/列操作，必须同步在 `src/storage/sqlite_provider/schema_reconcile.rs` 补齐事务式无损迁移与 FTS5 脱同步校验，并在 `tests/schema_migration_regression.rs` 与 `tests/storage_spi_contract.rs` 固化老库升级与 SQLite/DuckDB 等价回归。
 
 ---
 
@@ -94,7 +96,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/ecosystem/` | MCP/SKILL 目录、外部服务通讯录与 Context 防爆路由 | 严禁存明文密钥 |
 | ├── `src/tui/` | 终端单屏实时看板 | 轻量 ANSI 交互刷新 |
 | └── `src/web/` | 内嵌单二进制 HTTP/SSE、昼夜双主题 9 大工作台 (`assets/{index.html,style.css,js/*.js}`, `parity_api/*`) | 写端点强制鉴权与 100% 黑白屏对齐 |
-| `EVOLUTION_GUIDE.md` | 零重扫演进活地图与 8 大场景变更触点矩阵 | 新会话 `Tier-0` 必读入口 |
+| `EVOLUTION_GUIDE.md` | 双引擎自进化手册、零重扫演进活地图与 10 大场景变更触点矩阵 | 新会话 `Tier-0` 必读入口 |
 | `INSTALL.md` | 生产安装、依赖矩阵、Docker 与 Systemd 部署指南 | 与 `preflight` 保持事实对齐 |
 | `ISSUE.md` | 未来演进与待探讨 ISSUE 总账 | 与 Roadmap 及反馈总账协同 |
 | `user_feedback.md` | 主理人与 Agent 实际使用体验与探针自上报总账 | `body_feedback` 双向读写目标 |
@@ -115,7 +117,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 flowchart TD
     A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 docs/src_doc/roadmap-phase*.md)"]
     B --> C["步骤 3: 串行编码与单元测试驱动<br/>(TDD + cargo test 局部验证)"]
-    C --> D["步骤 4: 编译检查与全量回归<br/>(workspace 396 tests 全绿 + release 构建)"]
+    C --> D["步骤 4: 编译检查与全量回归<br/>(workspace 414 tests 全绿 + release 构建)"]
     D --> E["步骤 5: 文档同步与交付三段式小结<br/>(更新手册/README + 状态标记)"]
 ```
 
@@ -144,7 +146,7 @@ flowchart TD
    ```bash
    export PATH="$HOME/.cargo/bin:$PATH" && RUST_TEST_THREADS=1 cargo test --workspace
    ```
-   **门禁要求**: 全工作区 **396 项测试全部 `ok`**（根包 353 + `kernel` 26 + `contrib` 13 + `distributions` 4），0 failed。
+   **门禁要求**: 全工作区 **414 项测试全部 `ok`**（根包 371 + `kernel` 26 + `contrib` 13 + `distributions` 4），0 failed；改动 Web/Schema/API 时追加通过 `make verify-webui`（Playwright 9 工作台 + 老库无损迁移 E2E）。
 2. 运行 release 生产构建（旗舰版与精简发行版按需编译）：
    ```bash
    export PATH="$HOME/.cargo/bin:$PATH" && cargo build --release
@@ -178,10 +180,10 @@ flowchart TD
 ## 四、常见场景与标准模板（Cookbook）
 
 ### 场景 A: 新增一个 MCP 宿主感知工具
-1. 在 `src/api/mcp_schemas.rs` 的 `all_tool_schemas()` 向量中追加工具定义，给出清晰的 `description` 与 JSON Schema 参数校验。
-2. 在 `src/api/mcp_tools/mod.rs` 及其子模块（`core_handlers.rs` / `infra_handlers.rs` / `body_handlers.rs`）中注入执行代码。
-3. 在 `src/cli_args.rs` 与 `src/main.rs` 对应子命令中保持对等支持。
-4. 编写 `cargo test api::mcp::tests` 确保通过 mock stdio 测试。
+1. 在 `src/api/mcp_schemas.rs` 或 `src/api/mcp_schemas_ops.rs` 中追加工具定义，给出清晰的 `description` 与 JSON Schema 参数校验。
+2. 在 `src/api/mcp_tools/mod.rs` 及其子模块（`core_handlers.rs` / `infra_handlers.rs` / `body_handlers.rs`）中注入执行代码（必填参数缺失须显式返回错误，禁止静默降级）。
+3. 在 `src/cli_args.rs`、`src/cli_subcommands.rs` 与 `src/cli_handlers/` 及 `src/web/` (`server.rs` + `parity_api/`) 保持 1:1:1 对等支持。
+4. 运行 `cargo test --test mcp_all_tools_e2e` 与 `cargo test --test web_full_e2e` 确保全矩阵 E2E 与 Parity 契约全绿。
 
 ### 场景 B: 扩展图智能与依赖推演规则
 1. 修改 `src/links/` 中的正则与语义提取器（支持新的语言或框架，如 Java、Go import 语法）。
@@ -191,7 +193,12 @@ flowchart TD
 ### 场景 C: 扩展扫描策略或放置规则
 1. 修改 `src/storage/schema.sql` 初始插入的预置规则（`INSERT OR IGNORE INTO placement_rules ...`）。
 2. 在 `src/placement/mod.rs` 中调整评分与推荐优先级匹配算法。
-3. 运行 `cargo test placement::tests` 验证不会对既有 `/root/new/shared_proj/`、`/root/new/work/` 产生回退断言。
+3. 运行 `cargo test placement::tests` 验证不会对既有工作区规则产生回退断言。
+
+### 场景 D: 新增或修改表结构 / 字段（老库无损升级红线）
+1. 同步更新 `src/storage/schema.sql`、`src/storage/pg_schema.sql`、`src/storage/duckdb_schema.sql`、`src/storage/models.rs` 与 `src/storage/spi.rs`。
+2. 在 `src/storage/sqlite_provider/schema_reconcile.rs` 补齐事务式老库列改名/补列及 FTS5 同步校验逻辑，并在 DuckDB/PG provider 补齐对应旧列兼容迁移。
+3. 在 `tests/schema_migration_regression.rs` 新增老库升级回归测试，运行 `cargo test --test schema_migration_regression && cargo test --test storage_spi_contract && make verify-webui`。
 
 ---
 
@@ -204,9 +211,9 @@ flowchart TD
 - [ ] **并发模式自检（规约 #8 & #25）**：涉及高危/写共享/绑定端口是否坚守悲观门禁？可逆/客户端连接等高频路径是否支持消费开工乐观租约直行并由 `post_tool_call` 兜底碰壁自愈？
 - [ ] **双域审计自检（规约 #4, #8, #18, #22 & #26）**：新增 `IN_AGENT` 工具/Hook/Web 写操作或 `OUT_OF_AGENT` 守护巡检/GC/修复/写穿动作是否已写入脱敏 `audit_events` 并携带 `before_after_delta` 与 `evidence_sha256`？被动 `Watcher` 事件是否已防洪折叠？
 - [ ] **本体边界与命名兼容自检（规约 #2 & #27）**：是否严守脑体分离不内置业务 LLM 规划循环？自治行为是否遵守 `L0~L3` 权限包络（不越权执行 `L2/L3`）？对外叙事升级为「Agent 本体」的同时，是否保证 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容？
-- [ ] 新增的字段和表结构是否已在 `schema.sql`、`models.rs`、`storage/mod.rs` 保持三位一体同步？
+- [ ] 新增的字段和表结构是否已在 `schema.sql`/`pg_schema.sql`/`duckdb_schema.sql`、`models.rs`、`spi.rs` 保持同步，并在 `src/storage/sqlite_provider/schema_reconcile.rs` 与 `tests/schema_migration_regression.rs` 覆盖老库无损迁移？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
-- [ ] 是否执行了 `make quality-gate`（`evolution-check` + `arch-check` 防腐边界门禁 + `lint-panic` + `lint-hygiene` 位置无关性/`>1000L` 文件清零/`let _ = <= 15`/核心自治及微内核与周边路径 `= 0`/`18/18 WaitEventId` + `lint-strict` 全工作区零警告编译）且 `RUST_TEST_THREADS=1 cargo test --workspace` 全部通过（**396 项全工作区测试全绿，零 warning**）？若改动 `presentation/` 或演说生成脚本，是否已通过 `make verify-decks` Playwright 无头验真？
+- [ ] 是否执行了 `make quality-gate`（`evolution-check` + `arch-check` 防腐边界门禁 + `lint-panic` + `lint-hygiene` 位置无关性/`>1000L` 文件清零/`let _ = <= 15`/核心自治及微内核与周边路径 `= 0`/`18/18 WaitEventId` + `lint-strict` 全工作区零警告编译）且 `RUST_TEST_THREADS=1 cargo test --workspace` 全部通过（**414 项全工作区测试全绿，零 warning**）？改动 Web/Schema/API 时是否已通过 `make verify-webui`？改动 `presentation/` 或演说脚本时是否已通过 `make verify-decks` Playwright 无头验真？
 - [ ] **二进制位置无关与发版一致性自检（规约 #11 & #28）**：生产路径是否 0 处 `env!("CARGO_MANIFEST_DIR")`？改名/核心修复提交后是否已重编安装 `make restart` 并核验 `agent-body --version` hash 与 `HEAD` 一致且 `DQ5 >= 98%`？
 - [ ] 是否执行了 `agent-body preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？

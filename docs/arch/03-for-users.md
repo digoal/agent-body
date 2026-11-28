@@ -108,7 +108,7 @@ agent-body memory search "数据库连接池排障" --hybrid # 混合检索记�
 {
   "mcpServers": {
     "agent-body": {
-      "command": "/root/new/work/agent-body/target/release/agent-body",
+      "command": "/usr/local/bin/agent-body",
       "args": ["mcp"]
     }
   }

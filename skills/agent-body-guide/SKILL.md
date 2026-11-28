@@ -46,7 +46,7 @@ Agent 本体采用 **Rust** 编写，原生单二进制交付，依赖极简、�
 | **操作系统** | Linux (Ubuntu / Debian / CentOS / 统信 / 麒麟) | 深度利用 Linux `/proc` 文件系统与 `inotify` 机制 |
 | **C/C++ 工具链 (旗舰版编译期)** | GCC/G++ >= 9, CMake >= 3.15, make | 旗舰版 DuckDB bundled 构建必须；精简发行版（`probe`/`dba`/`kernel-minimal`）无需 CMake/DuckDB |
 | **C++ 运行时 (`libstdc++.so.6`)** | 仅旗舰全功能版必选 | 精简发行版 `agent-body-probe` (6.7M) / `agent-body-dba` (6.4M) / `agent-body-kernel-minimal` (3.9M) **零 C++ 运行时依赖** |
-| **Rust 工具链 (编译期)** | Rust >= 1.88 (推荐 1.99+) + Cargo | 源码编译构建工具（`Cargo.lock` 依赖 `edition = "2024"` crate），安装于 `/root/.cargo/bin` |
+| **Rust 工具链 (编译期)** | Rust >= 1.88 (实测 1.99+) + Cargo | 源码编译构建工具（`Cargo.lock` 依赖 `edition = "2024"` crate），安装于 `$HOME/.cargo/bin` |
 | **SQLite3 运行环境** | 内置 Bundled FTS5 (无需外装系统级动态库) | `rusqlite` 以 bundled 特性编译，单二进制自包含 |
 | **本地 Ollama (可选)** | `http://127.0.0.1:11434` (模型推荐 `nomic-embed-text` 或 `bge-m3`) | 提供语义向量混合检索（RRF）。若未安装自动降级为 FTS5 |
 | **PostgreSQL (可选)** | PostgreSQL >= 14 (`pgvector` 可选) | 跨机多 Agent 高并发共享存储后端（默认应用层余弦运算，无需强装扩展） |
@@ -68,9 +68,10 @@ cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-
 ./target/release/agent-body-probe metrics | head -n 20
 ./target/release/agent-body-probe diagnose
 
-# 3. 运行全工作区 396 项自动化测试验证环境
+# 3. 运行全工作区 414 项自动化测试验证环境（及可选 WebUI Playwright E2E）
 RUST_TEST_THREADS=1 make test
 # 或: RUST_TEST_THREADS=1 cargo test --workspace
+# 可选 WebUI 9 工作台 + 老库无损迁移验真: make verify-webui
 
 # 4. 运行环境与依赖完整性预检 (Preflight)
 agent-body preflight
@@ -85,7 +86,7 @@ agent-body --version
 
 ### 2.3 配置文件与初始化存储
 
-Agent 本体首次启动时会自动在用户家目录创建持久化存储空间：
+Agent 本体首次启动或跨版本升级时会自动在用户家目录初始化并执行事务式无损 Schema 自愈（`src/storage/sqlite_provider/schema_reconcile.rs`，自动兼容老库列改名与 FTS5 重建）：
 - **数据存储**: `~/.agent-body/body.db`（SQLite WAL 模式，集成 FTS5 全文虚拟表与触发器）；
 - **主配置文件**: `~/.agent-body/config.toml`（支持通过 `AGENT_BODY_CONFIG` 指定自定义路径；参数详解见 [config.example.toml](../../config.example.toml)）。
 
@@ -208,7 +209,7 @@ agent-body links audit
 agent-body links query -t project project:agent-body --max-hops 2 --include-semantic
 
 # 穿透调用本地已建索引的 .codegraph/ 微观函数符号调用方
-agent-body links codegraph /root/new/work/agent-body StorageProvider
+agent-body links codegraph <repo-root> StorageProvider
 ```
 
 #### 场景 7: 跨会话长期记忆检索（混合模式）
@@ -358,7 +359,7 @@ sequenceDiagram
     S-->>Agent: 全系统拓扑健康，无断链
 
     Note over Agent, CG: 4. 执行任务与宏微联邦
-    Agent->>S: body_codegraph_bridge(path="/root/new/work/agent-body", symbol="StorageProvider")
+    Agent->>S: body_codegraph_bridge(path="<repo-root>", symbol="StorageProvider")
     S->>CG: 穿透检索底层符号
     CG-->>S: 返回符号定义与调用树
     S-->>Agent: 宏微联动结果反馈
