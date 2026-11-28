@@ -3,100 +3,208 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Agent Body · 体系化演讲与路演总览</title>
+<title>Agent Body · 视觉图解演讲与路演总览</title>
 <style>
 :root{
-  --paper:#F7F6F2; --paper2:#F1EFE9; --line:#D9D5CB; --ink:#1B2B33; --ink2:#46585F;
-  --mute:#89938F; --teal:#245A6B; --teal-l:#E5EFF0; --clay:#BE653B; --clay-l:#F7E9DE; --green:#2F7A66;
+  --paper:#FAF8F4; --paper2:#F2EFE9; --line:#DCD7CC; --ink:#162A33; --ink2:#445A63;
+  --mute:#7D8B88; --teal:#1F5E73; --teal-l:#E6F2F4; --clay:#C85A32; --clay-l:#FCEEE8; --green:#257A60;
   --f-r:"Songti SC","STSong","Noto Serif CJK SC",Georgia,serif;
   --f-s:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
   --f-m:"SF Mono",Menlo,Consolas,"Courier New",monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#E9E7E1;color:var(--ink);font-family:var(--f-s);padding:36px 24px 64px;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1360px;margin:0 auto;background:var(--paper);border:1px solid var(--line);padding:52px 60px}
-.eyebrow{font-family:var(--f-m);font-size:12px;letter-spacing:3px;color:var(--mute)}
-h1{font-family:var(--f-r);font-size:44px;font-weight:600;margin-top:12px;letter-spacing:1px}
-.sub{font-size:17px;color:var(--ink2);margin-top:10px;line-height:1.65}
-.sub b{color:var(--teal)}
-.rule{height:1px;background:var(--line);margin:28px 0}
-.sec-lbl{font-family:var(--f-m);font-size:11.5px;letter-spacing:2.4px;color:var(--mute);margin-bottom:16px}
-.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:36px}
-.hero-card{display:block;text-decoration:none;background:var(--paper2);border:1px solid var(--line);border-top:4px solid var(--teal);padding:24px 26px;color:var(--ink);transition:border-color .2s,background .2s}
+body{background:#E7E4DC;color:var(--ink);font-family:var(--f-s);padding:32px 24px 60px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1360px;margin:0 auto;background:var(--paper);
+  background-image:radial-gradient(#DDD8CC .9px,transparent .9px);background-size:28px 28px;
+  border:1px solid var(--line);border-radius:22px;padding:44px 54px;box-shadow:0 16px 48px rgba(22,42,51,.08)}
+.top-bar{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.eyebrow{display:inline-block;font-family:var(--f-m);font-size:11.5px;letter-spacing:2px;
+  color:var(--teal);background:var(--teal-l);padding:4px 12px;border-radius:12px;font-weight:700}
+h1{font-family:var(--f-r);font-size:40px;font-weight:700;margin-top:10px;letter-spacing:.6px}
+.keys-pill{font-family:var(--f-m);font-size:12px;color:var(--ink2);background:#FFFFFF;
+  border:1px solid var(--line);border-radius:12px;padding:10px 16px;display:flex;gap:14px;flex-wrap:wrap}
+.keys-pill b{color:var(--teal)}
+.hero-map{display:block;margin:24px 0 30px}
+.sec-lbl{font-family:var(--f-m);font-size:11.5px;letter-spacing:2.2px;color:var(--teal);font-weight:700;margin-bottom:14px}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:34px}
+.hero-card{display:flex;flex-direction:column;text-decoration:none;background:#FFFFFF;
+  border:1.6px solid var(--line);border-top:6px solid var(--teal);border-radius:18px;
+  padding:24px 28px;color:var(--ink);transition:transform .18s,border-color .18s,box-shadow .18s}
 .hero-card.clay{border-top-color:var(--clay)}
-.hero-card:hover{background:var(--teal-l);border-color:var(--teal)}
-.hero-card h2{font-family:var(--f-r);font-size:24px;margin:8px 0 10px}
-.hero-card p{font-size:14px;color:var(--ink2);line-height:1.65}
+.hero-card:hover{transform:translateY(-3px);border-color:var(--teal);box-shadow:0 12px 28px rgba(22,42,51,.1)}
+.hero-card.clay:hover{border-color:var(--clay)}
+.hero-card h2{font-family:var(--f-r);font-size:23px;margin:10px 0 12px}
+.dc-head{display:flex;align-items:center;gap:14px}
+.dc-top-col{display:flex;flex-direction:column;gap:3px;font-family:var(--f-m);font-size:11.5px;color:var(--mute)}
+.dc-meta{color:var(--teal);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;flex:1;align-content:flex-start}
+.chip{font-family:var(--f-m);font-size:12px;color:var(--ink2);background:var(--paper2);
+  border:1px solid var(--line);border-radius:10px;padding:4px 10px;font-weight:600}
 .series-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.deck-card{display:flex;flex-direction:column;text-decoration:none;background:#FFFFFF;border:1px solid var(--line);border-top:4px solid #2E6373;padding:22px 24px;color:var(--ink);transition:background .2s,border-color .2s}
-.deck-card:hover{background:var(--teal-l);border-color:var(--teal)}
-.dc-top{display:flex;justify-content:space-between;font-family:var(--f-m);font-size:11px;color:var(--mute);letter-spacing:1.2px}
-.dc-meta{color:var(--teal)}
-.deck-card h3{font-family:var(--f-r);font-size:20px;margin:12px 0 10px;line-height:1.35}
-.deck-card p{font-size:13.5px;color:var(--ink2);line-height:1.65;flex:1}
-.dc-go{font-family:var(--f-m);font-size:12px;color:var(--clay);margin-top:16px;font-weight:600}
-.foot{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-family:var(--f-m);font-size:11.5px;color:var(--mute)}
+.deck-card{display:flex;flex-direction:column;text-decoration:none;background:#FFFFFF;
+  border:1.5px solid var(--line);border-top:5px solid var(--acc,var(--teal));border-radius:16px;
+  padding:22px 24px;color:var(--ink);transition:transform .18s,border-color .18s,box-shadow .18s}
+.deck-card:hover{transform:translateY(-3px);border-color:var(--acc,var(--teal));box-shadow:0 10px 24px rgba(22,42,51,.09)}
+.deck-card h3{font-family:var(--f-r);font-size:19.5px;margin:14px 0 12px;line-height:1.35}
+.dc-go{font-family:var(--f-m);font-size:12.5px;color:var(--clay);margin-top:16px;font-weight:700}
+.foot{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);display:flex;
+  justify-content:space-between;font-family:var(--f-m);font-size:11.5px;color:var(--mute);flex-wrap:wrap;gap:12px}
 @media(max-width:980px){.hero-grid,.series-grid{grid-template-columns:1fr}.wrap{padding:28px 22px}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="eyebrow">AGENT BODY · PRESENTATION SUITE · v1.1.0 · APACHE-2.0</div>
-  <h1>Agent 本体体系化演讲与路演总览</h1>
-  <p class="sub">统一采用<b>「浅色纸基 · 地层剖面 · 工程蓝图」</b>视觉规范（零外部依赖 · 内联正交 SVG · <code>N/T</code> 联动讲稿 · <code>G</code> 目录 · <code>P/A/S/R</code> 步进动画 · Decks-as-Code 确定性生成）。基线实测：27 模块 · 43 工具 · 88 SPI · 微内核 3 Crates · 10 Contrib 扩展 · 3 精简发行版 · 396 测试全绿 · Bench v3.9。</p>
-  <div class="rule"></div>
-  <div class="sec-lbl">OVERVIEW DECKS · 旗舰全景总览版（Phase 75 全一等公民大一统 · v1.1.0 旗舰与微内核四发行版）</div>
+  <div class="top-bar">
+    <div>
+      <span class="eyebrow">AGENT BODY · VISUAL PRESENTATION SUITE · v1.1.0</span>
+      <h1>Agent 本体图解演讲与路演总览</h1>
+    </div>
+    <div class="keys-pill">
+      <span><b>G</b> 目录</span><span><b>N</b> 本页讲稿</span><span><b>T</b> 全文联动</span>
+      <span><b>P</b> 自动</span><span><b>A/S/R</b> 步进动画</span><span><b>F</b> 全屏</span>
+    </div>
+  </div>
+  
+    <svg class="hero-map" viewBox="0 0 1240 218" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="1236" height="214" rx="18" fill="#FFFFFF" stroke="#DCD7CC" stroke-width="1.4"/>
+      <text x="28" y="34" font-family="var(--f-m)" font-size="11.5" fill="#1F5E73" font-weight="700" letter-spacing="2">VISUAL ARCHITECTURE MAP · 脑体分离一图速览</text>
+      <text x="1212" y="34" font-family="var(--f-m)" font-size="11.5" fill="#7D8B88" text-anchor="end">27 模块 · 43 MCP · 88 SPI · 3 核 / 10 扩展 / 4 发行版 · 396 测</text>
+      <!-- Left: Hot-Swappable Brains -->
+      <rect x="28" y="54" width="236" height="142" rx="14" fill="#FAF8F4" stroke="#1F5E73" stroke-width="1.6"/>
+      <circle cx="74.0" cy="102.0" r="22.0" fill="#E6F2F4" stroke="#1F5E73" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(61.4,89.3) scale(1.054)"><path d="M9.5 4a3.5 3.5 0 0 0-3.3 2.4A3 3 0 0 0 4 9.3c0 1.1.6 2.1 1.5 2.6A3.2 3.2 0 0 0 5 13.7a3.3 3.3 0 0 0 3.2 3.3H11V4H9.5z" fill="#1F5E73" opacity="0.16"/><path d="M14.5 4a3.5 3.5 0 0 1 3.3 2.4A3 3 0 0 1 20 9.3c0 1.1-.6 2.1-1.5 2.6a3.2 3.2 0 0 1 .5 1.8 3.3 3.3 0 0 1-3.2 3.3H13V4h1.5z" fill="#1F5E73" opacity="0.16"/><path d="M12 4v16M9.5 4a3.5 3.5 0 0 0-3.3 2.4A3 3 0 0 0 4 9.3c0 1.1.6 2.1 1.5 2.6A3.2 3.2 0 0 0 5 13.7a3.3 3.3 0 0 0 3.2 3.3H12" stroke="#1F5E73" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M14.5 4a3.5 3.5 0 0 1 3.3 2.4A3 3 0 0 1 20 9.3c0 1.1-.6 2.1-1.5 2.6a3.2 3.2 0 0 1 .5 1.8 3.3 3.3 0 0 1-3.2 3.3H12" stroke="#1F5E73" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M8 9.5c1 0 1.5.5 2 1.2M16 9.5c-1 0-1.5.5-2 1.2M8.5 14c1 0 1.8-.4 2.2-1M15.5 14c-1 0-1.8-.4-2.2-1" stroke="#1F5E73" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g>
+      <text x="108" y="96" font-family="var(--f-r)" font-size="18" fill="#162A33" font-weight="700">瞬态大脑</text>
+      <text x="108" y="118" font-family="var(--f-m)" font-size="11.5" fill="#1F5E73" font-weight="600">热插拔算力</text>
+      <text x="146" y="160" font-family="var(--f-m)" font-size="11.5" fill="#445A63" text-anchor="middle">Claude · Antigravity · Cursor</text>
+      <text x="146" y="180" font-family="var(--f-m)" font-size="11" fill="#7D8B88" text-anchor="middle">Codex · Cron Worker</text>
+      <!-- Connector -->
+      <line x1="264" y1="125" x2="318" y2="125" stroke="#1F5E73" stroke-width="3" stroke-dasharray="6 4"/>
+      <!-- Middle: 6 Persistent Body Organs -->
+      <rect x="322" y="54" width="584" height="142" rx="14" fill="#E6F2F4" fill-opacity="0.55" stroke="#1F5E73" stroke-width="1.8"/>
+      <text x="614" y="78" font-family="var(--f-m)" font-size="11" fill="#154454" font-weight="700" text-anchor="middle" letter-spacing="1.6">AGENT BODY · 永驻宿主机的六大生理器官</text>
+      <g transform="translate(338,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#154454" stroke-width="1.3"/>
+        <circle cx="42.0" cy="34.0" r="18.0" fill="#E6F2F4" stroke="#154454" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(31.6,23.6) scale(0.862)"><path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6z" fill="#154454" opacity="0.16"/><path d="M2 12s3.8-6 10-6 10 6 10 6-3.8 6-10 6-10-6-10-6z" stroke="#154454" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="12" r="3" stroke="#154454" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="12" r="1.2" fill="#154454"/></g>
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">感官图谱</text>
+      </g>
+      <g transform="translate(432,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#C85A32" stroke-width="1.3"/>
+        <circle cx="42.0" cy="34.0" r="18.0" fill="#FCEEE8" stroke="#C85A32" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(31.6,23.6) scale(0.862)"><polygon points="13 2 4 14 11.5 14 10.5 22 20 10 12.5 10 13 2" fill="#C85A32" opacity="0.16"/><polygon points="13 2 4 14 11.5 14 10.5 22 20 10 12.5 10 13 2" stroke="#C85A32" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g>
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">小脑反射</text>
+      </g>
+      <g transform="translate(526,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#257A60" stroke-width="1.3"/>
+        <circle cx="42.0" cy="34.0" r="18.0" fill="#E6F4EE" stroke="#257A60" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(31.6,23.6) scale(0.862)"><rect x="4" y="7" width="16" height="10" rx="5" fill="#257A60" opacity="0.16"/><rect x="4" y="7" width="16" height="10" rx="5" stroke="#257A60" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><line x1="12" y1="7" x2="12" y2="17" stroke="#257A60" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="8.5" cy="12" r="1.3" fill="#257A60"/><path d="M15 10.5h2.5M15 13.5h2" stroke="#257A60" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g>
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">海马接力</text>
+      </g>
+      <g transform="translate(620,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#B5852A" stroke-width="1.3"/>
+        <circle cx="42.0" cy="34.0" r="18.0" fill="#FBF3E0" stroke="#B5852A" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(31.6,23.6) scale(0.862)"><rect x="9" y="3" width="6" height="18" rx="2" fill="#B5852A" opacity="0.16"/><line x1="12" y1="2" x2="12" y2="22" stroke="#B5852A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M7 6h10M6 10h12M6 14h12M7 18h10" stroke="#B5852A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g>
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">规约脊柱</text>
+      </g>
+      <g transform="translate(714,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#2D7187" stroke-width="1.3"/>
+        <circle cx="42.0" cy="34.0" r="18.0" fill="#E6F2F4" stroke="#2D7187" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(31.6,23.6) scale(0.862)"><path d="M12 2.5l8 3.2v5.8c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V5.7L12 2.5z" fill="#2D7187" opacity="0.16"/><path d="M12 2.5l8 3.2v5.8c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V5.7L12 2.5z" stroke="#2D7187" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M8.8 12.2l2.2 2.2 4.4-4.6" stroke="#2D7187" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g>
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">免疫 AWR</text>
+      </g>
+      <g transform="translate(808,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#1F5E73" stroke-width="1.3"/>
+        <circle cx="42.0" cy="34.0" r="18.0" fill="#E6F2F4" stroke="#1F5E73" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(31.6,23.6) scale(0.862)"><circle cx="12" cy="5" r="2.5" fill="#1F5E73" opacity="0.16"/><circle cx="5" cy="18" r="2.5" fill="#1F5E73" opacity="0.16"/><circle cx="19" cy="18" r="2.5" fill="#1F5E73" opacity="0.16"/><circle cx="12" cy="5" r="2.5" stroke="#1F5E73" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="5" cy="18" r="2.5" stroke="#1F5E73" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="19" cy="18" r="2.5" stroke="#1F5E73" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M10.7 7.2L6.3 15.8M13.3 7.2l4.4 8.6M7.5 18h9" stroke="#1F5E73" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g>
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">多体联邦</text>
+      </g>
+      <!-- Connector -->
+      <line x1="906" y1="125" x2="960" y2="125" stroke="#257A60" stroke-width="3" stroke-dasharray="6 4"/>
+      <!-- Right: Benchmark Outcome -->
+      <rect x="964" y="54" width="248" height="142" rx="14" fill="#154454"/>
+      <text x="1088" y="84" font-family="var(--f-m)" font-size="11" fill="#A6CFD5" font-weight="700" text-anchor="middle" letter-spacing="1.6">BENCHMARK v3.9 实测</text>
+      <text x="1028" y="138" font-family="var(--f-m)" font-size="28" fill="#FAF8F4" font-weight="700" text-anchor="middle">-99.2%</text>
+      <text x="1028" y="164" font-family="var(--f-s)" font-size="12" fill="#B8DBE0" text-anchor="middle">Token 节省</text>
+      <line x1="1096" y1="100" x2="1096" y2="174" stroke="#326C7F" stroke-width="1.4"/>
+      <text x="1154" y="138" font-family="var(--f-m)" font-size="28" fill="#7DE0B8" font-weight="700" text-anchor="middle">98.0</text>
+      <text x="1154" y="164" font-family="var(--f-s)" font-size="12" fill="#B8DBE0" text-anchor="middle">上下文质量</text>
+    </svg>
+    
+  <div class="sec-lbl">FLAGSHIP DECKS · 两大旗舰图解全景版</div>
   <div class="hero-grid">
     <a class="hero-card" href="presentation.html">
-      <div class="dc-top"><span>ROADSHOW · 路演总览版</span><span class="dc-meta">17 页 · 15~20 分钟</span></div>
+      <div class="dc-head">
+        <svg width="46" height="46" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30.0" cy="30.0" r="26.0" fill="#E6F2F4" stroke="#1F5E73" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(15.1,15.1) scale(1.246)"><path d="M12 2.5c3.5 2.5 5 6 5 10.5l-5 3-5-3c0-4.5 1.5-8 5-10.5z" fill="#1F5E73" opacity="0.16"/><path d="M12 2.5c3.5 2.5 5 6 5 10.5l-5 3-5-3c0-4.5 1.5-8 5-10.5zM7 12l-3 3v3l3-1M17 12l3 3v3l-3-1M10 18l2 3.5 2-3.5" stroke="#1F5E73" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="9.5" r="1.6" fill="#1F5E73"/></g></svg>
+        <div class="dc-top-col"><span>ROADSHOW · 对外路演版</span><span class="dc-meta">17 页 · 15~20 分钟 · 全定制视觉图解</span></div>
+      </div>
       <h2>Agent 本体对外路演版（presentation.html）</h2>
-      <p>面向投资人、CTO 与技术决策者：比较优势 → 脑体分离六大器官 → AOPCC 乐观-悲观并发 → 换脑不失忆 → 内生 AWR → PostgreSQL 式微内核与四大发行版 → Bench v3.9 与竞品实测。</p>
+      <div class="chips">
+        <span class="chip">比较优势天平</span><span class="chip">蒙眼翻车现场</span><span class="chip">脑体解剖图</span>
+        <span class="chip">ETC 乐观立交</span><span class="chip">150t 发光胶囊</span><span class="chip">帕累托象限</span><span class="chip">微内核 4 发行版</span>
+      </div>
       <span class="dc-go">打开路演版 →</span>
     </a>
     <a class="hero-card clay" href="agent-body-deck.html">
-      <div class="dc-top"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">25 页 · 45~60 分钟</span></div>
+      <div class="dc-head">
+        <svg width="46" height="46" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30.0" cy="30.0" r="26.0" fill="#FCEEE8" stroke="#C85A32" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(15.1,15.1) scale(1.246)"><circle cx="12" cy="12" r="4" fill="#C85A32" opacity="0.16"/><circle cx="12" cy="12" r="3.5" stroke="#C85A32" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8" stroke="#C85A32" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="12" r="7.5" stroke="#C85A32" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-dasharray="3 2.8"/></g></svg>
+        <div class="dc-top-col"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">25 页 · 45~60 分钟 · 内核架构图谱</span></div>
+      </div>
       <h2>Agent 本体深度技术交流版（agent-body-deck.html）</h2>
-      <p>面向数据库内核与 AI Infra 架构师：27 模块 / 88 SPI、L1~L3 分层图谱、AOPCC 数学边界、新鲜度写穿、MeshEnvelope v1.0、Wait Events/AWR/ADDM、kernel/contrib 分离架构与六重确定性门禁。</p>
-      <span class="dc-go">打开交流版 →</span>
+      <div class="chips">
+        <span class="chip">27 模块 / 88 SPI</span><span class="chip">三层有向图</span><span class="chip">目录锁 + WFG</span>
+        <span class="chip">写穿净水器</span><span class="chip">五维雷达</span><span class="chip">600% CPU AWR 曲线</span><span class="chip">10 Contrib 扩展</span>
+      </div>
+      <span class="dc-go">打开深度交流版 →</span>
     </a>
   </div>
-  <div class="sec-lbl">DEEP-DIVE SERIES · 6 讲 × 30 分钟单点说透体系化专题</div>
+  <div class="sec-lbl">DEEP-DIVE SERIES · 6 讲 × 30 分钟单点说透图解专题</div>
   <div class="series-grid">
-    <a class="deck-card" href="01-brain-body-separation.html">
-          <div class="dc-top"><span class="dc-no">SERIES 01 / 06</span><span class="dc-meta">30 min · 14 页</span></div>
+    <a class="deck-card" href="01-brain-body-separation.html" style="--acc:#154454">
+          <div class="dc-head">
+            <svg width="46" height="46" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30.0" cy="30.0" r="26.0" fill="#E6F2F4" stroke="#154454" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(15.1,15.1) scale(1.246)"><path d="M9.5 4a3.5 3.5 0 0 0-3.3 2.4A3 3 0 0 0 4 9.3c0 1.1.6 2.1 1.5 2.6A3.2 3.2 0 0 0 5 13.7a3.3 3.3 0 0 0 3.2 3.3H11V4H9.5z" fill="#154454" opacity="0.16"/><path d="M14.5 4a3.5 3.5 0 0 1 3.3 2.4A3 3 0 0 1 20 9.3c0 1.1-.6 2.1-1.5 2.6a3.2 3.2 0 0 1 .5 1.8 3.3 3.3 0 0 1-3.2 3.3H13V4h1.5z" fill="#154454" opacity="0.16"/><path d="M12 4v16M9.5 4a3.5 3.5 0 0 0-3.3 2.4A3 3 0 0 0 4 9.3c0 1.1.6 2.1 1.5 2.6A3.2 3.2 0 0 0 5 13.7a3.3 3.3 0 0 0 3.2 3.3H12" stroke="#154454" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M14.5 4a3.5 3.5 0 0 1 3.3 2.4A3 3 0 0 1 20 9.3c0 1.1-.6 2.1-1.5 2.6a3.2 3.2 0 0 1 .5 1.8 3.3 3.3 0 0 1-3.2 3.3H12" stroke="#154454" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M8 9.5c1 0 1.5.5 2 1.2M16 9.5c-1 0-1.5.5-2 1.2M8.5 14c1 0 1.8-.4 2.2-1M15.5 14c-1 0-1.8-.4-2.2-1" stroke="#154454" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g></svg>
+            <div class="dc-top-col"><span class="dc-no">SERIES 01 / 06</span><span class="dc-meta">30 min · 14 页</span></div>
+          </div>
           <h3>脑体分离与 Agent 本体哲学</h3>
-          <p>为什么只能定位为 Agent 本体？比较优势、六大生理器官、递弱代偿、三层统一架构与 src/body/ 源码剖析。</p>
-          <span class="dc-go">进入演讲 →</span>
-        </a><a class="deck-card" href="02-host-reality-graph.html">
-          <div class="dc-top"><span class="dc-no">SERIES 02 / 06</span><span class="dc-meta">30 min · 14 页</span></div>
+          <div class="chips"><span class="chip">比较优势天平</span><span class="chip">六大器官解剖</span><span class="chip">递弱代偿红线</span></div>
+          <span class="dc-go">进入图解演讲 →</span>
+        </a><a class="deck-card" href="02-host-reality-graph.html" style="--acc:#1F5E73">
+          <div class="dc-head">
+            <svg width="46" height="46" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30.0" cy="30.0" r="26.0" fill="#E6F2F4" stroke="#1F5E73" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(15.1,15.1) scale(1.246)"><circle cx="12" cy="12" r="9" fill="#1F5E73" opacity="0.16"/><circle cx="12" cy="12" r="9" stroke="#1F5E73" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="12" r="5" stroke="#1F5E73" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-dasharray="2.5 2"/><line x1="12" y1="12" x2="18.2" y2="6.4" stroke="#1F5E73" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="12" r="1.5" fill="#1F5E73"/></g></svg>
+            <div class="dc-top-col"><span class="dc-no">SERIES 02 / 06</span><span class="dc-meta">30 min · 14 页</span></div>
+          </div>
           <h3>宿主机物理感官图谱与零污染扫盘</h3>
-          <p>/proc 0.2ms 探测、白黑灰分级扫描敲门不进屋、L1/L2/L3 语义元数据、三层有向加权图谱与 CodeGraph 宏微联邦。</p>
-          <span class="dc-go">进入演讲 →</span>
-        </a><a class="deck-card" href="03-cerebellum-and-aopcc.html">
-          <div class="dc-top"><span class="dc-no">SERIES 03 / 06</span><span class="dc-meta">30 min · 13 页</span></div>
-          <h3>小脑反射、痛觉门禁与自适应并发控制 AOPCC</h3>
-          <p>算清整轮对话税 C_turn、乐观直通租约 vs 悲观门禁、Post-Hook 碰壁毫秒自愈、目录层级锁与 WFG 死锁破局。</p>
-          <span class="dc-go">进入演讲 →</span>
-        </a><a class="deck-card" href="04-hippocampus-freshness-continuity.html">
-          <div class="dc-top"><span class="dc-no">SERIES 04 / 06</span><span class="dc-meta">30 min · 13 页</span></div>
-          <h3>海马体、信息新鲜度治理与跨大脑 1ms 接力</h3>
-          <p>Memory SPI、七大陈旧漏斗写穿失效、FreshnessReconciler 对账、第 27 表 body_checkpoints 与跨脑脱敏接力胶囊。</p>
-          <span class="dc-go">进入演讲 →</span>
-        </a><a class="deck-card" href="05-security-audit-evolution-mesh.html">
-          <div class="dc-top"><span class="dc-no">SERIES 05 / 06</span><span class="dc-meta">30 min · 13 页</span></div>
-          <h3>纵深安全、双域审计与探针驱动自进化</h3>
-          <p>四道纵深安全铁闸、IN/OUT 双域 60s 折叠审计、P1~P5 内生对比探针、五维稳态自愈与 MeshEnvelope v1.0。</p>
-          <span class="dc-go">进入演讲 →</span>
-        </a><a class="deck-card" href="06-empirical-benchmark-engineering.html">
-          <div class="dc-top"><span class="dc-no">SERIES 06 / 06</span><span class="dc-meta">30 min · 13 页</span></div>
-          <h3>三轨实证 Benchmark v3.9 与可复现工程体系</h3>
-          <p>帕累托四维质量门禁 Q、W1~W19 / M1~M6 / DQ1~DQ10 实测与 COMP-C1~C4 同跑、微内核 396 测试与 2 分钟独立复现纪律。</p>
-          <span class="dc-go">进入演讲 →</span>
+          <div class="chips"><span class="chip">0.2ms /proc 探针</span><span class="chip">敲门不进屋</span><span class="chip">CodeGraph 显微镜</span></div>
+          <span class="dc-go">进入图解演讲 →</span>
+        </a><a class="deck-card" href="03-cerebellum-and-aopcc.html" style="--acc:#C85A32">
+          <div class="dc-head">
+            <svg width="46" height="46" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30.0" cy="30.0" r="26.0" fill="#FCEEE8" stroke="#C85A32" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(15.1,15.1) scale(1.246)"><polygon points="13 2 4 14 11.5 14 10.5 22 20 10 12.5 10 13 2" fill="#C85A32" opacity="0.16"/><polygon points="13 2 4 14 11.5 14 10.5 22 20 10 12.5 10 13 2" stroke="#C85A32" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g></svg>
+            <div class="dc-top-col"><span class="dc-no">SERIES 03 / 06</span><span class="dc-meta">30 min · 13 页</span></div>
+          </div>
+          <h3>小脑反射与自适应并发控制 AOPCC</h3>
+          <div class="chips"><span class="chip">ETC 乐观立交</span><span class="chip"><2ms 碰壁秒愈</span><span class="chip">WFG 死锁破环</span></div>
+          <span class="dc-go">进入图解演讲 →</span>
+        </a><a class="deck-card" href="04-hippocampus-freshness-continuity.html" style="--acc:#257A60">
+          <div class="dc-head">
+            <svg width="46" height="46" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30.0" cy="30.0" r="26.0" fill="#E6F4EE" stroke="#257A60" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(15.1,15.1) scale(1.246)"><rect x="4" y="7" width="16" height="10" rx="5" fill="#257A60" opacity="0.16"/><rect x="4" y="7" width="16" height="10" rx="5" stroke="#257A60" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><line x1="12" y1="7" x2="12" y2="17" stroke="#257A60" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="8.5" cy="12" r="1.3" fill="#257A60"/><path d="M15 10.5h2.5M15 13.5h2" stroke="#257A60" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g></svg>
+            <div class="dc-top-col"><span class="dc-no">SERIES 04 / 06</span><span class="dc-meta">30 min · 13 页</span></div>
+          </div>
+          <h3>海马体保鲜与跨大脑 10ms 接力</h3>
+          <div class="chips"><span class="chip">三级写穿净水</span><span class="chip">150t 发光胶囊</span><span class="chip">三引擎热迁移</span></div>
+          <span class="dc-go">进入图解演讲 →</span>
+        </a><a class="deck-card" href="05-security-audit-evolution-mesh.html" style="--acc:#2D7187">
+          <div class="dc-head">
+            <svg width="46" height="46" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30.0" cy="30.0" r="26.0" fill="#E6F2F4" stroke="#2D7187" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(15.1,15.1) scale(1.246)"><path d="M12 2.5l8 3.2v5.8c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V5.7L12 2.5z" fill="#2D7187" opacity="0.16"/><path d="M12 2.5l8 3.2v5.8c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V5.7L12 2.5z" stroke="#2D7187" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M8.8 12.2l2.2 2.2 4.4-4.6" stroke="#2D7187" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g></svg>
+            <div class="dc-top-col"><span class="dc-no">SERIES 05 / 06</span><span class="dc-meta">30 min · 13 页</span></div>
+          </div>
+          <h3>纵深安全、双域审计与多体联邦</h3>
+          <div class="chips"><span class="chip">四道安全铁闸</span><span class="chip">60s 折叠漏斗</span><span class="chip">P1~P5 飞轮 / Mesh</span></div>
+          <span class="dc-go">进入图解演讲 →</span>
+        </a><a class="deck-card" href="06-empirical-benchmark-engineering.html" style="--acc:#B5852A">
+          <div class="dc-head">
+            <svg width="46" height="46" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="30.0" cy="30.0" r="26.0" fill="#FBF3E0" stroke="#B5852A" stroke-width="1.5" stroke-opacity="0.35"/><g transform="translate(15.1,15.1) scale(1.246)"><path d="M7 4h10v5a5 5 0 0 1-10 0V4z" fill="#B5852A" opacity="0.16"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v5M8 20h8" stroke="#B5852A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g></svg>
+            <div class="dc-top-col"><span class="dc-no">SERIES 06 / 06</span><span class="dc-meta">30 min · 13 页</span></div>
+          </div>
+          <h3>三轨实证 Benchmark v3.9 与微内核工程</h3>
+          <div class="chips"><span class="chip">帕累托 -99.2%</span><span class="chip">四赛道 VS 擂台</span><span class="chip">396 测 · 微内核</span></div>
+          <span class="dc-go">进入图解演讲 →</span>
         </a>
   </div>
   <div class="foot">
-    <span>digoal 德哥 · 2026-11 · 全部 9 份 HTML 通过 Playwright 0 溢出 / 0 重叠门禁</span>
-    <span>github.com/digoal/agent-body</span>
+    <span>digoal 德哥 · 2026-11 · 浅色纸基工程蓝图 · 零外部依赖 · Playwright 9/9 零溢出零重叠</span>
+    <span>github.com/digoal/agent-body · Apache-2.0</span>
   </div>
 </div>
 </body>

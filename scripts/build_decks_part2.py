@@ -8,8 +8,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from deck_engine import (
     C_CLAY, C_CLAY_L, C_GOLD, C_GOLD_L, C_GREEN, C_GREEN_L, C_INK, C_LINE,
     C_PAPER, C_PAPER2, C_TEAL, C_TEAL_2, C_TEAL_3, C_TEAL_D, C_TEAL_L, C_TEAL_M, C_WHITE,
-    render_deck, svg_bars, svg_closing, svg_code_and_flow, svg_columns,
+    icon_badge, render_deck, svg_bars, svg_closing, svg_code_and_flow, svg_columns,
     svg_compare_rows, svg_cover, svg_matrix_2x2, svg_metrics_table, svg_pipeline,
+    vis_benchmark_pareto, vis_competitor_arena, vis_evolution_flywheel,
+    vis_freshness_purifier, vis_handoff_capsule, vis_mesh_network,
+    vis_microkernel_hub, vis_quality_gates, vis_security_dual_audit,
+    vis_storage_tri_engine,
 )
 
 from evolution_manifest import extract_manifest
@@ -122,18 +126,14 @@ def build_talk_04() -> None:
         },
         {
             "eyebrow": "02 · 七大陈旧漏斗",
-            "title": "记忆发霉解剖：真实宿主机上的七大陈旧漏斗（STALE-01~07）",
-            "lead": "文件改了、删了、端口停了，如果只改主表不联动作废，<b>大脑召回的全是「幽灵与僵尸」</b>。",
-            "svg": svg_compare_rows(
-                ("陈旧漏斗编号", "真实宿主机里悄悄发生的腐化现象", "Phase 38 写穿失效与对账根治"),
-                [
-                    ("STALE-01/02 向量与标注过期", "源码重写了，旧 Embedding 与旧 Ollama 摘要还在库里", "文件变更写穿重置 embedding='[]' 与 stale 标志"),
-                    ("STALE-03 僵尸文件召回", "文件已删除，FTS5 虚拟表里仍能搜出幽灵路径", "删除事件级联清理 FTS/fact_nodes/links，查询强过滤 active"),
-                    ("STALE-04/05 重复摘要与幽灵端口", "同一文件反复修改堆出 N 条摘要；已停端口还挂在图上", "AutoSync 幂等去重归档；图谱剪除已关闭幽灵端口"),
-                    ("STALE-06/07 回填态与索引滞后", "向量回填后状态未核销；.codegraph.db 落后最新代码", "FreshnessReconciler 统一核销并上报滞后告警"),
-                ],
-                ("不治陈旧，记忆库就是定时炸弹；治住陈旧，记忆库才是复利资产。", "ISSUE #21 · Phase 38 实证"),
-            ),
+            "title": "记忆发霉解剖：三级写穿净水引擎根治 STALE-01~07",
+            "lead": "文件一改标 STALE · 文件一删级联冲刷 · <b>现网 589 项鲜活度 100%</b>",
+            "svg": vis_freshness_purifier(animated=True),
+            "anim_caps": [
+                "Step 1/3：左侧七大发霉源——改档旧向量、删档 FTS 僵尸、断链与重复记忆",
+                "Step 2/3：中央三级净水引擎——content_hash 探针 → ChangeHandler 冲刷 → 现实对账",
+                "Step 3/3：右侧实测仪表——589 项鲜活度 100%、向量覆盖 99.5%、0 僵尸召回",
+            ],
             "next": "我们看看这些写穿失效与现实对账，在代码里是怎么严丝合缝闭环的。",
             "script": (
                 "这是我们在自己宿主机上真刀真枪挖出来的七个陈旧漏斗。\n"
@@ -182,46 +182,13 @@ def build_talk_04() -> None:
         },
         {
             "eyebrow": "04 · 跨大脑接力痛点",
-            "title": "换脑瞬间丢失了什么？为什么聊天记录不是好接力棒",
-            "lead": "把上个会话 10 万字聊天记录原封不动喂给新模型，<b>既烧钱、又带入噪音，还可能把敏感密钥和注入文本一并传染</b>。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "BAD · 粗暴复制聊天记录",
-                        "title": "全量上下文搬运",
-                        "accent": C_CLAY,
-                        "bg": C_CLAY_L,
-                        "lines": [
-                            "动辄 30k~100k tok，新会话一开局就快满窗",
-                            "夹杂大量试错废话、报错栈与已否决路线",
-                            "极易把明文 Token 或恶意网页片段带入新脑",
-                        ],
-                    },
-                    {
-                        "tag": "BAD · 全靠新大脑重扫",
-                        "title": "裸奔冷启动重头来",
-                        "accent": C_GOLD,
-                        "bg": C_GOLD_L,
-                        "lines": [
-                            "新模型反复 git diff、rg、读十几个文件",
-                            "W17 基线实测：冷启动重扫消耗 2,400+ tok",
-                            "遗漏「为什么刚才否决方案 A」的隐性决策",
-                        ],
-                    },
-                    {
-                        "tag": "GOOD · 接力胶囊",
-                        "title": "ContinuityCapsule <=300 tok",
-                        "accent": C_GREEN,
-                        "bg": C_GREEN_L,
-                        "lines": [
-                            "结构化 5 要素：目标/进度/关键文件/未决风险/下一步",
-                            "强经 SecretRedactor + PromptInjectionScanner 净化",
-                            ("开工 Brief 自动注入 <=150 tok，1ms 无缝接盘", True),
-                        ],
-                    },
-                ],
-                ("接力棒不需要装下整场马拉松，只需要装下「跑到哪、避什么坑、下一棒往哪跑」。", "docs/design_doc/17 §三.2", "green"),
-            ),
+            "title": "换脑瞬间：50,000 tok 聊天垃圾山 vs 150 tok 发光胶囊",
+            "lead": "W17 实测：<b>Token -92.7% · 10ms 着陆续跑 · 零密钥泄露</b>",
+            "svg": vis_handoff_capsule(animated=True),
+            "anim_caps": [
+                "Step 1/2：传统方式搬运 5 万 Token 聊天噪音；本体压缩为 150 tok 四芯脱敏胶囊",
+                "Step 2/2：上午 Claude 封存 → 底座保险箱 → 下午 Antigravity 10ms 续跑 → 凌晨 Cron",
+            ],
             "next": "让我们直接看第 27 张表 `body_checkpoints` 与 `ContinuityManager` 的硬核实现。",
             "script": (
                 "很多人试过跨工具接力：把 Claude Code 的对话历史导出成 Markdown，粘贴到 Cursor 里。结果呢？五万字贴进去，新模型光读噪音就晕了，还顺手把报错日志里的 API Key 喂给了另一家模型。\n"
@@ -348,43 +315,15 @@ def build_talk_04() -> None:
         },
         {
             "eyebrow": "08 · 三引擎迁移",
-            "title": "SQLite 单机起步，一键无损迁移至 PostgreSQL / DuckDB",
-            "lead": "`body_checkpoints` 与其余 26 张表全部通过 <b>StorageProvider SPI（88 方法）</b> 统一抽象，迁移零丢失。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "SQLITE WAL · 默认主库",
-                        "title": "个人单机零运维",
-                        "accent": C_TEAL_D,
-                        "lines": [
-                            "单文件 ~/.agent-body/body.db",
-                            "WAL 并发读 + FTS5 内置全文",
-                            "27 张完整表结构即装即用",
-                        ],
-                    },
-                    {
-                        "tag": "POSTGRESQL · 团队多机",
-                        "title": "高并发 + Advisory Lock",
-                        "accent": C_TEAL_2,
-                        "lines": [
-                            "tsvector 全文 + PG 原生并发",
-                            "跨连接 Advisory Lock 强一致",
-                            "真实 PG 迁移集成测试全绿",
-                        ],
-                    },
-                    {
-                        "tag": "DUCKDB · 审计分析",
-                        "title": "百倍 OLAP 聚合与导出",
-                        "accent": C_GREEN,
-                        "lines": [
-                            "增量同步管道零锁阻塞主库",
-                            "变更热力图、趋势与 Parquet 导出",
-                            "M4/M5 微基准均远优于 SLA",
-                        ],
-                    },
-                ],
-                ("Migration #11 已覆盖 body_checkpoints 全字段无损搬迁，SQLite ↔ PG ↔ DuckDB 全部实测通过。", "src/storage/migration.rs", "teal"),
-            ),
+            "title": f"SQLite 单机起步，经 {SPI_CNT} SPI 一键热迁移 PostgreSQL / DuckDB",
+            "lead": f"{TABLE_CNT} 张三端同步表 · <b>SyncPipeline 零停机热迁移</b>",
+            "svg": vis_storage_tri_engine(animated=True),
+            "anim_caps": [
+                f"Step 1/4：Layer 1 接入层——{TOOL_CNT} MCP / {CLI_CNT} CLI / 7 Hooks / Web 同源接入",
+                f"Step 2/4：Layer 2 六大器官引擎——{MOD_CNT} 个 Rust 顶层模块高内聚",
+                f"Step 3/4：Layer 3 StorageProvider SPI——{SPI_CNT} 方法统一驾驭 {TABLE_CNT} 张业务表",
+                "Step 4/4：Layer 4 三圆柱存储引擎——SQLite 单机 / PG 并发集群 / DuckDB 列存 OLAP",
+            ],
             "next": "我们在终端里实操一遍「Antigravity 存胶囊 → Claude Code 接盘」全流程。",
             "script": (
                 "很多个人工具一上团队规模就得重写存储。我们从第一天起就把 88 个存储操作抽象进了 `StorageProvider` Trait。个人用 SQLite 零配置起飞，团队多机直接一条迁移命令切到 PostgreSQL，做长期行为分析走 DuckDB OLAP 导 Parquet。"
@@ -550,58 +489,14 @@ def build_talk_05() -> None:
             ),
         },
         {
-            "eyebrow": "01 · 纵深安全",
-            "title": "四道安全铁闸：脱敏、抗注入、防命令逃逸、最小权限",
-            "lead": "安全不是最后补丁，而是<b>从采集、存储、Web API 到跨机传输的每一毫秒默认开启</b>。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "GATE 01 · 全链路脱敏",
-                        "title": "SecretRedactor",
-                        "accent": C_TEAL_D,
-                        "lines": [
-                            "覆盖 OpenAI/GitHub/AWS/Bearer",
-                            "覆盖 PG/MySQL/Redis URI 密码",
-                            "覆盖 --token / --password 参数",
-                            ("DQ4 抽检 144/144 零明文残留", True),
-                        ],
-                    },
-                    {
-                        "tag": "GATE 02 · 抗提示词投毒",
-                        "title": "PromptInjectionScanner",
-                        "accent": C_CLAY,
-                        "lines": [
-                            "隔离恶意文件/对话里的越狱指令",
-                            "跨脑胶囊与 Mesh 对话强制净化",
-                            "防间接注入劫持主战大模型",
-                            ("W11 事前拦截 100% 命中", True),
-                        ],
-                    },
-                    {
-                        "tag": "GATE 03 · 注入与路径穿越",
-                        "title": "Shell & SQL 硬防线",
-                        "accent": C_GOLD,
-                        "lines": [
-                            "Dispatcher 严防 Shell 命令注入",
-                            "DuckDB 导出白名单防 SQL/路径穿越",
-                            "GC 与敏感路径 L3 硬拦截",
-                            ("0 unwrap/expect 零崩溃", True),
-                        ],
-                    },
-                    {
-                        "tag": "GATE 04 · 鉴权与权限",
-                        "title": "0700/0600 + Bearer Auth",
-                        "accent": C_GREEN,
-                        "lines": [
-                            "~/.agent-body/ 收敛 0700，db 收敛 0600",
-                            "Web 所有写/敏感路由强制鉴权 401",
-                            "Preflight 启动自检权限姿态",
-                            ("tests/test_web_dashboard.rs 覆盖", True),
-                        ],
-                    },
-                ],
-                ("W11 实测：全链路脱敏、防命令注入与抗投毒节省 70.4% Token，质量从 21.5 升至 100.0。", "DQ4 = 100.0% · W11 PASS", "green"),
-            ),
+            "eyebrow": "01 · 纵深安全与双域监控",
+            "title": "四道安全铁闸 × IN / OUT 双域审计 60s 折叠漏斗",
+            "lead": "DQ4 凭据零落盘 100% · <b>W11 抗投毒 100 分 · DQ7 双域留痕 100%</b>",
+            "svg": vis_security_dual_audit(animated=True),
+            "anim_caps": [
+                "Step 1/2：左侧四道纵深安全铁闸——全链路脱敏、抗提示词投毒、防命令逃逸、0600 红线",
+                "Step 2/2：右侧双域监控汇聚 60s 折叠漏斗 (10→1) 并盖 SHA-256 钢印写入审计账本",
+            ],
             "next": "防线搭好了，但如果系统在后台默默干了活却没留账，出了问题一样无法追溯。",
             "script": (
                 "把一个常驻工具装在主力开发机上，工程师第一个问的永远是安全。\n"
@@ -672,44 +567,13 @@ def build_talk_05() -> None:
         },
         {
             "eyebrow": "04 · 内生对比探针",
-            "title": "P1~P5 五切面对比探针：让系统自己发现自己的退化",
-            "lead": "不用等用户抱怨，<b>在执行回路 5 个关键切面埋设微秒级探针</b>，用数字差值自动驱动反馈总账。",
-            "svg": svg_pipeline(
-                [
-                    {"tag": "P1 开工切面", "title": "Brief 覆盖探针", "accent": C_TEAL_D, "lines": ["核验简报命中与预算", "监控租约签发质量"]},
-                    {"tag": "P2 事前切面", "title": "Pre-Hook 门禁探针", "accent": C_TEAL_2, "lines": ["统计拦撞与误报率", "核验 AOPCC 分类"]},
-                    {"tag": "P3 检索切面", "title": "召回新鲜度探针", "accent": C_CLAY, "lines": ["实时揪出 stale_vec", "首轮即捕获 3 条缺口"]},
-                    {"tag": "P4/P5 事后切面", "title": "漂移与图谱探针", "accent": C_GREEN, "lines": ["核验磁盘/端口一致性", "监控图谱连通度退化"]},
-                ],
-                [
-                    {
-                        "title": "去重幂等驱动 user_feedback.md 自进化闭环",
-                        "accent": C_TEAL,
-                        "bg": C_TEAL_L,
-                        "lines": [
-                            "探针发现 Before/After 异常差值 → 调用 FeedbackEngine::add_item_deduped() 自动建档",
-                            "同指纹问题绝不重复刷屏；修复验证后自动回写 Verified 并沉淀至长期记忆",
-                        ],
-                    },
-                    {
-                        "title": "AuditEvolution：用审计数据自动调优系统参数",
-                        "accent": C_GREEN,
-                        "bg": C_GREEN_L,
-                        "lines": [
-                            "热点分析：识别高频失败工具与高冲突目录，自动生成治理建议",
-                            "租约闭环：按审计成功/失败滑窗自动升降级 AOPCC 乐观直通租约",
-                        ],
-                    },
-                ],
-                animated=True,
-                mid="ah505",
-            ),
+            "title": "P1~P5 五切面对比探针飞轮：让系统自己发现并治愈退化",
+            "lead": "数据驱动调优闭环 · <b>上线首轮即自动捕获并修复现网 3 条过期向量</b>",
+            "svg": vis_evolution_flywheel(animated=True),
             "anim_caps": [
-                "① P1 探针：守护开工简报与租约质量",
-                "② P2 探针：量化门禁拦撞与零误报",
-                "③ P3 探针：实时捕获过期向量并触发自愈",
-                "④ P4/P5 探针：巡检物理漂移与图谱连通度",
-                "⑤ 自动汇聚至 Feedback 总账与 AuditEvolution 调优",
+                "Step 1/3：中心自进化中枢持续比对物理真值与历史快照，输出量化 Delta",
+                "Step 2/3：外环 P1~P5 五大探针覆盖事实漂移、召回退化、租约碰壁、规则摩擦与遥测",
+                "Step 3/3：右侧四大自动动作——升降级 AOPCC 租约、聚类新规约、去重反馈、量化存证",
             ],
             "next": "单台宿主机的免疫与自进化闭环完成了；如果我有 3 台服务器，它们之间怎么安全协同？",
             "script": (
@@ -719,39 +583,12 @@ def build_talk_05() -> None:
         },
         {
             "eyebrow": "05 · 多体联邦协议",
-            "title": "MeshEnvelope v1.0：零信任签名、防重放与受控沙盒投递",
-            "lead": "遵循递弱代偿，不造 Raft 也不造聊天软件 IM；用 <b>HMAC-SHA256 规范信封</b> 支撑三大跨机刚需。",
-            "svg": svg_code_and_flow(
-                "src/mesh/auth.rs & src/mesh/mod.rs",
-                "src/mesh/{auth,dialogue,transfer,mod}.rs",
-                [
-                    "// MeshEnvelope v1.0 零信任线协议",
-                    "X-Body-Peer:      peer-gpu-01",
-                    "X-Body-Timestamp: 1795334400       // ±300s 时间窗防过期",
-                    "X-Body-Nonce:     uuid-v4          // NonceCache 防重放",
-                    "X-Body-Signature: HMAC-SHA256(secret, canonical_payload)",
-                    "",
-                    "// 最小权限 Peer Scopes：",
-                    "//   read:facts | read:graph | write:dialogue | write:transfer",
-                    "",
-                    "// Phase 44 新增多体本体名片端点：",
-                    "//   GET /api/v1/mesh/body_manifest (需 HMAC + read:facts)",
-                ],
-                "四大跨宿主机联邦能力",
-                [
-                    ("1. 跨机图谱联邦 (mesh/graph)", "零拷贝远端查询对端端口、服务与项目拓扑，避免跨机盲操", "Scope: read:graph"),
-                    ("2. 双向脱敏对话 (mesh/dialogue)", "跨机 Agent 结构化传话，进出双端强制脱敏 + 防提示词投毒", "test_dialogue_sanitizes"),
-                    ("3. 沙盒文件投递 (mesh/transfer)", "硬限额 <=10MB + SHA-256 校验 + 落盘 ~/.agent-body/mesh_inbox/ 防穿越", "W14 质量 100.0"),
-                    ("4. 多体名片发现 (body_manifest)", "自动发现对端 body_id、OS/架构、6 器官就绪态与稳态分", "agent-body body peers"),
-                ],
-                animated=True,
-            ),
+            "title": "MeshEnvelope v1.0：多宿主机零信任签名信封 × 沙盒收件箱",
+            "lead": "拒绝重型 Raft · <b>HMAC-SHA256 + ±300s Nonce 防重放 · 10MB 沙盒</b>",
+            "svg": vis_mesh_network(animated=True),
             "anim_caps": [
-                "① MeshEnvelope v1.0 HMAC 签名、时间窗与 Nonce 防重放",
-                "② 能力一：跨机只读图谱联邦",
-                "③ 能力二：双向脱敏与抗投毒结构化对话",
-                "④ 能力三：10MB 限额 + SHA-256 隔离沙盒投递",
-                "⑤ 能力四：Phase 44 多体本体名片交换",
+                "Step 1/2：开发机 / GPU 算力机 / 跳板机各自独立自治，零分布式共识泥潭",
+                "Step 2/2：跨机通信统一封装 HMAC-SHA256 + Nonce 防重放信封，文件只落 0600 沙盒收件箱",
             ],
             "next": "看实机实测数据：安全、审计、自进化与 Mesh 四条线跑出来的成绩单。",
             "script": (
@@ -1032,39 +869,13 @@ def build_talk_06() -> None:
         },
         {
             "eyebrow": "01 · 帕累托双门禁",
-            "title": "只谈「省 99% Token」是耍流氓——必须同时守住上下文质量",
-            "lead": "把输出砍成空字符串也能省 100% Token。<b>真正有价值的优化，是 Token 暴降的同时，质量评分 Q 显著上升</b>。",
-            "svg": svg_code_and_flow(
-                "src/benchmark/workloads.rs (Pareto Gate)",
-                "docs/design_doc/10-benchmark-spec.md",
-                [
-                    "// 确定性四维上下文质量模型 (0 ~ 100 分)",
-                    "Q = 0.40 * R_fact    // 必含物理真值事实断言命中率",
-                    "  + 0.30 * P_signal  // 有效信噪比 (去除噪音文件与废话)",
-                    "  + 0.20 * A_action  // 可执行行动指引完整性",
-                    "  + 0.10 * S_safety; // 凭据零泄露与安全合规分",
-                    "",
-                    "// 帕累托硬门禁 (任一不满足即判 FAIL)：",
-                    "//   1. 禁止空输出或截断作弊 (test_pareto_gate_rejects_empty)",
-                    "//   2. Body_Q >= Baseline_Q (上下文质量不降反升)",
-                    "//   3. 必含真值事实断言 100% 命中",
-                    "//   4. 有效信息密度 = Facts / 1k Tokens 显著放大",
-                ],
-                "四维模型如何堵死作弊漏洞",
-                [
-                    ("堵死「截断省钱」", "少返回哪怕 1 条必含物理事实，R_fact 立即扣分并直接判 FAIL", "test_pareto_gate_rejects_empty"),
-                    ("量化信噪比", "裸奔把 500 个噪音文件倒进窗口，P_signal 暴跌；Agent Body 精准召回直奔满分", "基线 35.8 → 赋能 99.8"),
-                    ("信息密度倍数", "同时衡量「准」和「省」：每 1,000 Token 承载的有效事实数放大 92.1 倍", "Facts / 1k Tokens = 92.1x"),
-                    ("SHA-256 存证", "每份报告计算 SHA-256 防篡改指纹并写入 benchmark_runs 历史表", "支持 compare 跨版本回归"),
-                ],
-                animated=True,
-            ),
+            "title": "帕累托二维象限：省 99.23% Token 的同时，质量跃升 98.0",
+            "lead": "严禁靠截断信息骗压缩率 · <b>落入右下角红区直接门禁熔断</b>",
+            "svg": vis_benchmark_pareto(animated=True),
             "anim_caps": [
-                "① 四维上下文质量公式 Q 与帕累托四项硬门禁",
-                "② 防作弊：截断或空输出直接判红",
-                "③ 信噪比：真实反映噪音对大模型的伤害",
-                "④ 有效信息密度：92.1 倍单位 Token 含金量",
-                "⑤ SHA-256 存证：支持跨版本回归对比",
+                "Step 1/3：二维帕累托象限——裸奔大脑落左下 35.6 分，本体跃迁右上黄金区 98.0 分",
+                "Step 2/3：三大实证圆环——Token 省 99.23%、质量飙升 +64.2 分、39/39 门禁全绿",
+                "Step 3/3：内核微秒级 SLA——无锁探针 7μs、放置 33μs、3 跳图 139μs、FTS5 259μs",
             ],
             "next": "基于这套防作弊标尺，我们搭建了「A/B 对照 + 生产账本 + 竞品同跑」三轨实证体系。",
             "script": (
@@ -1213,18 +1024,15 @@ def build_talk_06() -> None:
         },
         {
             "eyebrow": "05 · 轨道 C 竞品实测",
-            "title": "COMP-C1 ~ C4：四大赛道同机真跑对比（LIVE_BENCHMARKED）",
-            "lead": "严格区分 <b>LIVE_BENCHMARKED（同机真跑）</b> 与 <b>ARCH_VERIFIED（源码核验）</b>，绝不混淆口径。",
-            "svg": svg_compare_rows(
-                ("竞品对标轨道", "主流竞品 / 传统基线实测", "Agent Body 同机实测"),
-                [
-                    ("C1 长期记忆", "Mem0/JSON 无脱敏基线：5/5 明文落盘 · 质量 24.1", "0/5 泄露 · Top-5 FTS · 省 97.8% tok · 质量 100.0"),
-                    ("C2 上下文路由", "OpenViking 摘要+静态全量技能：60 副本 · 144,730 tok", "0 副本搬迁 · 931 tok (-99.4%) · 密度 233.2x"),
-                    ("C3 工作区治理", "AgentFS VFS 全量导入 290 文件 (65KB)", "白黑灰阻断 4 噪音目录 · 仅 10 净入库 (-96.5% tok)"),
-                    ("C4 宿主冷启动", "rg + psutil + ss 派生 3 子进程 · 0 跳拓扑 (176.8ms)", "0 子进程 · 2 上游影响点 · 46.6ms · 质量 37.3→97.5"),
-                ],
-                ("四个赛道不是要消灭谁，而是证明：宿主机物理本体这个生态位，别人根本没在解决。", "src/benchmark/competitors.rs"),
-            ),
+            "title": "COMP-C1 ~ C4：四大赛道同机真跑 VS 视觉擂台",
+            "lead": "严格区分 LIVE_BENCHMARKED 与 ARCH_VERIFIED · <b>红绿柱一目了然</b>",
+            "svg": vis_competitor_arena(animated=True),
+            "anim_caps": [
+                "Step 1/4：C1 长期记忆——0 明文泄露 (-97.8% tok)，SPI 开放兼容 Mem0/Letta",
+                "Step 2/4：C2 上下文路由——OpenViking 144,730 tok vs 本体零副本 931 tok",
+                "Step 3/4：C3 工作区治理——AgentFS 290 全吞 vs 本体 10 净入拦黑名单",
+                "Step 4/4：C4 宿主探针——多子进程 89ms 0 跳 vs 本体 20ms 单进程 + 3 跳图",
+            ],
             "next": "跑完一次全绿很容易，难的是迭代到 46 个 Phase、27 个模块后，文档、代码、测试依然零漂移——我们怎么做到的？",
             "script": (
                 "我们在竞品对标里守一条学术底线：跑了真代码的才标 `LIVE_BENCHMARKED`，看源码对比的标 `ARCH_VERIFIED`，绝不混着吹。四条赛道同机跑完，Agent Body 在脱敏安全、零副本省 Token、白黑灰防噪音和零子进程拓扑上的优势一目了然。"
@@ -1232,57 +1040,13 @@ def build_talk_06() -> None:
         },
         {
             "eyebrow": "06 · 零漂移工程体系",
-            "title": "四位一体防重扫与零漂移架构：让 AI 维护大仓不再失忆",
-            "lead": "项目长到 27 模块、43 工具、88 SPI 后，<b>靠人工同步文档必漂移；必须用确定性脚本把事实锁死</b>。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "PILLAR 01 · O(1) 活地图",
-                        "title": "EVOLUTION_GUIDE.md",
-                        "accent": C_TEAL_D,
-                        "lines": [
-                            "根目录唯一演进入口",
-                            "9 大演进场景变更触点矩阵",
-                            "Tier-0/1/2 文档分级禁扫令",
-                            ("新会话 3 秒定位精确源码触点", True),
-                        ],
-                    },
-                    {
-                        "tag": "PILLAR 02 · 确定性门禁",
-                        "title": "manifest + arch_boundary",
-                        "accent": C_GREEN,
-                        "lines": [
-                            "直接扫描源码与微内核/周边目录",
-                            "核对模块/工具/SPI/表/扩展计数",
-                            "守卫 kernel 零业务词与五件套",
-                            ("evolution-check + arch-check", True),
-                        ],
-                    },
-                    {
-                        "tag": "PILLAR 03 · 零崩溃红线",
-                        "title": f"lint-panic + {TEST_CNT} 测试",
-                        "accent": C_CLAY,
-                        "lines": [
-                            "生产代码强制 0 unwrap/expect",
-                            f"旗舰 + {KERNEL_CNT} 核 / {CONTRIB_CNT} 扩展全绿色",
-                            f"Parity {TOOL_CNT}/{TOOL_CNT} 写死进单元测试",
-                            ("任一破坏性修改编译测试即红", True),
-                        ],
-                    },
-                    {
-                        "tag": "PILLAR 04 · 符号与镜像",
-                        "title": "CodeGraph + Sync Mirror",
-                        "accent": C_GOLD,
-                        "lines": [
-                            "codegraph init/sync 索引符号图",
-                            "make sync-mirror 安全同步开源仓",
-                            "3 套 SKILL 与手册一等公民对齐",
-                            ("研发/文档/演示全自动同频", True),
-                        ],
-                    },
-                ],
-                ("这套工程体系本身，就是 AI 时代「人机协同维护中大型 Rust 仓库」的最佳实践样板。", "Makefile + scripts/evolution_manifest.py", "teal"),
-            ),
+            "title": "7 道确定性机器门禁流水线：让大仓演进 75 期永不腐烂",
+            "lead": f"evolution-check · arch-check · 0 unwrap · <b>{TEST_CNT} 全测 · Playwright 9/9</b>",
+            "svg": vis_quality_gates(test_cnt=TEST_CNT, mod_cnt=MOD_CNT, tool_cnt=TOOL_CNT, animated=True),
+            "anim_caps": [
+                f"Step 1/2：顶部 7 道全自动门禁锁死零漂移、零内核污染、零 Panic 与 {TEST_CNT} 项全绿",
+                "Step 2/2：底部交付账单——6.7MB 零 C++ 探针、100% 位置无关与 2 轮零重扫定位",
+            ],
             "next": "连你现在看到的这 9 份 HTML 演讲稿，也纳入了自动化视觉门禁！",
             "script": (
                 f"很多人好奇：一个人带 AI 迭代 75 个 Phase、写数万行 Rust、微内核加 {CONTRIB_CNT} 个插件和几十份文档，为什么没有烂尾成屎山？\n"
@@ -1380,29 +1144,15 @@ def build_talk_06() -> None:
             ),
         },
         {
-            "eyebrow": "10 · 零返工演进序",
-            "title": "为什么按「本体升维 → 微内核分离 → 全一等公民大一统」推进",
-            "lead": "复杂项目演进最忌讳前后打架。<b>合理排布依赖拓扑，先夯实能力边界再拆微内核，最后以交叉铁门禁锁死全栈同频</b>。",
-            "svg": svg_pipeline(
-                [
-                    {"tag": "PHASE 44~69 ✅", "title": "本体升维与模块化拆分", "accent": C_TEAL_D, "bg": C_TEAL_L, "lines": ["src/body/ + AWR 自愈", "Benchmark v3.9 全绿", "Top-5 <700L 防爆拆分"]},
-                    {"tag": "PHASE 70~73 ✅", "title": "ISSUE #52 微内核分离", "accent": C_GREEN, "bg": C_GREEN_L, "lines": ["3 kernel + AIOps 扩展", "3 精简版 0 C++ (3.9~6.7M)", "arch_boundary_check 防腐"]},
-                    {"tag": "PHASE 74~75 ✅", "title": "可观测与全一等公民大一统", "accent": C_CLAY, "bg": C_CLAY_L, "lines": ["obs_telemetry + /metrics", "A~G 交叉门禁 + body metrics", "CLI/MCP/Web/CI/Doc 全齐步"]},
-                    {"tag": "FUTURE · 共建", "title": "跨端生态与政务实战", "accent": C_GOLD, "bg": C_GOLD_L, "lines": ["国产 OS/数据库真实接入", "更多轨 B CMDB/SIEM", "OS 原生具身标准协议"]},
-                ],
-                [
-                    {
-                        "title": "先收敛再拆微内核、最后大一统交叉锁死的工程逻辑",
-                        "accent": C_TEAL,
-                        "bg": C_TEAL_L,
-                        "lines": [
-                            "先打穿全栈功能边界并立住 SPI 契约，再抽象 kernel/ 与 contrib/，最后补齐 obs_telemetry、/metrics 与 W3C Trace",
-                            f"Phase 75 引入 A~G 交叉校验铁门禁，让源码、微内核、{CONTRIB_CNT} 扩展、手册、SKILL、CI 与 9 份演说 HTML 永久零漂移",
-                        ],
-                    },
-                ],
-                mid="ah611",
-            ),
+            "eyebrow": "10 · 微内核与周边分离",
+            "title": f"PostgreSQL 式微内核：{KERNEL_CNT} 核 × {CONTRIB_CNT} 磁吸扩展 → 4 大发行版",
+            "lead": "Phase 70~75 · <b>先收敛再拆微内核，最后以交叉铁门禁全栈大一统</b>",
+            "svg": vis_microkernel_hub(animated=True),
+            "anim_caps": [
+                f"Step 1/3：中心六边形纯机制微内核（{KERNEL_CNT} Crates · 8 Catalog · 6 Routine · 7 Hook）",
+                f"Step 2/3：{CONTRIB_CNT} 个标准五件套 Contrib 扩展磁吸挂载，0 内核业务污染",
+                "Step 3/3：四座积木塔按需装配——服务器与政务云直接上 6.7MB 零 C++ 探针",
+            ],
             "next": "最后，谈谈我们对「AI 时代基础软件」的终局判断。",
             "script": (
                 f"看这条从 Phase 44 走到 Phase 75 的演进脉络：先做本体升维与 `<1000L` 模块拆分，再在第 70~73 期完成 PostgreSQL 式微内核与周边分离，随后在第 74~75 期用 ISSUE #53/#54 补齐 `obs_telemetry` 可观测扩展、Prometheus `/metrics` 与 A~G 全一等公民交叉验证铁门禁，全程零返工。"
@@ -1484,100 +1234,204 @@ def build_talk_06() -> None:
 
 
 def build_index_hub() -> None:
-    """Build presentation/index.html matching exact 地层剖面 aesthetic."""
+    """Build visual-first presentation/index.html gallery hub with bespoke architecture banner & icons."""
     cards = [
-        ("01", "脑体分离与 Agent 本体哲学", "01-brain-body-separation.html", "30 min · 14 页",
-         "为什么只能定位为 Agent 本体？比较优势、六大生理器官、递弱代偿、三层统一架构与 src/body/ 源码剖析。"),
-        ("02", "宿主机物理感官图谱与零污染扫盘", "02-host-reality-graph.html", "30 min · 14 页",
-         "/proc 0.2ms 探测、白黑灰分级扫描敲门不进屋、L1/L2/L3 语义元数据、三层有向加权图谱与 CodeGraph 宏微联邦。"),
-        ("03", "小脑反射、痛觉门禁与自适应并发控制 AOPCC", "03-cerebellum-and-aopcc.html", "30 min · 13 页",
-         "算清整轮对话税 C_turn、乐观直通租约 vs 悲观门禁、Post-Hook 碰壁毫秒自愈、目录层级锁与 WFG 死锁破局。"),
-        ("04", "海马体、信息新鲜度治理与跨大脑 1ms 接力", "04-hippocampus-freshness-continuity.html", "30 min · 13 页",
-         "Memory SPI、七大陈旧漏斗写穿失效、FreshnessReconciler 对账、第 27 表 body_checkpoints 与跨脑脱敏接力胶囊。"),
-        ("05", "纵深安全、双域审计与探针驱动自进化", "05-security-audit-evolution-mesh.html", "30 min · 13 页",
-         "四道纵深安全铁闸、IN/OUT 双域 60s 折叠审计、P1~P5 内生对比探针、五维稳态自愈与 MeshEnvelope v1.0。"),
-        ("06", "三轨实证 Benchmark v3.9 与可复现工程体系", "06-empirical-benchmark-engineering.html", "30 min · 13 页",
-         f"帕累托四维质量门禁 Q、W1~W19 / M1~M6 / DQ1~DQ10 实测与 COMP-C1~C4 同跑、微内核 {TEST_CNT} 测试与 2 分钟独立复现纪律。"),
+        ("01", "脑体分离与 Agent 本体哲学", "01-brain-body-separation.html", "30 min · 14 页", "brain", C_TEAL_D,
+         ["比较优势天平", "六大器官解剖", "递弱代偿红线"]),
+        ("02", "宿主机物理感官图谱与零污染扫盘", "02-host-reality-graph.html", "30 min · 14 页", "radar", C_TEAL,
+         ["0.2ms /proc 探针", "敲门不进屋", "CodeGraph 显微镜"]),
+        ("03", "小脑反射与自适应并发控制 AOPCC", "03-cerebellum-and-aopcc.html", "30 min · 13 页", "bolt", C_CLAY,
+         ["ETC 乐观立交", "<2ms 碰壁秒愈", "WFG 死锁破环"]),
+        ("04", "海马体保鲜与跨大脑 10ms 接力", "04-hippocampus-freshness-continuity.html", "30 min · 13 页", "capsule", C_GREEN,
+         ["三级写穿净水", "150t 发光胶囊", "三引擎热迁移"]),
+        ("05", "纵深安全、双域审计与多体联邦", "05-security-audit-evolution-mesh.html", "30 min · 13 页", "shield", C_TEAL_2,
+         ["四道安全铁闸", "60s 折叠漏斗", "P1~P5 飞轮 / Mesh"]),
+        ("06", f"三轨实证 Benchmark v{BENCH_VER} 与微内核工程", "06-empirical-benchmark-engineering.html", "30 min · 13 页", "trophy", C_GOLD,
+         ["帕累托 -99.2%", "四赛道 VS 擂台", f"{TEST_CNT} 测 · 微内核"]),
     ]
+
+    def _mini_icon_svg(ic_name: str, col: str) -> str:
+        return (
+            f'<svg width="46" height="46" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">'
+            f'{icon_badge(ic_name, 30, 30, 26, col)}'
+            f"</svg>"
+        )
+
     cards_html = "".join(
-        f"""<a class="deck-card" href="{href}">
-          <div class="dc-top"><span class="dc-no">SERIES {no} / 06</span><span class="dc-meta">{meta}</span></div>
+        f"""<a class="deck-card" href="{href}" style="--acc:{col}">
+          <div class="dc-head">
+            {_mini_icon_svg(ic, col)}
+            <div class="dc-top-col"><span class="dc-no">SERIES {no} / 06</span><span class="dc-meta">{meta}</span></div>
+          </div>
           <h3>{title}</h3>
-          <p>{desc}</p>
-          <span class="dc-go">进入演讲 →</span>
+          <div class="chips">{"".join(f'<span class="chip">{t}</span>' for t in tags)}</div>
+          <span class="dc-go">进入图解演讲 →</span>
         </a>"""
-        for no, title, href, meta, desc in cards
+        for no, title, href, meta, ic, col, tags in cards
     )
+
+    # Top Visual Architecture Map SVG Banner (concise, iconic, clickable visual orientation)
+    banner_svg = f"""
+    <svg class="hero-map" viewBox="0 0 1240 218" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="1236" height="214" rx="18" fill="#FFFFFF" stroke="#DCD7CC" stroke-width="1.4"/>
+      <text x="28" y="34" font-family="var(--f-m)" font-size="11.5" fill="#1F5E73" font-weight="700" letter-spacing="2">VISUAL ARCHITECTURE MAP · 脑体分离一图速览</text>
+      <text x="1212" y="34" font-family="var(--f-m)" font-size="11.5" fill="#7D8B88" text-anchor="end">27 模块 · 43 MCP · 88 SPI · 3 核 / 10 扩展 / 4 发行版 · {TEST_CNT} 测</text>
+      <!-- Left: Hot-Swappable Brains -->
+      <rect x="28" y="54" width="236" height="142" rx="14" fill="#FAF8F4" stroke="#1F5E73" stroke-width="1.6"/>
+      {icon_badge("brain", 74, 102, 22, C_TEAL)}
+      <text x="108" y="96" font-family="var(--f-r)" font-size="18" fill="#162A33" font-weight="700">瞬态大脑</text>
+      <text x="108" y="118" font-family="var(--f-m)" font-size="11.5" fill="#1F5E73" font-weight="600">热插拔算力</text>
+      <text x="146" y="160" font-family="var(--f-m)" font-size="11.5" fill="#445A63" text-anchor="middle">Claude · Antigravity · Cursor</text>
+      <text x="146" y="180" font-family="var(--f-m)" font-size="11" fill="#7D8B88" text-anchor="middle">Codex · Cron Worker</text>
+      <!-- Connector -->
+      <line x1="264" y1="125" x2="318" y2="125" stroke="#1F5E73" stroke-width="3" stroke-dasharray="6 4"/>
+      <!-- Middle: 6 Persistent Body Organs -->
+      <rect x="322" y="54" width="584" height="142" rx="14" fill="#E6F2F4" fill-opacity="0.55" stroke="#1F5E73" stroke-width="1.8"/>
+      <text x="614" y="78" font-family="var(--f-m)" font-size="11" fill="#154454" font-weight="700" text-anchor="middle" letter-spacing="1.6">AGENT BODY · 永驻宿主机的六大生理器官</text>
+      <g transform="translate(338,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#154454" stroke-width="1.3"/>
+        {icon_badge("eye", 42, 34, 18, C_TEAL_D)}
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">感官图谱</text>
+      </g>
+      <g transform="translate(432,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#C85A32" stroke-width="1.3"/>
+        {icon_badge("bolt", 42, 34, 18, C_CLAY)}
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">小脑反射</text>
+      </g>
+      <g transform="translate(526,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#257A60" stroke-width="1.3"/>
+        {icon_badge("capsule", 42, 34, 18, C_GREEN)}
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">海马接力</text>
+      </g>
+      <g transform="translate(620,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#B5852A" stroke-width="1.3"/>
+        {icon_badge("spine", 42, 34, 18, C_GOLD)}
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">规约脊柱</text>
+      </g>
+      <g transform="translate(714,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#2D7187" stroke-width="1.3"/>
+        {icon_badge("shield", 42, 34, 18, C_TEAL_2)}
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">免疫 AWR</text>
+      </g>
+      <g transform="translate(808,90)">
+        <rect x="0" y="0" width="84" height="90" rx="10" fill="#FFFFFF" stroke="#1F5E73" stroke-width="1.3"/>
+        {icon_badge("mesh", 42, 34, 18, C_TEAL)}
+        <text x="42" y="74" font-family="var(--f-s)" font-size="12" fill="#162A33" font-weight="700" text-anchor="middle">多体联邦</text>
+      </g>
+      <!-- Connector -->
+      <line x1="906" y1="125" x2="960" y2="125" stroke="#257A60" stroke-width="3" stroke-dasharray="6 4"/>
+      <!-- Right: Benchmark Outcome -->
+      <rect x="964" y="54" width="248" height="142" rx="14" fill="#154454"/>
+      <text x="1088" y="84" font-family="var(--f-m)" font-size="11" fill="#A6CFD5" font-weight="700" text-anchor="middle" letter-spacing="1.6">BENCHMARK v{BENCH_VER} 实测</text>
+      <text x="1028" y="138" font-family="var(--f-m)" font-size="28" fill="#FAF8F4" font-weight="700" text-anchor="middle">-99.2%</text>
+      <text x="1028" y="164" font-family="var(--f-s)" font-size="12" fill="#B8DBE0" text-anchor="middle">Token 节省</text>
+      <line x1="1096" y1="100" x2="1096" y2="174" stroke="#326C7F" stroke-width="1.4"/>
+      <text x="1154" y="138" font-family="var(--f-m)" font-size="28" fill="#7DE0B8" font-weight="700" text-anchor="middle">98.0</text>
+      <text x="1154" y="164" font-family="var(--f-s)" font-size="12" fill="#B8DBE0" text-anchor="middle">上下文质量</text>
+    </svg>
+    """
 
     html_doc = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Agent Body · 体系化演讲与路演总览</title>
+<title>Agent Body · 视觉图解演讲与路演总览</title>
 <style>
 :root{{
-  --paper:#F7F6F2; --paper2:#F1EFE9; --line:#D9D5CB; --ink:#1B2B33; --ink2:#46585F;
-  --mute:#89938F; --teal:#245A6B; --teal-l:#E5EFF0; --clay:#BE653B; --clay-l:#F7E9DE; --green:#2F7A66;
+  --paper:#FAF8F4; --paper2:#F2EFE9; --line:#DCD7CC; --ink:#162A33; --ink2:#445A63;
+  --mute:#7D8B88; --teal:#1F5E73; --teal-l:#E6F2F4; --clay:#C85A32; --clay-l:#FCEEE8; --green:#257A60;
   --f-r:"Songti SC","STSong","Noto Serif CJK SC",Georgia,serif;
   --f-s:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
   --f-m:"SF Mono",Menlo,Consolas,"Courier New",monospace;
 }}
 *{{box-sizing:border-box;margin:0;padding:0}}
-body{{background:#E9E7E1;color:var(--ink);font-family:var(--f-s);padding:36px 24px 64px;-webkit-font-smoothing:antialiased}}
-.wrap{{max-width:1360px;margin:0 auto;background:var(--paper);border:1px solid var(--line);padding:52px 60px}}
-.eyebrow{{font-family:var(--f-m);font-size:12px;letter-spacing:3px;color:var(--mute)}}
-h1{{font-family:var(--f-r);font-size:44px;font-weight:600;margin-top:12px;letter-spacing:1px}}
-.sub{{font-size:17px;color:var(--ink2);margin-top:10px;line-height:1.65}}
-.sub b{{color:var(--teal)}}
-.rule{{height:1px;background:var(--line);margin:28px 0}}
-.sec-lbl{{font-family:var(--f-m);font-size:11.5px;letter-spacing:2.4px;color:var(--mute);margin-bottom:16px}}
-.hero-grid{{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:36px}}
-.hero-card{{display:block;text-decoration:none;background:var(--paper2);border:1px solid var(--line);border-top:4px solid var(--teal);padding:24px 26px;color:var(--ink);transition:border-color .2s,background .2s}}
+body{{background:#E7E4DC;color:var(--ink);font-family:var(--f-s);padding:32px 24px 60px;-webkit-font-smoothing:antialiased}}
+.wrap{{max-width:1360px;margin:0 auto;background:var(--paper);
+  background-image:radial-gradient(#DDD8CC .9px,transparent .9px);background-size:28px 28px;
+  border:1px solid var(--line);border-radius:22px;padding:44px 54px;box-shadow:0 16px 48px rgba(22,42,51,.08)}}
+.top-bar{{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}}
+.eyebrow{{display:inline-block;font-family:var(--f-m);font-size:11.5px;letter-spacing:2px;
+  color:var(--teal);background:var(--teal-l);padding:4px 12px;border-radius:12px;font-weight:700}}
+h1{{font-family:var(--f-r);font-size:40px;font-weight:700;margin-top:10px;letter-spacing:.6px}}
+.keys-pill{{font-family:var(--f-m);font-size:12px;color:var(--ink2);background:#FFFFFF;
+  border:1px solid var(--line);border-radius:12px;padding:10px 16px;display:flex;gap:14px;flex-wrap:wrap}}
+.keys-pill b{{color:var(--teal)}}
+.hero-map{{display:block;margin:24px 0 30px}}
+.sec-lbl{{font-family:var(--f-m);font-size:11.5px;letter-spacing:2.2px;color:var(--teal);font-weight:700;margin-bottom:14px}}
+.hero-grid{{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:34px}}
+.hero-card{{display:flex;flex-direction:column;text-decoration:none;background:#FFFFFF;
+  border:1.6px solid var(--line);border-top:6px solid var(--teal);border-radius:18px;
+  padding:24px 28px;color:var(--ink);transition:transform .18s,border-color .18s,box-shadow .18s}}
 .hero-card.clay{{border-top-color:var(--clay)}}
-.hero-card:hover{{background:var(--teal-l);border-color:var(--teal)}}
-.hero-card h2{{font-family:var(--f-r);font-size:24px;margin:8px 0 10px}}
-.hero-card p{{font-size:14px;color:var(--ink2);line-height:1.65}}
+.hero-card:hover{{transform:translateY(-3px);border-color:var(--teal);box-shadow:0 12px 28px rgba(22,42,51,.1)}}
+.hero-card.clay:hover{{border-color:var(--clay)}}
+.hero-card h2{{font-family:var(--f-r);font-size:23px;margin:10px 0 12px}}
+.dc-head{{display:flex;align-items:center;gap:14px}}
+.dc-top-col{{display:flex;flex-direction:column;gap:3px;font-family:var(--f-m);font-size:11.5px;color:var(--mute)}}
+.dc-meta{{color:var(--teal);font-weight:700}}
+.chips{{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;flex:1;align-content:flex-start}}
+.chip{{font-family:var(--f-m);font-size:12px;color:var(--ink2);background:var(--paper2);
+  border:1px solid var(--line);border-radius:10px;padding:4px 10px;font-weight:600}}
 .series-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}}
-.deck-card{{display:flex;flex-direction:column;text-decoration:none;background:#FFFFFF;border:1px solid var(--line);border-top:4px solid #2E6373;padding:22px 24px;color:var(--ink);transition:background .2s,border-color .2s}}
-.deck-card:hover{{background:var(--teal-l);border-color:var(--teal)}}
-.dc-top{{display:flex;justify-content:space-between;font-family:var(--f-m);font-size:11px;color:var(--mute);letter-spacing:1.2px}}
-.dc-meta{{color:var(--teal)}}
-.deck-card h3{{font-family:var(--f-r);font-size:20px;margin:12px 0 10px;line-height:1.35}}
-.deck-card p{{font-size:13.5px;color:var(--ink2);line-height:1.65;flex:1}}
-.dc-go{{font-family:var(--f-m);font-size:12px;color:var(--clay);margin-top:16px;font-weight:600}}
-.foot{{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-family:var(--f-m);font-size:11.5px;color:var(--mute)}}
+.deck-card{{display:flex;flex-direction:column;text-decoration:none;background:#FFFFFF;
+  border:1.5px solid var(--line);border-top:5px solid var(--acc,var(--teal));border-radius:16px;
+  padding:22px 24px;color:var(--ink);transition:transform .18s,border-color .18s,box-shadow .18s}}
+.deck-card:hover{{transform:translateY(-3px);border-color:var(--acc,var(--teal));box-shadow:0 10px 24px rgba(22,42,51,.09)}}
+.deck-card h3{{font-family:var(--f-r);font-size:19.5px;margin:14px 0 12px;line-height:1.35}}
+.dc-go{{font-family:var(--f-m);font-size:12.5px;color:var(--clay);margin-top:16px;font-weight:700}}
+.foot{{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);display:flex;
+  justify-content:space-between;font-family:var(--f-m);font-size:11.5px;color:var(--mute);flex-wrap:wrap;gap:12px}}
 @media(max-width:980px){{.hero-grid,.series-grid{{grid-template-columns:1fr}}.wrap{{padding:28px 22px}}}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="eyebrow">AGENT BODY · PRESENTATION SUITE · v{APP_VER} · APACHE-2.0</div>
-  <h1>Agent 本体体系化演讲与路演总览</h1>
-  <p class="sub">统一采用<b>「浅色纸基 · 地层剖面 · 工程蓝图」</b>视觉规范（零外部依赖 · 内联正交 SVG · <code>N/T</code> 联动讲稿 · <code>G</code> 目录 · <code>P/A/S/R</code> 步进动画 · Decks-as-Code 确定性生成）。基线实测：{MOD_CNT} 模块 · {TOOL_CNT} 工具 · {SPI_CNT} SPI · 微内核 {KERNEL_CNT} Crates · {CONTRIB_CNT} Contrib 扩展 · {DIST_CNT} 精简发行版 · {TEST_CNT} 测试全绿 · Bench v{BENCH_VER}。</p>
-  <div class="rule"></div>
-  <div class="sec-lbl">OVERVIEW DECKS · 旗舰全景总览版（Phase 75 全一等公民大一统 · v{APP_VER} 旗舰与微内核四发行版）</div>
+  <div class="top-bar">
+    <div>
+      <span class="eyebrow">AGENT BODY · VISUAL PRESENTATION SUITE · v{APP_VER}</span>
+      <h1>Agent 本体图解演讲与路演总览</h1>
+    </div>
+    <div class="keys-pill">
+      <span><b>G</b> 目录</span><span><b>N</b> 本页讲稿</span><span><b>T</b> 全文联动</span>
+      <span><b>P</b> 自动</span><span><b>A/S/R</b> 步进动画</span><span><b>F</b> 全屏</span>
+    </div>
+  </div>
+  {banner_svg}
+  <div class="sec-lbl">FLAGSHIP DECKS · 两大旗舰图解全景版</div>
   <div class="hero-grid">
     <a class="hero-card" href="presentation.html">
-      <div class="dc-top"><span>ROADSHOW · 路演总览版</span><span class="dc-meta">17 页 · 15~20 分钟</span></div>
+      <div class="dc-head">
+        {_mini_icon_svg("rocket", C_TEAL)}
+        <div class="dc-top-col"><span>ROADSHOW · 对外路演版</span><span class="dc-meta">17 页 · 15~20 分钟 · 全定制视觉图解</span></div>
+      </div>
       <h2>Agent 本体对外路演版（presentation.html）</h2>
-      <p>面向投资人、CTO 与技术决策者：比较优势 → 脑体分离六大器官 → AOPCC 乐观-悲观并发 → 换脑不失忆 → 内生 AWR → PostgreSQL 式微内核与四大发行版 → Bench v3.9 与竞品实测。</p>
+      <div class="chips">
+        <span class="chip">比较优势天平</span><span class="chip">蒙眼翻车现场</span><span class="chip">脑体解剖图</span>
+        <span class="chip">ETC 乐观立交</span><span class="chip">150t 发光胶囊</span><span class="chip">帕累托象限</span><span class="chip">微内核 4 发行版</span>
+      </div>
       <span class="dc-go">打开路演版 →</span>
     </a>
     <a class="hero-card clay" href="agent-body-deck.html">
-      <div class="dc-top"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">25 页 · 45~60 分钟</span></div>
+      <div class="dc-head">
+        {_mini_icon_svg("gear", C_CLAY)}
+        <div class="dc-top-col"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">25 页 · 45~60 分钟 · 内核架构图谱</span></div>
+      </div>
       <h2>Agent 本体深度技术交流版（agent-body-deck.html）</h2>
-      <p>面向数据库内核与 AI Infra 架构师：27 模块 / 88 SPI、L1~L3 分层图谱、AOPCC 数学边界、新鲜度写穿、MeshEnvelope v1.0、Wait Events/AWR/ADDM、kernel/contrib 分离架构与六重确定性门禁。</p>
-      <span class="dc-go">打开交流版 →</span>
+      <div class="chips">
+        <span class="chip">27 模块 / 88 SPI</span><span class="chip">三层有向图</span><span class="chip">目录锁 + WFG</span>
+        <span class="chip">写穿净水器</span><span class="chip">五维雷达</span><span class="chip">600% CPU AWR 曲线</span><span class="chip">10 Contrib 扩展</span>
+      </div>
+      <span class="dc-go">打开深度交流版 →</span>
     </a>
   </div>
-  <div class="sec-lbl">DEEP-DIVE SERIES · 6 讲 × 30 分钟单点说透体系化专题</div>
+  <div class="sec-lbl">DEEP-DIVE SERIES · 6 讲 × 30 分钟单点说透图解专题</div>
   <div class="series-grid">
     {cards_html}
   </div>
   <div class="foot">
-    <span>digoal 德哥 · 2026-11 · 全部 9 份 HTML 通过 Playwright 0 溢出 / 0 重叠门禁</span>
-    <span>github.com/digoal/agent-body</span>
+    <span>digoal 德哥 · 2026-11 · 浅色纸基工程蓝图 · 零外部依赖 · Playwright 9/9 零溢出零重叠</span>
+    <span>github.com/digoal/agent-body · Apache-2.0</span>
   </div>
 </div>
 </body>

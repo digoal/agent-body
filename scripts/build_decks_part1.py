@@ -10,6 +10,11 @@ from deck_engine import (
     C_PAPER, C_PAPER2, C_TEAL, C_TEAL_2, C_TEAL_3, C_TEAL_D, C_TEAL_L, C_TEAL_M, C_WHITE,
     render_deck, svg_bars, svg_closing, svg_code_and_flow, svg_columns,
     svg_compare_rows, svg_cover, svg_matrix_2x2, svg_metrics_table, svg_pipeline,
+    vis_aopcc_highway, vis_blind_agent_scene, vis_brain_body_anatomy,
+    vis_comparative_scale, vis_competitor_arena, vis_do_dont_wall,
+    vis_host_graph_federation, vis_lock_and_wfg, vis_parity_console,
+    vis_roadmap_journey, vis_three_tier_pyramid, vis_tiered_scan_doors,
+    vis_vitals_radar_autonomy,
 )
 
 from evolution_manifest import extract_manifest
@@ -89,60 +94,13 @@ def build_talk_01() -> None:
         {
             "eyebrow": "01 · 第一性原理",
             "title": "比较优势：主战大脑的时间太贵，不该耗在物理杂务",
-            "lead": "大卫·李嘉图比较优势在 AI 时代的直接推论：<b>云端大模型擅长高杠杆推理，本地本体擅长亚毫秒物理确定性</b>。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "CLOUD BRAIN · 瞬态大脑",
-                        "title": "云端大模型 (LLM)",
-                        "accent": C_CLAY,
-                        "lines": [
-                            "擅长：跨文件架构推演、代码生成",
-                            "擅长：复杂故障根因推理与创造",
-                            ("短板：每次会话冷启动完全失忆", True),
-                            ("短板：单轮对话税 5k~30k tok + 2~4s", True),
-                            "短板：看不见 /proc、端口、cron",
-                        ],
-                        "foot_lbl": "稀缺资源",
-                        "foot_val": "上下文窗口 × 推理注意力",
-                    },
-                    {
-                        "tag": "HOST BODY · 永驻本体",
-                        "title": "Agent Body",
-                        "accent": C_TEAL,
-                        "lines": [
-                            "擅长：/proc 0.2ms 探测端口与进程",
-                            "擅长：inotify 实时感知文件改删",
-                            ("优势：Rust 单二进制，0 云端 Token", True),
-                            ("优势：跨会话、跨模型永驻宿主机", True),
-                            "优势：确定性脱敏、防撞、加锁",
-                        ],
-                        "foot_lbl": "核心职责",
-                        "foot_val": "感官 · 反射 · 海马体 · 稳态",
-                    },
-                    {
-                        "tag": "PARETO OPTIMUM · 协同终局",
-                        "title": "脑体分离帕累托最优",
-                        "accent": C_GREEN,
-                        "lines": [
-                            "脑只管思考，体负责感知与记忆",
-                            "换模型、换客户端，身体状态不丢",
-                            ("实测：Prompt Token -99.22%", True),
-                            ("实测：上下文质量 35.8 → 99.8", True),
-                            "实测：有效信息密度提升 92.1 倍",
-                        ],
-                        "foot_lbl": "Bench v3.9 实证",
-                        "foot_val": "run-6a0a4995 · SLA PASS",
-                    },
-                ],
-                ("脑体分离不是哲学口号，是算力成本与物理延迟逼出来的唯一工程最优解。", "Bench v3.9 全绿实测", "teal"),
-                animated=True,
-            ),
+            "lead": "云端大模型专攻高杠杆推理 · <b>本地本体 0.2ms 物理确定性 0 Token</b>",
+            "svg": vis_comparative_scale(animated=True),
             "anim_caps": [
-                "① 云端大脑的比较优势与物理盲区",
-                "② 永驻宿主机的本地本体优势",
-                "③ 脑体协同达成 Token 与质量双赢",
-                "④ 工程结论：成本与延迟决定分工",
+                "Step 1/4：云端 LLM 大脑擅长架构推理，但冷启动失忆、看不见宿主机物理态",
+                "Step 2/4：物理探索延迟 3,000ms vs 0.2ms（快 15,000x），探索 Token 省 99.23%",
+                "Step 3/4：Rust 单二进制永驻本地，零云端 Token 守候感官、防撞与连续状态",
+                "Step 4/4：硅谷物业 → 决策幕僚 → 脑体分离，实现有效信息密度 94.5x 跃升",
             ],
             "next": "如果把大模型比作大脑，那这具常驻宿主机的身体，具体由哪六大器官组成？",
             "script": (
@@ -155,45 +113,12 @@ def build_talk_01() -> None:
         {
             "eyebrow": "02 · 生理隐喻",
             "title": "脑体分离解剖图：一个大脑可以热插拔，身体永驻宿主",
-            "lead": "今天用 Claude Code，明天换 Antigravity，半夜跑 Cron 脚本——<b>大脑随时切换，但身体的感官、规约、伤疤与接力胶囊都在原地</b>。",
-            "svg": svg_pipeline(
-                [
-                    {"tag": "BRAIN A", "title": "Claude Code", "accent": C_TEAL_D, "lines": ["上午做架构重构", "写入决策与接力胶囊", "会话结束退出内存"]},
-                    {"tag": "HOST BODY", "title": "永驻本体底座", "accent": C_GREEN, "bg": C_GREEN_L, "lines": ["BodyManifest 身份", "body_checkpoints 表", "事实图谱 + 审计账本"]},
-                    {"tag": "BRAIN B", "title": "Antigravity", "accent": C_TEAL_2, "lines": ["下午 1ms 拉取简报", "自动继承未竟目标", "零重扫直入联调"]},
-                    {"tag": "BRAIN C", "title": "凌晨 Cron", "accent": C_GOLD, "lines": ["无头自动化巡检", "共用同一套锁与规约", "异常写入双域审计"]},
-                ],
-                [
-                    {
-                        "title": "没有本体：每次换工具都是「重新投胎」",
-                        "accent": C_CLAY,
-                        "bg": C_CLAY_L,
-                        "lines": [
-                            "Claude Code 踩过的端口坑，换到 Cursor 再踩一遍",
-                            "Antigravity 梳理好的项目结构，新会话重扫 20 分钟",
-                            "多个客户端并发改同一配置，彼此看不见直接覆盖",
-                        ],
-                    },
-                    {
-                        "title": "有了本体：大脑是无状态算力，身体是有状态资产",
-                        "accent": C_TEAL,
-                        "bg": C_TEAL_L,
-                        "lines": [
-                            "确定性 body_id 绑定宿主机（SHA-256 指纹）",
-                            "43 个 MCP 工具 + CLI + Web 1:1 暴露同一具身体",
-                            ("agent-body body manifest / vitals / handoff", True),
-                        ],
-                    },
-                ],
-                animated=True,
-                mid="ah104",
-            ),
+            "lead": "今天用 Claude，明天换 Antigravity，半夜跑 Cron · <b>六大器官永驻原地</b>",
+            "svg": vis_brain_body_anatomy(animated=True),
             "anim_caps": [
-                "① 上午 Brain A 干活并留下接力状态",
-                "② 永驻宿主机本体持久化一切物理与认知资产",
-                "③ 下午 Brain B 换脑接入 1ms 零重扫接盘",
-                "④ 夜间无头 Cron 共享同一套锁与规约",
-                "⑤ 对比总结：大脑无状态化，身体资产化",
+                "Step 1/3：顶部 Claude / Antigravity / Cursor / Cron 均是可随时热插拔的无状态大脑",
+                "Step 2/3：统一神经总线将 43 MCP、30 CLI、7 大 Hook 与 Web 指挥舱无缝桥接",
+                "Step 3/3：永驻宿主机的六大生理器官：感官、小脑、海马体、脊柱、免疫与联邦",
             ],
             "next": "这具身体内部不是一锅大杂烩，而是严格分工的六大生理器官。",
             "script": (
@@ -245,62 +170,12 @@ def build_talk_01() -> None:
         {
             "eyebrow": "03 · 架构克制",
             "title": "递弱代偿原则：坚决画清「做什么」与「绝不做什么」",
-            "lead": "升维成 Agent 本体，绝不意味着吞并大脑。<b>越是底座，越要保持只做确定性基础设施的克制</b>。",
-            "svg": svg_matrix_2x2(
-                [
-                    {
-                        "tag": "DO · 确定性物理感知",
-                        "title": "我们坚决做深",
-                        "accent": C_TEAL,
-                        "bg": C_TEAL_L,
-                        "lines": [
-                            "零幻觉只读事实图谱（/proc, $PATH, systemd, cron）",
-                            "毫秒级防撞红线（锁、端口、敏感路径、脱敏）",
-                            "跨会话记忆门面 + 新鲜度写穿 + 接力胶囊",
-                        ],
-                    },
-                    {
-                        "tag": "DO NOT · 抢占主战大脑",
-                        "title": "我们坚决不做",
-                        "accent": C_CLAY,
-                        "bg": C_CLAY_L,
-                        "lines": [
-                            "绝不内置多 Agent 任务拆解与 ReAct 主规划循环",
-                            "绝不充当 LLM 推理网关或重造 RAG 聊天机器人",
-                            "绝不替用户做 L2/L3 破坏性写决策（只预警不越权）",
-                        ],
-                    },
-                    {
-                        "tag": "DO · 可观测与自进化",
-                        "title": "我们坚决闭环",
-                        "accent": C_GREEN,
-                        "bg": C_GREEN_L,
-                        "lines": [
-                            "IN_AGENT + OUT_OF_AGENT 双域审计可追溯",
-                            "P1~P5 内生对比探针 + 五维稳态 L1 自主自愈",
-                            "三轨实证 Benchmark v3.9 帕累托门禁守卫",
-                        ],
-                    },
-                    {
-                        "tag": "DO NOT · 重造重型轮子",
-                        "title": "我们坚决借力",
-                        "accent": C_GOLD,
-                        "bg": C_GOLD_L,
-                        "lines": [
-                            "不重造符号级 AST 分析（联邦桥接 CodeGraph）",
-                            "不重造分布式共识与 IM（Mesh 严守轻量零信任信封）",
-                            "不垄断记忆引擎（SPI 开放接入 Mem0/Letta/PowerContext）",
-                        ],
-                    },
-                ],
-                "架构红线：底座只提供「物理现实 + 安全反射 + 连续状态」，把 100% 创造力留给大脑。",
-                animated=True,
-            ),
+            "lead": "越是底座，越要保持<b>只做确定性具身基础设施</b>的极致克制",
+            "svg": vis_do_dont_wall(animated=True),
             "anim_caps": [
-                "① 做深：确定性物理感知与安全反射",
-                "② 不做：绝不抢占大模型主战规划循环",
-                "③ 闭环：双域审计、探针自进化与实证基准",
-                "④ 借力：不重造 AST、分布式共识与记忆轮子",
+                "Step 1/3：左侧蓝绿堡垒——死磕物理感官、反射门禁、保鲜记忆与双域审计",
+                "Step 2/3：中央警戒红线——递弱代偿边界，严防底座膨胀为臃肿框架",
+                "Step 3/3：右侧红叉禁区——不做主战大脑、不替代编排器、不重造沙箱与 Raft",
             ],
             "next": "定位升维后，老用户已经配好的已有 MCP 工具、CLI 命令和 ~/.agent-body 目录怎么办？",
             "script": (
@@ -312,51 +187,21 @@ def build_talk_01() -> None:
         {
             "eyebrow": "03 · 平滑演进",
             "title": "三层命名零破坏契约：品牌升维，协议零断层",
-            "lead": "架构演进最怕「为了改名把线上全部搞崩」。我们用<b>三层分层契约</b>兼顾心智升级与 100% 向后兼容。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "TIER 1 · 品牌与产品叙事",
-                        "title": "全面升维为 Agent 本体",
-                        "accent": C_TEAL_D,
-                        "lines": [
-                            "README / 演讲 PPT / Web 顶栏",
-                            "主标题：脑体分离 · Agent 本体",
-                            "副叙事：宿主机具身底座",
-                            ("受众：新用户、架构师、开源社区", True),
-                        ],
-                        "foot_lbl": "门禁检查",
-                        "foot_val": "evolution_manifest.py",
-                    },
-                    {
-                        "tag": "TIER 2 · 概念与接口注释",
-                        "title": "器官映射 + 兼容释义",
-                        "accent": C_TEAL_2,
-                        "lines": [
-                            "Cargo.toml / CLI --help",
-                            "MCP Tool Description / SKILL",
-                            "明确统一：全部能力收拢为本体器官",
-                            ("受众：接入的大模型与开发者", True),
-                        ],
-                        "foot_lbl": "三处同步",
-                        "foot_val": "skills/ -> ~/.gemini & /root/new",
-                    },
-                    {
-                        "tag": "TIER 3 · 二进制与协议标识",
-                        "title": "100% 稳定零破坏红线",
-                        "accent": C_GREEN,
-                        "lines": [
-                            "二进制：agent-body 不变",
-                            "MCP 前缀：body_* 43 工具不变",
-                            "数据目录：~/.agent-body/ 不变",
-                            ("兼容：老配置零迁移直接平滑升级", True),
-                        ],
-                        "foot_lbl": "硬约束",
-                        "foot_val": "零 Breaking Change",
-                    },
+            "lead": "向上重塑认知，向下<b>100% 向后兼容零迁移成本</b>",
+            "svg": vis_three_tier_pyramid(
+                tiers=[
+                    ("TIER 1 · 品牌叙事层", "全面升维为 Agent 本体", "README / 演讲 / Web 顶栏 · evolution_manifest 守卫", C_TEAL),
+                    ("TIER 2 · 接口描述层", "器官映射 + 兼容释义", "CLI --help / MCP 描述 / 3 套 SKILL 全量同步", C_TEAL_2),
+                    ("TIER 3 · 协议基座红线", "100% 稳定零破坏兼容", "agent-body · body_* 43 工具 · ~/.agent-body/ 纹丝不动", C_GREEN),
                 ],
-                ("向上重塑认知，向下零迁移成本——这是成熟基础软件演进的标配纪律。", "docs/design_doc/17 §二", "green"),
+                footer="向上重塑心智，向下零破坏迁移——成熟基础软件演进的标配纪律 (docs/design_doc/17)",
+                animated=True,
             ),
+            "anim_caps": [
+                "Step 1/3：Tier 1 顶层品牌全面升维为「脑体分离 · Agent 本体」",
+                "Step 2/3：Tier 2 接口描述与三套 SKILL 统一器官语义",
+                "Step 3/3：Tier 3 二进制、43 MCP 工具与数据目录 100% 稳定零破坏",
+            ],
             "next": "理念讲透了，现在我们直接钻进代码，看 Phase 44 新建的第 27 模块 src/body/ 到底长什么样。",
             "script": (
                 "工程上最忌讳拍脑袋打破兼容。我们通过分层演进策略把所有旧工程形态平滑统一为 `agent-body` 与 `body_*` 工具族，让老用户的 `hooks.json`、MCP 配置、后台服务平滑过渡不出错。\n"
@@ -469,19 +314,13 @@ def build_talk_01() -> None:
         },
         {
             "eyebrow": "04 · 源码剖析 (三)",
-            "title": "HomeostasisVitals：五维生命体征雷达与 L1 自主自愈",
-            "lead": "把抽象的「系统健康」拆成可量化的五维百分制评分，<b>低于 70 分自动唤醒小脑反射自愈</b>。",
-            "svg": svg_bars(
-                "实机宿主 digoal-home 五维本体生命体征实测（run-6a0a4995 / DQ8 实证）",
-                [
-                    ("01 感官维度 (Sensory) · 资产元数据 & 图谱覆盖", 100.0, "100.0", "健康 · 零漂移", C_TEAL_D),
-                    ("02 反射维度 (Reflex) · 24h AOPCC 租约有效率", 99.7, "99.7", "健康 · 毫秒反射", C_TEAL_2),
-                    ("03 海马体维度 (Hippocampus) · 记忆冲突与新鲜度", 100.0, "100.0", "健康 · 零僵尸", C_TEAL_3),
-                    ("04 代谢维度 (Metabolism) · 磁盘水位与过期锁清理", 100.0, "100.0", "健康 · 0 过期锁", C_GREEN),
-                    ("05 免疫维度 (Immunity) · 脱敏审计与 L3 禁区守卫", 100.0, "100.0", "健康 · 0 明文泄露", C_GREEN),
-                ],
-                "实机综合稳态分：99.9 / 100 (healthy) · 后台每 1800s 自动巡检，低分自动触发 run_l1_autonomic_heal()",
-            ),
+            "title": "HomeostasisVitals：五维生命体征雷达 × L0~L3 自治包络",
+            "lead": "五维量化百分制雷达 · <b>低于 70 分自动唤醒 L1 小脑反射自愈</b>",
+            "svg": vis_vitals_radar_autonomy(animated=True),
+            "anim_caps": [
+                "Step 1/2：左侧五边形生命体征雷达实时评估新鲜度/连通度/向量/遥测/脱敏五大维度",
+                "Step 2/2：右侧 L0~L3 同心权限圆环——可逆自愈自主落地，碰 L3 禁区 100% 强拦",
+            ],
             "next": "一个好的底座，必须做到「大脑用 MCP、人用 CLI、看大盘用 Web，三端能力分毫不差」。",
             "script": (
                 "看这五条实机雷达条，不是画的假图，是我在 `digoal-home` 主机上跑 `agent-body body vitals` 的真实输出：综合分 99.9 / 100。\n"
@@ -492,54 +331,13 @@ def build_talk_01() -> None:
         {
             "eyebrow": "05 · 三端同构",
             "title": "43/43 黑白屏 1:1:1 同构：第 43 原生工具全景落地",
-            "lead": "不搞「Web 有按钮、Agent 调不到」的割裂。<b>body_state 在 MCP、CLI、Web 共享同一内核引擎</b>。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "MCP STDIO · 给大脑调用",
-                        "title": "body_state (#43)",
-                        "accent": C_TEAL_D,
-                        "lines": [
-                            "action = manifest / vitals",
-                            "action = envelope / peers",
-                            "action = handoff_save",
-                            "action = handoff_resume",
-                            ("自动计入 PR-13 效能账本", True),
-                        ],
-                        "foot_lbl": "源码触点",
-                        "foot_val": "src/api/mcp_tools.rs",
-                    },
-                    {
-                        "tag": "CLI · 给工程师与脚本",
-                        "title": "agent-body body",
-                        "accent": C_TEAL_2,
-                        "lines": [
-                            "body manifest / vitals",
-                            "body envelope --action --target",
-                            "body handoff save / list / resume",
-                            "body peers (跨机本体名片)",
-                            ("零依赖终端即敲即得", True),
-                        ],
-                        "foot_lbl": "源码触点",
-                        "foot_val": "src/main.rs (Commands::Body)",
-                    },
-                    {
-                        "tag": "WEB 2.0 · 可视化驾驶舱",
-                        "title": "#view-body 本体中枢",
-                        "accent": C_GREEN,
-                        "lines": [
-                            "8 条 /api/v1/body/* REST 接口",
-                            "写接口强制 Bearer Auth (401)",
-                            "五维稳态仪表盘 + 胶囊管理台",
-                            "路演剧场第 7 幕：换脑不失忆",
-                            ("Parity 矩阵实测 43/43 = 100%", True),
-                        ],
-                        "foot_lbl": "源码触点",
-                        "foot_val": "src/web/parity_api.rs",
-                    },
-                ],
-                ("任何新能力必须三端同步交付，由 test_web_parity_matrix_100_percent 单元测试硬门禁守卫。", "43/43 Parity PASS", "teal"),
-            ),
+            "lead": "MCP / CLI / Web 共享同一 Rust 内核 · <b>Parity 门禁锁死 100% 对齐</b>",
+            "svg": vis_parity_console(animated=True),
+            "anim_caps": [
+                "Step 1/3：左侧黑屏神经接口——43 MCP 工具、30 CLI 命令、7 大 Hook 与 3 套 SKILL",
+                "Step 2/3：中央 43/43 Parity 自动化校验锁死三端 100% 零漂移同步",
+                "Step 3/3：右侧 Web 指挥舱 (:8765) 含 9 大工作台与 7 幕真引擎剧场",
+            ],
             "next": "光说架构好没用，我们拉出实机 Benchmark v3.9 账单，看「脑体分离」到底带来了什么量化收益。",
             "script": (
                 "我们项目有一条铁律叫「黑白屏 1:1:1 双向同步」：黑屏是给 Agent 调的 MCP 和给工程师敲的 CLI，白屏是 Web 2.0 驾驶舱。\n"
@@ -576,38 +374,28 @@ def build_talk_01() -> None:
         },
         {
             "eyebrow": "06 · 体系导航",
-            "title": "6 讲 × 30 分钟：把 Agent 本体每一寸骨架拆透",
-            "lead": "每一讲只聚焦<b>一个核心技术切面</b>，配有真实源码坐标、动画推演与实测数据，独立成篇又首尾咬合。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "TALK 01 · 本讲",
-                        "title": "脑体分离哲学",
-                        "accent": C_TEAL_D,
-                        "bg": C_TEAL_L,
-                        "lines": ["本体定位边界", "六大生理器官", "递弱代偿防膨胀", "src/body/ 源码"],
-                    },
-                    {
-                        "tag": "TALK 02 · 感觉神经",
-                        "title": "物理感官图谱",
-                        "accent": C_TEAL_2,
-                        "lines": ["/proc 0.2ms 探测", "白黑灰零污染扫盘", "L1/L2/L3 加权图谱", "CodeGraph 联邦"],
-                    },
-                    {
-                        "tag": "TALK 03 · 小脑反射",
-                        "title": "AOPCC 并发控制",
-                        "accent": C_TEAL_3,
-                        "lines": ["整轮对话税剖析", "乐观租约 vs 悲观锁", "Post-Hook 碰壁自愈", "WFG 死锁破局"],
-                    },
-                    {
-                        "tag": "TALK 04~06 · 进阶三讲",
-                        "title": "海马体 · 安全 · 实证",
-                        "accent": C_GREEN,
-                        "lines": ["04 新鲜度与跨脑接力", "05 双域审计与 Mesh", "06 Bench v3.9 工程", "完整闭环可复现"],
-                    },
+            "title": "6 讲 × 30 分钟路线图：把 Agent 本体每一寸骨架拆透",
+            "lead": "每讲单点说透一个器官 · <b>独立成篇又首尾咬合</b>",
+            "svg": vis_roadmap_journey(
+                stops=[
+                    ("TALK 01 · 本讲", "脑体分离哲学", "比较优势 · 六大器官 · 递弱代偿", "brain", C_TEAL_D),
+                    ("TALK 02 · 感觉", "物理感官图谱", "/proc · 敲门不进屋 · CodeGraph", "radar", C_TEAL),
+                    ("TALK 03 · 小脑", "AOPCC 并发控制", "ETC 乐观直通 · <2ms 自愈 · WFG", "bolt", C_CLAY),
+                    ("TALK 04 · 海马", "保鲜与跨脑接力", "七大漏斗写穿 · 150t 发光胶囊", "capsule", C_GREEN),
+                    ("TALK 05 · 免疫", "安全审计与联邦", "四道铁闸 · 双域折叠 · Mesh v1.0", "shield", C_TEAL_2),
+                    ("TALK 06 · 实证", "Bench 与微内核", "帕累托 99.2% · 396 测 · 2 分钟复现", "trophy", C_GOLD),
                 ],
-                ("建议按 01 → 06 顺序阅读，或在 presentation/index.html 按需直达任一专题。", "6 × 30 min 系列课程", "teal"),
+                footer="建议按 01 → 06 顺序推进，或在 presentation/index.html 按需直达任一专题。",
+                animated=True,
             ),
+            "anim_caps": [
+                "第 01 讲：立住脑体分离哲学、六大器官与递弱代偿边界",
+                "第 02 讲：拆透 0.2ms /proc 物理探针、分级扫盘与三层图谱",
+                "第 03 讲：讲清整轮对话税、AOPCC 立交与 WFG 死锁破环",
+                "第 04 讲：写穿净水保鲜与 <=300 tok 跨大脑 10ms 接力胶囊",
+                "第 05 讲：纵深安全铁闸、双域审计、P1~P5 飞轮与 Mesh v1.0",
+                "第 06 讲：三轨实证 Benchmark v3.9 与微内核零漂移工程体系",
+            ],
             "next": "最后，用三个锚点和一个留给在座架构师的开放问题，收束今天的第 1 讲。",
             "script": (
                 "这套系列一共六讲，每讲 30 分钟，绝不贪多求全、走马观花。\n"
@@ -676,18 +464,15 @@ def build_talk_02() -> None:
         },
         {
             "eyebrow": "01 · 盲人摸象",
-            "title": "没有感官图谱，Agent 在宿主机上每天怎么翻车",
-            "lead": "传统方案靠 Agent 临时敲 `find`、`ps`、`ss`、`rg`——<b>慢、耗 Token、漏看跨服务隐藏依赖</b>。",
-            "svg": svg_compare_rows(
-                ("高频工程动作", "裸奔 Agent 的盲摸路径", "物理感官图谱 1 毫秒直达"),
-                [
-                    ("提取 PDF / 转码视频", "没看见本机已有 pdftotext / ffmpeg，pip 装库报错", "fact_query(capability) 给出路径 + 最佳实践参数"),
-                    ("启动本地 Web 服务", "盲绑 8080 端口，撞死现网看板或报错重试 3 轮", "/proc/net/tcp 0.2ms 返回占用 PID/Cwd + 空闲推荐端口"),
-                    ("修改公共脚本/配置", "看不见有 systemd 单元与 crontab 强引用该文件", "automation + links 3 跳反查上游服务爆炸半径"),
-                    ("调研开源项目源码", "没看见 /root/new/src/ 已有 110 仓与 .codegraph", "asset_search 0.4ms 命中现成源码树与代码地图"),
-                ],
-                ("W1 实测：工具能力发现从 21,079 tok 压至 131 tok（-99.4%），加速 358.31x。", "Bench v3.9 W1 实证"),
-            ),
+            "title": "没有感官图谱，蒙眼 Agent 每天在宿主机怎么五连翻车",
+            "lead": "临时敲 find / ps / ss 慢且漏依赖 · <b>W1 实测省 99.4% Token 加速 358x</b>",
+            "svg": vis_blind_agent_scene(animated=True),
+            "anim_caps": [
+                "Step 1/4：无感官图谱的裸奔大脑只看得见聊天窗口，对宿主机物理世界完全盲视",
+                "Step 2/4：不知本地已有源码/工具重造轮子，盲绑 :5432 撞车报错重试 3 轮",
+                "Step 3/4：误改共享脚本剪断 Cron/Systemd 链，扫爆 node_modules 污染上下文",
+                "Step 4/4：换脑冷启动 100% 失忆——宿主机感官图谱 0.2ms 一次性根治",
+            ],
             "next": "为什么我们说「零幻觉」是架构属性，而不是提示词技巧？",
             "script": (
                 "很多人以为减少幻觉靠在 System Prompt 里写「请不要编造」。没用的，机器里此刻跑着什么进程，大模型训练权重里根本不可能知道。\n"
@@ -739,54 +524,14 @@ def build_talk_02() -> None:
         {
             "eyebrow": "03 · 零污染扫盘",
             "title": "白 / 黑 / 灰分级颗粒度扫盘：敲门，但不进屋",
-            "lead": "遇到 `target/`、`node_modules/`、`.git/`、`.codegraph/`，<b>只建档目录本身一条标量记录，硬阻断递归</b>。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "WHITELIST · 深层精索引",
-                        "title": "白名单工作区",
-                        "accent": C_GREEN,
-                        "bg": C_GREEN_L,
-                        "lines": [
-                            "覆盖：src/、docs/、scripts/、skills/",
-                            "行为：递归扫描全部源码与文档",
-                            "提取：L1 启发元数据 + 依赖边",
-                            ("入库：全量 FTS5 + 向量检索就绪", True),
-                        ],
-                        "foot_lbl": "颗粒度",
-                        "foot_val": "File-Level Deep Index",
-                    },
-                    {
-                        "tag": "BLACKLIST · 浅层硬阻断",
-                        "title": "黑名单噪音目录",
-                        "accent": C_CLAY,
-                        "bg": C_CLAY_L,
-                        "lines": [
-                            "覆盖：target/、node_modules/、.git/",
-                            "覆盖：.venv/、__pycache__/、dist/",
-                            "行为：Shallow Tier 仅记目录存在",
-                            ("收益：W3 实测阻断 531 个噪音文件", True),
-                        ],
-                        "foot_lbl": "颗粒度",
-                        "foot_val": "Directory-Only Stub",
-                    },
-                    {
-                        "tag": "RESTRICTED · 机密绝缘层",
-                        "title": "敏感文件硬隔离",
-                        "accent": C_GOLD,
-                        "bg": C_GOLD_L,
-                        "lines": [
-                            "覆盖：.env、*.pem、*.key、id_rsa",
-                            "行为：绝不读取正文、绝不建 FTS",
-                            "绝不送本地 Ollama 做语义摘要",
-                            ("收益：从源头杜绝私钥进上下文", True),
-                        ],
-                        "foot_lbl": "安全等级",
-                        "foot_val": "Zero-Content Read",
-                    },
-                ],
-                ("大仓库扫盘采用 ScanStateMachine 断点续传（每次后台推 200 条），防 I/O 尖峰且随时可恢复。", "src/scanner/state_machine.rs", "teal"),
-            ),
+            "lead": "黑名单只记目录节点严禁下钻 · <b>W3 阻断 534 噪音 · 省 7,825 inotify 句柄</b>",
+            "svg": vis_tiered_scan_doors(animated=True),
+            "anim_caps": [
+                "Step 1/4：宿主机磁盘 21,403 纳管资产经白/黑/灰三道门精准分流",
+                "Step 2/4：绿色白名单业务目录深挖到底，全量元数据 + FTS5 + 向量就绪",
+                "Step 3/4：红色黑名单 node_modules/.git/target 紧锁门禁「敲门不进屋」",
+                "Step 4/4：灰名单开源源码转交 CodeGraph；右侧本地 Ollama 零云端三层精炼",
+            ],
             "next": "文件进了白名单之后，怎么在不烧一分钱云端 Token 的前提下，读懂每个文件是干嘛的？",
             "script": (
                 "这是我最得意的工程设计之一，叫做「敲门，但不进屋」。\n"
@@ -845,52 +590,15 @@ def build_talk_02() -> None:
         },
         {
             "eyebrow": "05 · 图谱破孤岛",
-            "title": "从 99.5% 孤立到 100% 连通：三层有向加权属性图",
-            "lead": "Phase 40 现网实测曾暴露 214/215 项目节点孤立。我们用 <b>L1_EXPLICIT / L2_STRUCTURAL / L3_SEMANTIC</b> 彻底打通。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "L1_EXPLICIT · 0.85~1.00",
-                        "title": "物理硬依赖边",
-                        "accent": C_TEAL_D,
-                        "lines": [
-                            "进程监听端口 (LISTENS_ON)",
-                            "systemd/cron 执行脚本",
-                            "源码/文档精确文件引用",
-                            ("可信度：物理实证 100%", True),
-                        ],
-                        "foot_lbl": "用途",
-                        "foot_val": "端口防撞 · 爆炸半径核心",
-                    },
-                    {
-                        "tag": "L2_STRUCTURAL · 0.55~0.84",
-                        "title": "结构上卷与服务桥接",
-                        "accent": C_TEAL_2,
-                        "lines": [
-                            "5,116 条文件引用上卷至项目",
-                            "systemd 单元 ↔ 活跃进程桥接",
-                            "工具能力与工程目录依赖挖掘",
-                            ("突破：消除项目/服务同体分裂", True),
-                        ],
-                        "foot_lbl": "源码触点",
-                        "foot_val": "src/fact/semantic_discovery.rs",
-                    },
-                    {
-                        "tag": "L3_SEMANTIC · 0.35~0.65",
-                        "title": "隐式语义关系发现",
-                        "accent": C_GREEN,
-                        "lines": [
-                            "Ollama 向量余弦 >= 0.78",
-                            "融合标签/域名 Jaccard 打分",
-                            "严格 Top-K=3 剪枝防边爆炸",
-                            ("收益：发现看似断连的跨仓关联", True),
-                        ],
-                        "foot_lbl": "现网 DQ6",
-                        "foot_val": "工程连通 215/215 (100%)",
-                    },
-                ],
-                ("W13 实测：三层加权图谱与隐式语义发现节省 84.8% Token，质量从 19.5 跃升至 100.0。", "DQ6: fact_edges=778/778 合法", "green"),
-            ),
+            "title": "从 99.5% 孤立到 100% 连通：L1 / L2 / L3 加权图 × CodeGraph",
+            "lead": "4,985 文件边自动上卷 · <b>孤岛率 99.5% → 0% · M1 爆炸半径 148 μs</b>",
+            "svg": vis_host_graph_federation(animated=True),
+            "anim_caps": [
+                "Step 1/4：L1 实线物理硬依赖 (0.85~1.00)：Systemd → 活进程 → 端口",
+                "Step 2/4：L2 虚线结构上卷 (0.55~0.84)：将数千文件引用聚合成工程拓扑",
+                "Step 3/4：L3 语义点线 (cos>=0.78, Top-3)：防边爆炸，绝不伪装硬因果",
+                "Step 4/4：右侧 CodeGraph 显微镜穿透微观 AST 函数调用，DQ6 100% 连通",
+            ],
             "next": "图谱里如果混进了测试代码和 Markdown 示例里的假路径，爆炸半径就会误报——怎么免疫？",
             "script": (
                 "Phase 40 之前我们查过一次自己的生产库，吓了一跳：`fact_nodes` 有 355 个节点，但 215 个项目节点里有 214 个是孤岛，99.5% 没连起来！\n"
@@ -1270,55 +978,15 @@ def build_talk_03() -> None:
         },
         {
             "eyebrow": "02 · 三态分类引擎",
-            "title": "AOPCC 三态决策矩阵：精确区分客户端连接与服务端绑定",
-            "lead": "同样出现端口号，<b>`psql -p 5432` 是只读/客户端试探（乐观直通），`uvicorn --port 8765` 是服务端占坑（悲观门禁）</b>。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "MODE 01 · OPTIMISTIC",
-                        "title": "乐观直通（零打断）",
-                        "accent": C_GREEN,
-                        "bg": C_GREEN_L,
-                        "lines": [
-                            "典型：psql -p 5432 / redis-cli",
-                            "典型：curl 本地健康检查 / 只读查库",
-                            "行为：Pre-Hook 直接放行，0 额外轮次",
-                            ("兜底：真碰壁时 Post-Hook 毫秒自愈", True),
-                        ],
-                        "foot_lbl": "预期收益",
-                        "foot_val": "省去 100% 事前查询对话税",
-                    },
-                    {
-                        "tag": "MODE 02 · CAUTIOUS_CAS",
-                        "title": "轻量条件校验",
-                        "accent": C_GOLD,
-                        "bg": C_GOLD_L,
-                        "lines": [
-                            "典型：编辑项目代码、写新脚本",
-                            "行为：核验放置规范与软依赖提醒",
-                            "无硬冲突直接放行，有风险注入警示",
-                            ("特性：低摩擦 + 防路径漂移", True),
-                        ],
-                        "foot_lbl": "检查维度",
-                        "foot_val": "Placement + 3 跳影响提示",
-                    },
-                    {
-                        "tag": "MODE 03 · PESSIMISTIC_LOCK",
-                        "title": "悲观硬门禁",
-                        "accent": C_CLAY,
-                        "bg": C_CLAY_L,
-                        "lines": [
-                            "典型：bind 监听端口、改共享配置",
-                            "典型：多 Agent 同目录写入、危险命令",
-                            "行为：强制查锁/查端口/查 L3 禁区",
-                            ("底线：冲突即刻阻断，绝不事后擦屁股", True),
-                        ],
-                        "foot_lbl": "拦截通道",
-                        "foot_val": "PreToolUse 硬 Hook",
-                    },
-                ],
-                ("由 src/hooks/diagnoser.rs 中的 ConcurrencyPolicyClassifier 确定性判定，零 LLM 推理开销。", "src/hooks/diagnoser.rs", "teal"),
-            ),
+            "title": "AOPCC 高速 ETC 立交：客户端直飞 × 服务端红灯铁闸",
+            "lead": "W15 实测：<b>Token -83.9% · 质量 52 → 100 · Post-Hook &lt;2ms 秒愈</b>",
+            "svg": vis_aopcc_highway(animated=True),
+            "anim_caps": [
+                "Step 1/4：事前全查引发整轮对话税 C_turn (2~4s + 10k tok)，数学判据清晰分流",
+                "Step 2/4：SessionStart 签发 <=120 tok MVCC 乐观租约交由三态分类器分流",
+                "Step 3/4：psql 直连走 ETC 绿道 0 额外轮；bind 端口/高危写走红灯铁闸 1ms 拦停",
+                "Step 4/4：偶发碰壁 2ms 内 PostToolUse 反查宿主机塞回替代端口并降级租约",
+            ],
             "next": "乐观直通不是「盲目自信」，它手里握着一张开工时签发的 MVCC 短时租约。",
             "script": (
                 "早期版本里我们只要在命令里看到端口号就一刀切拦下来，结果连 `psql -p 5432` 都被误伤。\n"
@@ -1435,43 +1103,14 @@ def build_talk_03() -> None:
         },
         {
             "eyebrow": "06 · 多 Agent 协作锁",
-            "title": "共享/排他锁 + 目录树层级冲突传播",
-            "lead": "锁住父目录 `/root/work/proj`，<b>任何子路径 `/root/work/proj/src/a.rs` 的排他写请求都会被自动感知与拦截</b>。",
-            "svg": svg_columns(
-                [
-                    {
-                        "tag": "SHARED (S 锁)",
-                        "title": "多读并行不互斥",
-                        "accent": C_TEAL,
-                        "lines": [
-                            "多个研究型 Agent 同时读同一仓库",
-                            "支持同 owner 可重入续租 (TTL)",
-                            "过期锁由 GC 与 L1 自愈自动回收",
-                        ],
-                    },
-                    {
-                        "tag": "EXCLUSIVE (X 锁)",
-                        "title": "写操作严格排他",
-                        "accent": C_CLAY,
-                        "lines": [
-                            "独占端口绑定或关键文件重构",
-                            "阻止第二个 Agent 并发覆写",
-                            "支持管理员显式 force_release",
-                        ],
-                    },
-                    {
-                        "tag": "HIERARCHY · 目录树传播",
-                        "title": "父子路径自动冲突判定",
-                        "accent": C_GREEN,
-                        "lines": [
-                            "路径规范化防 ../ 绕过",
-                            "父目录 X 锁自动覆盖全部子文件",
-                            "子文件持锁时拒绝父目录抢占 X 锁",
-                        ],
-                    },
-                ],
-                ("支持 SQLite 事务锁与 PostgreSQL Advisory Lock 跨连接强一致，8 项并发集成测试全绿。", "tests/coordination_integration.rs", "teal"),
-            ),
+            "title": "目录树层级锁波纹 × WFG 死锁成环闪电破局",
+            "lead": "父锁子必阻 · 同级共享并发 · <b>W6 死锁破局加速 46.49x</b>",
+            "svg": vis_lock_and_wfg(animated=True),
+            "anim_caps": [
+                "Step 1/3：左侧目录树层级锁——src/ 挂排他锁自动阻断子文件，docs/ 共享读并行",
+                "Step 2/3：右侧 WFG 死锁成环检测——A↔B 红色环路毫秒现形并闪电破环",
+                "Step 3/3：Wait-Queue 释放推送唤醒 + TTL 自动回收僵尸锁，杜绝空转烧 Token",
+            ],
             "next": "有了排他锁和等待队列，经典的 AB-BA 死锁就会出现——Agent Body 怎么在微秒内破局？",
             "script": (
                 "多 Agent 协作最隐蔽的冲突是目录层级冲突：Agent A 锁了整个 `src/storage/` 目录在做重构，Agent B 去锁 `src/storage/spi.rs`，如果只做字符串相等比对，两个锁居然都拿到了，结果代码互相覆盖。\n"
