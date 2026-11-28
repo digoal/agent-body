@@ -2,7 +2,7 @@
 
 > **版本**: v1.1.0 (Rust Edition)  
 > **更新时间**: 2026-11-28  
-> **架构基线**: 脑体分离 Agent 本体（27 顶层模块 · 43 MCP · 30 CLI · 88 SPI · 27 表 · 事务式老库无损 Schema 自愈）+ 微内核与周边扩展体系 (`3 kernel / 11 contrib / 3 slim distributions`) + 分层加权图谱 + MeshEnvelope v1.0 + AOPCC + 内生 18 Wait Events / AWR / Prometheus `/metrics` / W3C Trace + Benchmark v4.1 (`W22 / M6 / DQ12 / COMP-C4 / PR-16`) + **435 项全工作区测试全绿**
+> **架构基线**: 脑体分离 Agent 本体（27 顶层模块 · 43 MCP · 30 CLI · 95 SPI · 28 表 · 事务式老库无损 Schema 自愈）+ 微内核与周边扩展体系 (`3 kernel / 11 contrib / 3 slim distributions`) + 分层加权图谱 + MeshEnvelope v1.0 + AOPCC + 内生 18 Wait Events / AWR / Prometheus `/metrics` / W3C Trace + Benchmark v4.1 (`W22 / M6 / DQ12 / COMP-C4 / PR-16`) + **440 项全工作区测试全绿**
 
 ---
 
@@ -38,7 +38,7 @@ agent-body/
 ├── Cargo.toml               # Rust Workspace 与旗舰依赖配置
 ├── Cargo.lock               # 依赖版本精确锁定
 ├── build.rs                 # 编译期 Git Hash / 构建时间 / 目标平台注入
-├── Makefile                 # 构建、六重门禁、435 测试、Playwright 双门禁、热重启与镜像同步
+├── Makefile                 # 构建、六重门禁、440 测试、Playwright 双门禁、热重启与镜像同步
 ├── Dockerfile               # 多阶段镜像（旗舰版 + 零 C++ --target probe 精简镜像）
 ├── docker-compose.yml       # 容器化编排参考配置
 ├── config.example.toml      # 完整注释的配置模板（含 [workspace]、[memory].pg_tx 与三态 [runtime]）
@@ -49,7 +49,8 @@ agent-body/
 ├── kernel/                  # 纯机制微内核 (body-sdk / body-protocol / body-kernel)
 ├── contrib/                 # 11 个独立周边标准五件套扩展 (含 obs_telemetry 与 mem_pg_tx)
 ├── distributions/           # 3 个零 C++/DuckDB 精简发行版 (kernel-minimal / aiops-probe / dba-sentinel)
-├── tests/                   # 19 个集成、契约、PG 18 压测/睡眠整理/M3百万流、迁移回归、全量 MCP/Web E2E 与基准套件 (全工作区 435 项测试)
+├── tests/                   # 20 个集成、契约、PG 18 压测/睡眠整理/M3百万流、迁移回归、全量 MCP/Web E2E 与基准套件 (全工作区 440 项测试)
+│   ├── superset_search_regression.rs  # Phase 79 超集检索、DB Trigram 模糊、5000+ 无截断与防噪门禁回归
 │   ├── schema_migration_regression.rs # 老库列改名/补列无损自愈、FTS5 重建、WAL 上限与 CJK 回退回归
 │   ├── storage_spi_contract.rs        # SQLite & DuckDB 12 域 StorageProvider SPI 等价契约测试
 │   ├── pg_tx_memory_integration.rs    # PostgreSQL 18.6 16线程MVCC压测、写穿无僵尸召回、SQLite降级与老库tx_epoch迁移测试
@@ -90,7 +91,7 @@ make quality-gate
 # 串联执行: evolution-check + arch-check + lint-panic + lint-hygiene + lint-strict
 ```
 
-### 2. 全工作区 435 项测试（根包 `387` + `kernel` `27` + `contrib` `17` + `distributions` `4`）
+### 2. 全工作区 440 项测试（根包 `392` + `kernel` `27` + `contrib` `17` + `distributions` `4`）
 
 ```bash
 # 推荐设置 RUST_TEST_THREADS=1 避免微基准 SLA 断言受多核 CPU 争抢抖动

@@ -272,6 +272,13 @@ fn test_legacy_sqlite_db_auto_migrates_losslessly_and_runs_benchmark_and_awr() {
     provider
         .update_asset_embedding("/tmp/legacy_script.py", &[0.25, 0.75])
         .expect("update embedding on migrated asset");
+    provider
+        .update_asset_content("/tmp/legacy_script.py", "fn legacy_migrated_private_fn() {}")
+        .expect("update content_text on migrated asset");
+    let fz = provider
+        .search_assets_fuzzy_db("legacy_migrated_private_fn", 10, true, None)
+        .expect("fuzzy search on migrated assets_trigram_fts");
+    assert!(fz.iter().any(|h| h.asset.path == "/tmp/legacy_script.py"));
     let mems = provider.list_all_memories(20).expect("list legacy memories");
     assert!(mems.iter().any(|m| m.id == "legacy-mem-1"));
     let links = provider.list_all_links(20).expect("list legacy links");

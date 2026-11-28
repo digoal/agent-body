@@ -49,18 +49,27 @@ CREATE TABLE IF NOT EXISTS assets (
     tags            JSONB DEFAULT '[]'::jsonb,
     status          TEXT DEFAULT 'active' CHECK (status IN ('active','archived','missing')),
     embedding       TEXT DEFAULT '[]',
+    content_text    TEXT NOT NULL DEFAULT '',
     last_scanned_at TIMESTAMPTZ,
     last_modified_at TIMESTAMPTZ,
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW(),
     fts_doc         TSVECTOR GENERATED ALWAYS AS (
-        to_tsvector('simple', coalesce(path, '') || ' ' || coalesce(description, '') || ' ' || coalesce(usage, ''))
+        to_tsvector('simple', coalesce(path, '') || ' ' || coalesce(description, '') || ' ' || coalesce(usage, '') || ' ' || coalesce(content_text, ''))
     ) STORED
 );
 
 CREATE INDEX IF NOT EXISTS idx_pg_assets_fts ON assets USING GIN(fts_doc);
 CREATE INDEX IF NOT EXISTS idx_pg_assets_type ON assets(type);
 CREATE INDEX IF NOT EXISTS idx_pg_assets_scan_tier ON assets(scan_tier);
+DO $$ BEGIN
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
+    CREATE INDEX IF NOT EXISTS idx_pg_assets_fuzzy_trgm ON assets USING GIN (
+        (coalesce(path, '') || ' ' || coalesce(description, '') || ' ' || coalesce(content_text, '')) gin_trgm_ops
+    );
+EXCEPTION WHEN OTHERS THEN
+    NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS active_processes (
     id              TEXT PRIMARY KEY,

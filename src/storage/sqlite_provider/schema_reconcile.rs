@@ -123,6 +123,18 @@ pub(super) fn reconcile_sqlite_schema(conn: &Connection) -> Result<()> {
 fn reconcile_sqlite_schema_in_tx(conn: &Connection) -> Result<()> {
     let mut migrated_any = false;
 
+    // 0. 历史 assets 表先补 content_text 列：否则 schema.sql 已建的触发器引用 NEW.content_text，
+    //    会令后续 RENAME COLUMN 校验触发器失败。
+    let asset_cols = list_table_columns(conn, "assets")?;
+    if !asset_cols.is_empty() && !asset_cols.iter().any(|c| c == "content_text") {
+        conn.execute(
+            "ALTER TABLE assets ADD COLUMN content_text TEXT NOT NULL DEFAULT ''",
+            [],
+        )
+        .context("历史 assets 表补齐 content_text 列失败")?;
+        migrated_any = true;
+    }
+
     // 1. benchmark_runs: 无损将旧版 total_*_tokens（排除 baseline）重命名为 total_body_tokens
     if rename_legacy_column_if_needed(conn, "benchmark_runs", "total_body_tokens", |col| {
         col.starts_with("total_")
@@ -160,6 +172,7 @@ fn reconcile_sqlite_schema_in_tx(conn: &Connection) -> Result<()> {
             "assets",
             &[
                 ("embedding", "TEXT DEFAULT '[]'"),
+                ("content_text", "TEXT NOT NULL DEFAULT ''"),
                 ("last_scanned_at", "TEXT"),
                 ("last_modified_at", "TEXT"),
             ],
@@ -222,13 +235,105 @@ fn reconcile_sqlite_schema_in_tx(conn: &Connection) -> Result<()> {
         }
     }
 
+    // 3.5. 升级旧版 5 列 assets_fts 至 6 列（含 content_text），并确保 assets_trigram_fts 存在
+    let assets_fts_cols = list_table_columns(conn, "assets_fts")?;
+    if !assets_fts_cols.is_empty() && !assets_fts_cols.iter().any(|c| c == "content_text") {
+        conn.execute_batch(
+            "DROP TRIGGER IF EXISTS assets_fts_insert;
+             DROP TRIGGER IF EXISTS assets_fts_delete;
+             DROP TRIGGER IF EXISTS assets_fts_update;
+             DROP TABLE IF EXISTS assets_fts;
+             CREATE VIRTUAL TABLE assets_fts USING fts5(
+                 path,
+                 description,
+                 desc_kv,
+                 usage,
+                 tags,
+                 content_text,
+                 content=assets,
+                 content_rowid=rowid,
+                 tokenize='unicode61 remove_diacritics 2'
+             );
+             CREATE TRIGGER assets_fts_insert AFTER INSERT ON assets BEGIN
+                 INSERT INTO assets_fts(rowid, path, description, desc_kv, usage, tags, content_text)
+                 VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.usage, NEW.tags, NEW.content_text);
+             END;
+             CREATE TRIGGER assets_fts_delete AFTER DELETE ON assets BEGIN
+                 INSERT INTO assets_fts(assets_fts, rowid, path, description, desc_kv, usage, tags, content_text)
+                 VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.usage, OLD.tags, OLD.content_text);
+             END;
+             CREATE TRIGGER assets_fts_update AFTER UPDATE ON assets BEGIN
+                 INSERT INTO assets_fts(assets_fts, rowid, path, description, desc_kv, usage, tags, content_text)
+                 VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.usage, OLD.tags, OLD.content_text);
+                 INSERT INTO assets_fts(rowid, path, description, desc_kv, usage, tags, content_text)
+                 VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.usage, NEW.tags, NEW.content_text);
+             END;
+             INSERT INTO assets_fts(assets_fts) VALUES ('rebuild');",
+        )
+        .context("升级历史 assets_fts 虚表至 6 列（含 content_text）失败")?;
+        eprintln!("[SQLite][MIGRATE] 已无损升级 assets_fts 至 6 列全文索引 (含 content_text)");
+        migrated_any = true;
+    }
+
+    let trigram_exists: bool = conn
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='assets_trigram_fts'",
+            [],
+            |r| r.get::<_, i64>(0),
+        )
+        .unwrap_or(0)
+        > 0;
+    if !trigram_exists {
+        conn.execute_batch(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS assets_trigram_fts USING fts5(
+                 path,
+                 description,
+                 desc_kv,
+                 tags,
+                 content_text,
+                 content=assets,
+                 content_rowid=rowid,
+                 tokenize='trigram'
+             );
+             CREATE TRIGGER IF NOT EXISTS assets_trigram_fts_insert AFTER INSERT ON assets BEGIN
+                 INSERT INTO assets_trigram_fts(rowid, path, description, desc_kv, tags, content_text)
+                 VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.tags, NEW.content_text);
+             END;
+             CREATE TRIGGER IF NOT EXISTS assets_trigram_fts_delete AFTER DELETE ON assets BEGIN
+                 INSERT INTO assets_trigram_fts(assets_trigram_fts, rowid, path, description, desc_kv, tags, content_text)
+                 VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.tags, OLD.content_text);
+             END;
+             CREATE TRIGGER IF NOT EXISTS assets_trigram_fts_update AFTER UPDATE ON assets BEGIN
+                 INSERT INTO assets_trigram_fts(assets_trigram_fts, rowid, path, description, desc_kv, tags, content_text)
+                 VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.tags, OLD.content_text);
+                 INSERT INTO assets_trigram_fts(rowid, path, description, desc_kv, tags, content_text)
+                 VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.tags, NEW.content_text);
+             END;
+             INSERT INTO assets_trigram_fts(assets_trigram_fts) VALUES ('rebuild');",
+        )
+        .context("创建并重建历史库 assets_trigram_fts 虚表失败")?;
+        migrated_any = true;
+    }
+
     // 4. 校验并自动修复外部内容型 FTS5 虚表与基表行计数失步（防历史库新建 FTS5 后 UPDATE 触发 SQLITE_CORRUPT_VTAB 267）
-    for (base_table, fts_table) in [
+    let mut fts_pairs: Vec<(&str, &str)> = vec![
         ("memories", "memories_fts"),
         ("assets", "assets_fts"),
         ("skills_catalog", "skills_catalog_fts"),
         ("external_services", "external_services_fts"),
-    ] {
+    ];
+    let has_trigram_now: bool = conn
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='assets_trigram_fts'",
+            [],
+            |r| r.get::<_, i64>(0),
+        )
+        .unwrap_or(0)
+        > 0;
+    if has_trigram_now {
+        fts_pairs.push(("assets", "assets_trigram_fts"));
+    }
+    for (base_table, fts_table) in fts_pairs {
         let base_cnt: i64 = conn
             .query_row(&format!("SELECT COUNT(*) FROM {}", base_table), [], |r| r.get(0))
             .unwrap_or(0);
@@ -258,6 +363,13 @@ fn reconcile_sqlite_schema_in_tx(conn: &Connection) -> Result<()> {
         params![
             2i64,
             "schema reconciler v2: canonical body column rename and missing-column self-heal"
+        ],
+    )?;
+    conn.execute(
+        "INSERT OR IGNORE INTO migrations(version, description) VALUES (?1, ?2)",
+        params![
+            3i64,
+            "schema reconciler v3: assets.content_text + 6-col assets_fts + optional assets_trigram_fts"
         ],
     )?;
     conn.execute(

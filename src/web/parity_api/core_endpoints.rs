@@ -121,13 +121,14 @@ pub fn handle_assets_search(req: &HttpRequest, storage: &dyn StorageProvider) ->
         let v = query_str(req, key, "");
         if v.trim().is_empty() { None } else { Some(v) }
     };
-    let hybrid_raw = query_str(req, "hybrid", "false");
-    let hybrid = matches!(hybrid_raw.trim().to_ascii_lowercase().as_str(), "true" | "1" | "yes");
+    let hybrid_raw = query_str(req, "hybrid", "true");
+    let hybrid = !matches!(hybrid_raw.trim().to_ascii_lowercase().as_str(), "false" | "0" | "no");
 
     let mut opts = crate::scanner::AssetSearchOptions::new(q.trim(), limit);
     opts.modality = opt_param("modality");
     opts.asset_type = opt_param("asset_type");
     opts.domain = opt_param("domain");
+    opts.scope_path = opt_param("scope_path");
     opts.kv_key = opt_param("kv_key");
     opts.kv_value = opt_param("kv_value");
     opts.kv_filter = opt_param("kv_filter");
@@ -138,6 +139,10 @@ pub fn handle_assets_search(req: &HttpRequest, storage: &dyn StorageProvider) ->
         .min(2);
     opts.fuzzy = !matches!(
         query_str(req, "fuzzy", "true").trim().to_ascii_lowercase().as_str(),
+        "false" | "0" | "no"
+    );
+    opts.use_fuzzy_index = !matches!(
+        query_str(req, "use_fuzzy_index", "true").trim().to_ascii_lowercase().as_str(),
         "false" | "0" | "no"
     );
     opts.include_links = !matches!(
@@ -157,6 +162,13 @@ pub fn handle_assets_search(req: &HttpRequest, storage: &dyn StorageProvider) ->
                             "matched_channels".to_string(),
                             serde_json::json!(h.matched_channels),
                         );
+                        obj.insert("match_tier".to_string(), serde_json::json!(h.match_tier));
+                        if let Some(ln) = h.matched_line {
+                            obj.insert("matched_line".to_string(), serde_json::json!(ln));
+                        }
+                        if let Some(ref snip) = h.matched_snippet {
+                            obj.insert("matched_snippet".to_string(), serde_json::json!(snip));
+                        }
                         if !h.matched_sections.is_empty() {
                             obj.insert(
                                 "matched_sections".to_string(),

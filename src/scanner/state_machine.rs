@@ -16,6 +16,7 @@ pub struct ScanStateMachine {
     checkpoint_batch_size: usize,
     ignore_patterns: Vec<String>,
     default_owner: String,
+    max_index_content_bytes: usize,
 }
 
 impl ScanStateMachine {
@@ -36,6 +37,7 @@ impl ScanStateMachine {
             checkpoint_batch_size: batch_size.max(1),
             ignore_patterns: cfg.assets.ignore_patterns,
             default_owner,
+            max_index_content_bytes: cfg.knowledge_graph.max_index_content_bytes.max(4096),
         })
     }
 
@@ -324,6 +326,17 @@ impl ScanStateMachine {
             let existing = self.storage.get_asset_by_path(&r.path).ok().flatten();
             let merged = crate::scanner::metadata::merge_with_existing_asset(r.clone(), existing.as_ref());
             self.storage.upsert_asset(&merged)?;
+            if merged.status == "active" && merged.asset_type != "directory" {
+                if let Some(txt) = crate::scanner::metadata::extract_indexable_content_text(
+                    Path::new(&merged.path),
+                    &merged.scan_tier,
+                    self.max_index_content_bytes,
+                ) {
+                    if let Err(e) = self.storage.update_asset_content(&merged.path, &txt) {
+                        eprintln!("[Scanner][WARN] 状态机更新正文索引失败 ({}): {}", merged.path, e);
+                    }
+                }
+            }
         }
         self.storage.update_scan_job(job)?;
         Ok(())

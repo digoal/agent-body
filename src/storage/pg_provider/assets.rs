@@ -261,6 +261,7 @@ impl PgStorageProvider {
                 tags = EXCLUDED.tags,
                 status = EXCLUDED.status,
                 embedding = CASE WHEN $14 THEN '[]' ELSE assets.embedding END,
+                content_text = CASE WHEN EXCLUDED.status = 'missing' THEN '' ELSE assets.content_text END,
                 updated_at = NOW()",
             &[
                 &asset.id,

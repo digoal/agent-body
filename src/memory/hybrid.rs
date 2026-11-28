@@ -121,6 +121,15 @@ impl HybridSearchEngine {
         for fts_m in fts_results {
             all_memories_map.insert(fts_m.id.clone(), fts_m);
         }
+        let db_fuzzy_mems = self
+            .storage
+            .search_memories_fuzzy_db(query, limit * 3)
+            .unwrap_or_default();
+        for fm in db_fuzzy_mems {
+            let next_rank = fts_ranks.len() + 1;
+            fts_ranks.entry(fm.id.clone()).or_insert(next_rank);
+            all_memories_map.entry(fm.id.clone()).or_insert(fm);
+        }
 
         // 2.5 Pure-Rust Fuzzy 模糊通道 + Know-How 知识图扩散通道（无向量时重点补偿语义断层）
         let mut fuzzy_scored: Vec<(String, f64)> = Vec::new();
@@ -160,10 +169,13 @@ impl HybridSearchEngine {
             let _wait = crate::body::WaitEventGuard::enter(crate::body::WaitEventId::CpuVectorCosine);
             let mut scored_memories: Vec<(String, f32)> = Vec::new();
 
+            const MIN_MEMORY_VEC_SIM: f32 = 0.52;
             for m in all_memories {
                 if !m.embedding.is_empty() && m.embedding.len() == q_emb.len() {
                     let sim = cosine_similarity(q_emb, &m.embedding);
-                    scored_memories.push((m.id.clone(), sim));
+                    if sim.is_finite() && sim >= MIN_MEMORY_VEC_SIM {
+                        scored_memories.push((m.id.clone(), sim));
+                    }
                 }
                 all_memories_map.insert(m.id.clone(), m);
             }

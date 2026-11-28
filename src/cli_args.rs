@@ -361,12 +361,22 @@ pub(crate) enum BodyCommands {
         #[arg(long, default_value_t = false)]
         json: bool,
     },
-    #[command(about = "立即执行一次原生实时搜索 vs agent-body 索引 A/B 对照并入库")]
+    #[command(about = "立即执行一次原生实时搜索 (rg/grep) vs agent-body 索引超集 A/B 对照并入库")]
     AbCompare {
         #[arg(help = "检索查询词")]
         query: String,
         #[arg(short, long, default_value_t = 10)]
         limit: usize,
+        #[arg(long, help = "限定对比检索路径前缀目录")]
+        scope: Option<String>,
+        #[arg(long, help = "禁用语义向量通道")]
+        no_hybrid: bool,
+        #[arg(long, help = "禁用数据库模糊通道")]
+        no_fuzzy: bool,
+        #[arg(long, help = "禁用数据库 Trigram 索引加速")]
+        no_fuzzy_index: bool,
+        #[arg(long, default_value_t = 1)]
+        graph_hops: usize,
         #[arg(long, default_value_t = false)]
         json: bool,
     },

@@ -449,14 +449,25 @@ impl McpToolRegistry {
                             .ok_or_else(|| anyhow::anyhow!("action=ab_compare 必须提供 query"))?;
                         let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
                         let cur = crate::config::Config::load_effective_or_default();
-                        let (cmp, _, _) = crate::body::ShadowAbEngine::compare_asset_search(
+                        let opts = crate::body::AbCompareOptions {
+                            scope_path: args.get("scope_path").and_then(|v| v.as_str()).map(str::to_string),
+                            hybrid: args.get("hybrid").and_then(|v| v.as_bool()).unwrap_or(true),
+                            fuzzy: args.get("fuzzy").and_then(|v| v.as_bool()).unwrap_or(true),
+                            use_fuzzy_index: args
+                                .get("use_fuzzy_index")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(cur.knowledge_graph.db_fuzzy_index),
+                            ..Default::default()
+                        };
+                        let rep = crate::body::ShadowAbEngine::compare_asset_search_detailed(
                             &self.storage,
                             &cur,
                             query,
                             limit,
+                            &opts,
                             "mcp-ab",
                         )?;
-                        Ok(serde_json::to_string_pretty(&cmp)?)
+                        Ok(serde_json::to_string_pretty(&rep)?)
                     }
                     "perf_snapshot" => {
                         let label = args.get("label").and_then(|v| v.as_str());

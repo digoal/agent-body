@@ -455,6 +455,22 @@ pub struct KnowledgeGraphConfig {
     #[serde(default = "default_kg_default_search_hops")]
     pub default_search_hops: usize,
 
+    /// 是否启用数据库侧三元组模糊索引加速 (ISSUE #56: SQLite FTS5 trigram / PG pg_trgm)
+    #[serde(default = "default_true_flag")]
+    pub db_fuzzy_index: bool,
+
+    /// 单文件入库索引正文 content_text 最大字节上限 (默认 128KB，大文件保留首尾)
+    #[serde(default = "default_kg_max_index_content_bytes")]
+    pub max_index_content_bytes: usize,
+
+    /// 语义向量召回最低余弦相似度门禁 (默认 0.58，防止弱相似无关资产充当多余噪音)
+    #[serde(default = "default_kg_min_vec_similarity")]
+    pub min_vec_similarity: f32,
+
+    /// 对严格代码标识符查询启用精准门禁 (已命中精确/模糊/FTS 时不再填充纯语义弱相关噪声)
+    #[serde(default = "default_true_flag")]
+    pub strict_identifier_vec_gate: bool,
+
     /// 自定义行业术语别名归一化映射
     #[serde(default)]
     pub aliases: std::collections::HashMap<String, String>,
@@ -488,6 +504,14 @@ pub(super) fn default_kg_default_search_hops() -> usize {
     1
 }
 
+pub(super) fn default_kg_max_index_content_bytes() -> usize {
+    131_072
+}
+
+pub(super) fn default_kg_min_vec_similarity() -> f32 {
+    0.58
+}
+
 impl Default for KnowledgeGraphConfig {
     fn default() -> Self {
         Self {
@@ -499,6 +523,10 @@ impl Default for KnowledgeGraphConfig {
             doc_link_boost: default_kg_doc_link_boost(),
             l2_extract_enabled: false,
             default_search_hops: default_kg_default_search_hops(),
+            db_fuzzy_index: default_true_flag(),
+            max_index_content_bytes: default_kg_max_index_content_bytes(),
+            min_vec_similarity: default_kg_min_vec_similarity(),
+            strict_identifier_vec_gate: default_true_flag(),
             aliases: std::collections::HashMap::new(),
         }
     }

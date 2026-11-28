@@ -102,7 +102,7 @@ impl SyncPipeline {
         }
 
         let write_res: Result<SyncCounts> = (|| {
-            // 1. assets (18 cols)
+            // 1. assets (19 cols, content_text 分析镜像不落正文)
             let mut assets_synced = 0usize;
             {
                 let mut seen_ids = HashSet::with_capacity(assets.len());
@@ -130,6 +130,7 @@ impl SyncPipeline {
                         tags,
                         a.status,
                         "[]",
+                        "",
                         now_str,
                         now_str,
                         created_ts,

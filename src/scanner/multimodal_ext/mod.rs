@@ -547,6 +547,80 @@ pub fn backfill_multimodal_assets(
     Ok(report)
 }
 
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct ContentBackfillReport {
+    pub scanned: usize,
+    pub updated: usize,
+    pub skipped_existing: usize,
+    pub skipped_non_text_or_sensitive: usize,
+    pub skipped_missing_on_disk: usize,
+    pub errors: usize,
+    pub duration_ms: u64,
+}
+
+/// 幂等回填存量活跃非黑名单文本资产的脱敏正文 `content_text` (ISSUE #56)
+pub fn backfill_asset_contents(
+    storage: &Storage,
+    max_bytes: usize,
+    limit: usize,
+    path_prefix: Option<&str>,
+    force: bool,
+) -> Result<ContentBackfillReport> {
+    let started = Instant::now();
+    let mut report = ContentBackfillReport::default();
+    let filter = crate::storage::models::AssetScalarFilter {
+        scope_path: path_prefix
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string),
+        ..Default::default()
+    };
+    let fetch_cap = if limit == 0 { 200_000 } else { limit.max(200_000) };
+    let active_assets = storage.search_assets_scalar_db(&filter, fetch_cap)?;
+    for asset in active_assets {
+        if asset.status != "active"
+            || asset.scan_tier == "shallow"
+            || asset.asset_type == "directory"
+            || asset.asset_type == "project"
+        {
+            continue;
+        }
+        if limit > 0 && report.updated >= limit {
+            break;
+        }
+        report.scanned += 1;
+        if !force {
+            if let Ok(Some(cur)) = storage.get_asset_content(&asset.path) {
+                if !cur.trim().is_empty() {
+                    report.skipped_existing += 1;
+                    continue;
+                }
+            }
+        }
+        let p = Path::new(&asset.path);
+        if !p.exists() || !p.is_file() {
+            report.skipped_missing_on_disk += 1;
+            continue;
+        }
+        let Some(txt) = crate::scanner::metadata::extract_indexable_content_text(
+            p,
+            &asset.scan_tier,
+            max_bytes.max(4096),
+        ) else {
+            report.skipped_non_text_or_sensitive += 1;
+            continue;
+        };
+        if let Err(e) = storage.update_asset_content(&asset.path, &txt) {
+            eprintln!("[ContentBackfill][WARN] 更新正文失败 ({}): {}", asset.path, e);
+            report.errors += 1;
+            continue;
+        }
+        report.updated += 1;
+    }
+    report.duration_ms = started.elapsed().as_millis() as u64;
+    Ok(report)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

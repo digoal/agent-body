@@ -328,6 +328,21 @@ async fn test_web_all_demo_scenarios_and_parity_workflows_e2e() {
             .await;
     assert_eq!(st_as, 200);
     assert!(b_as.contains("web_e2e_asset.rs"));
+    assert!(b_as.contains("\"match_tier\""));
+
+    let (st_ab_cmp, _, b_ab_cmp) = http_call(
+        port,
+        "POST",
+        "/api/v1/body/ab-compare",
+        Some("parity-tok"),
+        Some(r#"{"query":"Cargo","limit":5,"hybrid":true,"use_fuzzy_index":true}"#),
+    )
+    .await;
+    assert_eq!(st_ab_cmp, 200, "ab-compare failed: {}", b_ab_cmp);
+    assert!(b_ab_cmp.contains("\"superset_satisfied\""));
+    assert!(b_ab_cmp.contains("\"baseline_engine\""));
+    assert!(b_ab_cmp.contains("\"common_paths\""));
+    assert!(b_ab_cmp.contains("\"missed_by_body\""));
 
     let (st_br, _, b_br) =
         http_call(port, "GET", "/api/v1/brief?intent=sqlite&budget=800", None, None).await;
@@ -390,8 +405,8 @@ async fn test_web_all_demo_scenarios_and_parity_workflows_e2e() {
     );
 
     // 6. Analytics heatmap / trend / export (安全路径成功 + 非法路径 403) + Prometheus /metrics
-    let (st_hm, _, _) = http_call(port, "GET", "/api/v1/analytics/heatmap?days=7", None, None).await;
-    assert_eq!(st_hm, 200);
+    let (st_hm, _, b_hm) = http_call(port, "GET", "/api/v1/analytics/heatmap?days=7", None, None).await;
+    assert_eq!(st_hm, 200, "heatmap body: {}", b_hm);
     let (st_tr, _, _) = http_call(port, "GET", "/api/v1/analytics/trend?days=7", None, None).await;
     assert_eq!(st_tr, 200);
 

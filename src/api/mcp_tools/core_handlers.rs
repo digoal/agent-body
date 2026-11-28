@@ -119,6 +119,18 @@ impl McpToolRegistry {
                 if let Some(fz) = args.get("fuzzy").and_then(|v| v.as_bool()) {
                     search_opts.fuzzy = fz;
                 }
+                if let Some(fi) = args.get("use_fuzzy_index").and_then(|v| v.as_bool()) {
+                    search_opts.use_fuzzy_index = fi;
+                }
+                if let Some(hy) = args.get("hybrid").and_then(|v| v.as_bool()) {
+                    search_opts.hybrid = hy;
+                }
+                if let Some(sc) = args.get("scope_path").and_then(|v| v.as_str()) {
+                    let trimmed = sc.trim();
+                    if !trimmed.is_empty() {
+                        search_opts.scope_path = Some(trimmed.to_string());
+                    }
+                }
                 if let Some(lk) = args.get("include_links").and_then(|v| v.as_bool()) {
                     search_opts.include_links = lk;
                 }

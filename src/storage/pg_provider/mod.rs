@@ -46,6 +46,7 @@ impl PgStorageProvider {
 }
 
 mod assets;
+mod assets_search;
 mod audit;
 mod facts;
 mod locks;
@@ -85,6 +86,40 @@ impl StorageProvider for PgStorageProvider {
     fn list_assets(&self, limit: usize) -> Result<Vec<AssetRecord>> {
         self.impl_list_assets(limit)
     }
+    fn update_asset_content(&self, path: &str, content_text: &str) -> Result<()> {
+        self.impl_update_asset_content(path, content_text)
+    }
+    fn get_asset_content(&self, path: &str) -> Result<Option<String>> {
+        self.impl_get_asset_content(path)
+    }
+    fn search_assets_fuzzy_db(
+        &self,
+        query: &str,
+        limit: usize,
+        use_index: bool,
+        scope_path: Option<&str>,
+    ) -> Result<Vec<DbFuzzyAssetHit>> {
+        self.impl_search_assets_fuzzy_db(query, limit, use_index, scope_path)
+    }
+    fn search_assets_scalar_db(
+        &self,
+        filter: &AssetScalarFilter,
+        limit: usize,
+    ) -> Result<Vec<AssetRecord>> {
+        self.impl_search_assets_scalar_db(filter, limit)
+    }
+    fn search_assets_vector_db(
+        &self,
+        query_vec: &[f32],
+        min_sim: f32,
+        limit: usize,
+        scope_path: Option<&str>,
+    ) -> Result<Vec<(AssetRecord, f32)>> {
+        self.impl_search_assets_vector_db(query_vec, min_sim, limit, scope_path)
+    }
+    fn set_fuzzy_index_enabled(&self, enabled: bool) -> Result<bool> {
+        self.impl_set_fuzzy_index_enabled(enabled)
+    }
     fn replace_active_processes(&self, procs: &[ActiveProcessRecord]) -> Result<()> {
         self.impl_replace_active_processes(procs)
     }
@@ -96,6 +131,9 @@ impl StorageProvider for PgStorageProvider {
     }
     fn search_memories_fts(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {
         self.impl_search_memories_fts(query, limit)
+    }
+    fn search_memories_fuzzy_db(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {
+        self.impl_search_memories_fuzzy_db(query, limit)
     }
     fn list_all_active_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {
         self.impl_list_all_active_memories(limit)

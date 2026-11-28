@@ -405,6 +405,19 @@ l2_extract_enabled = false
 # 默认: 1
 default_search_hops = 1
 
+# 是否启用数据库侧三元组模糊索引加速 (SQLite FTS5 trigram / PG pg_trgm，ISSUE #56)
+# 默认: true (关闭时自动退化为纯数据库 LIKE/ILIKE 全文扫描，无损切换)
+db_fuzzy_index = true
+
+# 单文件入库索引脱敏正文 content_text 最大字节上限 (默认 131072 = 128KB，大文件保留首尾)
+max_index_content_bytes = 131072
+
+# 语义向量召回最低余弦相似度门禁 (默认 0.58，防止弱相似无关资产充当多余噪音)
+min_vec_similarity = 0.58
+
+# 对严格代码标识符查询启用精准门禁 (已命中精确/模糊/FTS 时不再填充纯语义弱相关噪声)
+strict_identifier_vec_gate = true
+
 # 自定义行业术语别名归一化映射（自动与内置 PG/FTS5/SQLite/DuckDB 等合并）
 [knowledge_graph.aliases]
 # "pgvector" = "pgvector"

@@ -26,6 +26,73 @@ pub trait StorageProvider: Send + Sync {
     fn get_asset_by_path(&self, path: &str) -> Result<Option<AssetRecord>>;
     fn search_assets_fts(&self, query: &str, limit: usize) -> Result<Vec<AssetRecord>>;
     fn list_assets(&self, limit: usize) -> Result<Vec<AssetRecord>>;
+    fn update_asset_content(&self, _path: &str, _content_text: &str) -> Result<()> {
+        Ok(())
+    }
+    fn get_asset_content(&self, _path: &str) -> Result<Option<String>> {
+        Ok(None)
+    }
+    fn search_assets_fuzzy_db(
+        &self,
+        query: &str,
+        limit: usize,
+        _use_index: bool,
+        scope_path: Option<&str>,
+    ) -> Result<Vec<DbFuzzyAssetHit>> {
+        let fts = self.search_assets_fts(query, limit)?;
+        let out = fts
+            .into_iter()
+            .filter(|a| scope_path.map(|s| a.path.starts_with(s)).unwrap_or(true))
+            .enumerate()
+            .map(|(idx, asset)| DbFuzzyAssetHit {
+                asset,
+                match_mode: "db_fuzzy_scan".to_string(),
+                rank_score: 1.0 / (idx as f64 + 1.0),
+                matched_line: None,
+                matched_snippet: None,
+            })
+            .collect();
+        Ok(out)
+    }
+    fn search_assets_scalar_db(
+        &self,
+        filter: &AssetScalarFilter,
+        limit: usize,
+    ) -> Result<Vec<AssetRecord>> {
+        let mut out = Vec::new();
+        for asset in self.list_assets(limit.saturating_mul(20).max(5000))? {
+            if asset.status != "active" {
+                continue;
+            }
+            if let Some(ref sc) = filter.scope_path {
+                if !asset.path.starts_with(sc.as_str()) {
+                    continue;
+                }
+            }
+            if let Some(ref at) = filter.asset_type {
+                if !asset.asset_type.eq_ignore_ascii_case(at) {
+                    continue;
+                }
+            }
+            out.push(asset);
+            if out.len() >= limit {
+                break;
+            }
+        }
+        Ok(out)
+    }
+    fn search_assets_vector_db(
+        &self,
+        _query_vec: &[f32],
+        _min_sim: f32,
+        _limit: usize,
+        _scope_path: Option<&str>,
+    ) -> Result<Vec<(AssetRecord, f32)>> {
+        Ok(Vec::new())
+    }
+    fn set_fuzzy_index_enabled(&self, _enabled: bool) -> Result<bool> {
+        Ok(false)
+    }
 
     // ─── Active Processes ────────────────────────────────────────────
     fn replace_active_processes(&self, procs: &[ActiveProcessRecord]) -> Result<()>;
@@ -34,6 +101,9 @@ pub trait StorageProvider: Send + Sync {
     // ─── Memories ────────────────────────────────────────────────────
     fn insert_memory(&self, mem: &MemoryRecord) -> Result<()>;
     fn search_memories_fts(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>>;
+    fn search_memories_fuzzy_db(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {
+        self.search_memories_fts(query, limit)
+    }
     fn list_all_active_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>>;
     fn list_all_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {
         self.list_all_active_memories(limit)

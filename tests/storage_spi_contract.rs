@@ -89,6 +89,38 @@ fn run_shared_spi_contract(p: &dyn StorageProvider, expected_name: &str) {
     let a_emb = p.get_asset_embedding(&asset.path).expect("get_asset_embedding");
     assert_eq!(a_emb.len(), 3);
 
+    // ISSUE #56: DB content_text + DB Fuzzy (index + scan fallback) + DB Scalar + DB Vector + Memory Fuzzy
+    p.update_asset_content(&asset.path, "fn bounded_levenshtein_contract_helper() { /* 帮倒忙测试 */ }")
+        .expect("update_asset_content");
+    assert!(p
+        .get_asset_content(&asset.path)
+        .expect("get_asset_content")
+        .unwrap_or_default()
+        .contains("bounded_levenshtein_contract_helper"));
+    let fz_idx = p
+        .search_assets_fuzzy_db("bounded_levenshtein_contract", 10, true, Some("/workspace/contract_demo"))
+        .expect("search_assets_fuzzy_db indexed");
+    assert!(fz_idx.iter().any(|h| h.asset.path == asset.path));
+    let fz_scan = p
+        .search_assets_fuzzy_db("bounded_levenshtein_contract", 10, false, Some("/workspace/contract_demo"))
+        .expect("search_assets_fuzzy_db scan");
+    assert!(fz_scan.iter().any(|h| h.asset.path == asset.path));
+    let sc_hits = p
+        .search_assets_scalar_db(
+            &agent_body::storage::AssetScalarFilter {
+                asset_type: Some("script".into()),
+                scope_path: Some("/workspace/contract_demo".into()),
+                ..Default::default()
+            },
+            10,
+        )
+        .expect("search_assets_scalar_db");
+    assert!(sc_hits.iter().any(|a| a.path == asset.path));
+    let vec_hits = p
+        .search_assets_vector_db(&[0.25, 0.5, 0.75], 0.90, 10, Some("/workspace/contract_demo"))
+        .expect("search_assets_vector_db");
+    assert!(vec_hits.iter().any(|(a, sim)| a.path == asset.path && *sim > 0.95));
+
     // 3. Active processes & Changes
     p.replace_active_processes(&[ActiveProcessRecord {
         id: "proc-contract-1".into(),

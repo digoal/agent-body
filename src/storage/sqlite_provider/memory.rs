@@ -140,6 +140,48 @@ impl SqliteStorageProvider {
     }
 
 
+    pub(super) fn impl_search_memories_fuzzy_db(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {
+        let q_trim = query.trim();
+        if q_trim.is_empty() || limit == 0 {
+            return Ok(Vec::new());
+        }
+        let conn = self.lock_conn()?;
+        let pat = format!("%{}%", super::assets_search::escape_sql_like(&q_trim.to_lowercase()));
+        let mut stmt = conn.prepare(
+            "SELECT id, type, content, summary, source_agent, source_session, tags, weight, pinned, status, embedding
+             FROM memories
+             WHERE status = 'active'
+               AND (LOWER(content) LIKE ?1 ESCAPE '\\'
+                    OR LOWER(COALESCE(summary, '')) LIKE ?1 ESCAPE '\\'
+                    OR LOWER(tags) LIKE ?1 ESCAPE '\\')
+             ORDER BY pinned DESC, weight DESC, updated_at DESC
+             LIMIT ?2",
+        )?;
+        let rows = stmt
+            .query_map(params![pat, limit as i64], |row| {
+                let tags_str: String = row.get(6)?;
+                let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
+                let emb_str: String = row.get(10)?;
+                let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+                Ok(MemoryRecord {
+                    id: row.get(0)?,
+                    memory_type: row.get(1)?,
+                    content: row.get(2)?,
+                    summary: row.get(3)?,
+                    source_agent: row.get(4)?,
+                    source_session: row.get(5)?,
+                    tags,
+                    weight: row.get(7)?,
+                    pinned: row.get(8)?,
+                    status: row.get(9)?,
+                    embedding,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+
     pub(super) fn impl_list_all_active_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {
         let conn = self.lock_conn()?;
         let mut stmt = conn.prepare(

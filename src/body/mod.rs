@@ -9,6 +9,7 @@
 
 pub mod continuity;
 pub mod envelope;
+pub mod live_search;
 pub mod manifest;
 pub mod obs_log;
 pub mod perf_awr;
@@ -17,6 +18,7 @@ pub mod vitals;
 
 pub use continuity::{ContinuityInput, ContinuityManager};
 pub use envelope::{AutonomyEnvelope, AutonomyLevel, EnvelopeDecision, EnvelopeRuleSpec};
+pub use live_search::{LiveSearchHit, LiveSearchRun};
 pub use manifest::{compute_body_id, BodyManifest, BodyManifestEngine, OrganStatus};
 pub use perf_awr::{
     flagship_metrics_json_value, render_flagship_prometheus_metrics, AddmFinding, AwrDiffReport,
@@ -25,6 +27,7 @@ pub use perf_awr::{
     WaitEventSnapshotRow,
 };
 pub use runtime_ab::{
-    AbAnalysisReport, AbKindStats, LiveAssetHit, ShadowAbComparison, ShadowAbEngine,
+    AbAnalysisReport, AbBodyHitView, AbCompareOptions, AbDetailedCompareReport, AbKindStats,
+    LiveAssetHit, ShadowAbComparison, ShadowAbEngine,
 };
 pub use vitals::{HomeostasisHealReport, HomeostasisVitals, HomeostasisVitalsEngine, VitalDimension};

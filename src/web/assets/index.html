@@ -772,7 +772,14 @@
               </div>
               <div id="body-runtime-status-box" class="mt-8"><div class="empty">正在读取运行模式与 MCP Profile 状态...</div></div>
               <div class="mt-8" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                <input id="body-ab-query" class="input input-xs flex-1" type="text" placeholder="输入检索词执行单次 Shadow A/B 实时对照 (含 H1~H5 帮倒忙诊断与写穿自愈)..." value="ShadowAbEngine" />
+                <input id="body-ab-query" class="input input-xs flex-1" style="min-width:180px;" type="text" placeholder="输入检索词执行单次 Shadow A/B 实时对照 (含不用 agent-body 的原生 rg/grep 对比与 H1~H5 诊断)..." value="ShadowAbEngine" />
+                <input id="body-ab-scope" class="input input-xs" style="width:190px;" type="text" placeholder="目录前缀 scope (可选)" />
+                <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);" title="开启语义向量融合">
+                  <input id="body-ab-hybrid" type="checkbox" checked /> 语义
+                </label>
+                <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);" title="开启数据库 Trigram 模糊索引加速">
+                  <input id="body-ab-fuzzy-idx" type="checkbox" checked /> DB索引
+                </label>
                 <button id="btn-body-ab-compare" class="btn btn-primary btn-xs">⚔️ 单次 A/B 实测</button>
                 <select id="body-ab-window" class="input input-xs" style="width:88px;">
                   <option value="24h">24h</option>

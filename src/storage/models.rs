@@ -41,6 +41,28 @@ pub struct AssetRecord {
     pub status: String,
 }
 
+/// ISSUE #56: 数据库侧标量下推过滤条件
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AssetScalarFilter {
+    pub modality: Option<String>,
+    pub asset_type: Option<String>,
+    pub domain: Option<String>,
+    pub scope_path: Option<String>,
+    pub kv_key: Option<String>,
+    pub kv_value: Option<String>,
+    pub kv_filter: Option<String>,
+}
+
+/// ISSUE #56: 数据库侧模糊检索命中项 (Trigram 索引加速或纯数据库 LIKE/ILIKE 全文扫描)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DbFuzzyAssetHit {
+    pub asset: AssetRecord,
+    pub match_mode: String, // "db_fuzzy_index" | "db_fuzzy_scan"
+    pub rank_score: f64,
+    pub matched_line: Option<usize>,
+    pub matched_snippet: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActiveProcessRecord {
     pub id: String,

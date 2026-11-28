@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS assets (
     tags            VARCHAR DEFAULT '[]',
     status          VARCHAR DEFAULT 'active',
     embedding       VARCHAR DEFAULT '[]',
+    content_text    VARCHAR DEFAULT '',
     last_scanned_at VARCHAR,
     last_modified_at VARCHAR,
     created_at      VARCHAR,

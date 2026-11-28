@@ -138,6 +138,15 @@ impl AutoSyncEngine {
         let existing = self.storage.get_asset_by_path(path_str).ok().flatten();
         let merged = crate::scanner::metadata::merge_with_existing_asset(asset_rec, existing.as_ref());
         self.storage.upsert_asset(&merged)?;
+        if let Some(txt) = crate::scanner::metadata::extract_indexable_content_text(
+            path,
+            &merged.scan_tier,
+            131_072,
+        ) {
+            if let Err(e) = self.storage.update_asset_content(path_str, &txt) {
+                eprintln!("[AutoSync][WARN] 更新正文索引失败 ({}): {}", path_str, e);
+            }
+        }
         res.asset_registered = true;
 
         // 同步刷新脚本/文档静态依赖边（保持拓扑实时新鲜）

@@ -92,7 +92,7 @@ Agent Body 不造重型 Agent Runtime、不接管大模型 ReAct 规划，而是
 - **Benchmark `v4.1` 帕累托双门禁战报**（`W1~W22` + `M1~M6` + `DQ1~DQ12` + `COMP-C1~C4` + `PR-01~16`）：
   - 覆盖 22 大真实工程负载（含 `W20` PG 18 MVCC 防丢写、`W21` 睡眠压缩 `3.73×` 与低可预测自动旁路、`W22` 快权重三门禁/定向遗忘与 `ContinuityCapsule v2` 热挂），输出带 **SHA-256 防篡改存证指纹** 与有效信息密度提升；
   - `Shadow A/B` 真世界对照面板实时捕获 `H1~H5` 帮倒忙事件并自动写穿自愈；
-- **六重确定性工程门禁与 O(1) 一等公民传导**：>1000 行生产文件清零（`0` 个）、核心自治路径 `let _ =` 清零（`0 / 15`）、全仓库零 `unwrap`/`expect` 与零 `CARGO_MANIFEST_DIR` 硬编码、微内核零业务词污染、**`make citizen-impact` + `make citizen-audit` 16 类一等公民增量交叉对齐**、**435 项全工作区自动化测试全绿**（旗舰 `387` + `kernel` `27` + `contrib` `17` + `distributions` `4`）、Playwright WebUI 9 工作台与 9 份演说无头全检。
+- **六重确定性工程门禁与 O(1) 一等公民传导**：>1000 行生产文件清零（`0` 个）、核心自治路径 `let _ =` 清零（`0 / 15`）、全仓库零 `unwrap`/`expect` 与零 `CARGO_MANIFEST_DIR` 硬编码、微内核零业务词污染、**`make citizen-impact` + `make citizen-audit` 16 类一等公民增量交叉对齐**、**440 项全工作区自动化测试全绿**（旗舰 `387` + `kernel` `27` + `contrib` `17` + `distributions` `4`）、Playwright WebUI 9 工作台与 9 份演说无头全检。
 
 ---
 

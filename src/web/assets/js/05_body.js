@@ -579,25 +579,97 @@ async function saveBodyRuntimeMode() {
   }
 }
 
+function renderSupersetAbComparisonHtml(cmp) {
+  const flags = (cmp.hindering_flags || []).length
+    ? cmp.hindering_flags.map((f) => `<span class="badge badge-warn" style="margin-right:4px;">${esc(f)}</span>`).join("")
+    : '<span class="badge badge-ok">无 H1~H5 帮倒忙</span>';
+  const supersetOk = cmp.superset_satisfied === true || (cmp.body_missed_count ?? 0) === 0;
+  const supersetBadge = supersetOk
+    ? '<span class="badge badge-ok">✅ 超集达标 (无缺失)</span>'
+    : `<span class="badge badge-err">❌ 存在缺失 (${cmp.body_missed_count})</span>`;
+  const engineName = esc(cmp.baseline_engine || "ripgrep/grep");
+  const liveHits = Array.isArray(cmp.live_hits) ? cmp.live_hits : [];
+  const bodyHits = Array.isArray(cmp.body_hits) ? cmp.body_hits : [];
+  const commonPaths = Array.isArray(cmp.common_paths) ? cmp.common_paths : [];
+  const missedHits = Array.isArray(cmp.missed_by_body) ? cmp.missed_by_body : [];
+  const extraHits = Array.isArray(cmp.extra_by_body) ? cmp.extra_by_body : [];
+
+  const renderLiveRows = liveHits.length
+    ? liveHits.map((h) => {
+        const ln = h.line_number ? `L${h.line_number}: ` : "";
+        return `<tr><td class="mono" style="font-size:11px;word-break:break-all;">${esc(h.path)}</td><td style="font-size:11px;">${esc(ln + (h.snippet || h.match_kind || ""))}</td></tr>`;
+      }).join("")
+    : '<tr><td colspan="2" class="muted-text">原生搜索无命中</td></tr>';
+
+  const renderBodyRows = bodyHits.length
+    ? bodyHits.map((b) => {
+        const ch = (b.matched_channels || []).map((c) => `<span class="badge" style="font-size:10px;margin-right:3px;">${esc(c)}</span>`).join("");
+        const tierBadge = b.match_tier === "deterministic"
+          ? '<span class="badge badge-ok" style="font-size:10px;">精确超集</span>'
+          : '<span class="badge" style="font-size:10px;">扩展</span>';
+        const snip = b.matched_snippet ? `${b.matched_line ? `L${b.matched_line}: ` : ""}${b.matched_snippet}` : "";
+        return `<tr><td class="mono" style="font-size:11px;word-break:break-all;">${esc(b.path)}<div style="margin-top:3px;">${tierBadge} ${ch}</div></td><td style="font-size:11px;"><div>score=${b.score ?? "-"}</div><div class="muted-text">${esc(snip)}</div></td></tr>`;
+      }).join("")
+    : '<tr><td colspan="2" class="muted-text">Agent Body 无命中</td></tr>';
+
+  const missedHtml = missedHits.length
+    ? missedHits.map((m) => `<div class="mono" style="font-size:11px;color:var(--err);">❌ ${esc(m.path)} (${esc(m.snippet || "")})</div>`).join("")
+    : '<div class="muted-text" style="font-size:11px;">0 缺失（原生命中全部覆盖）</div>';
+  const commonHtml = commonPaths.length
+    ? commonPaths.slice(0, 10).map((p) => `<div class="mono" style="font-size:11px;">✅ ${esc(p)}</div>`).join("")
+    : '<div class="muted-text" style="font-size:11px;">无交集</div>';
+  const extraHtml = extraHits.length
+    ? extraHits.slice(0, 12).map((e) => `<div class="mono" style="font-size:11px;">➕ ${esc(e.path)} <span class="badge" style="font-size:10px;">${esc((e.matched_channels || []).join("+"))}</span></div>`).join("")
+    : '<div class="muted-text" style="font-size:11px;">0 额外扩展（严格精准无多余）</div>';
+
+  return `<div class="item-box">
+    <div class="item-top">
+      <strong>⚔️ 超集 A/B 对照实测: <span class="mono">${esc(cmp.query)}</span></strong>
+      <div>${supersetBadge} <span class="badge">${esc(cmp.verdict)} (healed=${cmp.auto_healed_count ?? 0})</span></div>
+    </div>
+    <div class="summary-kpi-row mt-8">
+      <div class="summary-kpi"><span class="sk-label">不用 Body (${engineName})</span><span class="sk-val">${cmp.live_hit_count} 命中 · ${(cmp.live_elapsed_us / 1000).toFixed(1)}ms · ${cmp.live_tokens}tok</span></div>
+      <div class="summary-kpi"><span class="sk-label">使用 Body (Omni-RRF)</span><span class="sk-val c-cyan">${cmp.body_hit_count} 命中 · ${(cmp.body_elapsed_us / 1000).toFixed(1)}ms · ${cmp.body_tokens}tok</span></div>
+      <div class="summary-kpi"><span class="sk-label">相对原生召回</span><span class="sk-val ${supersetOk ? "c-green" : "c-orange"}">${cmp.recall_vs_live_pct}%</span></div>
+      <div class="summary-kpi"><span class="sk-label">缺失 / 扩展</span><span class="sk-val">${missedHits.length} 漏 / ${extraHits.length} 扩</span></div>
+    </div>
+    <div class="mt-8">${flags} · <span class="muted-text">${esc(cmp.reason || "")}</span></div>
+    <div class="grid-2 mt-8">
+      <div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:4px;">🗂️ 不用 agent-body (${engineName} 原生模糊全文)</div>
+        <table class="data-table"><thead><tr><th>路径</th><th>命中行与片段</th></tr></thead><tbody>${renderLiveRows}</tbody></table>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:4px;">🧠 使用 agent-body (DB Fuzzy + BM25 + 向量/图谱 RRF)</div>
+        <table class="data-table"><thead><tr><th>路径与通道</th><th>RRF 评分与摘要</th></tr></thead><tbody>${renderBodyRows}</tbody></table>
+      </div>
+    </div>
+    <div class="grid-3 mt-8" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">
+      <div class="card" style="padding:8px;"><strong>✅ 共同命中 (${commonPaths.length})</strong><div class="mt-4">${commonHtml}</div></div>
+      <div class="card" style="padding:8px;"><strong>❌ Body 缺失 (${missedHits.length})</strong><div class="mt-4">${missedHtml}</div></div>
+      <div class="card" style="padding:8px;"><strong>➕ Body 独有扩展 (${extraHits.length})</strong><div class="mt-4">${extraHtml}</div></div>
+    </div>
+  </div>`;
+}
+
 async function runBodyAbCompare() {
   const query = document.getElementById("body-ab-query")?.value?.trim() || "";
+  const scope_path = document.getElementById("body-ab-scope")?.value?.trim() || "";
+  const hybrid = document.getElementById("body-ab-hybrid")?.checked !== false;
+  const use_fuzzy_index = document.getElementById("body-ab-fuzzy-idx")?.checked !== false;
   const cmpBox = document.getElementById("body-ab-compare-box");
   if (!query) {
     showToast("请输入对照检索词 query", true);
     return;
   }
-  mirrorBlackScreen(`agent-body body ab-compare "${query}" --limit 10`, "body_state", { action: "ab_compare", query, limit: 10 });
+  const payload = { query, limit: 15, hybrid, fuzzy: true, use_fuzzy_index };
+  if (scope_path) payload.scope_path = scope_path;
+  const cliCmd = `agent-body body ab-compare "${query}" --limit 15${scope_path ? ` --scope "${scope_path}"` : ""}${!hybrid ? " --no-hybrid" : ""}${!use_fuzzy_index ? " --no-fuzzy-index" : ""}`;
+  mirrorBlackScreen(cliCmd, "body_state", { action: "ab_compare", ...payload });
   try {
-    const cmp = await apiPost("/api/v1/body/ab-compare", { query, limit: 10 });
+    const cmp = await apiPost("/api/v1/body/ab-compare", payload);
     if (cmpBox) {
-      const flags = (cmp.hindering_flags || []).length
-        ? cmp.hindering_flags.map((f) => `<span class="badge badge-warn" style="margin-right:4px;">${esc(f)}</span>`).join("")
-        : '<span class="badge badge-ok">无 H1~H5 帮倒忙</span>';
-      cmpBox.innerHTML = `<div class="item-box">
-        <div class="item-top"><strong>⚔️ 单次 A/B 实测: <span class="mono">${esc(cmp.query)}</span></strong><span class="badge">${esc(cmp.verdict)} (healed=${cmp.auto_healed_count ?? 0})</span></div>
-        <div class="mt-8">${flags} · live=${cmp.live_elapsed_us}μs/${cmp.live_hit_count}hits vs body=${cmp.body_elapsed_us}μs/${cmp.body_hit_count}hits · recall=${cmp.recall_vs_live_pct}% · stale=${cmp.body_stale_count}</div>
-        <div class="muted-text mt-4">${esc(cmp.reason || "")}</div>
-      </div>`;
+      cmpBox.innerHTML = renderSupersetAbComparisonHtml(cmp);
     }
     await loadBodyRuntimeAndAb();
   } catch (e) {

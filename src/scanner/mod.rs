@@ -1,6 +1,7 @@
 pub mod matcher;
 pub mod state_machine;
 pub mod importance;
+pub mod content_extract;
 pub mod metadata;
 pub mod redactor;
 pub mod multimodal;
@@ -12,13 +13,14 @@ pub mod ollama_annotator;
 pub use state_machine::ScanStateMachine;
 pub use importance::{ImportanceScorer, NoiseFilter, ImportanceScore};
 pub use metadata::{
-    DetailLevel, ExtractedMetadata, HeuristicMetadataExtractor, SecretRedactor,
-    format_asset_line, merge_with_existing_asset, project_asset_view,
+    extract_indexable_content_text, format_asset_line, merge_with_existing_asset,
+    project_asset_view, DetailLevel, ExtractedMetadata, HeuristicMetadataExtractor, SecretRedactor,
 };
 pub use multimodal::infer_modality;
 pub use multimodal_ext::{
-    backfill_multimodal_assets, classify_asset_path, matches_kv_filters, parse_kv_filters,
-    AssetClassification, KvOp, KvPredicate, MultimodalBackfillReport,
+    backfill_asset_contents, backfill_multimodal_assets, classify_asset_path, matches_kv_filters,
+    parse_kv_filters, AssetClassification, ContentBackfillReport, KvOp, KvPredicate,
+    MultimodalBackfillReport,
 };
 pub use asset_search::{AssetSearchEngine, AssetSearchHit, AssetSearchOptions, format_search_results};
 pub use ollama_annotator::{EnrichReport, EnrichedSample, OllamaAnnotator};
@@ -53,6 +55,7 @@ pub struct Scanner {
     noise_filter: NoiseFilter,
     ignore_patterns: Vec<String>,
     default_owner: String,
+    max_index_content_bytes: usize,
 }
 
 impl Scanner {
@@ -66,6 +69,7 @@ impl Scanner {
         ignore_patterns: Vec<String>,
         default_owner: String,
     ) -> Result<Self> {
+        let cfg = crate::config::Config::load_effective_or_default();
         let policies = storage.get_scan_policies()?;
         let matcher = PolicyMatcher::from_policies(&policies)?;
         let noise_filter = NoiseFilter::with_ignore_patterns(ignore_patterns.clone());
@@ -75,6 +79,7 @@ impl Scanner {
             noise_filter,
             ignore_patterns,
             default_owner,
+            max_index_content_bytes: cfg.knowledge_graph.max_index_content_bytes.max(4096),
         })
     }
 
@@ -89,6 +94,7 @@ impl Scanner {
             noise_filter,
             ignore_patterns: cfg.assets.ignore_patterns,
             default_owner,
+            max_index_content_bytes: cfg.knowledge_graph.max_index_content_bytes.max(4096),
         })
     }
 
@@ -105,6 +111,7 @@ impl Scanner {
             noise_filter,
             ignore_patterns: cfg.assets.ignore_patterns,
             default_owner,
+            max_index_content_bytes: cfg.knowledge_graph.max_index_content_bytes.max(4096),
         })
     }
 
@@ -284,6 +291,17 @@ impl Scanner {
             let existing = self.storage.get_asset_by_path(&r.path).ok().flatten();
             let merged = merge_with_existing_asset(r.clone(), existing.as_ref());
             self.storage.upsert_asset(&merged)?;
+            if merged.status == "active" && merged.asset_type != "directory" {
+                if let Some(txt) = extract_indexable_content_text(
+                    Path::new(&merged.path),
+                    &merged.scan_tier,
+                    self.max_index_content_bytes,
+                ) {
+                    if let Err(e) = self.storage.update_asset_content(&merged.path, &txt) {
+                        eprintln!("[Scanner][WARN] 更新正文索引失败 ({}): {}", merged.path, e);
+                    }
+                }
+            }
         }
         Ok(())
     }

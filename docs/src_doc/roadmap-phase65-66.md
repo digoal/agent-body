@@ -12,7 +12,7 @@
 | **DQ2 口径一致 + DQ6 防截断** | `DQ2` 展示目标 `99.0%` 与通过门槛 `95.0%` 打架；`DQ6` 因 `list_all_fact_edges(5000)` 在 157k 边库截断，报告工程节点连通 `0/12` | `DQ2` 统一常量 `DQ2_TARGET_PCT = 95.0`；`DQ6` 对未命中采样边的 `project:*` 节点走 `traverse_fact_graph(&p.id, 1)` 索引定向核查并补充单测 | [`src/benchmark/dq.rs`](../../src/benchmark/dq.rs) |
 | **五维稳态 `vitals` 防截断** | 感官清晰度因 `list_all_fact_edges(4000)` 截断误报 `60.0 [critical]` | 对未出现在采样边中的 `project:*` 节点补充 `traverse_fact_graph(pid, 1)` 索引核查并新增单测 | [`src/body/vitals.rs`](../../src/body/vitals.rs) |
 | **`expand_graph_for_query` 降延迟** | 每次代码词检索对子词执行 55k 节点 `LIKE` 全表扫描 + Hub 2 跳爆炸（`257ms` -> 触发 `H3_LATENCY_DRAG`） | `get_fact_node(&tid)` 主键命中时跳过 `find_fact_nodes_by_name`；复合代码标识符优先精确节点锚定；1-hop `edge_cnt <= 40` 才进 2-hop | [`src/fact/knowledge_graph.rs`](../../src/fact/knowledge_graph.rs) |
-| **`AssetSearchEngine` & `ShadowAbEngine` 精准提速** | 复合代码标识符 `ShadowAbEngine` 被含单子词 `"engine"` 的旧文档挤出 Top-K；循环内重复构造 `AliasCanonicalizer` | 抽出 `PreparedFuzzyQuery` 预计算；对复合代码词单子词命中降权并引入强权重 `exact_id` RRF 通道；`ShadowAbEngine` 对代码词聚焦 1-hop 图扩散 | [`src/scanner/asset_search.rs`](../../src/scanner/asset_search.rs), [`src/body/runtime_ab.rs`](../../src/body/runtime_ab.rs) |
+| **`AssetSearchEngine` & `ShadowAbEngine` 精准提速** | 复合代码标识符 `ShadowAbEngine` 被含单子词 `"engine"` 的旧文档挤出 Top-K；循环内重复构造 `AliasCanonicalizer` | 抽出 `PreparedFuzzyQuery` 预计算；对复合代码词单子词命中降权并引入强权重 `exact_id` RRF 通道；`ShadowAbEngine` 对代码词聚焦 1-hop 图扩散 | [`src/scanner/asset_search.rs`](../../src/scanner/asset_search/mod.rs), [`src/body/runtime_ab.rs`](../../src/body/runtime_ab.rs) |
 
 ---
 

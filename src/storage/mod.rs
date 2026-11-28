@@ -359,6 +359,46 @@ impl Storage {
         self.provider.list_assets(limit)
     }
 
+    pub fn update_asset_content(&self, path: &str, content_text: &str) -> Result<()> {
+        self.provider.update_asset_content(path, content_text)
+    }
+
+    pub fn get_asset_content(&self, path: &str) -> Result<Option<String>> {
+        self.provider.get_asset_content(path)
+    }
+
+    pub fn search_assets_fuzzy_db(
+        &self,
+        query: &str,
+        limit: usize,
+        use_index: bool,
+        scope_path: Option<&str>,
+    ) -> Result<Vec<DbFuzzyAssetHit>> {
+        self.provider.search_assets_fuzzy_db(query, limit, use_index, scope_path)
+    }
+
+    pub fn search_assets_scalar_db(
+        &self,
+        filter: &AssetScalarFilter,
+        limit: usize,
+    ) -> Result<Vec<AssetRecord>> {
+        self.provider.search_assets_scalar_db(filter, limit)
+    }
+
+    pub fn search_assets_vector_db(
+        &self,
+        query_vec: &[f32],
+        min_sim: f32,
+        limit: usize,
+        scope_path: Option<&str>,
+    ) -> Result<Vec<(AssetRecord, f32)>> {
+        self.provider.search_assets_vector_db(query_vec, min_sim, limit, scope_path)
+    }
+
+    pub fn set_fuzzy_index_enabled(&self, enabled: bool) -> Result<bool> {
+        self.provider.set_fuzzy_index_enabled(enabled)
+    }
+
     // ─── Active Processes ────────────────────────────────────────────
 
     pub fn replace_active_processes(&self, procs: &[ActiveProcessRecord]) -> Result<()> {
@@ -387,6 +427,10 @@ impl Storage {
 
     pub fn search_memories_fts(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {
         self.provider.search_memories_fts(query, limit)
+    }
+
+    pub fn search_memories_fuzzy_db(&self, query: &str, limit: usize) -> Result<Vec<MemoryRecord>> {
+        self.provider.search_memories_fuzzy_db(query, limit)
     }
 
     pub fn list_all_active_memories(&self, limit: usize) -> Result<Vec<MemoryRecord>> {

@@ -342,6 +342,7 @@ impl SqliteStorageProvider {
                 tags = excluded.tags,
                 status = excluded.status,
                 embedding = CASE WHEN ?14 != 0 THEN '[]' ELSE assets.embedding END,
+                content_text = CASE WHEN excluded.status = 'missing' THEN '' ELSE assets.content_text END,
                 updated_at = strftime('%Y-%m-%dT%H:%M:%f+00:00','now')",
             params![
                 asset.id,
@@ -410,7 +411,7 @@ impl SqliteStorageProvider {
              FROM assets_fts f
              JOIN assets a ON f.rowid = a.rowid
              WHERE assets_fts MATCH ?1 AND a.status = 'active'
-             ORDER BY bm25(assets_fts, 4.0, 2.5, 2.0, 1.5, 2.0)
+             ORDER BY bm25(assets_fts, 10.0, 5.0, 3.0, 2.0, 4.0, 1.0)
              LIMIT ?2"
         )?;
 

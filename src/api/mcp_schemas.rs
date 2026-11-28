@@ -140,59 +140,73 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_asset_search",
-                "description": "全文检索与语义搜索宿主机已纳管的代码、工具、项目、文档及配置资产（支持 micro/standard/full 三级渐进式 Token 披露）。",
+                "description": "全文检索与语义搜索宿主机已纳管资产（支持 micro/standard/full 三级渐进披露）。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "搜索关键词或自然语言描述"
+                            "description": "搜索关键词或自然语言"
                         },
                         "limit": {
                             "type": "integer",
                             "default": 10,
-                            "description": "最多返回结果数"
+                            "description": "最多返回条数"
                         },
                         "detail_level": {
                             "type": "string",
                             "enum": ["micro", "standard", "full"],
                             "default": "standard",
-                            "description": "元数据披露粒度: micro(~25 tok) | standard(~85 tok, 剥离管线噪音) | full(~180 tok, 含完整desc_kv)"
+                            "description": "披露粒度: micro(~25t)|standard(~85t)|full(~180t)"
                         },
                         "modality": {
                             "type": "string",
                             "enum": ["image", "audio", "video", "pdf", "office", "dataset", "code", "document", "config", "media", "other"],
-                            "description": "按多模态类别过滤 (image/audio/video/pdf/office/dataset/code 等)"
+                            "description": "多模态类别过滤"
                         },
                         "asset_type": {
                             "type": "string",
-                            "description": "按资产类型过滤 (script/document/dataset/config/media/other)"
+                            "description": "资产类型 (script/document/dataset/config/media/other)"
                         },
                         "domain": {
                             "type": "string",
-                            "description": "按业务领域过滤 (如 web_dashboard, storage_engine, asset_scanner)"
+                            "description": "业务领域过滤"
                         },
                         "kv_key": {
                             "type": "string",
-                            "description": "要求 desc_kv 中存在指定结构化键 (如 table_names, columns, dimensions, page_count)"
+                            "description": "要求 desc_kv 含指定键"
                         },
                         "kv_value": {
                             "type": "string",
-                            "description": "要求 desc_kv（或 kv_key 对应值）包含指定关键词子串"
+                            "description": "要求 desc_kv 含指定子串"
                         },
                         "kv_filter": {
                             "type": "string",
-                            "description": "多谓词结构化过滤表达式 (如 \"importance_score>=0.7,modality=document;has:doc_title\")"
+                            "description": "多谓词过滤 (如 importance_score>=0.7,modality=document)"
                         },
                         "graph_hops": {
                             "type": "integer",
                             "default": 1,
-                            "description": "Omni-RRF 知识网络扩散跳数 (0 关闭 | 1 | 2)"
+                            "description": "知识网络扩散跳数 (0|1|2)"
                         },
                         "fuzzy": {
                             "type": "boolean",
                             "default": true,
-                            "description": "是否启用纯 Rust 模糊容错匹配通道"
+                            "description": "DB 模糊容错匹配"
+                        },
+                        "use_fuzzy_index": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "DB Trigram 索引加速 (false 退化 LIKE)"
+                        },
+                        "hybrid": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "语义向量 RRF 融合"
+                        },
+                        "scope_path": {
+                            "type": "string",
+                            "description": "可选：限定检索路径前缀目录 (对标 rg <query> <dir>)"
                         },
                         "include_links": {
                             "type": "boolean",

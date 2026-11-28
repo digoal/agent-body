@@ -404,7 +404,7 @@ pub(crate) fn ops_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_state",
-                "description": "Agent 本体中枢（宿主机具身底座，第 43 原生工具）：提供本体身份证与六器官自省 (manifest)、五维稳态生命体征 (vitals)、四级自治权限包络评估 (envelope)、跨大脑工作态接力胶囊保存与恢复 (handoff_save/handoff_resume)、L1 稳态反射自愈 (heal)、多本体联邦名片发现 (peers)、三态运行模式与真实 A/B 对照 (runtime_mode/ab_report/ab_compare)、OpenMetrics/JSON 实时指标 (metrics) 以及内生等待事件与 AWR 快照/报告库管理与 ADDM 自调优 (perf_snapshot/perf_awr/perf_snapshots/perf_reports/perf_delete/perf_tune)。",
+                "description": "Agent 本体中枢（第 43 原生工具）：自省(manifest)、体征(vitals)、权限包络(envelope)、接力胶囊(handoff_save/handoff_resume)、自愈(heal)、联邦名片(peers)、运行模式与 A/B 对照(runtime_mode/ab_report/ab_compare)、指标(metrics)及 AWR/ADDM 调优(perf_snapshot/perf_awr/perf_snapshots/perf_reports/perf_delete/perf_tune)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -414,45 +414,48 @@ pub(crate) fn ops_tool_schemas() -> Vec<Value> {
                             "default": "manifest",
                             "description": "操作类型"
                         },
-                        "format": { "type": "string", "enum": ["prometheus", "json"], "default": "prometheus", "description": "action=metrics 时输出格式" },
-                        "mode": { "type": "string", "enum": ["body_only", "bypass", "shadow_ab"], "description": "action=runtime_mode 时设置运行模式" },
-                        "shadow_primary": { "type": "string", "enum": ["live", "body"], "description": "action=runtime_mode 时设置 shadow_ab 主响应侧" },
-                        "mcp_profile": { "type": "string", "enum": ["core", "dev", "ops", "full"], "description": "action=runtime_mode 时设置 MCP Schema 暴露档位" },
-                        "query": { "type": "string", "description": "action=ab_compare 时待对照的检索查询词" },
-                        "window": { "type": "string", "enum": ["24h", "7d", "30d", "all"], "default": "7d", "description": "action=ab_report 时回溯统计窗口" },
-                        "from_brain": { "type": "string", "description": "发起接力的大脑标识 (如 antigravity / claude-code / codex)" },
+                        "format": { "type": "string", "enum": ["prometheus", "json"], "default": "prometheus", "description": "metrics 输出格式" },
+                        "mode": { "type": "string", "enum": ["body_only", "bypass", "shadow_ab"], "description": "runtime_mode 模式" },
+                        "shadow_primary": { "type": "string", "enum": ["live", "body"], "description": "shadow_ab 主响应侧" },
+                        "mcp_profile": { "type": "string", "enum": ["core", "dev", "ops", "full"], "description": "MCP Schema 档位" },
+                        "query": { "type": "string", "description": "ab_compare 检索查询词" },
+                        "scope_path": { "type": "string", "description": "ab_compare 目录前缀" },
+                        "hybrid": { "type": "boolean", "default": true, "description": "ab_compare 语义向量" },
+                        "use_fuzzy_index": { "type": "boolean", "default": true, "description": "ab_compare Trigram 索引" },
+                        "window": { "type": "string", "enum": ["24h", "7d", "30d", "all"], "default": "7d", "description": "ab_report 窗口" },
+                        "from_brain": { "type": "string", "description": "发起接力的大脑标识" },
                         "session_id": { "type": "string", "description": "当前会话 ID" },
-                        "goal_summary": { "type": "string", "description": "handoff_save 必填：当前核心目标摘要" },
+                        "goal_summary": { "type": "string", "description": "handoff_save 目标摘要" },
                         "active_files": {
                             "type": "array",
                             "items": { "type": "string" },
-                            "description": "正在处理的核心文件路径列表"
+                            "description": "核心文件路径"
                         },
                         "verified_facts": {
                             "type": "array",
                             "items": { "type": "string" },
-                            "description": "已核实的关键物理事实"
+                            "description": "已核实事实"
                         },
                         "open_blockers": {
                             "type": "array",
                             "items": { "type": "string" },
-                            "description": "尚未解决的阻塞项"
+                            "description": "未解决阻塞项"
                         },
-                        "next_step_hint": { "type": "string", "description": "下一步行动建议" },
-                        "checkpoint_id": { "type": "string", "description": "handoff_resume 时指定接力胶囊 ID（留空恢复最新）" },
-                        "base_model_id": { "type": "string", "description": "Phase 78 ContinuityCapsule v2：基座模型 ID（保存时绑定，恢复时校验同基座热挂/异构自动回退文本胶囊）" },
-                        "fast_weight_snapshot_id": { "type": "string", "description": "handoff_save 可选：显式绑定快权重快照 UUID（留空自动探测活跃快照）" },
-                        "check_action": { "type": "string", "description": "action=envelope 时待评估的动作名" },
-                        "target": { "type": "string", "description": "action=envelope 时待评估的目标路径或资源" },
-                        "dry_run": { "type": "boolean", "default": true, "description": "action=envelope 时是否处于 dry_run 预览" },
-                        "label": { "type": "string", "description": "action=perf_snapshot 时快照标签" },
-                        "set_baseline": { "type": "boolean", "default": false, "description": "action=perf_snapshot 时是否将该快照设为 Golden Baseline 黄金性能基准" },
-                        "snap_a": { "type": "string", "description": "action=perf_awr 时基准快照 ID（留空默认用 baseline）" },
-                        "snap_b": { "type": "string", "description": "action=perf_awr 时目标快照 ID（留空默认抓取当前最新态）" },
-                        "report_id": { "type": "string", "description": "action=perf_awr 时直接查看已保存的历史 AWR 报告 ID" },
-                        "vs_baseline": { "type": "boolean", "default": true, "description": "action=perf_awr 时是否对比黄金基线" },
-                        "target_kind": { "type": "string", "enum": ["auto", "snapshot", "report"], "default": "auto", "description": "action=perf_delete 时待删除对象类型" },
-                        "target_id": { "type": "string", "description": "action=perf_delete 时待删除的快照或 AWR 报告 ID" },
+                        "next_step_hint": { "type": "string", "description": "下一步建议" },
+                        "checkpoint_id": { "type": "string", "description": "恢复指定胶囊 ID" },
+                        "base_model_id": { "type": "string", "description": "ContinuityCapsule v2 基座模型 ID" },
+                        "fast_weight_snapshot_id": { "type": "string", "description": "快权重快照 UUID" },
+                        "check_action": { "type": "string", "description": "envelope 动作名" },
+                        "target": { "type": "string", "description": "envelope 目标路径" },
+                        "dry_run": { "type": "boolean", "default": true, "description": "envelope dry_run 预览" },
+                        "label": { "type": "string", "description": "perf_snapshot 标签" },
+                        "set_baseline": { "type": "boolean", "default": false, "description": "设为黄金基准" },
+                        "snap_a": { "type": "string", "description": "基准快照 ID" },
+                        "snap_b": { "type": "string", "description": "目标快照 ID" },
+                        "report_id": { "type": "string", "description": "AWR 报告 ID" },
+                        "vs_baseline": { "type": "boolean", "default": true, "description": "对比黄金基线" },
+                        "target_kind": { "type": "string", "enum": ["auto", "snapshot", "report"], "default": "auto", "description": "perf_delete 对象类型" },
+                        "target_id": { "type": "string", "description": "perf_delete 对象 ID" },
                         "limit": { "type": "integer", "default": 20 }
                     }
                 }

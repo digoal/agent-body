@@ -20,7 +20,7 @@
 1. **硬截断丢失主体语义**：[src/memory/embedding.rs](../../src/memory/embedding.rs) 的 `EmbeddingClient::embed_text` 对入模文本执行 `chars().take(2000)` 硬截断；[src/scanner/ollama_annotator.rs](../../src/scanner/ollama_annotator.rs) 的文本摘录默认上限仅 `1200` 字符（长篇研报/架构文档后 80% 完全盲区），且缺乏章节感知（Heading-Aware）切分与父/兄上下文回溯。
 2. **图谱本体局限于物理与工程拓扑**：[src/storage/schema.sql](../../src/storage/schema.sql) 中 `fact_nodes.node_type` 受 `CHECK` 约束仅允许 7 种物理/工程类节点（`project`/`tool`/`port`/`service`/`cron`/`file`/`authoritative_site`），`fact_edges.relation` 仅限 12 种工程边——缺少「概念、行业术语、原子 Know-How 因果论断、适用边界、文档章节」节点及对应的语义关系。
 3. **L3 语义边反向强依赖小向量**：[src/fact/semantic_discovery.rs](../../src/fact/semantic_discovery.rs) 的 `L3_SEMANTIC` 挖掘依赖本地 Embedding 余弦相似度 `>= 0.78`。当宿主机无向量模型（如未拉取 `nomic-embed-text`）或小模型发生语义塌缩时，隐式语义网直接归零。
-4. **检索引擎检索维度单一且 0-Hop**：[src/memory/hybrid.rs](../../src/memory/hybrid.rs) (`HybridSearchEngine`) 与 [src/scanner/asset_search.rs](../../src/scanner/asset_search.rs) (`AssetSearchEngine`) 当前仅做 **FTS5 默认排序 + 单向量余弦 2 路 RRF**：
+4. **检索引擎检索维度单一且 0-Hop**：[src/memory/hybrid.rs](../../src/memory/hybrid.rs) (`HybridSearchEngine`) 与 [src/scanner/asset_search.rs](../../src/scanner/asset_search/mod.rs) (`AssetSearchEngine`) 当前仅做 **FTS5 默认排序 + 单向量余弦 2 路 RRF**：
    - 未启用 FTS5 字段加权 `bm25(...)` 与驼峰/蛇形拆词（本机 `shadow_ab` 实测已暴露 `ShadowAbEngine` 0 命中回退）；
    - 缺少 **模糊查询**（错别字/短语碎片/中文未分词子串 n-gram）；
    - 事实标量（时效 `mtime_secs`、重要度 `importance_score`、权威清单权重、`domain`/`modality`）尚未参与排序调制；

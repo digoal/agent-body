@@ -139,6 +139,15 @@ impl ChangeHandler {
                         let existing = self.storage.get_asset_by_path(&path_str).ok().flatten();
                         let merged = crate::scanner::metadata::merge_with_existing_asset(record, existing.as_ref());
                         self.storage.upsert_asset(&merged)?;
+                        if let Some(txt) = crate::scanner::metadata::extract_indexable_content_text(
+                            &event.path,
+                            &merged.scan_tier,
+                            131_072,
+                        ) {
+                            if let Err(e) = self.storage.update_asset_content(&path_str, &txt) {
+                                eprintln!("[Watcher][WARN] 更新正文索引失败 ({}): {}", path_str, e);
+                            }
+                        }
 
                         if tier == "deep" {
                             let links_engine = crate::links::LinksEngine::new(std::sync::Arc::new(self.storage.clone()));

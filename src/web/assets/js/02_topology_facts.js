@@ -1236,8 +1236,9 @@ function renderFactsTab() {
   } else {
     el.innerHTML = `
       <div class="inline-bar" style="flex-wrap:wrap;gap:6px;">
-        <input id="asset-search-q" class="input flex-1" style="min-width:200px;" type="text" value="${esc(q)}" placeholder="Omni-RRF 检索纳管资产 (BM25/模糊/图谱/层级/互链)..." />
-        <select id="asset-modality" class="input input-sm" style="width:105px;" title="按多模态过滤">
+        <input id="asset-search-q" class="input flex-1" style="min-width:190px;" type="text" value="${esc(q)}" placeholder="超集多路检索 (DB Fuzzy/BM25/向量/图谱/标量/互链)..." />
+        <input id="asset-scope-path" class="input input-sm" style="width:165px;" type="text" placeholder="目录范围 scope (可选)" />
+        <select id="asset-modality" class="input input-sm" style="width:100px;" title="按多模态过滤">
           <option value="">全模态</option>
           <option value="document">document</option>
           <option value="code">code</option>
@@ -1249,7 +1250,7 @@ function renderFactsTab() {
           <option value="audio">audio</option>
           <option value="video">video</option>
         </select>
-        <select id="asset-type-filter" class="input input-sm" style="width:100px;" title="按资产类别过滤">
+        <select id="asset-type-filter" class="input input-sm" style="width:95px;" title="按资产类别过滤">
           <option value="">全类别</option>
           <option value="document">document</option>
           <option value="script">script</option>
@@ -1258,24 +1259,31 @@ function renderFactsTab() {
           <option value="media">media</option>
           <option value="other">other</option>
         </select>
-        <input id="asset-kv-filter" class="input input-sm" style="width:210px;" type="text" placeholder="KV过滤 (如 schema_version=2.0,has:doc_title)" />
-        <select id="asset-detail-level" class="input input-sm" style="width:100px;" title="Token 披露粒度">
+        <input id="asset-kv-filter" class="input input-sm" style="width:185px;" type="text" placeholder="KV过滤 (如 schema_version=2.0)" />
+        <select id="asset-detail-level" class="input input-sm" style="width:92px;" title="Token 披露粒度">
           <option value="standard">standard</option>
           <option value="micro">micro</option>
           <option value="full">full</option>
         </select>
-        <select id="asset-graph-hops" class="input input-sm" style="width:90px;" title="知识图扩散跳数">
+        <select id="asset-graph-hops" class="input input-sm" style="width:86px;" title="知识图扩散跳数">
           <option value="1">1-hop 图</option>
           <option value="2">2-hop 图</option>
           <option value="0">0-hop 图</option>
         </select>
         <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
-          <input id="asset-fuzzy" type="checkbox" checked /> Fuzzy
+          <input id="asset-fuzzy" type="checkbox" checked /> DB Fuzzy
+        </label>
+        <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);" title="数据库 Trigram 模糊索引加速">
+          <input id="asset-fuzzy-index" type="checkbox" checked /> 索引加速
+        </label>
+        <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);" title="开启语义向量 RRF 融合">
+          <input id="asset-hybrid" type="checkbox" checked /> 语义
         </label>
         <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;color:var(--muted);">
           <input id="asset-include-links" type="checkbox" checked /> Links
         </label>
         <button id="btn-asset-search" class="btn btn-primary btn-xs">🔍 检索资产</button>
+        <button id="btn-asset-ab-compare" class="btn btn-ghost btn-xs" title="与不使用 agent-body 的原生 rg/grep 逐项对照">⚔️ 对比不用Body (rg/grep)</button>
       </div>
       <div class="inline-bar" style="flex-wrap:wrap;gap:6px;">
         <input id="asset-scan-path" class="input flex-1" style="min-width:200px;" type="text" value="" placeholder="待扫描目录绝对路径" />
@@ -1304,57 +1312,109 @@ function renderFactsTab() {
       <div id="asset-panel-out"><div class="muted-text">正在加载资产列表...</div></div>
     `;
     document.getElementById("btn-asset-search")?.addEventListener("click", loadAssetsPanel);
+    document.getElementById("btn-asset-ab-compare")?.addEventListener("click", compareAssetsVsNative);
     document.getElementById("btn-asset-scan")?.addEventListener("click", scanAssetFromWeb);
     document.getElementById("btn-asset-reg")?.addEventListener("click", registerAssetFromWeb);
     loadAssetsPanel();
   }
 }
 
+async function compareAssetsVsNative() {
+  const query = document.getElementById("asset-search-q")?.value?.trim() || "";
+  const scope_path = document.getElementById("asset-scope-path")?.value?.trim() || "";
+  const modality = document.getElementById("asset-modality")?.value || "";
+  const asset_type = document.getElementById("asset-type-filter")?.value || "";
+  const kv_filter = document.getElementById("asset-kv-filter")?.value || "";
+  const graph_hops = Number(document.getElementById("asset-graph-hops")?.value || "1");
+  const fuzzy = document.getElementById("asset-fuzzy")?.checked !== false;
+  const use_fuzzy_index = document.getElementById("asset-fuzzy-index")?.checked !== false;
+  const hybrid = document.getElementById("asset-hybrid")?.checked !== false;
+  const include_links = document.getElementById("asset-include-links")?.checked !== false;
+  const out = document.getElementById("asset-panel-out");
+  if (!out) return;
+  if (!query) {
+    out.innerHTML = '<div class="empty">请先在上方输入检索词，再对比原生 rg/grep 与 Agent Body</div>';
+    return;
+  }
+  out.innerHTML = '<div class="muted-text">正在双轨实测: 不用 agent-body (原生 rg/grep) vs 使用 agent-body (Omni-RRF)...</div>';
+  const payload = { query, limit: 25, fuzzy, use_fuzzy_index, hybrid, graph_hops, include_links };
+  if (scope_path) payload.scope_path = scope_path;
+  if (modality) payload.modality = modality;
+  if (asset_type) payload.asset_type = asset_type;
+  if (kv_filter) payload.kv_filter = kv_filter;
+  mirrorBlackScreen(
+    `agent-body body ab-compare "${query}" --limit 25${scope_path ? ` --scope "${scope_path}"` : ""}${!hybrid ? " --no-hybrid" : ""}${!use_fuzzy_index ? " --no-fuzzy-index" : ""}`,
+    "body_state",
+    { action: "ab_compare", ...payload }
+  );
+  try {
+    const cmp = await apiPost("/api/v1/body/ab-compare", payload);
+    out.innerHTML = typeof renderSupersetAbComparisonHtml === "function"
+      ? renderSupersetAbComparisonHtml(cmp)
+      : `<pre class="md-pre">${esc(JSON.stringify(cmp, null, 2))}</pre>`;
+  } catch (e) {
+    out.innerHTML = `<div class="empty">对比失败: ${esc(e.message)}</div>`;
+  }
+}
+
 async function loadAssetsPanel() {
   const q = document.getElementById("asset-search-q")?.value || "";
+  const scopePath = document.getElementById("asset-scope-path")?.value?.trim() || "";
   const modality = document.getElementById("asset-modality")?.value || "";
   const assetType = document.getElementById("asset-type-filter")?.value || "";
   const kvFilter = document.getElementById("asset-kv-filter")?.value || "";
   const detail = document.getElementById("asset-detail-level")?.value || "standard";
   const graphHops = document.getElementById("asset-graph-hops")?.value || "1";
   const fuzzy = document.getElementById("asset-fuzzy")?.checked !== false;
+  const useFuzzyIndex = document.getElementById("asset-fuzzy-index")?.checked !== false;
+  const hybrid = document.getElementById("asset-hybrid")?.checked !== false;
   const includeLinks = document.getElementById("asset-include-links")?.checked !== false;
   const out = document.getElementById("asset-panel-out");
   if (!out) return;
   try {
     const params = new URLSearchParams({
       q, limit: "50", detail, graph_hops: graphHops,
-      fuzzy: String(fuzzy), include_links: String(includeLinks),
+      fuzzy: String(fuzzy), use_fuzzy_index: String(useFuzzyIndex),
+      hybrid: String(hybrid), include_links: String(includeLinks),
     });
+    if (scopePath) params.set("scope_path", scopePath);
     if (modality) params.set("modality", modality);
     if (assetType) params.set("asset_type", assetType);
     if (kvFilter) params.set("kv_filter", kvFilter);
     const list = await apiGet(`/api/v1/assets/search?${params.toString()}`);
     const cliParts = [`agent-body asset search "${q}" --detail ${detail} --graph-hops ${graphHops}`];
+    if (scopePath) cliParts.push(`--scope "${scopePath}"`);
     if (modality) cliParts.push(`--modality ${modality}`);
     if (assetType) cliParts.push(`--asset-type ${assetType}`);
     if (kvFilter) cliParts.push(`--kv-filter "${kvFilter}"`);
+    if (!hybrid) cliParts.push("--no-hybrid");
     if (!fuzzy) cliParts.push("--no-fuzzy");
+    if (!useFuzzyIndex) cliParts.push("--no-fuzzy-index");
     if (!includeLinks) cliParts.push("--no-links");
-    const mcpArgs = { query: q, limit: 50, detail_level: detail, graph_hops: Number(graphHops), fuzzy, include_links: includeLinks };
+    const mcpArgs = { query: q, limit: 50, detail_level: detail, graph_hops: Number(graphHops), fuzzy, use_fuzzy_index: useFuzzyIndex, hybrid, include_links: includeLinks };
+    if (scopePath) mcpArgs.scope_path = scopePath;
     if (modality) mcpArgs.modality = modality;
     if (assetType) mcpArgs.asset_type = assetType;
     if (kvFilter) mcpArgs.kv_filter = kvFilter;
     mirrorBlackScreen(cliParts.join(" "), "body_asset_search", mcpArgs);
-    out.innerHTML = `<table class="data-table"><thead><tr><th>类型 / 域 / 通道</th><th>路径</th><th>核心用途、匹配章节与推理路径</th></tr></thead><tbody>` +
+    out.innerHTML = `<table class="data-table"><thead><tr><th>类型 / 域 / 通道</th><th>路径</th><th>核心用途、匹配行片段与推理路径</th></tr></thead><tbody>` +
       (list || []).map((a) => {
         const typ = a.type || a.asset_type || "other";
         const kv = a.desc_kv || {};
         const domain = a.domain || kv.domain || "-";
         const purpose = a.purpose || kv.purpose || a.description || "-";
         const caps = Array.isArray(kv.capabilities) ? kv.capabilities.map((c) => `<span class="badge badge-ok" style="margin-right:4px;">${esc(c)}</span>`).join("") : "";
+        const tierBadge = a.match_tier === "deterministic"
+          ? '<span class="badge badge-ok" style="margin-right:3px;font-size:10px;">超集精确</span>'
+          : (a.match_tier === "expansion" ? '<span class="badge" style="margin-right:3px;font-size:10px;">扩展</span>' : "");
         const channels = Array.isArray(a.matched_channels) ? a.matched_channels.map((ch) => `<span class="badge" style="margin-right:3px;font-size:10px;">${esc(ch)}</span>`).join("") : "";
+        const hitLine = a.matched_snippet ? `<div class="mono" style="font-size:11px;color:var(--ok);margin-top:3px;">📍 ${a.matched_line ? `L${a.matched_line}: ` : ""}${esc(a.matched_snippet)}</div>` : "";
         const symsArr = kv.symbols || kv.headings || kv.config_sections || [];
         const syms = Array.isArray(symsArr) && symsArr.length ? `<div class="mono" style="font-size:11px;color:var(--muted);margin-top:3px;">符号/章节: ${esc(symsArr.slice(0, 5).join(", "))}</div>` : "";
         const secs = Array.isArray(a.matched_sections) && a.matched_sections.length ? `<div style="font-size:11px;color:var(--accent);margin-top:3px;">📌 片段: ${esc(a.matched_sections[0])}</div>` : "";
         const rpaths = Array.isArray(a.reasoning_paths) && a.reasoning_paths.length ? `<div class="mono" style="font-size:11px;color:var(--muted);margin-top:2px;">🕸️ 推理: ${esc(a.reasoning_paths.slice(0, 2).join(" | "))}</div>` : "";
         const modelBadge = kv.annotation_model ? `<span class="badge">${esc(kv.annotation_model)}</span>` : "";
-        return `<tr><td><span class="badge">${esc(typ)}</span> <span class="badge">${esc(domain)}</span> ${modelBadge}<div style="margin-top:4px;">${channels}</div></td><td class="mono">${esc(a.path)}</td><td><div>${esc(purpose)}</div><div style="margin-top:3px;">${caps}</div>${syms}${secs}${rpaths}</td></tr>`;
+        return `<tr><td><span class="badge">${esc(typ)}</span> <span class="badge">${esc(domain)}</span> ${modelBadge}<div style="margin-top:4px;">${tierBadge}${channels}</div></td><td class="mono">${esc(a.path)}</td><td><div>${esc(purpose)}</div>${hitLine}<div style="margin-top:3px;">${caps}</div>${syms}${secs}${rpaths}</td></tr>`;
       }).join("") + `</tbody></table>`;
   } catch (e) {
     out.innerHTML = `<div class="empty">${esc(e.message)}</div>`;

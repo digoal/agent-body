@@ -1,7 +1,7 @@
 # 07 — 数据模型（Data Model · 演进总览与设计基线）
 
 > **生产实时 DDL 真相源（v1.1.0）**：
-> - SQLite 嵌入式主库（**27 张实体与 FTS5 虚表**）：[src/storage/schema.sql](../../src/storage/schema.sql)（含 `body_checkpoints` Phase 76~78 `tx_epoch` / `fast_weight_snapshot_id` / `fast_weight_base_model` 无损演化列）
+> - SQLite 嵌入式主库（**28 张实体与 FTS5 虚表**）：[src/storage/schema.sql](../../src/storage/schema.sql)（含 `body_checkpoints` Phase 76~78 `tx_epoch` / `fast_weight_snapshot_id` / `fast_weight_base_model` 无损演化列）
 > - PostgreSQL 协同集群版（**21 张核心表**）：[src/storage/pg_schema.sql](../../src/storage/pg_schema.sql)
 > - PostgreSQL 事务级海马体周边扩展（**4 张独立 `ext_mem_pg_tx__*` 表**）：[contrib/mem_pg_tx/src/schema.rs](../../contrib/mem_pg_tx/src/schema.rs)（`events` / `segments` / `fast_weight_snapshots` / `compaction_jobs`）
 > - DuckDB OLAP 分析与增量副本（**22 张列存表**）：[src/storage/duckdb_schema.sql](../../src/storage/duckdb_schema.sql)
@@ -15,7 +15,7 @@
 
 Agent Body 的默认持久化数据存放在单机 SQLite 数据库（`~/.agent-body/body.db`），同时通过 88 方法 `StorageProvider` SPI 支持热迁移与同步至 PostgreSQL 和 DuckDB：
 
-- **SQLite (`schema.sql`, 27 张表/虚表)**：
+- **SQLite (`schema.sql`, 28 张表/虚表)**：
   - 系统配置与状态：`config`, `migrations`（注：AWR 快照/报告与优化状态以 `awr:*` 键存入 `system_meta`/KV 迁移表，与用户记忆严格隔离）
   - 资产与扫描：`assets`, `assets_fts` (FTS5), `placement_rules`, `scan_policies`, `scan_jobs`, `links`, `changes`
   - 记忆与检索：`memories`, `memories_fts` (FTS5)

@@ -164,6 +164,8 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                     mine_knowledge,
                     extract_knowhow,
                     backfill_multimodal,
+                    backfill_content,
+                    backfill_limit,
                 } => {
                     println!("正在执行分级颗粒度扫描: {:?}", path);
                     let scanner = Scanner::new(storage.clone())?;
@@ -238,6 +240,20 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                             bf.scanned, bf.upgraded, bf.skipped_existing, bf.skipped_missing_on_disk, bf.duration_ms
                         );
                     }
+                    if backfill_content {
+                        let prefix = path.to_string_lossy().to_string();
+                        let cb = agent_body::scanner::backfill_asset_contents(
+                            &storage,
+                            cfg.knowledge_graph.max_index_content_bytes,
+                            backfill_limit,
+                            Some(&prefix),
+                            false,
+                        )?;
+                        println!(
+                            "📄 正文内容与 DB Fuzzy 索引回填完成: scanned={} | updated={} | skipped_existing={} | non_text_or_sensitive={} | missing={} | 耗时={}ms",
+                            cb.scanned, cb.updated, cb.skipped_existing, cb.skipped_non_text_or_sensitive, cb.skipped_missing_on_disk, cb.duration_ms
+                        );
+                    }
                 }
                 AssetCommands::Search {
                     query,
@@ -252,6 +268,8 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                     no_hybrid,
                     graph_hops,
                     no_fuzzy,
+                    no_fuzzy_index,
+                    scope,
                     no_links,
                 } => {
                     let t0 = std::time::Instant::now();
@@ -266,6 +284,10 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                     opts.hybrid = !no_hybrid;
                     opts.graph_hops = graph_hops.min(2);
                     opts.fuzzy = !no_fuzzy;
+                    if no_fuzzy_index {
+                        opts.use_fuzzy_index = false;
+                    }
+                    opts.scope_path = scope;
                     opts.include_links = !no_links;
                     let hits = agent_body::scanner::AssetSearchEngine::search(
                         storage.provider().as_ref(),

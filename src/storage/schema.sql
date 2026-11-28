@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS assets (
     tags            TEXT DEFAULT '[]',
     status          TEXT DEFAULT 'active' CHECK (status IN ('active','archived','missing')),
     embedding       TEXT DEFAULT '[]',
+    content_text    TEXT NOT NULL DEFAULT '',
     last_scanned_at TEXT,
     last_modified_at TEXT,
     created_at      TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f+00:00','now')),
@@ -101,26 +102,55 @@ CREATE VIRTUAL TABLE IF NOT EXISTS assets_fts USING fts5(
     desc_kv,
     usage,
     tags,
+    content_text,
     content=assets,
     content_rowid=rowid,
     tokenize='unicode61 remove_diacritics 2'
 );
 
 CREATE TRIGGER IF NOT EXISTS assets_fts_insert AFTER INSERT ON assets BEGIN
-    INSERT INTO assets_fts(rowid, path, description, desc_kv, usage, tags)
-    VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.usage, NEW.tags);
+    INSERT INTO assets_fts(rowid, path, description, desc_kv, usage, tags, content_text)
+    VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.usage, NEW.tags, NEW.content_text);
 END;
 
 CREATE TRIGGER IF NOT EXISTS assets_fts_delete AFTER DELETE ON assets BEGIN
-    INSERT INTO assets_fts(assets_fts, rowid, path, description, desc_kv, usage, tags)
-    VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.usage, OLD.tags);
+    INSERT INTO assets_fts(assets_fts, rowid, path, description, desc_kv, usage, tags, content_text)
+    VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.usage, OLD.tags, OLD.content_text);
 END;
 
 CREATE TRIGGER IF NOT EXISTS assets_fts_update AFTER UPDATE ON assets BEGIN
-    INSERT INTO assets_fts(assets_fts, rowid, path, description, desc_kv, usage, tags)
-    VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.usage, OLD.tags);
-    INSERT INTO assets_fts(rowid, path, description, desc_kv, usage, tags)
-    VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.usage, NEW.tags);
+    INSERT INTO assets_fts(assets_fts, rowid, path, description, desc_kv, usage, tags, content_text)
+    VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.usage, OLD.tags, OLD.content_text);
+    INSERT INTO assets_fts(rowid, path, description, desc_kv, usage, tags, content_text)
+    VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.usage, NEW.tags, NEW.content_text);
+END;
+
+CREATE VIRTUAL TABLE IF NOT EXISTS assets_trigram_fts USING fts5(
+    path,
+    description,
+    desc_kv,
+    tags,
+    content_text,
+    content=assets,
+    content_rowid=rowid,
+    tokenize='trigram'
+);
+
+CREATE TRIGGER IF NOT EXISTS assets_trigram_fts_insert AFTER INSERT ON assets BEGIN
+    INSERT INTO assets_trigram_fts(rowid, path, description, desc_kv, tags, content_text)
+    VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.tags, NEW.content_text);
+END;
+
+CREATE TRIGGER IF NOT EXISTS assets_trigram_fts_delete AFTER DELETE ON assets BEGIN
+    INSERT INTO assets_trigram_fts(assets_trigram_fts, rowid, path, description, desc_kv, tags, content_text)
+    VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.tags, OLD.content_text);
+END;
+
+CREATE TRIGGER IF NOT EXISTS assets_trigram_fts_update AFTER UPDATE ON assets BEGIN
+    INSERT INTO assets_trigram_fts(assets_trigram_fts, rowid, path, description, desc_kv, tags, content_text)
+    VALUES ('delete', OLD.rowid, OLD.path, OLD.description, OLD.desc_kv, OLD.tags, OLD.content_text);
+    INSERT INTO assets_trigram_fts(rowid, path, description, desc_kv, tags, content_text)
+    VALUES (NEW.rowid, NEW.path, NEW.description, NEW.desc_kv, NEW.tags, NEW.content_text);
 END;
 
 CREATE TABLE IF NOT EXISTS placement_rules (

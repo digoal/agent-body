@@ -715,6 +715,15 @@ pub fn handle_body_ab_report(req: &HttpRequest, storage: Arc<dyn StorageProvider
 pub struct BodyAbCompareBody {
     pub query: Option<String>,
     pub limit: Option<usize>,
+    pub scope_path: Option<String>,
+    pub hybrid: Option<bool>,
+    pub fuzzy: Option<bool>,
+    pub use_fuzzy_index: Option<bool>,
+    pub graph_hops: Option<usize>,
+    pub include_links: Option<bool>,
+    pub modality: Option<String>,
+    pub asset_type: Option<String>,
+    pub kv_filter: Option<String>,
 }
 
 pub fn handle_body_ab_compare(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
@@ -732,17 +741,28 @@ pub fn handle_body_ab_compare(req: &HttpRequest, storage: Arc<dyn StorageProvide
     }
     let limit = body.limit.unwrap_or(10).clamp(1, 50);
     let cfg = Config::load_effective_or_default();
+    let opts = crate::body::AbCompareOptions {
+        scope_path: body.scope_path.filter(|s| !s.trim().is_empty()),
+        hybrid: body.hybrid.unwrap_or(true),
+        fuzzy: body.fuzzy.unwrap_or(true),
+        use_fuzzy_index: body.use_fuzzy_index.unwrap_or(cfg.knowledge_graph.db_fuzzy_index),
+        graph_hops: body.graph_hops.unwrap_or(1).min(2),
+        include_links: body.include_links.unwrap_or(true),
+        modality: body.modality.filter(|s| !s.trim().is_empty()),
+        asset_type: body.asset_type.filter(|s| !s.trim().is_empty()),
+        kv_filter: body.kv_filter.filter(|s| !s.trim().is_empty()),
+    };
     let st = Storage::new(storage.clone());
-    match crate::body::ShadowAbEngine::compare_asset_search(&st, &cfg, &q, limit, "web-ab") {
-        Ok((cmp, _, _)) => {
+    match crate::body::ShadowAbEngine::compare_asset_search_detailed(&st, &cfg, &q, limit, &opts, "web-ab") {
+        Ok(rep) => {
             crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
                 storage.as_ref(),
                 "web",
                 "body_state",
-                &cmp.verdict,
+                &rep.comparison.verdict,
                 t0.elapsed().as_micros() as i64,
             );
-            WebResponse::success(cmp)
+            WebResponse::success(rep)
         }
         Err(e) => WebResponse::error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }

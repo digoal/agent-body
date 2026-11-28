@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+pub use crate::scanner::content_extract::extract_indexable_content_text;
 use serde_json::{json, Map, Value};
 use crate::scanner::importance::ImportanceScore;
 use crate::storage::models::AssetRecord;

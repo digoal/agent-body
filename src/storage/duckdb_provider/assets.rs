@@ -256,6 +256,7 @@ impl DuckDbStorageProvider {
                 tags = excluded.tags,
                 status = excluded.status,
                 embedding = CASE WHEN ?14 THEN '[]' ELSE assets.embedding END,
+                content_text = CASE WHEN excluded.status = 'missing' THEN '' ELSE assets.content_text END,
                 updated_at = excluded.updated_at",
             params![
                 asset.id,

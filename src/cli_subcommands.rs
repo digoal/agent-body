@@ -459,6 +459,12 @@ pub(crate) enum AssetCommands {
 
         #[arg(long, help = "幂等升级存量 other 误判或旧版 schema 资产的多模态元数据")]
         backfill_multimodal: bool,
+
+        #[arg(long, help = "幂等回填存量活跃文本资产的脱敏正文 content_text (ISSUE #56，支持 --backfill-limit)")]
+        backfill_content: bool,
+
+        #[arg(long, default_value_t = 0, help = "正文回填最多处理条数 (0 表示扫描前缀下全部缺失正文的资产)")]
+        backfill_limit: usize,
     },
 
     #[command(about = "全文与语义搜索资产（支持多模态、领域与 KV 过滤及 Omni-RRF 多路融合检索）")]
@@ -496,8 +502,14 @@ pub(crate) enum AssetCommands {
         #[arg(long, default_value_t = 1, help = "知识网络扩散跳数 (0 | 1 | 2)")]
         graph_hops: usize,
 
-        #[arg(long, help = "禁用纯 Rust 模糊容错通道")]
+        #[arg(long, help = "禁用数据库侧模糊容错检索通道")]
         no_fuzzy: bool,
+
+        #[arg(long, help = "禁用数据库侧 Trigram 索引加速（退化为纯数据库 LIKE 扫描）")]
+        no_fuzzy_index: bool,
+
+        #[arg(long, help = "限定搜索路径前缀目录 (对标 rg <query> <dir>)")]
+        scope: Option<String>,
 
         #[arg(long, help = "禁用 links 文档互链扩展通道")]
         no_links: bool,

@@ -843,15 +843,39 @@ pub fn handle_governance(cmd: Commands, cfg: &Config, storage: Storage) -> Resul
                         }
                     }
                 }
-                BodyCommands::AbCompare { query, limit, json } => {
-                    let (cmp, _, _) = agent_body::body::ShadowAbEngine::compare_asset_search(
+                BodyCommands::AbCompare {
+                    query,
+                    limit,
+                    scope,
+                    no_hybrid,
+                    no_fuzzy,
+                    no_fuzzy_index,
+                    graph_hops,
+                    json,
+                } => {
+                    let opts = agent_body::body::AbCompareOptions {
+                        scope_path: scope,
+                        hybrid: !no_hybrid,
+                        fuzzy: !no_fuzzy,
+                        use_fuzzy_index: if no_fuzzy_index {
+                            false
+                        } else {
+                            cfg.knowledge_graph.db_fuzzy_index
+                        },
+                        graph_hops: graph_hops.min(2),
+                        include_links: true,
+                        ..Default::default()
+                    };
+                    let rep = agent_body::body::ShadowAbEngine::compare_asset_search_detailed(
                         &storage,
                         cfg,
                         &query,
                         limit,
+                        &opts,
                         "cli-ab",
                     )?;
-                    let out = serde_json::to_string_pretty(&cmp)?;
+                    let cmp = &rep.comparison;
+                    let out = serde_json::to_string_pretty(&rep)?;
                     agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         storage.provider().as_ref(),
                         "cli",
@@ -863,8 +887,10 @@ pub fn handle_governance(cmd: Commands, cfg: &Config, storage: Storage) -> Resul
                         println!("{}", out);
                     } else {
                         println!(
-                            "⚖️ Shadow A/B 单次实测 (`{}`): verdict={} | live={}μs/{}hits/{}tok vs body={}μs/{}hits/{}tok | recall={:.1}% | stale={}",
+                            "⚖️ Shadow A/B 单次实测 (`{}` | baseline={} | superset={}): verdict={} | live={}μs/{}hits/{}tok vs body={}μs/{}hits/{}tok | recall={:.1}% | missed={} | extra={}",
                             cmp.query,
+                            rep.baseline_engine,
+                            if rep.superset_satisfied { "PASS(100%)" } else { "MISS" },
                             cmp.verdict,
                             cmp.live_elapsed_us,
                             cmp.live_hit_count,
@@ -873,9 +899,22 @@ pub fn handle_governance(cmd: Commands, cfg: &Config, storage: Storage) -> Resul
                             cmp.body_hit_count,
                             cmp.body_tokens,
                             cmp.recall_vs_live_pct,
-                            cmp.body_stale_count
+                            rep.missed_by_body.len(),
+                            rep.extra_by_body.len()
                         );
                         println!("  结论: {}", cmp.reason);
+                        if !rep.missed_by_body.is_empty() {
+                            println!("  ❌ 原生命中但 Body 缺失:");
+                            for m in &rep.missed_by_body {
+                                println!("     - {} ({})", m.path, m.snippet);
+                            }
+                        }
+                        if !rep.extra_by_body.is_empty() {
+                            println!("  ➕ Body 独有扩展 ({}):", rep.extra_by_body.len());
+                            for ex in rep.extra_by_body.iter().take(10) {
+                                println!("     - {} [{} | {}]", ex.path, ex.match_tier, ex.matched_channels.join("+"));
+                            }
+                        }
                     }
                 }
             }
