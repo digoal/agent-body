@@ -418,6 +418,18 @@ min_vec_similarity = 0.58
 # 对严格代码标识符查询启用精准门禁 (已命中精确/模糊/FTS 时不再填充纯语义弱相关噪声)
 strict_identifier_vec_gate = true
 
+# Relate 嵌入式 openCypher 图谱引擎 (contrib/graph_relate + librelate_ffi.so v2)
+# 默认: false（保持零额外运行时依赖；开启后可通过 `links relate-sync` 同步并加速多跳推演）
+relate_enabled = false
+# Relate 图库存储路径（留空默认 {data_dir}/graph.rl）
+# relate_db_path = "~/.agent-body/graph.rl"
+# 可选显式指定 librelate_ffi.so 路径（留空按 RELATE_LIB -> /usr/local/lib -> /usr/lib 探测）
+# relate_lib_path = "/usr/local/lib/librelate_ffi.so"
+relate_timeout_ms = 5000
+relate_max_rows = 200
+# 当 librelate_ffi.so 不可用或未同步时是否自动无损回退 SQLite/PG
+relate_fallback_to_sqlite = true
+
 # 自定义行业术语别名归一化映射（自动与内置 PG/FTS5/SQLite/DuckDB 等合并）
 [knowledge_graph.aliases]
 # "pgvector" = "pgvector"

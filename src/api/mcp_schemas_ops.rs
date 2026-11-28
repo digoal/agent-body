@@ -18,6 +18,10 @@ pub(crate) fn ops_tool_schemas() -> Vec<Value> {
                             "enum": ["auto", "capability", "port", "automation", "impact", "repo", "doc", "graph", "all"],
                             "default": "auto",
                             "description": "事实类别过滤，留空或 auto 为智能识别"
+                        },
+                        "cypher": {
+                            "type": "string",
+                            "description": "可选只读 openCypher 查询语句（启用 knowledge_graph.relate_enabled 时在嵌入式 Relate 图库上执行）"
                         }
                     },
                     "required": ["query"]

@@ -16,6 +16,7 @@ dependencies = [
  "chrono",
  "clap",
  "duckdb",
+ "ext-graph-relate",
  "ext-mem-pg-tx",
  "globset",
  "notify",
@@ -796,6 +797,20 @@ dependencies = [
  "agent-body-kernel",
  "agent-body-sdk",
  "anyhow",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "ext-graph-relate"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-sdk",
+ "anyhow",
+ "chrono",
+ "libc",
  "serde",
  "serde_json",
  "tempfile",

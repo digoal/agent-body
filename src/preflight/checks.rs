@@ -591,6 +591,45 @@ impl PreflightChecker {
         }
     }
 
+    /// 探活 `ext-graph-relate` (`librelate_ffi.so` v2) 嵌入式图引擎可用性
+    pub fn check_relate_graph_probe(report: &mut PreflightReport, config: &crate::config::Config) {
+        if !config.knowledge_graph.relate_enabled {
+            return;
+        }
+        let kg = &config.knowledge_graph;
+        let probe = ext_graph_relate::RelateGraphEngine::probe_library(kg.relate_lib_path.as_deref());
+        if probe.available {
+            report.add(CheckItem {
+                name: "Relate 图引擎 (librelate_ffi)".to_string(),
+                category: CheckCategory::Optional,
+                status: CheckStatus::Pass,
+                message: probe.detail,
+                remedy: None,
+            });
+        } else {
+            let (category, status) = if kg.relate_fallback_to_sqlite {
+                (CheckCategory::Optional, CheckStatus::Warn)
+            } else {
+                (CheckCategory::Required, CheckStatus::Fail)
+            };
+            let suffix = if kg.relate_fallback_to_sqlite {
+                "（已开启 relate_fallback_to_sqlite=true，将自动无损回退 SQLite/PG）"
+            } else {
+                "（relate_fallback_to_sqlite=false，Relate 图查询将被阻断）"
+            };
+            report.add(CheckItem {
+                name: "Relate 图引擎 (librelate_ffi)".to_string(),
+                category,
+                status,
+                message: format!("{}{}", probe.detail, suffix),
+                remedy: Some(
+                    "构建安装 /usr/local/lib/librelate_ffi.so 或设置环境变量 RELATE_LIB"
+                        .to_string(),
+                ),
+            });
+        }
+    }
+
     /// 探活 Phase 78 旁路快权重 Model Runtime JSON-RPC 2.0 端点
     fn check_fast_weight_runtime(
         report: &mut PreflightReport,

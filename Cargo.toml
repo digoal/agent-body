@@ -35,6 +35,9 @@ postgres = { version = "0.19", features = ["with-chrono-0_4", "with-serde_json-1
 # Phase 76 (路线 3): 独立周边 PostgreSQL 事务级海马体扩展包 (单向依赖 body-sdk，0 内核污染)
 ext-mem-pg-tx = { path = "contrib/mem_pg_tx" }
 
+# 独立周边嵌入式 openCypher 图谱扩展包 (dlopen librelate_ffi.so v2，0 内核污染)
+ext-graph-relate = { path = "contrib/graph_relate" }
+
 # 系统信息采集与进程监控
 sysinfo = "0.30"
 

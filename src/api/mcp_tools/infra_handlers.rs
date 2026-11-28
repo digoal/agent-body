@@ -159,6 +159,40 @@ impl McpToolRegistry {
             }
 
             "body_fact_query" => {
+                if let Some(cypher) = args
+                    .get("cypher")
+                    .and_then(|v| v.as_str())
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                {
+                    let cfg = crate::config::Config::load_effective_or_default();
+                    if !cfg.knowledge_graph.relate_enabled {
+                        return Ok(serde_json::to_string_pretty(&serde_json::json!({
+                            "ok": false,
+                            "reason": "Relate 嵌入式图谱引擎未启用",
+                            "hint": "请在 config.toml 中设置 [knowledge_graph] relate_enabled = true 并执行 `agent-body links relate-sync`"
+                        }))?);
+                    }
+                    let mut relate_cfg = cfg.resolve_relate_config();
+                    relate_cfg.read_only = true;
+                    match ext_graph_relate::RelateGraphEngine::open(relate_cfg) {
+                        Ok(eng) => {
+                            let val = crate::links::relate_bridge::RelateGraphBridge::query_readonly_json(
+                                &eng,
+                                cypher,
+                                Some(cfg.knowledge_graph.relate_max_rows),
+                            )?;
+                            return Ok(serde_json::to_string_pretty(&val)?);
+                        }
+                        Err(e) => {
+                            return Ok(serde_json::to_string_pretty(&serde_json::json!({
+                                "ok": false,
+                                "reason": format!("打开 Relate 图库失败: {}", e),
+                                "hint": "请确认已安装 librelate_ffi.so 且已运行 `agent-body links relate-sync` 初始化图库"
+                            }))?);
+                        }
+                    }
+                }
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("all");
                 let fact_type = args.get("fact_type").and_then(|v| v.as_str()).unwrap_or("auto");
                 crate::fact::FactFacade::query_facts(fact_type, query)

@@ -683,7 +683,49 @@ impl Config {
                 self.knowledge_graph.pmi_threshold
             );
         }
+        if self.knowledge_graph.relate_timeout_ms == 0 {
+            anyhow::bail!("knowledge_graph.relate_timeout_ms 必须大于 0");
+        }
+        if self.knowledge_graph.relate_max_rows == 0 {
+            anyhow::bail!("knowledge_graph.relate_max_rows 必须大于 0");
+        }
         Ok(())
+    }
+
+    /// 解析 Relate 图谱扩展运行配置
+    pub fn resolve_relate_config(&self) -> ext_graph_relate::RelateGraphConfig {
+        let db_path = self
+            .knowledge_graph
+            .relate_db_path
+            .clone()
+            .unwrap_or_else(|| self.data_dir.join("graph.rl"));
+        ext_graph_relate::RelateGraphConfig {
+            db_path: db_path.to_string_lossy().into_owned(),
+            lib_path: self.knowledge_graph.relate_lib_path.clone(),
+            read_only: false,
+            timeout_ms: self.knowledge_graph.relate_timeout_ms,
+            max_rows: self.knowledge_graph.relate_max_rows,
+            namespace: "neo4j".to_string(),
+        }
+    }
+
+    /// 按配置尝试打开 Relate 图谱引擎；`relate_enabled=false` 时返回 `Ok(None)`，
+    /// 打开失败且 `relate_fallback_to_sqlite=true` 时优雅降级返回 `Ok(None)`
+    pub fn try_open_relate_graph(&self) -> Result<Option<ext_graph_relate::RelateGraphEngine>> {
+        if !self.knowledge_graph.relate_enabled {
+            return Ok(None);
+        }
+        let cfg = self.resolve_relate_config();
+        match ext_graph_relate::RelateGraphEngine::open(cfg) {
+            Ok(eng) => Ok(Some(eng)),
+            Err(e) => {
+                if self.knowledge_graph.relate_fallback_to_sqlite {
+                    Ok(None)
+                } else {
+                    Err(e)
+                }
+            }
+        }
     }
 }
 

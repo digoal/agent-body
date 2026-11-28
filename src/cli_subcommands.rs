@@ -406,6 +406,42 @@ pub(crate) enum LinksCommands {
         #[arg(help = "待查询的微观符号/函数/类名称 (可选)")]
         symbol: Option<String>,
     },
+
+    #[command(about = "探测 Relate FFI 嵌入式图引擎可用性与图库统计")]
+    RelateStatus {
+        #[arg(long, help = "可选 Relate 图库路径（默认使用配置中的 graph.rl）")]
+        db: Option<String>,
+
+        #[arg(long, help = "可选显式 librelate_ffi.so 路径")]
+        lib: Option<String>,
+    },
+
+    #[command(about = "将主存储资产与关联图谱增量同步至 Relate 图库")]
+    RelateSync {
+        #[arg(long, help = "可选 Relate 图库路径（默认使用配置中的 graph.rl）")]
+        db: Option<String>,
+
+        #[arg(long, help = "可选显式 librelate_ffi.so 路径")]
+        lib: Option<String>,
+    },
+
+    #[command(about = "在 Relate 图库上执行 openCypher 查询（默认只读护栏）")]
+    RelateQuery {
+        #[arg(help = "openCypher 查询语句")]
+        cypher: String,
+
+        #[arg(long, help = "可选 Relate 图库路径（默认使用配置中的 graph.rl）")]
+        db: Option<String>,
+
+        #[arg(long, help = "可选显式 librelate_ffi.so 路径")]
+        lib: Option<String>,
+
+        #[arg(long, help = "显式允许写操作（默认关闭，开启只读护栏）")]
+        allow_write: bool,
+
+        #[arg(long, default_value_t = 200, help = "最大返回行数")]
+        max_rows: usize,
+    },
 }
 
 #[derive(Subcommand)]

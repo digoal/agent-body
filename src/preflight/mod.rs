@@ -150,6 +150,7 @@ impl PreflightChecker {
             Self::check_annotation_model(&mut report, &cfg.annotation);
             Self::check_storage_backend(&mut report, cfg);
             Self::check_memory_backend(&mut report, cfg);
+            Self::check_relate_graph_probe(&mut report, cfg);
         } else {
             let default_emb = crate::config::EmbeddingConfig::default();
             Self::check_ollama(

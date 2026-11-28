@@ -796,6 +796,53 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                         }
                     }
                 }
+                LinksCommands::RelateStatus { db, lib } => {
+                    let lib_path = lib.as_deref().map(std::path::Path::new).or(cfg.knowledge_graph.relate_lib_path.as_deref());
+                    let probe = ext_graph_relate::RelateGraphEngine::probe_library(lib_path);
+                    if !probe.available {
+                        println!("{}", serde_json::to_string_pretty(&probe)?);
+                    } else {
+                        let resolved_db = db
+                            .clone()
+                            .unwrap_or_else(|| cfg.resolve_relate_config().db_path);
+                        let eng = agent_body::links::relate_bridge::RelateGraphBridge::open_with_overrides(
+                            &cfg,
+                            Some(&resolved_db),
+                            lib.as_deref(),
+                            None,
+                        )?;
+                        let st = eng.status()?;
+                        println!("{}", serde_json::to_string_pretty(&st)?);
+                    }
+                }
+                LinksCommands::RelateSync { db, lib } => {
+                    let eng = agent_body::links::relate_bridge::RelateGraphBridge::open_with_overrides(
+                        &cfg,
+                        db.as_deref(),
+                        lib.as_deref(),
+                        None,
+                    )?;
+                    let stats = agent_body::links::relate_bridge::RelateGraphBridge::sync_from_storage(
+                        arc_storage.as_ref(),
+                        &eng,
+                    )?;
+                    println!("{}", serde_json::to_string_pretty(&stats)?);
+                }
+                LinksCommands::RelateQuery { cypher, db, lib, allow_write, max_rows } => {
+                    let eng = agent_body::links::relate_bridge::RelateGraphBridge::open_with_overrides(
+                        &cfg,
+                        db.as_deref(),
+                        lib.as_deref(),
+                        Some(max_rows),
+                    )?;
+                    let params = serde_json::Map::new();
+                    let out = if allow_write {
+                        eng.query(&cypher, &params)?
+                    } else {
+                        eng.query_readonly(&cypher, &params)?
+                    };
+                    println!("{}", serde_json::to_string_pretty(&out)?);
+                }
             }
         }
 

@@ -66,6 +66,28 @@ impl ImpactAnalyzer {
         min_weight: f32,
         include_semantic: bool,
     ) -> Result<ImpactAnalysisResult> {
+        let cfg = crate::config::Config::load_effective_or_default();
+        if cfg.knowledge_graph.relate_enabled {
+            let relate_cfg = cfg.resolve_relate_config();
+            let store_exists = relate_cfg.db_path != ":memory:"
+                && Path::new(&relate_cfg.db_path).exists();
+            if store_exists {
+                if let Ok(Some(eng)) = cfg.try_open_relate_graph() {
+                    if let Ok(relate_res) = self.analyze_impact_with_relate(
+                        target_id,
+                        max_depth,
+                        min_weight,
+                        include_semantic,
+                        &eng,
+                    ) {
+                        if relate_res.total_dependents_count > 0 {
+                            return Ok(relate_res);
+                        }
+                    }
+                }
+            }
+        }
+
         let all_links = self.storage.list_all_links(2000)?;
         let all_fact_edges = self.storage.list_all_fact_edges(5000).unwrap_or_default();
 
@@ -233,6 +255,114 @@ impl ImpactAnalyzer {
             format!(
                 "⚠️ 发现 {} 个直接依赖与 {} 个多跳间接下游依赖于 '{}'（强依赖 {} 个，最高有效权重 {:.2}）。综合风险评级: {}！{}改动需确保接口向后兼容或提前迁移调用方。",
                 direct_dependents.len(), indirect_dependents.len(), target_id, strong_count, top_score, risk_level, codegraph_tip
+            )
+        };
+
+        Ok(ImpactAnalysisResult {
+            target: target_id.to_string(),
+            risk_level: risk_level.to_string(),
+            direct_dependents,
+            indirect_dependents,
+            total_dependents_count: total_count,
+            has_codegraph,
+            codegraph_db,
+            summary,
+        })
+    }
+
+    /// 使用嵌入式 Relate openCypher 图引擎执行多跳影响半径推演
+    pub fn analyze_impact_with_relate(
+        &self,
+        target_id: &str,
+        max_depth: usize,
+        min_weight: f32,
+        include_semantic: bool,
+        engine: &ext_graph_relate::RelateGraphEngine,
+    ) -> Result<ImpactAnalysisResult> {
+        let hits = engine.analyze_impact(target_id, max_depth, min_weight, include_semantic)?;
+        let target_path = Path::new(target_id);
+        let codegraph_db = CodeGraphBridge::find_codegraph_db(target_path)
+            .map(|p| p.to_string_lossy().to_string());
+        let has_codegraph = codegraph_db.is_some();
+
+        let mut direct_dependents = Vec::new();
+        let mut indirect_dependents = Vec::new();
+        for hit in hits {
+            let node = DependentNode {
+                node_type: hit.node_type,
+                node_id: hit.node_id,
+                relation: hit.relation,
+                depth: hit.depth,
+                confidence: hit.weight,
+                weight: hit.weight,
+                effective_score: hit.effective_score,
+                evidence_tier: hit.evidence_tier,
+                line_number: hit.line_number,
+                snippet: hit.snippet,
+                provenance: hit.provenance,
+            };
+            if node.depth <= 1 {
+                direct_dependents.push(node);
+            } else {
+                indirect_dependents.push(node);
+            }
+        }
+
+        direct_dependents.sort_by(|a, b| {
+            b.effective_score
+                .partial_cmp(&a.effective_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        indirect_dependents.sort_by(|a, b| {
+            b.effective_score
+                .partial_cmp(&a.effective_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let strong_count = direct_dependents
+            .iter()
+            .chain(indirect_dependents.iter())
+            .filter(|d| d.evidence_tier != "L3_SEMANTIC")
+            .count();
+        let total_count = direct_dependents.len() + indirect_dependents.len();
+
+        let is_shared_or_core = target_id.contains("shared_proj")
+            || target_id.contains("postgresql")
+            || target_id.contains("config");
+        let risk_level = if strong_count >= 5 || (strong_count >= 2 && is_shared_or_core) {
+            "CRITICAL"
+        } else if strong_count >= 3 || (strong_count >= 1 && is_shared_or_core) {
+            "HIGH"
+        } else if strong_count >= 1 {
+            "MEDIUM"
+        } else {
+            "LOW"
+        };
+
+        let codegraph_tip = if has_codegraph {
+            " [支持 CodeGraph 微观函数级下钻]"
+        } else {
+            ""
+        };
+        let summary = if total_count == 0 {
+            format!(
+                "✅ [engine: relate-ffi] 未检测到任何上下游资产或服务依赖 '{}'。改动或删除此对象爆炸半径极小 (Risk: LOW)。{}",
+                target_id, codegraph_tip
+            )
+        } else {
+            let top_score = direct_dependents
+                .first()
+                .map(|d| d.effective_score)
+                .unwrap_or(0.0);
+            format!(
+                "⚠️ [engine: relate-ffi] 发现 {} 个直接依赖与 {} 个多跳间接下游依赖于 '{}'（强依赖 {} 个，最高有效权重 {:.2}）。综合风险评级: {}！{}改动需确保接口向后兼容或提前迁移调用方。",
+                direct_dependents.len(),
+                indirect_dependents.len(),
+                target_id,
+                strong_count,
+                top_score,
+                risk_level,
+                codegraph_tip
             )
         };
 

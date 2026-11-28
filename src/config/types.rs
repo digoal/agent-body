@@ -474,6 +474,30 @@ pub struct KnowledgeGraphConfig {
     /// 自定义行业术语别名归一化映射
     #[serde(default)]
     pub aliases: std::collections::HashMap<String, String>,
+
+    /// 是否启用 Relate 嵌入式 openCypher 图谱引擎 (contrib/graph_relate + librelate_ffi.so)
+    #[serde(default)]
+    pub relate_enabled: bool,
+
+    /// Relate 图库落盘路径（默认 None -> {data_dir}/graph.rl）
+    #[serde(default)]
+    pub relate_db_path: Option<PathBuf>,
+
+    /// 可选显式指定 `librelate_ffi.so` 路径
+    #[serde(default)]
+    pub relate_lib_path: Option<PathBuf>,
+
+    /// Relate 单条 Cypher 语句超时毫秒数（默认 5000）
+    #[serde(default = "default_kg_relate_timeout_ms")]
+    pub relate_timeout_ms: u64,
+
+    /// Relate 查询最大返回行数（默认 200）
+    #[serde(default = "default_kg_relate_max_rows")]
+    pub relate_max_rows: usize,
+
+    /// 当 Relate 共享库不可用或未同步时是否自动无损回退 SQLite/PG（默认 true）
+    #[serde(default = "default_true_flag")]
+    pub relate_fallback_to_sqlite: bool,
 }
 
 pub(super) fn default_kg_enabled() -> bool {
@@ -512,6 +536,14 @@ pub(super) fn default_kg_min_vec_similarity() -> f32 {
     0.58
 }
 
+pub(super) fn default_kg_relate_timeout_ms() -> u64 {
+    5000
+}
+
+pub(super) fn default_kg_relate_max_rows() -> usize {
+    200
+}
+
 impl Default for KnowledgeGraphConfig {
     fn default() -> Self {
         Self {
@@ -528,6 +560,12 @@ impl Default for KnowledgeGraphConfig {
             min_vec_similarity: default_kg_min_vec_similarity(),
             strict_identifier_vec_gate: default_true_flag(),
             aliases: std::collections::HashMap::new(),
+            relate_enabled: false,
+            relate_db_path: None,
+            relate_lib_path: None,
+            relate_timeout_ms: default_kg_relate_timeout_ms(),
+            relate_max_rows: default_kg_relate_max_rows(),
+            relate_fallback_to_sqlite: true,
         }
     }
 }
