@@ -1,12 +1,13 @@
 # 07 — 数据模型（Data Model · 演进总览与设计基线）
 
-> **生产实时 DDL 真相源（v1.0.0 GA）**：
-> - SQLite 嵌入式主库（**27 张实体与 FTS5 虚表**）：[src/storage/schema.sql](../../src/storage/schema.sql)
+> **生产实时 DDL 真相源（v1.1.0）**：
+> - SQLite 嵌入式主库（**27 张实体与 FTS5 虚表**）：[src/storage/schema.sql](../../src/storage/schema.sql)（含 `body_checkpoints` Phase 76~78 `tx_epoch` / `fast_weight_snapshot_id` / `fast_weight_base_model` 无损演化列）
 > - PostgreSQL 协同集群版（**21 张核心表**）：[src/storage/pg_schema.sql](../../src/storage/pg_schema.sql)
+> - PostgreSQL 事务级海马体周边扩展（**4 张独立 `ext_mem_pg_tx__*` 表**）：[contrib/mem_pg_tx/src/schema.rs](../../contrib/mem_pg_tx/src/schema.rs)（`events` / `segments` / `fast_weight_snapshots` / `compaction_jobs`）
 > - DuckDB OLAP 分析与增量副本（**22 张列存表**）：[src/storage/duckdb_schema.sql](../../src/storage/duckdb_schema.sql)
 > - SPI 接口定义（**88 个存储方法**）：[src/storage/spi.rs](../../src/storage/spi.rs)
 >
-> *说明：下文“二、DDL 定义”起保留了 Phase 1 初版 12 表设计原稿供架构溯源；`v1.0.0` 已扩充至覆盖事实图谱、协作锁/等待队列、MCP/SKILL/外部服务生态目录、Benchmark 存证、Mesh 信封、双域审计与本体检查点等全量表群。*
+> *说明：下文“二、DDL 定义”起保留了 Phase 1 初版 12 表设计原稿供架构溯源；`v1.1.0` 已扩充至覆盖事实图谱、协作锁/等待队列、MCP/SKILL/外部服务生态目录、Benchmark v4.1 存证、Mesh 信封、双域审计、本体检查点 (`ContinuityCapsule v2`) 及 PG 事务级海马体表群。*
 
 ---
 

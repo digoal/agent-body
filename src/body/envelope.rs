@@ -191,6 +191,10 @@ impl AutonomyEnvelope {
                 | "handoff_resume"
                 | "perf_tune"
                 | "perf_delete"
+                | "sleep_compaction"
+                | "fast_weight_compaction"
+                | "selective_unlearn"
+                | "fast_weight_rollback"
         ) {
             return EnvelopeDecision {
                 action: action.to_string(),

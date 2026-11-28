@@ -435,4 +435,477 @@ impl PreflightChecker {
             remedy: None,
         });
     }
+
+    /// 检查事务级记忆后端 (`pg_tx` / `builtin` 等) 与 Phase 78 旁路快权重控制面 (`fast_weight_runtime_url`)
+    pub fn check_memory_backend(report: &mut PreflightReport, config: &crate::config::Config) {
+        let mem_cfg = &config.memory;
+        if let Err(err) = mem_cfg.validate(config.storage.pg_url.as_deref()) {
+            let safe_err =
+                crate::scanner::metadata::SecretRedactor::redact_single_line(&err.to_string());
+            report.add(CheckItem {
+                name: "事务级记忆后端 (Memory Backend)".to_string(),
+                category: CheckCategory::Required,
+                status: CheckStatus::Fail,
+                message: format!("[memory] 配置校验失败: {}", safe_err),
+                remedy: Some("请检查 config.toml 中 [memory] 字段取值范围与 URL 格式".to_string()),
+            });
+            let fw_url = mem_cfg.fast_weight_runtime_url.trim();
+            let fw_scheme_invalid = !fw_url.is_empty()
+                && !(fw_url.starts_with("http://") || fw_url.starts_with("https://"));
+            if (mem_cfg.fast_weight_enabled || !fw_url.is_empty()) && !fw_scheme_invalid {
+                Self::check_fast_weight_runtime(report, mem_cfg);
+            }
+            return;
+        }
+
+        let provider = mem_cfg.provider.trim();
+        if provider.eq_ignore_ascii_case("pg_tx") {
+            Self::check_pg_tx_memory_probe(report, config);
+        } else {
+            report.add(CheckItem {
+                name: "长期记忆后端 (Memory Backend)".to_string(),
+                category: CheckCategory::Informational,
+                status: CheckStatus::Pass,
+                message: format!(
+                    "provider='{}'（本地 SQLite / 外部适配器模式，未启用独立 pg_tx 事务引擎）",
+                    provider
+                ),
+                remedy: None,
+            });
+        }
+
+        if mem_cfg.fast_weight_enabled || !mem_cfg.fast_weight_runtime_url.trim().is_empty() {
+            Self::check_fast_weight_runtime(report, mem_cfg);
+        }
+    }
+
+    /// 探活 `pg_tx` 事务记忆引擎与 `ext_mem_pg_tx__*` 表状态（连接错误全程脱敏）
+    fn check_pg_tx_memory_probe(report: &mut PreflightReport, config: &crate::config::Config) {
+        let mem_cfg = &config.memory;
+        let category = if mem_cfg.fallback_to_sqlite {
+            CheckCategory::Optional
+        } else {
+            CheckCategory::Required
+        };
+        let degraded_status = if mem_cfg.fallback_to_sqlite {
+            CheckStatus::Warn
+        } else {
+            CheckStatus::Fail
+        };
+        let fallback_hint = if mem_cfg.fallback_to_sqlite {
+            "（已开启 fallback_to_sqlite=true，将自动无损降级至本地 SQLite）"
+        } else {
+            "（fallback_to_sqlite=false，记忆写入/检索将被阻断）"
+        };
+
+        let resolved_url = mem_cfg
+            .pg_url
+            .clone()
+            .filter(|s| !s.trim().is_empty())
+            .or_else(|| config.storage.pg_url.clone().filter(|s| !s.trim().is_empty()))
+            .or_else(|| {
+                std::env::var("AGENT_BODY_MEMORY_PG_URL")
+                    .ok()
+                    .filter(|s| !s.trim().is_empty())
+            })
+            .unwrap_or_default();
+
+        if resolved_url.trim().is_empty() {
+            report.add(CheckItem {
+                name: "事务级记忆后端 (Memory Backend)".to_string(),
+                category,
+                status: degraded_status,
+                message: format!(
+                    "provider='pg_tx'，但 memory.pg_url / storage.pg_url / AGENT_BODY_MEMORY_PG_URL 均未配置{}",
+                    fallback_hint
+                ),
+                remedy: Some(
+                    "在 config.toml 配置 [memory].pg_url 或设置环境变量 AGENT_BODY_MEMORY_PG_URL"
+                        .to_string(),
+                ),
+            });
+            return;
+        }
+
+        let safe_url = crate::scanner::metadata::SecretRedactor::redact_single_line(&resolved_url);
+        let url_owned = resolved_url.clone();
+        let probe_res = std::thread::spawn(move || -> anyhow::Result<(String, bool)> {
+            use std::str::FromStr;
+            let mut pg_cfg = postgres::Config::from_str(&url_owned)?;
+            pg_cfg.connect_timeout(Duration::from_secs(2));
+            let mut client = pg_cfg.connect(postgres::NoTls)?;
+            let row = client.query_one(
+                "SELECT current_setting('server_version'), to_regclass('ext_mem_pg_tx__events') IS NOT NULL",
+                &[],
+            )?;
+            let ver: String = row.get(0);
+            let has_schema: bool = row.get(1);
+            Ok((ver, has_schema))
+        })
+        .join();
+
+        match probe_res {
+            Ok(Ok((ver, has_schema))) => {
+                let schema_note = if has_schema {
+                    "ext_mem_pg_tx__* 已初始化"
+                } else {
+                    "首次运行时将自动幂等迁移"
+                };
+                report.add(CheckItem {
+                    name: "事务级记忆后端 (Memory Backend)".to_string(),
+                    category,
+                    status: CheckStatus::Pass,
+                    message: format!(
+                        "provider=pg_tx ({}) 已连通，PostgreSQL {}，scope='{}'，vector='{}'（{}）",
+                        safe_url, ver, mem_cfg.pg_tenant_scope, mem_cfg.vector_backend, schema_note
+                    ),
+                    remedy: None,
+                });
+            }
+            Ok(Err(e)) => {
+                let safe_err =
+                    crate::scanner::metadata::SecretRedactor::redact_single_line(&e.to_string());
+                report.add(CheckItem {
+                    name: "事务级记忆后端 (Memory Backend)".to_string(),
+                    category,
+                    status: degraded_status,
+                    message: format!(
+                        "provider=pg_tx ({}) 连接失败{}: {}",
+                        safe_url, fallback_hint, safe_err
+                    ),
+                    remedy: Some(
+                        "检查 PostgreSQL 服务状态、pg_hba 鉴权规则及 [memory].pg_url 配置"
+                            .to_string(),
+                    ),
+                });
+            }
+            Err(_) => {
+                report.add(CheckItem {
+                    name: "事务级记忆后端 (Memory Backend)".to_string(),
+                    category,
+                    status: degraded_status,
+                    message: format!("provider=pg_tx ({}) 探活线程异常终止{}", safe_url, fallback_hint),
+                    remedy: Some("检查 [memory].pg_url 连接串格式及网络可达性".to_string()),
+                });
+            }
+        }
+    }
+
+    /// 探活 Phase 78 旁路快权重 Model Runtime JSON-RPC 2.0 端点
+    fn check_fast_weight_runtime(
+        report: &mut PreflightReport,
+        mem_cfg: &crate::config::MemoryConfig,
+    ) {
+        let fw_url = mem_cfg.fast_weight_runtime_url.trim();
+        if fw_url.is_empty() {
+            report.add(CheckItem {
+                name: "旁路快权重控制面 (Fast-Weight)".to_string(),
+                category: CheckCategory::Optional,
+                status: CheckStatus::Pass,
+                message: "已启用 fast_weight_enabled，当前运行于纯元数据血缘模式（fast_weight_runtime_url 留空，零内置训练/推理依赖）".to_string(),
+                remedy: None,
+            });
+            return;
+        }
+
+        let safe_fw_url = crate::scanner::metadata::SecretRedactor::redact_single_line(fw_url);
+        if !(fw_url.starts_with("http://") || fw_url.starts_with("https://")) {
+            let (category, status) = if mem_cfg.fast_weight_enabled {
+                (CheckCategory::Required, CheckStatus::Fail)
+            } else {
+                (CheckCategory::Optional, CheckStatus::Warn)
+            };
+            report.add(CheckItem {
+                name: "旁路快权重控制面 (Fast-Weight)".to_string(),
+                category,
+                status,
+                message: format!(
+                    "memory.fast_weight_runtime_url ('{}') 必须以 http:// 或 https:// 开头",
+                    safe_fw_url
+                ),
+                remedy: Some(
+                    "修正 [memory].fast_weight_runtime_url 或置空以仅使用元数据血缘控制面"
+                        .to_string(),
+                ),
+            });
+            return;
+        }
+
+        let rpc_body = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": "preflight",
+            "method": "fast_weight.health",
+            "params": {}
+        });
+        let client = match reqwest::blocking::Client::builder()
+            .timeout(Duration::from_millis(1500))
+            .build()
+        {
+            Ok(cli) => cli,
+            Err(e) => {
+                let safe_err = crate::scanner::metadata::SecretRedactor::redact_single_line(
+                    &e.to_string(),
+                );
+                report.add(CheckItem {
+                    name: "旁路快权重控制面 (Fast-Weight)".to_string(),
+                    category: CheckCategory::Optional,
+                    status: CheckStatus::Warn,
+                    message: format!("旁路 HTTP 客户端构建失败: {}", safe_err),
+                    remedy: Some("检查系统 TLS/HTTP 运行环境及 [memory].fast_weight_runtime_url".to_string()),
+                });
+                return;
+            }
+        };
+
+        match client.post(fw_url).json(&rpc_body).send() {
+            Ok(resp) if resp.status().is_success() => {
+                let status_code = resp.status();
+                match resp.json::<serde_json::Value>() {
+                    Ok(payload) => {
+                        if let Some(err_val) = payload.get("error").filter(|v| !v.is_null()) {
+                            let safe_err = crate::scanner::metadata::SecretRedactor::redact_single_line(
+                                &err_val.to_string(),
+                            );
+                            report.add(CheckItem {
+                                name: "旁路快权重控制面 (Fast-Weight)".to_string(),
+                                category: CheckCategory::Optional,
+                                status: CheckStatus::Warn,
+                                message: format!(
+                                    "旁路服务 ({}) 返回 JSON-RPC 错误（快照血缘控制面仍可安全运行于元数据/回退模式）: {}",
+                                    safe_fw_url, safe_err
+                                ),
+                                remedy: Some("检查外部 Model Runtime JSON-RPC 接口及 [memory].fast_weight_runtime_url".to_string()),
+                            });
+                            return;
+                        }
+                        let result_obj = payload.get("result");
+                        let runtime_kind = result_obj
+                            .and_then(|r| r.get("runtime_kind"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("http_jsonrpc");
+                        let models: Vec<&str> = result_obj
+                            .and_then(|r| r.get("active_base_models"))
+                            .and_then(|v| v.as_array())
+                            .map(|arr| arr.iter().filter_map(|m| m.as_str()).collect())
+                            .unwrap_or_default();
+                        let models_note = if models.is_empty() {
+                            "models=未声明".to_string()
+                        } else {
+                            format!("models=[{}]", models.join(", "))
+                        };
+                        report.add(CheckItem {
+                            name: "旁路快权重控制面 (Fast-Weight)".to_string(),
+                            category: CheckCategory::Optional,
+                            status: CheckStatus::Pass,
+                            message: format!(
+                                "旁路 JSON-RPC 探活就绪 ({}, HTTP {}, runtime_kind='{}', {})",
+                                safe_fw_url,
+                                status_code.as_u16(),
+                                runtime_kind,
+                                models_note
+                            ),
+                            remedy: None,
+                        });
+                    }
+                    Err(e) => {
+                        let safe_err = crate::scanner::metadata::SecretRedactor::redact_single_line(
+                            &e.to_string(),
+                        );
+                        report.add(CheckItem {
+                            name: "旁路快权重控制面 (Fast-Weight)".to_string(),
+                            category: CheckCategory::Optional,
+                            status: CheckStatus::Warn,
+                            message: format!(
+                                "旁路服务 ({}) 响应非合法 JSON-RPC 载荷（快照血缘控制面仍可安全运行于元数据/回退模式）: {}",
+                                safe_fw_url, safe_err
+                            ),
+                            remedy: Some("确认 [memory].fast_weight_runtime_url 指向实现 fast_weight.health 的 JSON-RPC 2.0 端点".to_string()),
+                        });
+                    }
+                }
+            }
+            Ok(resp) => {
+                report.add(CheckItem {
+                    name: "旁路快权重控制面 (Fast-Weight)".to_string(),
+                    category: CheckCategory::Optional,
+                    status: CheckStatus::Warn,
+                    message: format!(
+                        "旁路服务 ({}) 返回 HTTP {}，快照血缘控制面仍可安全运行于元数据/回退模式",
+                        safe_fw_url,
+                        resp.status()
+                    ),
+                    remedy: Some("检查外部快权重服务状态及 [memory].fast_weight_runtime_url".to_string()),
+                });
+            }
+            Err(e) => {
+                let safe_err = crate::scanner::metadata::SecretRedactor::redact_single_line(
+                    &e.to_string(),
+                );
+                report.add(CheckItem {
+                    name: "旁路快权重控制面 (Fast-Weight)".to_string(),
+                    category: CheckCategory::Optional,
+                    status: CheckStatus::Warn,
+                    message: format!(
+                        "旁路服务 ({}) 暂不可达，快照血缘控制面仍可安全运行于元数据/回退模式: {}",
+                        safe_fw_url, safe_err
+                    ),
+                    remedy: Some("如需神经 Compaction，请启动外部服务并核对 [memory].fast_weight_runtime_url".to_string()),
+                });
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+
+    use super::*;
+
+    #[test]
+    fn test_check_memory_backend_builtin_and_pg_tx_redaction() {
+        // 1. 默认 builtin -> Informational Pass，零网络开销
+        let mut rep_builtin = PreflightReport::new();
+        let cfg_builtin = crate::config::Config::default();
+        PreflightChecker::check_memory_backend(&mut rep_builtin, &cfg_builtin);
+        assert!(rep_builtin.passed_required);
+        let item_builtin = rep_builtin
+            .items
+            .iter()
+            .find(|i| i.name.contains("Memory Backend"))
+            .expect("builtin memory item");
+        assert_eq!(item_builtin.category, CheckCategory::Informational);
+        assert_eq!(item_builtin.status, CheckStatus::Pass);
+        assert!(item_builtin.message.contains("builtin"));
+
+        // 2. pg_tx + 不可达 URL + fallback_to_sqlite=true -> Optional Warn + 密码脱敏
+        let mut cfg_warn = crate::config::Config::default();
+        cfg_warn.memory.provider = "pg_tx".to_string();
+        cfg_warn.memory.fallback_to_sqlite = true;
+        cfg_warn.memory.pg_url = Some("postgres://user:TopSecretFw99@127.0.0.1:1/db".to_string());
+        let mut rep_warn = PreflightReport::new();
+        PreflightChecker::check_memory_backend(&mut rep_warn, &cfg_warn);
+        assert!(rep_warn.passed_required);
+        let item_warn = rep_warn
+            .items
+            .iter()
+            .find(|i| i.name.contains("Memory Backend"))
+            .expect("pg_tx warn item");
+        assert_eq!(item_warn.category, CheckCategory::Optional);
+        assert_eq!(item_warn.status, CheckStatus::Warn);
+        assert!(
+            !item_warn.message.contains("TopSecretFw99"),
+            "pg_tx 错误信息禁止泄露明文密码: {}",
+            item_warn.message
+        );
+
+        // 3. pg_tx + 不可达 URL + fallback_to_sqlite=false -> Required Fail + 密码脱敏
+        let mut cfg_fail = crate::config::Config::default();
+        cfg_fail.memory.provider = "pg_tx".to_string();
+        cfg_fail.memory.fallback_to_sqlite = false;
+        cfg_fail.memory.pg_url = Some("postgres://user:TopSecretFw99@127.0.0.1:1/db".to_string());
+        let mut rep_fail = PreflightReport::new();
+        PreflightChecker::check_memory_backend(&mut rep_fail, &cfg_fail);
+        assert!(!rep_fail.passed_required);
+        let item_fail = rep_fail
+            .items
+            .iter()
+            .find(|i| i.name.contains("Memory Backend"))
+            .expect("pg_tx fail item");
+        assert_eq!(item_fail.category, CheckCategory::Required);
+        assert_eq!(item_fail.status, CheckStatus::Fail);
+        assert!(
+            !item_fail.message.contains("TopSecretFw99"),
+            "pg_tx 阻断信息禁止泄露明文密码: {}",
+            item_fail.message
+        );
+
+        // 4. pg_tx + 空 URL + fallback_to_sqlite=false -> Required Fail
+        let mut cfg_empty = crate::config::Config::default();
+        cfg_empty.memory.provider = "pg_tx".to_string();
+        cfg_empty.memory.fallback_to_sqlite = false;
+        cfg_empty.memory.pg_url = None;
+        cfg_empty.storage.pg_url = None;
+        let mut rep_empty = PreflightReport::new();
+        PreflightChecker::check_memory_backend(&mut rep_empty, &cfg_empty);
+        assert!(!rep_empty.passed_required);
+        let item_empty = rep_empty
+            .items
+            .iter()
+            .find(|i| i.name.contains("Memory Backend"))
+            .expect("pg_tx empty url item");
+        assert_eq!(item_empty.category, CheckCategory::Required);
+        assert_eq!(item_empty.status, CheckStatus::Fail);
+    }
+
+    #[test]
+    fn test_check_memory_backend_fast_weight_runtime_modes() {
+        // 1. fast_weight_enabled=true + 空 URL -> Optional Pass (纯元数据血缘模式)
+        let mut cfg_meta = crate::config::Config::default();
+        cfg_meta.memory.fast_weight_enabled = true;
+        cfg_meta.memory.fast_weight_runtime_url.clear();
+        let mut rep_meta = PreflightReport::new();
+        PreflightChecker::check_memory_backend(&mut rep_meta, &cfg_meta);
+        assert!(rep_meta.passed_required);
+        let item_meta = rep_meta
+            .items
+            .iter()
+            .find(|i| i.name.contains("Fast-Weight"))
+            .expect("fast-weight meta item");
+        assert_eq!(item_meta.category, CheckCategory::Optional);
+        assert_eq!(item_meta.status, CheckStatus::Pass);
+        assert!(item_meta.message.contains("纯元数据血缘模式"));
+
+        // 2. fast_weight_enabled=true + 不可达 URL -> Optional Warn
+        let mut cfg_unreach = crate::config::Config::default();
+        cfg_unreach.memory.fast_weight_enabled = true;
+        cfg_unreach.memory.fast_weight_runtime_url = "http://127.0.0.1:1/rpc".to_string();
+        let mut rep_unreach = PreflightReport::new();
+        PreflightChecker::check_memory_backend(&mut rep_unreach, &cfg_unreach);
+        assert!(rep_unreach.passed_required);
+        let item_unreach = rep_unreach
+            .items
+            .iter()
+            .find(|i| i.name.contains("Fast-Weight"))
+            .expect("fast-weight unreachable item");
+        assert_eq!(item_unreach.category, CheckCategory::Optional);
+        assert_eq!(item_unreach.status, CheckStatus::Warn);
+
+        // 3. 本地临时 TcpListener 响应有效 JSON-RPC 2.0 -> Optional Pass
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind local mock listener");
+        let addr = listener.local_addr().expect("listener addr");
+        let handle = std::thread::spawn(move || {
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut buf = [0u8; 2048];
+                let _read_res = stream.read(&mut buf);
+                let body = r#"{"jsonrpc":"2.0","id":"preflight","result":{"runtime_kind":"mock","endpoint":"http://127.0.0.1","reachable":true,"active_base_models":["qwen3-coder-next"],"detail":"ok"}}"#;
+                let resp = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                let _write_res = stream.write_all(resp.as_bytes());
+                let _flush_res = stream.flush();
+            }
+        });
+
+        let mut cfg_ok = crate::config::Config::default();
+        cfg_ok.memory.fast_weight_enabled = true;
+        cfg_ok.memory.fast_weight_runtime_url = format!("http://{}/rpc", addr);
+        let mut rep_ok = PreflightReport::new();
+        PreflightChecker::check_memory_backend(&mut rep_ok, &cfg_ok);
+        handle.join().expect("mock server thread join");
+
+        assert!(rep_ok.passed_required);
+        let item_ok = rep_ok
+            .items
+            .iter()
+            .find(|i| i.name.contains("Fast-Weight"))
+            .expect("fast-weight rpc pass item");
+        assert_eq!(item_ok.category, CheckCategory::Optional);
+        assert_eq!(item_ok.status, CheckStatus::Pass);
+        assert!(item_ok.message.contains("mock"));
+        assert!(item_ok.message.contains("qwen3-coder-next"));
+    }
 }

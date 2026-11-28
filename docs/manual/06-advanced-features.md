@@ -147,13 +147,13 @@ Agent 本体吸收 CodeGraph 的图谱模型设计：
 - **五点对比探针 (`agent-body feedback probes`)**：在 `P1 开工 Brief` / `P2 事前 Pre-Hook` / `P3 检索效用` / `P4 事后漂移` / `P5 周期回归` 以物理真值量化 Before/After/Delta 差值并自动自愈或去重写入 `user_feedback.md`；
 - **AOPCC 悲观-乐观自适应并发控制**：`body_brief` 在开工时签发 `<= 120 tok` 乐观直通租约（如本机 `:5432` PostgreSQL、已装 CLI、`<temp_dir>`）；高危端口绑定与共享资源写维持悲观前置拦截；若乐观直连碰壁失败，`body_hook_post(success=false)` 在 `< 2ms` 内注入宿主机替代处方并自适应降级租约；
 - **内生 Wait Events、`/proc/self` 与 AWR/ADDM 自调优**：覆盖 6 大类 `18/18` 标准等待事件、AWR 快照黄金基线差分与 `L1_AUTONOMIC` 一键自调优（`perf-snapshot`/`perf-awr`/`perf-tune`/`perf-delete`）；
-- **实证 Benchmark 与存证账本 (`v3.9`)**：关于 A/B 对照负载（`W1`~`W20`）、内核微基准 SLA（`M1`~`M6`）、质量与 Shadow A/B 稳态门禁（`DQ1`~`DQ10`）、竞品对标（`COMP-C1`~`C4`）及 `PR-01`~`PR-14` 生产效能存证流水，请直接阅读专题章节 [10-benchmark-and-roi.md](10-benchmark-and-roi.md)。
+- **实证 Benchmark 与存证账本 (`v4.1`)**：关于 A/B 对照负载（`W1`~`W22`）、内核微基准 SLA（`M1`~`M6`）、质量与 Shadow A/B/睡眠整理/快权重血缘门禁（`DQ1`~`DQ12`）、竞品对标（`COMP-C1`~`C4`）及 `PR-01`~`PR-16` 生产效能存证流水，请直接阅读专题章节 [10-benchmark-and-roi.md](10-benchmark-and-roi.md)。
 - **三态运行模式、纯 Rust 多模态 L1A (`schema_version=2.0`) 与全信号 Omni-RRF 知识网络 (Phase 58~63)**：支持 `bypass`/`shadow_ab`/`body_only` 三态动态切换与 `H1~H5` Shadow A/B 自主自愈、MCP `core`/`dev`/`ops`/`full` Schema 减税档位、纯 Rust 多模态解析与 `asset_chunk` 分块，以及 BM25 + Fuzzy + Semantic + 属性图 + 层级 + `links` + 标量调制的 7 路 Omni-RRF 召回。
 
 ---
 
-## 11. PostgreSQL 事务级海马体与双时态 MVCC (`pg_tx` / Phase 76)
-- **定位与隔离**：由独立五件套扩展 `contrib/mem_pg_tx/` 与旗舰 `PgTxMemoryAdapter` 提供（完整规格见 [22-pg-tx-memory-spi-a-to-b-spec.md](../design_doc/22-pg-tx-memory-spi-a-to-b-spec.md)），彻底解决多 Agent 并发写丢写、更新写放大与删除僵尸向量召回，同时在 PG 不可达时默认自动透明降级至本地 SQLite 并记入 `OUT_OF_AGENT` 审计。
+## 11. PostgreSQL 事务级海马体、睡眠整理与旁路快权重 (`pg_tx` / Phase 76~78)
+- **定位与隔离**：由独立五件套扩展 `contrib/mem_pg_tx/` 与旗舰 `PgTxMemoryAdapter` 提供（完整规格见 [22-pg-tx-memory-spi-a-to-b-spec.md](../design_doc/22-pg-tx-memory-spi-a-to-b-spec.md)），彻底解决多 Agent 并发写丢写、更新写放大与删除僵尸向量召回，同时在 PG 不可达时默认自动透明降级至本地 SQLite 并记入 `OUT_OF_AGENT` 审计；M3（Phase 78）通过 `FastWeightCheckpointSpi` + JSON-RPC 2.0 旁路控制面外挂外部快权重与定向遗忘（本体零权重、零训练代码）。
 - **启用配置 (`~/.agent-body/config.toml`)**：
   ```toml
   [memory]
@@ -163,8 +163,11 @@ Agent 本体吸收 CodeGraph 的图谱模型设计：
   pg_tenant_scope = "default"
   vector_backend = "none"         # 可选: none | pgvector | pg_vectorsearch | external_lsm
   fallback_to_sqlite = true       # PG 不可达时自动无损降级 SQLite
+  fast_weight_enabled = false
+  fast_weight_runtime_url = ""    # 外部 In-Place TTT / Atlas / SCoL JSON-RPC 服务地址
   ```
 - **三端一致操作（43 工具零膨胀）**：
   - 写入双时态逻辑键与 CAS 校验：`agent-body memory add -c "主库迁移至 5433" --fact-key "deploy:pg_port" --evidence-tier L1_EXPLICIT --expected-epoch 12`（`body_memory_add`）；
   - 双时态时间旅行检索：`agent-body memory search "5432" --as-of-epoch 12 --include-history`（`body_memory_search`）；
-  - 健康巡检与墓碑清除：`agent-body memory audit --tx-status` / `agent-body memory audit --tombstone-fact-key "deploy:pg_port"`（`body_memory_audit`）。
+  - 健康巡检、墓碑清除与 M2 空闲期睡眠整理：`agent-body memory audit --tx-status` / `agent-body memory audit --tombstone-fact "deploy:pg_port"` / `agent-body memory audit --sleep-action run --force`（`body_memory_audit`；高熵探索型查询自动触发 `QueryPredictabilityGate` 旁路直查原始活跃事件，每次整理经 `SecretRedactor` 脱敏并以 `OUT_OF_AGENT` 写入 `audit_events`）；
+  - M3 旁路快权重血缘、三门禁切换与秒级回滚：`agent-body memory audit --fast-weight-action lineage` / `compact --base-model-id qwen3-8b` / `unlearn` / `rollback --target-epoch 12`，并在 `body handoff`/`resume --base-model-id` 中支持 `ContinuityCapsule v2` 同基座热挂载与异构回退。

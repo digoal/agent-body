@@ -260,6 +260,10 @@ pub(crate) enum BodyCommands {
         blockers: Option<String>,
         #[arg(long, default_value = "")]
         next_step: String,
+        #[arg(long, help = "Phase 78 Continuity v2: 绑定基座模型 ID")]
+        base_model_id: Option<String>,
+        #[arg(long, help = "Phase 78 Continuity v2: 显式绑定快权重快照 UUID")]
+        fast_weight_snapshot_id: Option<String>,
         #[arg(long, default_value_t = false)]
         json: bool,
     },
@@ -269,6 +273,8 @@ pub(crate) enum BodyCommands {
         by_brain: String,
         #[arg(long)]
         checkpoint_id: Option<String>,
+        #[arg(long, help = "Phase 78 Continuity v2: 当前接管大脑基座模型 ID（同基座热挂/异构回退文本胶囊）")]
+        base_model_id: Option<String>,
         #[arg(long, default_value_t = false)]
         json: bool,
     },
@@ -459,9 +465,9 @@ pub(crate) enum FeedbackCommands {
 
 #[derive(Subcommand)]
 pub(crate) enum BenchCommands {
-    #[command(about = "列出 20 大标准 A/B 负载与 PR-01~14 推导规则")]
+    #[command(about = "列出 22 大标准 A/B 负载与 PR-01~16 推导规则")]
     Workloads,
-    #[command(about = "运行宿主机真机 A/B 对照基准 (full/macro/micro/dq/competitors/W1~W20)")]
+    #[command(about = "运行宿主机真机 A/B 对照基准 (full/macro/micro/dq/competitors/W1~W22)")]
     Run {
         #[arg(long, default_value = "full")]
         suite: String,

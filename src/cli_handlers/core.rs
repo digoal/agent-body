@@ -554,7 +554,59 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                     archive_id,
                     tx_status,
                     tombstone_fact,
+                    sleep_action,
+                    force,
+                    fast_weight_action,
+                    target_epoch,
+                    snapshot_id,
+                    base_model_id,
+                    adapter_kind,
                 } => {
+                    if let Some(fw_act) = fast_weight_action.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+                        let out = agent_body::memory::FastWeightOrchestrator::execute_action(
+                            &storage,
+                            &cfg,
+                            fw_act,
+                            snapshot_id.as_deref(),
+                            target_epoch,
+                            base_model_id.as_deref(),
+                            adapter_kind.as_deref(),
+                            None,
+                        )?;
+                        println!("{}", serde_json::to_string_pretty(&out)?);
+                        return Ok(());
+                    }
+                    if let Some(s_act) = sleep_action.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+                        match s_act.to_ascii_lowercase().as_str() {
+                            "status" => {
+                                let st = agent_body::memory::SleepCompactionOrchestrator::status(&storage, &cfg);
+                                println!("{}", serde_json::to_string_pretty(&st)?);
+                            }
+                            "dry_run" => {
+                                let rep = agent_body::memory::SleepCompactionOrchestrator::execute(&storage, &cfg, true, true)?;
+                                println!("{}", serde_json::to_string_pretty(&rep)?);
+                            }
+                            "run" => {
+                                let rep = agent_body::memory::SleepCompactionOrchestrator::execute(&storage, &cfg, false, force)?;
+                                println!("{}", serde_json::to_string_pretty(&rep)?);
+                            }
+                            "pause" => {
+                                agent_body::memory::SleepCompactionOrchestrator::set_paused(&cfg.data_dir, true)?;
+                                let st = agent_body::memory::SleepCompactionOrchestrator::status(&storage, &cfg);
+                                println!("{}", serde_json::to_string_pretty(&st)?);
+                            }
+                            "resume" => {
+                                agent_body::memory::SleepCompactionOrchestrator::set_paused(&cfg.data_dir, false)?;
+                                let st = agent_body::memory::SleepCompactionOrchestrator::status(&storage, &cfg);
+                                println!("{}", serde_json::to_string_pretty(&st)?);
+                            }
+                            other => anyhow::bail!(
+                                "未知 --sleep-action '{}'，支持: status | run | dry_run | pause | resume",
+                                other
+                            ),
+                        }
+                        return Ok(());
+                    }
                     if let Some(fk) = tombstone_fact.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
                         let tx_prov = cfg.build_tx_memory_provider(storage.clone())?;
                         let n = tx_prov.tombstone_fact(

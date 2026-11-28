@@ -149,6 +149,7 @@ impl PreflightChecker {
             Self::check_ollama(&mut report, &cfg.embedding.ollama_url, &cfg.embedding.model, cfg.embedding.fallback_fts_only);
             Self::check_annotation_model(&mut report, &cfg.annotation);
             Self::check_storage_backend(&mut report, cfg);
+            Self::check_memory_backend(&mut report, cfg);
         } else {
             let default_emb = crate::config::EmbeddingConfig::default();
             Self::check_ollama(

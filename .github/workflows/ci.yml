@@ -34,7 +34,7 @@ jobs:
         if: runner.os == 'macOS'
         run: echo "CPLUS_INCLUDE_PATH=$(xcrun --show-sdk-path)/usr/include/c++/v1" >> "$GITHUB_ENV"
 
-      - name: Run quality gate (evolution, arch, panic, hygiene, strict lint)
+      - name: Run quality gate (evolution, citizen-audit, arch, panic, hygiene, strict lint)
         run: make quality-gate
 
       - name: Run clippy with -D warnings across workspace

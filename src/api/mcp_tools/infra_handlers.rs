@@ -73,6 +73,67 @@ impl McpToolRegistry {
                 }
                 let tx_status_req = args.get("tx_status").and_then(|v| v.as_bool()).unwrap_or(false);
                 let tomb_key = args.get("tombstone_fact_key").and_then(|v| v.as_str()).map(str::trim).filter(|s| !s.is_empty());
+                let sleep_act = args.get("sleep_action").and_then(|v| v.as_str()).map(str::trim).filter(|s| !s.is_empty());
+                let force = args.get("force").and_then(|v| v.as_bool()).unwrap_or(false);
+                let fw_act = args.get("fast_weight_action").and_then(|v| v.as_str()).map(str::trim).filter(|s| !s.is_empty());
+
+                if let Some(fw) = fw_act {
+                    let cfg = crate::config::Config::load_effective_or_default();
+                    let payload = crate::memory::FastWeightOrchestrator::execute_action(
+                        &self.storage,
+                        &cfg,
+                        fw,
+                        args.get("snapshot_id").and_then(|v| v.as_str()),
+                        args.get("target_epoch").and_then(|v| v.as_i64()),
+                        args.get("base_model_id").and_then(|v| v.as_str()),
+                        args.get("adapter_kind").and_then(|v| v.as_str()),
+                        None,
+                    )?;
+                    let rep = mgr.audit_memories()?;
+                    return Ok(serde_json::to_string_pretty(&serde_json::json!({
+                        "audit": rep,
+                        "fast_weight_action": fw,
+                        "fast_weight": payload,
+                    }))?);
+                }
+
+                if let Some(s_act) = sleep_act {
+                    let cfg = crate::config::Config::load_effective_or_default();
+                    let sleep_payload = match s_act.to_ascii_lowercase().as_str() {
+                        "status" => serde_json::to_value(
+                            crate::memory::SleepCompactionOrchestrator::status(&self.storage, &cfg),
+                        )?,
+                        "dry_run" => serde_json::to_value(
+                            crate::memory::SleepCompactionOrchestrator::execute(&self.storage, &cfg, true, true)?,
+                        )?,
+                        "run" => serde_json::to_value(
+                            crate::memory::SleepCompactionOrchestrator::execute(&self.storage, &cfg, false, force)?,
+                        )?,
+                        "pause" => {
+                            crate::memory::SleepCompactionOrchestrator::set_paused(&cfg.data_dir, true)?;
+                            serde_json::to_value(
+                                crate::memory::SleepCompactionOrchestrator::status(&self.storage, &cfg),
+                            )?
+                        }
+                        "resume" => {
+                            crate::memory::SleepCompactionOrchestrator::set_paused(&cfg.data_dir, false)?;
+                            serde_json::to_value(
+                                crate::memory::SleepCompactionOrchestrator::status(&self.storage, &cfg),
+                            )?
+                        }
+                        other => anyhow::bail!(
+                            "未知 sleep_action '{}'，允许值: status | run | dry_run | pause | resume",
+                            other
+                        ),
+                    };
+                    let rep = mgr.audit_memories()?;
+                    return Ok(serde_json::to_string_pretty(&serde_json::json!({
+                        "audit": rep,
+                        "sleep_action": s_act,
+                        "sleep_compaction": sleep_payload,
+                    }))?);
+                }
+
                 let rep = mgr.audit_memories()?;
                 if tx_status_req || tomb_key.is_some() {
                     let cfg = crate::config::Config::load_effective_or_default();

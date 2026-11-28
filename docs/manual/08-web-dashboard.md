@@ -26,9 +26,9 @@
    - 采用 **三层渐进式故事舞台**：第 1 层展示每幕「💡 一句话生活比喻 (`analogy`)」「🎯 核心用意 (`intent_summary`)」、3 张核心收益数字卡 (`hero_metrics`) 与演讲者 30 秒提词卡；第 2 层左右分屏对比「盲人 Agent 三步翻车故事线」vs「7 套真引擎驱动的专属可视化组件」（含第 7 幕「换脑不失忆 · 跨大脑 1ms 本体接力」）；第 3 层提供默认收起的 `<details>` 技术专家原始 JSON 核验抽屉；
    - 支持 8 秒/幕自动巡航（`Space` 暂停 / `←→` 切幕）、演讲者大屏模式与一键无痕重置 `demo:*` 沙盒；
    - 左侧内置 `/deck`（[presentation/agent-body-deck.html](../../presentation/agent-body-deck.html)，25 页深度技术交流版）与 `/presentation`（[presentation/presentation.html](../../presentation/presentation.html)，17 页对外路演版）离线 PPT 直达入口（Decks-as-Code 生成，全套 6 讲 30 分钟专题见 [presentation/index.html](../../presentation/index.html)），页脚内置全局「⌨️ 黑屏命令镜像器」实时回显等价 CLI 与 MCP JSON-RPC。
-7. **📊 实证基准、竞品对标与自进化探针 (Empirical Benchmark v3.9 & Feedback · Phase 27~64)**：
-   - **轨道 A — A/B 对照基准跑批**：支持一键运行 `full` / `competitors` / `macro` / `micro` / `dq` / 单项负载（`W1`~`W19`，含 `W19` 多模态与 Know-How 回填），同机实时比对 Without Agent Body 裸奔基线 vs With Agent Body 真引擎的 Token 节省率、延迟加速比、四维上下文质量净胜（$\Delta Q$）、有效信息密度倍数、6 大微基准 SLA（`M1`~`M6`）与 10 项质量及 Shadow A/B 稳态门禁（`DQ1`~`DQ10`），每批生成 **SHA-256 防篡改指纹**；
-   - **轨道 B — 生产效能存证账本**：按 `24h` / `7d` / `30d` / `all` 时间窗展示日常每一次 MCP/CLI/Web/Hook 调用自动记账的 `PR-01`~`PR-14` 归因收益与溯源流水；
+7. **📊 实证基准、竞品对标与自进化探针 (Empirical Benchmark v4.1 & Feedback · Phase 27~78)**：
+   - **轨道 A — A/B 对照基准跑批**：支持一键运行 `full` / `competitors` / `macro` / `micro` / `dq` / 单项负载（`W1`~`W22`，含 `W19` 多模态与 Know-How 回填、`W20` PG 事务记忆、`W21` 睡眠整理与旁路帕累托、`W22` 旁路快权重三门禁/定向遗忘与回滚），同机实时比对 Without Agent Body 裸奔基线 vs With Agent Body 真引擎的 Token 节省率、延迟加速比、四维上下文质量净胜（$\Delta Q$）、有效信息密度倍数、6 大微基准 SLA（`M1`~`M6`）与 12 项质量、睡眠整理与快权重血缘门禁（`DQ1`~`DQ12`），每批生成 **SHA-256 防篡改指纹**；
+   - **轨道 B — 生产效能存证账本**：按 `24h` / `7d` / `30d` / `all` 时间窗展示日常每一次 MCP/CLI/Web/Hook 调用自动记账的 `PR-01`~`PR-16` 归因收益与溯源流水；
    - **轨道 C — 热门竞品对标 & 使用反馈/自进化面板 (`body_feedback`)**：同屏展示 `COMP-C1~C4` 竞品对比与 12 维源码能力矩阵，并直接驱动 `user_feedback.md` 列表、五点对比探针（`P1~P5`）、信息新鲜度对账（`reconcile`）与已验证反馈沉淀入记忆（`sync`），与 43 个原生 MCP 工具及 CLI 保持 **43/43 (100%)** 双向同步。
 8. **📜 双域行为审计与自进化工作台 (Dual-Domain Audit & Self-Evolution · Phase 43)**：
    - 支持按 `IN_AGENT` / `OUT_OF_AGENT` 双域过滤审计流水、`trace_id` 因果链路钻取、DuckDB OLAP 聚合视图、一键触发审计自进化（AOPCC 租约滑窗升降级 + Placement/Feedback 反哺）与 Parquet/CSV 导出，同步回显等价 `agent-body audit` CLI 与 `body_audit_query` MCP 请求体。
@@ -82,6 +82,8 @@ port = 8765
 | `GET` | `/api/v1/ecosystem?q=<kw>` | MCP Server、SKILL 目录与外部服务通讯录清单 | 开放 |
 | `GET` | `/api/v1/ecosystem/route?intent=<q>&budget=600` | Context 防爆路由器演练与 Token 节省估算 | 开放 |
 | `GET` | `/api/v1/governance?q=<kw>` | 放置规则、扫描策略、长期记忆、变更审计流与 Preflight 预检 | 开放 |
+| `GET` | `/api/v1/memories/audit` | 认知记忆体检（`tx_status` / `sleep_action=status` / `fast_weight_action=status,lineage` 只读探测） | 开放 |
+| `POST` | `/api/v1/memories/audit` | 记忆归档、墓碑写穿（`tombstone_fact_key`）、M2 睡眠整理与 M3 旁路快权重控制（`fast_weight_action=compact/unlearn/rollback`） | Bearer Token |
 | `GET` | `/api/v1/mesh/status` / `/api/v1/mesh/query` | 本机跨平台探针、Peer Mesh 状态与联邦动作查询 | 开放 |
 | `GET` | `/api/v1/mesh/ping` / `facts` / `locks` / `graph` / `body_manifest` | 节点间图谱、事实与本体名片联邦端点（带 `MeshEnvelope` 校验） | Token / HMAC |
 | `POST` | `/api/v1/mesh/dialogue` / `transfer` | `MeshEnvelope v1.0` HMAC 签名防重放对话与 `<=10MB` 沙盒投递 | HMAC-SHA256 |
@@ -96,8 +98,8 @@ port = 8765
 | `POST` | `/api/v1/body/handoff` / `resume` / `heal` / `perf/snapshot` / `perf/awr` / `perf/tune` / `perf/delete` | 保存/恢复接力胶囊、`L1` 自愈、抓取/对比 AWR 快照、ADDM 调优与删除报告/快照 | Bearer Token |
 | `GET` | `/api/v1/demo/scenarios` / `/api/v1/demo/roi` | 7 大路演剧目列表与实时 ROI 商业价值核算 | 开放 |
 | `POST` | `/api/v1/demo/run` / `/api/v1/demo/reset` | 真引擎实跑指定路演剧目与一键重置 `demo:*` 沙盒 | Bearer Token |
-| `GET` | `/api/v1/benchmark/workloads` | 获取 20 大标准 A/B 负载 (`W1~W20`) 与 `PR-01~14` 规则字典 | 开放 |
-| `POST` | `/api/v1/benchmark/run` | 真机运行 `full` / `competitors` / `macro` / `micro` / `dq` / `W1~W20` 基准 | Bearer Token |
+| `GET` | `/api/v1/benchmark/workloads` | 获取 22 大标准 A/B 负载 (`W1~W22`) 与 `PR-01~16` 规则字典 | 开放 |
+| `POST` | `/api/v1/benchmark/run` | 真机运行 `full` / `competitors` / `macro` / `micro` / `dq` / `W1~W22` 基准 | Bearer Token |
 | `GET` | `/api/v1/benchmark/report` | 查询指定或最近批次报告及历史列表（含 SHA-256 指纹） | 开放 |
 | `GET` | `/api/v1/benchmark/ledger` | 审计指定时间窗内的生产效能存证账本流水 | 开放 |
 | `GET` | `/api/v1/benchmark/compare` | 对比两个批次（`run_a` vs `run_b`）的回归差异 | 开放 |

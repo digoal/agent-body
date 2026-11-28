@@ -409,6 +409,7 @@ impl WebServer {
             (Method::Post, "/api/v1/memories/add") => parity_api::handle_memories_add(req, storage),
             (Method::Get, "/api/v1/memories/search") => parity_api::handle_memories_search(req, storage),
             (Method::Get, "/api/v1/memories/audit") => parity_api::handle_memories_audit(storage),
+            (Method::Post, "/api/v1/memories/audit") => parity_api::handle_memories_audit_action(req, storage),
             (Method::Get, "/api/v1/env/gc") => parity_api::handle_env_gc(req),
             (Method::Post, "/api/v1/session/close") => parity_api::handle_session_close(req, storage),
             (Method::Post, "/api/v1/locks/acquire") => parity_api::handle_locks_acquire(req, storage, auth_token),

@@ -855,6 +855,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "postgres",
+ "reqwest",
  "serde",
  "serde_json",
  "sha2",

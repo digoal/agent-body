@@ -56,6 +56,8 @@ impl PgStorageProvider {
                      END IF;
                  END IF;
                  ALTER TABLE body_checkpoints ADD COLUMN IF NOT EXISTS tx_epoch BIGINT NOT NULL DEFAULT 0;
+                 ALTER TABLE body_checkpoints ADD COLUMN IF NOT EXISTS fast_weight_snapshot_id TEXT DEFAULT NULL;
+                 ALTER TABLE body_checkpoints ADD COLUMN IF NOT EXISTS fast_weight_base_model TEXT DEFAULT NULL;
              END $$;",
         ) { eprintln!("[PG][WARN] 增量列/索引热迁移告警: {}", e); }
 

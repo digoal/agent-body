@@ -23,37 +23,39 @@
 
 ---
 
-## Phase 77（M2 · 方案 A 满血形态：`L1_AUTONOMIC` 空闲期睡眠整理 `SleepTimeCompactor`）
+## Phase 77（M2 · 方案 A 满血形态：`L1_AUTONOMIC` 空闲期睡眠整理 `SleepTimeCompactor`） `✅ 已完成`
 
 > **阶段目标**：在不影响热路径 `< 15 ms` SLA 的前提下，利用宿主机空闲窗口异步整理长情景记忆与计算 STC 显著性评分，实现在线推理上下文 Token 降本 `3×–5×` 且事实召回率 `100%`。  
 > **前置条件**：Phase 76（M1）全部任务 `✅ 已完成` 且门禁全绿。  
-> **硬验收门禁**：在线推理 Token 降本 **`3×–5×`** · 帕累托双门禁 **`Fact Recall = 100%`** 且 **`Q_body >= Q_baseline`** · 不可预测查询自动旁路 0 退化 · 全量写动作 100% 入 `audit_events`。
+> **硬验收门禁**：在线推理 Token 降本 **`3×–5×`** · 帕累托双门禁 **`Fact Recall = 100%`** 且 **`Q_body >= Q_baseline`** · 不可预测查询自动旁路 0 退化 · 全量写动作 100% 入 `audit_events`。  
+> **真机 PG 18.6 硬验收实测**：`SleepTimeCompactor` 压缩比 **`3.73×`**（`272→73 tok`） · 保留原子事实 **`6/6 (100%)`** · 整理期间热路径 `search_tx` **`P50 = 5.19 ms` / `P99 = 10.65 ms`**（远优于 `< 20 ms` SLA） · 不可预测探索查询自动旁路 `QueryPredictabilityGate` 召回 0 退化 · SQLite `memories.status='archived'` 兼容降级、中断作业恢复与暂停开关、`OUT_OF_AGENT` 脱敏审计、Benchmark `v4.0` (`W21` `260→87 tok` / `DQ11` / `PR-15`) 及 `428` 项全工作区测试 + Playwright 9 工作台 E2E 全绿。
 
 | 任务编号 | 原子任务清单 | 核心代码 / 文档触点 | 验收标准 | 状态 |
 |:---:|---|---|---|:---:|
-| **77.1** | **STC 突触显著性评分引擎 (`SalienceScorer`)**：综合新颖度/惊喜度、跨会话复用频次、人工/探针冲突修正权重与时间衰减，为 `agent_memory_events` 计算并持久化 `salience_score` | `contrib/mem_pg_tx/src/` · `src/memory/lifecycle.rs` | 确定性单测覆盖高价值决策 vs 高频低值噪声显著性分层 | 🗓️ 待规划 |
-| **77.2** | **空闲窗口探测与 `SleepTimeCompactor`**：在 `BackgroundScheduler`（`L1_AUTONOMIC` 包络）挂载空闲期整理器，按 CPU/活跃会话空闲阈值消费 `compaction_jobs (sleep_context)`，压缩冗余 `auto_sync` 与长情景片段为高密度摘要并标记 `consolidation_st='sleep_compacted'` | `src/daemon/scheduler.rs` · `contrib/mem_pg_tx/src/` | 整理期间热路径 `brief` / `search` P99 不劣化；支持 `dry_run` 与中断恢复 | 🗓️ 待规划 |
-| **77.3** | **查询可预测性评估与自动旁路门禁**：引入查询分布熵/命中率检测，遇到高度不可预测的探索型查询自动旁路预整理结果、直查原始双时态事件流，规避 Sleep-time Compute 负面干扰边界 | `src/memory/hybrid.rs` · `src/brief/assembler.rs` | 不可预测查询测试集准确率无下降（`ΔRecall >= 0`） | 🗓️ 待规划 |
-| **77.4** | **双域审计留痕与三端观测控制**：每次睡眠整理强制经 `SecretRedactor` 脱敏并以 `OUT_OF_AGENT` 写入 `audit_events`（携带 `audit_trace_id` 与 `before_after_delta`）；在 `body_memory_audit` / CLI / Web 暴露整理队列查询、触发与暂停开关 | `src/audit/` · `src/api/mcp_tools/` · `src/web/` | `audit_events` 100% 可回溯；明文凭据残留 `0` | 🗓️ 待规划 |
-| **77.5** | **Benchmark `v4.0` 升级 (`W21` + `DQ11` + `PR-15`)**：新增睡眠整理帕累托负载 `W21`、双时态一致性与墓碑纯净度 `DQ11`、睡眠省 Token 存证规则 `PR-15`，同步 `evolution_manifest.py` | `src/benchmark/` · `scripts/evolution_manifest.py` · `docs/design_doc/10-benchmark-spec.md` | `W21` 省 Token `>= 3×` 且 `Fact Recall = 100%`、`Q_body >= Q_baseline` | 🗓️ 待规划 |
-| **77.6** | **M2 全栈验收与文档/手册同步**：跑通 `make quality-gate && RUST_TEST_THREADS=1 make test && make verify-webui`，更新手册 `06`/`10` 与 `progress.md` | `docs/manual/` · `docs/src_doc/progress.md` | 0 drift / 0 warning / 全部门禁通过 | 🗓️ 待规划 |
+| **77.1** | **STC 突触显著性评分引擎 (`SalienceScorer`)**：综合新颖度/惊喜度、跨会话复用频次、人工/探针冲突修正权重与时间衰减，为 `ext_mem_pg_tx__events` 计算并持久化 `salience_score` | `contrib/mem_pg_tx/src/salience.rs` · `src/memory/lifecycle.rs` | 确定性单测覆盖高价值决策 vs 高频低值噪声显著性分层 | ✅ 已完成 |
+| **77.2** | **空闲窗口探测与 `SleepTimeCompactor`**：在 `BackgroundScheduler`（`L1_AUTONOMIC` 包络）挂载空闲期整理器，按 CPU/活跃会话空闲阈值消费 `compaction_jobs (sleep_context)`，压缩冗余 `auto_sync` 与长情景片段为高密度摘要并标记 `consolidation_st='sleep_compacted'` | `src/daemon/scheduler.rs` · `contrib/mem_pg_tx/src/sleep_compactor.rs` · `src/memory/sleep_compaction.rs` | 整理期间热路径 `P99 = 10.65 ms`；支持 `dry_run`、`pause/resume` 与中断恢复 | ✅ 已完成 |
+| **77.3** | **查询可预测性评估与自动旁路门禁**：引入查询分布熵/命中率检测（`QueryPredictabilityGate`），遇到高度不可预测的探索型查询自动旁路预整理结果、直查原始双时态事件流，规避 Sleep-time Compute 负面干扰边界 | `contrib/mem_pg_tx/src/predictability.rs` · `src/memory/adapters/pg_tx.rs` · `src/memory/hybrid.rs` · `src/brief/assembler.rs` | 不可预测查询测试集准确率无下降（`ΔRecall >= 0`） | ✅ 已完成 |
+| **77.4** | **双域审计留痕与三端观测控制**：每次睡眠整理强制经 `SecretRedactor` 脱敏并以 `OUT_OF_AGENT` 写入 `audit_events`（携带 `audit_trace_id` 与 `before_after_delta`）；在 `body_memory_audit` / CLI / Web (`GET`+`POST /api/v1/memories/audit`) 暴露 `sleep_action`/`force` | `src/audit/` · `src/api/mcp_tools/` · `src/cli_handlers/core.rs` · `src/web/` | `audit_events` 100% 可回溯；明文凭据残留 `0`；43 工具零膨胀 | ✅ 已完成 |
+| **77.5** | **Benchmark `v4.0` 升级 (`W21` + `DQ11` + `PR-15`)**：新增睡眠整理帕累托负载 `W21`、双时态一致性与墓碑纯净度 `DQ11`、睡眠省 Token 存证规则 `PR-15`，同步 `evolution_manifest.py` | `src/benchmark/` · `scripts/evolution_manifest.py` · `docs/design_doc/10-benchmark-spec.md` | `W21` 省 Token (`260→87 tok`) 且 `Fact Recall = 100%`、`Q_body >= Q_baseline` | ✅ 已完成 |
+| **77.6** | **M2 全栈验收与文档/手册同步**：跑通 `make quality-gate && RUST_TEST_THREADS=1 make test && make verify-webui`，更新手册 `03`/`04`/`06`/`08`/`10` 与 `progress.md` | `docs/manual/` · `docs/src_doc/progress.md` · `tests/sleep_compaction_integration.rs` | 0 drift / 0 warning / 428 测试与全部门禁通过 | ✅ 已完成 |
 
 ---
 
-## Phase 78（M3 · 方案 B 中长期演进：旁路快权重血缘控制面与神经 Compaction 门禁）
+## Phase 78（M3 · 方案 B 旁路快权重血缘控制面与神经 Compaction 门禁）`✅ 已完成`
 
 > **阶段目标**：复用 M1/M2 同一套 `tx_epoch` 与 `compaction_jobs` 契约，在**零推理/训练代码进 Rust 本体、零 GB 权重存堆表**的前提下，通过旁路控制面外挂租户级快权重与后台神经整理，实现“常数延迟热态推理 + 事务级回滚 + 合规精准遗忘”。  
 > **前置条件**：Phase 77（M2）全部任务 `✅ 已完成` 且帕累托门禁全绿。  
-> **硬验收门禁**：百万级模拟事件流检索延迟恒定 · 连续多轮合并通用基准衰减 **`< 3%`** (`eval_glue_delta >= -0.03`) · 墓碑数据诱导召回率 **`< 0.1%`** (`unlearn_leak_rate < 0.001`) · 按 `tx_epoch` 秒级回滚 100% 通过。
+> **硬验收门禁**：百万级模拟事件流检索延迟恒定 · 连续多轮合并通用基准衰减 **`< 3%`** (`eval_glue_delta >= -0.03`) · 墓碑数据诱导召回率 **`< 0.1%`** (`unlearn_leak_rate < 0.001`) · 按 `tx_epoch` 秒级回滚 100% 通过。  
+> **真机 PG 18.6 硬验收实测**：**1,000,003 事件流**实测通过 `WITH active_e AS MATERIALIZED` 局部索引物化使 **`search_tx P50 = 2.66 ms` / `P99 = 4.42 ms`**（远优于 `< 20 ms` SLA）、`active_snap P99 = 0.75 ms`、`lineage P99 = 1.94 ms`（`lineage_cte = 7,780 μs`）、按 `tx_epoch` 原子回滚耗时 **`24 ms`** · 3 类故障注入（超标范数 / 回归衰减 / 墓碑泄漏）**`100%`** 阻断置 `aborted` 且无损回退方案 A · 墓碑定向遗忘与 `ContinuityCapsule v2` 同基座热挂载/异构回退全绿 · Benchmark **`v4.1`** (`W22` `320→48 tok` / `DQ12` / `PR-16`) 与 43 工具零膨胀、`tests/fast_weight_m3_integration.rs` + 全栈四门禁全绿。
 
 | 任务编号 | 原子任务清单 | 核心代码 / 文档触点 | 验收标准 | 状态 |
 |:---:|---|---|---|:---:|
-| **78.1** | **`FastWeightCheckpointSpi` 与旁路 Model Runtime 线协议**：定义标准化 JSON-RPC/HTTP 旁路接口（支持对接外部 In-Place TTT / Atlas / Larimar / SCoL + NeurStore 服务），附带 Mock Runtime 供 CI 离线回归验证 | `kernel/body-sdk/` · `contrib/mem_pg_tx/src/` | `agent-body` 本体零模型权重文件与零训练依赖；Mock Runtime 契约测试通过 | 🗓️ 待规划 |
-| **78.2** | **快权重快照血缘账本与范数防雪崩监控**：实现 `fast_weight_snapshots` 状态机（`warming → active → compacted / rolled_back`）、父子版本链、`artifact_uri` 登记与 `norm_ratio` 异常熔断 | `contrib/mem_pg_tx/src/` | `norm_ratio` 超阈值自动拒绝激活并告警；版本血缘查询 `< 5 ms` | 🗓️ 待规划 |
-| **78.3** | **定向遗忘墓碑管道 (`selective_unlearn`)**：打通 `FreshnessReconciler` 删除与人工合规擦除至 `compaction_jobs.tombstone_ids`，向旁路 Runtime 下发定向擦除作业并记录审计存证 | `src/feedback/probes.rs` · `contrib/mem_pg_tx/src/` · `src/audit/` | 删除事件 100% 进入墓碑队列；擦除完成前检索层严格屏蔽 | 🗓️ 待规划 |
-| **78.4** | **三道硬门禁原子切换与按 `tx_epoch` 秒级回滚**：仅当 `norm_ratio` 合规、`eval_glue_delta >= -0.03` 且 `unlearn_leak_rate < 0.001` 时在 PG 单事务原子切换 `status='active'`；任一不通过自动 `aborted` 并无损回退纯方案 A 非参数检索；支持一键回滚至任意历史 `tx_epoch` | `contrib/mem_pg_tx/src/` · `src/api/mcp_tools/` | 故障注入（超标范数/回归/泄漏）100% 拦截回退；回滚耗时 `< 1 s` | 🗓️ 待规划 |
-| **78.5** | **热态快权重跨大脑接力 (`ContinuityCapsule v2`)**：扩展 `body_checkpoints` 附带可选 `fast_weight_snapshot_id`（仍严格 `<= 300 tok` + `PromptInjectionScanner` 清洗），让同基座新大脑直接挂载热态记忆快照 | `src/body/continuity.rs` · `src/storage/sqlite_provider/schema_reconcile.rs` | 换脑接力自动校验 `base_model_id` 与 `anchored_epoch`，异构基座自动回退文本胶囊 | 🗓️ 待规划 |
-| **78.6** | **M3 全量压测与全一等公民大一统**：完成百万事件流模拟压测、回滚演练与安全审计，同步更新 `README.md`、10 卷手册、3 套 SKILL、Web UI 面板与 `presentation/` 演说矩阵 | `docs/` · `skills/` · `scripts/build_*.py` · `presentation/` | `make quality-gate && RUST_TEST_THREADS=1 make test && make verify-webui && make verify-decks` 全绿 | 🗓️ 待规划 |
+| **78.1** | **`FastWeightCheckpointSpi` 与旁路 Model Runtime 线协议**：定义标准化 JSON-RPC 2.0/HTTP 旁路接口（支持对接外部 `In-Place TTT` / `Atlas` / `Larimar` / `SCoL` 服务），附带 `MockFastWeightRuntime` 故障注入器与 `HttpFastWeightRuntime` 供离线回归与外部挂接 | `kernel/body-sdk/src/fast_weight.rs` · `contrib/mem_pg_tx/src/fast_weight_runtime.rs` · `src/config/types.rs` · `config.example.toml` | `agent-body` 本体零模型权重文件与零训练依赖（`data:` 内联权重直拒）；`arch-check` & SDK 单测全绿 | ✅ 已完成 |
+| **78.2** | **快权重快照血缘账本与范数防雪崩监控**：实现 `fast_weight_snapshots` 状态机（`warming → active → compacted / rolled_back`）、递归 CTE 父子版本链、`artifact_uri` 登记与 `norm_ratio` 异常熔断 | `contrib/mem_pg_tx/src/fast_weight.rs` · `contrib/mem_pg_tx/src/schema.rs` | 百万行下血缘查询 `P99 = 1.94 ms`（`< 5 ms`）；超标 `norm_ratio` 自动拒绝切换并保留原活跃版本 | ✅ 已完成 |
+| **78.3** | **定向遗忘墓碑管道 (`selective_unlearn`)**：打通 `tombstone_fact` 删除至 `compaction_jobs` (`tombstone_ids`)，向旁路 Runtime 下发定向擦除作业并记录 `OUT_OF_AGENT` 脱敏审计 | `contrib/mem_pg_tx/src/engine.rs` · `contrib/mem_pg_tx/src/fast_weight_ops.rs` · `src/memory/fast_weight.rs` | 删除事件 `100%` 进入墓碑队列；擦除前检索层严格 `0%` 僵尸召回 | ✅ 已完成 |
+| **78.4** | **三道硬门禁原子切换与按 `tx_epoch` 秒级回滚**：仅当 `norm_ratio` 合规、`eval_glue_delta >= -0.03` 且 `unlearn_leak_rate < 0.001` 时在 PG 单事务原子切换 `status='active'`；任一不通过自动 `aborted` 并无损回退方案 A；三端 `body_memory_audit` / `memory audit` / `/api/v1/memories/audit` 暴露 `fast_weight_action` (`status`/`lineage`/`compact`/`unlearn`/`rollback`) | `contrib/mem_pg_tx/src/fast_weight_ops.rs` · `src/memory/fast_weight.rs` · `src/api/mcp_tools/infra_handlers.rs` · `src/cli_handlers/core.rs` · `src/web/parity_api/ops_endpoints.rs` | 3 类故障注入 `100%` 拦截回退；回滚耗时 `24 ms`（`< 1 s`）；43 工具零膨胀 | ✅ 已完成 |
+| **78.5** | **热态快权重跨大脑接力 (`ContinuityCapsule v2`)**：扩展 `body_checkpoints` 增加可空 `fast_weight_snapshot_id` 与 `fast_weight_base_model`（SQLite/PG/DuckDB 三后端 + `schema_reconcile.rs` 无损补列 + `PromptInjectionScanner` 清洗 + `<= 300 tok`），同基座新大脑自动热挂、异构基座自动回退纯文本胶囊 | `src/body/continuity.rs` · `src/storage/{models,schema,pg_schema,duckdb_schema,sync_pipeline}.rs` · `src/storage/sqlite_provider/schema_reconcile.rs` · `src/api/mcp_tools/body_handlers.rs` | 老库无损补列回归通过；换脑接力自动核验 `base_model_id` 并返回 `Attached` / `Fallback` 决定论结果 | ✅ 已完成 |
+| **78.6** | **M3 百万级 PG 压测、Benchmark `v4.1` 与全一等公民大一统**：新增 `tests/fast_weight_m3_integration.rs` 1,000,003 事件实测与 `Benchmark v4.1`（`W22` + `DQ12` + `PR-16`），同步更新 `README.md`、手册、3 套 SKILL、Web UI 面板与 `presentation/` 演说矩阵 | `tests/fast_weight_m3_integration.rs` · `src/benchmark/` · `docs/` · `skills/` · `scripts/build_*.py` · `presentation/` | `make quality-gate && RUST_TEST_THREADS=1 make test && make verify-webui && make verify-decks` 全绿，0 残留 PG 临时库 | ✅ 已完成 |
 
 ---
 

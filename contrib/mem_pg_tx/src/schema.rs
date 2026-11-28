@@ -43,6 +43,13 @@ CREATE INDEX IF NOT EXISTS idx_ext_mem_pg_tx_active_epoch
 CREATE INDEX IF NOT EXISTS idx_ext_mem_pg_tx_fact_history
     ON ext_mem_pg_tx__events (body_id, tenant_scope, fact_key, tx_epoch DESC);
 
+CREATE INDEX IF NOT EXISTS idx_ext_mem_pg_tx_scope_epoch
+    ON ext_mem_pg_tx__events (tenant_scope, tx_epoch DESC);
+
+CREATE INDEX IF NOT EXISTS idx_ext_mem_pg_tx_scope_active
+    ON ext_mem_pg_tx__events (tenant_scope, tx_epoch DESC)
+    WHERE upper_inf(valid_range) AND embedding_status <> 'tombstoned';
+
 -- 2) LSM 式解耦检索段：写穿失效后立即可见度隔离，杜绝僵尸向量召回
 CREATE TABLE IF NOT EXISTS ext_mem_pg_tx__segments (
     segment_id        BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

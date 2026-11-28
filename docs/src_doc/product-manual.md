@@ -10,4 +10,4 @@
 - **30 组 CLI 全量命令速查**：[03-cli-reference.md](../manual/03-cli-reference.md)
 - **43 个 MCP 工具参考**：[04-mcp-integration.md](../manual/04-mcp-integration.md)
 - **Web 监控大屏（9 大工作台）**：[08-web-dashboard.md](../manual/08-web-dashboard.md)
-- **实证 Benchmark v3.8 与效能账本**：[10-benchmark-and-roi.md](../manual/10-benchmark-and-roi.md)
+- **实证 Benchmark v4.1 与效能账本**：[10-benchmark-and-roi.md](../manual/10-benchmark-and-roi.md)

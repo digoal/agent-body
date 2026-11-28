@@ -16,6 +16,16 @@ import html
 import math
 from typing import Any
 
+from evolution_manifest import extract_manifest
+
+_VIS_MANIFEST = extract_manifest()
+_VIS_COUNTS = _VIS_MANIFEST["counts"]
+_VIS_BENCH_VER = _VIS_MANIFEST["bench_spec_version"]
+_VIS_WL_CNT = _VIS_COUNTS["workloads"]
+_VIS_MICRO_CNT = _VIS_COUNTS["micro"]
+_VIS_DQ_CNT = _VIS_COUNTS["dq"]
+_VIS_TOTAL_SLA = _VIS_WL_CNT + _VIS_MICRO_CNT + _VIS_DQ_CNT
+
 # Palette — Warm Architectural Blueprint (light, crisp, high-contrast, never dark)
 C_PAPER = "#FAF8F4"
 C_PAPER2 = "#F2EFE9"
@@ -521,7 +531,7 @@ def _cover_illustration(theme: str) -> str:
 
     else:  # benchmark
         # Pareto Quadrant Hero Chart
-        parts.append(f'<text x="380" y="44" font-family="var(--f-m)" font-size="12" fill="{C_MUTE}" text-anchor="middle" letter-spacing="2.2">PARETO FRONTIER · BENCHMARK v3.9</text>')
+        parts.append(f'<text x="380" y="44" font-family="var(--f-m)" font-size="12" fill="{C_MUTE}" text-anchor="middle" letter-spacing="2.2">PARETO FRONTIER · BENCHMARK v{_VIS_BENCH_VER}</text>')
         # Axes
         parts.append(f'<rect x="86" y="76" width="604" height="390" rx="12" fill="{C_PAPER}"/>')
         # Sweet spot corner
@@ -1563,7 +1573,7 @@ def vis_evolution_flywheel(animated: bool = True) -> str:
 
 
 def vis_benchmark_pareto(animated: bool = True) -> str:
-    """Benchmark v3.9 Hero Visual: 2D Pareto Quadrant + 4 Ring Gauges + Microsecond SLA Bars."""
+    """Benchmark v4.1 Hero Visual: 2D Pareto Quadrant + 4 Ring Gauges + Microsecond SLA Bars."""
     cls = "fig anim" if animated else "fig"
     s = lambda k: f'<g data-step="{k}">' if animated else "<g>"
     parts = [f'<svg class="{cls}" viewBox="0 0 1472 640" width="1472" height="640" xmlns="http://www.w3.org/2000/svg">', _arrow_defs("bp")]
@@ -1607,16 +1617,16 @@ def vis_benchmark_pareto(animated: bool = True) -> str:
     parts.append(f'<circle cx="728" cy="134" r="7" fill="{C_GREEN}"/>')
     parts.append(f'<text x="728" y="168" font-family="var(--f-m)" font-size="11" fill="{C_GREEN}" font-weight="700" text-anchor="middle">W7 / 均值</text>')
     parts.append(f'<text x="646" y="206" font-family="var(--f-s)" font-size="15" fill="{C_GREEN}" font-weight="700" text-anchor="middle">Agent Body v1.1 · Q = 98.0</text>')
-    parts.append(f'<text x="444" y="538" font-family="var(--f-m)" font-size="12" fill="{C_MUTE}" text-anchor="middle">SHA-256 防篡改真机存证 · W1~W19 全 19 项帕累托双赢</text>')
+    parts.append(f'<text x="444" y="538" font-family="var(--f-m)" font-size="12" fill="{C_MUTE}" text-anchor="middle">SHA-256 防篡改真机存证 · W1~W{_VIS_WL_CNT} 全 {_VIS_WL_CNT} 项帕累托双赢</text>')
     parts.append("</g>")
 
     # Step 2: Right Top 2x2 Ring Gauges + Bottom Microsecond SLA Bars
     parts.append(s(2))
     parts.append(f'<rect x="850" y="14" width="606" height="278" rx="20" fill="{C_WHITE}" stroke="{C_GREEN}" stroke-width="2"/>')
-    parts.append(f'<text x="878" y="48" font-family="var(--f-m)" font-size="12" fill="{C_GREEN}" font-weight="700">BENCHMARK v3.9 核心实证</text>')
+    parts.append(f'<text x="878" y="48" font-family="var(--f-m)" font-size="12" fill="{C_GREEN}" font-weight="700">BENCHMARK v{_VIS_BENCH_VER} 核心实证</text>')
     parts.append(ring_gauge(960, 156, 52, 99.23, "-99.2%", "Token 节省", C_TEAL))
     parts.append(ring_gauge(1154, 156, 52, 98.0, "98.0", "质量分 (+64.2)", C_GREEN))
-    parts.append(ring_gauge(1348, 156, 52, 100.0, "39/39", "全维门禁 PASS", C_CLAY))
+    parts.append(ring_gauge(1348, 156, 52, 100.0, f"{_VIS_TOTAL_SLA}/{_VIS_TOTAL_SLA}", "全维门禁 PASS", C_CLAY))
     parts.append(f'<text x="1153" y="270" font-family="var(--f-m)" font-size="13" fill="{C_INK2}" text-anchor="middle">662,502 → 5,114 tok · 18/18 WaitEvent 全埋点</text>')
     parts.append("</g>")
 
@@ -2009,7 +2019,12 @@ def vis_parity_console(animated: bool = True) -> str:
     return "".join(parts)
 
 
-def vis_quality_gates(test_cnt: int = 396, mod_cnt: int = 27, tool_cnt: int = 43, animated: bool = True) -> str:
+def vis_quality_gates(
+    test_cnt: int = _VIS_COUNTS["verified_tests"],
+    mod_cnt: int = _VIS_COUNTS["modules"],
+    tool_cnt: int = _VIS_COUNTS["mcp_tools"],
+    animated: bool = True,
+) -> str:
     """7-Stage Deterministic Quality Gate Security Conveyor + Runtime Budget Gauges."""
     cls = "fig anim" if animated else "fig"
     s = lambda k: f'<g data-step="{k}">' if animated else "<g>"

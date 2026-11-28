@@ -28,7 +28,7 @@ pub fn sha256_hex(input: &str) -> String {
     digest.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
-/// 生产效能存证账本确定性推导规则 (PR-01 ~ PR-14)
+/// 生产效能存证账本确定性推导规则 (PR-01 ~ PR-16)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ProvenanceRule {
     Pr01SkillMcpRouting,
@@ -45,6 +45,8 @@ pub enum ProvenanceRule {
     Pr12AuditDrivenSelfEvolution,
     Pr13CrossBrainContinuitySaved,
     Pr14PerfAwrDiagnosticsSaved,
+    Pr15SleepCompactionSavings,
+    Pr16FastWeightGateVerified,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,6 +74,8 @@ impl ProvenanceRule {
             Self::Pr12AuditDrivenSelfEvolution => "PR-12",
             Self::Pr13CrossBrainContinuitySaved => "PR-13",
             Self::Pr14PerfAwrDiagnosticsSaved => "PR-14",
+            Self::Pr15SleepCompactionSavings => "PR-15",
+            Self::Pr16FastWeightGateVerified => "PR-16",
         }
     }
 
@@ -91,6 +95,8 @@ impl ProvenanceRule {
             Self::Pr12AuditDrivenSelfEvolution => "双域行为审计溯源与数据驱动自进化",
             Self::Pr13CrossBrainContinuitySaved => "跨大脑连续性接力与本体器官自省",
             Self::Pr14PerfAwrDiagnosticsSaved => "内生等待事件与 AWR/ADDM 性能自诊断省轮",
+            Self::Pr15SleepCompactionSavings => "空闲期睡眠整理上下文压缩降本",
+            Self::Pr16FastWeightGateVerified => "旁路快权重神经 Compaction 与定向遗忘三门禁实证",
         }
     }
 
@@ -138,6 +144,12 @@ impl ProvenanceRule {
             Self::Pr14PerfAwrDiagnosticsSaved => {
                 "18-event WaitEventRegistry + /proc/self KernelSelfTelemetry + AWR/ADDM auto-tune saves external ps/lsof/iostat probing, rounds_saved = 4"
             }
+            Self::Pr15SleepCompactionSavings => {
+                "baseline_tokens = sum(raw episodic tokens); body_tokens = compacted_summary_tokens (target >=3x reduction & 100% Fact Recall)"
+            }
+            Self::Pr16FastWeightGateVerified => {
+                "External Model Runtime neural compaction / selective_unlearn verified by 3 gates (norm_ratio<=1.50, glue>=-0.03, unlearn_leak<0.001) + <1s epoch rollback"
+            }
         }
     }
 
@@ -157,6 +169,8 @@ impl ProvenanceRule {
             (Self::Pr12AuditDrivenSelfEvolution, "body_audit_query, AuditLogger, AuditEvolutionAnalyzer"),
             (Self::Pr13CrossBrainContinuitySaved, "body_state(manifest/vitals/envelope/handoff/heal/peers), ContinuityManager"),
             (Self::Pr14PerfAwrDiagnosticsSaved, "body_state(perf_snapshot/perf_awr/perf_snapshots/perf_reports/perf_delete/perf_tune), BodyPerfEngine"),
+            (Self::Pr15SleepCompactionSavings, "body_memory_audit(sleep_action), SleepCompactionOrchestrator, BackgroundScheduler"),
+            (Self::Pr16FastWeightGateVerified, "body_memory_audit(fast_weight_action), FastWeightOrchestrator, FastWeightCheckpointSpi"),
         ];
         all.iter()
             .map(|(r, tools)| ProvenanceRuleMeta {

@@ -1,7 +1,7 @@
 # 10 — 实证 Benchmark 对照评测与生产效能存证账本规格说明书 (Benchmark & Verifiable ROI Spec)
 
 > **Agent Body 产品设计 · 交付件 10**  
-> **版本**: v0.4.0 → Phase 27~64 演进基线（当前 Spec **`v3.9`** · `v1.1.0`） · **编制**: Antigravity · **日期**: 2026-11-27  
+> **版本**: v0.4.0 → Phase 27~78 演进基线（当前 Spec **`v4.1`** · `v1.1.0`） · **编制**: Antigravity · **日期**: 2026-11-28  
 > **对齐约束**: [README.md 规约 #1、#5、#9、#12、#13、#16、#17、#18](../../README.md#L234-L311) · [ISSUE.md #13](../../ISSUE.md#L73)
 
 ---
@@ -322,3 +322,12 @@ $$Q = \text{round2}\Big(100 \times (0.40 \cdot R_{\text{fact}} + 0.30 \cdot P_{\
 2. **Benchmark `v3.9` (`W19` + `DQ10` · Phase 63 · `v1.1.0`)**：
    - **`W19 (multimodal_metadata_and_knowhow_backfill)`**：验证纯 Rust 多模态 L1A (`schema_version=2.0`) 提取、`asset_chunk` 章节切片、Know-How 知识网络边与 7 路 `Omni-RRF` 混合检索的端到端命中质量与帕累托净胜；
    - **`DQ10 (shadow_ab_falsification_and_zero_panic_probe)`**：验证多模态扫描/回填全格式零 Panic、`Shadow A/B` 帮倒忙率审计及 `H1~H5` 自动自愈机制现网稳态合规度。
+3. **Benchmark `v4.0` (`W20` + `W21` + `DQ11` + `PR-15` · Phase 76~77 · M1+M2 方案 A 满血形态)**：
+   - **`W20 (pg_tx_mvcc_concurrency_and_write_through)`**：验证 PostgreSQL 事务记忆（`TxMemoryProvider` / `contrib/mem_pg_tx`）并发写穿、MVCC 快照读、`tx_epoch` 墓碑隔离与 SQLite 透明降级；
+   - **`W21 (sleep_time_compaction_and_bypass_pareto)`**：验证 STC 突触显著性分级（`SalienceScorer`）、`L1_AUTONOMIC` 空闲期睡眠整理、`QueryPredictabilityGate` 探索型查询自动旁路、`OUT_OF_AGENT` 脱敏审计及 `Fact Recall = 100%` 双门禁；
+   - **`DQ11 (bitemporal_sleep_compaction_purity)`**：验证现网事务事件不存在“原文/摘要同时 active”的僵尸双活与零显著性噪声摘要；
+   - **`PR-15 (SleepCompactedTokens)`**：按每次睡眠整理节省的活跃上下文 Token 自动写入 `effectiveness_ledger` 生产效能账本。
+4. **Benchmark `v4.1` (`W22` + `DQ12` + `PR-16` · Phase 78 · M3 方案 B 旁路快权重闭环)**：
+   - **`W22 (fast_weight_lineage_gates_and_unlearn_rollback)`**：验证三道硬门禁（`norm_ratio`、`eval_glue_delta >= -0.03`、`unlearn_leak_rate < 0.001`）原子切换、3 类故障注入 100% 阻断置 `aborted` 无损回退、`selective_unlearn` 定向遗忘、`tx_epoch` 回滚及 `ContinuityCapsule v2` 同基座热挂载/异构回退，确保 `320→48 tok` 帕累托双赢；
+   - **`DQ12 (fast_weight_lineage_integrity)`**：校验现网/沙盒 `body_checkpoints` 中的快权重快照指针必须合法锚定非零 `tx_epoch` 且通过基座匹配校验，禁止悬空/零纪元非法快照引用；
+   - **`PR-16 (FastWeightCompactedAndUnlearned)`**：按每次通过三门禁的快权重神经整理与定向遗忘节省的上下文代价写入 `effectiveness_ledger` 生产效能账本。

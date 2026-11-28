@@ -38,7 +38,7 @@ agent-body [OPTIONS] <COMMAND>
 | `mesh` | 轻量多机联邦 `MeshEnvelope v1.0`：跨机图谱、HMAC 签名对话与沙盒文件投递 | 多机集群联动 |
 | `platform` | 跨平台原生探针查看本机硬件、端口与自动化任务 | Linux/macOS/Windows 探测 |
 | `demo` | 真引擎路演场景演示、ROI 核算与 43 工具黑白屏对齐自检 | 产品路演与一致性验证 |
-| `bench` | 运行 `v3.9` 实证 Benchmark（`W1~W20` / `M1~M6` / `DQ1~DQ10` / `COMP-C1~C4`）与 `PR-01~14` 账本 | 实证效能评测与回归对比 |
+| `bench` | 运行 `v4.1` 实证 Benchmark（`W1~W22` / `M1~M6` / `DQ1~DQ12` / `COMP-C1~C4`）与 `PR-01~16` 账本 | 实证效能评测与回归对比 |
 | `feedback` | `user_feedback.md` 双向管理、`reconcile` 新鲜度对账与 `P1~P5` 五点自进化探针 | 反馈闭环与自进化体检 |
 | `audit` | 双域全链路行为审计 (`IN_AGENT` + `OUT_OF_AGENT`)、DuckDB OLAP 与自进化 | 行为溯源与数据驱动进化 |
 | `body` | Agent 本体中枢：`manifest` / `vitals` / `envelope` / `handoff` / `resume` / `heal` / `peers` / `perf-*` | 跨大脑连续性、稳态治理与 AWR 诊断 |
@@ -363,12 +363,21 @@ agent-body [OPTIONS] <COMMAND>
   - `--archive-id <ID>`: 若存在冲突，指定归档淘汰的旧记忆 ID
   - `--tx-status`: 查看 PG 事务海马体健康态、当前 `tx_epoch`、活跃事件/分段及降级状态
   - `--tombstone-fact-key <KEY>`: 对指定逻辑键执行写穿墓碑逻辑删除（清除所有向量/分段召回）
+  - `--sleep-action <status|run|dry_run|pause|resume>`: 控制 `L1_AUTONOMIC` 空闲睡眠整理（配合 `--force` 可立即触发）
+  - `--fast-weight-action <status|lineage|compact|unlearn|rollback>`: Phase 78 方案 B 旁路快权重控制
+  - `--target-epoch <EPOCH>` / `--snapshot-id <UUID>` / `--base-model-id <ID>` / `--adapter-kind <KIND>`: 分别配合 `rollback` / `lineage` / `compact` / `unlearn` 使用
 - **示例**:
   ```bash
   agent-body memory audit
   agent-body memory audit --archive-id mem-01
   agent-body memory audit --tx-status
-  agent-body memory audit --tombstone-fact-key "deploy:old_port"
+  agent-body memory audit --tombstone-fact "deploy:old_port"
+  agent-body memory audit --sleep-action status
+  agent-body memory audit --sleep-action run --force
+  agent-body memory audit --fast-weight-action status
+  agent-body memory audit --fast-weight-action lineage
+  agent-body memory audit --fast-weight-action compact --base-model-id qwen3-8b --adapter-kind scol_lora
+  agent-body memory audit --fast-weight-action rollback --target-epoch 12
   ```
 
 ---
@@ -517,12 +526,12 @@ agent-body [OPTIONS] <COMMAND>
 
 ---
 
-### 2.23 `bench` — 实证 Benchmark v3.9 对照评测与生产效能存证账本 (Phase 27~63)
+### 2.23 `bench` — 实证 Benchmark v4.1 对照评测与生产效能存证账本 (Phase 27~78)
 - **这是什么**: 在真实宿主机上运行「Without Agent Body 裸奔基线 vs With Agent Body 本体引擎」A/B 对照测试套件，运行竞品横向对标，并审计日常每次 MCP/CLI/Web/Hook 调用自动记录的生产效能存证流水（对应 `body_benchmark`）。
 - **为什么需要**: 用同机实跑数据与 SHA-256 防篡改指纹证明 Token 节省率、上下文质量净胜（$\Delta Q$）、延迟加速比与冲突拦截率，杜绝“拍脑袋宣传数字”（规约 #18）。
 - **子命令与参数**:
-  - `workloads`: 列出 20 大标准 A/B 负载（`W1`~`W20`）、`M1`~`M6`、`DQ1`~`DQ10` 与 `PR-01`~`PR-14` 归因推导规则字典。
-  - `run [--suite full|macro|micro|dq|competitors|W1~W20|COMP-C1~C4] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
+  - `workloads`: 列出 22 大标准 A/B 负载（`W1`~`W22`）、`M1`~`M6`、`DQ1`~`DQ12` 与 `PR-01`~`PR-16` 归因推导规则字典。
+  - `run [--suite full|macro|micro|dq|competitors|W1~W22|COMP-C1~C4] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
   - `competitors [--track all|C1|C2|C3|C4] [--format markdown|json]`: 运行四大赛道热门开源竞品横向实证对标。
   - `report [--run-id <ID>] [--format table|json|csv]`: 查看指定批次或最近一次跑批报告。
   - `ledger [--window 24h|7d|30d|all] [--tool <NAME>] [--limit 20]`: 审计生产运行态按 PR 规则聚合的效能存证账本。
@@ -551,7 +560,7 @@ agent-body [OPTIONS] <COMMAND>
   | **事前拦截风险数** | - | - | **16 次** |
   | **阻断垃圾噪音文件** | - | - | **379 个** |
   ```
-  > 💡 **指标解读**: 当前 Benchmark 已演进至 **`v3.9`**，覆盖 `W1~W20`（含分层图谱 `W13`、Mesh 防重放 `W14`、AOPCC 自适应并发 `W15`、双域审计 `W16`、跨大脑连续性 `W17`、AWR/ADDM 诊断 `W18`、多模态/Know-How 回填 `W19`、PG 事务记忆 MVCC 写穿与透明降级 `W20`）、6 项微基准（`M1~M6`）、10 项质量/AWR/Shadow A/B 稳态门禁（`DQ1~DQ10`）及 `COMP-C1~C4` 竞品同机对标，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁。
+  > 💡 **指标解读**: 当前 Benchmark 已演进至 **`v4.1`**，覆盖 `W1~W22`（含分层图谱 `W13`、Mesh 防重放 `W14`、AOPCC 自适应并发 `W15`、双域审计 `W16`、跨大脑连续性 `W17`、AWR/ADDM 诊断 `W18`、多模态/Know-How 回填 `W19`、PG 事务记忆 MVCC 写穿与透明降级 `W20`、`L1_AUTONOMIC` 空闲期睡眠整理与不可预测查询自动旁路 `W21`、方案 B 快权重血缘门禁/定向遗忘/epoch 回滚与 `Continuity v2` 热挂 `W22`）、6 项微基准（`M1~M6`）、12 项质量/AWR/Shadow A/B/睡眠整理纯净度/快权重血缘门禁（`DQ1~DQ12`）及 `COMP-C1~C4` 竞品同机对标，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁。
 
 ---
 
@@ -595,8 +604,8 @@ agent-body [OPTIONS] <COMMAND>
   - `manifest [--json]`: 输出 `body_id`、宿主指纹与六大生理器官（感官/小脑/海马体/脊柱/代谢/社会）健康状态。
   - `vitals [--json]`: 计算五维本体生命体征雷达评分（`sensory_clarity` / `reflex_accuracy` / `memory_purity` / `metabolic_health` / `immune_traceability`）。
   - `envelope [--action <ACT>] [--target <PATH>] [--dry-run] [--json]`: 展示 `L0~L3` 策略矩阵或判定特定动作的自治边界。
-  - `handoff --goal <TEXT> [--from-brain <NAME>] [--files <CSV>] [--facts <CSV>] [--blockers <CSV>] [--next-step <TEXT>]`: 脱敏防投毒后保存 `<=300 tok` 接力胶囊。
-  - `resume [--by-brain <NAME>] [--checkpoint-id <ID>]`: 恢复最新未消费接力胶囊并标注接替大脑。
+  - `handoff --goal <TEXT> [--from-brain <NAME>] [--files <CSV>] [--facts <CSV>] [--blockers <CSV>] [--next-step <TEXT>] [--base-model-id <ID>] [--fast-weight-snapshot-id <UUID>]`: 脱敏防投毒后保存 `<=300 tok` 接力胶囊（可选绑定基座模型与活跃快权重快照）。
+  - `resume [--by-brain <NAME>] [--checkpoint-id <ID>] [--base-model-id <ID>]`: 恢复最新未消费接力胶囊并标注接替大脑；若提供 `--base-model-id` 且与胶囊绑定的快权重同基座即热挂载（`Attached`），异构或不可达自动优雅回退纯文本胶囊（`Fallback`）。
   - `heal [--json]`: 严格在 `L1_AUTONOMIC` 包络内执行过期锁清理、租约校准与新鲜度对账。
   - `peers [--json]`: 拉取多机 Mesh 节点 `/api/v1/mesh/body_manifest` 本体名片。
   - `perf-snapshot [--label <NAME>] [--set-baseline] [--json]`: 抓取本体内生 6 类 18 种等待事件与 `/proc/self` 内核性能快照（可选设为 `Golden Baseline` 黄金性能基准）。

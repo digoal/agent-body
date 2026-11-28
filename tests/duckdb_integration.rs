@@ -504,6 +504,8 @@ fn test_sync_pipeline_timestamps_all_tables_olap_and_export() {
         resumed_by_brain: None,
         resumed_at: None,
         tx_epoch: 0,
+        fast_weight_snapshot_id: None,
+        fast_weight_base_model: None,
     })
     .expect("insert cp");
 
@@ -919,6 +921,8 @@ fn test_storage_migration_full_20_entities_and_idempotent() {
         resumed_by_brain: None,
         resumed_at: None,
         tx_epoch: 0,
+        fast_weight_snapshot_id: None,
+        fast_weight_base_model: None,
     })
     .expect("cp");
 

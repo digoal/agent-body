@@ -7,6 +7,7 @@
 //! - 扩展元数据、注册器与 `BodyExtension` Trait (`extension`)
 
 pub mod extension;
+pub mod fast_weight;
 pub mod hooks;
 pub mod observability;
 pub mod routines;
@@ -42,6 +43,13 @@ macro_rules! body_module_magic {
 }
 
 pub use extension::{BodyExtension, ExtensionKind, ExtensionMeta, ExtensionRegistrar, HookRegistration, MigrationScript};
+pub use fast_weight::{
+    evaluate_fast_weight_gates, validate_artifact_uri, AdapterKind, FastWeightCompactRequest,
+    FastWeightCompactResponse, FastWeightGateMetrics, FastWeightGatePolicy, FastWeightGateVerdict,
+    FastWeightRollbackRequest, FastWeightRollbackResponse, FastWeightRuntimeClient,
+    FastWeightRuntimeHealth, FastWeightSnapshotStatus, FastWeightUnlearnRequest,
+    FastWeightUnlearnResponse,
+};
 pub use hooks::{
     AccessOp, AccessVerdict, AuditEnvelope, AuthVerdict, ClientAuthContext, ClientAuthHook,
     ClientCertInfo, EmitAuditHook, ExecutorEndHook, ExecutorStartHook, FailPolicy,

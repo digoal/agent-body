@@ -2,7 +2,7 @@
 
 > **版本**: v2.0 (`ISSUE #52`)  
 > **作者**: digoal 德哥 & Agent Body Architecture Team  
-> **状态**: 已全量落地（`Phase 70~73` 完成 `kernel/` 3 crates、`contrib/` 前 9 扩展与 3 精简发行版；`Phase 74` 扩展只读 `ObservabilityProvider` 与第 10 个 `contrib/obs_telemetry` 扩展，详见 [21-observability-and-telemetry-spec.md](21-observability-and-telemetry-spec.md)）  
+> **状态**: 已全量落地（`Phase 70~73` 完成 `kernel/` 3 crates、`contrib/` 前 9 扩展与 3 精简发行版；`Phase 74` 扩展只读 `ObservabilityProvider` 与第 10 个 `contrib/obs_telemetry` 扩展，详见 [21-observability-and-telemetry-spec.md](21-observability-and-telemetry-spec.md)；`Phase 76~78` 落地第 11 个扩展 `contrib/mem_pg_tx`（PG 双时态 MVCC 事务记忆、空闲睡眠记忆整理与方案 B 旁路快权重血缘控制面），详见 [22-pg-tx-memory-spi-a-to-b-spec.md](22-pg-tx-memory-spi-a-to-b-spec.md)）  
 > **对齐规约**: 规约 #1 (脑体分离), #2 (递弱代偿与边界防膨胀), #5 (零幻觉物理实证), #8 (四级自治与留痕), #9 (极速轻量化), #11 (向后兼容), #13 (测试与门禁), #15 (宏微联邦), #16 (黑白屏 1:1:1 同步), #18 (实证基准), #19 (纵深防御与全链路脱敏), #20 (零重扫演进), #21 (写穿失效与现实对账), #25 (AOPCC 乐观-悲观并发控制), #28 (模块化复杂度)
 
 ---
@@ -26,7 +26,7 @@ PostgreSQL 之所以能在保持相对克制、稳健内核的同时，孕育出
 | **2. 是否包含特定安全合规或组织身份模型？** | 只提供 `ClientAuthHook` / `ObjectAccessHook` / `TupleRedactHook` / `EmitAuditHook` 空槽与默认回环基线 | mTLS 双向认证、租户/环境 RLS 过滤策略、政务 PII 掩码正则、Syslog/OTLP SIEM 外发器 | 省级/企业级统一 IAM、多租户审批流、堡垒机执行引擎 |
 | **3. 是否依赖重型外部运行时或大模型服务？** | 零 C++ 运行时、零 HTTP 推理依赖、仅默认嵌入式 SQLite 或纯内存存储 | DuckDB OLAP（`libstdc++6`）、PostgreSQL `pgvector`、Ollama 向量/L2 标注、多模态解析 | 大规模云端推理集群与统一向量平台 |
 | **4. 是否承载特定用户的目录偏好或业务规则？** | 仅提供通用实体/边/事件/锁/胶囊/RRF 数学骨架 | 个人工作区 8 大放置规约（Placement）、Host GC、MCP/SKILL 目录路由、Peer Mesh | 跨机构运维 SOP 编排引擎 |
-| **5. 是否属于展示层、路演或评测套件？** | 仅暴露纯协议帧（MCP/CLI/HTTP 路由派发内核） | Web UI 控制台、终端 TUI、路演演示剧场（Demo）、Benchmark `v3.9`、Shadow A/B 评估器 | 集团级监控与运维运营大屏 |
+| **5. 是否属于展示层、路演或评测套件？** | 仅暴露纯协议帧（MCP/CLI/HTTP 路由派发内核） | Web UI 控制台、终端 TUI、路演演示剧场（Demo）、Benchmark `v4.1`、Shadow A/B 评估器 | 集团级监控与运维运营大屏 |
 
 ### 1.3 现网 `v1.1.0` 源码耦合审计与 27 模块去向映射总表
 
@@ -44,7 +44,7 @@ PostgreSQL 之所以能在保持相对克制、稳健内核的同时，孕育出
 | `src/daemon/` | `BgWorker` 调度宿主机（优雅停机、周期/事件触发、内存/耗时熔断） | 具体后台巡检任务作为 `BgWorkerRoutine` 下沉至 `contrib/*` |
 | `src/audit/` | `EmitAuditHook` 槽位、不可篡改 `evidence_sha256` 信封与本地事件流写入 | `contrib/hook_audit_siem`（SIEM 外发）、`contrib/audit_evolution`（滑窗分析） |
 | `src/scanner/` | 仅保留内核级“扫描作业状态机与敏感路径红线判定接口” | `contrib/idx_fts_fuzzy`、`contrib/idx_ollama_vec`、`contrib/idx_multimodal`、`contrib/hook_gov_compliance` |
-| `src/memory/` | 仅保留通用记忆元组模型与生命周期状态机 | `contrib/mem_external_spi`（Mem0 / Letta / PowerContext 适配桥接） |
+| `src/memory/` | 仅保留通用记忆元组模型与生命周期状态机 | `contrib/mem_external_spi`（Mem0 / Letta / PowerContext 适配桥接）、`contrib/mem_pg_tx`（PG 双时态 MVCC 事务记忆、空闲睡眠记忆整理与方案 B 旁路快权重血缘控制面） |
 | `src/fact/` | 仅保留 `TypeRegistry`、`RrfMergeExecutor` 与 `FdwRoutine` 调度器 | `contrib/probe_host_basic`、`contrib/idx_knowhow_graph`（PMI/Ollama Know-How）、`contrib/probe_*` |
 | `src/env/` | 无（全部外提） | `contrib/probe_host_basic`、`contrib/probe_linux_ops`、`contrib/gov_host_gc` |
 | `src/platform/` | 仅保留 `FdwRoutine` 抽象 | `contrib/probe_host_basic`（macOS/Windows/基础 Linux 探针） |
@@ -84,6 +84,8 @@ agent-body/
 │   ├── idx_ollama_vec/                # IndexAM 扩展：Ollama Embedding + L2 语义标注 + 多模态理解
 │   ├── idx_knowhow_graph/             # IndexAM 扩展：HeadingChunker + 术语归一 + PMI + Know-How 图扩散
 │   ├── mem_external_spi/              # Memory 适配器：Mem0 / Letta / PowerContext
+│   ├── mem_pg_tx/                     # 【Phase 76~78 已落地 · 第 11 扩展】PG 双时态 MVCC 事务记忆 + SleepCompactor + 方案 B 旁路快权重血缘控制面
+│   ├── obs_telemetry/                 # 【Phase 74 已落地 · 第 10 扩展】只读 ObservabilityProvider 与 OTLP/OpenMetrics 诊断导出
 │   ├── probe_host_basic/              # FDW/Probe 扩展：开发工作站基础端口/服务/仓库编目
 │   ├── probe_fs_watcher/              # BgWorker 扩展：inotify / FSEvents 60s 折叠文件监听
 │   ├── probe_linux_ops/               # 【Phase K4 新增】Linux/信创运维深度探针（started_at/长命令/RHEL Cron/Systemd 实时态）
@@ -101,7 +103,7 @@ agent-body/
 │   ├── diag_awr_addm/                 # UDF/BgWorker 扩展：AWR 黄金基线、快照差分与 ADDM 诊断
 │   ├── ui_web_console/                # HTTP 扩展：Web UI 2.0 控制台与可视化拓扑大屏
 │   ├── demo_roadshow/                 # UDF 扩展：7 大路演演示剧场沙盒
-│   └── bench_empirical/               # UDF 扩展：Benchmark v3.9 全套评测负载
+│   └── bench_empirical/               # UDF 扩展：Benchmark v4.1 全套评测负载
 └── distributions/                     # 【多发行版组装清单 · 按场景组合 kernel + contrib 子集】
     ├── kernel-minimal/                # 0 contrib 纯内核（CI 防腐门禁专用）
     ├── personal-flagship/             # 个人旗舰全功能版（等价现网 agent-body v1.1.0）
@@ -545,7 +547,7 @@ sequenceDiagram
 | `contrib/gov_host_gc` & `gov_ecosystem` & `gov_feedback` | `src/env/gc.rs`, `src/ecosystem/`, `src/feedback/` | `ProcRoutine` + `BgWorker` | `ext_gov_eco__*`；宿主清理、MCP/SKILL 通讯录与反馈同步 |
 | `contrib/fed_peer_mesh` | `src/mesh/` | `ProcRoutine` + HTTP 扩展路由 | `ext_fed_mesh__dialogues`, `ext_fed_mesh__transfers` |
 | `contrib/diag_awr_addm` | `src/body/perf_awr/` (报表与调优部分) | `ProcRoutine` + `BgWorker` | `ext_diag_awr__snapshots`；消费内核 `WaitEventRegistry` 原子计数生成 AWR 报告 |
-| `contrib/ui_web_console` & `demo_roadshow` & `bench_empirical` | `src/web/assets/`, `src/demo/`, `src/benchmark/` | HTTP 静态挂载 + `ProcRoutine` | `ext_bench__runs`；Web 2.0 工作台、7 大路演与 Benchmark `v3.9` 全部外置 |
+| `contrib/ui_web_console` & `demo_roadshow` & `bench_empirical` | `src/web/assets/`, `src/demo/`, `src/benchmark/` | HTTP 静态挂载 + `ProcRoutine` | `ext_bench__runs`；Web 2.0 工作台、7 大路演与 Benchmark `v4.1` 全部外置 |
 
 ### 6.2 重构完成后在 `contrib/` 新增的场景 GAP 模块（`Phase K4`：内核 0 行改动）
 
@@ -575,6 +577,12 @@ sequenceDiagram
 6. **`contrib/fdw_cmdb_ticket`（外部台账/发布/工单连接器与交接算子）**：
    - **挂载接口**：轨 B `FdwRoutine`（`.control.toml` + JSON-RPC）+ `ProcRoutine`。
    - **解决的 GAP**：以只读方式映射外部 CMDB 资产标签、发布时间线与变更工单，并提供面向跨班/跨厂商协作的结构化运维交接算子（关联故障单号、已核实证据指纹与待确认假设）。
+7. **`contrib/obs_telemetry`（只读可观测性与遥测扩展，Phase 74 已落地）**：
+   - **挂载接口**：`ObservabilityProvider` + `ProcRoutine`。
+   - **解决的 GAP**：统一沉淀只读可观测性与遥测导出算子，输出 OpenMetrics / W3C `traceparent` / 异常自诊断快照（详见 [21-observability-and-telemetry-spec.md](21-observability-and-telemetry-spec.md)）。
+8. **`contrib/mem_pg_tx`（PostgreSQL 事务级记忆与旁路快权重血缘控制面，Phase 76~78 已落地）**：
+   - **挂载接口**：`TxMemoryProvider` / `FastWeightCheckpointSpi` + `ProcRoutine`（`ext_mem_pg_tx_status` / `ext_mem_pg_tx_query`）。
+   - **解决的 GAP**：通过 `ext_mem_pg_tx__*` 前缀隔离的 4 张私有业务表（`events`、`segments`、`fast_weight_snapshots`、`compaction_jobs`）及扩展元数据表 `ext_mem_pg_tx__catalog_meta`，在 PostgreSQL 上实现原生 `tstzrange` + `EXCLUDE USING gist` 双时态 MVCC 事务记忆、空闲睡眠记忆整理（`SleepCompactor`），并严格遵循“零推理/训练依赖入 Rust 内核”原则落地方案 B 旁路快权重血缘控制面与 HTTP JSON-RPC 2.0 客户端（详见 [22-pg-tx-memory-spi-a-to-b-spec.md](22-pg-tx-memory-spi-a-to-b-spec.md)）。
 
 ### 6.3 平台外置边界重申（严守规约 #2）
 
@@ -730,4 +738,4 @@ sequenceDiagram
 | **常驻内存 RSS / 体积** | `< 10 MB` / `< 6 MB` | `< 90 MB` / `~45 MB` | **`< 20 MB` / `< 12 MB`** |
 | **C++ / 外部推理依赖** | `0` | 可选 `duckdb` + `ollama` | **严格为 `0`（`ldd` 无 `libstdc++6`）** |
 | **安全与审计合规** | Hook 槽位就绪 | 回环默认 + 写鉴权 | **默认全读/写强制 mTLS+RBAC 鉴权 + 全量脱敏 + 100% 只读审计** |
-| **向后兼容与门禁** | 内核全绿 | **43 MCP / 347+ 测试 / Bench v3.9 全绿** | 轨 B 故障/超时强杀零波及主进程 |
+| **向后兼容与门禁** | 内核全绿 | **43 MCP / 435+ 测试 / Bench v4.1 全绿** | 轨 B 故障/超时强杀零波及主进程 |

@@ -2,7 +2,7 @@
 """Build presentation/presentation.html (17-slide Visual-First Executive Roadshow Deck).
 
 Decks-as-Code generator using bespoke vector diagrams & iconic blueprints.
-Grounded 100% in Agent Body v1.1.0 source code, live Benchmark v3.9,
+Grounded 100% in Agent Body v1.1.0 source code, live Benchmark v4.1,
 and live AWR telemetry.
 """
 
@@ -246,27 +246,27 @@ def build_roadshow_deck() -> None:
                 "Step 1/2：左侧 6 类 18 等待事件无锁直方图 (<100ns) + /proc/self 零特权实时探针",
                 "Step 2/2：右侧真实事故曲线——ADDM 秒级定位 600% CPU / 1.3G 尖峰并 L1 压降至 <2%",
             ],
-            "next": "架构图讲得再透，最终要拿真机实测说话。看 Benchmark v3.9 帕累托成绩单。",
+            "next": f"架构图讲得再透，最终要拿真机实测说话。看 Benchmark v{BENCH_VER} 帕累托成绩单。",
             "script": (
                 "作为 PostgreSQL 老兵，我们在生产排查过一次 DuckDB 并发把 CPU 打到 600%、内存冲到 1.3G 的事故后，决定把数据库最精华的 Wait Events、AWR 黄金基线和 ADDM 诊断原生写进本体。\n"
                 "看右边这条真实压降曲线：不到 100 纳秒的无锁埋点精准定位锁与内存瓶颈，一键 L1 调优触发内存收缩与堆页归还，常驻压回 2% CPU 与 90MB 以内。"
             ),
         },
-        # 11 实证一 · Benchmark v3.9 帕累托二维象限跃迁图
+        # 11 实证一 · Benchmark v4.1 帕累托二维象限跃迁图
         {
             "eyebrow": f"10 · EMPIRICAL PROOF · BENCHMARK v{BENCH_VER}",
             "title": "实证成绩单：省 99.23% Token，上下文质量反升 +64.2 分",
-            "lead": "帕累托双门禁：<b>严禁靠丢事实骗压缩率 · 39/39 全维 PASS</b>",
+            "lead": "帕累托双门禁：<b>严禁靠丢事实骗压缩率 · 全维门禁 PASS</b>",
             "svg": vis_benchmark_pareto(animated=True),
             "anim_caps": [
                 "Step 1/3：二维帕累托象限——裸奔大脑落左下红区 (35.6 分)，本体跃迁右上黄金区 (98.0 分)",
-                "Step 2/3：三大核心仪表：Token 省 99.23%、质量飙升 +64.2 分、39/39 全维度通过",
+                f"Step 2/3：三大核心仪表：Token 省 99.23%、质量飙升 +64.2 分、{WL_CNT}+{MICRO_CNT}+{DQ_CNT} 全维通过",
                 "Step 3/3：内核微秒 SLA——无锁探针 7μs、放置 33μs、3 跳图 139μs、FTS5 259μs",
             ],
             "next": "跟裸奔的自己比完，再拉上四大开源热门赛道同机真跑对决！",
             "script": (
                 "我们定下死规矩：严禁靠删信息刷压缩率。看左边这张二维帕累托象限图，右下角是「丢事实骗省钱」的红区，会被门禁直接熔断。\n"
-                "真机跑出来的 Benchmark v3.9 成绩单上，Agent Body 从左下角 35.6 分一路跃迁到右上角黄金区 98.0 分，同时把 66.25 万 Token 压到 5,114，有效信息密度暴涨 94.5 倍，四大内核微基准全部跑在微秒级。"
+                f"真机跑出来的 Benchmark v{BENCH_VER} 成绩单上，Agent Body 从左下角 35.6 分一路跃迁到右上角黄金区 98.0 分，同时把 66.25 万 Token 压到 5,114，有效信息密度暴涨 94.5 倍，全部内核微基准跑在微秒级；PG 18.6 百万事件流检索 P99 稳定在 4.42 ms。"
             ),
         },
         # 12 实证二 · 四大赛道同机 VS 擂台图

@@ -72,6 +72,42 @@ pub struct MemoryConfig {
     #[serde(default = "default_true_flag")]
     pub fallback_to_sqlite: bool,
 
+    /// Phase 77: 是否在 L1_AUTONOMIC 空闲窗口期启用睡眠整理 (`SleepTimeCompactor`)
+    #[serde(default = "default_true_flag")]
+    pub sleep_compaction_enabled: bool,
+
+    /// Phase 77: 空闲窗口 CPU 利用率/归一化负载阈值 (%)，超过则延后睡眠整理 (5.0..=95.0，默认 45.0)
+    #[serde(default = "default_sleep_idle_cpu_pct")]
+    pub sleep_idle_cpu_pct: f32,
+
+    /// Phase 77: 触发单轮聚类压缩的最小事件数 (>= 2，默认 4)
+    #[serde(default = "default_sleep_min_events")]
+    pub sleep_min_events: usize,
+
+    /// Phase 77: 单轮睡眠整理最大扫描事件批大小 (>= sleep_min_events，默认 64)
+    #[serde(default = "default_sleep_max_batch")]
+    pub sleep_max_batch: usize,
+
+    /// Phase 78 (方案 B / M3): 是否启用旁路快权重血缘控制面与神经 Compaction
+    #[serde(default)]
+    pub fast_weight_enabled: bool,
+
+    /// Phase 78 (方案 B / M3): 外部旁路 Model Runtime JSON-RPC 2.0 端点 URL（留空仅管快照元数据，不内置训练/推理）
+    #[serde(default)]
+    pub fast_weight_runtime_url: String,
+
+    /// Phase 78 (方案 B / M3): 快权重范数增量比防雪崩上限 (默认 1.50)
+    #[serde(default = "default_fast_weight_max_norm_ratio")]
+    pub fast_weight_max_norm_ratio: f32,
+
+    /// Phase 78 (方案 B / M3): 通用基准回归允许下限 (默认 -0.03，即衰减 < 3%)
+    #[serde(default = "default_fast_weight_min_glue_delta")]
+    pub fast_weight_min_glue_delta: f32,
+
+    /// Phase 78 (方案 B / M3): 定向遗忘墓碑诱导召回泄漏率上限 (默认 0.001，即 < 0.1%)
+    #[serde(default = "default_fast_weight_max_unlearn_leak")]
+    pub fast_weight_max_unlearn_leak: f32,
+
     #[serde(default)]
     pub powercontext_url: Option<String>,
 
@@ -115,6 +151,30 @@ pub(super) fn default_memory_vector_backend() -> String {
     "none".to_string()
 }
 
+pub(super) fn default_sleep_idle_cpu_pct() -> f32 {
+    45.0
+}
+
+pub(super) fn default_sleep_min_events() -> usize {
+    4
+}
+
+pub(super) fn default_sleep_max_batch() -> usize {
+    64
+}
+
+pub(super) fn default_fast_weight_max_norm_ratio() -> f32 {
+    1.50
+}
+
+pub(super) fn default_fast_weight_min_glue_delta() -> f32 {
+    -0.03
+}
+
+pub(super) fn default_fast_weight_max_unlearn_leak() -> f32 {
+    0.001
+}
+
 impl Default for MemoryConfig {
     fn default() -> Self {
         Self {
@@ -124,6 +184,15 @@ impl Default for MemoryConfig {
             pg_tenant_scope: default_memory_tenant_scope(),
             vector_backend: default_memory_vector_backend(),
             fallback_to_sqlite: true,
+            sleep_compaction_enabled: true,
+            sleep_idle_cpu_pct: default_sleep_idle_cpu_pct(),
+            sleep_min_events: default_sleep_min_events(),
+            sleep_max_batch: default_sleep_max_batch(),
+            fast_weight_enabled: false,
+            fast_weight_runtime_url: String::new(),
+            fast_weight_max_norm_ratio: default_fast_weight_max_norm_ratio(),
+            fast_weight_min_glue_delta: default_fast_weight_min_glue_delta(),
+            fast_weight_max_unlearn_leak: default_fast_weight_max_unlearn_leak(),
             powercontext_url: None,
             powercontext_scope_id: None,
             mem0_url: None,
@@ -133,6 +202,86 @@ impl Default for MemoryConfig {
             letta_agent_id: None,
             letta_token_env: None,
         }
+    }
+}
+
+impl MemoryConfig {
+    /// 校验长期记忆引擎、空闲睡眠整理与 Phase 78 快权重门禁配置参数
+    pub fn validate(&self, storage_pg_url: Option<&str>) -> anyhow::Result<()> {
+        match self.provider.trim() {
+            "builtin" | "pg_tx" | "powercontext" | "mem0" | "letta" => {}
+            other => anyhow::bail!(
+                "未知 memory.provider: '{}'，仅支持 'builtin' / 'pg_tx' / 'powercontext' / 'mem0' / 'letta'",
+                other
+            ),
+        }
+        if self.pg_pool_size == 0 || self.pg_pool_size > 64 {
+            anyhow::bail!("memory.pg_pool_size ({}) 必须位于 1..=64 之间", self.pg_pool_size);
+        }
+        match self.vector_backend.trim().to_ascii_lowercase().as_str() {
+            "none" | "pgvector" | "pg_vectorsearch" | "external_lsm" => {}
+            other => anyhow::bail!(
+                "未知 memory.vector_backend: '{}'，仅支持 'none' / 'pgvector' / 'pg_vectorsearch' / 'external_lsm'",
+                other
+            ),
+        }
+        if self.provider.trim() == "pg_tx"
+            && !self.fallback_to_sqlite
+            && self.pg_url.as_deref().map(str::trim).filter(|s| !s.is_empty()).is_none()
+            && storage_pg_url.map(str::trim).filter(|s| !s.is_empty()).is_none()
+        {
+            anyhow::bail!(
+                "当 memory.provider='pg_tx' 且关闭 fallback_to_sqlite 时，必须配置 memory.pg_url 或 storage.pg_url"
+            );
+        }
+        if !(5.0..=95.0).contains(&self.sleep_idle_cpu_pct) {
+            anyhow::bail!(
+                "memory.sleep_idle_cpu_pct ({}) 必须位于 5.0..=95.0 之间",
+                self.sleep_idle_cpu_pct
+            );
+        }
+        if self.sleep_min_events < 2 {
+            anyhow::bail!("memory.sleep_min_events ({}) 不能小于 2", self.sleep_min_events);
+        }
+        if self.sleep_max_batch < self.sleep_min_events {
+            anyhow::bail!(
+                "memory.sleep_max_batch ({}) 不能小于 memory.sleep_min_events ({})",
+                self.sleep_max_batch,
+                self.sleep_min_events
+            );
+        }
+        if !self.fast_weight_max_norm_ratio.is_finite() || self.fast_weight_max_norm_ratio <= 1.0 {
+            anyhow::bail!(
+                "memory.fast_weight_max_norm_ratio ({}) 必须为大于 1.0 的有限浮点数",
+                self.fast_weight_max_norm_ratio
+            );
+        }
+        if !self.fast_weight_min_glue_delta.is_finite()
+            || self.fast_weight_min_glue_delta < -0.5
+            || self.fast_weight_min_glue_delta > 0.5
+        {
+            anyhow::bail!(
+                "memory.fast_weight_min_glue_delta ({}) 必须位于 -0.5..=0.5 之间",
+                self.fast_weight_min_glue_delta
+            );
+        }
+        if !self.fast_weight_max_unlearn_leak.is_finite()
+            || self.fast_weight_max_unlearn_leak <= 0.0
+            || self.fast_weight_max_unlearn_leak > 0.1
+        {
+            anyhow::bail!(
+                "memory.fast_weight_max_unlearn_leak ({}) 必须位于 (0.0, 0.1] 之间",
+                self.fast_weight_max_unlearn_leak
+            );
+        }
+        let fw_url = self.fast_weight_runtime_url.trim();
+        if !fw_url.is_empty() && !(fw_url.starts_with("http://") || fw_url.starts_with("https://")) {
+            anyhow::bail!(
+                "memory.fast_weight_runtime_url ('{}') 必须以 http:// 或 https:// 开头",
+                fw_url
+            );
+        }
+        Ok(())
     }
 }
 
@@ -458,7 +607,7 @@ pub struct MeshConfig {
     #[serde(default)]
     pub node_id: Option<String>,
 
-    /// 对等节点 Web 基地址列表，如 ["http://192.168.31.161:8756"]
+    /// 对等节点 Web 基地址列表，如 ["http://192.168.31.161:8765"]
     #[serde(default)]
     pub peers: Vec<String>,
 

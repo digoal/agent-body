@@ -45,11 +45,14 @@ impl DuckDbStorageProvider {
         rename_duckdb_legacy("effectiveness_ledger", "body_rounds", &|c| {
             c.ends_with("_rounds") && c != "baseline_rounds" && c != "body_rounds"
         })?;
-        if let Err(e) = conn.execute(
+        for ddl in [
             "ALTER TABLE body_checkpoints ADD COLUMN IF NOT EXISTS tx_epoch BIGINT DEFAULT 0",
-            [],
-        ) {
-            eprintln!("[DuckDB][WARN] 增量补列 body_checkpoints.tx_epoch 告警: {}", e);
+            "ALTER TABLE body_checkpoints ADD COLUMN IF NOT EXISTS fast_weight_snapshot_id VARCHAR",
+            "ALTER TABLE body_checkpoints ADD COLUMN IF NOT EXISTS fast_weight_base_model VARCHAR",
+        ] {
+            if let Err(e) = conn.execute(ddl, []) {
+                eprintln!("[DuckDB][WARN] 增量补列 body_checkpoints ({}) 告警: {}", ddl, e);
+            }
         }
 
         let now = chrono::Utc::now().to_rfc3339();

@@ -533,11 +533,11 @@
             <div class="view-toolbar mt-12" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);">
               <div class="toolbar-left">
                 <select id="bench-suite-select" class="input" style="width:260px;">
-                  <option value="full">全量套件 v3.9 (省Token×提质量帕累托 + 竞品 + Know-How图谱 + AOPCC + AWR)</option>
+                  <option value="full">全量套件 v4.1 (省Token×提质量帕累托 + 睡眠整理 + 快权重M3 + 竞品 + AOPCC + AWR)</option>
                   <option value="competitors">🏆 热门竞品横向对标 (COMP-C1~C4)</option>
-                  <option value="macro">宏观业务 A/B (W1~W20)</option>
+                  <option value="macro">宏观业务 A/B (W1~W22)</option>
                   <option value="micro">内核微基准 SLA (M1~M6)</option>
-                  <option value="dq">宿主机数据与遥测/图谱质量 (DQ1~DQ10)</option>
+                  <option value="dq">宿主机数据与遥测/睡眠整理/快权重质量 (DQ1~DQ12)</option>
                   <option value="W1">W1 · 宿主工具发现</option>
                   <option value="W2">W2 · 端口防撞选址</option>
                   <option value="W3">W3 · 分级扫描阻断</option>
@@ -558,6 +558,8 @@
                   <option value="W18">W18 · 内生等待事件与 AWR/ADDM 自诊断闭环</option>
                   <option value="W19">W19 · 弱向量 Know-How 网络与 Omni-RRF 融合召回</option>
                   <option value="W20">W20 · PG 事务记忆 MVCC 写穿、透明降级与防脏读自愈</option>
+                  <option value="W21">W21 · L1 空闲睡眠整理、可预测旁路与 3x~5x 降本</option>
+                  <option value="W22">W22 · 方案 B 旁路快权重血缘、三门禁熔断与热态跨脑接力</option>
                 </select>
                 <button id="btn-bench-run" class="btn btn-primary btn-xs">▶ 真机运行 A/B 基准</button>
                 <select id="bench-window-select" class="input" style="width:120px;">
@@ -576,7 +578,7 @@
             <div class="panel-grid-2 mt-12">
               <div class="card">
                 <div class="item-top"><strong>🧪 实验室 A/B 对照实测 (Without vs With Agent Body)</strong><span id="bench-sla-badge" class="badge">-</span></div>
-                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 19 大负载对照实测</div></div>
+                <div id="bench-workloads-box" class="mt-8"><div class="empty">点击「▶ 真机运行 A/B 基准」查看 22 大负载对照实测</div></div>
               </div>
               <div class="card">
                 <div class="item-top"><strong>⚡ 6 大内核微基准 SLA & 跨版本回归比对</strong></div>
@@ -594,17 +596,17 @@
             </div>
 
             <div class="card mt-12">
-              <div class="item-top"><strong>🛡️ 宿主机数据质量与 D6 准确率门禁 (DQ1~DQ10)</strong><span id="bench-dq-badge" class="badge">-</span></div>
-              <div id="bench-dq-box" class="mt-8"><div class="empty">运行「全量套件 v3.9」或「宿主机数据与遥测/图谱质量 (DQ1~DQ10)」查看 10 项质量门禁实测</div></div>
+              <div class="item-top"><strong>🛡️ 宿主机数据质量与 D6/D7 准确率门禁 (DQ1~DQ12)</strong><span id="bench-dq-badge" class="badge">-</span></div>
+              <div id="bench-dq-box" class="mt-8"><div class="empty">运行「全量套件 v4.1」或「宿主机数据与遥测/睡眠整理/快权重质量 (DQ1~DQ12)」查看 12 项质量门禁实测</div></div>
             </div>
 
             <div class="card mt-12">
               <div class="item-top"><strong>🏆 热门开源竞品横向对标 (轨道 C · LIVE_BENCHMARKED + ARCH_VERIFIED)</strong><span class="badge">Mem0 / OpenViking / AgentFS / rg+psutil</span></div>
-              <div id="bench-competitors-box" class="mt-8"><div class="empty">运行「全量套件 v3.9」或「🏆 热门竞品横向对标」查看同机实测结果与 12 维能力矩阵</div></div>
+              <div id="bench-competitors-box" class="mt-8"><div class="empty">运行「全量套件 v4.1」或「🏆 热门竞品横向对标」查看同机实测结果与 12 维能力矩阵</div></div>
             </div>
 
             <div class="card mt-12">
-              <div class="item-top"><strong>📒 生产运行态效能存证账本（带 PR-01~PR-14 确定性溯源依据）</strong></div>
+              <div class="item-top"><strong>📒 生产运行态效能存证账本（带 PR-01~PR-16 确定性溯源依据）</strong></div>
               <div id="bench-rules-strip" class="mt-8"></div>
               <div id="bench-ledger-list" class="mt-8"><div class="empty">暂无生产流水记录</div></div>
             </div>

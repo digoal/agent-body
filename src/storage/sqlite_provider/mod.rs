@@ -429,6 +429,8 @@ impl SqliteStorageProvider {
             resumed_by_brain: row.get(14)?,
             resumed_at: row.get(15)?,
             tx_epoch: row.get::<_, i64>(16).unwrap_or(0),
+            fast_weight_snapshot_id: row.get(17).unwrap_or(None),
+            fast_weight_base_model: row.get(18).unwrap_or(None),
         })
     }
 

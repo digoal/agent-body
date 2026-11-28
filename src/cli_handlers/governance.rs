@@ -443,6 +443,8 @@ pub fn handle_governance(cmd: Commands, cfg: &Config, storage: Storage) -> Resul
                     facts,
                     blockers,
                     next_step,
+                    base_model_id,
+                    fast_weight_snapshot_id,
                     json,
                 } => {
                     let split_csv = |opt: Option<String>| -> Vec<String> {
@@ -452,7 +454,12 @@ pub fn handle_governance(cmd: Commands, cfg: &Config, storage: Storage) -> Resul
                             .filter(|s| !s.is_empty())
                             .collect()
                     };
-                    let cp = ContinuityManager::save_capsule(
+                    let tx_ep = cfg
+                        .build_tx_memory_provider(storage.clone())
+                        .ok()
+                        .and_then(|p| p.current_tx_epoch().ok())
+                        .unwrap_or(0);
+                    let cp = ContinuityManager::save_capsule_with_fast_weight(
                         &storage,
                         ContinuityInput {
                             from_brain,
@@ -465,6 +472,9 @@ pub fn handle_governance(cmd: Commands, cfg: &Config, storage: Storage) -> Resul
                             next_step_hint: next_step,
                             token_budget: Some(300),
                         },
+                        tx_ep,
+                        base_model_id.as_deref(),
+                        fast_weight_snapshot_id.as_deref(),
                     )?;
                     let out = serde_json::to_string_pretty(&cp)?;
                     agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
@@ -485,9 +495,14 @@ pub fn handle_governance(cmd: Commands, cfg: &Config, storage: Storage) -> Resul
                         );
                     }
                 }
-                BodyCommands::Resume { by_brain, checkpoint_id, json } => {
-                    let res = ContinuityManager::resume_latest(&storage, &by_brain, checkpoint_id.as_deref())?;
-                    let out = serde_json::to_string_pretty(&res)?;
+                BodyCommands::Resume { by_brain, checkpoint_id, base_model_id, json } => {
+                    let outcome = ContinuityManager::resume_for_brain(
+                        &storage,
+                        &by_brain,
+                        checkpoint_id.as_deref(),
+                        base_model_id.as_deref(),
+                    )?;
+                    let out = serde_json::to_string_pretty(&outcome)?;
                     agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
                         storage.provider().as_ref(),
                         "cli",
@@ -497,8 +512,8 @@ pub fn handle_governance(cmd: Commands, cfg: &Config, storage: Storage) -> Resul
                     );
                     if json {
                         println!("{}", out);
-                    } else if let Some(cp) = res {
-                        println!("{}", ContinuityManager::render_brief_snippet(&cp, 300));
+                    } else if let Some(res) = outcome {
+                        println!("{}", res.brief_snippet);
                     } else {
                         println!("ℹ️ 当前暂无待接力的活跃跨大脑胶囊。");
                     }

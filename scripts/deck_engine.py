@@ -19,6 +19,11 @@ import re
 from pathlib import Path
 from typing import Any
 
+from evolution_manifest import extract_manifest
+
+_DECK_MANIFEST = extract_manifest()
+_BENCH_VER = _DECK_MANIFEST["bench_spec_version"]
+
 from deck_visuals import (
     C_CARD,
     C_CLAY,
@@ -209,7 +214,7 @@ def svg_cover(
         badges = [
             ("27 模块", "Rust 单二进制", C_TEAL),
             ("43 MCP", "黑白屏同源", C_CLAY),
-            ("-99.2%", "Bench v3.9", C_GREEN),
+            ("-99.2%", f"Bench v{_BENCH_VER}", C_GREEN),
         ]
     return vis_cover_visual(
         kicker=kicker,

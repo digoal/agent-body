@@ -107,7 +107,7 @@ def build_talk_01() -> None:
                 "这一页是整套架构的经济账。\n"
                 "硅谷创业者住在园区里，物业管水电餐食，创业者 100% 心流写代码；企业决策者配专职幕僚团队，自己只做核心拍板。背后都是大卫·李嘉图的比较优势：不是决策者不会订机票，而是他的机会成本太高。\n"
                 "大模型也一样。你让一个几百亿参数的云端推理模型，花五轮工具调用去 find、ps、ss、cat 检查本机有没有装 pdftotext、5432 端口谁占着，既慢又贵还容易产生幻觉。\n"
-                "把确定性的物理感知下沉到本地 Rust 本体，实测 Bench v3.9 上 Prompt Token 省了 99.22%，上下文质量反倒从 35.8 飙到 99.8。"
+                f"把确定性的物理感知下沉到本地 Rust 本体，实测 Bench v{BENCH_VER} 上 Prompt Token 省了 99.22%，上下文质量反倒从 35.8 飙到 99.8。"
             ),
         },
         {
@@ -338,7 +338,7 @@ def build_talk_01() -> None:
                 "Step 2/3：中央 43/43 Parity 自动化校验锁死三端 100% 零漂移同步",
                 "Step 3/3：右侧 Web 指挥舱 (:8765) 含 9 大工作台与 7 幕真引擎剧场",
             ],
-            "next": "光说架构好没用，我们拉出实机 Benchmark v3.9 账单，看「脑体分离」到底带来了什么量化收益。",
+            "next": f"光说架构好没用，我们拉出实机 Benchmark v{BENCH_VER} 账单，看「脑体分离」到底带来了什么量化收益。",
             "script": (
                 "我们项目有一条铁律叫「黑白屏 1:1:1 双向同步」：黑屏是给 Agent 调的 MCP 和给工程师敲的 CLI，白屏是 Web 2.0 驾驶舱。\n"
                 "Phase 44 新增第 43 个原生工具 `body_state` 时，三个通道同时落地，底层全调同一套 `src/body/` Rust 内核。连测试里都写死了 `test_web_parity_matrix_100_percent`，少对齐一个工具编译测试直接红。"
@@ -346,30 +346,30 @@ def build_talk_01() -> None:
         },
         {
             "eyebrow": "05 · 实证成绩单",
-            "title": "Benchmark v3.9 全绿基线：W18 内生 AWR 诊断与 DQ9 遥测门禁",
-            "lead": "所有数据均来自本机实跑持久化存证 <b>run-6a0a4995-7302-4bc1-86b6-554a784a6156</b>，绝无手工估算。",
+            "title": f"Benchmark v{BENCH_VER} 全绿基线：W18 AWR · W21 睡眠整理 · W22 快权重门禁",
+            "lead": "所有数据均来自本机实跑持久化存证，M3 在 PostgreSQL 18.6 百万事件流实测 P99 仅 <b>4.42 ms</b>。",
             "svg": svg_metrics_table(
                 [
-                    ("-99.22%", "19 负载总体 Token 节省", "650,073 → 5,065 tok"),
+                    ("-99.22%", f"{WL_CNT} 负载总体 Token 节省", "650,073 → 5,065 tok"),
                     ("99.8/100", "D6 上下文质量（+64.0）", "基线 35.8 → 赋能 99.8"),
                     ("92.1x", "有效信息密度提升", "Facts / 1k Tokens"),
-                    ("10 / 10", "DQ1~DQ10 宿主与遥测门禁", "全维度核验"),
+                    (f"{DQ_CNT} / {DQ_CNT}", f"DQ1~DQ{DQ_CNT} 宿主与血缘门禁", "全维度核验"),
                 ],
                 ["评测项", "场景说明", "基线 → 赋能", "质量/达标", "状态"],
                 [
                     ["W17", "跨大脑连续性接力与本体器官自省", "2400 → 175 tok (-92.7%)", "37.0 → 100.0 (4/4)", "PASS"],
-                    ["DQ8", "本体五维稳态健康度与自治包络合规", "稳态 99.9/100 · L3 硬拦截", "100.0% (>=99.0%)", "PASS"],
+                    ["W21/22", "M2 睡眠整理与 M3 快权重三门禁/回滚", "260→87 / 320→48 tok", "PG18 1M P99=4.42ms", "PASS"],
+                    ["DQ8/12", "本体稳态合规与快权重血缘锚定检查", "稳态 99.9 · L3 硬拦截", "100.0% · 0 悬空", "PASS"],
                     ["DQ2", "本地 Ollama Embedding 向量覆盖率", "199 / 200 抽样已生成向量", "99.5% (>=99.0%)", "PASS"],
-                    ["scene-7", "Web 路演剧场第 7 幕：换脑不失忆", "独立内存沙箱真引擎实跑", "零宿主污染 · 一键复位", "PASS"],
                     ["cargo test", "全工作区单元 + 集成测试（0 失败）", f"{TEST_CNT} 项全工作区测试", f"{TEST_CNT} passed / 0 failed", "PASS"],
                 ],
                 [18, 150, 560, 960, 1290],
-                footnote="Benchmark v3.9 实机 SHA-256 存证 · 覆盖 W1~W19 / M1~M6 / DQ1~DQ10 / PR-01~14",
+                footnote=f"Benchmark v{BENCH_VER} 实机 SHA-256 存证 · 覆盖 W1~W{WL_CNT} / M1~M{MICRO_CNT} / DQ1~DQ{DQ_CNT} / PR-01~{PR_CNT}",
             ),
             "next": "从第 1 讲出发，接下来 5 讲我们将把这具身体的每一个器官彻底拆开讲透。",
             "script": (
-                "看这份刚跑出来的 `v3.9` 全绿基线：`W1` 到 `W19` 19 个负载全过，`M1` 到 `M6` 6 个微基准全过，`DQ1` 到 `DQ10` 全维度覆盖，`COMP-C1` 到 `C4` 4 个热门竞品对标全过。\n"
-                "单看新增的 `W17`：换脑接力从裸奔重扫的 2400 tok 压到 175 tok，省了 92.7%，上下文质量从 37.0 直接拉满到 100.0，4 条关键接力事实全部命中。"
+                f"看这份刚跑出来的 `v{BENCH_VER}` 全绿基线：`W1` 到 `W{WL_CNT}` {WL_CNT} 个负载全过，`M1` 到 `M{MICRO_CNT}` {MICRO_CNT} 个微基准全过，`DQ1` 到 `DQ{DQ_CNT}` 全维度覆盖，`COMP-C1` 到 `C{COMP_CNT}` {COMP_CNT} 个热门竞品对标全过。\n"
+                "单看 `W17` 与 `W22`：换脑接力从裸奔重扫的 2400 tok 压到 175 tok，Phase 78 M3 在 PostgreSQL 18.6 100 万事件流下检索 P99 稳定在 4.42 毫秒，按 `tx_epoch` 回滚仅 24 毫秒。"
             ),
         },
         {
@@ -383,7 +383,7 @@ def build_talk_01() -> None:
                     ("TALK 03 · 小脑", "AOPCC 并发控制", "ETC 乐观直通 · <2ms 自愈 · WFG", "bolt", C_CLAY),
                     ("TALK 04 · 海马", "保鲜与跨脑接力", "七大漏斗写穿 · 150t 发光胶囊", "capsule", C_GREEN),
                     ("TALK 05 · 免疫", "安全审计与联邦", "四道铁闸 · 双域折叠 · Mesh v1.0", "shield", C_TEAL_2),
-                    ("TALK 06 · 实证", "Bench 与微内核", "帕累托 99.2% · 396 测 · 2 分钟复现", "trophy", C_GOLD),
+                    ("TALK 06 · 实证", "Bench 与微内核", f"帕累托 99.2% · {TEST_CNT} 测 · 2 分钟复现", "trophy", C_GOLD),
                 ],
                 footer="建议按 01 → 06 顺序推进，或在 presentation/index.html 按需直达任一专题。",
                 animated=True,
@@ -394,7 +394,7 @@ def build_talk_01() -> None:
                 "第 03 讲：讲清整轮对话税、AOPCC 立交与 WFG 死锁破环",
                 "第 04 讲：写穿净水保鲜与 <=300 tok 跨大脑 10ms 接力胶囊",
                 "第 05 讲：纵深安全铁闸、双域审计、P1~P5 飞轮与 Mesh v1.0",
-                "第 06 讲：三轨实证 Benchmark v3.9 与微内核零漂移工程体系",
+                f"第 06 讲：三轨实证 Benchmark v{BENCH_VER} 与微内核零漂移工程体系",
             ],
             "next": "最后，用三个锚点和一个留给在座架构师的开放问题，收束今天的第 1 讲。",
             "script": (
@@ -476,7 +476,7 @@ def build_talk_02() -> None:
             "next": "为什么我们说「零幻觉」是架构属性，而不是提示词技巧？",
             "script": (
                 "很多人以为减少幻觉靠在 System Prompt 里写「请不要编造」。没用的，机器里此刻跑着什么进程，大模型训练权重里根本不可能知道。\n"
-                "我们在 Bench v3.9 的 W1 场景里实测：让 Agent 找本机 PDF/视频/JSON 处理工具，裸奔全扫要花 21,079 tok；调一次 `body_fact_query` 只花 131 tok，省了 99.4%，速度快了 358 倍，而且 5 条工具事实 100% 命中。"
+                f"我们在 Bench v{BENCH_VER} 的 W1 场景里实测：让 Agent 找本机 PDF/视频/JSON 处理工具，裸奔全扫要花 21,079 tok；调一次 `body_fact_query` 只花 131 tok，省了 99.4%，速度快了 358 倍，而且 5 条工具事实 100% 命中。"
             ),
         },
         {
@@ -760,7 +760,7 @@ def build_talk_02() -> None:
                     ["W10", "复杂模板依赖抽取抗假阳性", "172 → 19 (-89.0%)", "56.0 → 100.0 (2/2)", "PASS"],
                 ],
                 [18, 130, 560, 920, 1290],
-                footnote="数据来源：Bench v3.9 全量实测 run-6a0a4995-7302-4bc1-86b6-554a784a6156",
+                footnote=f"数据来源：Bench v{BENCH_VER} 全量实测",
             ),
             "next": "对标热门开源项目 OpenViking 与 AgentFS，这套感官方案在同机同数据集下表现如何？",
             "script": (
@@ -779,7 +779,7 @@ def build_talk_02() -> None:
                     ("COMP-C3 工作区治理", "AgentFS SQLite VFS 全量导入 290 文件", "白黑灰阻断 4 噪音目录 · 仅 10 净入库 (-96.5% tok)"),
                     ("COMP-C4 宿主冷启动", "rg + psutil + ss 派生 3 子进程 · 0 跳跨服务图 (176ms)", "0 子进程 · 2 个上游影响点 · 46ms · 质量 37.3→97.5"),
                 ],
-                ("零副本搬迁 + 白黑灰门禁 + 零子进程物理图谱，是感觉神经的三大硬壁垒。", "Bench v3.9 COMP-C2~C4 全 PASS"),
+                ("零副本搬迁 + 白黑灰门禁 + 零子进程物理图谱，是感觉神经的三大硬壁垒。", f"Bench v{BENCH_VER} COMP-C2~C4 全 PASS"),
             ),
             "next": "如何在 30 秒内亲自在终端里体验一遍这套宿主机物理感官？",
             "script": (
@@ -1045,7 +1045,7 @@ def build_talk_03() -> None:
                     ("command not found", "立刻 apt/pip 盲装或放弃方案", "反查 capability 图谱给出本机等价工具及绝对路径"),
                     ("EADDRINUSE (:8765)", "手动试 8766/8767 碰运气", "指出占用 PID/服务名，并附带实测空闲推荐端口"),
                 ],
-                ("W15 实测：AOPCC 自适应控制节省 83.9% Token，加速 3.71x，质量从 52.0 升至 100.0。", "Bench v3.9 W15 PASS"),
+                ("W15 实测：AOPCC 自适应控制节省 83.9% Token，加速 3.71x，质量从 52.0 升至 100.0。", f"Bench v{BENCH_VER} W15 PASS"),
             ),
             "next": "单 Agent 的快慢问题解决了；当三个 Agent 同时在一台机器上干活，怎么防止它们互相覆盖甚至死锁？",
             "script": (
@@ -1140,7 +1140,7 @@ def build_talk_03() -> None:
                 [
                     ("实时环路拦截", "覆盖 2-Agent 互锁、3-Agent 环形等待及目录层级引发的隐式环路", "test_three_agent_cycle_with_directory_hierarchy"),
                     ("事件推送零轮询", "依托内部 EventBus 在锁释放瞬间唤醒等待方，彻底告别 sleep 盲等", "test_wait_and_acquire_push_wakeup"),
-                    ("W6 基准实证", "多 Agent 并发死锁破局节省 68.8% Token，加速比高达 27.70x，质量 100.0", "Bench v3.9 W6 PASS"),
+                    ("W6 基准实证", "多 Agent 并发死锁破局节省 68.8% Token，加速比高达 27.70x，质量 100.0", f"Bench v{BENCH_VER} W6 PASS"),
                 ],
                 animated=True,
             ),
@@ -1199,7 +1199,7 @@ def build_talk_03() -> None:
                 ],
                 ("W4 8 类资产放置合规门禁：有效信息密度提升 4,519.8 倍，8/8 规则 100% 命中。", "body_placement_suggest / learn", "teal"),
             ),
-            "next": "把整套小脑反射体系放到 Bench v3.9 里，看看硬指标表现如何。",
+            "next": f"把整套小脑反射体系放到 Bench v{BENCH_VER} 里，看看硬指标表现如何。",
             "script": (
                 "每个开发者都有自己的目录洁癖：临时脚本放 `tmp/`、复用工具放 `shared_proj/`、克隆源码放 `src/`。没有规则引擎时，Agent 随手就在根目录拉一堆 `test1.py`。\n"
                 "我们的 `PlacementEngine` 只需 83 微秒就能给出合规落盘路径，而且如果你把某类文件多次挪到另一个目录，`PlacementLearner` 会聚类发现规律，自动提炼出一条新规则。"
@@ -1207,7 +1207,7 @@ def build_talk_03() -> None:
         },
         {
             "eyebrow": "09 · 性能与实证",
-            "title": "小脑反射与并发控制实证成绩单（Bench v3.9）",
+            "title": f"小脑反射与并发控制实证成绩单（Bench v{BENCH_VER}）",
             "lead": "反射弧必须比大脑思考快三个数量级——<b>所有微基准全部在百微秒级，所有负载全部帕累托双赢</b>。",
             "svg": svg_metrics_table(
                 [
@@ -1225,7 +1225,7 @@ def build_talk_03() -> None:
                     ["Int Tests", "coordination + deadlock 集成套件", "8 + 2 项并发与死锁测试", "10 / 10 passed", "PASS"],
                 ],
                 [18, 150, 560, 930, 1290],
-                footnote="数据来源：Bench v3.9 run-6a0a4995 与 cargo test 实测",
+                footnote=f"数据来源：Bench v{BENCH_VER} 与 cargo test 实测",
             ),
             "next": "我们在终端里实操一遍锁、死锁检测与 AOPCC 钩子测试。",
             "script": (

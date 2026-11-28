@@ -1,8 +1,8 @@
 # Agent Body — 官方使用手册 (User Manual)
 
-> **版本**: v1.1.0 (Rust Edition · Phase 64~75 · 旗舰版、微内核 10 `contrib/` 多发行版与全栈可观测)  
+> **版本**: v1.1.0 (Rust Edition · Phase 64~78 · 旗舰版、微内核 11 `contrib/` 扩展、`M1~M3` PG 事务海马体方案 A→B 闭环与全栈可观测)  
 > **编写标准**: 遵循项目内置技能 [`skills/agent-body-doc-writer/SKILL.md`](../../skills/agent-body-doc-writer/SKILL.md)  
-> **更新时间**: 2026-11-27
+> **更新时间**: 2026-11-28
 
 ---
 
@@ -25,7 +25,7 @@
 | **[07-troubleshooting.md](07-troubleshooting.md)** | **故障诊断与常见问题 (FAQ)** | SQLite 锁超时排查、FTS5 虚拟表修复、权限问题与高频报错处置 | 全体用户 | ✅ 已完成 |
 | **[08-web-dashboard.md](08-web-dashboard.md)** | **Web UI 2.0 与可视化监控大屏** | 昼夜双主题蓝图、9 大工作台、本体中枢、双域审计、力导向拓扑图、路演剧场、43/43 同步与实证基准 | 全体用户 / 架构师 | ✅ 已完成 |
 | **[09-hooks-integration.md](09-hooks-integration.md)** | **HOOK 驱动集成引擎** | AOPCC 悲观-乐观自适应门禁、碰壁 `<2ms` 自愈、EventBus、AutoSync 与 Pipeline 编排 | Agent 开发者 | ✅ 已完成 |
-| **[10-benchmark-and-roi.md](10-benchmark-and-roi.md)** | **实证 Benchmark 与效能存证账本** | Benchmark v3.9：W1~W20 + M1~M6 + DQ1~DQ10 + COMP-C1~C4 + PR-01~14 溯源账本与 SHA-256 导出 | 全体用户 / 架构师 | ✅ 已完成 |
+| **[10-benchmark-and-roi.md](10-benchmark-and-roi.md)** | **实证 Benchmark 与效能存证账本** | Benchmark v4.1：W1~W22 + M1~M6 + DQ1~DQ12 + COMP-C1~C4 + PR-01~16 溯源账本与 SHA-256 导出 | 全体用户 / 架构师 | ✅ 已完成 |
 
 ---
 

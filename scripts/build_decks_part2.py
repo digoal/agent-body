@@ -164,7 +164,7 @@ def build_talk_04() -> None:
                 [
                     ("零僵尸召回", "删除文件后即刻从 FTS5 与属性图抹除，彻底杜绝幻觉路径", "test_change_handler_deleted_cascades"),
                     ("周期自动平账", "每 1800s 巡检自动清理失活资产与幽灵端口节点，并写入 OUT_OF_AGENT 审计", "DQ5 = 99.9% (726/727 健康)"),
-                    ("W12 基准验证", "改删写穿失效与一致性自愈节省 91.2% Token，质量从 27.5 跃升至 100.0", "Bench v3.9 W12 PASS"),
+                    ("W12 基准验证", "改删写穿失效与一致性自愈节省 91.2% Token，质量从 27.5 跃升至 100.0", f"Bench v{BENCH_VER} W12 PASS"),
                 ],
                 animated=True,
             ),
@@ -288,7 +288,7 @@ def build_talk_04() -> None:
         },
         {
             "eyebrow": "07 · 实证数据",
-            "title": "海马体与跨大脑接力实证成绩单（Bench v3.9）",
+            "title": f"海马体、PG 事务记忆与快权重实证成绩单（Bench v{BENCH_VER}）",
             "lead": "从混合检索（W9）、写穿新鲜度（W12）到跨大脑接力（W17），<b>四项指标全部满血 PASS</b>。",
             "svg": svg_metrics_table(
                 [
@@ -306,7 +306,7 @@ def build_talk_04() -> None:
                     ["COMP-C1", "对标 Mem0/JSON 无脱敏裸记忆基线", "97.8% Token 节省", "24.1 → 100.0 (+75.9)", "PASS"],
                 ],
                 [18, 130, 560, 920, 1290],
-                footnote="数据来源：Bench v3.9 run-6a0a4995-7302-4bc1-86b6-554a784a6156",
+                footnote=f"数据来源：Bench v{BENCH_VER} 与 PG 18.6 1M 事件实测",
             ),
             "next": "如果把海量历史记忆与胶囊拉到 PostgreSQL 或 DuckDB，存储迁移会不会丢数据？",
             "script": (
@@ -422,7 +422,7 @@ def build_talk_04() -> None:
                     ("安全与抗投毒", "明文落盘常见，跨会话提示词污染无防护", "SecretRedactor 脱敏 + PromptInjectionScanner 中和"),
                     ("检索韧性", "强依赖云端 Embedding API，断网即瘫痪", "本地 SQLite FTS5 + Ollama RRF，离线自动降级"),
                 ],
-                ("海马体只有扎根在宿主机物理现实上，才不会变成一座充满陈年谣言的图书馆。", "Bench v3.9 W9/W12/W17 全绿"),
+                ("海马体只有扎根在宿主机物理现实上，才不会变成一座充满陈年谣言的图书馆。", f"Bench v{BENCH_VER} W9/W12/W17/W20~22 全绿"),
             ),
             "next": "收束第 4 讲，进入下一讲关于安全、双域审计与探针自进化的硬核拆解。",
             "script": (
@@ -548,7 +548,7 @@ def build_talk_05() -> None:
                     ("100% 脱敏防泄露", "写审计前强制经 SecretRedactor 清洗，审计库本身绝不变成凭据泄露源", "DQ7 = 100.0% (500/500)"),
                     ("60s 折叠防磁盘膨胀", "编译/格式化触发百次写入自动折叠为 1 条，保真相又不爆库", "test_audit_logger_watcher_60s_fold"),
                     ("trace_id 因果钻取", "从开工 Brief → Pre-Hook → 工具执行 → Post 诊断串成完整因果链", "Web 2.0 #view-audit 钻取"),
-                    ("W16 实证收益", "双域审计与租约自进化闭环节省 83.5% Token，质量从 36.0 升至 100.0", "Bench v3.9 W16 PASS"),
+                    ("W16 实证收益", "双域审计与租约自进化闭环节省 83.5% Token，质量从 36.0 升至 100.0", f"Bench v{BENCH_VER} W16 PASS"),
                 ],
                 animated=True,
             ),
@@ -598,7 +598,7 @@ def build_talk_05() -> None:
         },
         {
             "eyebrow": "06 · 实证数据",
-            "title": "安全、审计与 Mesh 实证成绩单（Bench v3.9）",
+            "title": f"安全、审计与 Mesh 实证成绩单（Bench v{BENCH_VER}）",
             "lead": "从安全脱敏（W11/DQ4）、Mesh 零信任（W14）到双域审计自进化（W16/DQ7/DQ8），<b>全项 100% 达标</b>。",
             "svg": svg_metrics_table(
                 [
@@ -616,7 +616,7 @@ def build_talk_05() -> None:
                     ["DQ8", "本体五维稳态与自治包络合规", "稳态 99.9 · 5维合法", "100.0% (>=99.0%)", "PASS"],
                 ],
                 [18, 130, 560, 920, 1290],
-                footnote="数据来源：Bench v3.9 run-6a0a4995-7302-4bc1-86b6-554a784a6156",
+                footnote=f"数据来源：Bench v{BENCH_VER} 与 PG 18.6 1M 事件实测",
             ),
             "next": "我们在终端里跑一遍审计查询、探针自检与多体名片探测命令。",
             "script": (
@@ -710,7 +710,7 @@ def build_talk_05() -> None:
                 ],
                 "最佳实践：OS 容器/最小权限管住底层执行边界，Agent Body 管住认知、反思与审计免疫层。",
             ),
-            "next": "安全与免疫体系闭环后，收束第 5 讲，准备迎接压轴第 6 讲——三轨实证 Benchmark v3.9。",
+            "next": f"安全与免疫体系闭环后，收束第 5 讲，准备迎接压轴第 6 讲——三轨实证 Benchmark v{BENCH_VER}。",
             "script": (
                 "做安全架构最忌讳夸大其词。Agent Body 是认知与反射层的纵深免疫，它不能替代 Linux 用户隔离和容器沙箱；两者叠在一起，才构成生产级 AI 宿主机的完整防御体系。"
             ),
@@ -793,7 +793,7 @@ def build_talk_05() -> None:
             "title": "免疫飞轮：防得住、查得清、治得好、连得稳",
             "lead": "四大能力首尾相扣，让 Agent 本体具备 7×24 小时无人值守的工程韧性。",
             "svg": svg_bars(
-                "安全、审计与稳态核心门禁实测达标全景（Bench v3.9）",
+                f"安全、审计与稳态核心门禁实测达标全景（Bench v{BENCH_VER}）",
                 [
                     ("DQ4 库表凭据脱敏卫生度（目标 >= 100%）", 100.0, "100.0%", "PASS · 0 泄露", C_GREEN),
                     ("DQ7 双域行为审计 SHA-256 完整性（目标 >= 99%）", 100.0, "100.0%", "PASS · 500/500", C_GREEN),
@@ -822,11 +822,11 @@ def build_talk_05() -> None:
                     ("零信任联邦", "MeshEnvelope v1.0 HMAC 防重放 + 沙盒投递 + 名片", "W14 PASS · 17,391x 密度"),
                 ],
                 open_question="开放思考：我们在前五讲报出了一堆「省 99% Token」「质量 99.8 分」的数字——你怎么确信这些数字不是挑好听的编出来的？",
-                next_talk="压轴终章 → 第 06 讲：三轨实证 Benchmark v3.9 与可复现工程体系（06-empirical-benchmark-engineering.html）",
+                next_talk=f"压轴终章 → 第 06 讲：三轨实证 Benchmark v{BENCH_VER} 与可复现工程体系（06-empirical-benchmark-engineering.html）",
             ),
             "script": (
                 "第 5 讲到这里结束。最后我替最挑剔的听众问自己一个尖锐问题：前五讲你晒了这么多漂亮数字，怎么证明不是挑软柿子捏、不是把上下文截断换来的假省钱？\n"
-                "下一讲也是本系列压轴终章，我们把三轨实证 Benchmark v3.9 和整套防漂移工程体系彻底摊在阳光下！"
+                f"下一讲也是本系列压轴终章，我们把三轨实证 Benchmark v{BENCH_VER} 和整套防漂移工程体系彻底摊在阳光下！"
             ),
         },
     ]
@@ -844,7 +844,7 @@ def build_talk_06() -> None:
         {
             "cover": True,
             "eyebrow": "封面 · 第 06 讲",
-            "title": "三轨实证 Benchmark v3.9 与可复现工程体系",
+            "title": f"三轨实证 Benchmark v{BENCH_VER} 与可复现工程体系",
             "svg": svg_cover(
                 kicker=f"SERIES 06 / 06 · AGENT BODY · v{APP_VER} · 30 MIN",
                 title="三轨实证 Benchmark 与工程体系",
@@ -854,8 +854,8 @@ def build_talk_06() -> None:
                 spec_line=f"Spec v{BENCH_VER} · SHA-256 存证 · {TEST_CNT} 测试 0 失败 · 0 Panic · 0 Drift",
                 strata=[
                     ("帕累托双门禁 · 拒绝截断作弊", "Q = 40% 事实 + 30% 信噪 + 20% 行动 + 10% 安全", "#EBF1EE", C_INK),
-                    ("轨道 A · 19 负载 + 6 微基准 + 10 DQ", "W1~W19 A/B 真跑 · M1~M6 微秒 SLA · DQ1~DQ10 宿主与遥测门禁", "#CFE0DC", C_INK),
-                    ("轨道 B · PR-01~14 生产效能账本", "每一次真实 MCP/CLI/Web/Hook 调用自动归因记账", C_TEAL_D, C_PAPER),
+                    (f"轨道 A · {WL_CNT} 负载 + {MICRO_CNT} 微基准 + {DQ_CNT} DQ", f"W1~W{WL_CNT} A/B 真跑 · M1~M{MICRO_CNT} 微秒 SLA · DQ1~DQ{DQ_CNT} 质量与血缘门禁", "#CFE0DC", C_INK),
+                    (f"轨道 B · PR-01~{PR_CNT} 生产效能账本", "每一次真实 MCP/CLI/Web/Hook/睡眠/快权重 调用自动记账", C_TEAL_D, C_PAPER),
                     ("轨道 C · COMP-C1~C4 热门竞品同跑", "对标 Mem0 / OpenViking / AgentFS / CLI 组合同机实测", C_TEAL_2, C_PAPER),
                     ("零漂移工程纪律 · Zero-Rescan", "EVOLUTION_GUIDE · evolution_manifest.py · lint-panic · 43/43 Parity", C_TEAL_3, C_PAPER),
                     ("一键复现 · 2 分钟本地独立验真", "make check / test / evolution-check / bench run --suite full", "#A4C4C6", C_INK),
@@ -891,28 +891,28 @@ def build_talk_06() -> None:
                 [
                     {
                         "tag": "TRACK A · 标准可控 A/B",
-                        "title": "19 负载 + 6 微基准 + 10 DQ",
+                        "title": f"{WL_CNT} 负载 + {MICRO_CNT} 微基准 + {DQ_CNT} DQ",
                         "accent": C_TEAL_D,
                         "bg": C_TEAL_L,
                         "lines": [
-                            "W1~W19 覆盖 6 大器官与 AWR 诊断",
-                            "M1~M6 锁定微秒级内核与无锁探针 SLA",
-                            "DQ1~DQ10 直查宿主机库与内生遥测健康",
+                            f"W1~W{WL_CNT} 覆盖 6 大器官与 PG18 AWR/M1~M3",
+                            f"M1~M{MICRO_CNT} 锁定微秒级内核与无锁探针 SLA",
+                            f"DQ1~DQ{DQ_CNT} 直查宿主机库与快权重血缘",
                             ("一键全量回归，帕累托质量零降级", True),
                         ],
                         "foot_lbl": "实测结果",
-                        "foot_val": "35 / 35 全部 PASS",
+                        "foot_val": f"{WL_CNT + MICRO_CNT + DQ_CNT} / {WL_CNT + MICRO_CNT + DQ_CNT} 全部 PASS",
                     },
                     {
                         "tag": "TRACK B · 生产效能账本",
-                        "title": "PR-01 ~ PR-14 自动记账",
+                        "title": f"PR-01 ~ PR-{PR_CNT} 自动记账",
                         "accent": C_GREEN,
                         "bg": C_GREEN_L,
                         "lines": [
                             "日常每次 MCP/CLI/Web/Hook 自动记账",
                             "严格区分「真实省下的」与「演示沙盒」",
                             "按 24h / 7d / 30d / all 聚合 ROI",
-                            ("含 PR-13 接力归因与 PR-14 AWR 账本", True),
+                            (f"含 PR-15 睡眠省 Tok 与 PR-{PR_CNT} 快权重遗忘", True),
                         ],
                         "foot_lbl": "源码触点",
                         "foot_val": "src/benchmark/{provenance,ledger}.rs",
@@ -932,44 +932,44 @@ def build_talk_06() -> None:
                         "foot_val": "LIVE_BENCHMARKED 4/4 PASS",
                     },
                 ],
-                ("实验室防退化、生产账本看真 ROI、竞品对标知己知彼——三轨缺一不可。", "Benchmark Spec v3.9", "teal"),
+                (f"实验室防退化、生产账本看真 ROI、竞品对标知己知彼——三轨缺一不可。", f"Benchmark Spec v{BENCH_VER}", "teal"),
             ),
-            "next": "让我们逐一展开轨道 A 的 19 大负载与 6 大微基准真实成绩。",
+            "next": f"让我们逐一展开轨道 A 的 {WL_CNT} 大负载与 {MICRO_CNT} 大微基准真实成绩。",
             "script": (
-                "为什么设计三轨？因为实验室跑分容易脱离实际，所以加了轨道 B 生产效能账本，日常每一次真实调用都按 PR-01 到 PR-14 自动记账；光跟裸奔自己比又容易井底之蛙，所以加了轨道 C 同机实跑主流开源竞品。"
+                f"为什么设计三轨？因为实验室跑分容易脱离实际，所以加了轨道 B 生产效能账本，日常每一次真实调用都按 PR-01 到 PR-{PR_CNT} 自动记账；光跟裸奔自己比又容易井底之蛙，所以加了轨道 C 同机实跑主流开源竞品。"
             ),
         },
         {
             "eyebrow": "03 · 轨道 A (一)",
-            "title": "W1 ~ W19 全景成绩单：19/19 全部帕累托双赢",
-            "lead": "总消耗 <b>650,073 → 5,065 tok（-99.22%）</b>，D6 上下文质量 <b>35.8 → 99.8/100（+64.0）</b>，信息密度 <b>92.1x</b>。",
+            "title": f"W1 ~ W{WL_CNT} 全景成绩单：{WL_CNT}/{WL_CNT} 全部帕累托双赢",
+            "lead": "总消耗 <b>650,073 → 5,065 tok（-99.22%）</b>，D6 上下文质量 <b>35.8 → 99.8/100（+64.0）</b>，含 W20~W22 PG 事务记忆闭环。",
             "svg": svg_metrics_table(
                 [
                     ("-99.22%", "总 Prompt Token 节省", "节省 645,008 tok"),
                     ("+64.0 分", "上下文质量净胜 ΔQ", "35.8 → 99.8 / 100"),
-                    ("57 次", "事前拦截风险总数", "端口/锁/注入/L3"),
-                    ("531 个", "阻断垃圾噪音文件", "Shallow Tier 硬阻断"),
+                    ("69 次", "事前拦截风险总数", "端口/锁/注入/三门禁"),
+                    ("538 个", "阻断垃圾噪音文件", "Shallow Tier 硬阻断"),
                 ],
                 ["代表负载", "核心覆盖器官", "Token (基线 → 赋能)", "质量 (基线 → 赋能)", "密度 / 状态"],
                 [
                     ["W1 / W2 / W3", "物理感官：工具 · 端口 · 分级扫盘", "27,804 → 413 (-98.5%)", "51.2 → 100.0", "160.9x · PASS"],
                     ["W4 / W5 / W6", "规约与协作：放置 · 爆炸半径 · 死锁", "1,670 → 325 (-80.5%)", "25.1 → 100.0", "27.7x 速 · PASS"],
                     ["W7 / W8 / W9", "路由与海马体：百级技能 · Brief · RRF", "602,799 → 1,608 (-99.7%)", "39.2 → 98.9", "838.0x · PASS"],
-                    ["W11~W15", "安全 · 新鲜度 · 加权图 · Mesh · AOPCC", "844 → 125 (-85.2%)", "26.6 → 100.0", "17391x · PASS"],
-                    ["W16 / W17", "双域审计自进化 · 跨大脑 1ms 接力", "16,900 → 2,575 (-84.8%)", "36.5 → 100.0", "54.9x · PASS"],
+                    ["W11~W17", "安全 · 新鲜度 · 图谱 · Mesh · AOPCC · 接力", "17,744 → 2,700 (-84.8%)", "31.5 → 100.0", "双赢 · PASS"],
+                    ["W20 / W21 / W22", "PG18 事务记忆 · 睡眠压缩 · 旁路快权重", "2,530 → 215 (-91.5%)", "PG18 1M P99=4.42ms", "3.73x / 回滚24ms"],
                 ],
                 [18, 180, 560, 880, 1180],
-                footnote="实测批次：run-6a0a4995-7302-4bc1-86b6-554a784a6156 · 全部 17 项均 100% 命中真值事实断言",
+                footnote=f"Benchmark v{BENCH_VER} · 全部 {WL_CNT} 项负载均 100% 命中真值事实断言 · PG 18.6 实测",
             ),
             "next": "大场景赢了，底层 Rust 内核的微秒级延迟和宿主机数据质量门禁守得住吗？",
             "script": (
-                "把 19 个负载分组铺开看非常震撼：不管在感官、小脑、海马体、安全还是跨脑接力上，没有哪怕一个负载是靠牺牲质量换省 Token 的。平均质量从 35.8 飙升到 99.8，几乎全部满分。"
+                f"把 {WL_CNT} 个负载分组铺开看非常震撼：不管在感官、小脑、海马体、安全、跨脑接力，还是 Phase 76~78 的 PG 18 事务海马体 M1~M3 上，没有哪怕一个负载是靠牺牲质量换省 Token 的。"
             ),
         },
         {
             "eyebrow": "04 · 轨道 A (二)",
-            "title": "M1 ~ M6 微秒内核 SLA 与 DQ1 ~ DQ10 现网宿主机门禁",
-            "lead": "全部 6 项微基准远低于 P99 上限；<b>全部 10 项现网真实数据库质量门禁 100% 绿灯</b>。",
+            "title": f"M1 ~ M{MICRO_CNT} 微秒内核 SLA 与 DQ1 ~ DQ{DQ_CNT} 现网宿主机门禁",
+            "lead": f"全部 {MICRO_CNT} 项微基准远低于 P99 上限；<b>全部 {DQ_CNT} 项现网真实数据库与快权重血缘门禁 100% 绿灯</b>。",
             "svg": svg_columns(
                 [
                     {
@@ -1015,7 +1015,7 @@ def build_talk_06() -> None:
                         "foot_val": "4 / 4 PASS",
                     },
                 ],
-                ("DQ1~DQ10 跑的不是假造的 Mock 数据，而是我主力开发机上 21,230 个真实资产与 441 个事实节点。", "真实生产宿主机直测", "green"),
+                (f"DQ1~DQ{DQ_CNT} 跑的不是假造的 Mock 数据，而是真实宿主机库表与 PG18 快权重血缘防线。", "真实生产宿主机直测", "green"),
             ),
             "next": "再看轨道 C：把市面上热门开源竞品拉到同一台机器上实测，结果一目了然。",
             "script": (
@@ -1098,7 +1098,7 @@ def build_talk_06() -> None:
                     "# 3. 按需构建零 C++ 精简探针并执行离线自检",
                     "cargo build --release -p agent-body-probe && ./target/release/agent-body-probe self-check",
                     "",
-                    "# 4. 独立运行 Benchmark v3.9 全量三轨评测（~6 秒）",
+                    f"# 4. 独立运行 Benchmark v{BENCH_VER} 全量三轨评测（~6 秒）",
                     "./target/release/agent-body bench run --suite full --save false",
                     "",
                     "# 5. 启动 Web 2.0 驾驶舱与 /metrics 端点（默认 :8765）",
@@ -1108,8 +1108,8 @@ def build_talk_06() -> None:
                 [
                     ("旗舰与精简版任选", "旗舰版含 DuckDB/WebUI；probe(6.7M)/dba(6.4M)/minimal(3.9M) 零 C++", "SQLite 静态内嵌"),
                     ("增强可选", "本机安装 Ollama (nomic-embed-text + qwen3.5:0.8b) 解锁 L2/L3", "离线自动优雅降级"),
-                    ("零污染跑批", "--save false 在隔离内存/临时沙箱执行 W1~W19 与 COMP-C1~C4", "不污染宿主机文件"),
-                    ("验证本套 PPT", "make verify-decks (scripts/verify_presentations.py)", "9 份 HTML 逐页验真"),
+                    ("零污染跑批", f"--save false 在隔离内存/临时沙箱执行 W1~W{WL_CNT} 与 COMP-C1~C{COMP_CNT}", "不污染宿主机文件"),
+                    ("验证本套 PPT", "make verify-decks (scripts/verify_presentations.py)", "全套 HTML 逐页验真"),
                 ],
             ),
             "next": "看一眼整个仓库目前的物理工程规模与健康指标快照。",
@@ -1130,7 +1130,7 @@ def build_talk_06() -> None:
                 ],
                 ["架构切面", "精确规模与实测状态", "对应硬门禁", "状态"],
                 [
-                    ["存储与基准", f"{TABLE_CNT} 表 · {SPI_CNT} SPI · Bench v{BENCH_VER} (W1~19 / M1~6 / DQ1~10)", "duckdb + spi + bench 测试", "PASS"],
+                    ["存储与基准", f"{TABLE_CNT} 表 · {SPI_CNT} SPI · Bench v{BENCH_VER} (W1~{WL_CNT} / M1~{MICRO_CNT} / DQ1~{DQ_CNT})", "duckdb + spi + bench 测试", "PASS"],
                     ["协议与可观测", f"{TOOL_CNT} 原生 MCP · {CLI_CNT} CLI · Web 9 工作台 · /metrics", "test_web_parity + body metrics", "PASS"],
                     ["微内核/扩展", f"{KERNEL_CNT} kernel · {CONTRIB_CNT} contrib 五件套 · {DIST_CNT} 精简版 3.9~6.7M", "make arch-check + self-check", "PASS"],
                     ["文档与演说", "EVOLUTION_GUIDE + 手册 + 3 SKILL + 9 份 HTML 演讲", "evolution-check A~G + Playwright", "PASS"],
@@ -1210,7 +1210,7 @@ def build_talk_06() -> None:
                 kicker="SERIES FINALE · 第 06 讲收束（全系列完）",
                 headline="Agent Body：用数据库级工程纪律，锻造 AI 时代的宿主机具身底座",
                 pillars=[
-                    ("帕累托实证", "Token -99.22% × 质量 35.8→99.8 × 密度 92.1x", "W1~W19 · M1~M6 · DQ1~DQ10 全面对齐"),
+                    ("帕累托实证", "Token -99.22% × 质量 35.8→99.8 × 密度 92.1x", f"W1~W{WL_CNT} · M1~M{MICRO_CNT} · DQ1~DQ{DQ_CNT} 全面对齐"),
                     ("零漂移纪律", f"evolution-check + arch-check + {TEST_CNT} 测试 + Playwright", "可独立 2 分钟完整复现"),
                     ("长期主义", "脑体分离、递弱代偿、三层兼容、Apache-2.0 开源", "github.com/digoal/agent-body"),
                 ],
@@ -1225,9 +1225,9 @@ def build_talk_06() -> None:
         },
     ]
     render_deck(
-        doc_title="第 06 讲 · 三轨实证 Benchmark v3.9 与可复现工程体系 — Agent Body",
+        doc_title=f"第 06 讲 · 三轨实证 Benchmark v{BENCH_VER} 与可复现工程体系 — Agent Body",
         brand_label="SERIES 06 / 06 · 实证工程",
-        foot_label=f"AGENT BODY · 第 06 讲：三轨实证 Benchmark v3.9 与可复现工程体系 (v{APP_VER})",
+        foot_label=f"AGENT BODY · 第 06 讲：三轨实证 Benchmark v{BENCH_VER} 与可复现工程体系 (v{APP_VER})",
         slides_data=slides,
         out_path=OUT / "06-empirical-benchmark-engineering.html",
     )

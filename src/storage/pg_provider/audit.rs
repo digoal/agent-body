@@ -713,13 +713,16 @@ impl PgStorageProvider {
                 checkpoint_id, body_id, from_brain, session_id, goal_summary,
                 active_files_json, active_locks_json, verified_facts_json, open_blockers_json,
                 next_step_hint, token_budget, status, evidence_sha256, created_at,
-                resumed_by_brain, resumed_at, tx_epoch
-             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+                resumed_by_brain, resumed_at, tx_epoch,
+                fast_weight_snapshot_id, fast_weight_base_model
+             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
              ON CONFLICT (checkpoint_id) DO UPDATE SET
                 status = EXCLUDED.status,
                 resumed_by_brain = EXCLUDED.resumed_by_brain,
                 resumed_at = EXCLUDED.resumed_at,
-                tx_epoch = EXCLUDED.tx_epoch",
+                tx_epoch = EXCLUDED.tx_epoch,
+                fast_weight_snapshot_id = EXCLUDED.fast_weight_snapshot_id,
+                fast_weight_base_model = EXCLUDED.fast_weight_base_model",
             &[
                 &rec.checkpoint_id,
                 &rec.body_id,
@@ -738,6 +741,8 @@ impl PgStorageProvider {
                 &rec.resumed_by_brain,
                 &rec.resumed_at,
                 &rec.tx_epoch,
+                &rec.fast_weight_snapshot_id,
+                &rec.fast_weight_base_model,
             ],
         )?;
         Ok(())
@@ -750,7 +755,8 @@ impl PgStorageProvider {
             "SELECT checkpoint_id, body_id, from_brain, session_id, goal_summary,
                     active_files_json, active_locks_json, verified_facts_json, open_blockers_json,
                     next_step_hint, token_budget, status, evidence_sha256, created_at,
-                    resumed_by_brain, resumed_at, tx_epoch
+                    resumed_by_brain, resumed_at, tx_epoch,
+                    fast_weight_snapshot_id, fast_weight_base_model
              FROM body_checkpoints
              WHERE status = 'active' AND ($1 = '' OR body_id = $1)
              ORDER BY created_at DESC LIMIT 1",
@@ -768,7 +774,8 @@ impl PgStorageProvider {
             "SELECT checkpoint_id, body_id, from_brain, session_id, goal_summary,
                     active_files_json, active_locks_json, verified_facts_json, open_blockers_json,
                     next_step_hint, token_budget, status, evidence_sha256, created_at,
-                    resumed_by_brain, resumed_at, tx_epoch
+                    resumed_by_brain, resumed_at, tx_epoch,
+                    fast_weight_snapshot_id, fast_weight_base_model
              FROM body_checkpoints
              WHERE ($1 = '' OR status = $1)
              ORDER BY created_at DESC LIMIT $2",

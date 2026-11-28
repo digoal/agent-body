@@ -19,7 +19,7 @@ pub(crate) enum MeshCommands {
     },
     #[command(about = "向属主对等节点申请跨节点协作锁 (HTTP 租约)")]
     Acquire {
-        #[arg(long, help = "目标对等节点基地址，如 http://192.168.31.161:8756")]
+        #[arg(long, help = "目标对等节点基地址，如 http://192.168.31.161:8765")]
         peer: String,
         #[arg(short = 't', long)]
         resource_type: String,
@@ -608,7 +608,7 @@ pub(crate) enum MemoryCommands {
         tenant_scope: Option<String>,
     },
 
-    #[command(about = "全面体检长期记忆健康度 (含冲突/衰减检测、PG 事务健康态与事实墓碑擦除)")]
+    #[command(about = "全面体检长期记忆健康度 (含冲突/衰减检测、PG 事务健康态、墓碑擦除与睡眠整理控制)")]
     Audit {
         #[arg(long, help = "若存在冲突，指定归档淘汰的旧记忆 ID")]
         archive_id: Option<String>,
@@ -618,5 +618,26 @@ pub(crate) enum MemoryCommands {
 
         #[arg(long, help = "将指定 fact_key 墓碑化（0% 僵尸召回）")]
         tombstone_fact: Option<String>,
+
+        #[arg(long, help = "L1_AUTONOMIC 空闲睡眠整理控制: status | run | dry_run | pause | resume")]
+        sleep_action: Option<String>,
+
+        #[arg(long, default_value_t = false, help = "配合 --sleep-action run 忽略空闲窗口门禁强制执行一轮整理")]
+        force: bool,
+
+        #[arg(long, help = "Phase 78 方案 B 旁路快权重控制: status | lineage | compact | unlearn | rollback")]
+        fast_weight_action: Option<String>,
+
+        #[arg(long, help = "配合 --fast-weight-action rollback 指定目标 tx_epoch")]
+        target_epoch: Option<i64>,
+
+        #[arg(long, help = "配合 --fast-weight-action lineage 指定快照 UUID")]
+        snapshot_id: Option<String>,
+
+        #[arg(long, help = "配合 --fast-weight-action compact/unlearn 指定基座模型 ID")]
+        base_model_id: Option<String>,
+
+        #[arg(long, help = "可选快权重适配器形态 (inplace_ttt/atlas_state/larimar_mem/scol_lora)")]
+        adapter_kind: Option<String>,
     },
 }

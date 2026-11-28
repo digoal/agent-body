@@ -282,6 +282,8 @@ pub struct BodyHandoffBody {
     pub verified_facts: Option<Vec<String>>,
     pub open_blockers: Option<Vec<String>>,
     pub next_step_hint: Option<String>,
+    pub base_model_id: Option<String>,
+    pub fast_weight_snapshot_id: Option<String>,
 }
 
 pub fn handle_body_handoff(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
@@ -295,7 +297,12 @@ pub fn handle_body_handoff(req: &HttpRequest, storage: Arc<dyn StorageProvider>)
     }
     let storage_ref = storage.clone();
     let st = Storage::new(storage);
-    match crate::body::ContinuityManager::save_capsule(
+    let tx_ep = crate::config::Config::load_effective_or_default()
+        .build_tx_memory_provider(st.clone())
+        .ok()
+        .and_then(|p| p.current_tx_epoch().ok())
+        .unwrap_or(0);
+    match crate::body::ContinuityManager::save_capsule_with_fast_weight(
         &st,
         crate::body::ContinuityInput {
             from_brain: body.from_brain.unwrap_or_else(|| "web-console".to_string()),
@@ -308,6 +315,9 @@ pub fn handle_body_handoff(req: &HttpRequest, storage: Arc<dyn StorageProvider>)
             next_step_hint: body.next_step_hint.unwrap_or_default(),
             token_budget: Some(300),
         },
+        tx_ep,
+        body.base_model_id.as_deref(),
+        body.fast_weight_snapshot_id.as_deref(),
     ) {
         Ok(cp) => {
             crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
@@ -327,6 +337,7 @@ pub fn handle_body_handoff(req: &HttpRequest, storage: Arc<dyn StorageProvider>)
 pub struct BodyResumeBody {
     pub by_brain: Option<String>,
     pub checkpoint_id: Option<String>,
+    pub base_model_id: Option<String>,
 }
 
 pub fn handle_body_resume(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
@@ -334,24 +345,31 @@ pub fn handle_body_resume(req: &HttpRequest, storage: Arc<dyn StorageProvider>) 
     let body: BodyResumeBody = req.json().unwrap_or(BodyResumeBody {
         by_brain: None,
         checkpoint_id: None,
+        base_model_id: None,
     });
     let storage_ref = storage.clone();
     let st = Storage::new(storage);
     let by = body.by_brain.as_deref().unwrap_or("web-console");
-    match crate::body::ContinuityManager::resume_latest(&st, by, body.checkpoint_id.as_deref()) {
-        Ok(Some(cp)) => {
-            let snippet = crate::body::ContinuityManager::render_brief_snippet(&cp, 300);
+    match crate::body::ContinuityManager::resume_for_brain(
+        &st,
+        by,
+        body.checkpoint_id.as_deref(),
+        body.base_model_id.as_deref(),
+    ) {
+        Ok(Some(outcome)) => {
             crate::benchmark::ledger::EffectivenessLedger::record_channel_call(
                 storage_ref.as_ref(),
                 "web",
                 "body_state",
-                &snippet,
+                &outcome.brief_snippet,
                 t0.elapsed().as_micros() as i64,
             );
             WebResponse::success(serde_json::json!({
                 "resumed": true,
-                "checkpoint": cp,
-                "brief_snippet": snippet,
+                "checkpoint": outcome.checkpoint,
+                "attach_mode": outcome.attach_mode,
+                "reason": outcome.reason,
+                "brief_snippet": outcome.brief_snippet,
             }))
         }
         Ok(None) => WebResponse::success(serde_json::json!({

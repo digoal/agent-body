@@ -2,7 +2,7 @@
 """Build presentation/agent-body-deck.html (25-slide Visual-First Deep Technical Deck).
 
 Decks-as-Code generator using bespoke architectural SVG diagrams & visual code maps.
-Grounded 100% in Agent Body v1.1.0 source code, live Benchmark v3.9, and AWR telemetry.
+Grounded 100% in Agent Body v1.1.0 source code, live Benchmark v4.1, and AWR telemetry.
 """
 
 from __future__ import annotations
@@ -265,7 +265,7 @@ def build_tech_deck() -> None:
             "title": "规约脊柱：百级 SKILL 609k → 358t 防爆 × 41 μs 放置自演化",
             "lead": "PlacementLearner 2.0 纠偏聚类 · <b>W7 信息密度跃升 838x</b>",
             "svg": svg_bars(
-                title_left="规约与预算路由核心指标（Benchmark v3.9 真机实测）",
+                title_left=f"规约与预算路由核心指标（Benchmark v{BENCH_VER} 真机实测）",
                 rows=[
                     ("W7 百级 SKILL / MCP 预算路由 (609k→358t)", 99.9, "-99.9%", "密度 838.0x", C_TEAL_D),
                     ("W1 宿主工具能力语义路由 (21k→119t)", 99.4, "-99.4%", "加速 565.2x", C_TEAL),
@@ -515,25 +515,25 @@ def build_tech_deck() -> None:
                 "Step 1/2：左侧 6 类 18 等待事件占比条 + /proc/self + Prometheus /metrics 遥测底座",
                 "Step 2/2：右侧真实事故复盘——DuckDB 8 线程+3.5万单事务导致 600% CPU，三层根治压回 <2%",
             ],
-            "next": "六大器官与内核性能工程全景看完，进入 Benchmark v3.9 实证评测。",
+            "next": f"六大器官与内核性能工程全景看完，进入 Benchmark v{BENCH_VER} 实证评测。",
             "script": (
                 "看右边这条真实复盘曲线：Phase 48 曾抓到 Web 页触发 DuckDB 8 线程和 3.5 万次独立事务把 CPU 打爆到 600%、内存 1.3G。三层收敛后常驻降到 2% 以下，并把整套体检固化成 AWR 黄金基线与 ADDM 一键 L1 自调优。"
             ),
         },
-        # 20 实证评测① · Benchmark v3.9 帕累托二维象限
+        # 20 实证评测① · Benchmark v4.1 帕累托二维象限
         {
             "eyebrow": f"19 · BENCHMARK v{BENCH_VER} · PARETO DUAL-GATE",
             "title": f"实证评测①：Benchmark v{BENCH_VER} 帕累托跃迁与微秒 SLA",
-            "lead": "Q = 40%事实 + 30%信噪 + 20%行动 + 10%安全 · <b>W1~W19 全赢</b>",
+            "lead": f"Q = 40%事实 + 30%信噪 + 20%行动 + 10%安全 · <b>W1~W{WL_CNT} 全赢</b>",
             "svg": vis_benchmark_pareto(animated=True),
             "anim_caps": [
                 "Step 1/3：二维帕累托坐标——从裸奔 35.6 分跃迁至本体 98.0 分，拒绝伪省 Token 失真区",
-                "Step 2/3：三大实证圆环——Token 省 99.23%、质量 +64.2 分、39/39 全维门禁 PASS",
+                f"Step 2/3：三大实证圆环——Token 省 99.23%、质量 +64.2 分、W1~W{WL_CNT} + DQ1~{DQ_CNT} PASS",
                 "Step 3/3：内核微秒级 SLA——M6 7μs / M3 33μs / M1 139μs / M2 259μs 全远低红线",
             ],
             "next": "看完自对照与生产存证，再看四大赛道开源竞品的同机真跑擂台。",
             "script": (
-                "我们用确定的四维质量函数守住帕累托双门禁：19 个业务负载全部实现省 Token 与质量双赢，总体 Token 省 99.23%，信息密度提 94.5 倍，6 大内核微基准全部微秒级通过。"
+                f"我们用确定的四维质量函数守住帕累托双门禁：{WL_CNT} 个业务负载全部实现省 Token 与质量双赢，总体 Token 省 99.23%，信息密度提 94.5 倍，{MICRO_CNT} 大内核微基准全部微秒级通过，PG 18.6 M3 百万事件流 P99 4.42 ms。"
             ),
         },
         # 21 实证评测② · 四大赛道同机 VS 擂台
@@ -598,7 +598,7 @@ def build_tech_deck() -> None:
             ],
             "next": "最后一页，总结终局愿景与 6 讲 × 30 分钟专题系列入口。",
             "script": (
-                "全工作区已实现 100% 位置无关交付，搬到任意目录或容器 396 项测试全绿。我们同时把「绝不做什么」刻成边界红线，把创造力留给大脑，把确定性留给身体。"
+                f"全工作区已实现 100% 位置无关交付，搬到任意目录或容器 {TEST_CNT} 项测试全绿。我们同时把「绝不做什么」刻成边界红线，把创造力留给大脑，把确定性留给身体。"
             ),
         },
         # 25 终局与专题系列入口

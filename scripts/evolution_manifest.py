@@ -282,7 +282,7 @@ def check_drift(manifest: dict) -> list[str]:
                 f"docs/README.md 活跃路线图漂移: 最新路线图为 {latest_roadmap}，但未更新指向"
             )
 
-    # 校验核心活跃文档、演说与生成脚本同步最新 Benchmark 版本、W1~W19/DQ1~DQ10 计数与规格书登记
+    # 校验核心活跃文档、演说与生成脚本同步最新 Benchmark 版本、W1~W{wl_cnt}/DQ1~DQ{dq_cnt} 计数与规格书登记
     bench_ver = manifest["bench_spec_version"]
     dq_cnt = counts["dq"]
     bench_docs = active_docs + [

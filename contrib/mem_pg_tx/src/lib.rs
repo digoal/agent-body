@@ -6,8 +6,14 @@
 //! - 绝不内置 LLM 推理/训练循环，绝不把 GB 级模型权重作为裸 BLOB 存入堆表。
 
 pub mod engine;
+pub mod fast_weight;
+mod fast_weight_ops;
+pub mod fast_weight_runtime;
 pub mod pool;
+pub mod predictability;
+pub mod salience;
 pub mod schema;
+pub mod sleep_compactor;
 
 use std::sync::Arc;
 
@@ -17,12 +23,34 @@ use agent_body_sdk::{
     ProcVolatility, SDK_API_VERSION,
 };
 
+pub use agent_body_sdk::{
+    evaluate_fast_weight_gates, validate_artifact_uri, AdapterKind, FastWeightCompactRequest,
+    FastWeightCompactResponse, FastWeightGateMetrics, FastWeightGatePolicy, FastWeightGateVerdict,
+    FastWeightRollbackRequest, FastWeightRollbackResponse, FastWeightRuntimeClient,
+    FastWeightRuntimeHealth, FastWeightSnapshotStatus, FastWeightUnlearnRequest,
+    FastWeightUnlearnResponse,
+};
+
 pub use engine::{
     PgTxConfig, PgTxEngine, PgTxEventRow, PgTxSearchSnapshot, PgTxStatus, PgTxWriteInput,
     PgTxWriteResult, VectorBackendKind,
 };
+pub use fast_weight::{
+    FastWeightCompactionResult, FastWeightHealthSummary, FastWeightRollbackOutcome,
+    FastWeightUnlearnResult, PgFastWeightSnapshot,
+};
+pub use fast_weight_runtime::{HttpFastWeightRuntime, MockFastWeightRuntime, MockRuntimeFault};
 pub use pool::{PgConnPool, PooledClient};
+pub use predictability::{PredictabilityDecision, QueryPredictabilityGate};
+pub use salience::{
+    SalienceBreakdown, SalienceInput, SalienceRescoreReport, SalienceScore, SalienceScorer,
+    SalienceTier,
+};
 pub use schema::PG_TX_SCHEMA_SQL;
+pub use sleep_compactor::{
+    compact_episodic_texts, derive_cluster_topic, estimate_tokens_deterministic,
+    CompactionClusterSummary, CompactionJobRecord, SleepCompactionConfig, SleepCompactionReport,
+};
 
 body_module_magic!();
 

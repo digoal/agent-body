@@ -85,7 +85,7 @@ impl EffectivenessLedger {
         }
     }
 
-    /// 根据 MCP 工具名与实际输出自动按 PR-01~PR-11 推导并记入生产效能账本
+    /// 根据 MCP 工具名与实际输出自动按 PR-01~PR-16 推导并记入生产效能账本
     pub fn record_mcp_call(
         storage: &dyn StorageProvider,
         tool_name: &str,
@@ -540,5 +540,61 @@ mod tests {
         assert_eq!(s.total_events, 2);
         assert!(s.by_rule.iter().any(|r| r.provenance_rule == "PR-13"));
         assert!(s.by_rule.iter().any(|r| r.provenance_rule == "PR-14"));
+    }
+
+    #[test]
+    fn test_sleep_compaction_records_pr15() {
+        let provider = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        EffectivenessLedger::record(
+            &provider,
+            LedgerEventInput {
+                session_id: "daemon-sleep".to_string(),
+                source_channel: "daemon".to_string(),
+                tool_or_action: "sleep_compaction".to_string(),
+                rule: ProvenanceRule::Pr15SleepCompactionSavings,
+                baseline_tokens: 900,
+                body_tokens: 180,
+                baseline_rounds: 6,
+                body_rounds: 1,
+                hazard_intercepted: 5,
+                noise_blocked: 5,
+                elapsed_us: 1200,
+                evidence_summary: "PR-15: test 5x sleep compaction".to_string(),
+            },
+        );
+        let s = provider
+            .query_effectiveness_ledger("7d", None, 10)
+            .expect("query ledger pr15");
+        assert_eq!(s.total_events, 1);
+        assert_eq!(s.total_tokens_saved, 720);
+        assert!(s.by_rule.iter().any(|r| r.provenance_rule == "PR-15"));
+    }
+
+    #[test]
+    fn test_fast_weight_records_pr16() {
+        let provider = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        EffectivenessLedger::record(
+            &provider,
+            LedgerEventInput {
+                session_id: "fast_weight:m3".to_string(),
+                source_channel: "daemon".to_string(),
+                tool_or_action: "fast_weight_compaction".to_string(),
+                rule: ProvenanceRule::Pr16FastWeightGateVerified,
+                baseline_tokens: 640,
+                body_tokens: 24,
+                baseline_rounds: 3,
+                body_rounds: 1,
+                hazard_intercepted: 2,
+                noise_blocked: 10,
+                elapsed_us: 2500,
+                evidence_summary: "PR-16: test fast weight M3 gate".to_string(),
+            },
+        );
+        let s = provider
+            .query_effectiveness_ledger("7d", None, 10)
+            .expect("query ledger pr16");
+        assert_eq!(s.total_events, 1);
+        assert_eq!(s.total_tokens_saved, 616);
+        assert!(s.by_rule.iter().any(|r| r.provenance_rule == "PR-16"));
     }
 }

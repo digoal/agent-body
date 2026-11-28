@@ -29,7 +29,7 @@
 
 ## 第一性原理：脑体分离与六大生理器官
 
-Agent Body 不造重型 Agent Runtime、不接管大模型 ReAct 规划，而是严格锚定「宿主机物理具身底座」，用高内聚的 **27 个 Rust 模块** 构筑起六大生理器官，并自 Phase 70~75 起在同仓演进出 **PostgreSQL 式纯机制微内核 (`kernel/`) + 10 个独立周边扩展 (`contrib/`) + 四大发行版 (`distributions/`)**：
+Agent Body 不造重型 Agent Runtime、不接管大模型 ReAct 规划，而是严格锚定「宿主机物理具身底座」，用高内聚的 **27 个 Rust 模块** 构筑起六大生理器官，并自 Phase 70~78 起在同仓演进出 **PostgreSQL 式纯机制微内核 (`kernel/`) + 11 个独立周边扩展 (`contrib/`) + 四大发行版 (`distributions/`)**：
 
 ![Agent Body 分层架构与微内核全景图](svg/architecture.svg)
 
@@ -78,21 +78,21 @@ Agent Body 不造重型 Agent Runtime、不接管大模型 ReAct 规划，而是
 
 ---
 
-## 核心特性五：微内核 (`kernel/`) + 10 周边 (`contrib/`) 与全栈可观测闭环 (`Phase 70~75`)
+## 核心特性五：微内核 (`kernel/`) + 11 周边 (`contrib/`)、全栈可观测与 PG 事务级海马体 (`Phase 70~78`)
 
-借鉴 PostgreSQL 插件体系，同一套微内核底座已衍生出 **四大发行版**：
-- **纯机制微内核 (`kernel/`)**：`body-sdk` + `body-protocol` + `body-kernel`（8 张 `body_cat_*` 目录表 + 6 大 Routine + 7 大 Lifecycle Hook + 轨 B `OutOfProcessFdwAdapter` 超时强杀沙盒 + 只读 `ObservabilityProvider`），`arch_boundary_check.py` 强制守卫零业务与零观测协议词污染；
-- **10 个独立周边扩展 (`contrib/`)**：按标准五件套与 `ext_<id>__*` 前缀隔离实现——包含 `idx_fts_fuzzy`、`gov_placement`、`probe_db_engines`、Linux/JVM/Nginx 深度探针、mTLS/RBAC+租户 RLS、合规脱敏、SIEM 外发、轨 B CMDB 工单沙盒与第 10 个扩展 **`obs_telemetry`**；
+借鉴 PostgreSQL 插件体系，同一套微内核底座已衍生出 **四大发行版** 并进一步演进出 **PostgreSQL SPI 事务级海马体（方案 A → 方案 B 全闭环）**：
+- **纯机制微内核 (`kernel/`)**：`body-sdk` + `body-protocol` + `body-kernel`（8 张 `body_cat_*` 目录表 + 6 大 Routine + 7 大 Lifecycle Hook + `FastWeightCheckpointSpi` 旁路契约 + 轨 B `OutOfProcessFdwAdapter` 超时强杀沙盒 + 只读 `ObservabilityProvider`），`arch_boundary_check.py` 强制守卫零业务与零观测协议词污染；
+- **11 个独立周边扩展 (`contrib/`)**：按标准五件套与 `ext_<id>__*` 前缀隔离实现——包含 `idx_fts_fuzzy`、`gov_placement`、`probe_db_engines`、Linux/JVM/Nginx 深度探针、mTLS/RBAC+租户 RLS、合规脱敏、SIEM 外发、轨 B CMDB 工单沙盒、`obs_telemetry` 与第 11 扩展 **`mem_pg_tx`**（双时态 MVCC + LSM 向量解耦 + 空闲睡眠整理 + 旁路快权重三门禁/定向遗忘/`tx_epoch` 秒级回滚，PG 18.6 100 万事件流实测 `search_tx P99 = 4.42 ms`、回滚 `24 ms`，PG 不可达零崩溃透明降级 SQLite）；
 - **三大零 C++/零 DuckDB 精简发行版**：`agent-body-kernel-minimal`（**3.9M**）、政务云探针 `agent-body-probe`（**6.7M**，`otool -L` 零 `libc++`/`libstdc++`/DuckDB）与 `agent-body-dba`（**6.4M**），均内置 OpenMetrics `metrics` 与 `diagnose`（`OBS-01~05` 异常规则），全链路单一 `trace_id` 贯穿请求、审计 `AuditEnvelope`、慢环与 RFC 5424 SIEM 日志。
 
 ---
 
-## 内生性能工程 & Benchmark `v3.9` 三轨实证
+## 内生性能工程 & Benchmark `v4.1` 三轨实证
 
-- **Benchmark `v3.9` 帕累托双门禁战报**（`W1~W19` + `M1~M6` + `DQ1~DQ10` + `COMP-C1~C4` + `PR-01~14`）：
-  - 覆盖 19 大真实工程负载，输出带 **SHA-256 防篡改存证指纹** 与有效信息密度提升；
+- **Benchmark `v4.1` 帕累托双门禁战报**（`W1~W22` + `M1~M6` + `DQ1~DQ12` + `COMP-C1~C4` + `PR-01~16`）：
+  - 覆盖 22 大真实工程负载（含 `W20` PG 18 MVCC 防丢写、`W21` 睡眠压缩 `3.73×` 与低可预测自动旁路、`W22` 快权重三门禁/定向遗忘与 `ContinuityCapsule v2` 热挂），输出带 **SHA-256 防篡改存证指纹** 与有效信息密度提升；
   - `Shadow A/B` 真世界对照面板实时捕获 `H1~H5` 帮倒忙事件并自动写穿自愈；
-- **六重确定性工程门禁**：>1000 行生产文件清零（`0` 个）、核心自治路径 `let _ =` 清零（`0 / 15`）、全仓库零 `unwrap`/`expect` 与零 `CARGO_MANIFEST_DIR` 硬编码、微内核零业务词污染、**396 项全工作区自动化测试全绿**（旗舰 `353` + `kernel` `26` + `contrib` `13` + `distributions` `4`）与 9 份演说 Playwright 无头全检。
+- **六重确定性工程门禁与 O(1) 一等公民传导**：>1000 行生产文件清零（`0` 个）、核心自治路径 `let _ =` 清零（`0 / 15`）、全仓库零 `unwrap`/`expect` 与零 `CARGO_MANIFEST_DIR` 硬编码、微内核零业务词污染、**`make citizen-impact` + `make citizen-audit` 16 类一等公民增量交叉对齐**、**435 项全工作区自动化测试全绿**（旗舰 `387` + `kernel` `27` + `contrib` `17` + `distributions` `4`）、Playwright WebUI 9 工作台与 9 份演说无头全检。
 
 ---
 

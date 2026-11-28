@@ -495,7 +495,7 @@ impl BriefAssembler {
             }
         }
 
-        // 2. 语义搜索命中经验
+        // 2. 语义搜索命中经验（结合 QueryPredictabilityGate 在常规 queries 优先利用睡眠压缩摘要）
         let search_query = if query.is_empty() { "agent body" } else { query };
         let filter = MemoryFilter {
             memory_type: None,
@@ -503,7 +503,34 @@ impl BriefAssembler {
             source_session: None,
             min_score: Some(0.1),
         };
-        if let Ok(items) = provider.search(search_query, 5, Some(&filter)) {
+        if let Ok(mut items) = provider.search(search_query, 6, Some(&filter)) {
+            let summaries: Vec<String> = items
+                .iter()
+                .filter(|it| {
+                    it.tags
+                        .iter()
+                        .any(|t| t == "sleep_compacted" || t == "sleep_summary")
+                })
+                .map(|it| it.content.clone())
+                .collect();
+            if !summaries.is_empty() {
+                let s_refs: Vec<&str> = summaries.iter().map(|s| s.as_str()).collect();
+                let dec = ext_mem_pg_tx::QueryPredictabilityGate::evaluate(
+                    search_query,
+                    &s_refs,
+                    None,
+                    false,
+                );
+                if !dec.bypass_compacted {
+                    items.sort_by_key(|it| {
+                        if it.tags.iter().any(|t| t == "sleep_compacted" || t == "sleep_summary") {
+                            0u8
+                        } else {
+                            1u8
+                        }
+                    });
+                }
+            }
             let offset = lines.len() - 1; // 已添加的决策条数
             for (i, item) in items.iter().take(5).enumerate() {
                 let clean = crate::scanner::metadata::PromptInjectionScanner::scan_and_sanitize(&item.content).sanitized;

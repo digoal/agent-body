@@ -12,8 +12,8 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 ## 零、零重扫三步开工协议（Zero-Rescan Protocol，必先执行）
 
 任何新会话接手迭代任务时，**严禁全仓 `grep` 或扫描历史 `docs/src_doc/archive/roadmap-phase*.md` / `docs/src_doc/archive/progress-phase*.md`**，必须先执行以下 3 步（2 轮内精准锁定改点）：
-1. **读 `Tier-0` 入口（仅 2 文件）**：[EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md)（双引擎自进化架构 + 10 大演进场景 O(1) 变更触点矩阵）+ 当前活跃 `docs/src_doc/roadmap-phase*.md`；
-2. **跑确定性架构快照**：`make evolution-check`（`<200ms` 获取最新模块/MCP/SPI/表/Benchmark 计数与零漂移校验）；
+1. **读 `Tier-0` 入口（仅 2 文件）**：[EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md)（双引擎自进化架构 + 16 类一等公民全景图 + 10 大场景 O(1) 变更触点矩阵）+ 当前活跃 `docs/src_doc/roadmap-phase*.md`；
+2. **跑确定性架构快照与影响路由**：`make evolution-check`（`<200ms` 获取最新计数与零漂移校验）；编码后立即运行 `make citizen-impact`（基于 `git diff` O(1) 列出受影响的毛细血管清单，**严禁靠盲目全仓扫描发现变更面**）；
 3. **查符号用 CodeGraph**：`codegraph explore "<SymbolName>"` 穿透源码定义与调用链。
 
 ---
@@ -80,7 +80,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/placement/` | 8 大规范放置引擎与建议逻辑 (自演化学习) | 严格对齐 README 与放置规则 |
 | ├── `src/scanner/` | 分级扫描器、纯 Rust 多模态 L1A (`multimodal`/`multimodal_ext`)、三通道魔数统一分类、`AssetSearchEngine` (Omni-RRF + `kv_filter`) | 深度递归、全链路脱敏、0 Panic 与阻断的核心 |
 | ├── `src/env/` | 系统硬件规格、端口防撞、`/proc` 进程采集与白名单 GC | 过滤系统级底噪与端口冲突检测 |
-| ├── `src/memory/` | 跨会话长期记忆、PG 事务级海马体 (`PgTxMemoryAdapter`) 与多适配器体系 (内置/pg_tx/PowerContext/Mem0/Letta) | 降级机制保障与写前脱敏 |
+| ├── `src/memory/` | 跨会话长期记忆、PG 事务级海马体 (`PgTxMemoryAdapter`/`SleepCompactionOrchestrator`/`FastWeightOrchestrator`) 与多适配器体系 (内置/pg_tx/PowerContext/Mem0/Letta) | 降级机制保障与写前脱敏 |
 | ├── `src/watcher/` | inotify 监听器与变更同步流水线 | 300ms 防抖，同步 `changes` 表与写穿失效 |
 | ├── `src/daemon/` | 常驻守护进程主循环与定时轮询、依赖预检 | 优雅信号捕获与 Systemd 托管 |
 | ├── `src/links/` | 分层加权关联拓扑图、Mermaid 导出、断链审计与 CodeGraph 桥接 | AST 引用提取与宏微联邦 |
@@ -88,7 +88,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/session/` | 会话绑定、完工结清与临时垃圾回收 | 会话生命周期自洁 |
 | ├── `src/hooks/` | 事件总线、`AutoSyncEngine`、客户端生成器与 `OptimisticFailureDiagnoser` | POSIX 转义防注入与碰壁自愈 |
 | ├── `src/api/` | 43 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI/Web 1:1:1 映射 |
-| ├── `src/benchmark/` | 双轨/三轨实证 Benchmark `v3.9` 引擎（`W1~W20` + `M1~M6` + `DQ1~DQ10` + `COMP-C1~C4` + `PR-01~14` 账本） | 必须真机实测与 SHA-256 存证 |
+| ├── `src/benchmark/` | 双轨/三轨实证 Benchmark `v4.1` 引擎（`W1~W22` + `M1~M6` + `DQ1~DQ12` + `COMP-C1~C4` + `PR-01~16` 账本） | 必须真机实测与 SHA-256 存证 |
 | ├── `src/demo/` | 路演沙盒引擎（7 大黄金剧目、ROI 核算、`demo:*` 隔离） | 严禁假数据，必须真引擎实跑 |
 | ├── `src/feedback/` | `user_feedback.md` 双向总账、`FreshnessReconciler` 与 `P1~P5` 五点对比自进化探针 | 探针自愈与反馈沉淀闭环 |
 | ├── `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | 解析函数纯函数跨平台编译 |
@@ -117,7 +117,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 flowchart TD
     A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 docs/src_doc/roadmap-phase*.md)"]
     B --> C["步骤 3: 串行编码与单元测试驱动<br/>(TDD + cargo test 局部验证)"]
-    C --> D["步骤 4: 编译检查与全量回归<br/>(workspace 421 tests 全绿 + release 构建)"]
+    C --> D["步骤 4: 编译检查与全量回归<br/>(workspace 435 tests 全绿 + release 构建)"]
     D --> E["步骤 5: 文档同步与交付三段式小结<br/>(更新手册/README + 状态标记)"]
 ```
 
@@ -146,7 +146,7 @@ flowchart TD
    ```bash
    export PATH="$HOME/.cargo/bin:$PATH" && RUST_TEST_THREADS=1 cargo test --workspace
    ```
-   **门禁要求**: 全工作区 **421 项测试全部 `ok`**（根包 375 + `kernel` 26 + `contrib` 16 + `distributions` 4），0 failed；改动 Web/Schema/API 时追加通过 `make verify-webui`（Playwright 9 工作台 + 老库无损迁移 E2E）。
+   **门禁要求**: 全工作区 **435 项测试全部 `ok`**（根包 387 + `kernel` 27 + `contrib` 17 + `distributions` 4），0 failed；改动 Web/Schema/API 时追加通过 `make verify-webui`（Playwright 9 工作台 + 老库无损迁移 E2E）。
 2. 运行 release 生产构建（旗舰版与精简发行版按需编译）：
    ```bash
    export PATH="$HOME/.cargo/bin:$PATH" && cargo build --release
@@ -163,12 +163,9 @@ flowchart TD
    ```
 
 ### 步骤 5: 文档同步与交付小结
-1. 若新增或调整了 CLI 子命令，必须同步更新：
-   - [docs/manual/03-cli-reference.md](../../docs/manual/03-cli-reference.md)
-   - [docs/src_doc/progress.md](../../docs/src_doc/progress.md)
-2. 若新增或调整了 MCP 工具，必须同步更新：
-   - [docs/manual/04-mcp-integration.md](../../docs/manual/04-mcp-integration.md)
-   - [docs/manual/09-hooks-integration.md](../../docs/manual/09-hooks-integration.md)
+1. 优先运行 `make citizen-impact` 获取精准受影响的 **16 类一等公民** 列表（涵盖 Rustdoc/源码注释、`tests/`、CLI `--help`、MCP/Web、`config.example.toml`、`schema*.sql`、Benchmark/PR 账本、`docs/manual/`、`docs/design_doc/`、`docs/releases/`、`docs/markdown/`、`skills/`、`presentation/` 等），逐项核对补齐，禁止只改部分文档。
+2. 凡新增或调整 CLI / MCP 工具，同步更新 [docs/manual/03-cli-reference.md](../../docs/manual/03-cli-reference.md)、[docs/manual/04-mcp-integration.md](../../docs/manual/04-mcp-integration.md)、[docs/manual/09-hooks-integration.md](../../docs/manual/09-hooks-integration.md) 与 [docs/src_doc/progress.md](../../docs/src_doc/progress.md)。
+3. 凡新增或调整配置项、`tests/*.rs` 或 `contrib/`，同步对齐 `config.example.toml`、`INSTALL.md`、`docs/src_doc/development.md` 与 `EVOLUTION_GUIDE.md`，并确保 `make citizen-audit` 7 项交叉审计全绿。
 3. 更新 Roadmap 中的任务状态为 `✅ 已完成`，并记录完成时间。
 4. 按照“digoal德哥”三段式交付格式向用户汇报：
    - **文件路径**: 改动和新建的文件列表。
@@ -213,7 +210,7 @@ flowchart TD
 - [ ] **本体边界与命名兼容自检（规约 #2 & #27）**：是否严守脑体分离不内置业务 LLM 规划循环？自治行为是否遵守 `L0~L3` 权限包络（不越权执行 `L2/L3`）？对外叙事升级为「Agent 本体」的同时，是否保证 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`/`pg_schema.sql`/`duckdb_schema.sql`、`models.rs`、`spi.rs` 保持同步，并在 `src/storage/sqlite_provider/schema_reconcile.rs` 与 `tests/schema_migration_regression.rs` 覆盖老库无损迁移？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
-- [ ] 是否执行了 `make quality-gate`（`evolution-check` + `arch-check` 防腐边界门禁 + `lint-panic` + `lint-hygiene` 位置无关性/`>1000L` 文件清零/`let _ = <= 15`/核心自治及微内核与周边路径 `= 0`/`18/18 WaitEventId` + `lint-strict` 全工作区零警告编译）且 `RUST_TEST_THREADS=1 cargo test --workspace` 全部通过（**421 项全工作区测试全绿，零 warning**）？改动 Web/Schema/API 时是否已通过 `make verify-webui`？改动 `presentation/` 或演说脚本时是否已通过 `make verify-decks` Playwright 无头验真？
+- [ ] 是否运行 `make citizen-impact` 按 16 类一等公民图谱完成了毛细血管传导，并通过 `make quality-gate`（`evolution-check` + `citizen-audit` 7 项动态交叉审计 + `arch-check` 防腐边界 + `lint-panic` + `lint-hygiene` 位置无关/`>1000L` 清零/`let _ = <= 15`/`18/18 WaitEventId` + `lint-strict` 零警告编译）与 `RUST_TEST_THREADS=1 cargo test --workspace`（**435 项全绿**）？改动 Web/Schema/API/演说时是否已通过 `make verify-webui` 与 `make verify-decks`？
 - [ ] **二进制位置无关与发版一致性自检（规约 #11 & #28）**：生产路径是否 0 处 `env!("CARGO_MANIFEST_DIR")`？改名/核心修复提交后是否已重编安装 `make restart` 并核验 `agent-body --version` hash 与 `HEAD` 一致且 `DQ5 >= 98%`？
 - [ ] 是否执行了 `agent-body preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？

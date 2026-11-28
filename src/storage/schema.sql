@@ -534,7 +534,9 @@ CREATE TABLE IF NOT EXISTS body_checkpoints (
     created_at          TEXT NOT NULL,
     resumed_by_brain    TEXT DEFAULT NULL,
     resumed_at          TEXT DEFAULT NULL,
-    tx_epoch            INTEGER NOT NULL DEFAULT 0
+    tx_epoch            INTEGER NOT NULL DEFAULT 0,
+    fast_weight_snapshot_id TEXT DEFAULT NULL,
+    fast_weight_base_model  TEXT DEFAULT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_body_checkpoints_status_time

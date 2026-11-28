@@ -342,8 +342,22 @@ fn test_sqlite_missing_non_pk_columns_self_heal() {
     let prov = SqliteStorageProvider::open(&db_path).expect("open and self-heal missing cols");
     let cps = prov
         .list_body_checkpoints(None, 10)
-        .expect("list body_checkpoints must succeed after adding resumed_by_brain/resumed_at");
+        .expect("list body_checkpoints must succeed after adding resumed_by_brain/resumed_at/tx_epoch/fast_weight");
     assert!(cps.is_empty());
+
+    let conn_arc = prov.conn();
+    let conn = conn_arc.lock().expect("lock");
+    let mut stmt = conn
+        .prepare("PRAGMA table_info('body_checkpoints')")
+        .expect("pragma");
+    let cols: Vec<String> = stmt
+        .query_map([], |r| r.get(1))
+        .expect("q")
+        .filter_map(Result::ok)
+        .collect();
+    assert!(cols.contains(&"tx_epoch".to_string()));
+    assert!(cols.contains(&"fast_weight_snapshot_id".to_string()));
+    assert!(cols.contains(&"fast_weight_base_model".to_string()));
 }
 
 #[test]

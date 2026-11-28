@@ -31,7 +31,7 @@ graph TD
             LINKS["src/links/ (分层加权依赖拓扑/断链修复/CodeGraph联动)"]
             SCAN["src/scanner/ (分级扫描/全链路脱敏/抗投毒/三层元数据)"]
             ENV["src/env/ (内核proc采集/端口防撞/安全GC)"]
-            BENCH["src/benchmark/ (三轨 Benchmark v3.9 / PR-01~14 账本)"]
+            BENCH["src/benchmark/ (三轨 Benchmark v4.1 / PR-01~16 账本)"]
             FB["src/feedback/ (使用反馈总账 / 新鲜度对账 / P1~P5 探针)"]
             BODY["src/body/ (Agent 本体中枢: 身份证/接力胶囊/五维稳态/L0~L3/18 AWR)"]
         end
@@ -60,11 +60,11 @@ graph TD
 | `src/fact/` | 宿主机只读物理事实采集、L1~L3 属性图与行业 Know-How/Hierarchy 知识网络 | `FactFacade`, `CapabilityAnnotation`, `AutomationScanner`, `PropertyGraphOrganizer`, `KnowledgeNetworkEngine` |
 | `src/coordination/`| 多 Agent 协作锁、排队唤醒与 WFG 死锁检测 | `CoordinationEngine`, `CoordinationLock`, `DeadlockDetector` |
 | `src/placement/` | 资产规范放置与行为聚类学习 | `PlacementEngine`, `PlacementLearner`, `ConventionChecker` |
-| `src/memory/` | 跨会话长期记忆、PG 事务级海马体 (`PgTxMemoryAdapter`)、三方适配与 Omni-RRF 多路融合检索 | `MemoryManager`, `TxMemoryProvider`, `PgTxMemoryAdapter`, `BuiltinMemoryProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
+| `src/memory/` | 跨会话长期记忆、PG 事务级海马体 (`PgTxMemoryAdapter` / `SleepCompactionOrchestrator` / `FastWeightOrchestrator`)、三方适配与 Omni-RRF 多路融合检索 | `MemoryManager`, `TxMemoryProvider`, `PgTxMemoryAdapter`, `FastWeightOrchestrator`, `BuiltinMemoryProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
 | `src/links/` | 分层加权依赖关系网与爆炸半径推演 | `LinksEngine`, `CodeGraphBridge`, `LinkRepairer` |
 | `src/scanner/` | 资产扫描、全链路脱敏、抗投毒、多模态深度解析（L1A+L2）、原子 Know-How 抽取与 Omni-RRF 检索 | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `MultimodalExtractor`, `KnowHowExtractor`, `AssetSearchEngine`, `OllamaAnnotator` |
 | `src/api/` | 43 个原生 MCP 工具服务端（含 `core`/`dev`/`ops`/`full` Schema 减税档位） | `McpServer`, `AgentHookEngine`, `BodyResponse` |
-| `src/benchmark/` | 三轨实证 Benchmark v3.9 (`W1~W20`/`M1~M6`/`DQ1~DQ10`/`PR-01~14`) | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
+| `src/benchmark/` | 三轨实证 Benchmark v4.1 (`W1~W22`/`M1~M6`/`DQ1~DQ12`/`PR-01~16`) | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
 | `src/feedback/` | 使用反馈总账、新鲜度对账与五点对比自进化探针 | `FeedbackEngine`, `FreshnessReconciler`, `SelfEvolutionProbeEngine` |
 | `src/demo/` | 路演沙盒引擎与 ROI 核算 | `DemoEngine`, `DemoExecutionResult`, `RoiReport` |
 | `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` |
@@ -103,7 +103,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 # 1. 快速语法与类型检查 (耗时约 2~4 秒)
 cargo check
 
-# 2. 运行全工作区 421 项自动化测试套件（含旗舰版 375 + kernel 26 + contrib 16 + distributions 4）
+# 2. 运行全工作区 435 项自动化测试套件（含旗舰版 387 + kernel 27 + contrib 17 + distributions 4）
 RUST_TEST_THREADS=1 cargo test --workspace
 
 # 2b. 单独校验微内核防腐边界、Playwright WebUI 9 工作台 + 老库迁移 E2E 与精简发行版自检

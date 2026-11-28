@@ -453,13 +453,20 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_memory_audit",
-                "description": "长期记忆健康体检与矛盾仲裁：检测对立冲突的认知记忆对，计算温和时间衰减淘汰候选，支持指定归档旧条目，并支持查询 PG 事务记忆健康状态 (tx_status) 或按 fact_key 执行原子墓碑失效 (tombstone_fact_key)。",
+                "description": "长期记忆健康体检与矛盾仲裁：检测对立冲突的认知记忆对，计算温和时间衰减淘汰候选，支持指定归档旧条目，查询 PG 事务记忆健康状态 (tx_status)、按 fact_key 执行原子墓碑失效 (tombstone_fact_key)、L1_AUTONOMIC 空闲睡眠整理控制 (sleep_action)，以及方案 B 旁路快权重血缘/遗忘/回滚控制 (fast_weight_action)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "archive_id": { "type": "string", "description": "若存在冲突，指定归档淘汰的旧记忆 ID" },
                         "tx_status": { "type": "boolean", "default": false, "description": "是否返回 PG 事务记忆引擎的健康态、当前 tx_epoch、活跃事件与逻辑分段计数" },
-                        "tombstone_fact_key": { "type": "string", "description": "可选：按逻辑事实键 (fact_key) 对 PG 事务记忆执行写穿墓碑逻辑失效，清除向量/索引召回" }
+                        "tombstone_fact_key": { "type": "string", "description": "可选：按逻辑事实键 (fact_key) 对 PG 事务记忆执行写穿墓碑逻辑失效，清除向量/索引召回" },
+                        "sleep_action": { "type": "string", "enum": ["status", "run", "dry_run", "pause", "resume"], "description": "可选：睡眠整理观测与控制 (status 查询状态 | run 执行压缩 | dry_run 预览 | pause 暂停周期触发 | resume 恢复)" },
+                        "force": { "type": "boolean", "default": false, "description": "当 sleep_action=run 时，是否忽略空闲窗口门禁强制执行单轮整理" },
+                        "fast_weight_action": { "type": "string", "enum": ["status", "lineage", "compact", "unlearn", "rollback"], "description": "可选（Phase 78 方案 B）：旁路快权重血缘、神经 Compaction、定向遗忘与按 epoch 回滚控制" },
+                        "target_epoch": { "type": "integer", "description": "当 fast_weight_action=rollback 时指定回滚目标 tx_epoch" },
+                        "snapshot_id": { "type": "string", "description": "当 fast_weight_action=lineage 时指定追溯起点快照 UUID（留空追当前活跃快照）" },
+                        "base_model_id": { "type": "string", "description": "当 compact / unlearn 时指定目标基座模型 ID" },
+                        "adapter_kind": { "type": "string", "enum": ["inplace_ttt", "atlas_state", "larimar_mem", "scol_lora"], "description": "可选：快权重适配器形态" }
                     }
                 }
             }),

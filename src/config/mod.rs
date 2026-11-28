@@ -566,35 +566,7 @@ impl Config {
         if self.storage.provider == "postgres" && self.storage.pg_url.is_none() {
             anyhow::bail!("当 storage.provider 设置为 'postgres' 时，必须配置 storage.pg_url 连接串");
         }
-        match self.memory.provider.trim() {
-            "builtin" | "pg_tx" | "powercontext" | "mem0" | "letta" => {}
-            other => anyhow::bail!(
-                "未知 memory.provider: '{}'，仅支持 'builtin' / 'pg_tx' / 'powercontext' / 'mem0' / 'letta'",
-                other
-            ),
-        }
-        if self.memory.pg_pool_size == 0 || self.memory.pg_pool_size > 64 {
-            anyhow::bail!(
-                "memory.pg_pool_size ({}) 必须位于 1..=64 之间",
-                self.memory.pg_pool_size
-            );
-        }
-        match self.memory.vector_backend.trim().to_ascii_lowercase().as_str() {
-            "none" | "pgvector" | "pg_vectorsearch" | "external_lsm" => {}
-            other => anyhow::bail!(
-                "未知 memory.vector_backend: '{}'，仅支持 'none' / 'pgvector' / 'pg_vectorsearch' / 'external_lsm'",
-                other
-            ),
-        }
-        if self.memory.provider.trim() == "pg_tx"
-            && !self.memory.fallback_to_sqlite
-            && self.memory.pg_url.as_deref().map(str::trim).filter(|s| !s.is_empty()).is_none()
-            && self.storage.pg_url.as_deref().map(str::trim).filter(|s| !s.is_empty()).is_none()
-        {
-            anyhow::bail!(
-                "当 memory.provider='pg_tx' 且关闭 fallback_to_sqlite 时，必须配置 memory.pg_url 或 storage.pg_url"
-            );
-        }
+        self.memory.validate(self.storage.pg_url.as_deref())?;
         for peer in &self.mesh.peers {
             if !(peer.starts_with("http://") || peer.starts_with("https://")) {
                 anyhow::bail!("mesh.peers 中的 '{}' 必须以 http:// 或 https:// 开头", peer);

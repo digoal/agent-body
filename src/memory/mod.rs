@@ -9,6 +9,8 @@ pub mod builtin_provider;
 pub mod adapters;
 pub mod intake;
 pub mod embedding;
+pub mod fast_weight;
+pub mod sleep_compaction;
 
 pub use spi::{
     EvictCriteria, FastWeightCheckpointSpi, FastWeightSnapshotMeta, MemoryFilter, MemoryItem,
@@ -19,6 +21,13 @@ pub use builtin_provider::BuiltinMemoryProvider;
 pub use adapters::{AdapterConfig, MemoryFactory, PgTxAdapterConfig, PgTxMemoryAdapter};
 pub use intake::{MemoryIntakeFilter, MemoryIntakeEvaluation};
 pub use embedding::{EmbeddingClient, inject_embedding_meta, inject_pending_embedding_meta};
+pub use sleep_compaction::{
+    IdleWindowStatus, SleepCompactionOrchestrator, SleepCompactionStatus,
+};
+pub use fast_weight::{FastWeightOrchestrator, FastWeightStatusReport};
+pub use lifecycle::{
+    SalienceBreakdown, SalienceInput, SalienceScore, SalienceScorer, SalienceTier,
+};
 
 pub struct MemoryManager {
     storage: Storage,

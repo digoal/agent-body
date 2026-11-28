@@ -15,9 +15,9 @@ use crate::audit::{AuditEventInput, AuditLogger};
 use crate::body::manifest::compute_body_id;
 use crate::memory::builtin_provider::BuiltinMemoryProvider;
 use crate::memory::spi::{
-    EvictCriteria, MemoryFilter, MemoryItem, MemoryProvider, SessionContext, TxEvidenceTier,
-    TxMemoryEvent, TxMemoryProvider, TxMemorySnapshot, TxMemoryWriteInput, TxProviderHealth,
-    TxSearchOptions, TxWriteOutcome,
+    EvictCriteria, FastWeightCheckpointSpi, FastWeightSnapshotMeta, MemoryFilter, MemoryItem,
+    MemoryProvider, SessionContext, TxEvidenceTier, TxMemoryEvent, TxMemoryProvider,
+    TxMemorySnapshot, TxMemoryWriteInput, TxProviderHealth, TxSearchOptions, TxWriteOutcome,
 };
 use crate::scanner::metadata::{PromptInjectionScanner, SecretRedactor};
 use crate::storage::models::MemoryRecord;
@@ -129,6 +129,10 @@ impl PgTxMemoryAdapter {
 
     pub fn is_pg_active(&self) -> bool {
         self.engine.is_some()
+    }
+
+    pub fn engine(&self) -> Option<&PgTxEngine> {
+        self.engine.as_ref()
     }
 
     pub fn fallback_reason(&self) -> Option<&str> {
@@ -515,13 +519,46 @@ impl TxMemoryProvider for PgTxMemoryAdapter {
             } else {
                 opts.tenant_scope.trim()
             };
-            let snap = engine.search(
-                query,
-                scope,
-                opts.limit,
-                opts.as_of_epoch,
-                opts.include_history,
-            )?;
+            // Phase 77 M2.3: 查询可预测性评估，若遇到探索型或低摘要覆盖查询且非时间旅行/历史请求，自动旁路预整理摘要直查原始事件
+            let should_bypass = if opts.as_of_epoch.is_none() && !opts.include_history && !query.trim().is_empty() {
+                let summaries = engine.list_sleep_summary_texts(scope, 40).unwrap_or_default();
+                if summaries.is_empty() {
+                    false
+                } else {
+                    let s_refs: Vec<&str> = summaries.iter().map(|s| s.as_str()).collect();
+                    let dec = ext_mem_pg_tx::QueryPredictabilityGate::evaluate(
+                        query,
+                        &s_refs,
+                        opts.as_of_epoch,
+                        opts.include_history,
+                    );
+                    dec.bypass_compacted
+                }
+            } else {
+                false
+            };
+
+            let snap = if should_bypass {
+                engine.search_raw_bypass(query, scope, opts.limit)?
+            } else {
+                let regular = engine.search(
+                    query,
+                    scope,
+                    opts.limit,
+                    opts.as_of_epoch,
+                    opts.include_history,
+                )?;
+                // 兜底防漏召回：若常规解耦段未命中且未开启时间旅行，尝试旁路直查未墓碑原始事件
+                if regular.hits.is_empty()
+                    && opts.as_of_epoch.is_none()
+                    && !opts.include_history
+                    && !query.trim().is_empty()
+                {
+                    engine.search_raw_bypass(query, scope, opts.limit)?
+                } else {
+                    regular
+                }
+            };
             return Ok(TxMemorySnapshot {
                 snapshot_epoch: snap.snapshot_epoch,
                 backend: "pg_tx".to_string(),
@@ -627,5 +664,92 @@ impl TxMemoryProvider for PgTxMemoryAdapter {
                 .clone()
                 .unwrap_or_else(|| "使用本地 SQLite 降级模式".to_string()),
         })
+    }
+}
+
+fn pg_snapshot_to_spi(s: ext_mem_pg_tx::PgFastWeightSnapshot) -> FastWeightSnapshotMeta {
+    FastWeightSnapshotMeta {
+        snapshot_id: s.snapshot_id,
+        body_id: s.body_id,
+        tenant_scope: s.tenant_scope,
+        base_model_id: s.base_model_id,
+        parent_snapshot: s.parent_snapshot,
+        anchored_epoch: s.anchored_epoch,
+        adapter_kind: s.adapter_kind,
+        artifact_uri: s.artifact_uri,
+        norm_ratio: s.norm_ratio,
+        status: s.status,
+        created_at: s.created_at,
+    }
+}
+
+impl FastWeightCheckpointSpi for PgTxMemoryAdapter {
+    fn register_snapshot(&self, meta: &FastWeightSnapshotMeta) -> Result<()> {
+        let Some(engine) = &self.engine else {
+            anyhow::bail!("PostgreSQL 事务底座未激活（当前 SQLite 降级模式），无法写入 fast_weight_snapshots");
+        };
+        let body_id = if meta.body_id.trim().is_empty() {
+            compute_body_id()
+        } else {
+            meta.body_id.trim().to_string()
+        };
+        let scope = if meta.tenant_scope.trim().is_empty() {
+            self.config.tenant_scope.as_str()
+        } else {
+            meta.tenant_scope.trim()
+        };
+        let policy = ext_mem_pg_tx::FastWeightGatePolicy::default();
+        let snap_opt = Some(meta.snapshot_id.as_str()).filter(|s| !s.trim().is_empty());
+        engine.register_snapshot_meta(
+            snap_opt,
+            &body_id,
+            scope,
+            &meta.base_model_id,
+            meta.parent_snapshot.as_deref(),
+            meta.anchored_epoch,
+            &meta.adapter_kind,
+            &meta.artifact_uri,
+            meta.norm_ratio,
+            &meta.status,
+            &policy,
+        )?;
+        Ok(())
+    }
+
+    fn active_snapshot(
+        &self,
+        body_id: &str,
+        tenant_scope: &str,
+    ) -> Result<Option<FastWeightSnapshotMeta>> {
+        let Some(engine) = &self.engine else {
+            return Ok(None);
+        };
+        let body = if body_id.trim().is_empty() {
+            compute_body_id()
+        } else {
+            body_id.trim().to_string()
+        };
+        Ok(engine
+            .active_fast_weight_snapshot(&body, tenant_scope)?
+            .map(pg_snapshot_to_spi))
+    }
+
+    fn rollback_to_epoch(
+        &self,
+        body_id: &str,
+        tenant_scope: &str,
+        target_epoch: i64,
+    ) -> Result<Option<FastWeightSnapshotMeta>> {
+        let Some(engine) = &self.engine else {
+            return Ok(None);
+        };
+        let body = if body_id.trim().is_empty() {
+            compute_body_id()
+        } else {
+            body_id.trim().to_string()
+        };
+        let trace_id = format!("spi-rb-{}", uuid::Uuid::new_v4());
+        let outcome = engine.rollback_fast_weight_to_epoch(&body, tenant_scope, target_epoch, None, &trace_id)?;
+        Ok(outcome.restored_snapshot.map(pg_snapshot_to_spi))
     }
 }

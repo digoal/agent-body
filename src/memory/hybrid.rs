@@ -237,6 +237,85 @@ impl HybridSearchEngine {
 
         Ok(final_results)
     }
+
+    /// 评估查询可预测性并判定是否需要旁路睡眠整理摘要直查原始事件
+    pub fn evaluate_predictability(
+        &self,
+        query: &str,
+        as_of_epoch: Option<i64>,
+        include_history: bool,
+    ) -> ext_mem_pg_tx::PredictabilityDecision {
+        let summaries: Vec<String> = self
+            .storage
+            .list_all_active_memories(200)
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|m| m.tags.iter().any(|t| t == "sleep_compacted" || t == "sleep_summary"))
+            .map(|m| m.content)
+            .collect();
+        let refs: Vec<&str> = summaries.iter().map(|s| s.as_str()).collect();
+        ext_mem_pg_tx::QueryPredictabilityGate::evaluate(query, &refs, as_of_epoch, include_history)
+    }
+
+    /// 带可预测性旁路门禁的混合检索：
+    /// - 高可预测常规查询：优先返回高密度 `sleep_compacted` 摘要以压缩上下文 Token；
+    /// - 不可预测探索型查询：自动旁路摘要偏置并回补被整理归档的原始详情（`status='archived'` 且非 `outdated`），确保 `ΔRecall >= 0`。
+    pub async fn search_hybrid_with_gate(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<(Vec<HybridSearchResult>, ext_mem_pg_tx::PredictabilityDecision)> {
+        let dec = self.evaluate_predictability(query, None, false);
+        let mut results = self.search_hybrid(query, limit.saturating_mul(2).max(6)).await?;
+
+        if !dec.bypass_compacted {
+            for r in &mut results {
+                let is_sum = r
+                    .memory
+                    .tags
+                    .iter()
+                    .any(|t| t == "sleep_compacted" || t == "sleep_summary");
+                if is_sum {
+                    r.rrf_score *= 1.35;
+                }
+            }
+            results.sort_by(|a, b| b.rrf_score.partial_cmp(&a.rrf_score).unwrap_or(std::cmp::Ordering::Equal));
+            results.truncate(limit);
+            return Ok((results, dec));
+        }
+
+        // 探索型旁路：若活跃摘要未覆盖细节关键词，从 archived（睡眠整理折叠保留的原件，非 outdated/tombstoned）回补召回
+        let q_lower = query.trim().to_ascii_lowercase();
+        let q_terms: Vec<String> = q_lower
+            .split(|c: char| !c.is_alphanumeric() && c != '_' && c != '-' && c <= '\u{7f}')
+            .map(|s| s.trim().to_string())
+            .filter(|s| s.len() >= 3)
+            .collect();
+        let mut seen: std::collections::HashSet<String> =
+            results.iter().map(|r| r.memory.id.clone()).collect();
+        let all_archived = self.storage.list_all_memories(1000).unwrap_or_default();
+        for m in all_archived {
+            if m.status != "archived" || seen.contains(&m.id) {
+                continue;
+            }
+            let hay = format!("{} {} {}", m.id, m.content, m.summary.as_deref().unwrap_or("")).to_ascii_lowercase();
+            let hit_cnt = q_terms.iter().filter(|t| hay.contains(t.as_str())).count();
+            if hit_cnt > 0 {
+                let boost = 0.02 + (hit_cnt as f32 * 0.015);
+                seen.insert(m.id.clone());
+                results.push(HybridSearchResult {
+                    memory: m,
+                    rrf_score: boost,
+                    fts_rank: None,
+                    vec_rank: None,
+                    cosine_similarity: None,
+                });
+            }
+        }
+        results.sort_by(|a, b| b.rrf_score.partial_cmp(&a.rrf_score).unwrap_or(std::cmp::Ordering::Equal));
+        results.truncate(limit);
+        Ok((results, dec))
+    }
 }
 
 pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
@@ -351,5 +430,52 @@ mod tests {
         let results = engine.search_hybrid("Checkpont", 5).await.expect("omni mem search");
         assert!(!results.is_empty(), "Fuzzy + Know-How 图应支持无向量拼写容错召回");
         assert_eq!(results[0].memory.id, "mem-wal-1");
+    }
+
+    #[tokio::test]
+    async fn test_hybrid_search_with_gate_bypasses_on_unpredictable_query() {
+        let storage = Arc::new(Storage::open_in_memory().expect("open_in_memory"));
+        storage
+            .insert_memory(&MemoryRecord {
+                id: "sleep-sum-pg".to_string(),
+                memory_type: "experience".to_string(),
+                content: "[sleep_summary:pg] primary port=5432 max_wal_size=2GB".to_string(),
+                summary: Some("Sleep compacted PG summary".to_string()),
+                source_agent: Some("sleep_time_compactor".to_string()),
+                source_session: None,
+                tags: vec!["sleep_compacted".to_string(), "sleep_summary".to_string()],
+                weight: 0.85,
+                pinned: false,
+                status: "active".to_string(),
+                embedding: vec![],
+            })
+            .expect("insert summary");
+        storage
+            .insert_memory(&MemoryRecord {
+                id: "raw-orig-1".to_string(),
+                memory_type: "experience".to_string(),
+                content: "Root trace in PgTxEngine::search_raw_bypass hit SQLSTATE 40001 during burst".to_string(),
+                summary: None,
+                source_agent: Some("hook".to_string()),
+                source_session: None,
+                tags: vec!["pg".to_string()],
+                weight: 0.5,
+                pinned: false,
+                status: "archived".to_string(),
+                embedding: vec![],
+            })
+            .expect("insert archived original");
+
+        let engine = HybridSearchEngine::new(storage);
+        let (norm_hits, norm_dec) = engine.search_hybrid_with_gate("pg port 5432", 3).await.expect("norm");
+        assert!(!norm_dec.bypass_compacted);
+        assert_eq!(norm_hits[0].memory.id, "sleep-sum-pg");
+
+        let (rare_hits, rare_dec) = engine
+            .search_hybrid_with_gate("PgTxEngine::search_raw_bypass SQLSTATE 40001", 3)
+            .await
+            .expect("bypass");
+        assert!(rare_dec.bypass_compacted);
+        assert!(rare_hits.iter().any(|h| h.memory.id == "raw-orig-1"));
     }
 }

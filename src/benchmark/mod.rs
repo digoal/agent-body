@@ -23,7 +23,7 @@ use crate::benchmark::workloads::{run_all_workloads, run_workload, WorkloadResul
 use crate::storage::models::BenchmarkRunRecord;
 use crate::storage::StorageProvider;
 
-pub const BENCHMARK_SPEC_VERSION: &str = "3.9";
+pub const BENCHMARK_SPEC_VERSION: &str = "4.1";
 
 pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
     if workloads.is_empty() {
@@ -40,7 +40,7 @@ pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
 pub fn compute_query_guard_speedup(workloads: &[WorkloadResult]) -> f64 {
     let subset: Vec<&WorkloadResult> = workloads
         .iter()
-        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9" | "W11" | "W15" | "W16" | "W17" | "W18" | "W19" | "W20"))
+        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9" | "W11" | "W15" | "W16" | "W17" | "W18" | "W19" | "W20" | "W21" | "W22"))
         .collect();
     if subset.is_empty() {
         return 1.0;
@@ -319,11 +319,11 @@ mod tests {
         let report = BenchmarkEngine::run_suite(provider.clone(), "full", true, Some("bench:test"))
             .expect("run full suite");
 
-        assert_eq!(report.workloads.len(), 20);
+        assert_eq!(report.workloads.len(), 22);
         assert_eq!(report.micro_benchmarks.len(), 6);
-        assert_eq!(report.data_quality.len(), 10);
+        assert_eq!(report.data_quality.len(), 12);
         assert_eq!(report.competitors.len(), 4);
-        assert_eq!(report.spec_version, "3.9");
+        assert_eq!(report.spec_version, "4.1");
         let bad_w: Vec<String> = report
             .workloads
             .iter()
@@ -365,7 +365,7 @@ mod tests {
                 m.id, m.name, m.passed, m.avg_us, m.sla_limit_us
             );
         }
-        assert!(report.sla_passed, "20 大负载 + 6 大微基准 + 10 项 DQ SLA 应全部通过");
+        assert!(report.sla_passed, "22 大负载 + 6 大微基准 + 12 项 DQ SLA 应全部通过");
 
         let fetched = provider
             .get_benchmark_run(&report.run_id)

@@ -2,7 +2,7 @@
   <rect width="960" height="520" rx="10" fill="#F7F6F2" stroke="#D9D5CB" stroke-width="1.5"/>
 
   <text x="32" y="34" fill="#1B2B33" font-size="16" font-weight="bold" font-family="PingFang SC, Noto Sans CJK SC, sans-serif">Agent Body 全景分层架构 · 旗舰主干 × 纯微内核 (kernel/) × 周边扩展 (contrib/) × 四大发行版</text>
-  <text x="32" y="54" fill="#46585F" font-size="11" font-family="PingFang SC, Noto Sans CJK SC, sans-serif">v1.1.0 · 27 模块 · 43 MCP · 30 CLI · 88 SPI · 微内核 3 Crates · 周边 10 五件套 · 全栈可观测 (/metrics + W3C Trace)</text>
+  <text x="32" y="54" fill="#46585F" font-size="11" font-family="PingFang SC, Noto Sans CJK SC, sans-serif">v1.1.0 · 27 模块 · 43 MCP · 30 CLI · 88 SPI · 微内核 3 Crates · 周边 11 五件套 · 全栈可观测 (/metrics + W3C Trace)</text>
   <line x1="32" y1="64" x2="928" y2="64" stroke="#D9D5CB" stroke-width="1"/>
 
   <!-- Layer 1: Interface & Observability -->
@@ -61,17 +61,17 @@
 
   <!-- Layer 3: Microkernel & Contrib & Slim Distributions -->
   <rect x="32" y="282" width="896" height="96" rx="6" fill="#E5EFF0" stroke="#1E4B5A" stroke-width="1.2"/>
-  <text x="48" y="302" fill="#1E4B5A" font-size="12" font-weight="bold">Layer 3 · 微内核 (kernel/) × 10 周边扩展 (contrib/) × 精简发行版 (distributions/)</text>
+  <text x="48" y="302" fill="#1E4B5A" font-size="12" font-weight="bold">Layer 3 · 微内核 (kernel/) × 11 周边扩展 (contrib/) × 精简发行版 (distributions/)</text>
 
   <rect x="48" y="312" width="276" height="54" rx="4" fill="#FFFFFF" stroke="#245A6B"/>
   <text x="186" y="330" fill="#245A6B" font-size="10.5" font-weight="bold" text-anchor="middle">纯机制微内核 (3 Crates)</text>
-  <text x="186" y="344" fill="#46585F" font-size="8.5" text-anchor="middle">body-sdk · body-protocol · body-kernel (8Catalog)</text>
+  <text x="186" y="344" fill="#46585F" font-size="8.5" text-anchor="middle">body-sdk (含 FastWeightSPI) · protocol · kernel</text>
   <text x="186" y="357" fill="#2F7A66" font-size="8.5" font-weight="bold" text-anchor="middle">ObservabilityProvider · Trace 贯通 · 轨 B 沙盒</text>
 
   <rect x="338" y="312" width="318" height="54" rx="4" fill="#FFFFFF" stroke="#2F7A6B"/>
-  <text x="497" y="330" fill="#2F7A6B" font-size="10.5" font-weight="bold" text-anchor="middle">独立周边 (10 个标准五件套 · ext_*__ 前缀隔离)</text>
-  <text x="497" y="344" fill="#46585F" font-size="8.5" text-anchor="middle">Linux/JVM/Nginx · PG/达梦/金仓 · mTLS/RLS · 合规/SIEM</text>
-  <text x="497" y="357" fill="#BE653B" font-size="8.5" font-weight="bold" text-anchor="middle">obs_telemetry (Prometheus/W3C/OBS-01~05) · cmdb_ticket</text>
+  <text x="497" y="330" fill="#2F7A6B" font-size="10.5" font-weight="bold" text-anchor="middle">独立周边 (11 个标准五件套 · ext_*__ 前缀隔离)</text>
+  <text x="497" y="344" fill="#46585F" font-size="8.5" text-anchor="middle">Linux/JVM/PG · mTLS/RLS/SIEM · cmdb_ticket</text>
+  <text x="497" y="357" fill="#BE653B" font-size="8.5" font-weight="bold" text-anchor="middle">obs_telemetry · mem_pg_tx (PG 事务海马体 A→B)</text>
 
   <rect x="670" y="312" width="242" height="54" rx="4" fill="#FFFFFF" stroke="#BE653B"/>
   <text x="791" y="330" fill="#BE653B" font-size="10.5" font-weight="bold" text-anchor="middle">三大零 C++ 精简发行版</text>
@@ -80,8 +80,8 @@
 
   <!-- Layer 4: Storage SPI & Benchmark -->
   <rect x="32" y="390" width="896" height="56" rx="6" fill="#CFE0DC" stroke="#2E6373" stroke-width="1.2"/>
-  <text x="48" y="410" fill="#1E4B5A" font-size="11.5" font-weight="bold">Layer 4 · 存储中枢 88 SPI (27 表) &amp; Benchmark v3.9 三轨实证</text>
-  <text x="48" y="430" fill="#1B2B33" font-size="9.5">SQLite WAL+FTS5 ⇄ PostgreSQL pgvector+Advisory Lock ⇄ DuckDB OLAP+Parquet | W1~W19 + M1~M6 + DQ1~DQ10 + PR-01~14</text>
+  <text x="48" y="410" fill="#1E4B5A" font-size="11.5" font-weight="bold">Layer 4 · 存储中枢 88 SPI (27 表) &amp; Benchmark v4.1 三轨实证</text>
+  <text x="48" y="430" fill="#1B2B33" font-size="9.5">SQLite WAL+FTS5 ⇄ PostgreSQL 18 事务海马体(A→B) ⇄ DuckDB OLAP | W1~W22 + M1~M6 + DQ1~DQ12 + PR-01~16</text>
 
   <!-- Layer 5: Host OS & CodeGraph -->
   <rect x="32" y="456" width="896" height="48" rx="6" fill="#1E4B5A" stroke="#1E4B5A" stroke-width="1.2"/>

@@ -27,11 +27,9 @@ description: 专门用于协助 Agent 编写、维护、同步与迭代本项目
    - 所有 Mermaid 图必须使用标准语法（节点文字含特殊符号或括号必须用双引号包裹，如 `node["描述 (详情)"]`），布局美观，避免文字重叠或溢出；
    - 矢量图解必须先落盘为独立 SVG 文件（统一置于 `docs/markdown/svg/`），在 Markdown 中使用标准图片语法引用对应 SVG 路径；
    - 全局相对链接与文件引用必须 100% 真实有效，严禁出现断链或死链。
-5. **双轮驱动同步机制**：
-   - 任何核心特性的发布或调整，必须同步检查：
-     - **根目录 `README.md`**：保持项目门面最新（架构全景、核心定位、快速上手、MCP 配置简明指南、分阶段路线索引）；
-     - **`docs/manual/` 目录**：保持深度分卷手册完备（01~10 章节化深度展开、排障常见问题、参数字典与实证 Benchmark）；
-     - **`docs/markdown/` 目录**：提炼适合对外技术传播的长文与高保真图解。
+5. **双轮驱动 × 16 类一等公民 O(1) 同步机制**：
+   - 先运行 `make citizen-impact` 锁定本次代码变动真正波及的毛细血管（源码注释/Rustdoc、`tests/`、CLI `--help`、MCP/Web、`config.example.toml`、Schema、Benchmark、根目录 `README.md`、`docs/manual/`、`docs/releases/`、`docs/markdown/` 与 `presentation/`），**严禁盲目全仓扫描**；
+   - 收口强制通过 `make citizen-audit` 7 项动态交叉审计，确保每条战线 0 漂移、0 断链。
 6. **断点式增量推进**：
    - 当需要重构或批量撰写 `docs/manual/` 多章节长手册时，必须在 [docs/manual/README.md](../../docs/manual/README.md) 中维护章节目录进度清单，按章节串行步进。
 
@@ -76,7 +74,7 @@ flowchart TD
 
 ### 步骤 1: 提取代码事实
 在动笔前，Agent 必须快速查阅：
-- `EVOLUTION_GUIDE.md` & `ISSUE.md`：双引擎自进化活地图、27 模块 / 43 工具 / 88 SPI 方法 / 27 表 + 3 微内核 Crate / 11 `contrib/` 扩展 / 3 精简发行版 / 421 项全工作区测试锚点与 10 大演进场景触点矩阵；
+- `EVOLUTION_GUIDE.md` & `ISSUE.md`：双引擎自进化活地图、27 模块 / 43 工具 / 88 SPI 方法 / 27 表 + 3 微内核 Crate / 11 `contrib/` 扩展 / 3 精简发行版 / 435 项全工作区测试锚点与 10 大演进场景触点矩阵；
 - `kernel/`、`contrib/`、`distributions/` 与 [20-plugin-microkernel-architecture-spec.md](../../docs/design_doc/20-plugin-microkernel-architecture-spec.md) / [21-observability-and-telemetry-spec.md](../../docs/design_doc/21-observability-and-telemetry-spec.md) / [22-pg-tx-memory-spi-a-to-b-spec.md](../../docs/design_doc/22-pg-tx-memory-spi-a-to-b-spec.md)：纯微内核契约、标准五件套扩展、全栈可观测闭环、轨 B 沙盒、PostgreSQL 事务海马体规划与四大发行版装配规格；
 - `src/cli_args.rs` & `src/cli_handlers/*`：当前支持的所有 30 个顶级子命令与 flags 参数；
 - `src/api/mcp_schemas.rs`、`src/api/mcp_schemas_ops.rs` & `src/api/mcp_tools/mod.rs`：当前注册的全部 **43 个原生 MCP 工具** 名与 inputSchema；
@@ -87,7 +85,7 @@ flowchart TD
 - `src/brief/optimistic.rs` & `src/hooks/diagnoser.rs`：AOPCC 开工乐观直通租约、三态并发分类器与 `<2ms` 碰壁处方自愈；
 - `src/mesh/`：`MeshEnvelope v1.0` HMAC-SHA256 签名防重放、跨机图谱、双向脱敏对话与沙盒收件箱投递；
 - `src/feedback/` & `src/audit/`：`user_feedback.md` 双向同步、`FreshnessReconciler`、`P1~P5` 自进化探针与双域审计流水；
-- `src/benchmark/`：`v3.9` 实证评测引擎（`W1~W20` + `M1~M6` + `DQ1~DQ10` + `COMP-C1~C4` + `PR-01~14`）。
+- `src/benchmark/`：`v4.1` 实证评测引擎（`W1~W22` + `M1~M6` + `DQ1~DQ12` + `COMP-C1~C4` + `PR-01~16`）。
 
 ### 步骤 2: 实操命令获取真实输出
 针对文档中需要出现的示例，在终端中以 release 二进制执行捕获：
@@ -113,7 +111,7 @@ flowchart TD
   - 错误写法: `A[客户端(Agent)]`
   - 正确写法: `A["客户端 (Agent)"]`
 - **SVG 图表规范**：矢量图保存为独立 `.svg` 文件置于 `docs/markdown/svg/`，保证自适应与文字高对比度无遮挡；
-- **死链检查与防漂移门禁**：运行 `make quality-gate`（含 `make evolution-check` 校验 `27` 模块 / `43` 工具 / `88` SPI / `27` 表 / 微内核 `3` crates / `contrib` `11` 扩展 / 发行版 `3` 个 / `421` 测试 / Benchmark `v3.9` 与活跃 `.md` 0 死链 + `make arch-check` 防腐边界门禁）；涉及演说或 Web UI 变更时追加 `make verify-decks` / `make verify-webui`；并自检 URL 内无 `**bold**`、无未配对 `$...$` 冲突与 Mermaid 括号双引号包裹。
+- **死链检查与防漂移门禁**：运行 `make quality-gate`（含 `make evolution-check` 校验 `27` 模块 / `43` 工具 / `88` SPI / `27` 表 / 微内核 `3` crates / `contrib` `11` 扩展 / 发行版 `3` 个 / `435` 测试 / Benchmark `v4.1` 与活跃 `.md` 0 死链 + `make arch-check` 防腐边界门禁）；涉及演说或 Web UI 变更时追加 `make verify-decks` / `make verify-webui`；并自检 URL 内无 `**bold**`、无未配对 `$...$` 冲突与 Mermaid 括号双引号包裹。
 
 ### 步骤 5: 交付检查与 Commit
 - 检查 `README.md`、`docs/manual/` 与 `docs/src_doc/` 是否无缝互引；

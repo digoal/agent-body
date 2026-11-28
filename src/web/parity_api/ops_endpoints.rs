@@ -335,21 +335,149 @@ pub fn handle_memories_audit(storage: Arc<dyn StorageProvider>) -> HttpResponse 
         .build_tx_memory_provider(st.clone())
         .ok()
         .and_then(|p| p.tx_health().ok());
+    let sleep_status = crate::memory::SleepCompactionOrchestrator::status(&st, &cfg);
+    let fw_status = crate::memory::FastWeightOrchestrator::status(&cfg).ok();
     match mgr.audit_memories() {
         Ok(rep) => {
-            if let Some(health) = tx_health {
-                if let Ok(mut val) = serde_json::to_value(&rep) {
-                    if let Some(obj) = val.as_object_mut() {
+            if let Ok(mut val) = serde_json::to_value(&rep) {
+                if let Some(obj) = val.as_object_mut() {
+                    if let Some(health) = tx_health {
                         obj.insert(
                             "tx_memory_health".to_string(),
                             serde_json::to_value(&health).unwrap_or(serde_json::Value::Null),
                         );
                     }
-                    return WebResponse::success(val);
+                    obj.insert(
+                        "sleep_compaction".to_string(),
+                        serde_json::to_value(&sleep_status).unwrap_or(serde_json::Value::Null),
+                    );
+                    if let Some(fw) = fw_status {
+                        obj.insert(
+                            "fast_weight".to_string(),
+                            serde_json::to_value(&fw).unwrap_or(serde_json::Value::Null),
+                        );
+                    }
                 }
+                return WebResponse::success(val);
             }
             WebResponse::success(rep)
         }
+        Err(e) => WebResponse::error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Memory audit failed: {}", e),
+        ),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MemoryAuditActionBody {
+    pub archive_id: Option<String>,
+    pub tombstone_fact_key: Option<String>,
+    pub sleep_action: Option<String>,
+    pub force: Option<bool>,
+    pub fast_weight_action: Option<String>,
+    pub target_epoch: Option<i64>,
+    pub snapshot_id: Option<String>,
+    pub base_model_id: Option<String>,
+    pub adapter_kind: Option<String>,
+}
+
+pub fn handle_memories_audit_action(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
+    let body: MemoryAuditActionBody = match req.json() {
+        Ok(b) => b,
+        Err(_) => MemoryAuditActionBody {
+            archive_id: None,
+            tombstone_fact_key: None,
+            sleep_action: None,
+            force: None,
+            fast_weight_action: None,
+            target_epoch: None,
+            snapshot_id: None,
+            base_model_id: None,
+            adapter_kind: None,
+        },
+    };
+    let st = Storage::new(storage);
+    let cfg = Config::load_effective_or_default();
+    let mgr = MemoryLifecycleManager::new(&st);
+
+    if let Some(aid) = body.archive_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        if let Err(e) = mgr.archive_memory(aid) {
+            return WebResponse::error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &format!("Archive memory failed: {}", e),
+            );
+        }
+    }
+
+    let mut tombstoned_events = 0u64;
+    if let Some(fk) = body.tombstone_fact_key.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        match cfg.build_tx_memory_provider(st.clone()).and_then(|p| {
+            p.tombstone_fact(
+                &crate::body::manifest::compute_body_id(),
+                &cfg.memory.pg_tenant_scope,
+                fk,
+                "web_memory_audit_tombstone",
+            )
+        }) {
+            Ok(n) => tombstoned_events = n,
+            Err(e) => {
+                return WebResponse::error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &format!("Tombstone failed: {}", e),
+                )
+            }
+        }
+    }
+
+    let force = body.force.unwrap_or(false);
+    let sleep_result = if let Some(act) = body.sleep_action.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        let res = match act.to_ascii_lowercase().as_str() {
+            "status" => serde_json::to_value(crate::memory::SleepCompactionOrchestrator::status(&st, &cfg))
+                .map_err(anyhow::Error::from),
+            "dry_run" => crate::memory::SleepCompactionOrchestrator::execute(&st, &cfg, true, true)
+                .and_then(|r| serde_json::to_value(r).map_err(anyhow::Error::from)),
+            "run" => crate::memory::SleepCompactionOrchestrator::execute(&st, &cfg, false, force)
+                .and_then(|r| serde_json::to_value(r).map_err(anyhow::Error::from)),
+            "pause" => crate::memory::SleepCompactionOrchestrator::set_paused(&cfg.data_dir, true)
+                .and_then(|_| serde_json::to_value(crate::memory::SleepCompactionOrchestrator::status(&st, &cfg)).map_err(anyhow::Error::from)),
+            "resume" => crate::memory::SleepCompactionOrchestrator::set_paused(&cfg.data_dir, false)
+                .and_then(|_| serde_json::to_value(crate::memory::SleepCompactionOrchestrator::status(&st, &cfg)).map_err(anyhow::Error::from)),
+            other => Err(anyhow::anyhow!("未知 sleep_action '{}'", other)),
+        };
+        match res {
+            Ok(v) => Some(v),
+            Err(e) => return WebResponse::error(StatusCode::BAD_REQUEST, &e.to_string()),
+        }
+    } else {
+        Some(serde_json::to_value(crate::memory::SleepCompactionOrchestrator::status(&st, &cfg)).unwrap_or(serde_json::Value::Null))
+    };
+
+    let fast_weight_result = if let Some(fw) = body.fast_weight_action.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        match crate::memory::FastWeightOrchestrator::execute_action(
+            &st,
+            &cfg,
+            fw,
+            body.snapshot_id.as_deref(),
+            body.target_epoch,
+            body.base_model_id.as_deref(),
+            body.adapter_kind.as_deref(),
+            None,
+        ) {
+            Ok(v) => Some(v),
+            Err(e) => return WebResponse::error(StatusCode::BAD_REQUEST, &e.to_string()),
+        }
+    } else {
+        None
+    };
+
+    match mgr.audit_memories() {
+        Ok(rep) => WebResponse::success(serde_json::json!({
+            "audit": rep,
+            "tombstoned_events": tombstoned_events,
+            "sleep_compaction": sleep_result,
+            "fast_weight": fast_weight_result,
+        })),
         Err(e) => WebResponse::error(
             StatusCode::INTERNAL_SERVER_ERROR,
             &format!("Memory audit failed: {}", e),

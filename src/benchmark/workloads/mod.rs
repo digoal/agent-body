@@ -366,11 +366,29 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             body_desc: "PgTxMemoryAdapter 双时态写穿契约 + SQLite 透明降级 + MVCC_EPOCH_CONFLICT(<2ms) + 胶囊 tx_epoch 锚定 (1 round)".into(),
             sla_desc: "4/4 降级脱敏/OCC自愈/胶囊纪元/墓碑审计断言命中, token_savings_pct >= 50%, body_elapsed_us < 250_000".into(),
         },
+        WorkloadSpec {
+            id: "W21".into(),
+            name: "sleep_time_compaction_and_bypass_pareto".into(),
+            title: "L1_AUTONOMIC 空闲睡眠整理、可预测性旁路与 3x~5x 降本".into(),
+            category: "D6 Sleep-Time Compaction (M2)".into(),
+            baseline_desc: "无睡眠整理时全量注入重复寒暄/auto_sync 噪声与明文秘钥，高成本低信噪比 (5 rounds)".into(),
+            body_desc: "SalienceScorer 分级 + SleepTimeCompactor 聚类压缩 + QueryPredictabilityGate 旁路 + OUT_OF_AGENT/PR-15 存证 (1 round)".into(),
+            sla_desc: "4/4 显著性/压缩比/旁路召回/审计开关断言命中, Fact Recall=100%, Q_body >= Q_baseline".into(),
+        },
+        WorkloadSpec {
+            id: "W22".into(),
+            name: "fast_weight_lineage_gates_and_unlearn_rollback".into(),
+            title: "方案 B 旁路快权重血缘、三门禁熔断与热态跨脑接力".into(),
+            category: "D7 Fast-Weight Control Plane (M3)".into(),
+            baseline_desc: "无旁路快权重控制面与门禁熔断时全量重放冷上下文或直接内联权重导致回归与墓碑泄漏 (4 rounds)".into(),
+            body_desc: "FastWeightGatePolicy 三门禁 + URI 禁内联 + ContinuityCapsule v2 同/异构基座校验 + PR-16 存证 (1 round)".into(),
+            sla_desc: "4/4 门禁激活/故障熔断/跨脑校验/PR-16 断言命中, norm_ratio<=1.50, glue>=-0.03, unlearn_leak<0.001".into(),
+        },
     ]
 }
 
 pub fn run_all_workloads(storage: Arc<dyn StorageProvider>) -> Result<Vec<WorkloadResult>> {
-    let mut results = Vec::with_capacity(20);
+    let mut results = Vec::with_capacity(22);
     for spec in list_workload_specs() {
         results.push(run_workload(storage.clone(), &spec.id)?);
     }
@@ -399,7 +417,9 @@ pub fn run_workload(storage: Arc<dyn StorageProvider>, id: &str) -> Result<Workl
         "W18" => run_w18_perf_awr_and_self_diagnostics(),
         "W19" => run_w19_knowhow_graph_and_omni_rrf(),
         "W20" => run_w20_pg_tx_mvcc_and_write_through(),
-        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W20)", id),
+        "W21" => run_w21_sleep_time_compaction_pareto(),
+        "W22" => run_w22_fast_weight_gates_and_continuity(),
+        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W22)", id),
     }
 }
 

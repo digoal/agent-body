@@ -345,12 +345,12 @@ pub(crate) fn ops_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_benchmark",
-                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v3.9）：运行 A/B 对照负载(W1~W20)、内核微基准(M1~M6)、数据质量与遥测/图谱健康(DQ1~DQ10)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-14)。",
+                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v4.1）：运行 A/B 对照负载(W1~W22)、内核微基准(M1~M6)、数据质量与遥测/睡眠整理/快权重门禁(DQ1~DQ12)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-16)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "action": { "type": "string", "enum": ["workloads", "run", "report", "ledger", "compare", "export", "reset", "competitors"], "default": "report" },
-                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | dq | competitors | W1~W20 | COMP-C1~C4" },
+                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | dq | competitors | W1~W22 | COMP-C1~C4" },
                         "track": { "type": "string", "default": "all", "description": "竞品对标赛道: all | C1 | C2 | C3 | C4" },
                         "save": { "type": "boolean", "default": true },
                         "run_id": { "type": "string" },
@@ -440,6 +440,8 @@ pub(crate) fn ops_tool_schemas() -> Vec<Value> {
                         },
                         "next_step_hint": { "type": "string", "description": "下一步行动建议" },
                         "checkpoint_id": { "type": "string", "description": "handoff_resume 时指定接力胶囊 ID（留空恢复最新）" },
+                        "base_model_id": { "type": "string", "description": "Phase 78 ContinuityCapsule v2：基座模型 ID（保存时绑定，恢复时校验同基座热挂/异构自动回退文本胶囊）" },
+                        "fast_weight_snapshot_id": { "type": "string", "description": "handoff_save 可选：显式绑定快权重快照 UUID（留空自动探测活跃快照）" },
                         "check_action": { "type": "string", "description": "action=envelope 时待评估的动作名" },
                         "target": { "type": "string", "description": "action=envelope 时待评估的目标路径或资源" },
                         "dry_run": { "type": "boolean", "default": true, "description": "action=envelope 时是否处于 dry_run 预览" },

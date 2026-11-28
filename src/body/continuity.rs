@@ -10,6 +10,25 @@ use crate::body::manifest::compute_body_id;
 use crate::scanner::metadata::{PromptInjectionScanner, SecretRedactor};
 use crate::storage::models::BodyCheckpointRecord;
 use crate::storage::Storage;
+use serde::{Deserialize, Serialize};
+
+/// Phase 78 (方案 B / M3): 热态快权重接力挂载结论
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum FastWeightAttachMode {
+    Attached,
+    FallbackTextCapsule,
+    None,
+}
+
+/// Phase 78 (方案 B / M3): 带基座兼容校验的跨大脑接力返回
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContinuityResumeOutcome {
+    pub checkpoint: BodyCheckpointRecord,
+    pub attach_mode: FastWeightAttachMode,
+    pub reason: String,
+    pub brief_snippet: String,
+}
 
 /// 保存接力胶囊输入
 #[derive(Debug, Clone)]
@@ -120,10 +139,10 @@ impl ContinuityManager {
         }
     }
 
-    /// 脱敏、抗投毒并裁剪至 <=300 tok 后持久化跨大脑接力胶囊（自动锚定当前活跃 `tx_epoch`）
+    /// 脱敏、抗投毒并裁剪至 <=300 tok 后持久化跨大脑接力胶囊（自动锚定当前活跃 `tx_epoch` 与可选快权重）
     pub fn save_capsule(storage: &Storage, input: ContinuityInput) -> Result<BodyCheckpointRecord> {
         let resolved_epoch = Self::resolve_active_tx_epoch(storage);
-        Self::save_capsule_with_epoch(storage, input, resolved_epoch)
+        Self::save_capsule_with_fast_weight(storage, input, resolved_epoch, None, None)
     }
 
     fn resolve_active_tx_epoch(storage: &Storage) -> i64 {
@@ -137,11 +156,36 @@ impl ContinuityManager {
             .unwrap_or(0)
     }
 
+    fn resolve_active_fast_weight() -> (Option<String>, Option<String>) {
+        let cfg = crate::config::Config::load_effective_or_default();
+        if !cfg.memory.fast_weight_enabled || !cfg.memory.provider.trim().eq_ignore_ascii_case("pg_tx") {
+            return (None, None);
+        }
+        let Ok(st) = crate::memory::FastWeightOrchestrator::status(&cfg) else {
+            return (None, None);
+        };
+        match st.health.and_then(|h| h.active_snapshot) {
+            Some(s) => (Some(s.snapshot_id), Some(s.base_model_id)),
+            None => (None, None),
+        }
+    }
+
     /// 显式携带事务记忆逻辑纪元 `tx_epoch` 持久化跨大脑接力胶囊
     pub fn save_capsule_with_epoch(
         storage: &Storage,
         input: ContinuityInput,
         tx_epoch: i64,
+    ) -> Result<BodyCheckpointRecord> {
+        Self::save_capsule_with_fast_weight(storage, input, tx_epoch, None, None)
+    }
+
+    /// Phase 78 (`ContinuityCapsule v2`): 持久化接力胶囊并可选锚定快权重快照 UUID 与基座模型 ID
+    pub fn save_capsule_with_fast_weight(
+        storage: &Storage,
+        input: ContinuityInput,
+        tx_epoch: i64,
+        base_model_id: Option<&str>,
+        fast_weight_snapshot_id: Option<&str>,
     ) -> Result<BodyCheckpointRecord> {
         let body_id = compute_body_id();
         let token_budget = input.token_budget.unwrap_or(300).clamp(80, 300);
@@ -170,6 +214,16 @@ impl ContinuityManager {
         let verified_facts = Self::clean_vec(input.verified_facts, 4, 120);
         let open_blockers = Self::clean_vec(input.open_blockers, 4, 120);
 
+        let (auto_fw_id, auto_fw_model) = Self::resolve_active_fast_weight();
+        let fw_snapshot_id = fast_weight_snapshot_id
+            .map(|s| Self::clean_text(s, 64))
+            .filter(|s| !s.is_empty())
+            .or(auto_fw_id);
+        let fw_base_model = base_model_id
+            .map(|s| Self::clean_text(s, 64))
+            .filter(|s| !s.is_empty())
+            .or(auto_fw_model);
+
         let now = Utc::now().to_rfc3339();
         let checkpoint_id = format!("cp-{}", Uuid::new_v4());
         let mut rec = BodyCheckpointRecord {
@@ -190,6 +244,8 @@ impl ContinuityManager {
             resumed_by_brain: None,
             resumed_at: None,
             tx_epoch,
+            fast_weight_snapshot_id: fw_snapshot_id,
+            fast_weight_base_model: fw_base_model,
         };
         Self::enforce_budget(&mut rec, token_budget);
 
@@ -311,6 +367,79 @@ impl ContinuityManager {
         Ok(Some(cp))
     }
 
+    /// Phase 78 (`ContinuityCapsule v2`): 跨大脑接力并校验 `base_model_id` 与快权重状态，异构基座自动回退文本胶囊
+    pub fn resume_for_brain(
+        storage: &Storage,
+        by_brain: &str,
+        checkpoint_id: Option<&str>,
+        target_base_model: Option<&str>,
+    ) -> Result<Option<ContinuityResumeOutcome>> {
+        let Some(cp) = Self::resume_latest(storage, by_brain, checkpoint_id)? else {
+            return Ok(None);
+        };
+        let snippet = Self::render_brief_snippet(&cp, 300);
+
+        let Some(ref snap_id) = cp.fast_weight_snapshot_id.as_deref().filter(|s| !s.is_empty()) else {
+            return Ok(Some(ContinuityResumeOutcome {
+                checkpoint: cp,
+                attach_mode: FastWeightAttachMode::None,
+                reason: "胶囊未绑定快权重快照，使用纯文本接力胶囊".to_string(),
+                brief_snippet: snippet,
+            }));
+        };
+
+        let expected_model = cp.fast_weight_base_model.as_deref().map(str::trim).unwrap_or("");
+        let target_model = target_base_model.map(str::trim).unwrap_or("");
+        let model_matches = !expected_model.is_empty()
+            && !target_model.is_empty()
+            && expected_model.eq_ignore_ascii_case(target_model);
+
+        if !model_matches {
+            return Ok(Some(ContinuityResumeOutcome {
+                checkpoint: cp.clone(),
+                attach_mode: FastWeightAttachMode::FallbackTextCapsule,
+                reason: format!(
+                    "异构基座安全降级 (胶囊基座='{}', 接管基座='{}')，已自动回退文本胶囊",
+                    expected_model, target_model
+                ),
+                brief_snippet: snippet,
+            }));
+        }
+
+        // 若当前 PG fast_weight 可达，进一步核验该快照未被回滚
+        let cfg = crate::config::Config::load_effective_or_default();
+        if cfg.memory.provider.trim().eq_ignore_ascii_case("pg_tx") {
+            if let Ok(st) = crate::memory::FastWeightOrchestrator::status(&cfg) {
+                if !st.fallback_active {
+                    let rolled_back = st
+                        .recent_snapshots
+                        .iter()
+                        .find(|s| s.snapshot_id == *snap_id)
+                        .map(|s| s.status == "rolled_back" || s.status == "warming")
+                        .unwrap_or(false);
+                    if rolled_back {
+                        return Ok(Some(ContinuityResumeOutcome {
+                            checkpoint: cp.clone(),
+                            attach_mode: FastWeightAttachMode::FallbackTextCapsule,
+                            reason: format!("快权重快照 '{}' 已回滚/未激活，安全回退文本胶囊", snap_id),
+                            brief_snippet: snippet,
+                        }));
+                    }
+                }
+            }
+        }
+
+        Ok(Some(ContinuityResumeOutcome {
+            checkpoint: cp.clone(),
+            attach_mode: FastWeightAttachMode::Attached,
+            reason: format!(
+                "同基座 '{}' 校验通过，挂载热态快权重快照 '{}' (anchored tx_epoch={})",
+                target_model, snap_id, cp.tx_epoch
+            ),
+            brief_snippet: snippet,
+        }))
+    }
+
     /// 将接力胶囊渲染为紧凑 Markdown 片段，供 `BriefAssembler` 直接注入新大脑上下文
     pub fn render_brief_snippet(rec: &BodyCheckpointRecord, max_tokens: usize) -> String {
         let epoch_suffix = if rec.tx_epoch > 0 {
@@ -322,6 +451,10 @@ impl ContinuityManager {
             "## 🧬 跨大脑接力胶囊 (`{}` · 来自 `{}`{})\n",
             rec.checkpoint_id, rec.from_brain, epoch_suffix
         )];
+        if let Some(ref sid) = rec.fast_weight_snapshot_id.as_deref().filter(|s| !s.is_empty()) {
+            let m = rec.fast_weight_base_model.as_deref().unwrap_or("unknown");
+            lines.push(format!("- **快权重**: `{}` (base=`{}`)\n", sid, m));
+        }
         lines.push(format!("- **目标**: {}\n", rec.goal_summary));
         if !rec.active_files.is_empty() {
             lines.push(format!("- **活跃文件**: {}\n", rec.active_files.join(", ")));
@@ -386,5 +519,64 @@ mod tests {
 
         let again = ContinuityManager::resume_latest(&storage, "codex", None).expect("resume again");
         assert!(again.is_none(), "已消费的胶囊不应重复作为未接力胶囊返回");
+
+        // Phase 78 ContinuityCapsule v2: 同基座热挂载 vs 异构基座自动回退
+        let cp_v2 = ContinuityManager::save_capsule_with_fast_weight(
+            &storage,
+            ContinuityInput {
+                from_brain: "antigravity".to_string(),
+                session_id: "sess-fw-v2".to_string(),
+                goal_summary: "Continuity v2 hot weight handoff".to_string(),
+                active_files: vec![],
+                active_locks: vec![],
+                verified_facts: vec!["fast_weight gate passed".to_string()],
+                open_blockers: vec![],
+                next_step_hint: "continue".to_string(),
+                token_budget: Some(300),
+            },
+            42,
+            Some("qwen3-coder-next"),
+            Some("11111111-1111-4111-8111-111111111111"),
+        )
+        .expect("save v2");
+        assert_eq!(cp_v2.fast_weight_base_model.as_deref(), Some("qwen3-coder-next"));
+        let same_model = ContinuityManager::resume_for_brain(
+            &storage,
+            "claude-code",
+            Some(&cp_v2.checkpoint_id),
+            Some("qwen3-coder-next"),
+        )
+        .expect("resume same")
+        .expect("outcome");
+        assert_eq!(same_model.attach_mode, FastWeightAttachMode::Attached);
+        assert!(estimate_tokens(&same_model.brief_snippet) <= 300);
+
+        let cp_v2_b = ContinuityManager::save_capsule_with_fast_weight(
+            &storage,
+            ContinuityInput {
+                from_brain: "antigravity".to_string(),
+                session_id: "sess-fw-v2-hetero".to_string(),
+                goal_summary: "Continuity v2 fallback check".to_string(),
+                active_files: vec![],
+                active_locks: vec![],
+                verified_facts: vec!["hetero fallback safe".to_string()],
+                open_blockers: vec![],
+                next_step_hint: "fallback".to_string(),
+                token_budget: Some(300),
+            },
+            43,
+            Some("qwen3-coder-next"),
+            Some("22222222-2222-4222-8222-222222222222"),
+        )
+        .expect("save v2 hetero");
+        let hetero = ContinuityManager::resume_for_brain(
+            &storage,
+            "cursor-agent",
+            Some(&cp_v2_b.checkpoint_id),
+            Some("claude-sonnet-4"),
+        )
+        .expect("resume hetero")
+        .expect("outcome hetero");
+        assert_eq!(hetero.attach_mode, FastWeightAttachMode::FallbackTextCapsule);
     }
 }

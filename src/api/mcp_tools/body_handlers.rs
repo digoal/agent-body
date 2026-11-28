@@ -320,7 +320,9 @@ impl McpToolRegistry {
                                 })
                                 .unwrap_or_default()
                         };
-                        let cp = ContinuityManager::save_capsule(
+                        let base_model_id = args.get("base_model_id").and_then(|v| v.as_str());
+                        let fw_snap_id = args.get("fast_weight_snapshot_id").and_then(|v| v.as_str());
+                        let cp = ContinuityManager::save_capsule_with_fast_weight(
                             &self.storage,
                             ContinuityInput {
                                 from_brain: args
@@ -345,6 +347,13 @@ impl McpToolRegistry {
                                     .to_string(),
                                 token_budget: Some(300),
                             },
+                            crate::config::Config::load_effective_or_default()
+                                .build_tx_memory_provider(self.storage.clone())
+                                .ok()
+                                .and_then(|p| p.current_tx_epoch().ok())
+                                .unwrap_or(0),
+                            base_model_id,
+                            fw_snap_id,
                         )?;
                         Ok(serde_json::to_string_pretty(&cp)?)
                     }
@@ -354,14 +363,19 @@ impl McpToolRegistry {
                             .and_then(|v| v.as_str())
                             .unwrap_or("mcp-brain");
                         let cid = args.get("checkpoint_id").and_then(|v| v.as_str());
-                        let resumed = ContinuityManager::resume_latest(&self.storage, by_brain, cid)?;
-                        let snippet = resumed
-                            .as_ref()
-                            .map(|c| ContinuityManager::render_brief_snippet(c, 300));
+                        let target_model = args.get("base_model_id").and_then(|v| v.as_str());
+                        let outcome = ContinuityManager::resume_for_brain(
+                            &self.storage,
+                            by_brain,
+                            cid,
+                            target_model,
+                        )?;
                         Ok(serde_json::to_string_pretty(&serde_json::json!({
-                            "resumed": resumed.is_some(),
-                            "checkpoint": resumed,
-                            "brief_snippet": snippet,
+                            "resumed": outcome.is_some(),
+                            "checkpoint": outcome.as_ref().map(|o| &o.checkpoint),
+                            "attach_mode": outcome.as_ref().map(|o| &o.attach_mode),
+                            "reason": outcome.as_ref().map(|o| &o.reason),
+                            "brief_snippet": outcome.as_ref().map(|o| &o.brief_snippet),
                         }))?)
                     }
                     "heal" => {

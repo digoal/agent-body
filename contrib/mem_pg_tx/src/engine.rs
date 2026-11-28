@@ -147,8 +147,8 @@ pub struct PgTxStatus {
 /// PostgreSQL 事务级双时态记忆核心引擎
 #[derive(Clone)]
 pub struct PgTxEngine {
-    pool: Arc<PgConnPool>,
-    config: PgTxConfig,
+    pub(crate) pool: Arc<PgConnPool>,
+    pub(crate) config: PgTxConfig,
 }
 
 impl PgTxEngine {
@@ -446,7 +446,7 @@ impl PgTxEngine {
                      consolidation_st = 'purged'
                  WHERE body_id = $1 AND tenant_scope = $2 AND fact_key = $3
                    AND embedding_status <> 'tombstoned'
-                 RETURNING event_id",
+                 RETURNING event_id, tx_epoch",
                 &[&body_id, &scope, &fact_key],
             );
 
@@ -460,7 +460,16 @@ impl PgTxEngine {
                 Err(AttemptErr::Fatal(e)) => return Err(e),
             };
 
-            let ids: Vec<i64> = rows.iter().map(|r| r.get(0)).collect();
+            let mut ids: Vec<i64> = Vec::with_capacity(rows.len());
+            let mut min_ep = i64::MAX;
+            let mut max_ep = 0i64;
+            for r in &rows {
+                let eid: i64 = r.get(0);
+                let ep: i64 = r.get(1);
+                ids.push(eid);
+                min_ep = min_ep.min(ep);
+                max_ep = max_ep.max(ep);
+            }
             if !ids.is_empty() {
                 if let Err(err) = tx
                     .execute(
@@ -474,6 +483,24 @@ impl PgTxEngine {
                     match err {
                         AttemptErr::Retryable(_) if attempt < max_retries => continue,
                         AttemptErr::Retryable(m) => anyhow::bail!("段墓碑标记重试耗尽: {}", m),
+                        AttemptErr::Fatal(e) => return Err(e),
+                    }
+                }
+                let trace_id = format!("tombstone:{}", fact_key);
+                if let Err(err) = tx
+                    .execute(
+                        "INSERT INTO ext_mem_pg_tx__compaction_jobs (
+                            job_kind, tenant_scope, from_epoch, to_epoch, tombstone_ids, state, audit_trace_id
+                         ) VALUES (
+                            'selective_unlearn', $1, $2, $3, $4, 'queued', $5
+                         )",
+                        &[&scope, &min_ep, &max_ep, &ids, &trace_id],
+                    )
+                    .map_err(classify_pg_err)
+                {
+                    match err {
+                        AttemptErr::Retryable(_) if attempt < max_retries => continue,
+                        AttemptErr::Retryable(m) => anyhow::bail!("遗忘队列入队重试耗尽: {}", m),
                         AttemptErr::Fatal(e) => return Err(e),
                     }
                 }
@@ -586,12 +613,22 @@ impl PgTxEngine {
                 &[&scope, &q, &lim],
             )?
         } else {
-            // 热路径默认视图：仅扫描未删解耦段 + 当前有效行（0% 僵尸向量/墓碑召回）
+            // 热路径默认视图：以局部索引强制物化当前有效事实切片，杜绝 PG 优化器在海量历史行下误选 Merge Join 全扫 pkey
             tx.query(
-                "SELECT e.event_id, e.body_id, e.tenant_scope, e.fact_key, e.memory_type,
+                "WITH active_e AS MATERIALIZED (
+                     SELECT e.event_id, e.body_id, e.tenant_scope, e.fact_key, e.memory_type,
+                            e.evidence_tier, e.payload_redacted, e.evidence_sha256,
+                            lower(e.valid_range) AS valid_from,
+                            CASE WHEN upper_inf(e.valid_range) THEN NULL ELSE upper(e.valid_range) END AS valid_to,
+                            e.tx_epoch, e.embedding_status, e.salience_score, e.consolidation_st, e.created_at
+                     FROM ext_mem_pg_tx__events e
+                     WHERE e.tenant_scope = $1
+                       AND e.embedding_status <> 'tombstoned'
+                       AND upper_inf(e.valid_range)
+                 )
+                 SELECT e.event_id, e.body_id, e.tenant_scope, e.fact_key, e.memory_type,
                         e.evidence_tier, e.payload_redacted, e.evidence_sha256,
-                        lower(e.valid_range) AS valid_from,
-                        CASE WHEN upper_inf(e.valid_range) THEN NULL ELSE upper(e.valid_range) END AS valid_to,
+                        e.valid_from, e.valid_to,
                         e.tx_epoch, e.embedding_status, e.salience_score, e.consolidation_st, e.created_at,
                         CASE
                             WHEN $2 = '' THEN 1.0::double precision
@@ -599,12 +636,9 @@ impl PgTxEngine {
                                 THEN (ts_rank(s.fts_tsv, plainto_tsquery('simple', $2)) + 1.0)::double precision
                             ELSE 0.5::double precision
                         END AS rank_score
-                 FROM ext_mem_pg_tx__segments s
-                 JOIN ext_mem_pg_tx__events e ON e.event_id = s.event_id
-                 WHERE e.tenant_scope = $1
-                   AND NOT s.is_deleted
-                   AND e.embedding_status <> 'tombstoned'
-                   AND upper_inf(e.valid_range)
+                 FROM active_e e
+                 JOIN ext_mem_pg_tx__segments s ON s.event_id = e.event_id
+                 WHERE NOT s.is_deleted
                    AND (
                        $2 = ''
                        OR s.fts_tsv @@ plainto_tsquery('simple', $2)
@@ -738,7 +772,7 @@ fn normalize_tier(raw: &str) -> &'static str {
     }
 }
 
-fn build_search_text(
+pub(crate) fn build_search_text(
     fact_key: &str,
     content: &str,
     summary: Option<&str>,
@@ -756,7 +790,7 @@ fn build_search_text(
     parts.join(" ")
 }
 
-fn bytes_to_hex(bytes: &[u8]) -> String {
+pub(crate) fn bytes_to_hex(bytes: &[u8]) -> String {
     let mut out = String::with_capacity(bytes.len() * 2);
     for b in bytes {
         out.push_str(&format!("{:02x}", b));
@@ -764,7 +798,7 @@ fn bytes_to_hex(bytes: &[u8]) -> String {
     out
 }
 
-fn map_event_row(row: &postgres::Row) -> PgTxEventRow {
+pub(crate) fn map_event_row(row: &postgres::Row) -> PgTxEventRow {
     let payload: serde_json::Value = row.get(6);
     let content = payload
         .get("content")

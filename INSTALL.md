@@ -1,7 +1,7 @@
 # Agent Body — 生产安装与可移植部署指南 (INSTALL.md)
 
 > **适用版本**: v1.1.0  
-> **更新时间**: 2026-11-27  
+> **更新时间**: 2026-11-28  
 > **文档目标**: 本文档全面说明 Agent Body 在不同操作系统与容器环境下的**编译依赖**、**运行时依赖**、**可选增强服务**与**一键部署流程**，防止因环境差异导致部署或运行失败。
 
 ---
@@ -22,7 +22,8 @@ Agent 本体采用 Rust 开发，核心设计理念是**“零外部强依赖、
 | **多模态外部探针 (`poppler`/`ffmpeg`)** | OPTIONAL | `pdfinfo`, `pdftotext`, `ffprobe` | PDF 页数/正文深层提取与音视频精确流探测（`<= 500ms` 有界超时） | **自动降级**为纯 Rust L1A 内置头/Thrift Footer 解析，0 阻断 |
 | **Ollama 向量服务** | OPTIONAL | >= 0.1.20 (`nomic-embed-text` / `bge-m3`) | 长期记忆双路向量混合检索 (RRF) | **自动降级**为内置 SQLite FTS5 纯全文检索（或 `[embedding].fallback_fts_only=false` 显式报错） |
 | **Ollama 元数据标注模型** | OPTIONAL | >= 0.1.20 (`qwen3.5:0.8b`) | 资产 L2 本地异步脱敏语义标注精炼 | **自动降级**为纯 L1 Rust 确定性语法提取，零云端 Token |
-| **PostgreSQL** | OPTIONAL | >= 14 (`pgvector` 可选) | 跨机多 Agent 高并发共享存储后端（向量余弦默认应用层计算，无须强制安装 pgvector） | 默认采用内置嵌入式 SQLite，无需安装外部数据库 |
+| **PostgreSQL** | OPTIONAL | >= 14 (`18` 实测推荐，`pgvector`/`btree_gist` 可选) | 跨机多 Agent 高并发共享存储后端，以及 Phase 76~78 `[memory].provider = "pg_tx"` 双时态事务海马体；向量余弦默认应用层计算，无须强装扩展 | 默认采用内置嵌入式 SQLite；`pg_tx` 在 PG 不可达时自动透明降级 SQLite（`fallback_to_sqlite = true`） |
+| **旁路 Model Runtime (M3 可选)** | OPTIONAL | HTTP JSON-RPC 2.0 | `[memory].fast_weight_enabled = true` 时对接外部 In-Place TTT / Atlas / SCoL 快权重与定向遗忘服务 | 默认关闭 (`fast_weight_enabled = false`)；故障或门禁不通过时 100% 回退纯方案 A 非参数检索 |
 | **Systemd** | OPTIONAL | >= 245 | 系统自动化拓扑扫描、常驻后台守护服务托管 | 容器或 OpenRC 环境下跳过拓扑，可使用 Docker/nohup 运行 |
 | **CodeGraph CLI** | OPTIONAL | >= 0.1.0 | 宏微双层联邦微观代码函数符号穿透 | **自动降级**为文件与目录级宏观拓扑分析 |
 

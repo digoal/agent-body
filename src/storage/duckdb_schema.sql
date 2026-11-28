@@ -342,5 +342,7 @@ CREATE TABLE IF NOT EXISTS body_checkpoints (
     created_at          VARCHAR NOT NULL,
     resumed_by_brain    VARCHAR,
     resumed_at          VARCHAR,
-    tx_epoch            BIGINT DEFAULT 0
+    tx_epoch            BIGINT DEFAULT 0,
+    fast_weight_snapshot_id VARCHAR,
+    fast_weight_base_model  VARCHAR
 );

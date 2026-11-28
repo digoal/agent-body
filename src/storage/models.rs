@@ -466,4 +466,10 @@ pub struct BodyCheckpointRecord {
     /// Phase 76: 跨大脑接力锚定的事务记忆逻辑纪元 (`tx_epoch`，0 表示未绑定 PG 事务纪元)
     #[serde(default)]
     pub tx_epoch: i64,
+    /// Phase 78 (方案 B / M3): 热态快权重跨大脑接力锚定快照 UUID
+    #[serde(default)]
+    pub fast_weight_snapshot_id: Option<String>,
+    /// Phase 78 (方案 B / M3): 该快权重快照绑定的基座模型 ID（异构基座接力时自动回退文本胶囊）
+    #[serde(default)]
+    pub fast_weight_base_model: Option<String>,
 }

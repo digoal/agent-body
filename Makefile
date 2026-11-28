@@ -13,7 +13,7 @@ else
 endif
 MIRROR_DIR ?= $(HOME)/new/shared_git/agent-body
 
-.PHONY: all build check test preflight install restart clean docker-build lint-panic lint-hygiene lint-strict arch-check quality-gate sync-mirror codegraph evolution-check verify-decks verify-webui
+.PHONY: all build check test preflight install restart clean docker-build lint-panic lint-hygiene lint-strict arch-check quality-gate sync-mirror codegraph evolution-check citizen-impact citizen-audit verify-decks verify-webui
 
 all: build
 
@@ -37,8 +37,8 @@ lint-hygiene:
 lint-strict:
 	@export PATH="$$HOME/.cargo/bin:$$PATH" && cargo rustc --lib -- -D warnings && cargo rustc --bin agent-body -- -D warnings && cargo check --workspace --all-targets && (cargo clippy --version >/dev/null 2>&1 && cargo clippy --workspace --all-targets -- -D warnings || echo "ℹ️  clippy 未安装，已通过 cargo rustc --lib/--bin -D warnings 严格编译门禁")
 
-# 六重确定性质量门禁一键联检
-quality-gate: evolution-check arch-check lint-panic lint-hygiene lint-strict
+# 六重确定性质量门禁一键联检（清单零漂移 + 16类一等公民交叉审计 + 微内核防腐 + 零Panic + 卫生 + 零告警）
+quality-gate: evolution-check citizen-audit arch-check lint-panic lint-hygiene lint-strict
 	@echo "✅ 全部质量门禁检查通过"
 
 # 编译优化发布版二进制
@@ -89,6 +89,14 @@ codegraph:
 # 确定性架构清单生成与文档数字防漂移门禁
 evolution-check:
 	python3 scripts/evolution_manifest.py --check
+
+# O(1) 一等公民增量变更传导路由（告别高成本全仓扫描）
+citizen-impact:
+	python3 scripts/citizen_sync.py --impact
+
+# 全仓 16 类一等公民 7 项动态交叉审计（配置/测试/Rustdoc/演说/长文/发版/边界）
+citizen-audit:
+	python3 scripts/citizen_sync.py --audit
 
 # Playwright 无头演说视觉与交互全量门禁（规约 #13 & #17）
 verify-decks:

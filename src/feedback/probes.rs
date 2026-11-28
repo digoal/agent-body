@@ -407,7 +407,7 @@ impl SelfEvolutionProbeEngine {
                 ledger.total_hazards_intercepted, ledger.total_rounds_saved, audit_sum.recovered_count
             ),
             healthy: p2_healthy,
-            healed_action: "持续经由 PR-01~PR-12 双账本带出处留痕与三态 AOPCC 路由".into(),
+            healed_action: "持续经由 PR-01~PR-16 双账本带出处留痕与三态 AOPCC 路由".into(),
             recommendation: "若发现高频违规目录可运行 `agent-body audit evolve` 或 `place learn` 自动演化规则".into(),
         });
 

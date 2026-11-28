@@ -21,6 +21,8 @@ pub struct SchedulerCycleReport {
     pub homeostasis_healed: bool,
     #[serde(default)]
     pub awr_snapshot_captured: bool,
+    #[serde(default)]
+    pub sleep_events_compacted: usize,
 }
 
 /// 后台巡查与增量调度引擎
@@ -112,10 +114,10 @@ impl BackgroundScheduler {
         }
 
         // 8. 后台异步增量精炼待标注资产元数据 (Phase 23 Ollama 小模型)
-        let cfg = crate::config::Config::load_or_default(None).unwrap_or_default();
+        let cfg = crate::config::Config::load_effective_or_default();
         let assets_enriched = if cfg.annotation.enabled && cfg.annotation.auto_enrich_batch_size > 0 {
             let batch_size = cfg.annotation.auto_enrich_batch_size;
-            let annotator = crate::scanner::OllamaAnnotator::new(self.storage.clone(), cfg.annotation);
+            let annotator = crate::scanner::OllamaAnnotator::new(self.storage.clone(), cfg.annotation.clone());
             let enriched = annotator
                 .enrich_pending_assets(batch_size, None)
                 .map(|r| r.enriched_count)
@@ -127,6 +129,12 @@ impl BackgroundScheduler {
         } else {
             0
         };
+
+        // 8.5 L1_AUTONOMIC 空闲窗口期记忆睡眠整理 (Phase 77 M2)
+        let sleep_events_compacted =
+            crate::memory::SleepCompactionOrchestrator::maybe_run_idle_cycle(&self.storage, &cfg)
+                .map(|r| r.events_compacted)
+                .unwrap_or(0);
 
         // 9. 五维本体稳态体检与 L1 自主自愈反射 (Phase 44)
         let mut vitals = crate::body::HomeostasisVitalsEngine::assess(&self.storage);
@@ -178,6 +186,7 @@ impl BackgroundScheduler {
             homeostasis_score: vitals.overall_score,
             homeostasis_healed,
             awr_snapshot_captured,
+            sleep_events_compacted,
         };
 
         crate::audit::AuditLogger::record_best_effort(

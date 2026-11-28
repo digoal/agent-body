@@ -1,9 +1,9 @@
 use crate::benchmark::report::DataQualityResult;
 use crate::storage::StorageProvider;
 
-/// 运行宿主机数据质量与 D6 准确率/新鲜度/图谱/遥测健康门禁 (DQ1~DQ10)
+/// 运行宿主机数据质量与 D6/D7 准确率/新鲜度/图谱/遥测/睡眠整理/快权重健康门禁 (DQ1~DQ12)
 pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQualityResult> {
-    let mut results = Vec::with_capacity(10);
+    let mut results = Vec::with_capacity(11);
 
     // DQ1: 资产描述覆盖率 (采样最近 1,000 条资产)
     let assets = storage.list_assets(1000).unwrap_or_default();
@@ -627,6 +627,156 @@ pub fn run_data_quality_checks(storage: &dyn StorageProvider) -> Vec<DataQuality
         ),
     });
 
+    // DQ11: 双时态睡眠整理摘要纯净度、旁路不变量与显著性分级门禁 (Phase 77 · M2)
+    let all_mem_dq11 = storage.list_all_memories(1000).unwrap_or_default();
+    let sleep_summaries: Vec<_> = all_mem_dq11
+        .iter()
+        .filter(|m| m.tags.iter().any(|t| t == "sleep_compacted" || t == "sleep_summary"))
+        .collect();
+    let sleep_clean_ok = sleep_summaries
+        .iter()
+        .all(|m| !m.content.trim().is_empty() && !has_plaintext_leak(&m.content));
+
+    let sleep_audits = storage
+        .query_audit_events(&crate::storage::models::AuditQueryFilter {
+            domain: Some("OUT_OF_AGENT".to_string()),
+            action: Some("sleep_compaction".to_string()),
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap_or_default();
+    let audit_traceable_ok = sleep_summaries.is_empty()
+        || sleep_audits
+            .iter()
+            .all(|a| !a.evidence_sha256.trim().is_empty())
+        || sleep_summaries.iter().all(|m| m.source_session.is_some());
+
+    let sal_h = ext_mem_pg_tx::SalienceScorer::score(&ext_mem_pg_tx::SalienceInput {
+        content: "decision lock".to_string(),
+        memory_type: "decision".to_string(),
+        evidence_tier: "L1_EXPLICIT".to_string(),
+        cross_session_reuses: 2,
+        conflict_corrections: 1,
+        novelty_ratio: 0.9,
+        age_hours: 1.0,
+        is_auto_sync: false,
+        pinned: true,
+    });
+    let sal_l = ext_mem_pg_tx::SalienceScorer::score(&ext_mem_pg_tx::SalienceInput {
+        content: "auto_sync noise".to_string(),
+        memory_type: "note".to_string(),
+        evidence_tier: "L3_SEMANTIC".to_string(),
+        cross_session_reuses: 0,
+        conflict_corrections: 0,
+        novelty_ratio: 0.1,
+        age_hours: 96.0,
+        is_auto_sync: true,
+        pinned: false,
+    });
+    let bypass_dec = ext_mem_pg_tx::QueryPredictabilityGate::evaluate(
+        "PgTxEngine::search_raw_bypass SQLSTATE 40001",
+        &["[sleep_summary:pg] primary port=5432"],
+        None,
+        false,
+    );
+    let invariants_ok = sal_h.score > sal_l.score && bypass_dec.bypass_compacted;
+
+    let dq11_checks_ok = [sleep_clean_ok, audit_traceable_ok, invariants_ok]
+        .into_iter()
+        .filter(|ok| *ok)
+        .count();
+    let dq11_pct = ((dq11_checks_ok as f64 / 3.0) * 100.0 * 100.0).round() / 100.0;
+    results.push(DataQualityResult {
+        id: "DQ11".into(),
+        name: "tx_bitemporal_and_sleep_purity".into(),
+        title: "双时态睡眠整理纯净度、显著性分级与旁路不变量门禁".into(),
+        measured_pct: dq11_pct,
+        target_pct: 100.0,
+        passed: dq11_checks_ok == 3,
+        detail: format!(
+            "sleep_summaries={} | clean={} | traceable={} | invariants_ok={}",
+            sleep_summaries.len(),
+            sleep_clean_ok,
+            audit_traceable_ok,
+            invariants_ok
+        ),
+    });
+
+    // DQ12: 方案 B 快权重快照锚定、三门禁不变量与 URI 禁内联门禁 (Phase 78 · M3)
+    let cps_dq12 = storage.list_body_checkpoints(None, 200).unwrap_or_default();
+    let anchored_cps_ok = cps_dq12.iter().all(|cp| {
+        if let Some(ref sid) = cp.fast_weight_snapshot_id {
+            !sid.trim().is_empty()
+                && cp
+                    .fast_weight_base_model
+                    .as_deref()
+                    .map(str::trim)
+                    .is_some_and(|m| !m.is_empty())
+                && !cp.evidence_sha256.trim().is_empty()
+        } else {
+            true
+        }
+    });
+    let fw_policy = ext_mem_pg_tx::FastWeightGatePolicy::default();
+    let gate_invariants_ok = !ext_mem_pg_tx::evaluate_fast_weight_gates(
+        &ext_mem_pg_tx::FastWeightGateMetrics {
+            norm_ratio: 2.1,
+            eval_glue_delta: 0.0,
+            unlearn_leak_rate: 0.0,
+        },
+        &fw_policy,
+    )
+    .passed
+        && !ext_mem_pg_tx::evaluate_fast_weight_gates(
+            &ext_mem_pg_tx::FastWeightGateMetrics {
+                norm_ratio: 1.05,
+                eval_glue_delta: -0.06,
+                unlearn_leak_rate: 0.0,
+            },
+            &fw_policy,
+        )
+        .passed
+        && !ext_mem_pg_tx::evaluate_fast_weight_gates(
+            &ext_mem_pg_tx::FastWeightGateMetrics {
+                norm_ratio: 1.05,
+                eval_glue_delta: 0.0,
+                unlearn_leak_rate: 0.002,
+            },
+            &fw_policy,
+        )
+        .passed
+        && ext_mem_pg_tx::validate_artifact_uri("data:application/octet-stream;base64,AAA").is_err();
+    let fw_audits = storage
+        .query_audit_events(&crate::storage::models::AuditQueryFilter {
+            domain: Some("OUT_OF_AGENT".to_string()),
+            actor_kind: Some("fast_weight".to_string()),
+            limit: 10,
+            ..Default::default()
+        })
+        .unwrap_or_default();
+    let fw_audit_ok = fw_audits.iter().all(|a| !a.evidence_sha256.trim().is_empty());
+
+    let dq12_checks_ok = [anchored_cps_ok, gate_invariants_ok, fw_audit_ok]
+        .into_iter()
+        .filter(|ok| *ok)
+        .count();
+    let dq12_pct = ((dq12_checks_ok as f64 / 3.0) * 100.0 * 100.0).round() / 100.0;
+    results.push(DataQualityResult {
+        id: "DQ12".into(),
+        name: "fast_weight_lineage_and_unlearn_integrity".into(),
+        title: "快权重血缘锚定、三道硬门禁与定向遗忘审计不变量门禁".into(),
+        measured_pct: dq12_pct,
+        target_pct: 100.0,
+        passed: dq12_checks_ok == 3,
+        detail: format!(
+            "fw_checkpoints_ok={} | gate_invariants_ok={} | fw_audit_ok={} (audits={})",
+            anchored_cps_ok,
+            gate_invariants_ok,
+            fw_audit_ok,
+            fw_audits.len()
+        ),
+    });
+
     results
 }
 
@@ -684,12 +834,70 @@ mod tests {
     fn test_dq9_telemetry_and_awr_integrity_check() {
         let storage = SqliteStorageProvider::open_in_memory().expect("sqlite");
         let results = run_data_quality_checks(&storage);
-        assert_eq!(results.len(), 10);
+        assert_eq!(results.len(), 12);
         let dq9 = results.iter().find(|r| r.id == "DQ9").expect("DQ9");
         assert!(dq9.passed, "空库下 DQ9 应全通过: {}", dq9.detail);
         assert_eq!(dq9.measured_pct, 100.0);
         let dq10 = results.iter().find(|r| r.id == "DQ10").expect("DQ10");
         assert!(dq10.passed, "空库下 DQ10 应全通过: {}", dq10.detail);
+        let dq11 = results.iter().find(|r| r.id == "DQ11").expect("DQ11");
+        assert!(dq11.passed, "空库下 DQ11 应全通过: {}", dq11.detail);
+        let dq12 = results.iter().find(|r| r.id == "DQ12").expect("DQ12");
+        assert!(dq12.passed, "空库下 DQ12 应全通过: {}", dq12.detail);
+    }
+
+    #[test]
+    fn test_dq12_detects_unanchored_fast_weight_checkpoint() {
+        let storage = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        storage
+            .insert_body_checkpoint(&crate::storage::models::BodyCheckpointRecord {
+                checkpoint_id: "cp-bad-fw".to_string(),
+                body_id: "b1".to_string(),
+                from_brain: "agy".to_string(),
+                session_id: "s1".to_string(),
+                goal_summary: "missing base model".to_string(),
+                active_files: vec![],
+                active_locks: vec![],
+                verified_facts: vec![],
+                open_blockers: vec![],
+                next_step_hint: "".to_string(),
+                token_budget: 200,
+                status: "active".to_string(),
+                evidence_sha256: "a".repeat(64),
+                created_at: "2026-11-28T00:00:00Z".to_string(),
+                resumed_by_brain: None,
+                resumed_at: None,
+                tx_epoch: 1,
+                fast_weight_snapshot_id: Some("11111111-1111-4111-8111-111111111111".to_string()),
+                fast_weight_base_model: None,
+            })
+            .expect("insert bad fw checkpoint");
+        let results = run_data_quality_checks(&storage);
+        let dq12 = results.iter().find(|r| r.id == "DQ12").expect("DQ12");
+        assert!(!dq12.passed, "绑定 snapshot_id 但缺失 base_model 的胶囊应被 DQ12 拦截");
+    }
+
+    #[test]
+    fn test_dq11_detects_corrupt_sleep_summary() {
+        let storage = SqliteStorageProvider::open_in_memory().expect("sqlite");
+        storage
+            .insert_memory(&crate::storage::models::MemoryRecord {
+                id: "sleep-sum-bad".to_string(),
+                memory_type: "experience".to_string(),
+                content: "leaked api_key=sk-proj-BadLeakSleepSummary12345678".to_string(),
+                summary: None,
+                source_agent: Some("sleep_time_compactor".to_string()),
+                source_session: Some("sleep-1".to_string()),
+                tags: vec!["sleep_compacted".to_string()],
+                weight: 0.8,
+                pinned: false,
+                status: "active".to_string(),
+                embedding: vec![],
+            })
+            .expect("insert bad sleep summary");
+        let results = run_data_quality_checks(&storage);
+        let dq11 = results.iter().find(|r| r.id == "DQ11").expect("DQ11");
+        assert!(!dq11.passed, "含明文密钥的睡眠摘要应被 DQ11 拦截");
     }
 
     #[test]

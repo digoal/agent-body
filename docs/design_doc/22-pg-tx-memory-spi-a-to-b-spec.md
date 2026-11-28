@@ -1,7 +1,7 @@
 # 22 — 事务级海马体原型：基于 PostgreSQL SPI 从方案 A 演进到方案 B 架构规格说明书
 
 > **Agent Body 产品设计 · 交付件 22 (`ISSUE #55`)**  
-> **版本**: v1.0（规划基线） · **作者**: digoal 德哥 & Agent Body Architecture Team · **日期**: 2026-11-28  
+> **版本**: v1.2（M1+M2+M3 方案 A→B 全量落地并经 PG 18.6 百万事件实测验收） · **作者**: digoal 德哥 & Agent Body Architecture Team · **日期**: 2026-11-28  
 > **思想源流**: `~/new/agent_body_postgresql_spi_a_b.html`（PostgreSQL-V CIDR 2026 · HydraDB · Yang et al. 2026 · Sleep-time Compute · In-Place TTT / Atlas / Larimar · SEAL / SCoL · NeurDB / NeurStore）  
 > **对齐规约**: [README.md](../../README.md) 规约 #1 (脑体分离), #2 (递弱代偿防膨胀), #3 (跨大脑连续性), #8 (L0~L3 自治与留痕), #9 (亚毫秒热路径 SLA), #13 (测试驱动与无损自愈), #15 (开放记忆 SPI), #16 (43 工具零膨胀 1:1:1 同步), #18 (帕累托双门禁), #19 (全链路脱敏与抗投毒), #20 (微内核防腐与零重扫), #21 (写穿失效与墓碑净化), #25 (AOPCC 并发控制), #26 (双域全链路审计)
 
@@ -64,15 +64,15 @@ flowchart TB
         A1 --> A2 --> A3
     end
 
-    subgraph B["方案 B · Phase 78 (中长期演进 · 旁路挂载，零权重 BLOB 进 PG)"]
-        B1["M3: 快权重快照元数据账本<br/>(fast_weight_snapshots · anchored_epoch + artifact_uri)"]
-        B2["M3: 神经 Compaction 与定向遗忘队列<br/>(compaction_jobs · fast_to_warm_lora / selective_unlearn)"]
-        B3["旁路 Model Runtime (外部进程/服务)<br/>(In-Place TTT / Atlas / Larimar / SCoL + NeurStore)"]
+    subgraph B["方案 B · Phase 78 ✅ (M3 旁路快权重控制面，零权重 BLOB 进 PG)"]
+        B1["M3: 快权重快照元数据账本 + 递归血缘<br/>(fast_weight_snapshots · anchored_epoch + artifact_uri)"]
+        B2["M3: 三道硬门禁 + 定向遗忘 + 秒级回滚<br/>(compaction_jobs · norm / glue_delta / leak_rate)"]
+        B3["旁路 Model Runtime (JSON-RPC 2.0 HTTP)<br/>(In-Place TTT / Atlas / Larimar / SCoL + Mock)"]
         B1 --> B2 <--> B3
     end
 
     SQLITE["本地 SQLite 零依赖降级通道<br/>(PG 不可达自动回退 + 双向热同步)"]
-    AUDIT["双域审计账本 audit_events + Benchmark v4.0 帕累托门禁"]
+    AUDIT["双域审计账本 audit_events + Benchmark v4.1 (W20~W22/DQ11~12/PR-15~16)"]
 
     BRAIN <-->|"43 MCP / 30 CLI / Hooks (工具数零膨胀)"| BODY
     BODY -->|"provider = pg_tx"| A
@@ -175,10 +175,10 @@ CREATE TABLE IF NOT EXISTS compaction_jobs (
 
 1. **热路径事务契约（亚毫秒短事务提交：同键 `pg_advisory_xact_lock` + `READ COMMITTED` 写穿 + `REPEATABLE READ READ ONLY` 快照读）**：
    - 收到新记忆写入或 `FreshnessReconciler` 变更事件时，在亚毫秒级单事务内（**绝不跨推理持锁**）：① 通过 `pg_advisory_xact_lock(hashtextextended(body_id || '|' || tenant_scope || '|' || fact_key, 0))` 对**同一逻辑键**做提交期微序列化（不同 `fact_key` 100% 并行，彻底消除 16+ 并发热点 `40001` 惊群），并 `FOR UPDATE` 校验可选 `expected_epoch`（违例即报 `MVCC_EPOCH_CONFLICT` 供 AOPCC `<2ms` 自愈）；② 截断旧活跃行 `valid_range`（使用 `NULL` 无界上界保证 `upper_inf(valid_range)=TRUE`）并置 `embedding_status='stale'` + 旧检索段 `is_deleted=true`；③ 分配单调新 `tx_epoch`，插入经 `SecretRedactor` 脱敏且带 `evidence_sha256` 的新事件与新检索段，外层保留 `40001`/`23505`/`40P01` OCC 重试兜底；④ 读路径 `search()` 始终以 `REPEATABLE READ READ ONLY` 执行无锁 MVCC 快照读。
-2. **冷路径整理契约（`L1_AUTONOMIC` 空闲窗口 + 门禁回滚）**：
-   - M2 仅在 CPU/会话空闲期拉取 `sleep_context` 作业，写入高密度摘要并归档冗余事件；遇到高不可预测查询自动旁路预整理；
-   - M3 执行 `fast_to_warm_lora` / `selective_unlearn` 后，必须同时满足 `norm_ratio <= threshold`、`eval_glue_delta >= -0.03`、`unlearn_leak_rate < 0.001` 方可原子切换 `fast_weight_snapshots.status = 'active'`，否则置 `aborted` 并保持纯方案 A 非参数检索。
-3. **三阶段量化门禁总览（详见 [roadmap-phase76-78.md](../src_doc/roadmap-phase76-78.md)）**：
-   - **M1（Phase 76）**：多 Agent 并发写冲突丢失率 **`0%`** · `body_memory_search` P99 **`< 20 ms`** · 删/改后旧向量僵尸召回率 **`0%`** · SQLite 降级 100% 透明；
-   - **M2（Phase 77）**：在线推理上下文 Token 消耗降低 **`3×–5×`** · 帕累托门禁 **`Fact Recall = 100%`** 且 **`Q_body >= Q_baseline`** · 审计留痕 100%；
-   - **M3（Phase 78）**：百万级模拟事件流检索延迟恒定 · 连续多轮合并通用基准衰减 **`< 3%`** · 墓碑诱导召回率 **`< 0.1%`** · 按 `tx_epoch` 秒级回滚通过。
+2. **冷路径整理契约（`L1_AUTONOMIC` 空闲窗口 + 三道硬门禁与秒级回滚）**：
+   - M2 仅在 CPU/会话空闲期拉取 `sleep_context` 作业，写入高密度摘要并归档冗余事件；遇到高不可预测查询自动旁路预整理（`WITH active_e AS MATERIALIZED` 强制局部索引扫瞄，彻底消除 PG 优化器在海量历史行下误选 `Merge Join` 全扫主键的陷阱）；
+   - M3 在 `kernel/body-sdk/src/fast_weight.rs` 定义零依赖 `FastWeightCheckpointSpi` 与 JSON-RPC 2.0 线协议（严格拦截 `data:` 内联权重），在 `contrib/mem_pg_tx/` 执行 `fast_to_warm_lora` / `selective_unlearn` 后，必须同时满足 `norm_ratio <= max_norm_ratio`、`eval_glue_delta >= -0.03`、`unlearn_leak_rate < 0.001` 方可在 PG 单事务原子切换 `fast_weight_snapshots.status = 'active'`，任一不通过即置 `aborted` 并无损保留原激活快照或纯方案 A 非参数检索。
+3. **三阶段真机 PG 18.6 硬验收实测（详见 [roadmap-phase76-78.md](../src_doc/roadmap-phase76-78.md)）**：
+   - **M1（Phase 76 · ✅ 已通过）**：16 线程 × 5 = 80 tx 并发写丢写率 **`0%`** · 200 事实 `search_tx P50 = 3.28 ms / P99 = 4.34 ms`（`< 20 ms`） · 僵尸召回率 **`0%`** · SQLite 降级 100% 透明；
+   - **M2（Phase 77 · ✅ 已通过）**：压缩比 **`3.73×`** (`272→73 tok`) · 保留事实 **`100% (6/6)`** · 整理期热路径 **`P50 = 5.19 ms / P99 = 10.65 ms`** · `W21` (`260→87 tok`) 与审计留痕 100% 通过；
+   - **M3（Phase 78 · ✅ 已通过）**：**1,000,003 事件流**实测 **`search_tx P50 = 2.66 ms / P99 = 4.42 ms`**（`< 20 ms`）、`active_snap P99 = 0.75 ms`、`lineage P99 = 1.94 ms`（`< 5 ms`）、按 `tx_epoch` 回滚 **`24 ms`**（`< 1 s`） · 3 类故障注入 100% 拦截回退 · `ContinuityCapsule v2` 同基座热挂载/异构回退与 `W22` (`320→48 tok`) 全绿。

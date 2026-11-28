@@ -340,6 +340,8 @@ impl PgStorageProvider {
             resumed_by_brain: r.get(14),
             resumed_at: r.get(15),
             tx_epoch: r.try_get::<_, i64>(16).unwrap_or(0),
+            fast_weight_snapshot_id: r.try_get::<_, Option<String>>(17).unwrap_or(None),
+            fast_weight_base_model: r.try_get::<_, Option<String>>(18).unwrap_or(None),
         }
     }
 

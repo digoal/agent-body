@@ -3,6 +3,10 @@ use anyhow::Result;
 use crate::storage::Storage;
 use crate::storage::models::MemoryRecord;
 
+pub use ext_mem_pg_tx::{
+    SalienceBreakdown, SalienceInput, SalienceScore, SalienceScorer, SalienceTier,
+};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryConflictIssue {
     pub memory_id_a: String,
@@ -160,6 +164,34 @@ impl<'a> MemoryLifecycleManager<'a> {
         self.storage.update_memory_status(memory_id, "outdated")?;
         Ok(())
     }
+
+    /// 对本地 SQLite 记忆条目计算 STC 突触显著性评分 (`SalienceScore`)
+    pub fn score_memory_record(rec: &MemoryRecord, peers: &[&str]) -> SalienceScore {
+        let novelty = if peers.is_empty() {
+            0.80
+        } else {
+            SalienceScorer::compute_corpus_novelty(&rec.content, peers)
+        };
+        let is_auto = SalienceScorer::looks_like_auto_sync(&rec.id, &rec.content, &rec.tags);
+        let tier = if rec.pinned || rec.memory_type == "decision" {
+            "L1_EXPLICIT"
+        } else if rec.tags.iter().any(|t| t == "architecture" || t == "verified") {
+            "L2_STRUCTURAL"
+        } else {
+            "L3_SEMANTIC"
+        };
+        SalienceScorer::score(&SalienceInput {
+            content: rec.content.clone(),
+            memory_type: rec.memory_type.clone(),
+            evidence_tier: tier.to_string(),
+            cross_session_reuses: if rec.pinned { 2 } else { 0 },
+            conflict_corrections: 0,
+            novelty_ratio: novelty,
+            age_hours: if is_auto { 48.0 } else { 4.0 },
+            is_auto_sync: is_auto,
+            pinned: rec.pinned,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -231,5 +263,42 @@ pub mod tests {
         assert_eq!(rep2.conflict_count, 0);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_salience_scorer_separates_decisions_from_auto_sync_noise() {
+        let decision = MemoryRecord {
+            id: "mem-dec-1".to_string(),
+            memory_type: "decision".to_string(),
+            content: "PostgreSQL pool_size 必须设为 8 且禁用跨推理 2PL 长锁".to_string(),
+            summary: Some("核心架构决策".to_string()),
+            source_agent: Some("architect".to_string()),
+            source_session: None,
+            tags: vec!["verified".to_string()],
+            weight: 0.95,
+            pinned: true,
+            status: "active".to_string(),
+            embedding: vec![],
+        };
+        let noise = MemoryRecord {
+            id: "auto_sync:123".to_string(),
+            memory_type: "note".to_string(),
+            content: "auto_sync: 产出文件 `/tmp/a.log` 摘要: routine check ok".to_string(),
+            summary: None,
+            source_agent: Some("hook".to_string()),
+            source_session: None,
+            tags: vec!["auto_sync".to_string()],
+            weight: 0.4,
+            pinned: false,
+            status: "active".to_string(),
+            embedding: vec![],
+        };
+        let peers = [noise.content.as_str(), "auto_sync: routine check ok"];
+        let d_score = MemoryLifecycleManager::score_memory_record(&decision, &peers);
+        let n_score = MemoryLifecycleManager::score_memory_record(&noise, &[decision.content.as_str(), noise.content.as_str()]);
+        assert_eq!(d_score.tier, SalienceTier::High);
+        assert!(d_score.score >= 0.85, "decision score={}", d_score.score);
+        assert_eq!(n_score.tier, SalienceTier::Low);
+        assert!(n_score.score < 0.35, "noise score={}", n_score.score);
     }
 }
