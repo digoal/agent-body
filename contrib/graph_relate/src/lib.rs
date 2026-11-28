@@ -7,6 +7,7 @@
 
 pub mod engine;
 pub mod ffi;
+pub(crate) mod ffi_decode;
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -109,7 +110,9 @@ impl GraphRelateIndexAm {
     pub fn new(cfg: RelateGraphConfig) -> Self {
         let opened = RelateGraphEngine::open(cfg.clone()).ok();
         if let Some(ref eng) = opened {
-            let _ = eng.ensure_schema();
+            if let Err(e) = eng.ensure_schema() {
+                eprintln!("[graph_relate][WARN] ensure_schema 失败: {}", e);
+            }
         }
         Self {
             cfg,
@@ -138,7 +141,9 @@ impl GraphRelateIndexAm {
             .map_err(|_| anyhow::anyhow!("idx:graph_relate 引擎锁已中毒"))?;
         if guard.is_none() {
             let eng = RelateGraphEngine::open(self.cfg.clone())?;
-            let _ = eng.ensure_schema();
+            if let Err(e) = eng.ensure_schema() {
+                eprintln!("[graph_relate][WARN] ensure_schema 失败: {}", e);
+            }
             *guard = Some(eng);
         }
         Ok(())
@@ -343,7 +348,9 @@ impl IndexAmRoutine for GraphRelateIndexAm {
             .lock()
             .map_err(|_| anyhow::anyhow!("idx:graph_relate 引擎锁已中毒"))?;
         if let Some(eng) = guard.as_ref() {
-            let _ = eng.checkpoint();
+            if let Err(e) = eng.checkpoint() {
+                eprintln!("[graph_relate][WARN] vacuum checkpoint 失败: {}", e);
+            }
         }
         Ok(0)
     }
@@ -412,9 +419,12 @@ impl ProcRoutine for GraphRelateStatusProc {
                 serde_json::to_value(probe)?
             }
         };
-        let _ = ctx
+        if let Err(e) = ctx
             .table_am()
-            .kv_put("graph_relate", "last_status", &payload);
+            .kv_put("graph_relate", "last_status", &payload)
+        {
+            eprintln!("[graph_relate][WARN] 写入 last_status 失败: {}", e);
+        }
         Ok(payload)
     }
 }

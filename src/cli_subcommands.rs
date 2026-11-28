@@ -200,7 +200,7 @@ pub(crate) enum AnalyticsCommands {
 
 #[derive(Subcommand)]
 pub(crate) enum HooksCommands {
-    #[command(about = "自动生成指定 Agent 客户端的 Pre/Post Hook 集成配置")]
+    #[command(about = "自动生成指定 Agent 客户端的 Pre/Post Hook 与 Token 优化集成配置 (AGY 含 token_optimizer.py + .ripgreprc)")]
     Generate {
         #[arg(short, long, help = "目标客户端类型 (agy, cursor, claude, codex, hermes, git)")]
         client: String,
@@ -211,9 +211,9 @@ pub(crate) enum HooksCommands {
         #[arg(long, help = "仅预览生成内容，不实际写入磁盘", default_value_t = false)]
         dry_run: bool,
     },
-    #[command(about = "执行前置防撞检查门禁 (端口/文件/协作锁冲突)")]
+    #[command(about = "执行前置防撞检查与 Token 守卫门禁 (端口/文件/协作锁/噪音目录拦截与切片 overwrite)")]
     Pre {
-        #[arg(short, long, help = "即将调用的工具名 (如 write_file, bind_port)")]
+        #[arg(short, long, help = "即将调用的工具名 (如 write_file, read_file, run_command, bind_port)")]
         tool_name: String,
 
         #[arg(short, long, default_value = "{}", help = "工具入参 JSON 字符串")]

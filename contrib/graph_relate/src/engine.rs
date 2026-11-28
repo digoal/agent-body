@@ -210,7 +210,9 @@ impl RelateGraphEngine {
         self.conn.begin()?;
         for (stmt, params) in statements {
             if let Err(e) = self.conn.query(stmt, params) {
-                let _ = self.conn.rollback();
+                if let Err(rb_err) = self.conn.rollback() {
+                    eprintln!("[graph_relate][WARN] execute_tx rollback 失败: {}", rb_err);
+                }
                 return Err(e);
             }
         }
@@ -235,10 +237,12 @@ impl RelateGraphEngine {
 
     /// 初始化 `:Entity(id)` 索引（幂等）
     pub fn ensure_schema(&self) -> Result<()> {
-        let _ = self.conn.query(
+        if let Err(e) = self.conn.query(
             "CREATE INDEX entity_id_idx IF NOT EXISTS FOR (n:Entity) ON (n.id)",
             &Map::new(),
-        );
+        ) {
+            eprintln!("[graph_relate][WARN] CREATE INDEX entity_id_idx 跳过: {}", e);
+        }
         Ok(())
     }
 
@@ -353,13 +357,17 @@ impl RelateGraphEngine {
         let bookmark = match res {
             Ok(bm) => bm,
             Err(e) => {
-                let _ = self.conn.rollback();
+                if let Err(rb_err) = self.conn.rollback() {
+                    eprintln!("[graph_relate][WARN] sync_graph rollback 失败: {}", rb_err);
+                }
                 return Err(e);
             }
         };
 
         if self.cfg.db_path != ":memory:" && !self.cfg.read_only {
-            let _ = self.checkpoint();
+            if let Err(e) = self.checkpoint() {
+                eprintln!("[graph_relate][WARN] sync_graph checkpoint 失败: {}", e);
+            }
         }
 
         Ok(RelateSyncStats {

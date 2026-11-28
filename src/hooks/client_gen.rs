@@ -73,6 +73,7 @@ use super::client_templates::{
     AGY_BRIDGE_SCRIPT_TEMPLATE, AGY_HOOKS_JSON_TEMPLATE, CLAUDE_BRIDGE_SCRIPT_TEMPLATE,
     CLAUDE_SETTINGS_JSON_TEMPLATE, HERMES_BRIDGE_SCRIPT_TEMPLATE,
 };
+use super::token_guard_templates::{AGY_TOKEN_OPTIMIZER_SCRIPT_TEMPLATE, RIPGREPRC_TEMPLATE};
 
 /// Agent 客户端 Hook 自动生成器 (规约 #13 MCP 与 CLI 1:1 映射)
 pub struct ClientHookGenerator;
@@ -93,11 +94,19 @@ impl ClientHookGenerator {
     /// 配套生成文件清单（如 AGY / Claude / Hermes 的配置与桥接脚本）
     pub fn companion_templates(client: ClientType) -> Vec<(&'static str, &'static str, bool)> {
         match client {
-            ClientType::Agy => vec![(
-                ".gemini/config/hooks/body_bridge.py",
-                AGY_BRIDGE_SCRIPT_TEMPLATE,
-                true,
-            )],
+            ClientType::Agy => vec![
+                (
+                    ".gemini/config/hooks/body_bridge.py",
+                    AGY_BRIDGE_SCRIPT_TEMPLATE,
+                    true,
+                ),
+                (
+                    ".gemini/config/hooks/token_optimizer.py",
+                    AGY_TOKEN_OPTIMIZER_SCRIPT_TEMPLATE,
+                    true,
+                ),
+                (".ripgreprc", RIPGREPRC_TEMPLATE, false),
+            ],
             ClientType::Claude => vec![
                 (".claude/settings.json", CLAUDE_SETTINGS_JSON_TEMPLATE, false),
                 (
@@ -130,10 +139,11 @@ impl ClientHookGenerator {
   - Shared Tools: `<workspace_base>/shared_proj/`
   - Temporary files: `<temp_dir>/` (auto-cleaned)
 
-# 2. Automated Hook Integration
+# 2. Automated Hook Integration & Token Guard
 - When writing significant architecture/design files, ensure you invoke agent-body's hook:
   MCP tool: `body_hook_post` with the target file path.
-- Avoid committing or tracking noisy directories: `node_modules`, `target`, `.git`, `.venv`.
+- Token Hygiene: prefer `codegraph explore` / `body_asset_search` / `rg` (with `.ripgreprc`) and slice large reads (`StartLine`/`EndLine`); set `mcp_profile = "dev"` (18 tools) or `"core"` (10 tools) in `[runtime]` to trim context schema overhead.
+- Avoid committing or tracking noisy directories: `node_modules`, `target`, `.git`, `.venv`, `dist`, `build`.
 "#,
                 false,
             ),
@@ -145,9 +155,10 @@ impl ClientHookGenerator {
 - **Claude Code Hooks**: Automated `SessionStart`, `PreToolUse`, and `PostToolUse` hooks are wired in `.claude/settings.json` -> `.claude/hooks/body_claude_bridge.py`.
 - **Port & Concurrency Safety**: Before binding any network port or launching background services, check for conflicts using `body_port_check` or run `agent-body env port <port>` / `agent-body platform ports`.
 - **Cross-Brain Continuity & Vitals**: Check `agent-body body manifest` / `agent-body body vitals` or `body_state` when resuming across sessions.
-- **Pre-Hook & Post-Hook Discipline**:
-  - Run `body_hook_pre` before major workspace modifications to verify locks.
+- **Pre-Hook & Token Guard Discipline**:
+  - Run `body_hook_pre` before major workspace modifications to verify locks and Token Guard (`node_modules`/`dist`/`target`/lockfiles blocking & large-file slicing).
   - Run `body_hook_post` after creating key artifacts to automatically index assets and register long-term memory.
+  - Set `[runtime].mcp_profile = "dev"` (18 tools) or `"core"` (10 tools) and configure `~/.ripgreprc` to minimize token tax.
 - **Temporary Files**: Put throwaway files in your configured temp sandbox (`agent-body place suggest --type tmp` or `/tmp/`). Never pollute root project directories with ad-hoc logs.
 "#,
                 false,
@@ -160,7 +171,7 @@ impl ClientHookGenerator {
 - **Port & Concurrency Safety**: Before starting listeners or background daemons, check ports with `agent-body env port <port>` / `agent-body locks list` (or MCP `body_port_check` / `body_lock_acquire`).
 - **Write Guards & Post-Hooks**: Run `agent-body hooks pre --tool-name write_file --args '{"path":"<path>"}'` before risky writes, and `agent-body hooks post --tool-name write_file --args '{"path":"<path>"}'` afterwards so write-through invalidation stays current.
 - **Cross-Brain Handoff**: Save/resume continuity capsules across brain switches via `agent-body body handoff` and `agent-body body resume`.
-- **Code & Placement Discipline**: Check `.codegraph/` with `codegraph explore` first; verify target directories with `agent-body place suggest`; keep temporary artifacts in your configured temp sandbox (`agent-body gc --max-age-hours 72`).
+- **Code, Token Guard & Placement Discipline**: Check `.codegraph/` with `codegraph explore` first; use `rg` with `.ripgreprc` and bounded slices for large files; set `mcp_profile = "dev"`/`"core"` to cut MCP schema tokens; verify target directories with `agent-body place suggest`; keep temporary artifacts in your configured temp sandbox (`agent-body gc --max-age-hours 72`).
 "#,
                 false,
             ),
@@ -169,9 +180,10 @@ impl ClientHookGenerator {
 
 ## Runtime Embodiment Integration
 - **Startup Brief**: Invoke `python3 .hermes/hooks/body_bridge.py brief` or `agent-body brief` at session start to obtain host facts, optimistic AOPCC leases, and active continuity capsules.
-- **Pre/Post Guards**:
-  - Pre-check writes/binds: `python3 .hermes/hooks/body_bridge.py pre <tool_name> '<args_json>'`
+- **Pre/Post Guards & Token Guard**:
+  - Pre-check writes/binds/reads: `python3 .hermes/hooks/body_bridge.py pre <tool_name> '<args_json>'`
   - Post-sync changes & AOPCC failure recovery: `python3 .hermes/hooks/body_bridge.py post <tool_name> '<args_json>'`
+  - Configure `[runtime].mcp_profile = "dev"`/`"core"` and `~/.ripgreprc` to avoid scanning `node_modules`/`dist`/`target`.
 - **Multi-Agent Coordination**: Acquire/release locks via `agent-body coordination acquire` / `agent-body coordination release` (`body_lock_acquire` / `body_lock_release`).
 - **Telemetry & AWR Diagnostics**: Inspect host health with `agent-body body vitals` and `agent-body body perf-awr`.
 "#,
@@ -306,7 +318,11 @@ mod tests {
             "write_file|edit_file|run_command"
         );
         assert!(parsed["agent-body"]["SessionStart"].is_array());
-        assert_eq!(res.companion_files.len(), 1);
+        assert!(parsed["agent-body"]["PreInvocation"].is_array());
+        assert!(parsed["agent-body"]["Stop"].is_array());
+        assert_eq!(parsed["token-optimizer"]["enabled"], true);
+        assert!(parsed["token-optimizer"]["PreToolUse"].is_array());
+        assert_eq!(res.companion_files.len(), 3);
         assert_eq!(
             res.companion_files[0].relative_path,
             ".gemini/config/hooks/body_bridge.py"
@@ -314,7 +330,18 @@ mod tests {
         assert!(res.companion_files[0].content.contains("extract_failure_text"));
         assert!(res.companion_files[0].content.contains("--error-output"));
         assert!(res.companion_files[0].content.contains("is_destructive_or_sensitive_command"));
+        assert!(res.companion_files[0].content.contains("handle_pre_invocation"));
+        assert!(res.companion_files[0].content.contains("handle_stop"));
         assert!(res.companion_files[0].executable);
+        assert_eq!(
+            res.companion_files[1].relative_path,
+            ".gemini/config/hooks/token_optimizer.py"
+        );
+        assert!(res.companion_files[1].content.contains("handle_read_file"));
+        assert!(res.companion_files[1].executable);
+        assert_eq!(res.companion_files[2].relative_path, ".ripgreprc");
+        assert!(res.companion_files[2].content.contains("--max-columns=300"));
+        assert!(!res.companion_files[2].executable);
         assert!(res.written_path.is_none());
         assert!(res.is_dry_run);
     }
@@ -325,23 +352,32 @@ mod tests {
         let res = ClientHookGenerator::generate(ClientType::Agy, Some(dir.path()), false).unwrap();
         assert_eq!(res.client, "agy");
         assert!(res.written_path.is_some());
-        assert_eq!(res.companion_files.len(), 1);
+        assert_eq!(res.companion_files.len(), 3);
         assert!(res.companion_files[0].written_path.is_some());
+        assert!(res.companion_files[1].written_path.is_some());
+        assert!(res.companion_files[2].written_path.is_some());
 
         let hooks_file = dir.path().join(".gemini/config/hooks.json");
         let bridge_file = dir.path().join(".gemini/config/hooks/body_bridge.py");
+        let opt_file = dir.path().join(".gemini/config/hooks/token_optimizer.py");
+        let rg_file = dir.path().join(".ripgreprc");
         assert!(hooks_file.exists());
         assert!(bridge_file.exists());
+        assert!(opt_file.exists());
+        assert!(rg_file.exists());
 
         let parsed: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(&hooks_file).unwrap()).unwrap();
         assert_eq!(parsed["agent-body"]["enabled"], true);
+        assert_eq!(parsed["token-optimizer"]["enabled"], true);
 
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             let mode = fs::metadata(&bridge_file).unwrap().permissions().mode();
             assert_eq!(mode & 0o111, 0o111, "body_bridge.py 必须具有可执行权限");
+            let opt_mode = fs::metadata(&opt_file).unwrap().permissions().mode();
+            assert_eq!(opt_mode & 0o111, 0o111, "token_optimizer.py 必须具有可执行权限");
         }
     }
 

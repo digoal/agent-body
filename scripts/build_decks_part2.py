@@ -1275,7 +1275,7 @@ def build_index_hub() -> None:
     <svg class="hero-map" viewBox="0 0 1240 218" width="100%" xmlns="http://www.w3.org/2000/svg">
       <rect x="2" y="2" width="1236" height="214" rx="18" fill="#FFFFFF" stroke="#DCD7CC" stroke-width="1.4"/>
       <text x="28" y="34" font-family="var(--f-m)" font-size="11.5" fill="#1F5E73" font-weight="700" letter-spacing="2">VISUAL ARCHITECTURE MAP · 脑体分离一图速览</text>
-      <text x="1212" y="34" font-family="var(--f-m)" font-size="11.5" fill="#7D8B88" text-anchor="end">27 模块 · 43 MCP · 88 SPI · 3 核 / 10 扩展 / 4 发行版 · {TEST_CNT} 测</text>
+      <text x="1212" y="34" font-family="var(--f-m)" font-size="11.5" fill="#7D8B88" text-anchor="end">{MOD_CNT} 模块 · {TOOL_CNT} MCP · {SPI_CNT} SPI · {KERNEL_CNT} 核 / {CONTRIB_CNT} 扩展 / {DIST_CNT}+1 发行版 · {TEST_CNT} 测</text>
       <!-- Left: Hot-Swappable Brains -->
       <rect x="28" y="54" width="236" height="142" rx="14" fill="#FAF8F4" stroke="#1F5E73" stroke-width="1.6"/>
       {icon_badge("brain", 74, 102, 22, C_TEAL)}
@@ -1419,8 +1419,8 @@ h1{{font-family:var(--f-r);font-size:40px;font-weight:700;margin-top:10px;letter
       </div>
       <h2>Agent 本体深度技术交流版（agent-body-deck.html）</h2>
       <div class="chips">
-        <span class="chip">27 模块 / 88 SPI</span><span class="chip">去Skills目录路由</span><span class="chip">四通道入库机制</span><span class="chip">三层有向图</span><span class="chip">目录锁 + WFG</span>
-        <span class="chip">写穿净水器</span><span class="chip">600% CPU AWR 曲线</span><span class="chip">10 Contrib 扩展</span>
+        <span class="chip">{MOD_CNT} 模块 / {SPI_CNT} SPI</span><span class="chip">去Skills目录路由</span><span class="chip">四通道入库机制</span><span class="chip">三层有向图</span><span class="chip">目录锁 + WFG</span>
+        <span class="chip">写穿净水器</span><span class="chip">600% CPU AWR 曲线</span><span class="chip">{CONTRIB_CNT} Contrib 扩展</span>
       </div>
       <span class="dc-go">打开深度交流版 →</span>
     </a>

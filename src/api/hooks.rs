@@ -16,6 +16,8 @@ pub struct PreHookResult {
     pub concurrency_mode: String,
     #[serde(default)]
     pub concurrency_reason: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overwrite: Option<Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,12 +79,67 @@ impl AgentHookEngine {
                 suggestions: Vec::new(),
                 concurrency_mode: "BYPASS".to_string(),
                 concurrency_reason: "runtime.mode=bypass 已旁路前置门禁".to_string(),
+                overwrite: None,
             };
+        }
+
+        let cfg = crate::config::Config::load_effective_or_default();
+        let tg_policy = crate::hooks::TokenGuardPolicy::from_config(&cfg);
+        let mut token_guard_overwrite: Option<Value> = None;
+        let mut tg_suggestions: Vec<String> = Vec::new();
+        match crate::hooks::TokenGuardEngine::evaluate(tool_name, args, &tg_policy) {
+            crate::hooks::TokenGuardDecision::Pass => {}
+            crate::hooks::TokenGuardDecision::Deny {
+                reason,
+                suggestion,
+                target,
+            } => {
+                crate::audit::AuditLogger::record_best_effort(
+                    &self.storage,
+                    crate::audit::AuditEventInput::in_agent("hook", "hook_pre_token_guard", tool_name)
+                        .with_target("tool_arg", target)
+                        .with_concurrency_mode("TOKEN_GUARD")
+                        .with_outcome("blocked")
+                        .with_delta(serde_json::json!({
+                            "reason": reason,
+                            "suggestion": suggestion,
+                        })),
+                );
+                return PreHookResult {
+                    allowed: false,
+                    has_warnings: true,
+                    warnings: vec![reason],
+                    suggestions: vec![suggestion],
+                    concurrency_mode: "TOKEN_GUARD".to_string(),
+                    concurrency_reason: "PreToolUse Token 守卫拦截高噪目录/锁文件/单行压缩文本整读"
+                        .to_string(),
+                    overwrite: None,
+                };
+            }
+            crate::hooks::TokenGuardDecision::Overwrite {
+                overwrite,
+                suggestion,
+                target,
+            } => {
+                crate::audit::AuditLogger::record_best_effort(
+                    &self.storage,
+                    crate::audit::AuditEventInput::in_agent("hook", "hook_pre_token_guard", tool_name)
+                        .with_target("tool_arg", target)
+                        .with_concurrency_mode("TOKEN_GUARD")
+                        .with_outcome("rewritten")
+                        .with_delta(serde_json::json!({
+                            "overwrite": overwrite,
+                            "suggestion": suggestion,
+                        })),
+                );
+                token_guard_overwrite = Some(overwrite);
+                tg_suggestions.push(suggestion);
+            }
         }
 
         let mut class = ConcurrencyPolicyClassifier::classify(tool_name, args);
         let mut warnings = Vec::new();
-        let mut suggestions = Vec::new();
+        let mut suggestions = tg_suggestions;
 
         let tool_lower = tool_name.to_lowercase();
 
@@ -247,6 +304,7 @@ impl AgentHookEngine {
                     suggestions: Vec::new(),
                     concurrency_mode: "SHADOW_AB".to_string(),
                     concurrency_reason: "shadow_ab(live主导): 已记录影子预警但不阻断执行".to_string(),
+                    overwrite: token_guard_overwrite.clone(),
                 };
             }
         }
@@ -277,6 +335,7 @@ impl AgentHookEngine {
             suggestions,
             concurrency_mode: class.mode.as_str().to_string(),
             concurrency_reason: class.reason,
+            overwrite: token_guard_overwrite,
         }
     }
 

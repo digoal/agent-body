@@ -117,10 +117,13 @@ agent-body hooks generate --client claude --out-dir .
 }
 ```
 
-### 3. 原生 `hooks bridge` 与三态运行模式旁路 (Phase 58)
-对于支持 stdin/stdout Hook JSON 协议的客户端（Claude Code / Codex / Hermes），可直接将回调指向原生二进制命令 `agent-body hooks bridge`：
+### 3. 原生 `hooks bridge`、`TokenGuardEngine` 与三态运行模式旁路 (Phase 58 / 80)
+对于支持 stdin/stdout Hook JSON 协议的客户端（Antigravity / Claude Code / Codex / Hermes），可直接将回调指向原生二进制命令 `agent-body hooks bridge`：
 - 读取标准输入 `{ "hook_event_name", "tool_name", "tool_input", "tool_response" }`；
-- 自动遵循 `[runtime].mode` 与 `AGENT_BODY_MODE` 环境变量覆盖：`bypass` 模式下直接零阻塞透传放行；`shadow_ab` 模式下同步采集对比样本并落库 `audit_events` (`category="ab_shadow"`)；`body_only`（默认）执行完整 AOPCC 前/后置检查与 `<2ms` 碰壁自愈处方注入。
+- 自动遵循 `[runtime].mode` 与 `AGENT_BODY_MODE` 环境变量覆盖：`bypass` 模式下直接零阻塞透传放行；`shadow_ab` 模式下同步采集对比样本并落库 `audit_events` (`category="ab_shadow"`)；`body_only`（默认）执行完整 AOPCC 前/后置检查、`<2ms` 碰壁自愈处方注入与 **Phase 80 原生 Token 守卫**。
+- **Phase 80 原生 Token 守卫与 AGY 开箱套件**：
+  - `body_hook_pre` / `hooks pre` / `hooks bridge pre_tool` 内置 `TokenGuardEngine`：阻断 `node_modules`/`__pycache__`/`dist`/`build`/Rust `target`/锁文件/单行压缩文件的无切片整读（保留 `StartLine`/`EndLine <= 200` 行逃生口），对 `>36KB` 或 `>600` 行大文件返回 `overwrite: {"StartLine": 1, "EndLine": 250}`，为 `rg` / 递归 `grep` / 独立 `find` 自动注入忽略规则与 `180` 行截断上限，并将拦截与改写记录至 `audit_events` (`category="hook_pre_token_guard"`)；支持 `AGENT_BODY_TOKEN_GUARD=0` 一键旁路；
+  - `hooks generate --client agy`（及 `body_hook_generate`）同步生成 `.gemini/config/hooks.json`（含 `"agent-body"` 与 `"token-optimizer"`）、`.gemini/config/hooks/body_bridge.py`、`.gemini/config/hooks/token_optimizer.py` 与 `.ripgreprc`。
 
 ---
 

@@ -1,7 +1,7 @@
 # Agent Body — Agent 本体开发者全景开发指南 (面向开发者)
 
 > **目标受众**：Rust 研发工程师、开源贡献者、智能体插件与 MCP 工具生态开发者  
-> **定位准则**：**脑体分离架构下的 Agent 本体（宿主机具身底座，27 模块 / 43 MCP / 88 SPI / 27 表 · 0 `>1000L` 文件 · 微内核 3 crates / contrib 11 扩展 / 3 精简发行版）**，严守三层命名兼容纪律（对外叙事为 Agent 本体，底层 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容）  
+> **定位准则**：**脑体分离架构下的 Agent 本体（宿主机具身底座，27 模块 / 43 MCP / 95 SPI / 28 表 · 0 `>1000L` 文件 · 微内核 3 crates / contrib 12 扩展 / 3 精简发行版）**，严守三层命名兼容纪律（对外叙事为 Agent 本体，底层 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容）  
 > **工程要求**：严格类型安全 · 零内存泄漏 · 100% 测试全绿门禁 · 工业级可调试性
 
 ---
@@ -11,7 +11,7 @@
 Agent Body 采用“微内核 (`kernel/`) + 独立周边 (`contrib/`) + 多发行版 (`distributions/`)”与旗舰主干 (`src/`) 并行兼容的模块化架构：
 
 - `kernel/`：纯机制微内核底座（`body-sdk` / `body-protocol` / `body-kernel`，含只读 `ObservabilityProvider` 与 `KernelObservability`），受 `scripts/arch_boundary_check.py` 强制约束零业务/观测协议词污染；
-- `contrib/`：11 个按需挂载的标准五件套扩展模块（`idx_fts_fuzzy` / `gov_placement` / `probe_db_engines` / `probe_linux_ops` / `probe_jvm_middleware` / `hook_auth_mtls_rbac` / `hook_gov_compliance` / `hook_audit_siem` / `fdw_cmdb_ticket` / `obs_telemetry` / `mem_pg_tx`，详见 [21-observability-and-telemetry-spec.md](../design_doc/21-observability-and-telemetry-spec.md) 与 [22-pg-tx-memory-spi-a-to-b-spec.md](../design_doc/22-pg-tx-memory-spi-a-to-b-spec.md)）；
+- `contrib/`：12 个按需挂载的标准五件套扩展模块（`idx_fts_fuzzy` / `gov_placement` / `probe_db_engines` / `probe_linux_ops` / `probe_jvm_middleware` / `hook_auth_mtls_rbac` / `hook_gov_compliance` / `hook_audit_siem` / `fdw_cmdb_ticket` / `obs_telemetry` / `mem_pg_tx` / `graph_relate`，详见 [21-observability-and-telemetry-spec.md](../design_doc/21-observability-and-telemetry-spec.md) 与 [22-pg-tx-memory-spi-a-to-b-spec.md](../design_doc/22-pg-tx-memory-spi-a-to-b-spec.md)）；
 - `distributions/`：3 个零 C++/DuckDB 精简发行版装配入口（`kernel-minimal` / `aiops-probe` / `dba-sentinel`）；
 - `src/`：旗舰全功能版核心源码（27 个顶层模块）：
 
@@ -54,7 +54,7 @@ graph TD
 
 | 目录/模块 | 核心职责 | 关键数据类型 / 入口结构 |
 |:---|:---|:---|
-| `src/storage/` | 存储中枢、多后端分域 SPI (88 方法，27 表) 与事务式老库无损自愈 (`schema_reconcile.rs`) | `StorageProvider`, `SqliteStorageProvider`, `PgStorageProvider`, `DuckDbStorageProvider` |
+| `src/storage/` | 存储中枢、多后端分域 SPI (95 方法，28 表) 与事务式老库无损自愈 (`schema_reconcile.rs`) | `StorageProvider`, `SqliteStorageProvider`, `PgStorageProvider`, `DuckDbStorageProvider` |
 | `src/body/` | Agent 本体中枢（身份证、跨大脑接力胶囊、五维稳态、`L0~L3` 包络、三态运行模式与 Shadow A/B 证伪、`18/18` Wait Events AWR/ADDM） | `BodyManifestEngine`, `ContinuityManager`, `HomeostasisVitalsEngine`, `AutonomyEnvelope`, `BodyPerfEngine`, `ShadowAbEngine` |
 | `src/audit/` | 双域全链路行为审计（`IN_AGENT`/`OUT_OF_AGENT`）、60s 折叠与自进化 | `AuditLogger`, `AuditEvolutionAnalyzer` |
 | `src/fact/` | 宿主机只读物理事实采集、L1~L3 属性图与行业 Know-How/Hierarchy 知识网络 | `FactFacade`, `CapabilityAnnotation`, `AutomationScanner`, `PropertyGraphOrganizer`, `KnowledgeNetworkEngine` |
@@ -70,7 +70,7 @@ graph TD
 | `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` |
 | `src/mesh/` | 轻量多机联邦 HTTP Peer Mesh & `MeshEnvelope v1.0` | `MeshClient`, `MeshNodeFacts`, `MeshEnvelope` |
 | `src/ecosystem/` | MCP/SKILL 目录、外部服务通讯录与 Context 防爆路由 | `McpConfigScanner`, `SkillCatalogScanner`, `ExternalContactsManager`, `ContextBudgetRouter` |
-| `src/hooks/` | HOOK 事件总线、自动同步、客户端生成与碰壁秒级自愈 | `EventBus`, `AutoSyncEngine`, `ClientHookGenerator`, `OptimisticFailureDiagnoser` |
+| `src/hooks/` | HOOK 事件总线、自动同步、客户端生成（含 `token_optimizer.py`/`.ripgreprc`）、PreToolUse Token Guard 与碰壁秒级自愈 | `EventBus`, `AutoSyncEngine`, `ClientHookGenerator`, `TokenGuardEngine`, `OptimisticFailureDiagnoser` |
 | `src/session/` | 会话生命周期自动绑定与安全归档 | `SessionManager`, `SessionLifecycleManager` |
 | `src/web/` | 内嵌轻量 HTTP 引擎与昼夜蓝图 9 大工作台 | `WebServer`, `HttpRequest`, `TopologyGraph`, `LockViewItem` |
 | `src/preflight/` | 运行时依赖预检与降级保护 | `PreflightChecker`, `PreflightReport`, `CheckItem` |
@@ -103,7 +103,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 # 1. 快速语法与类型检查 (耗时约 2~4 秒)
 cargo check
 
-# 2. 运行全工作区 435 项自动化测试套件（含旗舰版 387 + kernel 27 + contrib 17 + distributions 4）
+# 2. 运行全工作区 452 项自动化测试套件（含旗舰版 401 + kernel 27 + contrib 20 + distributions 4）
 RUST_TEST_THREADS=1 cargo test --workspace
 
 # 2b. 单独校验微内核防腐边界、Playwright WebUI 9 工作台 + 老库迁移 E2E 与精简发行版自检
@@ -180,7 +180,7 @@ sequenceDiagram
 
     Dev->>Impl: 创建 MyStorageProvider 结构体
     Dev->>Impl: 实现 impl StorageProvider for MyStorageProvider
-    Note over Impl: 实现 88 个接口方法 (init, upsert_asset, locks, ecosystem, benchmark, mesh, body...)
+    Note over Impl: 实现 95 个接口方法 (init, upsert_asset, locks, ecosystem, benchmark, mesh, body...)
     Dev->>Facade: 在 Storage::from_config 中注册分支匹配
     Dev->>Dev: 编写单元测试验证 CRUD 与 FTS 行为
 ```
@@ -195,7 +195,7 @@ pub struct MyCustomProvider { /* 连接句柄 */ }
 impl StorageProvider for MyCustomProvider {
     fn init(&self) -> Result<()> { /* 创建 schema */ Ok(()) }
     fn provider_name(&self) -> &'static str { "custom" }
-    // 实现其余 86 个接口（共 88 个 SPI 方法）...
+    // 实现其余 93 个接口（共 95 个 SPI 方法）...
 }
 ```
 

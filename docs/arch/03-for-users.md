@@ -88,7 +88,7 @@ agent-body close session-20261118-01 --clean-temp
 
 | 发行版 | Release 二进制 | 运行依赖 | 适用场景与快速自检 |
 |---|---|---|---|
-| **个人旗舰版** | `agent-body` | SQLite + DuckDB (`libstdc++6`) + Web UI | 个人开发者 / 本机全功能伴侣（43 MCP + Web 大屏 + `/metrics` + Benchmark v4.1） |
+| **个人旗舰版** | `agent-body` | SQLite + DuckDB (`libstdc++6`) + Web UI | 个人开发者 / 本机全功能伴侣（43 MCP 支持 `dev`/`core` 减税 + PreToolUse Token Guard + Web 大屏 + `/metrics` + Benchmark v4.1） |
 | **政务云 AIOps 探针** | `agent-body-probe` (`6.7 MB`) | **纯 Rust（零 DuckDB / 零 C++）** | 服务器与政务云只读采集、mTLS/RLS、脱敏、SIEM 与可观测自诊断（`self-check` / `metrics` / `diagnose`） |
 | **DBA 专项哨兵** | `agent-body-dba` (`6.4 MB`) | **纯 Rust（零 DuckDB / 零 C++）** | PostgreSQL / 达梦 / 人大金仓配置诊断、脱敏与指标导出（`self-check` / `metrics` / `diagnose`） |
 | **纯微内核验证版** | `agent-body-kernel-minimal` (`3.9 MB`) | **纯 Rust（0 `contrib`）** | 验证微内核目录表、Hooks 与轨 B 沙盒最小基座（`agent-body-kernel-minimal self-check`） |

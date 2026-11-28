@@ -288,6 +288,18 @@ docker run -d \
    agent-body storage migrate --to postgres --to-url "host=127.0.0.1 dbname=agent_body user=postgres password=secret"
    ```
 
+### 3. 配置原生 Token 守卫与 MCP 减税（Phase 80）
+1. **一键生成 Antigravity Hook 与全局 `.ripgreprc`**：
+   ```bash
+   agent-body hooks generate --client agy --out-dir ~
+   # 将同步写入 ~/.gemini/config/hooks.json (含 agent-body + token-optimizer)、
+   # ~/.gemini/config/hooks/body_bridge.py、~/.gemini/config/hooks/token_optimizer.py 与 ~/.ripgreprc
+   ```
+2. **导出 `RIPGREP_CONFIG_PATH` 与按需开启 MCP 减税档位**：
+   - 在 `~/.bashrc` / `~/.profile` 持久化 `export RIPGREP_CONFIG_PATH="$HOME/.ripgreprc"`；
+   - 在 `~/.agent-body/config.toml` `[runtime]` 中设置 `mcp_profile = "dev"`（18 个研发工具，立省 **51.6%** Schema 字节）或 `"core"`（10 个核心工具）；
+   - 如需临时旁路 Token 守卫，可设置环境变量 `AGENT_BODY_TOKEN_GUARD=0` 或 `AGY_TOKEN_OPTIMIZER=0`。
+
 ---
 
 ## 八、常见故障与排障速查表 (FAQ)

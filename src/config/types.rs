@@ -418,6 +418,26 @@ pub struct RuntimeConfig {
     /// shadow_ab 检测到 H1 漏召回 / H2 幽灵陈旧命中时是否写穿自愈索引 (Phase 63)
     #[serde(default = "default_true_flag")]
     pub auto_heal_on_hindering: bool,
+
+    /// Phase 80: 是否启用 PreToolUse 原生 Token 守卫（拦截噪音目录/锁文件/压缩文件整读，大文件自动切片与搜索输出限流）
+    #[serde(default = "default_true_flag")]
+    pub token_guard_enabled: bool,
+
+    /// Phase 80: 允许整读的单文件最大字节数（超出则自动注入 StartLine/EndLine 切片，默认 36864 = 36KB）
+    #[serde(default = "default_token_guard_max_full_read_bytes")]
+    pub token_guard_max_full_read_bytes: usize,
+
+    /// Phase 80: 允许整读的单文件最大行数（超出则自动注入 StartLine/EndLine 切片，默认 600）
+    #[serde(default = "default_token_guard_max_full_read_lines")]
+    pub token_guard_max_full_read_lines: usize,
+
+    /// Phase 80: 触发大文件自动切片时的首屏读取行数上限（默认 250）
+    #[serde(default = "default_token_guard_auto_slice_lines")]
+    pub token_guard_auto_slice_lines: usize,
+
+    /// Phase 80: 独立 rg / grep -r / find 搜索命令自动注入的最多输出行数（默认 180）
+    #[serde(default = "default_token_guard_search_max_lines")]
+    pub token_guard_search_max_lines: usize,
 }
 
 /// 行业 Know-How 知识网络与 Omni-RRF 多路融合检索配置 (`[knowledge_graph]`, Phase 61 / ISSUE #44)
@@ -598,6 +618,22 @@ pub(super) fn default_multimodal_tool_timeout_ms() -> u64 {
     500
 }
 
+pub(super) fn default_token_guard_max_full_read_bytes() -> usize {
+    36 * 1024
+}
+
+pub(super) fn default_token_guard_max_full_read_lines() -> usize {
+    600
+}
+
+pub(super) fn default_token_guard_auto_slice_lines() -> usize {
+    250
+}
+
+pub(super) fn default_token_guard_search_max_lines() -> usize {
+    180
+}
+
 impl Default for RuntimeConfig {
     fn default() -> Self {
         Self {
@@ -607,6 +643,11 @@ impl Default for RuntimeConfig {
             shadow_max_live_ms: default_shadow_max_live_ms(),
             ab_sample_rate: default_ab_sample_rate(),
             auto_heal_on_hindering: default_true_flag(),
+            token_guard_enabled: default_true_flag(),
+            token_guard_max_full_read_bytes: default_token_guard_max_full_read_bytes(),
+            token_guard_max_full_read_lines: default_token_guard_max_full_read_lines(),
+            token_guard_auto_slice_lines: default_token_guard_auto_slice_lines(),
+            token_guard_search_max_lines: default_token_guard_search_max_lines(),
         }
     }
 }

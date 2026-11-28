@@ -53,7 +53,7 @@ def build_talk_01() -> None:
                 en_sub="Brain-Body Separation & Agent Embodiment Substrate",
                 subtitle1="为什么大模型需要一具永驻宿主机的物理身体",
                 subtitle2="从比较优势出发 · 划清本体定位边界 · 严守递弱代偿演进",
-                spec_line="27 模块 · 43 原生工具 · 88 SPI · 6 大生理器官 · Apache-2.0",
+                spec_line=f"{MOD_CNT} 模块 · {TOOL_CNT} 原生工具 · {SPI_CNT} SPI · 6 大生理器官 · Apache-2.0",
                 strata=[
                     ("可插拔大脑 (Transient Brain)", "Claude Code · Antigravity · Codex · Cursor · Cron", "#EBF1EE", C_INK),
                     ("统一神经接口 (43/43 Parity)", "MCP stdio · CLI · Web 2.0 · Pre/Post Hooks", "#CFE0DC", C_INK),
@@ -748,7 +748,7 @@ def build_talk_02() -> None:
             "anim_caps": [
                 "Step 1/4：四大采集通道——inotify 文件监听 / PostToolUse 回写 / 60s /proc 探针 / 1800s 巡检",
                 "Step 2/4：净化与写穿——改写将旧向量标 stale；删除立即标 missing 并清边、清幽灵节点与归档记忆",
-                "Step 3/4：88 SPI 落盘三引擎——assets 与 skills_catalog 靠 SQLite AFTER Trigger 自动同步 FTS5",
+                f"Step 3/4：{SPI_CNT} SPI 落盘三引擎——assets 与 skills_catalog 靠 SQLite AFTER Trigger 自动同步 FTS5",
                 "Step 4/4：EventBus 推向配置流水线与 Web SSE，下次 brief / changes_since 即刻可见最新状态",
             ],
             "next": "感官数据收集齐了，但不能一股脑全倒进上下文——我们如何做到「索引先行，按需下钻」？",

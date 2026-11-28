@@ -145,6 +145,8 @@ flowchart TD
    - 新增轻量确定性扫描器 `PromptInjectionScanner`（纯正则/规则微秒级实现，遵循规约 #2 不引入 LLM 开销）：
      - 检测典型越狱与指令劫持模式（如 `ignore previous instructions`、`disregard all prior rules`、`<system>` / `</system>` 伪造分隔符、`you are now` 角色劫持、隐藏零宽控制字符 `\u{200B}`-`\u{200F}`）；
      - 命中时在 L1 元数据打标 `security_flags: ["prompt_injection_suspected"]`，剥离危险控制字符并对可疑摘要进行截断隔离标记（`[EXTERNAL_UNTRUSTED_TEXT]`），防止直接作为高可信指令注入 `BriefAssembler`。
+2. **PreToolUse Token 守卫路径防爆与最小读取边界（`TokenGuardEngine`, Phase 80）**：
+   - 在 `body_hook_pre` / `hooks bridge` / AGY `token_optimizer.py` 中对构建/依赖噪音目录（`node_modules`、`__pycache__`、`dist`、`build`、Rust `target`、`/.git/objects/`、`/.cargo/registry/`）、锁文件（`Cargo.lock`/`package-lock.json` 等）及单行压缩产物执行无切片阻断（`<=200` 行显式范围可放行），对大文件自动注入 `1..250` 首屏切片 `overwrite`，在降低 Context 注入与 Token 浪费的同时避免海量不可信三方依赖或构建垃圾污染推理上下文。
 
 ---
 

@@ -123,9 +123,12 @@ multimodal_tool_timeout_ms = 500
 [runtime]
 # 运行模式: body_only | bypass | shadow_ab (支持 ~/.agent-body/runtime_mode.override 热切换)
 mode = "shadow_ab"
-mcp_profile = "core"
+# dev (18工具，立减58%工具声明税) | core (10工具，-78%) | ops (20工具) | full (43工具)
+mcp_profile = "dev"
 shadow_primary = "live"
 auto_heal_on_hindering = true
+# 原生 PreToolUse Token 守卫 (支持 AGENT_BODY_TOKEN_GUARD=0 旁路)
+token_guard_enabled = true
 ```
 
 ### 2.4 Systemd 后台常驻守护服务（生产托管）

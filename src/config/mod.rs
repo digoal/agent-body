@@ -190,6 +190,15 @@ pub(super) fn default_ignore_patterns() -> Vec<String> {
         ".agent-body".to_string(),
         "target".to_string(),
         ".venv".to_string(),
+        "dist".to_string(),
+        "build".to_string(),
+        ".next".to_string(),
+        ".nuxt".to_string(),
+        ".cache".to_string(),
+        "coverage".to_string(),
+        ".pytest_cache".to_string(),
+        ".mypy_cache".to_string(),
+        ".ruff_cache".to_string(),
     ]
 }
 
@@ -663,6 +672,30 @@ impl Config {
             anyhow::bail!(
                 "runtime.ab_sample_rate ({}) 必须位于 0.0..=1.0 之间",
                 self.runtime.ab_sample_rate
+            );
+        }
+        if self.runtime.token_guard_max_full_read_bytes < 4096 {
+            anyhow::bail!(
+                "runtime.token_guard_max_full_read_bytes ({}) 不能小于 4096",
+                self.runtime.token_guard_max_full_read_bytes
+            );
+        }
+        if self.runtime.token_guard_max_full_read_lines < 50 {
+            anyhow::bail!(
+                "runtime.token_guard_max_full_read_lines ({}) 不能小于 50",
+                self.runtime.token_guard_max_full_read_lines
+            );
+        }
+        if self.runtime.token_guard_auto_slice_lines < 20 {
+            anyhow::bail!(
+                "runtime.token_guard_auto_slice_lines ({}) 不能小于 20",
+                self.runtime.token_guard_auto_slice_lines
+            );
+        }
+        if self.runtime.token_guard_search_max_lines < 20 {
+            anyhow::bail!(
+                "runtime.token_guard_search_max_lines ({}) 不能小于 20",
+                self.runtime.token_guard_search_max_lines
             );
         }
         if self.knowledge_graph.max_section_chars < 200 || self.knowledge_graph.max_section_chars > 8000 {

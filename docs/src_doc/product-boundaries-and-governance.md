@@ -24,6 +24,7 @@
 | **双域审计与自进化** | 对 `IN_AGENT`（Brief/Hook/MCP/CLI/Web/Mesh）与 `OUT_OF_AGENT`（后台巡检/Watcher 60s 折叠/GC/断链修复/规则演化）全行为记录脱敏前后增量与 SHA-256 存证，用于 DuckDB OLAP 分析与驱动 AOPCC 租约/规则自进化 | **不替代** 企业级通用 SIEM/ELK 日志中心或应用层 APM 全量链路追踪系统（如 Datadog/Jaeger），仅审计宿主机Agent 本体双域关键治理与认知动作。 |
 | **Agent 本体与跨大脑连续性** | 提供本体身份证与六器官自省 (`BodyManifest`)、`<300 tok` 脱敏抗投毒跨大脑接力胶囊 (`ContinuityCapsule v2`)、五维稳态体检与 `L1` 反射自愈 (`HomeostasisVitals`)、四级自治权限包络 (`L0~L3`) 及多本体只读名片发现 | **不替代** 全栈 Agent Runtime、主战 LLM ReAct 规划循环、模型路由代理或面向人类的个人私人助理。 |
 | **事务级海马体与旁路快权重 (`contrib/mem_pg_tx`)** | 管理多 Agent 双时态 MVCC（`tx_epoch`）、LSM 向量解耦、空闲窗口 `SleepTimeCompactor`、`selective_unlearn` 定向遗忘与旁路模型运行时血缘/三门禁控制面 (`ArtifactURI`/回滚) | **绝不内置** LLM 推理、LoRA 微调或快权重训练循环进 Rust 本体；**绝不将 GB 级模型权重作为裸 BLOB 存入 PG 堆表**；**绝不跨大模型推理持 2PL 长锁**。 |
+| **原生 Token 守卫 (`TokenGuardEngine`)** | 在已有 `body_hook_pre`、`hooks bridge`、`hooks generate` 与 `[runtime].mcp_profile` 中原生提供噪音目录/锁文件/单行压缩文本拦截、大文件首屏切片 `overwrite`、命令行过滤限流与 `.ripgreprc` 模板 | **不引入** 额外第三方 MCP Server 及其常驻 Schema 声明税，**不新增** 第 44 个 MCP 工具，**不替代** 客户端或 OS 的真实文件系统读取。 |
 
 ---
 

@@ -205,6 +205,7 @@ Agent 本体向瞬态大脑暴露 43 个原子级感官、反射、海马体与�
 }
 ```
 - 精简探针版 `agent-body-probe mcp` 内置 `body_obs_metrics`（`obs metrics`）、`body_obs_diagnose`（`obs diagnose`，输出 `OBS-01~05` 异常规则与 W3C `traceparent`）及 `body_aiops_evidence_pack`。
+- **MCP Schema 减税与 PreToolUse Token 守卫（Phase 58 / Phase 80）**：在 `~/.agent-body/config.toml` `[runtime]` 中设置 `mcp_profile = "dev"` 仅暴露 18 个高频研发工具（实测较 `full` 43 工具立减 **58.1%** 工具数、`35,252 -> 17,065 bytes` 约省 **51.6%** Schema 上下文税），或设 `"core"`（10 工具）；`body_hook_pre` 原生集成 `TokenGuardEngine`，支持拦截噪音目录/锁文件/单行压缩文本并返回大文件切片及搜索截断 `overwrite`。
 支持 `action`: `"list" | "add" | "sync" | "reconcile" | "probes"`（默认为 `"list"`）。
 
 ```json

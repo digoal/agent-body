@@ -989,4 +989,17 @@ url = "http://localhost:8080/notify"
    - `GET /api/v1/assets/search?q=...&asset_type=...&modality=...&kv_filter=...&graph_hops=...&fuzzy=...&include_links=...`
    - `POST /api/v1/assets/scan`（支持 `enrich_with_ollama`/`mine_knowledge`/`extract_knowhow`/`backfill_multimodal`）
 
+---
+
+### 7.4 Phase 80 原生 PreToolUse Token 守卫契约 (`body_hook_pre` / `hooks bridge`)
+
+1. **`PreHookResult` 扩展 `overwrite` 字段**（保持 43 MCP 工具零膨胀）：
+   - 当 `read_file` / `view_file` 未指定切片且命中文末噪音目录（`node_modules`、`__pycache__`、`dist`、`build`、Rust `target`、锁文件、`*.min.*`）或单行压缩超长文本（`>16KB` 且前 `8KB` 换行 `<5`）时，返回 `allowed: false`（`concurrency_mode: "TOKEN_GUARD"`），并放行显式 `StartLine/EndLine`（`<=200` 行）逃生口；
+   - 当普通文本文件超出 `token_guard_max_full_read_bytes`（`36864`）或 `token_guard_max_full_read_lines`（`600`）时，返回 `allowed: true` + `overwrite: {"StartLine": 1, "EndLine": 250}`；
+   - 当独立 `rg` / 递归 `grep` / 独立 `find` 未配置目录排除或输出上限时，返回 `overwrite: {"CommandLine": "..."}` 注入 `.ripgreprc` / `--exclude-dir=...` 与 `awk` 180 行截断；
+   - 所有阻断与改写均写入 `audit_events`（`category = "hook_pre_token_guard"`）。
+2. **`hooks bridge pre_tool` 与 `body_hook_generate(client="agy")`**：
+   - `agent-body hooks bridge pre_tool` 在 `res.allowed && !res.has_warnings && res.overwrite.is_some()` 时向 Antigravity stdout 输出 `{"decision":"allow","overwrite": ...}`；
+   - `body_hook_generate(client="agy")` 同步产出 `.gemini/config/hooks.json`（含 `"agent-body"` 与 `"token-optimizer"`）、`.gemini/config/hooks/body_bridge.py`、`.gemini/config/hooks/token_optimizer.py` 与 `.ripgreprc`。
+
 *下一步: 07-data-model.md — 核心数据模型*

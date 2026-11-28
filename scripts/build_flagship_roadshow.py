@@ -197,7 +197,7 @@ def build_roadshow_deck() -> None:
             "anim_caps": [
                 "Step 1/4：四大采集通道——inotify 文件监听 / PostToolUse 回写 / 60s /proc 探针 / 1800s 巡检",
                 "Step 2/4：净化筛选与写穿级联——内容改写自动将旧向量标 stale；文件删除瞬时清理边、节点与记忆",
-                "Step 3/4：88 SPI 落盘三引擎——assets/skills_catalog 靠数据库 AFTER Trigger 自动同步 FTS5 虚表",
+                f"Step 3/4：{SPI_CNT} SPI 落盘三引擎——assets/skills_catalog 靠数据库 AFTER Trigger 自动同步 FTS5 虚表",
                 "Step 4/4：EventBus 触发配置流水线与 Web SSE 实时推送，下次 brief/changes_since 毫秒可见",
             ],
             "next": "看清了物理世界与实时同步，但事事事前查询会不会太慢？看小脑反射 AOPCC 的破局。",

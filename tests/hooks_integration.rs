@@ -58,7 +58,89 @@ fn test_client_hook_generator_all_supported_clients() {
         if matches!(client, ClientType::Agy | ClientType::Claude | ClientType::Hermes) {
             assert!(!gen.companion_files.is_empty());
         }
+        if client == ClientType::Agy {
+            assert_eq!(gen.companion_files.len(), 3);
+            assert!(gen.content.contains("token-optimizer"));
+            assert!(gen.companion_files.iter().any(|c| c.relative_path.ends_with("token_optimizer.py")));
+            assert!(gen.companion_files.iter().any(|c| c.relative_path == ".ripgreprc"));
+        }
     }
+}
+
+#[test]
+fn test_hook_pre_token_guard_deny_and_overwrite() {
+    let storage = Storage::open_in_memory().expect("open storage");
+    let engine = AgentHookEngine::new(storage.clone());
+    let tmp = tempfile::tempdir().expect("tempdir");
+
+    let nm_dir = tmp.path().join("node_modules");
+    std::fs::create_dir_all(&nm_dir).expect("mkdir node_modules");
+    let nm_file = nm_dir.join("index.js");
+    std::fs::write(&nm_file, "module.exports = 1;\n").expect("write nm");
+
+    let deny_nm = engine.pre_tool_call(
+        "read_file",
+        &serde_json::json!({ "Path": nm_file.to_string_lossy() }),
+    );
+    assert!(!deny_nm.allowed);
+    assert_eq!(deny_nm.concurrency_mode, "TOKEN_GUARD");
+    assert!(deny_nm.warnings.iter().any(|w| w.contains("token-optimizer")));
+
+    let lock_file = tmp.path().join("Cargo.lock");
+    std::fs::write(&lock_file, "# lock\n".repeat(40)).expect("write lock");
+    let deny_lock = engine.pre_tool_call(
+        "read_file",
+        &serde_json::json!({ "Path": lock_file.to_string_lossy() }),
+    );
+    assert!(!deny_lock.allowed);
+
+    let allow_lock_slice = engine.pre_tool_call(
+        "read_file",
+        &serde_json::json!({
+            "Path": lock_file.to_string_lossy(),
+            "StartLine": 1,
+            "EndLine": 50
+        }),
+    );
+    assert!(allow_lock_slice.allowed);
+    assert!(allow_lock_slice.overwrite.is_none());
+
+    let big_file = tmp.path().join("big_module.rs");
+    std::fs::write(
+        &big_file,
+        (1..=700).map(|i| format!("let v{} = {};\n", i, i)).collect::<String>(),
+    )
+    .expect("write big_file");
+    let slice_big = engine.pre_tool_call(
+        "read_file",
+        &serde_json::json!({ "Path": big_file.to_string_lossy() }),
+    );
+    assert!(slice_big.allowed);
+    assert_eq!(
+        slice_big.overwrite,
+        Some(serde_json::json!({ "StartLine": 1, "EndLine": 250 }))
+    );
+
+    let grep_ow = engine.pre_tool_call(
+        "run_command",
+        &serde_json::json!({ "CommandLine": "grep -rn foo ." }),
+    );
+    assert!(grep_ow.allowed);
+    let ow_cmd = grep_ow
+        .overwrite
+        .as_ref()
+        .and_then(|v| v.get("CommandLine"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(ow_cmd.contains("--exclude-dir=node_modules"));
+    assert!(ow_cmd.contains("awk 'NR<=180"));
+
+    let audits = storage
+        .query_audit_events(&Default::default())
+        .expect("query_audit_events");
+    assert!(audits
+        .iter()
+        .any(|ev| ev.category == "hook_pre_token_guard"));
 }
 
 #[tokio::test]

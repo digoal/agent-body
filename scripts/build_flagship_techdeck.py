@@ -109,7 +109,7 @@ def build_tech_deck() -> None:
                 "Step 3/4：不知上游 Cron/Systemd 依赖改崩服务，扫爆 node_modules 稀释上下文",
                 "Step 4/4：跨 IDE 切换即失忆——宿主机需要一层永驻、确定性的具身底座",
             ],
-            "next": "确立脑体分离后，看整套系统的四层分层拓扑与 88 方法三引擎 Storage SPI。",
+            "next": f"确立脑体分离后，看整套系统的四层分层拓扑与 {SPI_CNT} 方法三引擎 Storage SPI。",
             "script": (
                 "做系统架构最怕切错问题边界。过去一年开源社区涌现大量 Agent Memory 项目，但它们把持久化状态窄化成了聊天记录向量检索。\n"
                 "图中五处红色事故点没有一个是给聊天记录建向量索引能解决的。因此我们把抽象层下沉一级：LLM 是瞬态大脑，Agent Body 是永驻宿主机的具身底座。"
@@ -237,7 +237,7 @@ def build_tech_deck() -> None:
             "anim_caps": [
                 "Step 1/4：四通道采集——FileWatcher(500ms防抖) / PostToolUse(AutoSync) / 60s /proc / 1800s 巡检",
                 "Step 2/4：净化与写穿——改写标 embedding_status='stale'；删除清 links/fact_nodes/归档 memories",
-                "Step 3/4：88 SPI 落盘——SQLite AFTER INS/UPD/DEL 触发器自动同步 6 列 assets_fts 与 trigram",
+                f"Step 3/4：{SPI_CNT} SPI 落盘——SQLite AFTER INS/UPD/DEL 触发器自动同步 6 列 assets_fts 与 trigram",
                 "Step 4/4：EventBus → [[hooks]]/[[pipelines]] + Web SSE 推送，下次 brief/changes_since 即刻可见",
             ],
             "next": "节点元数据与实时入库机制齐备后，看如何织成 L1/L2/L3 有向加权图谱并桥接 CodeGraph。",

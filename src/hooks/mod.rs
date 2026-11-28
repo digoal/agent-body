@@ -9,6 +9,8 @@ pub mod dispatcher;
 pub mod event_bus;
 pub mod pipeline;
 pub mod push;
+pub mod token_guard;
+pub(crate) mod token_guard_templates;
 
 pub use auto_sync::{AutoSyncEngine, AutoSyncResult};
 pub use client_gen::{
@@ -27,6 +29,7 @@ pub use pipeline::{
 #[cfg(unix)]
 pub use push::UdsBroadcaster;
 pub use push::{bridge_event_bus_to_sse, WebhookDeliveryReport, WebhookPusher};
+pub use token_guard::{TokenGuardDecision, TokenGuardEngine, TokenGuardPolicy};
 
 /// Agent Body 系统生命周期与宿主物理事实事件枚举 (零捏造，规约 #5)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -65,13 +65,13 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 |---|---|---|
 | `Cargo.toml`, `Cargo.lock` | Rust 依赖与工作空间配置（旗舰 root + `kernel/*` + `contrib/*` + `distributions/*`） | 引入新 crate 需考虑编译耗时与轻量化 |
 | `kernel/` | 纯机制微内核底座（3 crates：`body-sdk` / `body-protocol` / `body-kernel`） | 单向依赖隔离，0 业务词污染（`make arch-check`） |
-| `contrib/` | 独立周边扩展插件目录（11 个标准五件套模块，含 `obs_telemetry` 可观测导出与 `mem_pg_tx` PG 事务海马体） | 严格 `ext_<id>__*` 前缀、`body_module_magic!()` 与 `contrib/<ext>/tests/regress.rs` |
+| `contrib/` | 独立周边扩展插件目录（12 个标准五件套模块，含 `obs_telemetry`、`mem_pg_tx` 与 `graph_relate`） | 严格 `ext_<id>__*` 前缀、`body_module_magic!()` 与 `contrib/<ext>/tests/regress.rs` |
 | `distributions/` | 多发行版组装入口（3 精简版：`kernel-minimal` / `aiops-probe` / `dba-sentinel`） | 精简版 0 DuckDB / 0 C++ 运行时依赖，内置 `self-check` |
 | `scripts/arch_boundary_check.py` | 微内核防腐与 `contrib/` 五件套边界门禁脚本 | 纳管于 `make quality-gate` |
 | `src/` | Rust 旗舰版源码目录（27 个顶层模块） | 旗舰业务实现与单元测试所在（`<1000L` / 模块） |
 | ├── `src/config/` | 配置文件结构体与 `~/.agent-body/config.toml` 引导、参数校验 | 保持向后兼容 |
 | ├── `src/preflight/` | 运行时环境与依赖完整性预检引擎 | 严格保障可移植部署与优雅降级 |
-| ├── `src/storage/` | SQLite/PG/DuckDB 三引擎、88 方法 SPI 抽象、27 张表与分域子模块 (`{assets,facts,memory,locks,audit}.rs`) | 任何表变更必须同步 schema |
+| ├── `src/storage/` | SQLite/PG/DuckDB 三引擎、95 方法 SPI 抽象、28 张表与分域子模块 (`{assets,facts,memory,locks,audit}.rs`) | 任何表变更必须同步 schema |
 | ├── `src/audit/` | 双域行为审计（`IN_AGENT`/`OUT_OF_AGENT`）、脱敏防洪与 AOPCC 自进化 | 写入严禁 Panic，强制脱敏 |
 | ├── `src/body/` | Agent 本体中枢（`BodyManifest`、`<300 tok` 接力胶囊、五维稳态、`L0~L3` 包络、`ShadowAbEngine` `H1~H5` 自愈、`perf_awr/*`） | 严守脑体分离不内置 LLM 循环 |
 | ├── `src/coordination/` | 多 Agent 协作锁中枢 (Port/Dir/File 互斥、TTL、WFG 死锁、Advisory Lock) | 跨 Agent 资源互斥保证 |
@@ -86,7 +86,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/links/` | 分层加权关联拓扑图、Mermaid 导出、断链审计与 CodeGraph 桥接 | AST 引用提取与宏微联邦 |
 | ├── `src/changes/` | 变更历史回溯与 Agent 会话简报 | 生成开工 markdown |
 | ├── `src/session/` | 会话绑定、完工结清与临时垃圾回收 | 会话生命周期自洁 |
-| ├── `src/hooks/` | 事件总线、`AutoSyncEngine`、客户端生成器与 `OptimisticFailureDiagnoser` | POSIX 转义防注入与碰壁自愈 |
+| ├── `src/hooks/` | 事件总线、`AutoSyncEngine`、客户端生成器（含 `token_optimizer.py` + `.ripgreprc`）、`TokenGuardEngine` 与 `OptimisticFailureDiagnoser` | POSIX 转义防注入、Token 守卫与碰壁自愈 |
 | ├── `src/api/` | 43 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI/Web 1:1:1 映射 |
 | ├── `src/benchmark/` | 双轨/三轨实证 Benchmark `v4.1` 引擎（`W1~W22` + `M1~M6` + `DQ1~DQ12` + `COMP-C1~C4` + `PR-01~16` 账本） | 必须真机实测与 SHA-256 存证 |
 | ├── `src/demo/` | 路演沙盒引擎（7 大黄金剧目、ROI 核算、`demo:*` 隔离） | 严禁假数据，必须真引擎实跑 |
@@ -117,7 +117,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 flowchart TD
     A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 docs/src_doc/roadmap-phase*.md)"]
     B --> C["步骤 3: 串行编码与单元测试驱动<br/>(TDD + cargo test 局部验证)"]
-    C --> D["步骤 4: 编译检查与全量回归<br/>(workspace 435 tests 全绿 + release 构建)"]
+    C --> D["步骤 4: 编译检查与全量回归<br/>(workspace 452 tests 全绿 + release 构建)"]
     D --> E["步骤 5: 文档同步与交付三段式小结<br/>(更新手册/README + 状态标记)"]
 ```
 
@@ -146,7 +146,7 @@ flowchart TD
    ```bash
    export PATH="$HOME/.cargo/bin:$PATH" && RUST_TEST_THREADS=1 cargo test --workspace
    ```
-   **门禁要求**: 全工作区 **435 项测试全部 `ok`**（根包 387 + `kernel` 27 + `contrib` 17 + `distributions` 4），0 failed；改动 Web/Schema/API 时追加通过 `make verify-webui`（Playwright 9 工作台 + 老库无损迁移 E2E）。
+   **门禁要求**: 全工作区 **452 项测试全部 `ok`**（根包 401 + `kernel` 27 + `contrib` 20 + `distributions` 4），0 failed；改动 Web/Schema/API 时追加通过 `make verify-webui`（Playwright 9 工作台 + 老库无损迁移 E2E）。
 2. 运行 release 生产构建（旗舰版与精简发行版按需编译）：
    ```bash
    export PATH="$HOME/.cargo/bin:$PATH" && cargo build --release
@@ -210,7 +210,7 @@ flowchart TD
 - [ ] **本体边界与命名兼容自检（规约 #2 & #27）**：是否严守脑体分离不内置业务 LLM 规划循环？自治行为是否遵守 `L0~L3` 权限包络（不越权执行 `L2/L3`）？对外叙事升级为「Agent 本体」的同时，是否保证 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`/`pg_schema.sql`/`duckdb_schema.sql`、`models.rs`、`spi.rs` 保持同步，并在 `src/storage/sqlite_provider/schema_reconcile.rs` 与 `tests/schema_migration_regression.rs` 覆盖老库无损迁移？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
-- [ ] 是否运行 `make citizen-impact` 按 16 类一等公民图谱完成了毛细血管传导，并通过 `make quality-gate`（`evolution-check` + `citizen-audit` 7 项动态交叉审计 + `arch-check` 防腐边界 + `lint-panic` + `lint-hygiene` 位置无关/`>1000L` 清零/`let _ = <= 15`/`18/18 WaitEventId` + `lint-strict` 零警告编译）与 `RUST_TEST_THREADS=1 cargo test --workspace`（**435 项全绿**）？改动 Web/Schema/API/演说时是否已通过 `make verify-webui` 与 `make verify-decks`？
+- [ ] 是否运行 `make citizen-impact` 按 16 类一等公民图谱完成了毛细血管传导，并通过 `make quality-gate`（`evolution-check` + `citizen-audit` 7 项动态交叉审计 + `arch-check` 防腐边界 + `lint-panic` + `lint-hygiene` 位置无关/`>1000L` 清零/`let _ = <= 15`/`18/18 WaitEventId` + `lint-strict` 零警告编译）与 `RUST_TEST_THREADS=1 cargo test --workspace`（**452 项全绿**）？改动 Web/Schema/API/演说时是否已通过 `make verify-webui` 与 `make verify-decks`？
 - [ ] **二进制位置无关与发版一致性自检（规约 #11 & #28）**：生产路径是否 0 处 `env!("CARGO_MANIFEST_DIR")`？改名/核心修复提交后是否已重编安装 `make restart` 并核验 `agent-body --version` hash 与 `HEAD` 一致且 `DQ5 >= 98%`？
 - [ ] 是否执行了 `agent-body preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？

@@ -47,11 +47,13 @@
 | **Phase 76 (M1)** | **PostgreSQL SPI 事务级海马体 · 方案 A 事务底座 (`PgTxMemoryProvider`)** | 落地非破坏性 `TxMemoryProvider` SPI、第 11 扩展 `contrib/mem_pg_tx/` 五件套与前后向兼容 4 表 DDL、有界连接池 + 同键微序列化写穿 + `REPEATABLE READ` 快照读 + LSM 解耦段 + SQLite 降级 + `tx_epoch` 贯通 AOPCC/胶囊/老库自愈 + `W20` 压测（PG 18 实测 16 线程 80tx 丢写 `0%`、P50 `3.28ms` / P99 `4.34ms`、僵尸召回 `0%`） | `#55` | [roadmap-phase76-78.md](roadmap-phase76-78.md) | ✅ **已完成** |
 | **Phase 77 (M2)** | **方案 A 满血形态 · `L1_AUTONOMIC` 空闲期睡眠整理 (`SleepTimeCompactor`)** | STC 显著性打分 (`SalienceScorer`)、空闲窗口探测与异步压缩、不可预测查询自动旁路、双域审计全留痕与 Benchmark `v4.0` (`W21`/`DQ11`/`PR-15`)（PG 18.6 实测压缩比 `3.73×` `272→73 tok`、事实保留 `100%`、热路径 `P50=5.19ms` / `P99=10.65ms`） | `#55` | [roadmap-phase76-78.md](roadmap-phase76-78.md) | ✅ **已完成** |
 | **Phase 78 (M3)** | **方案 B 旁路快权重快照血缘与神经 Compaction 门禁** | `FastWeightCheckpointSpi` + JSON-RPC 2.0 Runtime 线协议（零推理/权重进本体）、`fast_weight_snapshots` 递归血缘、三道硬门禁 (`norm_ratio`/`eval_glue_delta`/`unlearn_leak_rate`) 原子切换、`selective_unlearn` 定向遗忘、`tx_epoch` 秒级回滚、`ContinuityCapsule v2`（`base_model_id` 同基座热挂）与 Bench `v4.1` (`W22`/`DQ12`/`PR-16`)（PG 18.6 100 万事件实测 `search_tx P50=2.66ms`/`P99=4.42ms`、`lineage P99=1.94ms`、回滚 `24ms`） | `#55` | [roadmap-phase76-78.md](roadmap-phase76-78.md) | ✅ **已完成** |
+| **Phase 79** | **超集检索 × DB 侧模糊索引 × 真基线 A/B 与 `contrib/graph_relate`** | `assets.content_text` 脱敏正文索引 + 6 列 `assets_fts` + 第 28 张虚表 `assets_trigram_fts`（95 SPI / 28 表）、`QueryIntent`/`apply_precision_gate` 防噪门禁、`live_search` 真基线 A/B 对照、第 12 扩展 `contrib/graph_relate`（嵌入式 openCypher） | `#56` | [roadmap-phase79.md](roadmap-phase79.md) | ✅ **已完成** |
+| **Phase 80** | **原生 PreToolUse Token 守卫 × 默认忽略扩展 × 开箱优化套件** | `TokenGuardEngine`（噪音目录/锁文件/单行压缩拦截、大文件首屏切片 `overwrite`、`rg`/`grep -r`/`find` 自动过滤与 `180` 行上限）、`hooks generate --client agy` 3 伴生文件（含 `token_optimizer.py` + `.ripgreprc`）、`mcp_profile="dev"` 减税 `-58.1%` 工具/`-51.6%` 字节、`graph_relate` 卫生清零与 **452 项全工作区测试全绿** | `#57` | [roadmap-phase80.md](roadmap-phase80.md) | ✅ **已完成** |
 
 ---
 
 ## 三、断点恢复指引
 
-1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase76-78.md](roadmap-phase76-78.md)；
+1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase80.md](roadmap-phase80.md)；
 2. 严禁全仓扫描 `docs/src_doc/archive/` 内已冻结的历史路线图；
 3. 每次代码/文档改动收口前执行 `make quality-gate && RUST_TEST_THREADS=1 make test`（改动 Web/演说时追加 `make verify-webui` / `make verify-decks`）与 `make sync-mirror` 校验零漂移。

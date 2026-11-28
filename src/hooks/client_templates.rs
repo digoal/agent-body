@@ -31,6 +31,35 @@ pub(crate) const AGY_HOOKS_JSON_TEMPLATE: &str = r#"{
           }
         ]
       }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "python3 ./hooks/body_bridge.py pre_invocation",
+        "timeout": 2
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python3 ./hooks/body_bridge.py stop",
+        "timeout": 3
+      }
+    ]
+  },
+  "token-optimizer": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "read_file|view_file|run_command|grep_search|find_by_name",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ./hooks/token_optimizer.py",
+            "timeout": 3
+          }
+        ]
+      }
     ]
   }
 }
@@ -45,6 +74,8 @@ Antigravity (agy) <-> Agent Body (CLI) 生命周期硬 Hook 桥接脚本
   body_bridge.py session_start
   body_bridge.py pre_tool
   body_bridge.py post_tool
+  body_bridge.py pre_invocation
+  body_bridge.py stop
 """
 
 import json
@@ -350,7 +381,9 @@ def handle_post_tool() -> None:
                     )
                     if actions:
                         hint += " | 建议动作: " + " ; ".join(str(a) for a in actions[:3])
-                    emit({"additionalContext": hint})
+                    # agy PostToolUse 仅接收 {}，暂存处方供下一轮 PreInvocation injectSteps 注入
+                    _write_rx_cache(payload, hint)
+                    emit({})
                     return
         except Exception:
             pass
@@ -391,6 +424,71 @@ def handle_post_tool() -> None:
     emit({})
 
 
+def _rx_cache_path(payload: Dict[str, Any]) -> str:
+    conv_id = str(payload.get("conversationId") or "default")
+    safe_id = re.sub(r"[^a-zA-Z0-9._-]", "_", conv_id)[:64] or "default"
+    return os.path.expanduser(f"~/.agent-body/tmp/agy_rx_{safe_id}.txt")
+
+
+def _write_rx_cache(payload: Dict[str, Any], hint: str) -> None:
+    try:
+        p = _rx_cache_path(payload)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(hint)
+    except Exception:
+        pass
+
+
+def handle_pre_invocation() -> None:
+    payload = read_stdin_json()
+    p = _rx_cache_path(payload)
+    if not os.path.exists(p):
+        emit({})
+        return
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            hint = f.read().strip()
+        try:
+            os.remove(p)
+        except Exception:
+            pass
+        if hint:
+            emit(
+                {
+                    "injectSteps": [
+                        {
+                            "systemMessage": {
+                                "systemMessage": hint
+                            }
+                        }
+                    ]
+                }
+            )
+            return
+    except Exception:
+        pass
+    emit({})
+
+
+def handle_stop() -> None:
+    payload = read_stdin_json()
+    reason = str(payload.get("terminationReason") or "")
+    conv_id = str(payload.get("conversationId") or "").strip()
+    if reason == "NO_TOOL_CALL" and conv_id and os.path.exists(BODY_BIN):
+        try:
+            subprocess.Popen(
+                [BODY_BIN, "close", conv_id, "--clean-temp=false"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except Exception:
+            pass
+    emit({})
+
+
 def _is_bypass_mode() -> bool:
     env_mode = os.environ.get("AGENT_BODY_MODE", "").strip().lower()
     if env_mode in ("bypass", "off", "passthrough"):
@@ -422,6 +520,10 @@ def main() -> None:
         handle_pre_tool()
     elif mode == "post_tool":
         handle_post_tool()
+    elif mode == "pre_invocation":
+        handle_pre_invocation()
+    elif mode == "stop":
+        handle_stop()
     else:
         emit({})
 
@@ -445,7 +547,7 @@ pub(crate) const CLAUDE_SETTINGS_JSON_TEMPLATE: &str = r#"{
     ],
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit|Bash",
+        "matcher": "Write|Edit|MultiEdit|Bash|Read|Grep|Glob",
         "hooks": [
           {
             "type": "command",
@@ -546,7 +648,16 @@ def main() -> None:
         emit({})
         return
 
-    mapped_name = "write_file" if tool_name in ("Write", "Edit", "MultiEdit") else ("run_command" if tool_name == "Bash" else tool_name)
+    tool_map = {
+        "Write": "write_file",
+        "Edit": "edit_file",
+        "MultiEdit": "edit_file",
+        "Bash": "run_command",
+        "Read": "read_file",
+        "Grep": "grep_search",
+        "Glob": "find_by_name",
+    }
+    mapped_name = tool_map.get(tool_name, tool_name)
     args_dict = dict(tool_input)
     if "file_path" in tool_input and "path" not in args_dict:
         args_dict["path"] = tool_input["file_path"]
@@ -563,12 +674,15 @@ def main() -> None:
                 check=False,
             )
             data = json.loads(proc.stdout) if proc.returncode == 0 and proc.stdout.strip() else {}
-            if str(data.get("action") or "").upper() == "BLOCK":
+            if not data.get("allowed", True) or str(data.get("action") or "").upper() == "BLOCK":
+                warnings = data.get("warnings") or []
+                suggestions = data.get("suggestions") or []
+                reason = " ; ".join(warnings + suggestions) or data.get("message") or "Blocked by Agent Body pre-hook"
                 emit({
                     "hookSpecificOutput": {
                         "hookEventName": "PreToolUse",
                         "permissionDecision": "deny",
-                        "permissionDecisionReason": data.get("message") or "Blocked by Agent Body pre-hook",
+                        "permissionDecisionReason": reason,
                     }
                 })
                 return

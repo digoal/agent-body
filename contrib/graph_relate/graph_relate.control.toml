@@ -1,0 +1,19 @@
+[extension]
+id = "graph_relate"
+version = "0.1.0"
+kind = "compiled_crate"
+min_sdk_version = "2.0"
+requires = []
+relocatable = true
+
+[schema]
+migration_dir = "sql/"
+table_prefix = "ext_graph_relate__"
+default_autonomy = "L0_OBSERVE"
+
+[capabilities]
+provides_types = []
+provides_fdws = []
+provides_workers = []
+provides_hooks = []
+provides_procs = ["ext_graph_relate_status", "ext_graph_relate_query", "ext_graph_relate_impact"]

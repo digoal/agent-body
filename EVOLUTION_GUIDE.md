@@ -1,6 +1,6 @@
 # Agent Body — 自进化工程手册与零重扫演进活地图 (`EVOLUTION_GUIDE.md`)
 
-<!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=95 tables=28 workloads=22 micro=6 dq=12 pr_rules=16 kernel_crates=3 contrib_exts=11 distributions=3 verified_tests=440 -->
+<!-- MANIFEST: modules=27 mcp_tools=43 spi_methods=95 tables=28 workloads=22 micro=6 dq=12 pr_rules=16 kernel_crates=3 contrib_exts=12 distributions=3 verified_tests=452 -->
 
 > **核心定位（解决 ISSUE #17 / #22 / #26 / #52）**：同时统筹 Agent Body 的**运行时自进化飞轮**与**工程态零重扫演进闭环**——让任何新接手的 AI Agent 或开发者在不重复扫描全仓源码与 70+ 份历史阶段文档的前提下，**2 轮以内**完成需求定位、变更触点锁定、无损升级校验与高质量交付。
 
@@ -25,7 +25,7 @@ flowchart LR
         direction TB
         E1["Tier-0 零重扫开工<br/>(本文件 + 最新路线图 + evolution-check<br/>+ codegraph explore)"]
         E2["16 类一等公民 O(1) 传导<br/>(make citizen-impact 锁定毛细血管<br/>0 Panic / <1000L / kernel 防腐)"]
-        E3["六重门禁 + 全栈回归<br/>(make quality-gate [含 citizen-audit]<br/>+ 440 tests + verify-webui/decks)"]
+        E3["六重门禁 + 全栈回归<br/>(make quality-gate [含 citizen-audit]<br/>+ 452 tests + verify-webui/decks)"]
         E4["发版对账与一等公民齐平<br/>(make restart + git_hash 核验<br/>feedback reconcile DQ5>=98% + sync-mirror)"]
         E1 --> E2 --> E3 --> E4 --> E1
     end
@@ -42,7 +42,7 @@ flowchart LR
 
 1. **只读 `Tier-0` 入口（仅 2 份文档）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构锚点 + 10 大场景变更触点矩阵 + 模块/测试坐标）；
-   - 当前最新活跃路线图 [docs/src_doc/roadmap-phase79.md](docs/src_doc/roadmap-phase79.md)（`ISSUE #56` 超集检索 × DB 侧模糊索引 × 真基线 A/B；历史 PG 事务海马体方案 A→B 见 [docs/src_doc/roadmap-phase76-78.md](docs/src_doc/roadmap-phase76-78.md)；已完成基线见 [docs/src_doc/roadmap-phase75.md](docs/src_doc/roadmap-phase75.md) 与 [docs/src_doc/progress.md](docs/src_doc/progress.md)）。
+   - 当前最新活跃路线图 [docs/src_doc/roadmap-phase80.md](docs/src_doc/roadmap-phase80.md)（`ISSUE #57` 原生 PreToolUse Token 守卫 × `.ripgreprc` × `mcp_profile` 减税；历史 Phase 79 超集检索见 [docs/src_doc/roadmap-phase79.md](docs/src_doc/roadmap-phase79.md)；PG 事务海马体方案 A→B 见 [docs/src_doc/roadmap-phase76-78.md](docs/src_doc/roadmap-phase76-78.md)；已完成基线见 [docs/src_doc/roadmap-phase75.md](docs/src_doc/roadmap-phase75.md) 与 [docs/src_doc/progress.md](docs/src_doc/progress.md)）。
 2. **运行 O(1) 实时架构快照与一等公民变更路由（`<100ms`，禁止手工扫全仓）**：
    ```bash
    # 看全局计数与漂移校验
@@ -140,7 +140,7 @@ flowchart LR
 | `src/env/` | `EnvCollector`, `PortChecker`, `HostGarbageCollector` | `/proc` 任务采集（脱敏+去噪）、端口防撞与白名单 `dry-run` GC |
 | `src/fact/` | `FactFacade`, `CapabilityEngine`, `ProcessNetTopology`, `AutomationScanner`, `PropertyGraphOrganizer`, `KnowledgeGraphBuilder`, `KnowHowExtractor` | 宿主机客观事实图谱（工具/端口/Systemd/Cron/资料编目、`L1~L3` 属性图与 Know-How 知识网络） |
 | `src/feedback/` | `FeedbackEngine`, `FreshnessReconciler`, `SelfEvolutionProbeEngine` | `user_feedback.md` 双向总账、新鲜度写穿对账与 `P1~P5` 五点对比自进化探针 |
-| `src/hooks/` | `EventBus`, `HookDispatcher`, `ClientHookGenerator`, `HookPipelineEngine`, `OptimisticFailureDiagnoser` | 事件总线、POSIX 转义防注入、客户端生成与 `<2ms` 碰壁处方自愈 |
+| `src/hooks/` | `EventBus`, `HookDispatcher`, `ClientHookGenerator`, `HookPipelineEngine`, `OptimisticFailureDiagnoser`, `TokenGuardEngine` | 事件总线、POSIX 转义防注入、客户端生成（含 `token_optimizer.py`+`.ripgreprc`）、PreToolUse Token 守卫与 `<2ms` 碰壁处方自愈 |
 | `src/links/` | `LinksEngine`, `ImpactAnalyzer`, `LinkAuditor`, `LinkRepairer`, `CodeGraphBridge` | 宏观依赖拓扑、加权 3 跳爆炸半径、假阳性免疫与 CodeGraph 桥接 |
 | `src/memory/` | `MemoryManager`, `TxMemoryProvider`, `PgTxMemoryAdapter`, `MemoryFactory`, `MemoryIntakeFilter` | FTS5+CJK+Ollama RRF 混合检索、PG 事务级海马体 (`pg_tx` 透明降级)、SPI 与 Mem0/Letta/PowerContext 适配 |
 | `src/mesh/` | `MeshClient`, `MeshNodeFacts`, `MeshEnvelope` | 轻量多机联邦 HTTP Peer Mesh、HMAC 防重放信封、跨机对话与 `<=10MB` 沙盒收件箱 |
@@ -159,16 +159,16 @@ flowchart LR
 | 层次 | 成员清单 | 防腐门禁与自检命令 |
 |---|---|---|
 | **微内核 `kernel/` (3 Crates)** | `body-sdk` · `body-protocol` · `body-kernel`（8 张 `body_cat_*` 目录 + 7 Hook + 6 Routine + `ObservabilityProvider` + 轨 B 沙盒） | `make arch-check`（单向依赖，0 业务词/观测协议词污染） |
-| **周边 `contrib/` (11 五件套)** | `idx_fts_fuzzy` · `gov_placement` · `probe_db_engines` · `probe_linux_ops` · `probe_jvm_middleware` · `hook_auth_mtls_rbac` · `hook_gov_compliance` · `hook_audit_siem` · `fdw_cmdb_ticket` · `obs_telemetry` · `mem_pg_tx` | `ext_<id>__*` 表前缀隔离 + `body_module_magic!()` + `contrib/<ext>/tests/regress.rs` |
+| **周边 `contrib/` (12 五件套)** | `idx_fts_fuzzy` · `gov_placement` · `probe_db_engines` · `probe_linux_ops` · `probe_jvm_middleware` · `hook_auth_mtls_rbac` · `hook_gov_compliance` · `hook_audit_siem` · `fdw_cmdb_ticket` · `obs_telemetry` · `mem_pg_tx` · `graph_relate` | `ext_<id>__*` 表前缀隔离 + `body_module_magic!()` + `contrib/<ext>/tests/regress.rs` |
 | **发行版 `distributions/` (3 精简版)** | `kernel-minimal` (`~3.9M`) · `aiops-probe` (`~6.7M`) · `dba-sentinel` (`~6.4M`) | 零 DuckDB / 零 C++ 运行时；内置 `self-check` / `metrics` / `diagnose` |
 
-### 4.3 20 套自动化集成与回归测试矩阵（全工作区 `440` 项测试）
+### 4.3 21 套自动化集成与回归测试矩阵（全工作区 `452` 项测试）
 
 | 测试类别 | 覆盖文件（`tests/`） | 守护目标 |
 |---|---|---|
 | **存储契约、事务记忆与无损迁移** | `tests/schema_migration_regression.rs` · `tests/storage_spi_contract.rs` · `tests/duckdb_integration.rs` · `tests/pg_tx_memory_integration.rs` · `tests/sleep_compaction_integration.rs` · `tests/fast_weight_m3_integration.rs` | 老库列改名/补列无损自愈（含 `tx_epoch` 与 `Continuity v2` 快权重列）、FTS5 重建、WAL 控容、SQLite/DuckDB 12 域等价、PG 18 MVCC 压测、M2 睡眠整理、M3 百万事件流与三门禁回滚 |
 | **全端 E2E 与 Parity** | `tests/superset_search_regression.rs` · `tests/mcp_all_tools_e2e.rs` · `tests/web_full_e2e.rs` · `tests/test_web_dashboard.rs` · `tests/cli_e2e.rs` | 43/43 MCP 工具真调用与必填校验、Web 全工作台 API & 鉴权 & 错误透传、CLI 端到端行为 |
-| **核心引擎与协同安全** | `tests/coordination_integration.rs` · `tests/deadlock_wait_integration.rs` · `tests/mesh_integration.rs` · `tests/ecosystem_integration.rs` · `tests/hooks_integration.rs` | 目录祖先/后代互斥锁、WFG 死锁唤醒、Mesh HMAC 防重放与收件箱隔离、Hook 自动同步与碰壁自愈 |
+| **核心引擎与协同安全** | `tests/coordination_integration.rs` · `tests/deadlock_wait_integration.rs` · `tests/mesh_integration.rs` · `tests/ecosystem_integration.rs` · `tests/hooks_integration.rs` · `tests/relate_graph_integration.rs` | 目录祖先/后代互斥锁、WFG 死锁唤醒、Mesh HMAC 防重放与收件箱隔离、Hook 自动同步/Token Guard `deny`+`overwrite`/`<2ms` 碰壁自愈与 Relate 图谱集成 |
 | **自进化、多模态与基准** | `tests/audit_integration.rs` · `tests/body_awr_integration.rs` · `tests/multimodal_integration.rs` · `tests/benchmarks.rs` | 双域审计脱敏与自进化、AWR 快照与 `L0~L3` 包络、纯 Rust 多模态解析、`v4.1` 基准与微基准 SLA |
 
 ---
@@ -181,7 +181,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 # 0. O(1) 锁定本次改动受影响的一等公民毛细血管（<100ms，禁止手工扫描全仓）
 make citizen-impact
 
-# 1. 必跑：六重确定性门禁 (evolution + citizen-audit + arch + panic + hygiene + strict) + 全工作区 440 项测试
+# 1. 必跑：六重确定性门禁 (evolution + citizen-audit + arch + panic + hygiene + strict) + 全工作区 452 项测试
 make quality-gate && RUST_TEST_THREADS=1 make test
 
 # 2. 改动 Web / 存储 Schema / API 时必跑：Playwright 9 大工作台 + 老库迁移 E2E

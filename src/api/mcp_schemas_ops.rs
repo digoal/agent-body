@@ -29,17 +29,17 @@ pub(crate) fn ops_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_hook_pre",
-                "description": "Agent 工作流前置检查钩子。在 Agent 执行工具调用前调用，排查即将执行的动作是否存在端口冲突、对核心系统服务的破坏性依赖变更、或文件乱放违规等风险，提供避坑指引。",
+                "description": "Agent 工作流前置检查与 Token 守卫钩子。排查端口冲突、系统服务依赖、协作锁与破坏性命令风险，同时对 read_file/run_command/grep_search 执行噪音目录/锁文件/单行压缩文件拦截及大文件切片/搜索截断 overwrite 优化。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "tool_name": {
                             "type": "string",
-                            "description": "即将调用的工具名称（如 run_command, write_file, bind_port, edit_file 等）"
+                            "description": "即将调用的工具名称（如 run_command, read_file, write_file, bind_port, edit_file 等）"
                         },
                         "args": {
                             "type": "object",
-                            "description": "工具入参对象（如包含 port, path, command 等参数键值）"
+                            "description": "工具入参对象（如包含 port, path/Path, command/CommandLine, StartLine/EndLine 等参数键值）"
                         }
                     },
                     "required": ["tool_name", "args"]
@@ -74,7 +74,7 @@ pub(crate) fn ops_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_hook_generate",
-                "description": "Agent 客户端 Hook 自动生成器。为 Antigravity (agy)、Cursor、Claude Code (含 .claude/settings.json)、Codex (AGENTS.md)、Hermes 或 Git 生成自动化 Pre/Post Hook 集成配置与执行规则脚本（规约 #13 MCP 与 CLI 1:1 映射）。",
+                "description": "Agent 客户端 Hook 与 Token 优化套件自动生成器。为 Antigravity (agy，含 body_bridge.py + token_optimizer.py + .ripgreprc)、Cursor、Claude Code (含 .claude/settings.json)、Codex (AGENTS.md)、Hermes 或 Git 生成自动化 Pre/Post Hook 集成配置（规约 #13 MCP 与 CLI 1:1 映射）。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {

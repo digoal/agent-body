@@ -149,6 +149,7 @@ Agent 本体吸收 CodeGraph 的图谱模型设计：
 - **内生 Wait Events、`/proc/self` 与 AWR/ADDM 自调优**：覆盖 6 大类 `18/18` 标准等待事件、AWR 快照黄金基线差分与 `L1_AUTONOMIC` 一键自调优（`perf-snapshot`/`perf-awr`/`perf-tune`/`perf-delete`）；
 - **实证 Benchmark 与存证账本 (`v4.1`)**：关于 A/B 对照负载（`W1`~`W22`）、内核微基准 SLA（`M1`~`M6`）、质量与 Shadow A/B/睡眠整理/快权重血缘门禁（`DQ1`~`DQ12`）、竞品对标（`COMP-C1`~`C4`）及 `PR-01`~`PR-16` 生产效能存证流水，请直接阅读专题章节 [10-benchmark-and-roi.md](10-benchmark-and-roi.md)。
 - **三态运行模式、纯 Rust 多模态 L1A (`schema_version=2.0`) 与全信号 Omni-RRF 知识网络 (Phase 58~63)**：支持 `bypass`/`shadow_ab`/`body_only` 三态动态切换与 `H1~H5` Shadow A/B 自主自愈、MCP `core`/`dev`/`ops`/`full` Schema 减税档位、纯 Rust 多模态解析与 `asset_chunk` 分块，以及 BM25 + Fuzzy + Semantic + 属性图 + 层级 + `links` + 标量调制的 7 路 Omni-RRF 召回。
+- **原生 PreToolUse Token 守卫 (`[runtime].token_guard_*`, Phase 80)**：无需额外第三方 MCP，原生支持在 `[runtime]` 配置 `token_guard_enabled`（默认 `true`）、`token_guard_max_full_read_bytes`（默认 `36864`）、`token_guard_max_full_read_lines`（默认 `600`）、`token_guard_auto_slice_lines`（默认 `250`）与 `token_guard_search_max_lines`（默认 `180`），并可通过 `AGENT_BODY_TOKEN_GUARD=0`（或 `AGY_TOKEN_OPTIMIZER=0`）环境变量一键旁路。
 
 ---
 

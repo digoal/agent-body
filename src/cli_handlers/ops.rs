@@ -332,6 +332,11 @@ pub fn handle_ops(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> {
                                     "decision": "ask",
                                     "reason": format!("[agent-body 风险预警] {}", reason)
                                 }))?);
+                            } else if let Some(ow) = res.overwrite {
+                                println!("{}", serde_json::to_string(&serde_json::json!({
+                                    "decision": "allow",
+                                    "overwrite": ow
+                                }))?);
                             } else {
                                 println!(r#"{{"decision":"allow"}}"#);
                             }
