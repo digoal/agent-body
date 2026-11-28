@@ -10,8 +10,8 @@ from deck_engine import (
     C_PAPER, C_PAPER2, C_TEAL, C_TEAL_2, C_TEAL_3, C_TEAL_D, C_TEAL_L, C_TEAL_M, C_WHITE,
     render_deck, svg_bars, svg_closing, svg_code_and_flow, svg_columns,
     svg_compare_rows, svg_cover, svg_matrix_2x2, svg_metrics_table, svg_pipeline,
-    vis_aopcc_highway, vis_blind_agent_scene, vis_brain_body_anatomy,
-    vis_comparative_scale, vis_competitor_arena, vis_do_dont_wall,
+    vis_agent_usage_mcp_hook_skill, vis_aopcc_highway, vis_blind_agent_scene, vis_brain_body_anatomy,
+    vis_comparative_scale, vis_competitor_arena, vis_do_dont_wall, vis_env_change_to_db_pipeline,
     vis_host_graph_federation, vis_lock_and_wfg, vis_parity_console,
     vis_roadmap_journey, vis_three_tier_pyramid, vis_tiered_scan_doors,
     vis_vitals_radar_autonomy,
@@ -734,14 +734,33 @@ def build_talk_02() -> None:
                 ],
                 ("现网 agent-body.service 常驻运行，单二进制内存极低，零人工干预维持全机感官鲜活。", "systemctl is-active -> active", "teal"),
             ),
-            "next": "感官数据收集齐了，但不能一股脑全倒进上下文——我们如何做到「索引先行，按需下钻」？",
+            "next": "文件改删、进程启停、端口切换之后，这些变化究竟是通过什么机制精准写进数据库并同步索引的？",
             "script": (
                 "感官系统最怕两个极端：要么不更新变成死数据，要么一保存代码就触发几十次事件把数据库写爆。\n"
                 "我们采用了动静双轨：静的是每 1800 秒跑一次的 `BackgroundScheduler`，做全机进程同步、属性图更新、新鲜度对账和向量补全；动的是 `inotify` 实时监听，文件一删立刻级联清理 FTS 和幽灵节点，同时用 60 秒窗口折叠高频编译事件，彻底消灭日志洪泛。"
             ),
         },
         {
-            "eyebrow": "09 · 索引先行原则",
+            "eyebrow": "09 · 环境变更入库机制",
+            "title": "环境变化如何落入数据库：四通道感知 × FTS5 触发器 × 级联写穿全景",
+            "lead": "不只靠 `inotify` 单兵作战——<b>四条采集通道 + 写穿失效 + 数据库 `AFTER Trigger` 原子同步</b>，保证库内真值毫秒保鲜。",
+            "svg": vis_env_change_to_db_pipeline(animated=True),
+            "anim_caps": [
+                "Step 1/4：四大采集通道——inotify 文件监听 / PostToolUse 回写 / 60s /proc 探针 / 1800s 巡检",
+                "Step 2/4：净化与写穿——改写将旧向量标 stale；删除立即标 missing 并清边、清幽灵节点与归档记忆",
+                "Step 3/4：88 SPI 落盘三引擎——assets 与 skills_catalog 靠 SQLite AFTER Trigger 自动同步 FTS5",
+                "Step 4/4：EventBus 推向配置流水线与 Web SSE，下次 brief / changes_since 即刻可见最新状态",
+            ],
+            "next": "感官数据收集齐了，但不能一股脑全倒进上下文——我们如何做到「索引先行，按需下钻」？",
+            "script": (
+                "把镜头拉近，看看宿主机环境发生变化后到底是怎么一步步体现在 Agent Body 数据库里的。\n"
+                "第一层是四条采集通道互补：常驻的 `FileWatcher` 走 `inotify`/`FSEvents`，500 毫秒防抖后送给 `ChangeHandler`；Agent 自己改完文件由 `PostToolUse` 钩子异步拉起 `AutoSyncEngine` 立即入库；`EnvCollector` 每 60 秒直读 `/proc` 与监听端口，过滤底噪并脱敏后事务级替换 `active_processes`；最后 `BackgroundScheduler` 每 1800 秒在独立 OS 线程跑 `FreshnessReconciler::reconcile` 做全量现实对账与生态目录重扫。\n"
+                "第二层是净化筛选与增删改写穿：新增或改写文件时，`merge_with_existing_asset` 发现内容哈希变了，立刻把旧向量标 `stale`；删除文件或关停端口时，不仅把 `assets.status` 置为 `missing`，还同步清理 `links` 双向断链、`fact_nodes` 幽灵节点并归档旧摘要记忆。\n"
+                "第三层是数据库自动触发器：`schema_reconcile.rs` 为 `assets` 和 `skills_catalog` 建好了 `AFTER INSERT/UPDATE/DELETE` 触发器，主表一变，6 列 `assets_fts`、`assets_trigram_fts` 和 `skills_catalog_fts` 自动原子更新，再经 `EventBus` 推到 Web SSE。"
+            ),
+        },
+        {
+            "eyebrow": "10 · 索引先行原则",
             "title": "Brief 索引先行 + Skill 防爆路由：为什么能省下 99% Token",
             "lead": "把 120+ SKILL 和两万个资产的全文直接塞进 Prompt 是灾难。<b>先给轻量地图，命中再按需加载</b>。",
             "svg": svg_metrics_table(
@@ -769,7 +788,7 @@ def build_talk_02() -> None:
             ),
         },
         {
-            "eyebrow": "10 · 竞品实测对标",
+            "eyebrow": "11 · 竞品实测对标",
             "title": "同机同数据对标 OpenViking、AgentFS 与原生 CLI 组合",
             "lead": "不靠 PPT 嘴炮，我们在 <b>COMP-C2 / C3 / C4</b> 中写好真实对照代码，同机实跑验收差距。",
             "svg": svg_compare_rows(
@@ -788,7 +807,7 @@ def build_talk_02() -> None:
             ),
         },
         {
-            "eyebrow": "11 · 现场实操命令",
+            "eyebrow": "12 · 现场实操命令",
             "title": "工程师 6 条高频感官命令：黑屏敲完即刻验证",
             "lead": "所有感官能力全部开放为确定性 CLI 与等价 MCP 工具，<b>零门槛复现本讲全部结论</b>。",
             "svg": svg_code_and_flow(
@@ -825,7 +844,7 @@ def build_talk_02() -> None:
             ),
         },
         {
-            "eyebrow": "12 · 边界与诚实清单",
+            "eyebrow": "13 · 边界与诚实清单",
             "title": "感官图谱的适用边界与已知权衡",
             "lead": "做工程必须讲清前提假设：<b>物理感官不是魔法，以下三种场景需要明确认知边界</b>。",
             "svg": svg_columns(
@@ -869,7 +888,7 @@ def build_talk_02() -> None:
             ),
         },
         {
-            "eyebrow": "12 · 收束",
+            "eyebrow": "14 · 收束",
             "title": "先让 Agent 睁开眼睛，再谈一切智能协同",
             "lead": "没有物理感官图谱，大模型永远在黑暗中试错；有了它，<b>每一次动手前都站在客观事实之上</b>。",
             "svg": svg_closing(
@@ -1095,14 +1114,33 @@ def build_talk_03() -> None:
                 "④ PostToolUse：异步建档、审计与失败秒级处方",
                 "⑤ 多客户端一键部署与双轨协同心法",
             ],
-            "next": "现在把并发拉高：如果 Agent A 和 Agent B 同时抢两个目录或端口锁，怎么防死锁？",
+            "next": "把整套 MCP × 硬 Hook 串进一次真实任务，顺便拆解：如果把客户端自带 skills 目录删掉，怎么确保返回正确技能？",
             "script": (
                 "这是我们从大量真实使用中总结出来的核心经验：不要把安全底线寄托在大模型的自觉性上。\n"
                 "所以我们在 `~/.gemini/config/hooks.json` 里用硬 Hook 接管了三个确定性切面：SessionStart 自动注简报，PreToolUse 自动防撞，PostToolUse 自动建档与碰壁诊断。而深度检索、图谱影响分析这些需要高语义判断的，留给大模型主动调 MCP。"
             ),
         },
         {
-            "eyebrow": "06 · 多 Agent 协作锁",
+            "eyebrow": "06 · 端到端实战 · MCP × Hook × Skill",
+            "title": "端到端实战：MCP × 硬 Hook 协同与删掉客户端 Skills 目录后精准路由",
+            "lead": "删掉 `~/.agents/skills/` 切断静态灌入后，<b>技能实体托管宿主机 `~/new/skills/`</b>，由 `body_skill_route` 按需精准返回。",
+            "svg": vis_agent_usage_mcp_hook_skill(animated=True),
+            "anim_caps": [
+                "Step 1/4：SessionStart(brief) → Active MCP(body_skill_route/fact/lock) → PreToolUse(门禁) → PostToolUse(AutoSync+处方)",
+                "Step 2/4：删客户端自带 skills/ 后，SkillCatalogScanner 扫描 ~/new/skills/ Frontmatter 入库 skills_catalog_fts",
+                "Step 3/4：运行任务调 body_skill_route(intent) → FTS5 BM25 粗召回 → rank_skills 4 因子打分 → 预算裁剪",
+                "Step 4/4：返回 Top-3 摘要与绝对路径，大脑按需 read_file 加载命中那 1 份 SKILL.md，省 99.9% Token",
+            ],
+            "next": "现在把并发拉高：如果 Agent A 和 Agent B 同时抢两个目录或端口锁，怎么防死锁？",
+            "script": (
+                "这一页用一个真实端到端场景把 MCP、硬 Hook 和 SKILL 路由彻底串起来。\n"
+                "假设你把客户端自带的 `~/.agents/skills/` 或 `.claude/skills/` 删掉了，再也不让客户端开机把 100 多个技能全塞进系统提示词里烧几十万 Token。那运行任务时，Agent Body 怎么保证正确的 SKILL 被返回？\n"
+                "前提是技能实体统一托管在宿主机中立路径（例如 `~/new/skills/`，配置在 `[workspace].skills_dirs`）。`SkillCatalogScanner` 扫描时只抽每个 `SKILL.md` 的 YAML Frontmatter，做完防投毒和脱敏后写入 `skills_catalog` 与 `skills_catalog_fts`。\n"
+                "任务开始时，`SessionStart` 硬 Hook 注入简报与租约；任务中大脑调用 MCP `body_skill_route(intent, budget_tokens=600, max_skills=3)`（或在 `body_brief(query=...)` 自动触发）。`ContextBudgetRouter` 先用 `skills_catalog_fts MATCH` 粗召回（未命中自动降级 `LIKE` 与全库兜底），再用 `rank_skills` 按「全名 +60、词命中 +25、触发词 +20、描述 +15」排序并硬预算裁剪，精准返回 `~/new/skills/pgfaq/SKILL.md` 的绝对路径。大脑 `read_file` 读取那一份即可，动手前再由 `PreToolUse` 和 `PostToolUse` 兜住安全与落盘。"
+            ),
+        },
+        {
+            "eyebrow": "07 · 多 Agent 协作锁",
             "title": "目录树层级锁波纹 × WFG 死锁成环闪电破局",
             "lead": "父锁子必阻 · 同级共享并发 · <b>W6 死锁破局加速 46.49x</b>",
             "svg": vis_lock_and_wfg(animated=True),
@@ -1118,7 +1156,7 @@ def build_talk_03() -> None:
             ),
         },
         {
-            "eyebrow": "07 · WFG 死锁破局",
+            "eyebrow": "08 · WFG 死锁破局",
             "title": "Wait-For Graph 成环检测 + Wait-Queue 推送唤醒",
             "lead": "拒绝傻等超时干烧云端计费！<b>一旦等待图成环，立即精确选出牺牲者毫秒退避，解锁瞬间推送唤醒</b>。",
             "svg": svg_code_and_flow(
@@ -1157,7 +1195,7 @@ def build_talk_03() -> None:
             ),
         },
         {
-            "eyebrow": "08 · 规约脊柱",
+            "eyebrow": "09 · 规约脊柱",
             "title": "83 μs 放置建议引擎 + 纠偏自演化学习",
             "lead": "新建脚本放哪、临时文件放哪、开源克隆放哪——<b>把主人的目录秩序编译成确定性规则，还能从纠偏中自己长出新规矩</b>。",
             "svg": svg_columns(
@@ -1206,7 +1244,7 @@ def build_talk_03() -> None:
             ),
         },
         {
-            "eyebrow": "09 · 性能与实证",
+            "eyebrow": "10 · 性能与实证",
             "title": f"小脑反射与并发控制实证成绩单（Bench v{BENCH_VER}）",
             "lead": "反射弧必须比大脑思考快三个数量级——<b>所有微基准全部在百微秒级，所有负载全部帕累托双赢</b>。",
             "svg": svg_metrics_table(
@@ -1233,7 +1271,7 @@ def build_talk_03() -> None:
             ),
         },
         {
-            "eyebrow": "10 · 实操命令清单",
+            "eyebrow": "11 · 实操命令清单",
             "title": "小脑反射与协作锁现场演练命令",
             "lead": "一套命令同时覆盖 <b>AOPCC 钩子模拟、自治包络裁决、协作锁申请与死锁排查</b>。",
             "svg": svg_code_and_flow(
@@ -1269,7 +1307,7 @@ def build_talk_03() -> None:
             ),
         },
         {
-            "eyebrow": "11 · 常见误区",
+            "eyebrow": "12 · 常见误区",
             "title": "并发控制落地中最容易踩的三个坑",
             "lead": "把数据库理论搬到 Agent 世界，<b>最怕生搬硬套而不看实际约束</b>。",
             "svg": svg_columns(
@@ -1313,7 +1351,7 @@ def build_talk_03() -> None:
             ),
         },
         {
-            "eyebrow": "12 · 收束",
+            "eyebrow": "13 · 收束",
             "title": "快的地方乐观直通，险的地方悲观铁闸",
             "lead": "小脑反射让 Agent 拥有了接近人类老工程师的肌肉记忆：<b>熟路直接走，险路先探灯，撞墙秒换道</b>。",
             "svg": svg_closing(

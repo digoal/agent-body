@@ -22,6 +22,7 @@ from deck_engine import (
     render_deck,
     svg_bars,
     svg_closing,
+    vis_agent_usage_mcp_hook_skill,
     vis_aopcc_highway,
     vis_awr_telemetry,
     vis_benchmark_pareto,
@@ -31,6 +32,7 @@ from deck_engine import (
     vis_competitor_arena,
     vis_cover_visual,
     vis_do_dont_wall,
+    vis_env_change_to_db_pipeline,
     vis_handoff_capsule,
     vis_host_graph_federation,
     vis_microkernel_hub,
@@ -81,7 +83,7 @@ def build_roadshow_deck() -> None:
                     (f"{TOOL_CNT} MCP", f"{MOD_CNT} 模块 · {TEST_CNT} 测", C_CLAY),
                 ],
                 theme="roadshow",
-                right_tag=f"图解蓝图 · 对外路演版 (17 页) · Bench v{BENCH_VER}",
+                right_tag=f"图解蓝图 · 对外路演版 (19 页) · Bench v{BENCH_VER}",
             ),
             "script": (
                 "各位好，今天用十五到二十分钟，向大家完整汇报一个从真实工程痛点里长出来的开源项目——Agent Body，中文我们叫它「Agent 本体」。\n"
@@ -138,16 +140,38 @@ def build_roadshow_deck() -> None:
                 "Step 2/3：统一神经总线将 43 MCP、30 CLI、7 大 Hook 与 Web 指挥舱无缝桥接",
                 "Step 3/3：永驻宿主机的六大生理器官：感官、小脑、海马体、脊柱、免疫与联邦",
             ],
-            "next": "下面逐个解剖核心器官，先看第一器官：宿主机事实感官图谱。",
+            "next": "接上身体后，一次真实任务里 Agent 怎么经 MCP 和硬 Hook 使用它？删掉自带 skills 目录还能找对技能吗？",
             "script": (
                 "想明白痛点之后，我们确立了第一性原理：脑体分离。\n"
                 "不论今天用 Antigravity、Claude Code、Cursor 还是凌晨 Cron，它们都是随时可拔插的大脑；而 Agent Body 通过统一神经总线常驻你的宿主机。\n"
                 "机身内部严格划分为六大器官：感官图谱、小脑反射、海马体接力、规约脊柱、免疫代谢与多体联邦——全部收进一个零外部依赖的 Rust 单二进制。"
             ),
         },
-        # 05 器官 1 · 宿主机三层证据图谱与 CodeGraph 显微镜
+        # 05 调用实战 · MCP × 硬 Hook 协同与清空客户端 Skills 目录后的精准路由
         {
-            "eyebrow": "04 · ORGAN 1 · HOST REALITY GRAPH",
+            "eyebrow": "04 · USAGE IN ACTION · MCP × HOOK × SKILL ROUTE",
+            "title": "调用实战：Agent 如何经 MCP × 硬 Hook 使用本体（含清空 Skills 目录路由）",
+            "lead": "删掉客户端自带 <b>skills/</b> 后，实体托管宿主机 · <b>FTS5 + 4 因子打分精准返回 Top-K</b>",
+            "svg": vis_agent_usage_mcp_hook_skill(animated=True),
+            "anim_caps": [
+                "Step 1/4：硬 Hook（开工 brief / 写前防撞 / 写后建档与自愈）× 43 个 MCP 按需调用双轨协同",
+                "Step 2/4：删掉 ~/.agents/skills/ 等客户端自动全量加载目录，技能实体统一托管至 ~/new/skills/",
+                "Step 3/4：运行任务时调 body_skill_route，经 FTS5 BM25 粗召回 + rank_skills 打分 + 预算裁剪",
+                "Step 4/4：仅返回 Top-3 摘要与绝对路径，大脑按需 read_file 加载命中那 1 份，省 99.9% Token",
+            ],
+            "next": "看清一次完整调用后，深入第一器官：宿主机三层证据感官图谱与环境变化实时同步。",
+            "script": (
+                "很多人好奇：接上 Agent Body 后，大模型干活到底是一条什么链路？我们直接用一次真实任务来拆解。\n"
+                "第一步是 `SessionStart` 硬 Hook：你在 Claude 或 Antigravity 里刚一开会话，`hooks.json` 自动拉起 `body_bridge.py` 执行 `agent-body brief`，零轮次把宿主机工具、活跃端口、≤120 Token 的 AOPCC 乐观租约和上一棒 150 Token 接力胶囊注入上下文。\n"
+                "第二步是任务中主动调 MCP：比如要排查 PostgreSQL 慢 SQL，大脑调用 `body_skill_route` 查技能、调 `body_fact_query` 查端口、调 `body_codegraph_bridge` 看函数调用、用 `body_lock_acquire` 锁目录。\n"
+                "第三步和第四步是动手前后的确定性硬 Hook：准备 `write_file` 或 `run_command` 时，`PreToolUse` 自动放行安全读或直连，拦截端口撞车、目录锁冲突与 `~/.ssh` 等红线；执行完成后 `PostToolUse` 异步写穿建档，万一碰壁则在 2 毫秒内塞回替代端口自愈处方。\n"
+                "再回答一个高频实战问题：如果我把客户端自带的 `~/.agents/skills/` 目录删掉了，运行任务时 Agent Body 怎么确保返回正确的 SKILL？\n"
+                "注意这里有一个清晰的前提：删掉的是客户端会全量塞进 Prompt 的本地技能目录，技能实体仍统一托管在宿主机的中立目录（如 `~/new/skills/`）。`SkillCatalogScanner` 离线只提取 Frontmatter 摘要并做防投毒脱敏，写入 `skills_catalog` 和 `skills_catalog_fts`。运行任务时，大脑调用 `body_skill_route(intent, budget=600)`（或在简报里自动触发），引擎先走 FTS5 BM25 粗召回，再按「全名命中 +60、词命中名 +25、触发词 +20、描述 +15」确定性排序并做预算裁剪，最后把 `~/new/skills/pgfaq/SKILL.md` 的绝对路径返给大脑，大脑再按需 `read_file` 加载那一份即可，既把 60.9 万 Token 压到 358 Token，又让所有客户端共享同一份技能库。"
+            ),
+        },
+        # 06 器官 1 · 宿主机三层证据图谱与 CodeGraph 显微镜
+        {
+            "eyebrow": "05 · ORGAN 1 · HOST REALITY GRAPH",
             "title": "感觉神经：L1 / L2 / L3 证据分层图谱 × CodeGraph 显微镜",
             "lead": "绝不把「语义相似」当「物理因果」 · <b>连通度 0.5% → 100%</b>",
             "svg": vis_host_graph_federation(animated=True),
@@ -157,16 +181,37 @@ def build_roadshow_deck() -> None:
                 "Step 3/4：L3 语义近邻（琥珀点线 Top-3）：仅作跨项目探索，严禁冒充硬因果",
                 "Step 4/4：右侧 CodeGraph 显微镜直接穿透微观 AST 函数调用，3 跳推演仅 148 μs",
             ],
-            "next": "看清了物理世界，但事事事前查询会不会太慢？看小脑反射 AOPCC 的破局。",
+            "next": "地图画好了，但宿主机上的文件、进程和端口每分钟都在变——这些变化如何实时落入数据库？",
             "script": (
                 "很多图谱方案把语义相似混成物理依赖，查爆炸半径全是误报。\n"
                 "我们用三层线型彻底隔离证据强度：L1 实线是 Systemd 到进程到端口的物理硬依赖；L2 把近五千条文件引用上卷成项目拓扑，把 216 个工程的连通率从 0.5% 拉到 100%；L3 语义边严格限 Top-3 防污染。\n"
                 "需要下钻到函数 AST 调用链时，右侧透镜直接桥接 CodeGraph，做到宏微联邦、各司其职。"
             ),
         },
-        # 06 器官 2 · 小脑反射 AOPCC 高速 ETC 立交
+        # 07 环境同步 · 宿主机环境变化如何实时落入数据库
         {
-            "eyebrow": "05 · ORGAN 2 · CEREBELLUM & AOPCC",
+            "eyebrow": "06 · REALTIME SYNC · ENV CHANGE TO DB",
+            "title": "环境同步：宿主机变化如何实时落入本体数据库？",
+            "lead": "4 通道感知 × 净化筛选 × <b>SQLite FTS5 Trigger 自动同步 × 删改写穿级联</b>",
+            "svg": vis_env_change_to_db_pipeline(animated=True),
+            "anim_caps": [
+                "Step 1/4：四大采集通道——inotify 文件监听 / PostToolUse 回写 / 60s /proc 探针 / 1800s 巡检",
+                "Step 2/4：净化筛选与写穿级联——内容改写自动将旧向量标 stale；文件删除瞬时清理边、节点与记忆",
+                "Step 3/4：88 SPI 落盘三引擎——assets/skills_catalog 靠数据库 AFTER Trigger 自动同步 FTS5 虚表",
+                "Step 4/4：EventBus 触发配置流水线与 Web SSE 实时推送，下次 brief/changes_since 毫秒可见",
+            ],
+            "next": "看清了物理世界与实时同步，但事事事前查询会不会太慢？看小脑反射 AOPCC 的破局。",
+            "script": (
+                "既然身体是宿主机的物理底座，那么机器上一旦新建文件、删除脚本、重启服务或者换了端口，数据库怎么才能不发霉、实时反映这些变化？\n"
+                "Agent Body 靠「四通道采集 + 写穿级联 + 数据库触发器」三层机制完成闭环：\n"
+                "首先看左边四条通道：第一条是常驻守护进程的 `FileWatcher`（Linux `inotify` / macOS `FSEvents`），启动时就跳过 `.git`/`target`/`node_modules` 等黑名单目录，新目录自动补挂，500 毫秒防抖后交给 `ChangeHandler`；第二条是 Agent 每次 `write_file`/`edit_file` 或 `git post-commit` 后，由 `PostToolUse` 钩子异步拉起 `AutoSyncEngine` 秒级回写；第三条是每 60 秒 `EnvCollector` 0.2 毫秒直读 `/proc` 与监听端口，过滤 95% 系统底噪并脱敏后事务级替换 `active_processes` 快照；第四条是每 1800 秒在独立 OS 线程跑 `BackgroundScheduler`，由 `FreshnessReconciler` 兜底比对磁盘与数据库。\n"
+                "中间是净化与写穿机制：新增或修改时，先过白黑灰门禁与 `NoiseFilter`，抽取元数据与正文，一旦 `merge_with_existing_asset` 发现内容哈希变了，立刻把旧向量标成 `stale`；如果是删除文件或关闭端口，则把资产标 `missing`（FTS 检索强制只查 `active`），同步删掉 `links` 断链、`fact_nodes` 幽灵节点并归档旧摘要记忆。\n"
+                "最后看右边落盘：`assets` 和 `skills_catalog` 均配了 SQLite `AFTER INSERT/UPDATE/DELETE` 触发器，主表一动，6 列 `assets_fts` 和 `skills_catalog_fts` 自动原子同步，并通过 `EventBus` 推给 Web 指挥舱 SSE，保证大脑下一毫秒拿到的永远是热腾腾的物理真值。"
+            ),
+        },
+        # 08 器官 2 · 小脑反射 AOPCC 高速 ETC 立交
+        {
+            "eyebrow": "07 · ORGAN 2 · CEREBELLUM & AOPCC",
             "title": "小脑反射：ETC 乐观直通 + 红灯悲观门禁，消灭整轮对话税",
             "lead": "W15 实测：<b>Token -83.9% · 质量 52 → 100 · 加速 3.22x</b>",
             "svg": vis_aopcc_highway(animated=True),
@@ -184,7 +229,7 @@ def build_roadshow_deck() -> None:
         },
         # 07 器官 3 · 海马体发光接力胶囊
         {
-            "eyebrow": "06 · ORGAN 3 · HIPPOCAMPUS CAPSULE",
+            "eyebrow": "08 · ORGAN 3 · HIPPOCAMPUS CAPSULE",
             "title": "海马体接力：50,000 tok 聊天山 vs 150 tok 发光胶囊",
             "lead": "DQ5 鲜活度 100% · <b>W17 接力省 92.7% Token · 10ms 唤醒</b>",
             "svg": vis_handoff_capsule(animated=True),
@@ -200,7 +245,7 @@ def build_roadshow_deck() -> None:
         },
         # 08 器官 4 · 规约脊柱与 Context 防爆压缩柱状图
         {
-            "eyebrow": "07 · ORGAN 4 · GOVERNANCE SPINE",
+            "eyebrow": "09 · ORGAN 4 · GOVERNANCE SPINE",
             "title": "规约脊柱：百级 SKILL 609k → 358 tok (-99.9%) 与 41 μs 放置",
             "lead": "三层渐进披露防爆路由 · <b>搬移纠偏自演化学习</b>",
             "svg": svg_bars(
@@ -222,7 +267,7 @@ def build_roadshow_deck() -> None:
         },
         # 09 器官 5 · 纵深安全盾牌与双域审计漏斗
         {
-            "eyebrow": "08 · ORGAN 5 · SECURITY & DUAL AUDIT",
+            "eyebrow": "10 · ORGAN 5 · SECURITY & DUAL AUDIT",
             "title": "免疫系统：四道纵深安全铁闸 × IN / OUT 双域审计黑匣子",
             "lead": "DQ4 凭据零落盘 100% · <b>DQ7 双域留痕 100% · 60s 折叠防洪</b>",
             "svg": vis_security_dual_audit(animated=True),
@@ -238,7 +283,7 @@ def build_roadshow_deck() -> None:
         },
         # 10 器官 6 · 内生数据库级 AWR 与 600% CPU 根治曲线
         {
-            "eyebrow": "09 · ORGAN 6 · BUILT-IN AWR & TELEMETRY",
+            "eyebrow": "11 · ORGAN 6 · BUILT-IN AWR & TELEMETRY",
             "title": "内生代谢：把数据库级 AWR 装进本体，根治 600% CPU 尖峰",
             "lead": "6 类 18 等待事件 (&lt;100ns) · <b>Prometheus /metrics + W3C Trace</b>",
             "svg": vis_awr_telemetry(animated=True),
@@ -254,7 +299,7 @@ def build_roadshow_deck() -> None:
         },
         # 11 实证一 · Benchmark v4.1 帕累托二维象限跃迁图
         {
-            "eyebrow": f"10 · EMPIRICAL PROOF · BENCHMARK v{BENCH_VER}",
+            "eyebrow": f"12 · EMPIRICAL PROOF · BENCHMARK v{BENCH_VER}",
             "title": "实证成绩单：省 99.23% Token，上下文质量反升 +64.2 分",
             "lead": "帕累托双门禁：<b>严禁靠丢事实骗压缩率 · 全维门禁 PASS</b>",
             "svg": vis_benchmark_pareto(animated=True),
@@ -271,7 +316,7 @@ def build_roadshow_deck() -> None:
         },
         # 12 实证二 · 四大赛道同机 VS 擂台图
         {
-            "eyebrow": "11 · COMPETITIVE ARENA · COMP-C1 ~ C4",
+            "eyebrow": "13 · COMPETITIVE ARENA · COMP-C1 ~ C4",
             "title": "四赛道同机横向对决：数量级代差一目了然，拒绝拉踩",
             "lead": "同机同数据真跑 (LIVE_BENCHMARKED) · <b>记忆生态 SPI 开放兼容</b>",
             "svg": vis_competitor_arena(animated=True),
@@ -289,7 +334,7 @@ def build_roadshow_deck() -> None:
         },
         # 13 产品形态 · 43/43 黑白屏双屏同源与 7 幕剧场
         {
-            "eyebrow": "12 · PRODUCT EXPERIENCE · 43/43 PARITY",
+            "eyebrow": "14 · PRODUCT EXPERIENCE · 43/43 PARITY",
             "title": "产品形态：43/43 黑白屏双向镜像 × 7 幕真引擎路演剧场",
             "lead": "黑屏给大脑极速调用 · <b>白屏 Web 指挥舱实时治理与一键路演</b>",
             "svg": vis_parity_console(animated=True),
@@ -306,7 +351,7 @@ def build_roadshow_deck() -> None:
         },
         # 14 微内核与四大发行版 · 星型插件与积木塔
         {
-            "eyebrow": "13 · POSTGRESQL-STYLE MICROKERNEL",
+            "eyebrow": "15 · POSTGRESQL-STYLE MICROKERNEL",
             "title": "微内核与周边分离：3 核 × 10 磁吸扩展 → 4 大发行版积木",
             "lead": f"Phase 70~75 · <b>Probe 6.7MB / DBA 6.4MB / Minimal 3.9MB (零 C++)</b>",
             "svg": vis_microkernel_hub(animated=True),
@@ -323,7 +368,7 @@ def build_roadshow_deck() -> None:
         },
         # 15 工程账单 · 七重确定性安检流水线
         {
-            "eyebrow": "14 · ENGINEERING BILL & QUALITY GATES",
+            "eyebrow": "16 · ENGINEERING BILL & QUALITY GATES",
             "title": "工程账单：7 道确定性机器门禁 × 极致轻量单二进制",
             "lead": f"零生产 Panic · <b>{TEST_CNT}/{TEST_CNT} 全工作区测试全绿 · 位置无关交付</b>",
             "svg": vis_quality_gates(test_cnt=TEST_CNT, mod_cnt=MOD_CNT, tool_cnt=TOOL_CNT, animated=True),
@@ -339,7 +384,7 @@ def build_roadshow_deck() -> None:
         },
         # 16 架构克制 · 递弱代偿边界城墙
         {
-            "eyebrow": "15 · ARCHITECTURAL RESTRAINT",
+            "eyebrow": "17 · ARCHITECTURAL RESTRAINT",
             "title": "递弱代偿边界墙：把护城河挖深，坚决不越界抢大脑",
             "lead": "越基础的能力越被深度依赖 · <b>绝不膨胀成臃肿全栈框架</b>",
             "svg": vis_do_dont_wall(animated=True),
@@ -356,7 +401,7 @@ def build_roadshow_deck() -> None:
         },
         # 17 终局与 5 分钟三步上手
         {
-            "eyebrow": "16 · VISION & 5-MIN QUICK START",
+            "eyebrow": "18 · VISION & 5-MIN QUICK START",
             "title": "终局：智能体时代的下一代 OS 原生具身底座",
             "lead": "今天是模块化微内核单二进制 · <b>明天是智能体 OS 原生标配</b>",
             "svg": svg_closing(
@@ -367,7 +412,7 @@ def build_roadshow_deck() -> None:
                     ("2. 接入大脑 (2 分钟)", "挂载 MCP + 自动生成 7 大 Hook", "Antigravity / Claude / Cursor"),
                     ("3. 真机验真 (2 分钟)", "agent-body bench run --suite full", "Web :8765 体验 7 幕剧场"),
                 ],
-                open_question="想深挖内核与源码？请移步「深度技术交流版 agent-body-deck.html (25 页)」或「6 讲专题 index.html」",
+                open_question="想深挖内核与源码？请移步「深度技术交流版 agent-body-deck.html (27 页)」或「6 讲专题 index.html」",
                 next_talk="开源仓库：github.com/digoal/agent-body · 完整手册见 docs/manual/01~10",
             ),
             "script": (

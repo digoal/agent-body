@@ -53,6 +53,7 @@ from deck_visuals import (
     icon,
     icon_badge,
     ring_gauge,
+    vis_agent_usage_mcp_hook_skill,
     vis_aopcc_highway,
     vis_awr_telemetry,
     vis_benchmark_pareto,
@@ -63,6 +64,7 @@ from deck_visuals import (
     vis_competitor_arena,
     vis_cover_visual,
     vis_do_dont_wall,
+    vis_env_change_to_db_pipeline,
     vis_evolution_flywheel,
     vis_freshness_purifier,
     vis_handoff_capsule,
@@ -95,6 +97,7 @@ __all__ = [
     "vis_competitor_arena", "vis_microkernel_hub", "vis_mesh_network",
     "vis_do_dont_wall", "vis_storage_tri_engine", "vis_parity_console",
     "vis_quality_gates", "vis_three_tier_pyramid", "vis_command_console",
+    "vis_agent_usage_mcp_hook_skill", "vis_env_change_to_db_pipeline",
     "vis_roadmap_journey", "render_deck",
 ]
 

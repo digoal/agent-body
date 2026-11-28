@@ -1238,10 +1238,10 @@ def build_index_hub() -> None:
     cards = [
         ("01", "脑体分离与 Agent 本体哲学", "01-brain-body-separation.html", "30 min · 14 页", "brain", C_TEAL_D,
          ["比较优势天平", "六大器官解剖", "递弱代偿红线"]),
-        ("02", "宿主机物理感官图谱与零污染扫盘", "02-host-reality-graph.html", "30 min · 14 页", "radar", C_TEAL,
-         ["0.2ms /proc 探针", "敲门不进屋", "CodeGraph 显微镜"]),
-        ("03", "小脑反射与自适应并发控制 AOPCC", "03-cerebellum-and-aopcc.html", "30 min · 13 页", "bolt", C_CLAY,
-         ["ETC 乐观立交", "<2ms 碰壁秒愈", "WFG 死锁破环"]),
+        ("02", "宿主机物理感官图谱与零污染扫盘", "02-host-reality-graph.html", "30 min · 15 页", "radar", C_TEAL,
+         ["0.2ms /proc 探针", "敲门不进屋", "四通道入库机制", "CodeGraph 显微镜"]),
+        ("03", "小脑反射与自适应并发控制 AOPCC", "03-cerebellum-and-aopcc.html", "30 min · 14 页", "bolt", C_CLAY,
+         ["ETC 乐观立交", "MCP×Hook×Skill路由", "<2ms 碰壁秒愈", "WFG 死锁破环"]),
         ("04", "海马体保鲜与跨大脑 10ms 接力", "04-hippocampus-freshness-continuity.html", "30 min · 13 页", "capsule", C_GREEN,
          ["三级写穿净水", "150t 发光胶囊", "三引擎热迁移"]),
         ("05", "纵深安全、双域审计与多体联邦", "05-security-audit-evolution-mesh.html", "30 min · 13 页", "shield", C_TEAL_2,
@@ -1403,24 +1403,24 @@ h1{{font-family:var(--f-r);font-size:40px;font-weight:700;margin-top:10px;letter
     <a class="hero-card" href="presentation.html">
       <div class="dc-head">
         {_mini_icon_svg("rocket", C_TEAL)}
-        <div class="dc-top-col"><span>ROADSHOW · 对外路演版</span><span class="dc-meta">17 页 · 15~20 分钟 · 全定制视觉图解</span></div>
+        <div class="dc-top-col"><span>ROADSHOW · 对外路演版</span><span class="dc-meta">19 页 · 18~25 分钟 · 全定制视觉图解</span></div>
       </div>
       <h2>Agent 本体对外路演版（presentation.html）</h2>
       <div class="chips">
         <span class="chip">比较优势天平</span><span class="chip">蒙眼翻车现场</span><span class="chip">脑体解剖图</span>
-        <span class="chip">ETC 乐观立交</span><span class="chip">150t 发光胶囊</span><span class="chip">帕累托象限</span><span class="chip">微内核 4 发行版</span>
+        <span class="chip">MCP×Hook全流程</span><span class="chip">环境变化入库</span><span class="chip">ETC 乐观立交</span><span class="chip">150t 发光胶囊</span><span class="chip">微内核 4 发行版</span>
       </div>
       <span class="dc-go">打开路演版 →</span>
     </a>
     <a class="hero-card clay" href="agent-body-deck.html">
       <div class="dc-head">
         {_mini_icon_svg("gear", C_CLAY)}
-        <div class="dc-top-col"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">25 页 · 45~60 分钟 · 内核架构图谱</span></div>
+        <div class="dc-top-col"><span>TECHNICAL EXCHANGE · 深度交流版</span><span class="dc-meta">27 页 · 50~65 分钟 · 内核架构图谱</span></div>
       </div>
       <h2>Agent 本体深度技术交流版（agent-body-deck.html）</h2>
       <div class="chips">
-        <span class="chip">27 模块 / 88 SPI</span><span class="chip">三层有向图</span><span class="chip">目录锁 + WFG</span>
-        <span class="chip">写穿净水器</span><span class="chip">五维雷达</span><span class="chip">600% CPU AWR 曲线</span><span class="chip">10 Contrib 扩展</span>
+        <span class="chip">27 模块 / 88 SPI</span><span class="chip">去Skills目录路由</span><span class="chip">四通道入库机制</span><span class="chip">三层有向图</span><span class="chip">目录锁 + WFG</span>
+        <span class="chip">写穿净水器</span><span class="chip">600% CPU AWR 曲线</span><span class="chip">10 Contrib 扩展</span>
       </div>
       <span class="dc-go">打开深度交流版 →</span>
     </a>

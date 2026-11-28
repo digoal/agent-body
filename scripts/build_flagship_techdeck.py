@@ -24,6 +24,7 @@ from deck_engine import (
     svg_code_and_flow,
     svg_columns,
     svg_pipeline,
+    vis_agent_usage_mcp_hook_skill,
     vis_aopcc_highway,
     vis_awr_telemetry,
     vis_benchmark_pareto,
@@ -31,6 +32,7 @@ from deck_engine import (
     vis_competitor_arena,
     vis_cover_visual,
     vis_do_dont_wall,
+    vis_env_change_to_db_pipeline,
     vis_evolution_flywheel,
     vis_freshness_purifier,
     vis_handoff_capsule,
@@ -88,10 +90,10 @@ def build_tech_deck() -> None:
                     (f"{TEST_CNT} 测", f"Bench v{BENCH_VER} 全绿", C_CLAY),
                 ],
                 theme="tech_arch",
-                right_tag=f"图解工程蓝图 · 深度技术交流版 (25 页)",
+                right_tag=f"图解工程蓝图 · 深度技术交流版 (27 页)",
             ),
             "script": (
-                "各位技术同行好，这份 25 页的 Deck 是 Agent Body 的完整架构深度交流版，大约 45 到 60 分钟。\n"
+                "各位技术同行好，这份 27 页的 Deck 是 Agent Body 的完整架构深度交流版，大约 45 到 60 分钟。\n"
                 f"今天我们全部用工程原理图、网络拓扑和实测曲线直穿核心：{MOD_CNT} 个 Rust 模块、{SPI_CNT} 个存储 SPI、{TABLE_CNT} 张数据表、AOPCC 期望代价数学边界、内生 Wait Events / AWR / Prometheus `/metrics` 与 W3C Trace 性能工程，以及 Phase 70~75 借鉴 PostgreSQL 插件体系完成的微内核 (`kernel/`) 与周边 (`contrib/`) 大一统实践。"
             ),
         },
@@ -125,15 +127,34 @@ def build_tech_deck() -> None:
                 f"Step 3/4：Layer 3 StorageProvider SPI——{SPI_CNT} 强类型方法 + {TABLE_CNT} 张三端同步表",
                 "Step 4/4：Layer 4 三引擎圆柱——SQLite 零配单机 / PG 并发集群 / DuckDB 列存 OLAP",
             ],
-            "next": "看清整体骨架后，下钻第一器官：零幻觉物理事实探针与底噪过滤。",
+            "next": "看清整体骨架后，先看一次真实任务中 Agent 如何经 MCP 与硬 Hook 调用本体（含删掉客户端 skills 目录的路由机制）。",
             "script": (
                 f"这是 Agent Body 的四层全景图：接入层零业务逻辑，{MOD_CNT} 个模块按六大器官内聚，存储层通过 {SPI_CNT} 方法 SPI 统一门面驾驭 SQLite、PostgreSQL 和 DuckDB 三引擎。\n"
                 "个人开发机用内嵌 SQLite WAL+FTS5 零运维；多 Agent 高并发集群热切 PostgreSQL 利用 pgvector 与 Advisory Lock；审计分析由受限 2 线程/256MB 的 DuckDB 负责。"
             ),
         },
-        # 04 感官层① · 零幻觉物理事实采集
+        # 04 调用链路 · MCP × 硬 Hook 协同与去客户端 Skills 目录精准路由
         {
-            "eyebrow": "03 · SENSORY I · GROUND-TRUTH PROBES",
+            "eyebrow": "03 · RUNTIME INVOCATION · MCP × HOOK × SKILL ROUTE",
+            "title": "调用链路：MCP × 硬 Hook 协同与去客户端 Skills 目录精准路由",
+            "lead": "client_templates.rs 硬 Hook 拦截 + <b>ContextBudgetRouter 4 因子排序</b>",
+            "svg": vis_agent_usage_mcp_hook_skill(animated=True),
+            "anim_caps": [
+                "Step 1/4：SessionStart(brief) / Active MCP(43工具) / PreToolUse(门禁) / PostToolUse(AutoSync+<2ms处方)",
+                "Step 2/4：删客户端 ~/.agents/skills/ 后，SkillCatalogScanner 仅扫 ~/new/skills/ Frontmatter 入库",
+                "Step 3/4：body_skill_route 先跑 skills_catalog_fts MATCH，再 rank_skills(+60/+25/+20/+15) + 预算裁剪",
+                "Step 4/4：返回 Top-3 摘要与绝对路径，大脑按需 read_file 加载，609k → 358 tok (-99.9%)",
+            ],
+            "next": "调用闭环走通后，下钻第一器官：零幻觉物理事实探针与底噪过滤。",
+            "script": (
+                "先看源码级的接入调用链路：`src/hooks/client_templates.rs` 为 Antigravity、Claude、Cursor、Codex、Hermes 一键生成 `hooks.json` 与 `body_bridge.py`。\n"
+                "每次任务：开工 `SessionStart` 跑 `agent-body brief` 注入事实、租约与胶囊；任务中大脑通过 stdio JSON-RPC 按需调 `body_skill_route`、`body_fact_query`、`body_codegraph_bridge`、`body_lock_acquire` 等 MCP；动手前 `PreToolUse` 经 `src/api/hooks.rs` 做端口/目录锁/红线校验；完成后 `PostToolUse` 异步拉起 `AutoSyncEngine` 或在 2ms 内回注碰壁处方。\n"
+                "当删掉客户端自带 `skills/` 目录后，技能实体托管在 `[workspace].skills_dirs`（如 `~/new/skills/`），由 `src/ecosystem/scanner.rs` 抽 Frontmatter、防提示词投毒脱敏写入 `skills_catalog` + `skills_catalog_fts`；运行任务时 `src/ecosystem/router.rs` 经 FTS5 BM25 粗召回和 `rank_skills`（全名 +60、词命中 +25、触发词 +20、描述 +15）返回 Top-K 路径，大脑按需 `read_file` 加载。"
+            ),
+        },
+        # 05 感官层① · 零幻觉物理事实采集
+        {
+            "eyebrow": "04 · SENSORY I · GROUND-TRUTH PROBES",
             "title": "感官层①：/proc 0.2ms 直读与 95% 内核底噪过滤",
             "lead": "索引优先替代暴力 fork · <b>cmdline 全链路强制脱敏</b>",
             "svg": svg_columns(
@@ -189,9 +210,9 @@ def build_tech_deck() -> None:
                 "感官层底层做两件实战硬事：一是在 /proc 采集层滤除 95% kworker 底噪、折叠超长内联脚本并过 SecretRedactor 脱敏；二是把 $PATH 工具语义化，连推荐参数一并告知大脑，直接把 W1 加速 565 倍。"
             ),
         },
-        # 05 感官层② · 白黑灰敲门不进屋 + 三层元数据管道
+        # 06 感官层② · 白黑灰敲门不进屋 + 三层元数据管道
         {
-            "eyebrow": "04 · SENSORY II · TIERED SCAN & METADATA",
+            "eyebrow": "05 · SENSORY II · TIERED SCAN & METADATA",
             "title": "感官层②：白/黑/灰「敲门不进屋」× 零云端三层标注",
             "lead": "消灭 7,825 无效 inotify 句柄 · <b>W3 阻断 534 噪音 (-95.8%)</b>",
             "svg": vis_tiered_scan_doors(animated=True),
@@ -201,15 +222,33 @@ def build_tech_deck() -> None:
                 "Step 3/4：黑名单 node_modules/.git/target 紧锁红门「敲门不进屋」，挡下 7,825 句柄",
                 "Step 4/4：灰名单源码仓转交 CodeGraph；右侧 L0/L1/L2 本地 Ollama 0.8b 零云端精炼",
             ],
-            "next": "节点元数据齐备后，看如何织成 L1/L2/L3 有向加权图谱并桥接 CodeGraph。",
+            "next": "当宿主机文件增删改、进程启停、端口切换时，这些变化如何实时落入数据库？",
             "script": (
                 "看这三扇门：绿色白名单业务目录深挖到底；红色黑名单只记目录节点绝不下钻，连 inotify 一并剪枝；琥珀灰名单开源源码只读入口，微观代码转交 CodeGraph。\n"
                 "右边是零云端 Token 的三层正交标注管道：L0 管写穿哈希，L1 由 Rust 微秒静态提取，L2 由本地 Ollama 0.8b 异步脱敏精炼。"
             ),
         },
-        # 06 图谱智能 · L1/L2/L3 有向图与宏微联邦
+        # 07 实时入库机制 · 四通道感知 × FTS5 触发器 × 级联写穿对账
         {
-            "eyebrow": "05 · GRAPH INTELLIGENCE · L1/L2/L3 & FEDERATION",
+            "eyebrow": "06 · REALTIME DB SYNC · 4 CHANNELS & TRIGGERS",
+            "title": "实时入库机制：四通道感知 × FTS5 触发器 × 级联写穿对账",
+            "lead": "FileWatcher + AutoSync + EnvCollector + Scheduler · <b>schema_reconcile Trigger 原子同步</b>",
+            "svg": vis_env_change_to_db_pipeline(animated=True),
+            "anim_caps": [
+                "Step 1/4：四通道采集——FileWatcher(500ms防抖) / PostToolUse(AutoSync) / 60s /proc / 1800s 巡检",
+                "Step 2/4：净化与写穿——改写标 embedding_status='stale'；删除清 links/fact_nodes/归档 memories",
+                "Step 3/4：88 SPI 落盘——SQLite AFTER INS/UPD/DEL 触发器自动同步 6 列 assets_fts 与 trigram",
+                "Step 4/4：EventBus → [[hooks]]/[[pipelines]] + Web SSE 推送，下次 brief/changes_since 即刻可见",
+            ],
+            "next": "节点元数据与实时入库机制齐备后，看如何织成 L1/L2/L3 有向加权图谱并桥接 CodeGraph。",
+            "script": (
+                "环境变化落库靠四条独立互补的源码通道：`src/watcher/mod.rs` 的 `FileWatcher` 基于 inotify/FSEvents 在启动时剪枝黑名单、500ms 去重防抖后交 `ChangeHandler`；`src/hooks/auto_sync.rs` 由 `PostToolUse` 或 Git `post-commit` 异步触发秒级回写；`src/env/mod.rs` 每 60 秒读 `/proc` 与监听端口后原子替换 `active_processes`；`src/daemon/scheduler.rs` 每 1800 秒在独立 OS 线程跑 `FreshnessReconciler::reconcile` 兜底对账。\n"
+                "在写穿机制上：文件修改经 `merge_with_existing_asset` 发现哈希变化立即把旧向量标 `stale`，高并发写走 `AuditLogger` 60 秒滑动窗折叠；文件删除则置 `assets.status='missing'`，配合 `schema_reconcile.rs` 定义的 SQLite `AFTER INSERT/UPDATE/DELETE` 触发器实时同步 `assets_fts`、`assets_trigram_fts` 和 `skills_catalog_fts`，同时清除 `links` 断链、`fact_nodes` 幽灵节点与旧摘要记忆（PG 端写入墓碑），最后经 `EventBus` 推向 Web SSE。"
+            ),
+        },
+        # 08 图谱智能 · L1/L2/L3 有向图与宏微联邦
+        {
+            "eyebrow": "07 · GRAPH INTELLIGENCE · L1/L2/L3 & FEDERATION",
             "title": "图谱智能：三层证据有向加权图 × CodeGraph 显微镜",
             "lead": "4,985 文件边自动上卷 · <b>孤岛率 99.5% → 0% · M1 148 μs</b>",
             "svg": vis_host_graph_federation(animated=True),
@@ -227,7 +266,7 @@ def build_tech_deck() -> None:
         },
         # 07 并发控制 · AOPCC 高速 ETC 立交与碰壁自愈
         {
-            "eyebrow": "06 · CONCURRENCY · AOPCC MATH & SELF-HEAL",
+            "eyebrow": "08 · CONCURRENCY · AOPCC MATH & SELF-HEAL",
             "title": "并发控制：AOPCC 期望代价立交 × <2ms 碰壁秒愈环",
             "lead": "p·C_turn > (1-p)·C_fail → <b>ETC 乐观直飞完胜全悲观</b>",
             "svg": vis_aopcc_highway(animated=True),
@@ -245,7 +284,7 @@ def build_tech_deck() -> None:
         },
         # 08 多 Agent 协作锁 · 目录树传播 + WFG 死锁破环
         {
-            "eyebrow": "07 · COORDINATION · HIERARCHICAL LOCKS & WFG",
+            "eyebrow": "09 · COORDINATION · HIERARCHICAL LOCKS & WFG",
             "title": "多 Agent 协作锁：目录树层级传播 × WFG 死锁闪电破环",
             "lead": "5 类资源 · 共享/排他模式 · <b>W6 破局加速 46.49x · 零轮询唤醒</b>",
             "svg": vis_lock_and_wfg(animated=True),
@@ -261,7 +300,7 @@ def build_tech_deck() -> None:
         },
         # 09 规约脊柱 · 防爆压缩与 41μs 放置柱状图
         {
-            "eyebrow": "08 · GOVERNANCE SPINE · PLACEMENT & ROUTER",
+            "eyebrow": "10 · GOVERNANCE SPINE · PLACEMENT & ROUTER",
             "title": "规约脊柱：百级 SKILL 609k → 358t 防爆 × 41 μs 放置自演化",
             "lead": "PlacementLearner 2.0 纠偏聚类 · <b>W7 信息密度跃升 838x</b>",
             "svg": svg_bars(
@@ -281,7 +320,7 @@ def build_tech_deck() -> None:
         },
         # 10 海马体① · 可插拔记忆 SPI 与 RRF 流水线
         {
-            "eyebrow": "09 · HIPPOCAMPUS I · MEMORY SPI & RRF",
+            "eyebrow": "11 · HIPPOCAMPUS I · MEMORY SPI & RRF",
             "title": "海马体①：可插拔 Memory SPI × FTS5 + 向量 RRF 融合",
             "lead": "内置零依赖 335 μs · <b>一行配置热插 Mem0 / Letta / PowerContext</b>",
             "svg": svg_pipeline(
@@ -320,7 +359,7 @@ def build_tech_deck() -> None:
         },
         # 11 海马体② · 七大陈旧漏斗与写穿净水器
         {
-            "eyebrow": "10 · HIPPOCAMPUS II · FRESHNESS PURIFIER",
+            "eyebrow": "12 · HIPPOCAMPUS II · FRESHNESS PURIFIER",
             "title": "海马体②：三级写穿净水引擎，彻底根治七大陈旧漏斗",
             "lead": "DQ5 抽检 589/589 = 100.0% · <b>W12 Token -91.2% · 质量 27.5 → 100</b>",
             "svg": vis_freshness_purifier(animated=True),
@@ -336,7 +375,7 @@ def build_tech_deck() -> None:
         },
         # 12 跨大脑连续性 · 发光胶囊接力图
         {
-            "eyebrow": "11 · CONTINUITY · CROSS-BRAIN CAPSULE",
+            "eyebrow": "13 · CONTINUITY · CROSS-BRAIN CAPSULE",
             "title": "跨大脑连续性：BodyManifest × <=300 tok 脱敏接力胶囊",
             "lead": "Brain-Agnostic · <b>W17 Token -92.7% · 10ms 无缝唤醒续跑</b>",
             "svg": vis_handoff_capsule(animated=True),
@@ -351,7 +390,7 @@ def build_tech_deck() -> None:
         },
         # 13 自治边界 · 五维生命体征雷达 + L0~L3 同心圆环
         {
-            "eyebrow": "12 · AUTONOMY & HOMEOSTASIS VITALS",
+            "eyebrow": "14 · AUTONOMY & HOMEOSTASIS VITALS",
             "title": "自治边界：五维生命体征几何雷达 × L0~L3 同心权限包络",
             "lead": "现网 DQ8 稳态分 93.9 · <b>L1 自主自愈 · L3 物理禁区 100% 拦截</b>",
             "svg": vis_vitals_radar_autonomy(animated=True),
@@ -366,7 +405,7 @@ def build_tech_deck() -> None:
         },
         # 14 纵深安全与双域审计 · 四道盾牌 + 折叠漏斗
         {
-            "eyebrow": "13 · DEFENSE-IN-DEPTH & DUAL AUDIT",
+            "eyebrow": "15 · DEFENSE-IN-DEPTH & DUAL AUDIT",
             "title": "纵深安全：四道铁闸零泄露 × 抗间接提示词投毒",
             "lead": "DQ4 101/101 零明文残留 · <b>W11 抗投毒质量 21.5 → 100 (+78.5)</b>",
             "svg": vis_security_dual_audit(animated=True),
@@ -381,7 +420,7 @@ def build_tech_deck() -> None:
         },
         # 15 多体联邦 · MeshEnvelope v1.0 零信任拓扑图
         {
-            "eyebrow": "14 · FEDERATED MESH · MESHENVELOPE v1.0",
+            "eyebrow": "16 · FEDERATED MESH · MESHENVELOPE v1.0",
             "title": "多体联邦：HMAC-SHA256 防重放信封 × 10MB 沙盒收件箱",
             "lead": "拒绝重型 Raft / Rsync · <b>W14 篡改重放 100% 拦截 · Q 12.5 → 100</b>",
             "svg": vis_mesh_network(animated=True),
@@ -396,7 +435,7 @@ def build_tech_deck() -> None:
         },
         # 16 双域全链路审计 · 图标三支柱
         {
-            "eyebrow": "15 · DUAL-DOMAIN AUDIT · IN + OUT",
+            "eyebrow": "17 · DUAL-DOMAIN AUDIT · IN + OUT",
             "title": "双域审计：接入域 + 域外自治 100% 留痕与 60s 折叠防洪",
             "lead": "根治 94.7% 编辑器保存洪泛 · <b>DQ7 500/500 零泄露 · <80 μs</b>",
             "svg": svg_columns(
@@ -454,7 +493,7 @@ def build_tech_deck() -> None:
         },
         # 17 闭环自进化 · P1~P5 环形飞轮图
         {
-            "eyebrow": "16 · SELF-EVOLUTION · P1~P5 FLYWHEEL",
+            "eyebrow": "18 · SELF-EVOLUTION · P1~P5 FLYWHEEL",
             "title": "闭环自进化：P1~P5 五点对比探针驱动的数据调优飞轮",
             "lead": "严禁拍脑袋调参 · <b>实时消费 24h 审计滑窗动态升降级 AOPCC 租约</b>",
             "svg": vis_evolution_flywheel(animated=True),
@@ -470,7 +509,7 @@ def build_tech_deck() -> None:
         },
         # 18 内生性能工程① · 无锁 Wait Events 代码-机制联动图
         {
-            "eyebrow": "17 · BUILT-IN PERF I · WAIT EVENTS (<100ns)",
+            "eyebrow": "19 · BUILT-IN PERF I · WAIT EVENTS (<100ns)",
             "title": "内生性能工程①：无锁 6 类 18 等待事件 × /proc/self 探针",
             "lead": "零堆分配 RAII 埋点 (&lt;100ns) · <b>单二进制零 eBPF / OTel 依赖</b>",
             "svg": svg_code_and_flow(
@@ -507,7 +546,7 @@ def build_tech_deck() -> None:
         },
         # 19 内生性能工程② · AWR 仪表盘与 600% CPU 根治曲线
         {
-            "eyebrow": "18 · BUILT-IN PERF II · AWR & 600% CPU POSTMORTEM",
+            "eyebrow": "20 · BUILT-IN PERF II · AWR & 600% CPU POSTMORTEM",
             "title": "内生性能工程②：AWR 黄金基线 × 600% CPU 事故压降曲线",
             "lead": "32 份滚动快照 · <b>ADDM 5 规则自动定位 · L1 一键内存回收</b>",
             "svg": vis_awr_telemetry(animated=True),
@@ -522,7 +561,7 @@ def build_tech_deck() -> None:
         },
         # 20 实证评测① · Benchmark v4.1 帕累托二维象限
         {
-            "eyebrow": f"19 · BENCHMARK v{BENCH_VER} · PARETO DUAL-GATE",
+            "eyebrow": f"21 · BENCHMARK v{BENCH_VER} · PARETO DUAL-GATE",
             "title": f"实证评测①：Benchmark v{BENCH_VER} 帕累托跃迁与微秒 SLA",
             "lead": f"Q = 40%事实 + 30%信噪 + 20%行动 + 10%安全 · <b>W1~W{WL_CNT} 全赢</b>",
             "svg": vis_benchmark_pareto(animated=True),
@@ -538,7 +577,7 @@ def build_tech_deck() -> None:
         },
         # 21 实证评测② · 四大赛道同机 VS 擂台
         {
-            "eyebrow": "20 · COMPETITORS · 4-TRACK LIVE ARENA",
+            "eyebrow": "22 · COMPETITORS · 4-TRACK LIVE ARENA",
             "title": "实证评测②：四赛道同机对标擂台与开放生态边界",
             "lead": "严格区分 LIVE_BENCHMARKED 与 ARCH_VERIFIED · <b>不捏造、不拉踩</b>",
             "svg": vis_competitor_arena(animated=True),
@@ -555,7 +594,7 @@ def build_tech_deck() -> None:
         },
         # 22 微内核与周边分离架构 · 星型插槽与四发行版积木塔
         {
-            "eyebrow": "21 · MICROKERNEL & CONTRIB · PHASE 70~75",
+            "eyebrow": "23 · MICROKERNEL & CONTRIB · PHASE 70~75",
             "title": f"微内核与周边分离：{KERNEL_CNT} 核 × {CONTRIB_CNT} 扩展 × 4 大发行版",
             "lead": "kernel/ 0 业务词污染 · <b>contrib/ 五件套隔离 · Probe 6.7MB 零 C++</b>",
             "svg": vis_microkernel_hub(animated=True),
@@ -572,7 +611,7 @@ def build_tech_deck() -> None:
         },
         # 23 工程化实践 · 7 道确定性机器门禁
         {
-            "eyebrow": "22 · ENGINEERING EXCELLENCE · QUALITY GATES",
+            "eyebrow": "24 · ENGINEERING EXCELLENCE · QUALITY GATES",
             "title": "工程化实践：零重扫演进 × 7 道确定性质量门禁流水线",
             "lead": f"A~G 交叉防漂移 · <b>{TEST_CNT} 测试全绿 · Playwright 9/9 像素门禁</b>",
             "svg": vis_quality_gates(test_cnt=TEST_CNT, mod_cnt=MOD_CNT, tool_cnt=TOOL_CNT, animated=True),
@@ -587,7 +626,7 @@ def build_tech_deck() -> None:
         },
         # 24 边界与克制 · 递弱代偿红线墙
         {
-            "eyebrow": "23 · PORTABILITY & ANTI-CREEP BOUNDARY",
+            "eyebrow": "25 · PORTABILITY & ANTI-CREEP BOUNDARY",
             "title": "递弱代偿红线墙：只做最纯粹的具身微内核底座",
             "lead": "100% 位置无关交付 · <b>三层命名零破坏承诺 · 绝不沦为重框架</b>",
             "svg": vis_do_dont_wall(animated=True),
@@ -603,7 +642,7 @@ def build_tech_deck() -> None:
         },
         # 25 终局与专题系列入口
         {
-            "eyebrow": "24 · EPILOGUE · OS EMBODIED SUBSTRATE",
+            "eyebrow": "26 · EPILOGUE · OS EMBODIED SUBSTRATE",
             "title": "终局：从宿主机单二进制走向模块化 OS 原生具身底座",
             "lead": "今天开箱即用 · <b>明天成为智能体时代操作系统的底层原语</b>",
             "svg": svg_closing(
@@ -618,7 +657,7 @@ def build_tech_deck() -> None:
                 next_talk="返回总览导航：presentation/index.html · 对外路演版：presentation/presentation.html",
             ),
             "script": (
-                "非常感谢各位耐心听完这 25 页全图解技术深度交流！如果对某个器官的源码实现感兴趣，可以点击底部导航回到 index.html，进入 6 讲 × 30 分钟专题逐一拆透。欢迎拍砖与共建！"
+                "非常感谢各位耐心听完这 27 页全图解技术深度交流！如果对某个器官的源码实现感兴趣，可以点击底部导航回到 index.html，进入 6 讲 × 30 分钟专题逐一拆透。欢迎拍砖与共建！"
             ),
         },
     ]

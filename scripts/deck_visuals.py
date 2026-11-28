@@ -2207,3 +2207,268 @@ def vis_roadmap_journey(
         parts.append(f'<text x="48" y="601" font-family="var(--f-r)" font-size="19" fill="{C_PAPER}" font-weight="700">{esc(footer)}</text>')
     parts.append("</svg>")
     return "".join(parts)
+
+
+def vis_agent_usage_mcp_hook_skill(animated: bool = True) -> str:
+    """Diagram: How an Agent uses Agent Body via MCP + hard Hooks, and how body_skill_route
+    guarantees the right SKILL is returned even after deleting client skills/ directories."""
+    cls = "fig anim" if animated else "fig"
+    s = lambda k: f'<g data-step="{k}">' if animated else "<g>"
+    parts = [
+        f'<svg class="{cls}" viewBox="0 0 1472 640" width="1472" height="640" xmlns="http://www.w3.org/2000/svg">',
+        _arrow_defs("au"),
+    ]
+
+    # Step 1 (Top strip y=14..226): MCP + Hard Hook 4-stage runtime lifecycle
+    parts.append(s(1))
+    parts.append(f'<rect x="16" y="14" width="1440" height="212" rx="16" fill="{C_WHITE}" stroke="{C_LINE}" stroke-width="1.5" filter="url(#au_sh)"/>')
+    parts.append(f'<text x="36" y="39" font-family="var(--f-m)" font-size="12" fill="{C_TEAL}" font-weight="700" letter-spacing="1.4">STEP 1 · AGENT RUNTIME LIFECYCLE · 硬 HOOK × MCP 双轨协同实战过程</text>')
+    parts.append(f'<rect x="1226" y="21" width="210" height="26" rx="13" fill="{C_TEAL_L}"/>')
+    parts.append(f'<text x="1331" y="38" font-family="var(--f-m)" font-size="11.5" fill="{C_TEAL_D}" font-weight="700" text-anchor="middle">4 阶段确定性闭环</text>')
+
+    stages = [
+        (34, 322, "1. SESSION START", "开工硬 Hook 注简报", "rocket", C_TEAL_D, C_PAPER, [
+            ("hooks.json → body_bridge.py", False),
+            ("自动跑 agent-body brief", False),
+            ("注宿主机事实 + <=120t 租约", True),
+        ]),
+        (384, 322, "2. ACTIVE MCP CALL", "任务中按需调 MCP", "plug", C_TEAL, C_PAPER, [
+            ("body_skill_route(intent)", False),
+            ("body_fact_query / port_check", False),
+            ("body_codegraph_bridge / lock", True),
+        ]),
+        (734, 322, "3. PRE TOOL USE", "动手前硬 Hook 门禁", "shield", C_CLAY, C_CLAY_L, [
+            ("body_hook_pre(tool, args)", False),
+            ("只读/客户端直连 → allow 放行", False),
+            ("占端口/目录锁/高危 → deny/ask", True),
+        ]),
+        (1084, 352, "4. POST TOOL USE", "事后建档 + 碰壁自愈", "bolt", C_GREEN, C_GREEN_L, [
+            ("成功: 异步 AutoSync 写穿入库", False),
+            ("刷新 assets / memories / 图谱", False),
+            ("失败: <2ms 自愈处方 + 降级租约", True),
+        ]),
+    ]
+    for idx, (bx, bw, tag, title, ic, col, bg, lines) in enumerate(stages):
+        parts.append(f'<rect x="{bx}" y="54" width="{bw}" height="156" rx="14" fill="{bg}" stroke="{col}" stroke-width="1.8"/>')
+        parts.append(icon_badge(ic, bx + 34, 88, 18, col))
+        parts.append(f'<text x="{bx + 62}" y="80" font-family="var(--f-m)" font-size="11" fill="{col}" font-weight="700">{esc(tag)}</text>')
+        parts.append(f'<text x="{bx + 62}" y="103" font-family="var(--f-r)" font-size="16" fill="{C_INK}" font-weight="700">{esc(title)}</text>')
+        for li, (txt, is_b) in enumerate(lines):
+            ly = 132 + li * 23
+            fw = "700" if is_b else "500"
+            tcol = col if is_b else C_INK2
+            parts.append(f'<text x="{bx + 18}" y="{ly}" font-family="var(--f-m)" font-size="11.5" fill="{tcol}" font-weight="{fw}">{esc(txt)}</text>')
+        if idx < 3:
+            ax1 = bx + bw + 4
+            ax2 = ax1 + 20
+            parts.append(f'<line x1="{ax1}" y1="132" x2="{ax2}" y2="132" stroke="{C_TEAL}" stroke-width="2.4" marker-end="url(#au_t)"/>')
+    parts.append("</g>")
+
+    # Step 2 (Bottom-left x=16..462, y=244..624): Deleting client skills/ dir & neutral host repo
+    parts.append(s(2))
+    parts.append(f'<rect x="16" y="244" width="446" height="380" rx="16" fill="{C_WHITE}" stroke="{C_LINE}" stroke-width="1.5" filter="url(#au_sh)"/>')
+    parts.append(f'<text x="36" y="272" font-family="var(--f-m)" font-size="12" fill="{C_RED}" font-weight="700" letter-spacing="1.2">STEP 2 · 删客户端 SKILLS 目录仍零失手</text>')
+
+    parts.append(f'<rect x="32" y="288" width="414" height="122" rx="12" fill="{C_RED_L}" stroke="{C_RED}" stroke-width="1.6"/>')
+    parts.append(icon_badge("ban", 66, 326, 18, C_RED))
+    parts.append(f'<text x="96" y="320" font-family="var(--f-r)" font-size="16" fill="{C_INK}" font-weight="700">删掉客户端自带 skills/ 目录</text>')
+    parts.append(f'<text x="96" y="344" font-family="var(--f-m)" font-size="11.5" fill="{C_INK2}">~/.agents/skills/ · .claude/skills/</text>')
+    parts.append(f'<text x="48" y="376" font-family="var(--f-s)" font-size="12.5" fill="{C_INK}" font-weight="600">彻底切断 100+ 技能 609k tok 全量静态灌入</text>')
+    parts.append(f'<text x="48" y="398" font-family="var(--f-s)" font-size="12" fill="{C_RED}">客户端开机零上下文负担 · 技能实体不丢失</text>')
+
+    parts.append(f'<line x1="239" y1="412" x2="239" y2="432" stroke="{C_TEAL}" stroke-width="2.4" marker-end="url(#au_t)"/>')
+
+    parts.append(f'<rect x="32" y="436" width="414" height="172" rx="12" fill="{C_TEAL_L}" stroke="{C_TEAL}" stroke-width="1.6"/>')
+    parts.append(icon_badge("database", 66, 474, 18, C_TEAL))
+    parts.append(f'<text x="96" y="468" font-family="var(--f-r)" font-size="16" fill="{C_INK}" font-weight="700">宿主机中立技能库 + FTS5 索引</text>')
+    parts.append(f'<text x="96" y="492" font-family="var(--f-m)" font-size="11.5" fill="{C_TEAL_D}" font-weight="700">实体统一托管: ~/new/skills/</text>')
+    parts.append(f'<text x="48" y="524" font-family="var(--f-s)" font-size="12" fill="{C_INK2}">SkillCatalogScanner 只抽 Frontmatter 元数据</text>')
+    parts.append(f'<text x="48" y="548" font-family="var(--f-s)" font-size="12" fill="{C_INK2}">PromptInjectionScanner 防投毒 + SecretRedactor</text>')
+    parts.append(f'<text x="48" y="574" font-family="var(--f-m)" font-size="11.5" fill="{C_TEAL_D}" font-weight="700">入库: skills_catalog + skills_catalog_fts</text>')
+    parts.append(f'<text x="48" y="596" font-family="var(--f-m)" font-size="11" fill="{C_MUTE}">保存 skill_name / triggers / skill_path / tokens</text>')
+    parts.append("</g>")
+
+    # Step 3 (Bottom-center x=492..1022, y=244..624): body_skill_route deterministic retrieval
+    parts.append(s(3))
+    parts.append(f'<line x1="464" y1="504" x2="488" y2="504" stroke="{C_TEAL}" stroke-width="2.6" marker-end="url(#au_t)"/>')
+    parts.append(f'<rect x="492" y="244" width="530" height="380" rx="16" fill="{C_WHITE}" stroke="{C_LINE}" stroke-width="1.5" filter="url(#au_sh)"/>')
+    parts.append(f'<text x="512" y="272" font-family="var(--f-m)" font-size="12" fill="{C_TEAL_D}" font-weight="700" letter-spacing="1.2">STEP 3 · 运行任务时如何确保返回正确 SKILL</text>')
+
+    parts.append(f'<rect x="508" y="288" width="498" height="74" rx="12" fill="{C_PAPER}" stroke="{C_TEAL_2}" stroke-width="1.4"/>')
+    parts.append(f'<text x="524" y="311" font-family="var(--f-m)" font-size="12" fill="{C_TEAL_D}" font-weight="700">触发: body_skill_route(intent, budget=600, max=3)</text>')
+    parts.append(f'<text x="524" y="334" font-family="var(--f-s)" font-size="12" fill="{C_INK2}">或开工 body_brief(query=...) 自动触发按需生态路由</text>')
+    parts.append(f'<text x="524" y="354" font-family="var(--f-m)" font-size="11" fill="{C_MUTE}">示例意图: "PG 慢SQL 排查 · postgresql planner"</text>')
+
+    steps_r = [
+        (372, 52, C_TEAL_L, C_TEAL, "① FTS5 BM25 粗召回: skills_catalog_fts MATCH ? (limit=max*4)", "未命中时自动降级 LIKE 模糊检索 → 全库兜底，确保不漏召回"),
+        (432, 56, C_GOLD_L, C_GOLD, "② rank_skills 多因子确定性打分排序 (router.rs)", "全名命中 +60 · 词命中名 +25 · 触发词 +20 · 描述命中 +15"),
+        (496, 50, C_GREEN_L, C_GREEN, "③ clamp_to_budget 硬预算截断 → 输出 Top-K 索引卡片", "每条仅保留 skill_name + 90字摘要 + 物理绝对路径 skill_path"),
+    ]
+    for ry, rh, rbg, rcol, rtitle, rsub in steps_r:
+        parts.append(f'<rect x="508" y="{ry}" width="498" height="{rh}" rx="10" fill="{rbg}" stroke="{rcol}" stroke-width="1.4"/>')
+        parts.append(f'<text x="524" y="{ry + 21}" font-family="var(--f-m)" font-size="11.5" fill="{C_INK}" font-weight="700">{esc(rtitle)}</text>')
+        parts.append(f'<text x="524" y="{ry + 41}" font-family="var(--f-s)" font-size="11.5" fill="{C_INK2}">{esc(rsub)}</text>')
+
+    parts.append(f'<rect x="508" y="556" width="498" height="52" rx="10" fill="#21353E"/>')
+    parts.append(f'<text x="524" y="578" font-family="var(--f-m)" font-size="11.5" fill="#7DE0B8" font-weight="700">命中 #1: pgfaq (4200 tok) → ~/new/skills/pgfaq/SKILL.md</text>')
+    parts.append(f'<text x="524" y="598" font-family="var(--f-m)" font-size="11" fill="#B5CDD2">route_tokens_used: 358 tok · saved: 99.9% (609k → 358)</text>')
+    parts.append("</g>")
+
+    # Step 4 (Bottom-right x=1052..1456, y=244..624): Progressive read_file & cross-brain outcome
+    parts.append(s(4))
+    parts.append(f'<line x1="1024" y1="504" x2="1048" y2="504" stroke="{C_GREEN}" stroke-width="2.6" marker-end="url(#au_g)"/>')
+    parts.append(f'<rect x="1052" y="244" width="404" height="380" rx="16" fill="{C_WHITE}" stroke="{C_LINE}" stroke-width="1.5" filter="url(#au_sh)"/>')
+    parts.append(f'<text x="1072" y="272" font-family="var(--f-m)" font-size="12" fill="{C_GREEN}" font-weight="700" letter-spacing="1.2">STEP 4 · 精准加载与跨大脑共享</text>')
+
+    parts.append(f'<rect x="1068" y="288" width="372" height="154" rx="12" fill="{C_PAPER}" stroke="{C_GREEN}" stroke-width="1.6"/>')
+    parts.append(icon_badge("check", 1102, 324, 18, C_GREEN))
+    parts.append(f'<text x="1132" y="320" font-family="var(--f-r)" font-size="16" fill="{C_INK}" font-weight="700">按图索骥 read_file 加载</text>')
+    parts.append(f'<text x="1132" y="342" font-family="var(--f-m)" font-size="11" fill="{C_GREEN}" font-weight="700">只读命中那 1 份 SKILL.md</text>')
+    parts.append(f'<text x="1084" y="374" font-family="var(--f-s)" font-size="12" fill="{C_INK2}">1. 大脑据 skill_path 调 read_file 精读规范</text>')
+    parts.append(f'<text x="1084" y="398" font-family="var(--f-s)" font-size="12" fill="{C_INK2}">2. 其余百个技能全程零注入、零干扰注意力</text>')
+    parts.append(f'<text x="1084" y="424" font-family="var(--f-s)" font-size="11.5" fill="{C_TEAL_D}" font-weight="700">边界: 删客户端自动加载目录，保留宿主机托管库</text>')
+
+    parts.append(f'<rect x="1068" y="456" width="372" height="152" rx="14" fill="{C_TEAL_D}"/>')
+    parts.append(f'<text x="1254" y="484" font-family="var(--f-m)" font-size="11" fill="#A6CFD5" font-weight="700" text-anchor="middle" letter-spacing="1.4">SKILL ROUTING PARETO OUTCOME</text>')
+    parts.append(f'<text x="1162" y="534" font-family="var(--f-m)" font-size="28" fill="#FAF8F4" font-weight="700" text-anchor="middle">-99.9%</text>')
+    parts.append(f'<text x="1162" y="558" font-family="var(--f-s)" font-size="12" fill="#B8DBE0" text-anchor="middle">Token 节省 (838x 密度)</text>')
+    parts.append(f'<line x1="1254" y1="498" x2="1254" y2="572" stroke="#326C7F" stroke-width="1.4"/>')
+    parts.append(f'<text x="1346" y="534" font-family="var(--f-m)" font-size="28" fill="#7DE0B8" font-weight="700" text-anchor="middle">100%</text>')
+    parts.append(f'<text x="1346" y="558" font-family="var(--f-s)" font-size="12" fill="#B8DBE0" text-anchor="middle">跨大脑共享同一库</text>')
+    parts.append(f'<text x="1254" y="592" font-family="var(--f-m)" font-size="11" fill="#D2E7EB" text-anchor="middle">Claude · Antigravity · Cursor · Codex 零重复配置</text>')
+    parts.append("</g>")
+
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def vis_env_change_to_db_pipeline(animated: bool = True) -> str:
+    """Diagram: How host environment changes propagate into the Agent Body database
+    (4 capture channels -> purification & write-through cascade -> 88 SPI + SQLite FTS5 triggers -> live consumption)."""
+    cls = "fig anim" if animated else "fig"
+    s = lambda k: f'<g data-step="{k}">' if animated else "<g>"
+    parts = [
+        f'<svg class="{cls}" viewBox="0 0 1472 640" width="1472" height="640" xmlns="http://www.w3.org/2000/svg">',
+        _arrow_defs("ec"),
+    ]
+
+    # Step 1 (Left column x=16..432, y=14..548): 4 capture channels
+    parts.append(s(1))
+    parts.append(f'<rect x="16" y="14" width="416" height="534" rx="16" fill="{C_WHITE}" stroke="{C_LINE}" stroke-width="1.5" filter="url(#ec_sh)"/>')
+    parts.append(f'<text x="36" y="40" font-family="var(--f-m)" font-size="12" fill="{C_TEAL}" font-weight="700" letter-spacing="1.2">STEP 1 · 四大环境变化采集通道</text>')
+
+    channels = [
+        (56, "① 实时文件监听 FileWatcher", "radar", C_TEAL_D, C_PAPER, [
+            "Linux inotify / macOS FSEvents",
+            "启动剪枝黑名单 · 新目录动态补挂",
+            "500ms 轮询去重防抖 → ChangeHandler",
+        ]),
+        (174, "② PostToolUse & Git Hook", "bolt", C_CLAY, C_CLAY_L, [
+            "write_file / edit_file / post-commit",
+            "零阻塞异步拉起 AutoSyncEngine",
+            "source='agent_hook' 秒级写穿入库",
+        ]),
+        (292, "③ 60s 进程/端口 EnvCollector", "server", C_TEAL_2, C_PAPER, [
+            "0.2ms 直读 /proc + 扫描监听端口",
+            "过滤子线程与 95% kworker 底噪",
+            "cmdline 脱敏后原子替换快照",
+        ]),
+        (410, "④ 1800s 巡检 BackgroundScheduler", "clock", C_GREEN, C_GREEN_L, [
+            "独立 OS 线程防阻塞 Tokio 循环",
+            "FreshnessReconciler 现实对账",
+            "重扫 MCP/SKILL + 锁 GC + AWR 快照",
+        ]),
+    ]
+    for cy, ctitle, cic, ccol, cbg, clines in channels:
+        parts.append(f'<rect x="32" y="{cy}" width="384" height="106" rx="12" fill="{cbg}" stroke="{ccol}" stroke-width="1.6"/>')
+        parts.append(icon_badge(cic, 66, cy + 38, 17, ccol))
+        parts.append(f'<text x="94" y="{cy + 28}" font-family="var(--f-r)" font-size="15" fill="{C_INK}" font-weight="700">{esc(ctitle)}</text>')
+        for li, ln in enumerate(clines):
+            ly = cy + 50 + li * 21
+            lcol = ccol if li == 2 else C_INK2
+            lfw = "700" if li == 2 else "400"
+            parts.append(f'<text x="94" y="{ly}" font-family="var(--f-s)" font-size="11.5" fill="{lcol}" font-weight="{lfw}">{esc(ln)}</text>')
+    parts.append("</g>")
+
+    # Step 2 (Center column x=462..948, y=14..548): Purification & write-through cascade
+    parts.append(s(2))
+    parts.append(f'<line x1="434" y1="280" x2="458" y2="280" stroke="{C_TEAL}" stroke-width="2.6" marker-end="url(#ec_t)"/>')
+    parts.append(f'<rect x="462" y="14" width="486" height="534" rx="16" fill="{C_WHITE}" stroke="{C_LINE}" stroke-width="1.5" filter="url(#ec_sh)"/>')
+    parts.append(f'<text x="482" y="40" font-family="var(--f-m)" font-size="12" fill="{C_CLAY}" font-weight="700" letter-spacing="1.2">STEP 2 · 净化筛选 × 增改删写穿机制</text>')
+
+    parts.append(f'<rect x="478" y="56" width="454" height="232" rx="12" fill="{C_GREEN_L}" stroke="{C_GREEN}" stroke-width="1.6"/>')
+    parts.append(f'<text x="496" y="82" font-family="var(--f-r)" font-size="16" fill="{C_GREEN}" font-weight="700">新增 / 修改：净化过滤 + 写穿保鲜</text>')
+    mod_lines = [
+        ("1. 白黑灰门禁 + NoiseFilter 拦截 .log / .swp / .pyc", C_INK, "600"),
+        ("2. 提取元数据 + <=128KB 可索引正文 + 全链路脱敏", C_INK2, "400"),
+        ("3. merge_with_existing_asset 比对内容哈希:", C_INK, "600"),
+        ("   → 内容有变自动标 embedding_status='stale'", C_CLAY, "700"),
+        ("4. LinksEngine 刷新静态引用边 + fact_nodes 节点", C_INK2, "400"),
+        ("5. AuditLogger 60s 滑动窗折叠高频写 (瘦身 90%+)", C_INK2, "400"),
+        ("6. 同路径旧摘要记忆自动归档，仅留最新 1 条 active", C_TEAL_D, "600"),
+    ]
+    for li, (txt, col, fw) in enumerate(mod_lines):
+        parts.append(f'<text x="496" y="{110 + li * 26}" font-family="var(--f-s)" font-size="12" fill="{col}" font-weight="{fw}">{esc(txt)}</text>')
+
+    parts.append(f'<rect x="478" y="302" width="454" height="230" rx="12" fill="{C_CLAY_L}" stroke="{C_CLAY}" stroke-width="1.6"/>')
+    parts.append(f'<text x="496" y="328" font-family="var(--f-r)" font-size="16" fill="{C_CLAY}" font-weight="700">删除 / 漂移：级联清理与幽灵剪枝</text>')
+    del_lines = [
+        ("1. 磁盘缺失 → 标 assets.status = 'missing'", C_INK, "600"),
+        ("   → FTS 检索强制 WHERE status='active' 瞬间失效", C_RED, "700"),
+        ("2. 双向清除 links 源边与目标断链，杜绝假阳性", C_INK2, "400"),
+        ("3. 剪枝 fact_nodes 幽灵节点 (已删文件 + 已关端口)", C_INK2, "400"),
+        ("4. 归档失活文件摘要 memories (PG 事务写墓碑)", C_INK2, "400"),
+        ("5. FreshnessReconciler 比对 size/mtime 兜底修复", C_INK2, "400"),
+        ("6. 校验 .codegraph.db mtime 滞后并在 Brief 告警", C_TEAL_D, "600"),
+    ]
+    for li, (txt, col, fw) in enumerate(del_lines):
+        parts.append(f'<text x="496" y="{356 + li * 26}" font-family="var(--f-s)" font-size="12" fill="{col}" font-weight="{fw}">{esc(txt)}</text>')
+    parts.append("</g>")
+
+    # Step 3 (Right column x=978..1456, y=14..548): 88 SPI Database tables + Triggers
+    parts.append(s(3))
+    parts.append(f'<line x1="950" y1="280" x2="974" y2="280" stroke="{C_GREEN}" stroke-width="2.6" marker-end="url(#ec_g)"/>')
+    parts.append(f'<rect x="978" y="14" width="478" height="534" rx="16" fill="{C_WHITE}" stroke="{C_LINE}" stroke-width="1.5" filter="url(#ec_sh)"/>')
+    parts.append(f'<text x="998" y="40" font-family="var(--f-m)" font-size="12" fill="{C_TEAL_D}" font-weight="700" letter-spacing="1.2">STEP 3 · 88 SPI 数据库落盘 × TRIGGER 同步</text>')
+
+    parts.append(f'<rect x="994" y="54" width="446" height="30" rx="8" fill="{C_TEAL_L}"/>')
+    parts.append(f'<text x="1217" y="74" font-family="var(--f-m)" font-size="11.5" fill="{C_TEAL_D}" font-weight="700" text-anchor="middle">SQLite WAL (内嵌) ↔ PostgreSQL (集群) ↔ DuckDB (OLAP)</text>')
+
+    tbl_groups = [
+        (96, C_TEAL_D, "① 资产主表与 SQLite FTS5 自动触发器", [
+            ("assets ─[AFTER INS / UPD / DEL Trigger]─▶", C_INK, "700"),
+            ("自动同步 assets_fts (6列) + assets_trigram_fts", C_TEAL_D, "700"),
+            ("零手工双写失步 · 删改毫秒生效 (schema_reconcile.rs)", C_MUTE, "400"),
+        ]),
+        (206, C_TEAL, "② 物理拓扑与动态进程快照", [
+            ("links (依赖边) · fact_nodes / fact_edges (L1~L3)", C_INK, "600"),
+            ("active_processes: 60s replace_active_processes", C_INK2, "400"),
+            ("事务级整表快照替换，PID 与监听端口始终一致", C_MUTE, "400"),
+        ]),
+        (316, C_GREEN, "③ 生态目录与海马体记忆", [
+            ("skills_catalog ─[Trigger]─▶ skills_catalog_fts", C_INK, "600"),
+            ("mcp_catalog · memories (FTS5 + 768d 向量)", C_INK2, "400"),
+            ("1800s 自动重扫客户端 MCP 配置与 ~/new/skills/", C_MUTE, "400"),
+        ]),
+        (426, C_GOLD, "④ 变更流水、双域审计与协作锁", [
+            ("changes (watcher / agent_hook 变更流水历史)", C_INK, "600"),
+            ("audit_events (60s 折叠 + SHA-256) · resource_locks", C_INK2, "400"),
+            ("支撑 body_changes_since 增量回溯与审计回放", C_MUTE, "400"),
+        ]),
+    ]
+    for ty, tcol, ttitle, tlines in tbl_groups:
+        parts.append(f'<rect x="994" y="{ty}" width="446" height="98" rx="12" fill="{C_PAPER}" stroke="{tcol}" stroke-width="1.6"/>')
+        parts.append(f'<rect x="994" y="{ty}" width="7" height="98" rx="3.5" fill="{tcol}"/>')
+        parts.append(f'<text x="1014" y="{ty + 24}" font-family="var(--f-r)" font-size="14.5" fill="{C_INK}" font-weight="700">{esc(ttitle)}</text>')
+        for li, (txt, col, fw) in enumerate(tlines):
+            parts.append(f'<text x="1014" y="{ty + 48 + li * 20}" font-family="var(--f-m)" font-size="11" fill="{col}" font-weight="{fw}">{esc(txt)}</text>')
+    parts.append("</g>")
+
+    # Step 4 (Bottom banner y=564..624): EventBus -> SSE & Agent live visibility
+    parts.append(s(4))
+    parts.append(f'<rect x="16" y="564" width="1440" height="60" rx="14" fill="{C_TEAL_D}"/>')
+    parts.append(f'<text x="40" y="600" font-family="var(--f-r)" font-size="17" fill="{C_PAPER}" font-weight="700">STEP 4 · 实时消费闭环：EventBus → [[hooks]] / [[pipelines]] + Web SSE (:8765) → 下次 body_brief / body_changes_since 毫秒可见</text>')
+    parts.append("</g>")
+
+    parts.append("</svg>")
+    return "".join(parts)
