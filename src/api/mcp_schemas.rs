@@ -281,7 +281,7 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_memory_add",
-                "description": "向Agent 本体写入一条长期记忆（决策依据、排障经验、技术偏好或事实），跨会话持久化。",
+                "description": "向Agent 本体写入一条长期记忆（决策依据、排障经验、技术偏好或事实），跨会话持久化；启用 pg_tx 时支持双时态 fact_key 写穿与 expected_epoch 乐观并发校验。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -291,20 +291,32 @@ pub fn all_tool_schemas() -> Vec<Value> {
                             "default": "decision"
                         },
                         "content": { "type": "string", "description": "记忆正文" },
-                        "summary": { "type": "string", "description": "一句话摘要" }
+                        "summary": { "type": "string", "description": "一句话摘要" },
+                        "fact_key": { "type": "string", "description": "可选逻辑主键（用于双时态版本链与写穿更新，如 file:/path 或 rule:port_policy）" },
+                        "evidence_tier": {
+                            "type": "string",
+                            "enum": ["L1_EXPLICIT", "L2_STRUCTURAL", "L3_SEMANTIC"],
+                            "default": "L3_SEMANTIC",
+                            "description": "证据分级"
+                        },
+                        "expected_epoch": { "type": "integer", "description": "可选 CAS 期望逻辑纪元 (tx_epoch)，不匹配时返回 MVCC 冲突" },
+                        "tenant_scope": { "type": "string", "description": "可选项目/租户隔离域 (默认读取配置)" }
                     },
                     "required": ["content"]
                 }
             }),
             serde_json::json!({
                 "name": "body_memory_search",
-                "description": "语义与全文混合检索历史记忆与决策记录（支持 RRF 混合融合排序与近义词召回）。",
+                "description": "语义与全文混合检索历史记忆与决策记录（支持 RRF 混合融合排序，以及 pg_tx 双时态 as_of_epoch 快照与历史版本回溯）。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "query": { "type": "string", "description": "搜索关键词或语义描述" },
                         "limit": { "type": "integer", "default": 10 },
-                        "hybrid": { "type": "boolean", "default": true, "description": "是否启用 Ollama 向量+FTS5 混合重排" }
+                        "hybrid": { "type": "boolean", "default": true, "description": "是否启用 Ollama 向量+FTS5 混合重排" },
+                        "as_of_epoch": { "type": "integer", "description": "可选逻辑纪元快照时间旅行 (tx_epoch <= as_of_epoch)" },
+                        "include_history": { "type": "boolean", "default": false, "description": "是否包含已关闭/覆盖的历史双时态版本" },
+                        "tenant_scope": { "type": "string", "description": "可选项目/租户隔离域" }
                     },
                     "required": ["query"]
                 }
@@ -441,11 +453,13 @@ pub fn all_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_memory_audit",
-                "description": "长期记忆健康体检与矛盾仲裁：检测对立冲突的认知记忆对，计算温和时间衰减淘汰候选，支持指定归档旧条目。",
+                "description": "长期记忆健康体检与矛盾仲裁：检测对立冲突的认知记忆对，计算温和时间衰减淘汰候选，支持指定归档旧条目，并支持查询 PG 事务记忆健康状态 (tx_status) 或按 fact_key 执行原子墓碑失效 (tombstone_fact_key)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "archive_id": { "type": "string", "description": "若存在冲突，指定归档淘汰的旧记忆 ID" }
+                        "archive_id": { "type": "string", "description": "若存在冲突，指定归档淘汰的旧记忆 ID" },
+                        "tx_status": { "type": "boolean", "default": false, "description": "是否返回 PG 事务记忆引擎的健康态、当前 tx_epoch、活跃事件与逻辑分段计数" },
+                        "tombstone_fact_key": { "type": "string", "description": "可选：按逻辑事实键 (fact_key) 对 PG 事务记忆执行写穿墓碑逻辑失效，清除向量/索引召回" }
                     }
                 }
             }),

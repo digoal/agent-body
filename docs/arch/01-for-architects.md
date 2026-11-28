@@ -150,7 +150,7 @@ classDiagram
 借鉴 PostgreSQL `src/backend/` + `contrib/` 插件体系，项目完成微内核与周边的物理和逻辑分离（详见 [20-plugin-microkernel-architecture-spec.md](../design_doc/20-plugin-microkernel-architecture-spec.md)）：
 
 - **纯机制微内核 (`kernel/`)**：由 `body-sdk`（6 大开放 Routine + 7 大 Lifecycle Hook + 只读 `ObservabilityProvider` + `body_module_magic!()`）、`body-protocol`（`.control.toml` 前缀隔离校验与 JSON-RPC 2.0 线协议）及 `body-kernel`（8 张 `body_cat_*` 目录表 + 5 张基表 + `ScopedSqlExecutor` + `KernelDispatcher` 四端自动派发 + `KernelStatsRegistry` / `InFlightRegistry` / `SlowOpRing` + 轨 B `OutOfProcessFdwAdapter` 超时强杀沙盒）组成，`make arch-check` 强制守卫零跨层依赖与零周边业务/观测协议词污染；
-- **独立周边扩展 (`contrib/`)**：统一采用标准五件套（`Cargo.toml` + `.control.toml` + `sql/` `ext_<id>__*` + `body_module_magic!()` + `contrib/<ext>/tests/regress.rs`），已落地 10 个模块（`idx_fts_fuzzy`、`gov_placement`、`probe_db_engines` 及面向运维/政务云/可观测的 `probe_linux_ops`、`probe_jvm_middleware`、`hook_auth_mtls_rbac`、`hook_gov_compliance`、`hook_audit_siem`、`fdw_cmdb_ticket`、`obs_telemetry`）；
+- **独立周边扩展 (`contrib/`)**：统一采用标准五件套（`Cargo.toml` + `.control.toml` + `sql/` `ext_<id>__*` + `body_module_magic!()` + `contrib/<ext>/tests/regress.rs`），已落地 11 个模块（`idx_fts_fuzzy`、`gov_placement`、`probe_db_engines` 及面向运维/政务云/可观测/事务记忆的 `probe_linux_ops`、`probe_jvm_middleware`、`hook_auth_mtls_rbac`、`hook_gov_compliance`、`hook_audit_siem`、`fdw_cmdb_ticket`、`obs_telemetry`、`mem_pg_tx`）；
 - **四大发行版谱系 (`distributions/`)**：旗舰全功能版 `agent-body`（向后兼容 43 工具与 DuckDB/WebUI，支持 `GET /metrics`、W3C `traceparent` 与 `AGENT_BODY_LOG_FORMAT=json`）与三大零 C++/零 DuckDB 精简发行版——`agent-body-kernel-minimal`（3.9 MB，0 `contrib`）、`agent-body-probe`（6.7 MB，政务云/AIOps 极简探针）及 `agent-body-dba`（6.4 MB，PG/达梦/人大金仓专项哨兵，详见 [21-observability-and-telemetry-spec.md](../design_doc/21-observability-and-telemetry-spec.md)）。
 
 ---
@@ -220,7 +220,7 @@ sequenceDiagram
 | **资源开销** | 空闲内存 `< 25MB` | Tokio 协程多路复用，无请求时 CPU 利用率趋近于 0 |
 | **运行可用性** | 99.99% 防御性容错 | 运行时执行 `Preflight` 预检，内核级 `/proc` 与 inotify 缺失时优雅降级 |
 | **并发吞吐** | 10,000+ QPS (本地) | 亚毫秒内存/嵌入式 FTS 检索，锁判定与冲突检测耗时 `< 1ms` |
-| **实证可核验** | 100% 有据可查（规约 #18） | 三轨实证引擎 v3.9：W1~W19 同机 A/B 负载 + M1~M6 微基准 SLA + DQ1~DQ10 质量与 AWR 稳态门禁 + COMP-C1~C4 竞品对标 + PR-01~14 生产效能账本与 SHA-256 防篡改签名 |
+| **实证可核验** | 100% 有据可查（规约 #18） | 三轨实证引擎 v3.9：W1~W20 同机 A/B 负载 + M1~M6 微基准 SLA + DQ1~DQ10 质量与 AWR 稳态门禁 + COMP-C1~C4 竞品对标 + PR-01~14 生产效能账本与 SHA-256 防篡改签名 |
 
 ---
 

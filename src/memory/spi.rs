@@ -75,6 +75,195 @@ pub trait MemoryProvider: Send + Sync {
     fn evict(&self, criteria: &EvictCriteria) -> Result<usize>;
 }
 
+// ─── Phase 76 (ISSUE #55): 事务级海马体 SPI 契约（方案 A → 方案 B 前后向兼容，零重量依赖）───
+
+/// 三层证据分级（对齐规约 #5 与 #23）
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum TxEvidenceTier {
+    #[serde(rename = "L1_EXPLICIT")]
+    L1Explicit,
+    #[serde(rename = "L2_STRUCTURAL")]
+    L2Structural,
+    #[serde(rename = "L3_SEMANTIC")]
+    L3Semantic,
+}
+
+impl TxEvidenceTier {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::L1Explicit => "L1_EXPLICIT",
+            Self::L2Structural => "L2_STRUCTURAL",
+            Self::L3Semantic => "L3_SEMANTIC",
+        }
+    }
+
+    pub fn parse_str(s: &str) -> Self {
+        match s.trim().to_ascii_uppercase().as_str() {
+            "L1_EXPLICIT" | "L1" => Self::L1Explicit,
+            "L2_STRUCTURAL" | "L2" => Self::L2Structural,
+            _ => Self::L3Semantic,
+        }
+    }
+}
+
+/// 事务级双时态记忆写入请求
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TxMemoryWriteInput {
+    pub body_id: String,
+    pub tenant_scope: String,
+    pub fact_key: String,
+    pub memory_type: String,
+    pub content: String,
+    pub summary: Option<String>,
+    pub tags: Vec<String>,
+    pub evidence_tier: TxEvidenceTier,
+    /// STC 显著性评分（0.0 ~ 1.0，方案 B 预留）
+    pub salience_score: f32,
+    /// 可选 CAS 期望纪元：若提供且与当前活跃行 `tx_epoch` 不一致，则拒绝覆盖返回冲突
+    pub expected_epoch: Option<i64>,
+    pub source_agent: Option<String>,
+    pub source_session: Option<String>,
+    /// 可选解耦向量句柄（如外部 LSM / pgvector 段引用，绝不把大权重塞进堆表）
+    pub embedding_ref: Option<String>,
+}
+
+/// 不可变追加 + 双时态记忆事件记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TxMemoryEvent {
+    pub event_id: i64,
+    pub body_id: String,
+    pub tenant_scope: String,
+    pub fact_key: String,
+    pub memory_type: String,
+    pub content: String,
+    pub summary: Option<String>,
+    pub tags: Vec<String>,
+    pub evidence_tier: String,
+    pub evidence_sha256: String,
+    pub valid_from: String,
+    pub valid_to: Option<String>,
+    pub tx_epoch: i64,
+    pub embedding_status: String,
+    pub salience_score: f32,
+    pub consolidation_st: String,
+    pub created_at: String,
+    pub score: Option<f64>,
+}
+
+/// 事务写穿提交结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TxWriteOutcome {
+    pub event_id: i64,
+    pub tx_epoch: i64,
+    pub superseded_event_id: Option<i64>,
+    pub retries: u32,
+    pub evidence_sha256: String,
+}
+
+/// 双时态快照检索选项
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TxSearchOptions {
+    pub tenant_scope: String,
+    /// 可选逻辑纪元时间点回溯（`tx_epoch <= as_of_epoch`）
+    pub as_of_epoch: Option<i64>,
+    /// 是否包含历史已关闭版本
+    pub include_history: bool,
+    pub limit: usize,
+}
+
+impl Default for TxSearchOptions {
+    fn default() -> Self {
+        Self {
+            tenant_scope: "default".to_string(),
+            as_of_epoch: None,
+            include_history: false,
+            limit: 15,
+        }
+    }
+}
+
+/// 事务级快照检索响应
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TxMemorySnapshot {
+    pub snapshot_epoch: i64,
+    pub backend: String,
+    pub fallback_active: bool,
+    pub hits: Vec<TxMemoryEvent>,
+}
+
+/// 事务记忆后端运行健康态快照
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TxProviderHealth {
+    pub provider: String,
+    pub connected: bool,
+    pub fallback_active: bool,
+    pub current_epoch: i64,
+    pub active_events: i64,
+    pub tombstoned_events: i64,
+    pub active_segments: i64,
+    pub deleted_segments: i64,
+    pub pool_size: usize,
+    pub vector_backend: String,
+    pub server_version: Option<String>,
+    pub detail: String,
+}
+
+/// 扩展事务级海马体 SPI（非破坏性扩展既有 `MemoryProvider`）
+pub trait TxMemoryProvider: MemoryProvider + Send + Sync {
+    /// 单事务写穿提交（截断旧 `valid_range` + 标旧段 `is_deleted` + 追加新 `tx_epoch`）
+    fn append_tx_event(&self, input: &TxMemoryWriteInput) -> Result<TxWriteOutcome>;
+
+    /// 合规/物理删除墓碑化（关闭有效窗 + 标 `tombstoned` + 清理检索段，确保 0% 僵尸召回）
+    fn tombstone_fact(
+        &self,
+        body_id: &str,
+        tenant_scope: &str,
+        fact_key: &str,
+        reason: &str,
+    ) -> Result<u64>;
+
+    /// 支持 `as_of_epoch` 与 `include_history` 的双时态只读快照检索
+    fn search_tx(&self, query: &str, opts: &TxSearchOptions) -> Result<TxMemorySnapshot>;
+
+    /// 查询单个 `fact_key` 的完整双时态版本演进链
+    fn fact_history(
+        &self,
+        body_id: &str,
+        tenant_scope: &str,
+        fact_key: &str,
+        limit: usize,
+    ) -> Result<Vec<TxMemoryEvent>>;
+
+    /// O(1) 获取当前全局逻辑纪元号
+    fn current_tx_epoch(&self) -> Result<i64>;
+
+    /// 获取连接池、向量后端、事件/段统计与降级状态
+    fn tx_health(&self) -> Result<TxProviderHealth>;
+}
+
+/// 方案 B 预留：旁路快权重快照元数据（绝不承载 GB 级权重 BLOB，仅管血缘/URI/纪元锚点）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FastWeightSnapshotMeta {
+    pub snapshot_id: String,
+    pub body_id: String,
+    pub tenant_scope: String,
+    pub base_model_id: String,
+    pub parent_snapshot: Option<String>,
+    pub anchored_epoch: i64,
+    pub adapter_kind: String,
+    pub artifact_uri: String,
+    pub norm_ratio: f32,
+    pub status: String,
+    pub created_at: String,
+}
+
+/// 方案 B 预留控制面 SPI（Phase 78 激活对接旁路 Model Runtime）
+pub trait FastWeightCheckpointSpi: Send + Sync {
+    fn register_snapshot(&self, meta: &FastWeightSnapshotMeta) -> Result<()>;
+    fn active_snapshot(&self, body_id: &str, tenant_scope: &str) -> Result<Option<FastWeightSnapshotMeta>>;
+    fn rollback_to_epoch(&self, body_id: &str, tenant_scope: &str, target_epoch: i64) -> Result<Option<FastWeightSnapshotMeta>>;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

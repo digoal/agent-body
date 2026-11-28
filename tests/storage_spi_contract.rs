@@ -486,6 +486,7 @@ fn run_shared_spi_contract(p: &dyn StorageProvider, expected_name: &str) {
         created_at: now_iso.clone(),
         resumed_by_brain: None,
         resumed_at: None,
+        tx_epoch: 7,
     })
     .expect("insert_body_checkpoint");
     assert!(p

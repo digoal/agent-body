@@ -1,0 +1,21 @@
+[package]
+name = "ext-mem-pg-tx"
+version = "0.1.0"
+edition = "2021"
+authors = ["digoal 德哥"]
+description = "Agent Body Contrib Extension — PostgreSQL Bi-Temporal MVCC Transactional Memory (Scheme A -> B)"
+license = "Apache-2.0"
+
+[dependencies]
+agent-body-sdk = { path = "../../kernel/body-sdk" }
+anyhow = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+postgres = { version = "0.19", features = ["with-chrono-0_4", "with-serde_json-1"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.11"
+uuid = { version = "1.8", features = ["v4", "serde"] }
+
+[dev-dependencies]
+agent-body-kernel = { path = "../../kernel/body-kernel" }
+tempfile = "3.10"

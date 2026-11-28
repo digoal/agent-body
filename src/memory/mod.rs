@@ -10,9 +10,13 @@ pub mod adapters;
 pub mod intake;
 pub mod embedding;
 
-pub use spi::{MemoryProvider, MemoryItem, MemoryFilter, SessionContext, EvictCriteria};
+pub use spi::{
+    EvictCriteria, FastWeightCheckpointSpi, FastWeightSnapshotMeta, MemoryFilter, MemoryItem,
+    MemoryProvider, SessionContext, TxEvidenceTier, TxMemoryEvent, TxMemoryProvider,
+    TxMemorySnapshot, TxMemoryWriteInput, TxProviderHealth, TxSearchOptions, TxWriteOutcome,
+};
 pub use builtin_provider::BuiltinMemoryProvider;
-pub use adapters::{MemoryFactory, AdapterConfig};
+pub use adapters::{AdapterConfig, MemoryFactory, PgTxAdapterConfig, PgTxMemoryAdapter};
 pub use intake::{MemoryIntakeFilter, MemoryIntakeEvaluation};
 pub use embedding::{EmbeddingClient, inject_embedding_meta, inject_pending_embedding_meta};
 

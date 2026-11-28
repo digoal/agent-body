@@ -19,22 +19,30 @@
 
 pub mod letta;
 pub mod mem0;
+pub mod pg_tx;
 pub mod powercontext;
 
 pub use letta::LettaAdapter;
 pub use mem0::Mem0Adapter;
+pub use pg_tx::{PgTxAdapterConfig, PgTxMemoryAdapter};
 pub use powercontext::PowerContextAdapter;
 
 use anyhow::{anyhow, Result};
 use std::sync::Arc;
 
-use crate::memory::spi::MemoryProvider;
+use crate::memory::spi::{MemoryProvider, TxMemoryProvider};
 use crate::memory::builtin_provider::BuiltinMemoryProvider;
 use crate::storage::Storage;
 
 /// 适配器配置参数（从 config.toml 映射）
 #[derive(Debug, Clone, Default)]
 pub struct AdapterConfig {
+    // PostgreSQL 事务记忆 (Phase 76)
+    pub pg_url: String,
+    pub pg_pool_size: usize,
+    pub pg_tenant_scope: String,
+    pub vector_backend: String,
+    pub fallback_to_sqlite: bool,
     // PowerContext
     pub powercontext_url: String,
     pub powercontext_scope_id: String,
@@ -51,6 +59,15 @@ pub struct AdapterConfig {
 impl AdapterConfig {
     /// 应用默认值（允许 toml 配置部分省略）
     pub fn with_defaults(mut self) -> Self {
+        if self.pg_pool_size == 0 {
+            self.pg_pool_size = 8;
+        }
+        if self.pg_tenant_scope.is_empty() {
+            self.pg_tenant_scope = "default".to_string();
+        }
+        if self.vector_backend.is_empty() {
+            self.vector_backend = "none".to_string();
+        }
         if self.powercontext_url.is_empty() {
             self.powercontext_url = "http://127.0.0.1:8000".to_string();
         }
@@ -76,9 +93,29 @@ impl AdapterConfig {
 pub struct MemoryFactory;
 
 impl MemoryFactory {
+    /// 构建支持双时态 MVCC 事务契约的 `TxMemoryProvider`（用于 `pg_tx` 模式及双时态查询）
+    pub fn create_tx(
+        config: &AdapterConfig,
+        storage: Storage,
+    ) -> Result<Arc<dyn TxMemoryProvider>> {
+        let cfg = config.clone().with_defaults();
+        let adapter = PgTxMemoryAdapter::connect_or_fallback(
+            PgTxAdapterConfig {
+                pg_url: cfg.pg_url,
+                pool_size: cfg.pg_pool_size,
+                tenant_scope: cfg.pg_tenant_scope,
+                vector_backend: cfg.vector_backend,
+                fallback_to_sqlite: cfg.fallback_to_sqlite,
+                mirror_writes_to_sqlite: true,
+            },
+            storage,
+        )?;
+        Ok(Arc::new(adapter))
+    }
+
     /// 根据 provider 名称与配置创建适配器
     ///
-    /// - `provider`: "builtin" | "powercontext" | "mem0" | "letta"
+    /// - `provider`: "builtin" | "pg_tx" | "powercontext" | "mem0" | "letta"
     /// - `config`: 适配器配置（从 config.toml 解析）
     /// - `storage`: 内置引擎所需的 Storage 实例（供降级使用）
     pub fn create(
@@ -92,6 +129,20 @@ impl MemoryFactory {
             "builtin" => {
                 let p = BuiltinMemoryProvider::new(storage);
                 Ok(Arc::new(p))
+            }
+            "pg_tx" => {
+                let adapter = PgTxMemoryAdapter::connect_or_fallback(
+                    PgTxAdapterConfig {
+                        pg_url: cfg.pg_url,
+                        pool_size: cfg.pg_pool_size,
+                        tenant_scope: cfg.pg_tenant_scope,
+                        vector_backend: cfg.vector_backend,
+                        fallback_to_sqlite: cfg.fallback_to_sqlite,
+                        mirror_writes_to_sqlite: true,
+                    },
+                    storage,
+                )?;
+                Ok(Arc::new(adapter))
             }
             "powercontext" => {
                 match PowerContextAdapter::new(&cfg.powercontext_url, &cfg.powercontext_scope_id) {
@@ -131,7 +182,7 @@ impl MemoryFactory {
                 }
             }
             unknown => Err(anyhow!(
-                "未知的记忆提供者: '{}'. 支持: builtin | powercontext | mem0 | letta",
+                "未知的记忆提供者: '{}'. 支持: builtin | pg_tx | powercontext | mem0 | letta",
                 unknown
             )),
         }

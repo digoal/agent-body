@@ -16,6 +16,7 @@ dependencies = [
  "chrono",
  "clap",
  "duckdb",
+ "ext-mem-pg-tx",
  "globset",
  "notify",
  "postgres",
@@ -843,6 +844,22 @@ dependencies = [
  "anyhow",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "ext-mem-pg-tx"
+version = "0.1.0"
+dependencies = [
+ "agent-body-kernel",
+ "agent-body-sdk",
+ "anyhow",
+ "chrono",
+ "postgres",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "uuid",
 ]
 
 [[package]]

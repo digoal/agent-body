@@ -65,7 +65,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 |---|---|---|
 | `Cargo.toml`, `Cargo.lock` | Rust 依赖与工作空间配置（旗舰 root + `kernel/*` + `contrib/*` + `distributions/*`） | 引入新 crate 需考虑编译耗时与轻量化 |
 | `kernel/` | 纯机制微内核底座（3 crates：`body-sdk` / `body-protocol` / `body-kernel`） | 单向依赖隔离，0 业务词污染（`make arch-check`） |
-| `contrib/` | 独立周边扩展插件目录（10 个标准五件套模块，含 `obs_telemetry` 可观测导出） | 严格 `ext_<id>__*` 前缀、`body_module_magic!()` 与 `contrib/<ext>/tests/regress.rs` |
+| `contrib/` | 独立周边扩展插件目录（11 个标准五件套模块，含 `obs_telemetry` 可观测导出与 `mem_pg_tx` PG 事务海马体） | 严格 `ext_<id>__*` 前缀、`body_module_magic!()` 与 `contrib/<ext>/tests/regress.rs` |
 | `distributions/` | 多发行版组装入口（3 精简版：`kernel-minimal` / `aiops-probe` / `dba-sentinel`） | 精简版 0 DuckDB / 0 C++ 运行时依赖，内置 `self-check` |
 | `scripts/arch_boundary_check.py` | 微内核防腐与 `contrib/` 五件套边界门禁脚本 | 纳管于 `make quality-gate` |
 | `src/` | Rust 旗舰版源码目录（27 个顶层模块） | 旗舰业务实现与单元测试所在（`<1000L` / 模块） |
@@ -80,7 +80,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/placement/` | 8 大规范放置引擎与建议逻辑 (自演化学习) | 严格对齐 README 与放置规则 |
 | ├── `src/scanner/` | 分级扫描器、纯 Rust 多模态 L1A (`multimodal`/`multimodal_ext`)、三通道魔数统一分类、`AssetSearchEngine` (Omni-RRF + `kv_filter`) | 深度递归、全链路脱敏、0 Panic 与阻断的核心 |
 | ├── `src/env/` | 系统硬件规格、端口防撞、`/proc` 进程采集与白名单 GC | 过滤系统级底噪与端口冲突检测 |
-| ├── `src/memory/` | 跨会话长期记忆与多适配器体系 (内置/PowerContext/Mem0/Letta) | 降级机制保障 |
+| ├── `src/memory/` | 跨会话长期记忆、PG 事务级海马体 (`PgTxMemoryAdapter`) 与多适配器体系 (内置/pg_tx/PowerContext/Mem0/Letta) | 降级机制保障与写前脱敏 |
 | ├── `src/watcher/` | inotify 监听器与变更同步流水线 | 300ms 防抖，同步 `changes` 表与写穿失效 |
 | ├── `src/daemon/` | 常驻守护进程主循环与定时轮询、依赖预检 | 优雅信号捕获与 Systemd 托管 |
 | ├── `src/links/` | 分层加权关联拓扑图、Mermaid 导出、断链审计与 CodeGraph 桥接 | AST 引用提取与宏微联邦 |
@@ -88,7 +88,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | ├── `src/session/` | 会话绑定、完工结清与临时垃圾回收 | 会话生命周期自洁 |
 | ├── `src/hooks/` | 事件总线、`AutoSyncEngine`、客户端生成器与 `OptimisticFailureDiagnoser` | POSIX 转义防注入与碰壁自愈 |
 | ├── `src/api/` | 43 个原生 MCP (JSON-RPC 2.0 stdio) 工具注册与 Hook 门禁 | 必须与 CLI/Web 1:1:1 映射 |
-| ├── `src/benchmark/` | 双轨/三轨实证 Benchmark `v3.9` 引擎（`W1~W19` + `M1~M6` + `DQ1~DQ10` + `COMP-C1~C4` + `PR-01~14` 账本） | 必须真机实测与 SHA-256 存证 |
+| ├── `src/benchmark/` | 双轨/三轨实证 Benchmark `v3.9` 引擎（`W1~W20` + `M1~M6` + `DQ1~DQ10` + `COMP-C1~C4` + `PR-01~14` 账本） | 必须真机实测与 SHA-256 存证 |
 | ├── `src/demo/` | 路演沙盒引擎（7 大黄金剧目、ROI 核算、`demo:*` 隔离） | 严禁假数据，必须真引擎实跑 |
 | ├── `src/feedback/` | `user_feedback.md` 双向总账、`FreshnessReconciler` 与 `P1~P5` 五点对比自进化探针 | 探针自愈与反馈沉淀闭环 |
 | ├── `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | 解析函数纯函数跨平台编译 |
@@ -102,7 +102,7 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 | `user_feedback.md` | 主理人与 Agent 实际使用体验与探针自上报总账 | `body_feedback` 双向读写目标 |
 | `docs/manual/` | 面向使用者与架构师的分卷深度技术手册 (01~10) | 保持与代码演进实时同步 |
 | `docs/src_doc/` | 开发者指南、产品边界治理、活跃演进路线图与历史 `archive/` | 任务流转枢纽，统一 kebab-case |
-| `docs/design_doc/` | 架构设计文档闭环交付件 (01~21) | 顶层架构事实依据，统一 kebab-case |
+| `docs/design_doc/` | 架构设计文档闭环交付件 (01~22) | 顶层架构事实依据，统一 kebab-case |
 | `docs/idea_doc/` | 初始思考、方案推导与设计全过程长文 | 原始产品哲学思考沉淀 |
 | `docs/markdown/` | 面向公众传播的技术长文与高保真 SVG 架构图 | 宣传与技术分享沉淀 |
 | `skills/` | 本项目内置技能库 (`developer`, `doc-writer`, `guide`) | 指导 Agent 认知与自闭环自进化 |
@@ -117,13 +117,13 @@ description: 专门用于指导和规范 Agent 持续迭代、维护、演化本
 flowchart TD
     A["步骤 1: 需求对齐与设计查验<br/>(核对 design_doc 与 README)"] --> B["步骤 2: 任务拆解与断点登记<br/>(更新 docs/src_doc/roadmap-phase*.md)"]
     B --> C["步骤 3: 串行编码与单元测试驱动<br/>(TDD + cargo test 局部验证)"]
-    C --> D["步骤 4: 编译检查与全量回归<br/>(workspace 414 tests 全绿 + release 构建)"]
+    C --> D["步骤 4: 编译检查与全量回归<br/>(workspace 421 tests 全绿 + release 构建)"]
     D --> E["步骤 5: 文档同步与交付三段式小结<br/>(更新手册/README + 状态标记)"]
 ```
 
 ### 步骤 1: 需求对齐与设计查验
 1. 检查用户的需求是否符合第一节的“核心信条与设计红线”。
-2. 查阅 `docs/design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../docs/design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../docs/design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../docs/design_doc/08-graph-intelligence.md) 与 [14-graph-intelligence-and-mesh-protocol-spec.md](../../docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)，AOPCC 并发策略查 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](../../docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)，双域审计与自进化查 [16-dual-domain-audit-and-self-evolution-spec.md](../../docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md)，Agent 本体与跨大脑连续性查 [17-agent-embodiment-and-continuity-spec.md](../../docs/design_doc/17-agent-embodiment-and-continuity-spec.md)，Wait Events 与内生 AWR 诊断查 [18-wait-events-and-awr-perf-diagnostics-spec.md](../../docs/design_doc/18-wait-events-and-awr-perf-diagnostics-spec.md)，微内核与周边插件架构查 [20-plugin-microkernel-architecture-spec.md](../../docs/design_doc/20-plugin-microkernel-architecture-spec.md)，全栈可观测闭环查 [21-observability-and-telemetry-spec.md](../../docs/design_doc/21-observability-and-telemetry-spec.md)）。
+2. 查阅 `docs/design_doc/` 中对应章节（如 API 规范查 [06-api-spec.md](../../docs/design_doc/06-api-spec.md)，数据模型查 [07-data-model.md](../../docs/design_doc/07-data-model.md)，图智能查 [08-graph-intelligence.md](../../docs/design_doc/08-graph-intelligence.md) 与 [14-graph-intelligence-and-mesh-protocol-spec.md](../../docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md)，AOPCC 并发策略查 [15-adaptive-optimistic-pessimistic-concurrency-spec.md](../../docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md)，双域审计与自进化查 [16-dual-domain-audit-and-self-evolution-spec.md](../../docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md)，Agent 本体与跨大脑连续性查 [17-agent-embodiment-and-continuity-spec.md](../../docs/design_doc/17-agent-embodiment-and-continuity-spec.md)，Wait Events 与内生 AWR 诊断查 [18-wait-events-and-awr-perf-diagnostics-spec.md](../../docs/design_doc/18-wait-events-and-awr-perf-diagnostics-spec.md)，微内核与周边插件架构查 [20-plugin-microkernel-architecture-spec.md](../../docs/design_doc/20-plugin-microkernel-architecture-spec.md)，全栈可观测闭环查 [21-observability-and-telemetry-spec.md](../../docs/design_doc/21-observability-and-telemetry-spec.md)，PostgreSQL 事务级海马体方案 A→B 查 [22-pg-tx-memory-spi-a-to-b-spec.md](../../docs/design_doc/22-pg-tx-memory-spi-a-to-b-spec.md)）。
 3. 如涉及新增数据表或字段，先在 `src/storage/schema.sql`、`src/storage/models.rs`、`src/storage/mod.rs` 设计对齐。
 
 ### 步骤 2: 任务拆解与断点登记（严禁大步跨越）
@@ -146,7 +146,7 @@ flowchart TD
    ```bash
    export PATH="$HOME/.cargo/bin:$PATH" && RUST_TEST_THREADS=1 cargo test --workspace
    ```
-   **门禁要求**: 全工作区 **414 项测试全部 `ok`**（根包 371 + `kernel` 26 + `contrib` 13 + `distributions` 4），0 failed；改动 Web/Schema/API 时追加通过 `make verify-webui`（Playwright 9 工作台 + 老库无损迁移 E2E）。
+   **门禁要求**: 全工作区 **421 项测试全部 `ok`**（根包 375 + `kernel` 26 + `contrib` 16 + `distributions` 4），0 failed；改动 Web/Schema/API 时追加通过 `make verify-webui`（Playwright 9 工作台 + 老库无损迁移 E2E）。
 2. 运行 release 生产构建（旗舰版与精简发行版按需编译）：
    ```bash
    export PATH="$HOME/.cargo/bin:$PATH" && cargo build --release
@@ -213,7 +213,7 @@ flowchart TD
 - [ ] **本体边界与命名兼容自检（规约 #2 & #27）**：是否严守脑体分离不内置业务 LLM 规划循环？自治行为是否遵守 `L0~L3` 权限包络（不越权执行 `L2/L3`）？对外叙事升级为「Agent 本体」的同时，是否保证 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容？
 - [ ] 新增的字段和表结构是否已在 `schema.sql`/`pg_schema.sql`/`duckdb_schema.sql`、`models.rs`、`spi.rs` 保持同步，并在 `src/storage/sqlite_provider/schema_reconcile.rs` 与 `tests/schema_migration_regression.rs` 覆盖老库无损迁移？
 - [ ] **新增外部依赖或环境假设时，是否已同步在 `INSTALL.md` 说明并在 `src/preflight/mod.rs` 中增加预检探针？**
-- [ ] 是否执行了 `make quality-gate`（`evolution-check` + `arch-check` 防腐边界门禁 + `lint-panic` + `lint-hygiene` 位置无关性/`>1000L` 文件清零/`let _ = <= 15`/核心自治及微内核与周边路径 `= 0`/`18/18 WaitEventId` + `lint-strict` 全工作区零警告编译）且 `RUST_TEST_THREADS=1 cargo test --workspace` 全部通过（**414 项全工作区测试全绿，零 warning**）？改动 Web/Schema/API 时是否已通过 `make verify-webui`？改动 `presentation/` 或演说脚本时是否已通过 `make verify-decks` Playwright 无头验真？
+- [ ] 是否执行了 `make quality-gate`（`evolution-check` + `arch-check` 防腐边界门禁 + `lint-panic` + `lint-hygiene` 位置无关性/`>1000L` 文件清零/`let _ = <= 15`/核心自治及微内核与周边路径 `= 0`/`18/18 WaitEventId` + `lint-strict` 全工作区零警告编译）且 `RUST_TEST_THREADS=1 cargo test --workspace` 全部通过（**421 项全工作区测试全绿，零 warning**）？改动 Web/Schema/API 时是否已通过 `make verify-webui`？改动 `presentation/` 或演说脚本时是否已通过 `make verify-decks` Playwright 无头验真？
 - [ ] **二进制位置无关与发版一致性自检（规约 #11 & #28）**：生产路径是否 0 处 `env!("CARGO_MANIFEST_DIR")`？改名/核心修复提交后是否已重编安装 `make restart` 并核验 `agent-body --version` hash 与 `HEAD` 一致且 `DQ5 >= 98%`？
 - [ ] 是否执行了 `agent-body preflight` 验证环境诊断通过？
 - [ ] 是否执行了 `cargo build --release` 并且生成了可执行文件？

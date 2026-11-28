@@ -5,7 +5,7 @@
 
 [![Version](https://img.shields.io/badge/Version-v1.1.0-245A6B.svg)](docs/releases/v1.1.0.md)
 [![Rust](https://img.shields.io/badge/Rust-1.88%2B_%7C_1.99-BE653B.svg)](https://www.rust-lang.org/)
-[![Tests](https://img.shields.io/badge/Workspace_Tests-414_Passed-2F7A66.svg)](docs/src_doc/development.md)
+[![Tests](https://img.shields.io/badge/Workspace_Tests-421_Passed-2F7A66.svg)](docs/src_doc/development.md)
 [![Parity](https://img.shields.io/badge/MCP%2FCLI%2FWeb_Parity-43%2F43-1E4B5A.svg)](docs/manual/04-mcp-integration.md)
 [![SQLite](https://img.shields.io/badge/SQLite-FTS5_Bundled-2F7A66.svg)](https://sqlite.org/)
 [![MCP](https://img.shields.io/badge/Protocol-MCP_stdio-6B4C9A.svg)](https://modelcontextprotocol.io/)
@@ -61,9 +61,9 @@ flowchart LR
 
 | 维度 | 实测指标 | 校验入口 |
 |---|---|---|
-| **架构规模与纯度** | 旗舰 `27` 顶层模块 · `43` MCP / `30` CLI / Web `1:1:1` 对齐 · `88` SPI / `27` 表 · 微内核 `3` crates + `10` `contrib/` 五件套 + `3` 精简发行版 | `make evolution-check` / `make arch-check` |
-| **帕累托实证基准 (`v3.9`)** | `W1~W19` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ10` 质量门禁 + `COMP-C1~C4` 竞品对标 + `PR-01~14` 账本；放置 `~30 μs`、3 跳图遍历 `~120 μs`、FTS5 `~250 μs`、Token 节省 `99%+` 且质量净升 | `agent-body bench run --suite full` |
-| **代码质量与自愈硬化** | **414 项全工作区测试全绿**（根包 `371` + `kernel` `26` + `contrib` `13` + `distributions` `4`）· `0` `unwrap`/`expect` · `0` `>1000L` 文件 · `0/15` 静默 `let _ =` · `18/18` `WaitEventId` · 事务式老库无损 Schema 自愈与 FTS5 重建 | `make quality-gate && make test` |
+| **架构规模与纯度** | 旗舰 `27` 顶层模块 · `43` MCP / `30` CLI / Web `1:1:1` 对齐 · `88` SPI / `27` 表 · 微内核 `3` crates + `11` `contrib/` 五件套 + `3` 精简发行版 | `make evolution-check` / `make arch-check` |
+| **帕累托实证基准 (`v3.9`)** | `W1~W20` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ10` 质量门禁 + `COMP-C1~C4` 竞品对标 + `PR-01~14` 账本；放置 `~30 μs`、3 跳图遍历 `~120 μs`、FTS5 `~250 μs`、Token 节省 `99%+` 且质量净升 | `agent-body bench run --suite full` |
+| **代码质量与自愈硬化** | **421 项全工作区测试全绿**（根包 `375` + `kernel` `26` + `contrib` `16` + `distributions` `4`）· `0` `unwrap`/`expect` · `0` `>1000L` 文件 · `0/15` 静默 `let _ =` · `18/18` `WaitEventId` · 事务式老库无损 Schema 自愈与 FTS5 重建 | `make quality-gate && make test` |
 | **端到端无头视觉验真** | Playwright 9 大 WebUI 工作台 + 老库热迁移 E2E 回归（`verify-webui`）+ 9 份演说 HTML 零溢出/零重叠验真（`verify-decks`） | `make verify-webui` / `make verify-decks` |
 
 ### 2. 真实 CLI 执行输出（`v1.1.0` 现网实跑捕获）
@@ -111,7 +111,7 @@ $ agent-body env port 8765
 
 ## 四大发行版谱系（旗舰全功能 × 零 C++ 微内核精简版）
 
-借鉴 PostgreSQL `src/backend/` + `contrib/` 架构哲学，本项目实现了纯机制微内核（`kernel/`）与 10 个标准五件套周边扩展（`contrib/`）的物理隔离，按场景交付四款产物（详见 [20-plugin-microkernel-architecture-spec.md](docs/design_doc/20-plugin-microkernel-architecture-spec.md) 与 [21-observability-and-telemetry-spec.md](docs/design_doc/21-observability-and-telemetry-spec.md)）：
+借鉴 PostgreSQL `src/backend/` + `contrib/` 架构哲学，本项目实现了纯机制微内核（`kernel/`）与 11 个标准五件套周边扩展（`contrib/`，含 `obs_telemetry` 可观测导出与 `mem_pg_tx` PG 事务海马体）的物理隔离，按场景交付四款产物（详见 [20-plugin-microkernel-architecture-spec.md](docs/design_doc/20-plugin-microkernel-architecture-spec.md) 与 [21-observability-and-telemetry-spec.md](docs/design_doc/21-observability-and-telemetry-spec.md)）：
 
 | 发行版 | 二进制名 | 体积参考 | 运行依赖 | 核心能力与适用场景 |
 |---|---|---|---|---|
@@ -192,7 +192,7 @@ agent-body close session-20261128-01 --clean-temp
 ```bash
 export PATH="$HOME/.cargo/bin:$PATH"
 make quality-gate                 # 六重确定性门禁 (evolution / arch / panic / hygiene / strict)
-RUST_TEST_THREADS=1 make test     # 全工作区 414 项单元/集成/契约/迁移/MCP/Web E2E 测试
+RUST_TEST_THREADS=1 make test     # 全工作区 421 项单元/集成/契约/迁移/MCP/Web E2E 测试
 make verify-webui                 # Playwright 9 大 WebUI 工作台 + 老库无损迁移 E2E 验真
 make verify-decks                 # Playwright 9 份演说 HTML 视觉与快捷键全检
 ```
@@ -211,6 +211,18 @@ Agent Body 将“运行时自我保鲜纠偏”与“工程迭代零重扫演进
 
 ---
 
+## 演进路线：PostgreSQL SPI 事务级海马体（Phase 76 ~ 78）
+
+在不打破「脑体分离」与「递弱代偿防膨胀」红线（**绝不内置大模型推理/训练循环、绝不将 GB 级权重存进 PG 堆表、严禁跨推理持 2PL 长锁**）的前提下，项目基于 [22-pg-tx-memory-spi-a-to-b-spec.md](docs/design_doc/22-pg-tx-memory-spi-a-to-b-spec.md) 与 [roadmap-phase76-78.md](docs/src_doc/roadmap-phase76-78.md)，以第 11 个独立周边扩展 `contrib/mem_pg_tx/` + 旗舰无侵入适配（SQLite 透明降级、43 工具零膨胀）三阶段推进**方案 A → 方案 B** 事务级记忆原型：
+
+| 里程碑 | 核心目标 | 量化硬验收门禁与实测 | 状态 |
+|---|---|---|:---:|
+| **Phase 76 (M1 · 方案 A 事务底座)** | 落地 `TxMemoryProvider` / `PgTxMemoryAdapter`（连接池 + 同键 `pg_advisory_xact_lock` 写穿 + `REPEATABLE READ READ ONLY` 快照读 + LSM 解耦检索段与墓碑过滤 + SQLite 降级）并贯通 AOPCC 租约与 `ContinuityCapsule` | PG 18.6 真机实测 16 线程 × 5 并发写（80 tx）丢写率 **`0%`** · `search_tx` **`P50 = 3.28 ms` / `P99 = 4.34 ms`** (`< 20 ms`) · 僵尸召回率 **`0%`** · `W20` 基准全绿 | ✅ 已完成 |
+| **Phase 77 (M2 · 方案 A 满血形态)** | 在 `L1_AUTONOMIC` 守护挂载空闲期 `SleepTimeCompactor` 与 STC 显著性评分（`SalienceScorer`），叠加低可预测查询自动旁路门禁与 `audit_events` 全留痕 | 在线上下文 Token 降本 **`3×–5×`** · 帕累托门禁 **`Fact Recall = 100%`** 且 **`Q_body >= Q_baseline`** · Bench `v4.0` (`W21`/`DQ11`/`PR-15`) | 🗓️ 待规划 |
+| **Phase 78 (M3 · 方案 B 快慢权重闭环)** | 复用同一套 `tx_epoch` / `fast_weight_snapshots` / `compaction_jobs` 契约，经旁路控制面外挂外部 Model Runtime（In-Place TTT / Atlas / Larimar / SCoL + NeurStore）与定向遗忘墓碑 | 百万级事件流延迟恒定 · 连续合并基准衰减 **`< 3%`** · 墓碑诱导召回率 **`< 0.1%`** · 按 `tx_epoch` 秒级回滚 | 🗓️ 待规划 |
+
+---
+
 ## 文档全景导航
 
 ### 1. 思想起源与角色视角指南
@@ -219,7 +231,7 @@ Agent Body 将“运行时自我保鲜纠偏”与“工程迭代零重扫演进
 |---|---|---|
 | **思想哲学 (`docs/idea_doc/`)** | [00-comparative-advantage-origin.md](docs/idea_doc/00-comparative-advantage-origin.md) · [03-modular-body-architecture.md](docs/idea_doc/03-modular-body-architecture.md) · [04-agent-body-philosophy.md](docs/idea_doc/04-agent-body-philosophy.md) | 比较优势缘起 → 三位一体内核 → 「脑体分离 · Agent 本体」第一性原理 |
 | **角色指南 (`docs/arch/`)** | [01-for-architects.md](docs/arch/01-for-architects.md)（架构师） · [02-for-developers.md](docs/arch/02-for-developers.md)（开发者） · [03-for-users.md](docs/arch/03-for-users.md)（用户与 Agent） | 存储 SPI/锁算法/NFR、27 模块与 4 大 How-To、作业六部曲与 FAQ |
-| **演进与交付 (`docs/src_doc/`)** | [EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md) · [development.md](docs/src_doc/development.md) · [progress.md](docs/src_doc/progress.md) · [product-boundaries-and-governance.md](docs/src_doc/product-boundaries-and-governance.md) | 零重扫活地图、本地构建与 16 套件测试、全阶段里程碑与治理边界 |
+| **演进与交付 (`docs/src_doc/`)** | [EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md) · [roadmap-phase76-78.md](docs/src_doc/roadmap-phase76-78.md) · [development.md](docs/src_doc/development.md) · [progress.md](docs/src_doc/progress.md) · [product-boundaries-and-governance.md](docs/src_doc/product-boundaries-and-governance.md) | 零重扫活地图、Phase 76~78 路线图、17 套件测试、全阶段里程碑与治理边界 |
 
 ### 2. 官方使用手册（[`docs/manual/`](docs/manual/README.md) · 10 卷）
 
@@ -233,7 +245,7 @@ Agent Body 将“运行时自我保鲜纠偏”与“工程迭代零重扫演进
 | **基础架构与接口** | [03-feature-spec.md](docs/design_doc/03-feature-spec.md) 功能规格 · [05-architecture.md](docs/design_doc/05-architecture.md) 分层架构 · [06-api-spec.md](docs/design_doc/06-api-spec.md) API/MCP 契约 · [07-data-model.md](docs/design_doc/07-data-model.md) 27 表模型 · [09-modular-roadmap.md](docs/design_doc/09-modular-roadmap.md) 模块化路线 |
 | **安全、并发与图谱联邦** | [11-security-spec.md](docs/design_doc/11-security-spec.md) 五层纵深安全与抗投毒 · [14-graph-intelligence-and-mesh-protocol-spec.md](docs/design_doc/14-graph-intelligence-and-mesh-protocol-spec.md) `L1~L3` 图谱与 `MeshEnvelope v1.0` · [15-adaptive-optimistic-pessimistic-concurrency-spec.md](docs/design_doc/15-adaptive-optimistic-pessimistic-concurrency-spec.md) AOPCC 乐观-悲观自适应并发 · [19-knowledge-network-and-graph-recall-spec.md](docs/design_doc/19-knowledge-network-and-graph-recall-spec.md) 行业 Know-How 知识网络与 Omni-RRF |
 | **本体稳态、审计与自进化** | [13-freshness-and-self-evolution-spec.md](docs/design_doc/13-freshness-and-self-evolution-spec.md) 新鲜度对账、Schema 自愈与 `P1~P5` 探针 · [16-dual-domain-audit-and-self-evolution-spec.md](docs/design_doc/16-dual-domain-audit-and-self-evolution-spec.md) 双域全链路审计与数据驱动自进化 · [17-agent-embodiment-and-continuity-spec.md](docs/design_doc/17-agent-embodiment-and-continuity-spec.md) 本体身份证、跨脑接力与 `L0~L3` 包络 · [18-wait-events-and-awr-perf-diagnostics-spec.md](docs/design_doc/18-wait-events-and-awr-perf-diagnostics-spec.md) 18 等待事件与内生 AWR/ADDM |
-| **实证评测、微内核与可观测** | [10-benchmark-spec.md](docs/design_doc/10-benchmark-spec.md) 实证基准 v3.9 与效能账本 · [12-competitor-benchmark-spec.md](docs/design_doc/12-competitor-benchmark-spec.md) 四赛道竞品同机对标 · [20-plugin-microkernel-architecture-spec.md](docs/design_doc/20-plugin-microkernel-architecture-spec.md) 纯微内核 `kernel/` 与 `contrib/` 插件体系 · [21-observability-and-telemetry-spec.md](docs/design_doc/21-observability-and-telemetry-spec.md) 全栈可观测闭环（Prometheus `/metrics` + W3C Trace + JSONL + `OBS-01~05`） |
+| **实证评测、微内核、可观测与事务记忆** | [10-benchmark-spec.md](docs/design_doc/10-benchmark-spec.md) 实证基准 v3.9 与效能账本 · [12-competitor-benchmark-spec.md](docs/design_doc/12-competitor-benchmark-spec.md) 四赛道竞品同机对标 · [20-plugin-microkernel-architecture-spec.md](docs/design_doc/20-plugin-microkernel-architecture-spec.md) 纯微内核 `kernel/` 与 `contrib/` 插件体系 · [21-observability-and-telemetry-spec.md](docs/design_doc/21-observability-and-telemetry-spec.md) 全栈可观测闭环（`/metrics` + W3C Trace + `OBS-01~05`） · [22-pg-tx-memory-spi-a-to-b-spec.md](docs/design_doc/22-pg-tx-memory-spi-a-to-b-spec.md) PostgreSQL SPI 事务级海马体（方案 A → 方案 B） |
 
 ---
 
@@ -241,15 +253,15 @@ Agent Body 将“运行时自我保鲜纠偏”与“工程迭代零重扫演进
 
 - `src/` : 旗舰版 Rust 核心源码（27 个顶层模块，全量 `<1000L` 模块化）
 - `kernel/` : 纯机制微内核底座（3 crates：`body-sdk` / `body-protocol` / `body-kernel`，0 业务词污染）
-- `contrib/` : 独立周边扩展插件目录（10 个标准五件套模块，含 `obs_telemetry` 可观测导出）
+- `contrib/` : 独立周边扩展插件目录（11 个标准五件套模块，含 `obs_telemetry` 可观测导出与 `mem_pg_tx` PG 事务海马体）
 - `distributions/` : 零 C++/DuckDB 精简发行版组装入口（`kernel-minimal` / `aiops-probe` / `dba-sentinel`）
-- `tests/` : 16 个自动化集成、契约、老库迁移回归、43 工具 MCP 与 Web 全栈 E2E 测试套件（414 项全绿）
+- `tests/` : 17 个自动化集成、契约、PG 18 并发压测、老库迁移回归、43 工具 MCP 与 Web 全栈 E2E 测试套件（421 项全绿）
 - `scripts/` : 工程门禁与自动化工具集（`evolution_manifest.py`、`code_hygiene.py`、`arch_boundary_check.py`、Playwright `verify_webui_e2e.py` / `verify_presentations.py`、4 套演说生成器与向量回填）
 - `skills/` : 项目内置 AI Agent 技能包（`agent-body-developer` / `agent-body-doc-writer` / `agent-body-guide`）
 - `presentation/` : 单文件零依赖浅色工程蓝图 HTML 演讲体系（`index.html` + 路演版 + 深度技术版 + `01~06` 六讲专题）
 - `docs/` : 统一文档中心（详见 [docs/README.md](docs/README.md)）
   - `docs/arch/` : 面向架构师、开发者、用户的三视角全景指南
-  - `docs/design_doc/` : 21 份闭环架构设计与技术规格说明书
+  - `docs/design_doc/` : 22 份闭环架构设计与技术规格说明书
   - `docs/idea_doc/` : 比较优势起源与脑体分离哲学沉淀
   - `docs/manual/` : 10 卷官方使用手册
   - `docs/markdown/` : 对外技术长文与矢量 SVG 图表（`docs/markdown/svg/`）
@@ -264,7 +276,7 @@ Agent Body 将“运行时自我保鲜纠偏”与“工程迭代零重扫演进
   - `Cargo.toml` : Rust Workspace 元数据、生产依赖清单与 Release 编译优化配置
   - `Cargo.lock` : Rust 依赖树精确版本锁定文件，保障跨环境确定性可复现构建
   - `build.rs` : Rust 编译期构建脚本，负责注入 Git Commit Hash、构建时间与目标平台信息至 `--version`
-  - `Makefile` : 一键构建、六重质量门禁（`quality-gate`）、414 项测试（`test`）、WebUI 与演说 Playwright 验真（`verify-webui` / `verify-decks`）、热重启与开源镜像同步入口
+  - `Makefile` : 一键构建、六重质量门禁（`quality-gate`）、421 项测试（`test`）、WebUI 与演说 Playwright 验真（`verify-webui` / `verify-decks`）、热重启与开源镜像同步入口
   - `Dockerfile` : 多阶段轻量容器镜像构建文件（含旗舰镜像与零 `libstdc++6` 的 `--target probe` 极简探针镜像）
   - `docker-compose.yml` : 本地及生产容器化一键编排配置（数据卷挂载、端口映射、健康检查与环境变量模板）
   - `config.example.toml` : 带完整参数注释的 `~/.agent-body/config.toml` 配置模板（存储后端、三态运行模式、扫描策略、安全鉴权、Web/Mesh 与 Ollama 配置）
@@ -279,7 +291,7 @@ Agent Body 将“运行时自我保鲜纠偏”与“工程迭代零重扫演进
 ### 一、产品定位与脑体边界（#1 ~ #3）
 
 1. **脑体分离与本体定位准则**：LLM/客户端是瞬态大脑皮层，本项目是永驻物理宿主机的 Agent 本体；核心消费者始终是 AI Agent，所有接口以极低认知负载、零幻觉提取、语义自解释为第一标准。
-2. **递弱代偿防膨胀红线**：专注宿主机具身稳态的原子/分子能力。明确不内置主战 LLM ReAct 规划循环，不替代编排框架、容器沙箱、密钥托管、通用 OLTP、Raft 共识、Rsync 同步或通用 SIEM，坚守纯微内核 `kernel/` 与周边 `contrib/` 物理隔离。
+2. **递弱代偿防膨胀红线**：专注宿主机具身稳态的原子/分子能力。明确不内置主战 LLM ReAct 规划循环与模型训练/微调循环，不将 GB 级模型权重作为裸 BLOB 存入堆表，不替代编排框架、容器沙箱、密钥托管、通用 OLTP、Raft 共识、Rsync 同步或通用 SIEM，坚守纯微内核 `kernel/` 与周边 `contrib/` 物理隔离。
 3. **大脑无关性与跨大脑连续性**：任何符合 MCP / Hook / CLI 协议的大脑均可无缝接入同一本体，通过 `<= 300 tok` 脱敏接力胶囊实现“换脑不失忆”，演进为面向智能体时代的下一代 OS 原生具身底座。
 
 ### 二、数据治理与分级感知（#4 ~ #7）
@@ -299,15 +311,15 @@ Agent Body 将“运行时自我保鲜纠偏”与“工程迭代零重扫演进
 
 11. **一等公民平权、命名兼容与发版对账**：将 `SKILL`、手册、MCP、演说与代码同等视为一等公民；对外聚焦「Agent 本体」，工程标识（`agent-body` / `body_*` / `~/.agent-body/`）100% 兼容；核心提交后须核验已安装二进制 `git_hash` 与 `HEAD` 一致且现网 `DQ5 >= 98%`。
 12. **零 Panic 铁律**：生产代码路径严禁出现 `.unwrap()` 与 `.expect()`，统一以 `anyhow::Result` / `thiserror` 向上冒泡并受 `make lint-panic` 强制门禁守护。
-13. **测试驱动、无损自愈与六重确定性门禁**：新增特性或表结构变更必须同步补齐测试与无损迁移回归（`tests/schema_migration_regression.rs`、`tests/storage_spi_contract.rs`、`tests/mcp_all_tools_e2e.rs`、`tests/web_full_e2e.rs`）；任何提交前须通过 `make quality-gate`（`evolution-check` + `arch-check` + `lint-panic` + `lint-hygiene` + `lint-strict`）与 `RUST_TEST_THREADS=1 make test`（414 项全绿），前端/演说改动须追加通过 `make verify-webui` 与 `make verify-decks`。
+13. **测试驱动、无损自愈与六重确定性门禁**：新增特性或表结构变更必须同步补齐测试与无损迁移回归（`tests/schema_migration_regression.rs`、`tests/storage_spi_contract.rs`、`tests/pg_tx_memory_integration.rs`、`tests/mcp_all_tools_e2e.rs`、`tests/web_full_e2e.rs`）；任何提交前须通过 `make quality-gate`（`evolution-check` + `arch-check` + `lint-panic` + `lint-hygiene` + `lint-strict`）与 `RUST_TEST_THREADS=1 make test`（421 项全绿），前端/演说改动须追加通过 `make verify-webui` 与 `make verify-decks`。
 14. **断点续传与零碎片追踪**：大型演进在活跃 `docs/src_doc/roadmap-phase*.md` 维护原子检查点，收口同步更新 [docs/src_doc/progress.md](docs/src_doc/progress.md) 与 [EVOLUTION_GUIDE.md](EVOLUTION_GUIDE.md) 的 `Tier-0` 指针，确保任意中断可瞬间续传。
-15. **宏微联邦与不重复造轮子**：Agent 本体负责宏观拓扑与文件依赖上卷，微观 AST/符号调用通过 `CodeGraphBridge` 桥接 CodeGraph；长期记忆通过 SPI 兼容内置与 Mem0 / Letta / PowerContext。
+15. **宏微联邦与不重复造轮子**：Agent 本体负责宏观拓扑与文件依赖上卷，微观 AST/符号调用通过 `CodeGraphBridge` 桥接 CodeGraph；长期记忆通过开放 SPI 兼容内置 SQLite、Phase 76 已落地的 PostgreSQL 事务海马体方案 A 底座（`contrib/mem_pg_tx/`，详见 [22-pg-tx-memory-spi-a-to-b-spec.md](docs/design_doc/22-pg-tx-memory-spi-a-to-b-spec.md)）及 Mem0 / Letta / PowerContext，一切快权重前向计算与后台神经合并留在旁路模型运行时。
 16. **黑白屏动作级 1:1:1 双向同步**：43 个原生 MCP 工具、30 组 CLI 命令、Web REST API 与 9 大工作台按子动作粒度严格对齐（新能力优先以 `action` 子模式内聚防 Context 膨胀），由 `/api/v1/parity/matrix` 与自动化契约测试守卫 100% 一致。
 17. **真引擎路演与 Decks-as-Code 代码化演说**：Web 端 7 幕路演与黑屏 `body_demo_scenario` 同源且运行在 `demo:*` 沙盒；所有演说 HTML 均由确定性 Python 引擎（`scripts/deck_engine.py` + `scripts/deck_visuals.py` + `scripts/build_*.py`）动态读取架构快照生成，严禁手工打补丁，并经 `make verify-decks` Playwright 无头验真。
 
 ### 五、实证基准、安全防御与演进地图（#18 ~ #20）
 
-18. **帕累托双门禁与双账本实证（Bench `v3.9`）**：所有效能宣称必须通过可复现 A/B 负载（`W1~W19` + `M1~M6` + `DQ1~DQ10` + `COMP-C1~C4`）与生产效能存证账本（`effectiveness_ledger` `PR-01~14`）双轨验证，强制满足 `Q_body >= Q_baseline` 且关键事实 100% 命中，严禁丢事实换压缩率。
+18. **帕累托双门禁与双账本实证（Bench `v3.9`）**：所有效能宣称必须通过可复现 A/B 负载（`W1~W20` + `M1~M6` + `DQ1~DQ10` + `COMP-C1~C4`）与生产效能存证账本（`effectiveness_ledger` `PR-01~14`）双轨验证，强制满足 `Q_body >= Q_baseline` 且关键事实 100% 命中，严禁丢事实换压缩率。
 19. **五层纵深安全、全链路脱敏与抗投毒**：采集、记忆、审计、Mesh 对话与模型输入全链路经 `SecretRedactor` 脱敏与 `PromptInjectionScanner` 清洗；Hook 命令强制 POSIX 转义、DuckDB 导出白名单沙盒化；Web/Mesh 默认回环且全写端点受 `auth_token` 保护；本地目录/库保持 `0700`/`0600` 最小权限（详见 [11-security-spec.md](docs/design_doc/11-security-spec.md)）。
 20. **零重扫演进地图、根目录自文档化与竞品对标**：新会话仅读 `EVOLUTION_GUIDE.md` + 最新路线图并用 `make evolution-check` + `.codegraph/` 定位改点；根目录核心文件变动必须在本文「项目结构」逐项登记；横向竞品严格区分实跑 `LIVE_BENCHMARKED` 与源码核实 `ARCH_VERIFIED`。
 

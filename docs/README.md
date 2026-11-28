@@ -7,8 +7,8 @@
 | [`docs/arch/`](arch/) | 面向架构师、开发者、终端用户的三视角全景架构说明 | [01-for-architects.md](arch/01-for-architects.md) · [02-for-developers.md](arch/02-for-developers.md) · [03-for-users.md](arch/03-for-users.md) |
 | [`docs/manual/`](manual/) | 官方分卷使用手册（安装、概念、CLI、MCP、Web、Benchmark、运维） | [manual/README.md](manual/README.md) |
 | [`docs/idea_doc/`](idea_doc/) | 第一性原理与产品思想演进（从比较优势到脑体分离 Agent 本体） | [04-agent-body-philosophy.md](idea_doc/04-agent-body-philosophy.md) |
-| [`docs/design_doc/`](design_doc/) | 详细技术设计与规格说明（API、Benchmark、安全、图谱、Mesh、AOPCC、审计、本体、插件微内核、全栈可观测） | [17-agent-embodiment-and-continuity-spec.md](design_doc/17-agent-embodiment-and-continuity-spec.md) · [20-plugin-microkernel-architecture-spec.md](design_doc/20-plugin-microkernel-architecture-spec.md) · [21-observability-and-telemetry-spec.md](design_doc/21-observability-and-telemetry-spec.md) |
-| [`docs/src_doc/`](src_doc/) | 开发指南、产品边界治理、活跃路线图（`roadmap-phase75.md`）、历史归档 (`archive/`) 与进度追踪 | [progress.md](src_doc/progress.md) · [roadmap-phase75.md](src_doc/roadmap-phase75.md) |
+| [`docs/design_doc/`](design_doc/) | 详细技术设计与规格说明（API、Benchmark、安全、图谱、Mesh、AOPCC、审计、本体、插件微内核、全栈可观测、PG 事务海马体） | [20-plugin-microkernel-architecture-spec.md](design_doc/20-plugin-microkernel-architecture-spec.md) · [21-observability-and-telemetry-spec.md](design_doc/21-observability-and-telemetry-spec.md) · [22-pg-tx-memory-spi-a-to-b-spec.md](design_doc/22-pg-tx-memory-spi-a-to-b-spec.md) |
+| [`docs/src_doc/`](src_doc/) | 开发指南、产品边界治理、活跃路线图（`roadmap-phase76-78.md`）、历史归档 (`archive/`) 与进度追踪 | [progress.md](src_doc/progress.md) · [roadmap-phase76-78.md](src_doc/roadmap-phase76-78.md) |
 | [`docs/releases/`](releases/) | 版本发布说明（Release Notes） | [v1.1.0.md](releases/v1.1.0.md) · [v1.0.0.md](releases/v1.0.0.md) · [releases/](releases/README.md) |
 | [`docs/markdown/`](markdown/) | 面向公众的技术传播长文与配套 SVG 图解 | [markdown/](markdown/) |
 

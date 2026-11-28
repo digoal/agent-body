@@ -533,7 +533,8 @@ CREATE TABLE IF NOT EXISTS body_checkpoints (
     evidence_sha256     TEXT NOT NULL,
     created_at          TEXT NOT NULL,
     resumed_by_brain    TEXT DEFAULT NULL,
-    resumed_at          TEXT DEFAULT NULL
+    resumed_at          TEXT DEFAULT NULL,
+    tx_epoch            INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_body_checkpoints_status_time

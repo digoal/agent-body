@@ -463,4 +463,7 @@ pub struct BodyCheckpointRecord {
     pub created_at: String,
     pub resumed_by_brain: Option<String>,
     pub resumed_at: Option<String>,
+    /// Phase 76: 跨大脑接力锚定的事务记忆逻辑纪元 (`tx_epoch`，0 表示未绑定 PG 事务纪元)
+    #[serde(default)]
+    pub tx_epoch: i64,
 }

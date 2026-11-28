@@ -71,7 +71,29 @@ impl McpToolRegistry {
                 if let Some(aid) = args.get("archive_id").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty()) {
                     mgr.archive_memory(aid)?;
                 }
+                let tx_status_req = args.get("tx_status").and_then(|v| v.as_bool()).unwrap_or(false);
+                let tomb_key = args.get("tombstone_fact_key").and_then(|v| v.as_str()).map(str::trim).filter(|s| !s.is_empty());
                 let rep = mgr.audit_memories()?;
+                if tx_status_req || tomb_key.is_some() {
+                    let cfg = crate::config::Config::load_effective_or_default();
+                    let tx_prov = cfg.build_tx_memory_provider(self.storage.clone())?;
+                    let tombstoned = if let Some(fk) = tomb_key {
+                        tx_prov.tombstone_fact(
+                            &crate::body::manifest::compute_body_id(),
+                            &cfg.memory.pg_tenant_scope,
+                            fk,
+                            "mcp_memory_audit_tombstone",
+                        )?
+                    } else {
+                        0
+                    };
+                    let health = tx_prov.tx_health()?;
+                    return Ok(serde_json::to_string_pretty(&serde_json::json!({
+                        "audit": rep,
+                        "tombstoned_events": tombstoned,
+                        "tx_memory_health": health,
+                    }))?);
+                }
                 Ok(serde_json::to_string_pretty(&rep)?)
             }
 

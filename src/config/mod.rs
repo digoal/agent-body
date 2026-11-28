@@ -464,7 +464,25 @@ impl Config {
             .and_then(|env_name| std::env::var(env_name.trim()).ok())
             .unwrap_or_default();
 
+        let resolved_pg_url = self
+            .memory
+            .pg_url
+            .clone()
+            .filter(|s| !s.trim().is_empty())
+            .or_else(|| self.storage.pg_url.clone().filter(|s| !s.trim().is_empty()))
+            .or_else(|| {
+                std::env::var("AGENT_BODY_MEMORY_PG_URL")
+                    .ok()
+                    .filter(|s| !s.trim().is_empty())
+            })
+            .unwrap_or_default();
+
         let adapter_cfg = crate::memory::adapters::AdapterConfig {
+            pg_url: resolved_pg_url,
+            pg_pool_size: self.memory.pg_pool_size,
+            pg_tenant_scope: self.memory.pg_tenant_scope.clone(),
+            vector_backend: self.memory.vector_backend.clone(),
+            fallback_to_sqlite: self.memory.fallback_to_sqlite,
             powercontext_url: self.memory.powercontext_url.clone().unwrap_or_default(),
             powercontext_scope_id: self.memory.powercontext_scope_id.clone().unwrap_or_default(),
             mem0_url: self.memory.mem0_url.clone().unwrap_or_default(),
@@ -493,6 +511,43 @@ impl Config {
         }
     }
 
+    /// 构建支持双时态 MVCC 契约的 `TxMemoryProvider`（未启用 `pg_tx` 或 PG 不可达时自动降级本地 SQLite）
+    pub fn build_tx_memory_provider(
+        &self,
+        storage: crate::storage::Storage,
+    ) -> Result<Arc<dyn crate::memory::TxMemoryProvider>> {
+        let resolved_pg_url = if self.memory.provider.trim().eq_ignore_ascii_case("pg_tx")
+            || std::env::var("AGENT_BODY_MEMORY_PG_URL")
+                .ok()
+                .filter(|s| !s.trim().is_empty())
+                .is_some()
+        {
+            self.memory
+                .pg_url
+                .clone()
+                .filter(|s| !s.trim().is_empty())
+                .or_else(|| self.storage.pg_url.clone().filter(|s| !s.trim().is_empty()))
+                .or_else(|| {
+                    std::env::var("AGENT_BODY_MEMORY_PG_URL")
+                        .ok()
+                        .filter(|s| !s.trim().is_empty())
+                })
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
+
+        let adapter_cfg = crate::memory::adapters::AdapterConfig {
+            pg_url: resolved_pg_url,
+            pg_pool_size: self.memory.pg_pool_size,
+            pg_tenant_scope: self.memory.pg_tenant_scope.clone(),
+            vector_backend: self.memory.vector_backend.clone(),
+            fallback_to_sqlite: self.memory.fallback_to_sqlite,
+            ..crate::memory::adapters::AdapterConfig::default()
+        };
+        crate::memory::adapters::MemoryFactory::create_tx(&adapter_cfg, storage)
+    }
+
     /// 校验配置参数合法性与依赖关系
     pub fn validate(&self) -> Result<()> {
         if self.web.enabled && self.web.port < 1024 {
@@ -512,11 +567,33 @@ impl Config {
             anyhow::bail!("当 storage.provider 设置为 'postgres' 时，必须配置 storage.pg_url 连接串");
         }
         match self.memory.provider.trim() {
-            "builtin" | "powercontext" | "mem0" | "letta" => {}
+            "builtin" | "pg_tx" | "powercontext" | "mem0" | "letta" => {}
             other => anyhow::bail!(
-                "未知 memory.provider: '{}'，仅支持 'builtin' / 'powercontext' / 'mem0' / 'letta'",
+                "未知 memory.provider: '{}'，仅支持 'builtin' / 'pg_tx' / 'powercontext' / 'mem0' / 'letta'",
                 other
             ),
+        }
+        if self.memory.pg_pool_size == 0 || self.memory.pg_pool_size > 64 {
+            anyhow::bail!(
+                "memory.pg_pool_size ({}) 必须位于 1..=64 之间",
+                self.memory.pg_pool_size
+            );
+        }
+        match self.memory.vector_backend.trim().to_ascii_lowercase().as_str() {
+            "none" | "pgvector" | "pg_vectorsearch" | "external_lsm" => {}
+            other => anyhow::bail!(
+                "未知 memory.vector_backend: '{}'，仅支持 'none' / 'pgvector' / 'pg_vectorsearch' / 'external_lsm'",
+                other
+            ),
+        }
+        if self.memory.provider.trim() == "pg_tx"
+            && !self.memory.fallback_to_sqlite
+            && self.memory.pg_url.as_deref().map(str::trim).filter(|s| !s.is_empty()).is_none()
+            && self.storage.pg_url.as_deref().map(str::trim).filter(|s| !s.is_empty()).is_none()
+        {
+            anyhow::bail!(
+                "当 memory.provider='pg_tx' 且关闭 fallback_to_sqlite 时，必须配置 memory.pg_url 或 storage.pg_url"
+            );
         }
         for peer in &self.mesh.peers {
             if !(peer.starts_with("http://") || peer.starts_with("https://")) {

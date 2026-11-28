@@ -38,8 +38,14 @@
 # [memory] 长期记忆引擎适配器配置 (由 MemoryFactory 真实加载)
 # ==============================================================================
 [memory]
-# 可选值: "builtin" (默认, 内置 SQLite FTS5+向量) | "powercontext" | "mem0" | "letta"
+# 可选值: "builtin" (默认, 内置 SQLite FTS5+向量) | "pg_tx" (Phase 76 PostgreSQL 双时态事务记忆) | "powercontext" | "mem0" | "letta"
 provider = "builtin"
+# Phase 76: PostgreSQL 事务级记忆连接串 (留空自动回退 [storage].pg_url 或 AGENT_BODY_MEMORY_PG_URL)
+# pg_url = "host=127.0.0.1 port=5432 user=postgres dbname=agent_body"
+# pg_pool_size = 8
+# pg_tenant_scope = "default"
+# vector_backend = "none" # 可选: "none" | "pgvector" | "pg_vectorsearch" | "external_lsm"
+# fallback_to_sqlite = true # PG 不可达时自动无损降级为本地 SQLite 零依赖模式
 # powercontext_url = "http://127.0.0.1:8000"
 # powercontext_scope_id = "default"
 # mem0_url = "https://api.mem0.ai"

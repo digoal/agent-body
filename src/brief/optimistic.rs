@@ -38,6 +38,9 @@ pub struct OptimisticLeaseReport {
     /// 全量评估后的租约列表（含因 optimistic_miss 被降级的条目）
     pub leases: Vec<OptimisticLease>,
     pub epoch_hash: String,
+    /// Phase 76: 关联事务记忆全局逻辑纪元 (`tx_epoch`，启用 `pg_tx` 时 > 0)
+    #[serde(default)]
+    pub tx_epoch: i64,
     pub markdown_section: String,
     pub tokens_estimated: usize,
 }
@@ -75,8 +78,22 @@ impl OptimisticLeaseEngine {
             .filter(|n| n.node_type == "project")
             .collect();
 
+        // 探测活跃 PG 事务记忆逻辑纪元并混入短纪元指纹
+        let cfg = crate::config::Config::load_effective_or_default();
+        let tx_epoch = if cfg.memory.provider.trim().eq_ignore_ascii_case("pg_tx") {
+            cfg.build_tx_memory_provider(storage.clone())
+                .ok()
+                .and_then(|p| p.current_tx_epoch().ok())
+                .unwrap_or(0)
+        } else {
+            0
+        };
+
         // 计算短纪元指纹（8 位十六进制）
         let mut fingerprint_seed = String::new();
+        if tx_epoch > 0 {
+            fingerprint_seed.push_str(&format!("tx_epoch:{};", tx_epoch));
+        }
         for n in &port_nodes {
             fingerprint_seed.push_str(&n.id);
             fingerprint_seed.push(';');
@@ -214,6 +231,7 @@ impl OptimisticLeaseEngine {
         OptimisticLeaseReport {
             leases: candidates,
             epoch_hash,
+            tx_epoch,
             markdown_section,
             tokens_estimated,
         }

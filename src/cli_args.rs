@@ -459,9 +459,9 @@ pub(crate) enum FeedbackCommands {
 
 #[derive(Subcommand)]
 pub(crate) enum BenchCommands {
-    #[command(about = "列出 19 大标准 A/B 负载与 PR-01~14 推导规则")]
+    #[command(about = "列出 20 大标准 A/B 负载与 PR-01~14 推导规则")]
     Workloads,
-    #[command(about = "运行宿主机真机 A/B 对照基准 (full/macro/micro/dq/competitors/W1~W19)")]
+    #[command(about = "运行宿主机真机 A/B 对照基准 (full/macro/micro/dq/competitors/W1~W20)")]
     Run {
         #[arg(long, default_value = "full")]
         suite: String,

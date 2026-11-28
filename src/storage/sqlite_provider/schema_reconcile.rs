@@ -209,6 +209,7 @@ fn reconcile_sqlite_schema_in_tx(conn: &Connection) -> Result<()> {
             &[
                 ("resumed_by_brain", "TEXT DEFAULT NULL"),
                 ("resumed_at", "TEXT DEFAULT NULL"),
+                ("tx_epoch", "INTEGER NOT NULL DEFAULT 0"),
             ],
         ),
     ];

@@ -48,9 +48,29 @@ impl Default for WorkspaceConfig {
 /// 长期记忆引擎提供者配置 (`[memory]`, 驱动 MemoryFactory)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryConfig {
-    /// 提供者类型: "builtin" | "powercontext" | "mem0" | "letta"
+    /// 提供者类型: "builtin" | "pg_tx" | "powercontext" | "mem0" | "letta"
     #[serde(default = "default_memory_provider")]
     pub provider: String,
+
+    /// Phase 76: PostgreSQL 事务级记忆连接串（留空则回退 `[storage].pg_url` 或 `AGENT_BODY_MEMORY_PG_URL`）
+    #[serde(default)]
+    pub pg_url: Option<String>,
+
+    /// Phase 76: PostgreSQL 事务记忆连接池最大连接数 (1..=64，默认 8)
+    #[serde(default = "default_memory_pg_pool_size")]
+    pub pg_pool_size: usize,
+
+    /// Phase 76: 事务记忆租户/项目隔离域 (默认 "default")
+    #[serde(default = "default_memory_tenant_scope")]
+    pub pg_tenant_scope: String,
+
+    /// Phase 76: 解耦向量索引后端: "none" | "pgvector" | "pg_vectorsearch" | "external_lsm"
+    #[serde(default = "default_memory_vector_backend")]
+    pub vector_backend: String,
+
+    /// Phase 76: 当 PostgreSQL 不可达时是否自动无损降级为本地内置 SQLite 引擎 (默认 true)
+    #[serde(default = "default_true_flag")]
+    pub fallback_to_sqlite: bool,
 
     #[serde(default)]
     pub powercontext_url: Option<String>,
@@ -83,10 +103,27 @@ pub(super) fn default_memory_provider() -> String {
     "builtin".to_string()
 }
 
+pub(super) fn default_memory_pg_pool_size() -> usize {
+    8
+}
+
+pub(super) fn default_memory_tenant_scope() -> String {
+    "default".to_string()
+}
+
+pub(super) fn default_memory_vector_backend() -> String {
+    "none".to_string()
+}
+
 impl Default for MemoryConfig {
     fn default() -> Self {
         Self {
             provider: default_memory_provider(),
+            pg_url: None,
+            pg_pool_size: default_memory_pg_pool_size(),
+            pg_tenant_scope: default_memory_tenant_scope(),
+            vector_backend: default_memory_vector_backend(),
+            fallback_to_sqlite: true,
             powercontext_url: None,
             powercontext_scope_id: None,
             mem0_url: None,

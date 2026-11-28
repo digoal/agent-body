@@ -357,11 +357,20 @@ pub fn list_workload_specs() -> Vec<WorkloadSpec> {
             body_desc: "L1 章节PMI网 + 原文锚定 L2 Know-How + 8维 Omni-RRF + 写穿级联失效 (1 round)".into(),
             sla_desc: "4/4 跨词/容错/防幻觉/写穿断言命中, token_savings_pct >= 50%, body_elapsed_us < 250_000".into(),
         },
+        WorkloadSpec {
+            id: "W20".into(),
+            name: "pg_tx_mvcc_concurrency_and_write_through".into(),
+            title: "PostgreSQL 事务记忆 MVCC 写穿、透明降级与防脏读自愈".into(),
+            category: "D6 Transactional Memory (Scheme A)".into(),
+            baseline_desc: "无双时态/无写穿失效时多 Agent 并发覆写丢更新、读到僵尸记忆且无 MVCC 自愈 (4 rounds)".into(),
+            body_desc: "PgTxMemoryAdapter 双时态写穿契约 + SQLite 透明降级 + MVCC_EPOCH_CONFLICT(<2ms) + 胶囊 tx_epoch 锚定 (1 round)".into(),
+            sla_desc: "4/4 降级脱敏/OCC自愈/胶囊纪元/墓碑审计断言命中, token_savings_pct >= 50%, body_elapsed_us < 250_000".into(),
+        },
     ]
 }
 
 pub fn run_all_workloads(storage: Arc<dyn StorageProvider>) -> Result<Vec<WorkloadResult>> {
-    let mut results = Vec::with_capacity(19);
+    let mut results = Vec::with_capacity(20);
     for spec in list_workload_specs() {
         results.push(run_workload(storage.clone(), &spec.id)?);
     }
@@ -389,7 +398,8 @@ pub fn run_workload(storage: Arc<dyn StorageProvider>, id: &str) -> Result<Workl
         "W17" => run_w17_cross_brain_continuity_and_body_proprioception(),
         "W18" => run_w18_perf_awr_and_self_diagnostics(),
         "W19" => run_w19_knowhow_graph_and_omni_rrf(),
-        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W19)", id),
+        "W20" => run_w20_pg_tx_mvcc_and_write_through(),
+        _ => anyhow::bail!("未知 Benchmark 工作负载 ID: {} (支持 W1~W20)", id),
     }
 }
 

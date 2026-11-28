@@ -70,9 +70,9 @@ Agent 本体向瞬态大脑暴露 43 个原子级感官、反射、海马体与�
 | `body_env_show` | 查看系统硬件规格 (CPU/内存/磁盘) | 无 |
 | `body_env_gc` | 宿主垃圾回收：安全清理超期临时文件与孤儿进程 | `tmp_dir`, `max_age_hours`, `apply` |
 | `body_port_check` | 端口防撞检测与空闲可用端口推荐 | `port`, `suggest_count` |
-| `body_memory_add` | 写入一条跨会话长期记忆 | `type`, `content`, `summary` |
-| `body_memory_search` | 语义+全文混合 RRF 检索记忆 | `query`, `limit`, `hybrid` |
-| `body_memory_audit` | 长期记忆体检：认知矛盾对与衰减淘汰仲裁 | `archive_id` |
+| `body_memory_add` | 写入跨会话长期记忆（支持 `pg_tx` 双时态写穿与 CAS 纪元校验） | `memory_type`, `content`, `summary`, `tags`, `fact_key`, `evidence_tier`, `expected_epoch` |
+| `body_memory_search` | 语义+全文混合 RRF 检索记忆（支持 `pg_tx` `as_of_epoch` 时间旅行与历史版本） | `query`, `limit`, `hybrid`, `as_of_epoch`, `include_history`, `tenant_scope` |
+| `body_memory_audit` | 长期记忆体检：认知矛盾对、衰减淘汰、PG 事务健康 (`tx_status`) 与墓碑失效 | `archive_id`, `tx_status`, `tombstone_fact_key` |
 | `body_links_query` | 查询实体双向依赖与 `L1/L2/L3` 分层有向加权属性图谱 | `type`, `id`, `max_hops`, `min_weight`, `include_semantic` |
 | `body_links_visualize` | 导出当前实体拓扑关系为 Mermaid 架构图 (支持触发 L2/L3 挖掘) | `limit`, `discover_semantic` |
 | `body_links_impact` | 变更爆炸半径推演 (加权衰减 BFS，支持 `L1+L2` 基准与可选 `L3` 语义) | `target`, `max_depth`, `min_weight`, `include_semantic` |
@@ -98,7 +98,7 @@ Agent 本体向瞬态大脑暴露 43 个原子级感官、反射、海马体与�
 | `body_lock_deadlock_check` | 运行 Wait-For Graph (WFG) 环路检测，诊断多 Agent 死锁 | 无 |
 | `body_mesh_query` | `MeshEnvelope v1.0` HMAC 防重放联邦协同：ping/facts/locks/port/acquire/跨机图谱/脱敏对话/<=10MB 沙盒投递 | `action`, `port`, `peer`, `query`, `thread_id`, `intent`, `content`, `file_path`, `transfer_id` |
 | `body_demo_scenario` | Web 路演与黑屏同源场景演示引擎（7 大剧目、ROI、43/43 Parity、沙盒重置） | `action`, `scenario_id` |
-| `body_benchmark` | 实证 Benchmark v3.9 对照评测（`W1~W19` + `M1~M6` + `DQ1~DQ10` + `COMP-C1~C4`）与生产效能账本（`PR-01~14`） | `action`, `suite`, `track`, `save`, `run_id`, `run_a`, `run_b`, `window`, `tool_filter`, `format`, `limit` |
+| `body_benchmark` | 实证 Benchmark v3.9 对照评测（`W1~W20` + `M1~M6` + `DQ1~DQ10` + `COMP-C1~C4`）与生产效能账本（`PR-01~14`） | `action`, `suite`, `track`, `save`, `run_id`, `run_a`, `run_b`, `window`, `tool_filter`, `format`, `limit` |
 | `body_feedback` | 使用反馈总账 (`user_feedback.md`) 读写沉淀、`reconcile` 信息新鲜度对账与 `P1~P5` 自进化对比探针 | `action`, `category`, `priority`, `title`, `evidence`, `target`, `auto_heal`, `auto_feedback` |
 | `body_audit_query` | 双域全链路行为审计 (`IN_AGENT` + `OUT_OF_AGENT`)、因果钻取、DuckDB OLAP 导出与租约滑窗自进化 | `action`, `domain`, `actor_kind`, `category`, `outcome`, `trace_id`, `window`, `auto_feedback`, `output_path` |
 | `body_state` | Agent 本体中枢：六器官自省 (`manifest`)、五维稳态 (`vitals`)、四级包络 (`envelope`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`)、多本体发现 (`peers`)、三态运行模式/Shadow A/B (`runtime_status`/`runtime_mode`/`ab_compare`/`ab_report`) 与 AWR 性能剖析 (`perf_snapshot`/`perf_awr`/`perf_tune`/`delete_snapshot`/`delete_awr_report`) | `action`, `mode`, `mcp_profile`, `shadow_primary`, `query`, `window`, `from_brain`, `session_id`, `goal_summary`, `active_files`, `verified_facts`, `open_blockers`, `next_step_hint`, `checkpoint_id`, `check_action`, `target`, `dry_run`, `label`, `set_baseline`, `snap_a`, `snap_b`, `vs_baseline`, `target_id` |

@@ -55,6 +55,7 @@ impl PgStorageProvider {
                          EXECUTE format('ALTER TABLE effectiveness_ledger RENAME COLUMN %I TO body_rounds', old_col);
                      END IF;
                  END IF;
+                 ALTER TABLE body_checkpoints ADD COLUMN IF NOT EXISTS tx_epoch BIGINT NOT NULL DEFAULT 0;
              END $$;",
         ) { eprintln!("[PG][WARN] 增量列/索引热迁移告警: {}", e); }
 

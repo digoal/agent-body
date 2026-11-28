@@ -44,11 +44,14 @@
 | **Phase 75** | **全一等公民交叉验证与大一统（Check D~G + `body metrics` 1:1:1）** | 升级 `evolution_manifest.py` Check D~G；加固 CI/Release/Docker (`--target probe`)；补齐旗舰 `body metrics` CLI/MCP；全面刷新手册、架构文档、9 份演说与 `architecture.svg` | `#54` | [roadmap-phase75.md](roadmap-phase75.md) | ✅ **已完成** |
 | **v1.1.0 视觉重塑** | **9 份演说 HTML 形象化 SVG 图解引擎重构 (`225fb2c`)** | 新增 `scripts/deck_visuals.py`（28+ 矢量图标与 20 套专属领域架构图）、舞台画布扩至 `1472×640`（72%+ 图示占比），9/9 通过 `make verify-decks` Playwright 无头验真 | — | [presentation/index.html](../../presentation/index.html) | ✅ **已完成** |
 | **v1.1.0 品质硬化** | **老库无损 Schema 自愈、11 处缺陷根治与全栈 414 测 + WebUI E2E (`ce7c828`)** | 落地 `schema_reconcile.rs` 事务式老库列改名/补列与 FTS5 脱同步重建、SQLite WAL `64MB` 控容与 CJK 回退检索；修复 Benchmark 报错吞错、记忆类型归一、Mesh 路由、锁 Token 与 MCP 必填校验；新增 18 项测试（全工作区 **414 测**）与 `make verify-webui` Playwright 9 工作台 E2E 门禁 | — | [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) | ✅ **已完成** |
+| **Phase 76 (M1)** | **PostgreSQL SPI 事务级海马体 · 方案 A 事务底座 (`PgTxMemoryProvider`)** | 落地非破坏性 `TxMemoryProvider` SPI、第 11 扩展 `contrib/mem_pg_tx/` 五件套与前后向兼容 4 表 DDL、有界连接池 + 同键微序列化写穿 + `REPEATABLE READ` 快照读 + LSM 解耦段 + SQLite 降级 + `tx_epoch` 贯通 AOPCC/胶囊/老库自愈 + `W20` 压测（PG 18 实测 16 线程 80tx 丢写 `0%`、P50 `3.28ms` / P99 `4.34ms`、僵尸召回 `0%`） | `#55` | [roadmap-phase76-78.md](roadmap-phase76-78.md) | ✅ **已完成** |
+| **Phase 77 (M2)** | **方案 A 满血形态 · `L1_AUTONOMIC` 空闲期睡眠整理 (`SleepTimeCompactor`)** | STC 显著性打分 (`SalienceScorer`)、空闲窗口探测与异步压缩、不可预测查询自动旁路、双域审计全留痕与 Benchmark `v4.0` (`W21`/`DQ11`/`PR-15`) | `#55` | [roadmap-phase76-78.md](roadmap-phase76-78.md) | 🗓️ **已规划** |
+| **Phase 78 (M3)** | **方案 B 中长期演进 · 旁路快权重快照血缘与神经 Compaction 门禁** | `FastWeightCheckpointSpi` 旁路控制面（零推理/权重进本体）、`fast_weight_snapshots` 血缘与范数监控、`selective_unlearn` 定向遗忘三道硬门禁、按 `tx_epoch` 秒级回滚与 `ContinuityCapsule v2` | `#55` | [roadmap-phase76-78.md](roadmap-phase76-78.md) | 🗓️ **已规划** |
 
 ---
 
 ## 三、断点恢复指引
 
-1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase75.md](roadmap-phase75.md)；
+1. 新会话启动时，优先阅读根目录 [EVOLUTION_GUIDE.md](../../EVOLUTION_GUIDE.md) 与当前活跃路线图 [roadmap-phase76-78.md](roadmap-phase76-78.md)；
 2. 严禁全仓扫描 `docs/src_doc/archive/` 内已冻结的历史路线图；
 3. 每次代码/文档改动收口前执行 `make quality-gate && RUST_TEST_THREADS=1 make test`（改动 Web/演说时追加 `make verify-webui` / `make verify-decks`）与 `make sync-mirror` 校验零漂移。

@@ -356,7 +356,7 @@ impl SyncPipeline {
                 app.flush()?;
             }
 
-            // 8. body_checkpoints (16 cols)
+            // 8. body_checkpoints (17 cols)
             let mut body_checkpoints_synced = 0usize;
             {
                 let mut seen_ids = HashSet::with_capacity(checkpoints.len());
@@ -385,7 +385,8 @@ impl SyncPipeline {
                         cp.evidence_sha256,
                         cp.created_at,
                         cp.resumed_by_brain,
-                        cp.resumed_at
+                        cp.resumed_at,
+                        cp.tx_epoch
                     ])?;
                     body_checkpoints_synced += 1;
                 }

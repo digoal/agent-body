@@ -70,6 +70,15 @@ impl FreshnessReconciler {
         let links_engine = LinksEngine::new(Arc::new(storage.clone()));
         let active_memories = storage.list_all_active_memories(1000).unwrap_or_default();
         let mut archived_mem_ids: HashSet<String> = HashSet::new();
+        let pg_tx_opt = {
+            let cfg = crate::config::Config::load_effective_or_default();
+            if cfg.memory.provider.trim().eq_ignore_ascii_case("pg_tx") {
+                cfg.build_tx_memory_provider(storage.clone()).ok()
+            } else {
+                None
+            }
+        };
+        let body_id_for_tomb = crate::body::manifest::compute_body_id();
 
         for asset in assets {
             if asset.status != "active" {
@@ -108,6 +117,12 @@ impl FreshnessReconciler {
                         } else {
                             rep.duplicate_memories_archived += 1;
                         }
+                    }
+                }
+                if let Some(ref pg_tx) = pg_tx_opt {
+                    let fk = format!("file:{}", asset.path);
+                    if let Err(e) = pg_tx.tombstone_fact(&body_id_for_tomb, "", &fk, "asset_missing_reconcile") {
+                        eprintln!("[Reconcile][WARN] PG 事务记忆墓碑化失活文件 '{}' 失败: {}", fk, e);
                     }
                 }
                 rep.missing_assets_marked += 1;

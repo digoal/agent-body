@@ -120,8 +120,29 @@ impl ContinuityManager {
         }
     }
 
-    /// 脱敏、抗投毒并裁剪至 <=300 tok 后持久化跨大脑接力胶囊
+    /// 脱敏、抗投毒并裁剪至 <=300 tok 后持久化跨大脑接力胶囊（自动锚定当前活跃 `tx_epoch`）
     pub fn save_capsule(storage: &Storage, input: ContinuityInput) -> Result<BodyCheckpointRecord> {
+        let resolved_epoch = Self::resolve_active_tx_epoch(storage);
+        Self::save_capsule_with_epoch(storage, input, resolved_epoch)
+    }
+
+    fn resolve_active_tx_epoch(storage: &Storage) -> i64 {
+        let cfg = crate::config::Config::load_effective_or_default();
+        if !cfg.memory.provider.trim().eq_ignore_ascii_case("pg_tx") {
+            return 0;
+        }
+        cfg.build_tx_memory_provider(storage.clone())
+            .ok()
+            .and_then(|p| p.current_tx_epoch().ok())
+            .unwrap_or(0)
+    }
+
+    /// 显式携带事务记忆逻辑纪元 `tx_epoch` 持久化跨大脑接力胶囊
+    pub fn save_capsule_with_epoch(
+        storage: &Storage,
+        input: ContinuityInput,
+        tx_epoch: i64,
+    ) -> Result<BodyCheckpointRecord> {
         let body_id = compute_body_id();
         let token_budget = input.token_budget.unwrap_or(300).clamp(80, 300);
         let from_brain = Self::clean_text(
@@ -168,6 +189,7 @@ impl ContinuityManager {
             created_at: now.clone(),
             resumed_by_brain: None,
             resumed_at: None,
+            tx_epoch,
         };
         Self::enforce_budget(&mut rec, token_budget);
 
@@ -291,9 +313,14 @@ impl ContinuityManager {
 
     /// 将接力胶囊渲染为紧凑 Markdown 片段，供 `BriefAssembler` 直接注入新大脑上下文
     pub fn render_brief_snippet(rec: &BodyCheckpointRecord, max_tokens: usize) -> String {
+        let epoch_suffix = if rec.tx_epoch > 0 {
+            format!(" · tx_epoch=#{}", rec.tx_epoch)
+        } else {
+            String::new()
+        };
         let mut lines = vec![format!(
-            "## 🧬 跨大脑接力胶囊 (`{}` · 来自 `{}`)\n",
-            rec.checkpoint_id, rec.from_brain
+            "## 🧬 跨大脑接力胶囊 (`{}` · 来自 `{}`{})\n",
+            rec.checkpoint_id, rec.from_brain, epoch_suffix
         )];
         lines.push(format!("- **目标**: {}\n", rec.goal_summary));
         if !rec.active_files.is_empty() {

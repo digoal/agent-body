@@ -40,7 +40,7 @@ pub fn compute_geomean_speedup(workloads: &[WorkloadResult]) -> f64 {
 pub fn compute_query_guard_speedup(workloads: &[WorkloadResult]) -> f64 {
     let subset: Vec<&WorkloadResult> = workloads
         .iter()
-        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9" | "W11" | "W15" | "W16" | "W17" | "W18" | "W19"))
+        .filter(|w| matches!(w.id.as_str(), "W1" | "W2" | "W4" | "W6" | "W7" | "W8" | "W9" | "W11" | "W15" | "W16" | "W17" | "W18" | "W19" | "W20"))
         .collect();
     if subset.is_empty() {
         return 1.0;
@@ -319,7 +319,7 @@ mod tests {
         let report = BenchmarkEngine::run_suite(provider.clone(), "full", true, Some("bench:test"))
             .expect("run full suite");
 
-        assert_eq!(report.workloads.len(), 19);
+        assert_eq!(report.workloads.len(), 20);
         assert_eq!(report.micro_benchmarks.len(), 6);
         assert_eq!(report.data_quality.len(), 10);
         assert_eq!(report.competitors.len(), 4);
@@ -365,7 +365,7 @@ mod tests {
                 m.id, m.name, m.passed, m.avg_us, m.sla_limit_us
             );
         }
-        assert!(report.sla_passed, "19 大负载 + 6 大微基准 + 10 项 DQ SLA 应全部通过");
+        assert!(report.sla_passed, "20 大负载 + 6 大微基准 + 10 项 DQ SLA 应全部通过");
 
         let fetched = provider
             .get_benchmark_run(&report.run_id)

@@ -288,6 +288,49 @@ impl McpToolRegistry {
                     bail!("缺少必填参数 content（记忆正文不能为空）");
                 }
                 let summary = args.get("summary").and_then(|v| v.as_str());
+                let fact_key = args.get("fact_key").and_then(|v| v.as_str()).map(str::trim).filter(|s| !s.is_empty());
+                let evidence_tier = args.get("evidence_tier").and_then(|v| v.as_str()).unwrap_or("L3_SEMANTIC");
+                let expected_epoch = args.get("expected_epoch").and_then(|v| v.as_i64());
+                let tenant_scope = args.get("tenant_scope").and_then(|v| v.as_str()).unwrap_or("");
+
+                let cfg = crate::config::Config::load_effective_or_default();
+                if cfg.memory.provider.trim().eq_ignore_ascii_case("pg_tx")
+                    || fact_key.is_some()
+                    || expected_epoch.is_some()
+                {
+                    if let Ok(tx_prov) = cfg.build_tx_memory_provider(self.storage.clone()) {
+                        let health = tx_prov.tx_health().ok();
+                        if health.as_ref().is_some_and(|h| h.connected) {
+                            let fk = fact_key
+                                .map(|s| s.to_string())
+                                .unwrap_or_else(|| format!("mcp:{}", uuid::Uuid::new_v4()));
+                            let scope = if tenant_scope.trim().is_empty() {
+                                cfg.memory.pg_tenant_scope.clone()
+                            } else {
+                                tenant_scope.trim().to_string()
+                            };
+                            let out = tx_prov.append_tx_event(&crate::memory::TxMemoryWriteInput {
+                                body_id: crate::body::manifest::compute_body_id(),
+                                tenant_scope: scope,
+                                fact_key: fk.clone(),
+                                memory_type: mem_type.to_string(),
+                                content: content.to_string(),
+                                summary: summary.map(|s| s.to_string()),
+                                tags: vec![],
+                                evidence_tier: crate::memory::TxEvidenceTier::parse_str(evidence_tier),
+                                salience_score: 0.75,
+                                expected_epoch,
+                                source_agent: Some("mcp".to_string()),
+                                source_session: None,
+                                embedding_ref: None,
+                            })?;
+                            return Ok(format!(
+                                "✅ 事务级长期记忆已录入 (PG MVCC): event_id={}, fact_key={}, tx_epoch={}, retries={}",
+                                out.event_id, fk, out.tx_epoch, out.retries
+                            ));
+                        }
+                    }
+                }
 
                 let id = mm.add(mem_type, content, summary, Some("mcp"), vec![])?;
                 Ok(format!("✅ 长期记忆已录入, ID: {}", id))
@@ -297,6 +340,49 @@ impl McpToolRegistry {
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
                 let limit = args.get("limit").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
                 let use_hybrid = args.get("hybrid").and_then(|v| v.as_bool()).unwrap_or(true);
+                let as_of_epoch = args.get("as_of_epoch").and_then(|v| v.as_i64());
+                let include_history = args.get("include_history").and_then(|v| v.as_bool()).unwrap_or(false);
+                let tenant_scope = args.get("tenant_scope").and_then(|v| v.as_str()).unwrap_or("");
+
+                let cfg = crate::config::Config::load_effective_or_default();
+                if as_of_epoch.is_some()
+                    || include_history
+                    || cfg.memory.provider.trim().eq_ignore_ascii_case("pg_tx")
+                {
+                    if let Ok(tx_prov) = cfg.build_tx_memory_provider(self.storage.clone()) {
+                        let opts = crate::memory::TxSearchOptions {
+                            tenant_scope: if tenant_scope.trim().is_empty() {
+                                cfg.memory.pg_tenant_scope.clone()
+                            } else {
+                                tenant_scope.trim().to_string()
+                            },
+                            as_of_epoch,
+                            include_history,
+                            limit,
+                        };
+                        let snap = tx_prov.search_tx(query, &opts)?;
+                        if !snap.fallback_active || as_of_epoch.is_some() || include_history {
+                            let mut out = format!(
+                                "记忆检索结果 (事务快照 {}, snapshot_epoch={}, 共 {} 条):\n",
+                                snap.backend,
+                                snap.snapshot_epoch,
+                                snap.hits.len()
+                            );
+                            for ev in snap.hits {
+                                out.push_str(&format!(
+                                    "  - [{}|epoch:{}|{}] {} (fact_key: {}, status: {})\n",
+                                    ev.memory_type,
+                                    ev.tx_epoch,
+                                    ev.evidence_tier,
+                                    ev.content,
+                                    ev.fact_key,
+                                    ev.embedding_status
+                                ));
+                            }
+                            return Ok(out);
+                        }
+                    }
+                }
 
                 if use_hybrid {
                     let arc_storage = Arc::new(self.storage.clone());

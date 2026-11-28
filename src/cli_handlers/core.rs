@@ -408,15 +408,119 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
 
         Commands::Memory { action } => {
             match action {
-                MemoryCommands::Add { r#type, content, summary } => {
+                MemoryCommands::Add {
+                    r#type,
+                    content,
+                    summary,
+                    fact_key,
+                    evidence_tier,
+                    expected_epoch,
+                    tenant_scope,
+                } => {
+                    let fk_opt = fact_key.as_deref().map(str::trim).filter(|s| !s.is_empty());
+                    if cfg.memory.provider.trim().eq_ignore_ascii_case("pg_tx")
+                        || fk_opt.is_some()
+                        || expected_epoch.is_some()
+                    {
+                        if let Ok(tx_prov) = cfg.build_tx_memory_provider(storage.clone()) {
+                            if tx_prov.tx_health().map(|h| h.connected).unwrap_or(false) {
+                                let fk = fk_opt
+                                    .map(|s| s.to_string())
+                                    .unwrap_or_else(|| format!("cli:{}", uuid::Uuid::new_v4()));
+                                let scope = tenant_scope
+                                    .as_deref()
+                                    .map(str::trim)
+                                    .filter(|s| !s.is_empty())
+                                    .unwrap_or(&cfg.memory.pg_tenant_scope)
+                                    .to_string();
+                                let out = tx_prov.append_tx_event(&agent_body::memory::TxMemoryWriteInput {
+                                    body_id: agent_body::body::manifest::compute_body_id(),
+                                    tenant_scope: scope,
+                                    fact_key: fk.clone(),
+                                    memory_type: r#type.clone(),
+                                    content: content.clone(),
+                                    summary: summary.clone(),
+                                    tags: vec![],
+                                    evidence_tier: agent_body::memory::TxEvidenceTier::parse_str(&evidence_tier),
+                                    salience_score: 0.75,
+                                    expected_epoch,
+                                    source_agent: Some("cli".to_string()),
+                                    source_session: None,
+                                    embedding_ref: None,
+                                })?;
+                                println!(
+                                    "✅ 事务级记忆已保存 (PG MVCC): event_id={}, fact_key={}, tx_epoch={}, retries={}",
+                                    out.event_id, fk, out.tx_epoch, out.retries
+                                );
+                                return Ok(());
+                            }
+                        }
+                    }
                     let mm = MemoryManager::new(storage);
                     let id = mm.add(&r#type, &content, summary.as_deref(), Some("cli"), vec![])?;
                     println!("✅ 记忆已保存, ID: {}", id);
                 }
-                MemoryCommands::Search { query, limit, hybrid } => {
+                MemoryCommands::Search {
+                    query,
+                    limit,
+                    hybrid,
+                    as_of_epoch,
+                    include_history,
+                    tenant_scope,
+                } => {
                     let t0 = std::time::Instant::now();
                     let provider_ref = storage.provider().clone();
                     let mut out = String::new();
+                    if as_of_epoch.is_some()
+                        || include_history
+                        || cfg.memory.provider.trim().eq_ignore_ascii_case("pg_tx")
+                    {
+                        if let Ok(tx_prov) = cfg.build_tx_memory_provider(storage.clone()) {
+                            let scope = tenant_scope
+                                .as_deref()
+                                .map(str::trim)
+                                .filter(|s| !s.is_empty())
+                                .unwrap_or(&cfg.memory.pg_tenant_scope)
+                                .to_string();
+                            let snap = tx_prov.search_tx(
+                                &query,
+                                &agent_body::memory::TxSearchOptions {
+                                    tenant_scope: scope,
+                                    as_of_epoch,
+                                    include_history,
+                                    limit,
+                                },
+                            )?;
+                            if !snap.fallback_active || as_of_epoch.is_some() || include_history {
+                                out.push_str(&format!(
+                                    "记忆搜索结果 (事务快照 {}, snapshot_epoch={}, 共 {} 条):\n",
+                                    snap.backend,
+                                    snap.snapshot_epoch,
+                                    snap.hits.len()
+                                ));
+                                for ev in snap.hits {
+                                    out.push_str(&format!(
+                                        "  - [{}|epoch:{}|{}] {} (fact_key: {}, status: {})\n",
+                                        ev.memory_type,
+                                        ev.tx_epoch,
+                                        ev.evidence_tier,
+                                        ev.content,
+                                        ev.fact_key,
+                                        ev.embedding_status
+                                    ));
+                                }
+                                print!("{}", out);
+                                agent_body::benchmark::ledger::EffectivenessLedger::record_channel_call(
+                                    provider_ref.as_ref(),
+                                    "cli",
+                                    "body_memory_search",
+                                    &out,
+                                    t0.elapsed().as_micros() as i64,
+                                );
+                                return Ok(());
+                            }
+                        }
+                    }
                     if hybrid {
                         let arc_storage = std::sync::Arc::new(storage);
                         let results = tokio::runtime::Runtime::new()?.block_on(async {
@@ -446,7 +550,26 @@ pub fn handle_core(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> 
                         t0.elapsed().as_micros() as i64,
                     );
                 }
-                MemoryCommands::Audit { archive_id } => {
+                MemoryCommands::Audit {
+                    archive_id,
+                    tx_status,
+                    tombstone_fact,
+                } => {
+                    if let Some(fk) = tombstone_fact.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+                        let tx_prov = cfg.build_tx_memory_provider(storage.clone())?;
+                        let n = tx_prov.tombstone_fact(
+                            &agent_body::body::manifest::compute_body_id(),
+                            &cfg.memory.pg_tenant_scope,
+                            fk,
+                            "cli_memory_audit_tombstone",
+                        )?;
+                        println!("✅ 已将 fact_key='{}' 墓碑化（清理 {} 条事件，0% 僵尸召回）。", fk, n);
+                    }
+                    if tx_status {
+                        let tx_prov = cfg.build_tx_memory_provider(storage.clone())?;
+                        let health = tx_prov.tx_health()?;
+                        println!("{}", serde_json::to_string_pretty(&health)?);
+                    }
                     let mgr = agent_body::memory::lifecycle::MemoryLifecycleManager::new(&storage);
                     if let Some(aid) = archive_id {
                         mgr.archive_memory(&aid)?;

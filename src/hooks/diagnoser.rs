@@ -201,6 +201,29 @@ impl OptimisticFailureDiagnoser {
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
+        // 模式 5 (Phase 76): PostgreSQL 事务记忆 MVCC / OCC 纪元冲突自愈 (<2ms)
+        if err_lower.contains("mvcc_epoch_conflict")
+            || err_lower.contains("could not serialize access")
+            || err_lower.contains("sqlstate 40001")
+        {
+            let target = args
+                .get("fact_key")
+                .and_then(|v| v.as_str())
+                .map(|k| format!("fact_key:{}", k))
+                .unwrap_or_else(|| "memory:pg_tx".to_string());
+            return Some(FailureRecoveryPrescription {
+                failure_kind: "MVCC_EPOCH_CONFLICT".to_string(),
+                target,
+                root_cause: "检测到多 Agent 并发写事务记忆发生 MVCC/OCC 逻辑纪元冲突（严禁持长 2PL 锁）".to_string(),
+                recovery_actions: vec![
+                    "先运行 `agent-body memory search \"\" --include-history` 或 `body_memory_search(include_history=true)` 获取最新 tx_epoch".to_string(),
+                    "使用最新 `expected_epoch` 重试写入，或省略 `expected_epoch` 走双时态自动写穿追加".to_string(),
+                ],
+                lease_downgraded: false,
+                elapsed_us: t0.elapsed().as_micros(),
+            });
+        }
+
         // 模式 4：端口占用冲突 (Address already in use / EADDRINUSE)
         if err_lower.contains("address already in use") || err_lower.contains("eaddrinuse") {
             let port = extract_port_hint(args, &combined_err, cmd_str).unwrap_or(8080);

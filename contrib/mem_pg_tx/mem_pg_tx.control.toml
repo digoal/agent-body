@@ -1,0 +1,19 @@
+[extension]
+id = "mem_pg_tx"
+version = "0.1.0"
+kind = "compiled_crate"
+min_sdk_version = "2.0"
+requires = []
+relocatable = true
+
+[schema]
+migration_dir = "sql/"
+table_prefix = "ext_mem_pg_tx__"
+default_autonomy = "L1_AUTONOMIC"
+
+[capabilities]
+provides_types = []
+provides_fdws = []
+provides_workers = []
+provides_hooks = []
+provides_procs = ["ext_mem_pg_tx_status", "ext_mem_pg_tx_query"]

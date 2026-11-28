@@ -341,5 +341,6 @@ CREATE TABLE IF NOT EXISTS body_checkpoints (
     evidence_sha256     VARCHAR NOT NULL,
     created_at          VARCHAR NOT NULL,
     resumed_by_brain    VARCHAR,
-    resumed_at          VARCHAR
+    resumed_at          VARCHAR,
+    tx_epoch            BIGINT DEFAULT 0
 );

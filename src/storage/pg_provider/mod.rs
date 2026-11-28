@@ -339,6 +339,7 @@ impl PgStorageProvider {
             created_at: r.get(13),
             resumed_by_brain: r.get(14),
             resumed_at: r.get(15),
+            tx_epoch: r.try_get::<_, i64>(16).unwrap_or(0),
         }
     }
 

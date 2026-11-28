@@ -38,20 +38,21 @@ agent-body/
 ├── Cargo.toml               # Rust Workspace 与旗舰依赖配置
 ├── Cargo.lock               # 依赖版本精确锁定
 ├── build.rs                 # 编译期 Git Hash / 构建时间 / 目标平台注入
-├── Makefile                 # 构建、六重门禁、414 测试、Playwright 双门禁、热重启与镜像同步
+├── Makefile                 # 构建、六重门禁、421 测试、Playwright 双门禁、热重启与镜像同步
 ├── Dockerfile               # 多阶段镜像（旗舰版 + 零 C++ --target probe 精简镜像）
 ├── docker-compose.yml       # 容器化编排参考配置
-├── config.example.toml      # 完整注释的配置模板（含 [workspace] 与三态 [runtime]）
+├── config.example.toml      # 完整注释的配置模板（含 [workspace]、[memory].pg_tx 与三态 [runtime]）
 ├── EVOLUTION_GUIDE.md       # Tier-0 零重扫演进活地图与 10 大场景变更触点矩阵
 ├── INSTALL.md               # 生产部署与依赖全景排障手册
 ├── docs/releases/           # 历史各版本 Release Notes (v0.1.0 ~ v1.1.0)
 ├── docs/src_doc/            # 研发指南、边界治理、进度总表、活跃路线图与 archive/
 ├── kernel/                  # 纯机制微内核 (body-sdk / body-protocol / body-kernel)
-├── contrib/                 # 10 个独立周边标准五件套扩展 (含 obs_telemetry)
+├── contrib/                 # 11 个独立周边标准五件套扩展 (含 obs_telemetry 与 mem_pg_tx)
 ├── distributions/           # 3 个零 C++/DuckDB 精简发行版 (kernel-minimal / aiops-probe / dba-sentinel)
-├── tests/                   # 16 个集成、契约、迁移回归、全量 MCP/Web E2E 与基准套件 (全工作区 414 项测试)
+├── tests/                   # 17 个集成、契约、PG 18 压测、迁移回归、全量 MCP/Web E2E 与基准套件 (全工作区 421 项测试)
 │   ├── schema_migration_regression.rs # 老库列改名/补列无损自愈、FTS5 重建、WAL 上限与 CJK 回退回归
 │   ├── storage_spi_contract.rs        # SQLite & DuckDB 12 域 StorageProvider SPI 等价契约测试
+│   ├── pg_tx_memory_integration.rs    # PostgreSQL 18.6 16线程MVCC压测、写穿无僵尸召回、SQLite降级与老库tx_epoch迁移测试
 │   ├── mcp_all_tools_e2e.rs           # 43/43 原生 MCP 工具全矩阵调用与必填参数校验 E2E
 │   ├── web_full_e2e.rs                # Web 写鉴权、Benchmark 报错透传、Mesh 路由与记忆类型归一 E2E
 │   ├── test_web_dashboard.rs          # Web UI 2.0 端点与 SSE 推流测试
@@ -87,7 +88,7 @@ make quality-gate
 # 串联执行: evolution-check + arch-check + lint-panic + lint-hygiene + lint-strict
 ```
 
-### 2. 全工作区 414 项测试（根包 `371` + `kernel` `26` + `contrib` `13` + `distributions` `4`）
+### 2. 全工作区 421 项测试（根包 `375` + `kernel` `26` + `contrib` `16` + `distributions` `4`）
 
 ```bash
 # 推荐设置 RUST_TEST_THREADS=1 避免微基准 SLA 断言受多核 CPU 争抢抖动
@@ -99,6 +100,7 @@ cargo test --test schema_migration_regression
 cargo test --test mcp_all_tools_e2e
 cargo test --test web_full_e2e
 cargo test --test storage_spi_contract
+cargo test --test pg_tx_memory_integration
 ```
 
 ### 3. Playwright 双端无头验真（WebUI 9 工作台 + 9 份演说 HTML）

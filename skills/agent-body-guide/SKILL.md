@@ -68,7 +68,7 @@ cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-
 ./target/release/agent-body-probe metrics | head -n 20
 ./target/release/agent-body-probe diagnose
 
-# 3. 运行全工作区 414 项自动化测试验证环境（及可选 WebUI Playwright E2E）
+# 3. 运行全工作区 421 项自动化测试验证环境（及可选 WebUI Playwright E2E）
 RUST_TEST_THREADS=1 make test
 # 或: RUST_TEST_THREADS=1 cargo test --workspace
 # 可选 WebUI 9 工作台 + 老库无损迁移验真: make verify-webui
@@ -235,7 +235,7 @@ agent-body feedback reconcile
 
 #### 场景 9: 实证 Benchmark 与竞品横向对标（v3.9）
 ```bash
-# 真机运行全量套件 (W1~W19 + M1~M6 + DQ1~DQ10 + COMP-C1~C4)
+# 真机运行全量套件 (W1~W20 + M1~M6 + DQ1~DQ10 + COMP-C1~C4)
 agent-body bench run --suite full --save false
 
 # 查看生产运行态效能存证账本 (PR-01~PR-14)
@@ -300,9 +300,9 @@ agent-body close session-20261115-01 --clean-temp
 | | `body_env_show` | 查看宿主机 CPU、内存、磁盘与系统规格 |
 | | `body_env_gc` | 宿主垃圾回收：安全清理超期临时文件与孤儿进程 (默认 dry-run) |
 | | `body_port_check` | 探测网络端口冲突并推荐连续空闲端口 |
-| **长期记忆** | `body_memory_add` | 写入架构决策、踩坑教训或项目笔记 (可插拔多后端 + 脱敏) |
-| | `body_memory_search` | BGE-M3/Nomic 向量 + FTS5 RRF 倒数融合混合检索 |
-| | `body_memory_audit` | 长期记忆体检：认知矛盾对与衰减淘汰仲裁 |
+| **长期记忆** | `body_memory_add` | 写入架构决策、踩坑教训或项目笔记 (可插拔内置 SQLite / PG 事务海马体 `pg_tx` 双时态写穿 / Mem0 / Letta + 脱敏) |
+| | `body_memory_search` | BGE-M3/Nomic 向量 + FTS5 RRF 混合检索；启用 `pg_tx` 时支持 `as_of_epoch` 时间旅行与 `include_history` |
+| | `body_memory_audit` | 长期记忆体检：认知矛盾对、衰减淘汰仲裁、PG 事务健康状态 (`tx_status`) 与逻辑键墓碑失效 (`tombstone_fact_key`) |
 | **图智能与联邦**| `body_links_query` | 查询实体双向依赖与 `L1/L2/L3` 分层有向加权属性图谱 |
 | | `body_links_visualize` | 将资产与项目依赖关系导出为 Mermaid 图表 (支持触发 L2/L3 挖掘) |
 | | `body_links_impact` | 变更爆炸半径推演：跳数衰减加权计算 (`L1+L2` 强影响 + 可选 `L3` 语义) |
@@ -324,7 +324,7 @@ agent-body close session-20261115-01 --clean-temp
 | | `body_service_contact` | 管理外部可用服务通讯录与轻量健康探活（严禁存明文密钥） |
 | **多机联邦 Mesh** | `body_mesh_query` | `MeshEnvelope v1.0` HMAC 防重放联邦协同：ping/facts/locks/port/acquire/跨机图谱/脱敏对话/<=10MB 沙盒投递 |
 | **路演与对齐** | `body_demo_scenario` | Web/黑屏同源 7 大路演剧目真引擎实跑、ROI 核算、43/43 Parity 对齐与沙盒复位 |
-| **实证基准与账本** | `body_benchmark` | `v3.9` 基准评测：`W1~W19` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ10` + `COMP-C1~C4` 竞品对标与 `PR-01~14` 账本 |
+| **实证基准与账本** | `body_benchmark` | `v3.9` 基准评测：`W1~W20` A/B 负载 + `M1~M6` 微基准 + `DQ1~DQ10` + `COMP-C1~C4` 竞品对标与 `PR-01~14` 账本 |
 | **反馈与自进化** | `body_feedback` | `user_feedback.md` 双向总账读写、已验证反馈沉淀记忆、`reconcile` 新鲜度对账（含多模态回填）与 `P1~P5` 探针 |
 | **双域行为审计** | `body_audit_query` | `IN_AGENT` + `OUT_OF_AGENT` 双域审计查询、因果钻取、DuckDB OLAP 导出与租约滑窗自进化 |
 | **Agent 本体中枢** | `body_state` | 六器官自省 (`manifest`)、五维稳态 (`vitals`)、三态模式 (`runtime_status`/`runtime_mode`/`ab_compare`/`ab_report`)、OpenMetrics/JSON 实时指标 (`metrics`)、跨大脑接力 (`handoff_save`/`handoff_resume`)、`L1` 自愈 (`heal`) 与 AWR 诊断 (`perf_*`) |

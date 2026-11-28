@@ -364,6 +364,7 @@ impl DuckDbStorageProvider {
             created_at: row.get(13)?,
             resumed_by_brain: row.get(14)?,
             resumed_at: row.get(15)?,
+            tx_epoch: row.get::<_, i64>(16).unwrap_or(0),
         })
     }
 

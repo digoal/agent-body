@@ -10,7 +10,7 @@ AI 基础设施最容易陷入“自说自话”的宣传陷阱：写死几个�
 
 1. **轨道 A — 实验室可复现 A/B 对照基准 (`BenchmarkEngine`)**：
    - 在同一宿主机上真实运行 **Without Agent Body（裸奔等价命令/遍历/绑定碰撞）** 与 **With Agent Body（Agent 本体引擎）**；
-   - 覆盖 **19 大标准宿主业务负载（`W1`~`W19`）**、**6 大内核微基准 SLA（`M1`~`M6`）** 与 **10 大现网数据、AWR 及 Shadow A/B 稳态质量门禁（`DQ1`~`DQ10`）**，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁；
+   - 覆盖 **20 大标准宿主业务负载（`W1`~`W20`）**、**6 大内核微基准 SLA（`M1`~`M6`）** 与 **10 大现网数据、AWR 及 Shadow A/B 稳态质量门禁（`DQ1`~`DQ10`）**，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁；
    - 每次跑批输出带宿主机指纹与 **SHA-256 防篡改签名** 的报告并落库 `benchmark_runs`。
 2. **轨道 B — 生产运行态效能存证账本 (`EffectivenessLedger`)**：
    - 日常每一次 MCP/CLI/Web/Hook 调用与分级扫描都会以 `<100 μs` 极低开销自动记账至 `effectiveness_ledger`；
@@ -23,10 +23,10 @@ AI 基础设施最容易陷入“自说自话”的宣传陷阱：写死几个�
 ## 二、CLI 快速实操（`agent-body bench`）
 
 ```bash
-# 1. 查看 19 大标准负载与 PR-01~14 推导规则字典
+# 1. 查看 20 大标准负载与 PR-01~14 推导规则字典
 agent-body bench workloads
 
-# 2. 在当前宿主机真机跑批（W1~W19 + M1~M6 + DQ1~DQ10 + COMP-C1~C4）并落库存证
+# 2. 在当前宿主机真机跑批（W1~W20 + M1~M6 + DQ1~DQ10 + COMP-C1~C4）并落库存证
 agent-body bench run --suite full --save true
 
 # 3. 单独运行竞品横向对标

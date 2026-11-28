@@ -503,6 +503,7 @@ fn test_sync_pipeline_timestamps_all_tables_olap_and_export() {
         created_at: chrono::Utc::now().to_rfc3339(),
         resumed_by_brain: None,
         resumed_at: None,
+        tx_epoch: 0,
     })
     .expect("insert cp");
 
@@ -917,6 +918,7 @@ fn test_storage_migration_full_20_entities_and_idempotent() {
         created_at: now,
         resumed_by_brain: None,
         resumed_at: None,
+        tx_epoch: 0,
     })
     .expect("cp");
 

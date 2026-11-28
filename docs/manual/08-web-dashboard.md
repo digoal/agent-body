@@ -96,8 +96,8 @@ port = 8765
 | `POST` | `/api/v1/body/handoff` / `resume` / `heal` / `perf/snapshot` / `perf/awr` / `perf/tune` / `perf/delete` | 保存/恢复接力胶囊、`L1` 自愈、抓取/对比 AWR 快照、ADDM 调优与删除报告/快照 | Bearer Token |
 | `GET` | `/api/v1/demo/scenarios` / `/api/v1/demo/roi` | 7 大路演剧目列表与实时 ROI 商业价值核算 | 开放 |
 | `POST` | `/api/v1/demo/run` / `/api/v1/demo/reset` | 真引擎实跑指定路演剧目与一键重置 `demo:*` 沙盒 | Bearer Token |
-| `GET` | `/api/v1/benchmark/workloads` | 获取 19 大标准 A/B 负载 (`W1~W19`) 与 `PR-01~14` 规则字典 | 开放 |
-| `POST` | `/api/v1/benchmark/run` | 真机运行 `full` / `competitors` / `macro` / `micro` / `dq` / `W1~W19` 基准 | Bearer Token |
+| `GET` | `/api/v1/benchmark/workloads` | 获取 20 大标准 A/B 负载 (`W1~W20`) 与 `PR-01~14` 规则字典 | 开放 |
+| `POST` | `/api/v1/benchmark/run` | 真机运行 `full` / `competitors` / `macro` / `micro` / `dq` / `W1~W20` 基准 | Bearer Token |
 | `GET` | `/api/v1/benchmark/report` | 查询指定或最近批次报告及历史列表（含 SHA-256 指纹） | 开放 |
 | `GET` | `/api/v1/benchmark/ledger` | 审计指定时间窗内的生产效能存证账本流水 | 开放 |
 | `GET` | `/api/v1/benchmark/compare` | 对比两个批次（`run_a` vs `run_b`）的回归差异 | 开放 |

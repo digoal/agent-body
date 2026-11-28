@@ -563,7 +563,7 @@ pub(crate) enum EnvCommands {
 
 #[derive(Subcommand)]
 pub(crate) enum MemoryCommands {
-    #[command(about = "写入一条新记忆")]
+    #[command(about = "写入一条新记忆（支持 pg_tx 双时态 fact_key 与 expected_epoch）")]
     Add {
         #[arg(short, long, help = "记忆类型 (decision/task/experience/fact/note)", default_value = "decision")]
         r#type: String,
@@ -573,9 +573,21 @@ pub(crate) enum MemoryCommands {
 
         #[arg(short, long, help = "一句话摘要")]
         summary: Option<String>,
+
+        #[arg(long, help = "可选逻辑主键（用于双时态版本链与写穿更新）")]
+        fact_key: Option<String>,
+
+        #[arg(long, default_value = "L3_SEMANTIC", help = "证据分级 (L1_EXPLICIT/L2_STRUCTURAL/L3_SEMANTIC)")]
+        evidence_tier: String,
+
+        #[arg(long, help = "可选 CAS 期望逻辑纪元 (tx_epoch)")]
+        expected_epoch: Option<i64>,
+
+        #[arg(long, help = "可选项目/租户隔离域")]
+        tenant_scope: Option<String>,
     },
 
-    #[command(about = "搜索记忆 (支持 FTS5 与 Ollama 向量混合 RRF 检索)")]
+    #[command(about = "搜索记忆 (支持 FTS5/向量 RRF 与 pg_tx 双时态快照回溯)")]
     Search {
         #[arg(help = "搜索关键词或语义描述")]
         query: String,
@@ -585,11 +597,26 @@ pub(crate) enum MemoryCommands {
 
         #[arg(long, default_value_t = true, action = clap::ArgAction::Set, num_args = 0..=1, default_missing_value = "true", help = "是否启用 Ollama 向量混合 RRF 检索")]
         hybrid: bool,
+
+        #[arg(long, help = "可选逻辑纪元时间旅行 (tx_epoch <= as_of_epoch)")]
+        as_of_epoch: Option<i64>,
+
+        #[arg(long, default_value_t = false, help = "是否包含历史已关闭版本")]
+        include_history: bool,
+
+        #[arg(long, help = "可选项目/租户隔离域")]
+        tenant_scope: Option<String>,
     },
 
-    #[command(about = "全面体检长期记忆健康度 (检测认知冲突矛盾与衰减淘汰候选)")]
+    #[command(about = "全面体检长期记忆健康度 (含冲突/衰减检测、PG 事务健康态与事实墓碑擦除)")]
     Audit {
         #[arg(long, help = "若存在冲突，指定归档淘汰的旧记忆 ID")]
         archive_id: Option<String>,
+
+        #[arg(long, default_value_t = false, help = "查看 PostgreSQL 事务级记忆健康状态与当前 tx_epoch")]
+        tx_status: bool,
+
+        #[arg(long, help = "将指定 fact_key 墓碑化（0% 僵尸召回）")]
+        tombstone_fact: Option<String>,
     },
 }

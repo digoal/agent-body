@@ -129,6 +129,14 @@ pub struct MemoryAddBody {
     pub memory_type: Option<String>,
     pub content: String,
     pub summary: Option<String>,
+    #[serde(default)]
+    pub fact_key: Option<String>,
+    #[serde(default)]
+    pub evidence_tier: Option<String>,
+    #[serde(default)]
+    pub expected_epoch: Option<i64>,
+    #[serde(default)]
+    pub tenant_scope: Option<String>,
 }
 
 pub fn handle_memories_add(req: &HttpRequest, storage: Arc<dyn StorageProvider>) -> HttpResponse {
@@ -139,12 +147,73 @@ pub fn handle_memories_add(req: &HttpRequest, storage: Arc<dyn StorageProvider>)
     if body.content.trim().is_empty() {
         return WebResponse::error(StatusCode::BAD_REQUEST, "content must not be empty");
     }
-    let mm = MemoryManager::new(Storage::new(storage));
+    let st = Storage::new(storage);
     let raw_type = body.memory_type.unwrap_or_else(|| "decision".to_string());
     let canonical_type = match MemoryManager::normalize_memory_type(&raw_type) {
         Ok(t) => t,
         Err(e) => return WebResponse::error(StatusCode::BAD_REQUEST, &e.to_string()),
     };
+    let fk_opt = body.fact_key.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let cfg = Config::load_effective_or_default();
+    if cfg.memory.provider.trim().eq_ignore_ascii_case("pg_tx")
+        || fk_opt.is_some()
+        || body.expected_epoch.is_some()
+    {
+        if let Ok(tx_prov) = cfg.build_tx_memory_provider(st.clone()) {
+            if tx_prov.tx_health().map(|h| h.connected).unwrap_or(false) {
+                let fk = fk_opt
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| format!("web:{}", uuid::Uuid::new_v4()));
+                let scope = body
+                    .tenant_scope
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or(&cfg.memory.pg_tenant_scope)
+                    .to_string();
+                match tx_prov.append_tx_event(&crate::memory::TxMemoryWriteInput {
+                    body_id: crate::body::manifest::compute_body_id(),
+                    tenant_scope: scope,
+                    fact_key: fk.clone(),
+                    memory_type: canonical_type.to_string(),
+                    content: body.content.trim().to_string(),
+                    summary: body.summary.clone(),
+                    tags: vec![],
+                    evidence_tier: crate::memory::TxEvidenceTier::parse_str(
+                        body.evidence_tier.as_deref().unwrap_or("L3_SEMANTIC"),
+                    ),
+                    salience_score: 0.75,
+                    expected_epoch: body.expected_epoch,
+                    source_agent: Some("web_console".to_string()),
+                    source_session: None,
+                    embedding_ref: None,
+                }) {
+                    Ok(out) => {
+                        return WebResponse::success(serde_json::json!({
+                            "id": format!("pgtx-ev-{}", out.event_id),
+                            "event_id": out.event_id,
+                            "fact_key": fk,
+                            "tx_epoch": out.tx_epoch,
+                            "retries": out.retries,
+                            "memory_type": canonical_type,
+                            "backend": "pg_tx",
+                            "saved": true,
+                        }));
+                    }
+                    Err(e) => {
+                        let status = if e.to_string().contains("MVCC_EPOCH_CONFLICT") {
+                            StatusCode::CONFLICT
+                        } else {
+                            StatusCode::INTERNAL_SERVER_ERROR
+                        };
+                        return WebResponse::error(status, &format!("Tx memory add failed: {}", e));
+                    }
+                }
+            }
+        }
+    }
+
+    let mm = MemoryManager::new(st);
     match mm.add(
         canonical_type,
         body.content.trim(),
@@ -171,6 +240,43 @@ pub fn handle_memories_search(req: &HttpRequest, storage: Arc<dyn StorageProvide
         .unwrap_or(15)
         .clamp(1, 100);
     let hybrid = query_str(req, "hybrid", "true") != "false";
+    let as_of_epoch = query_str(req, "as_of_epoch", "").parse::<i64>().ok();
+    let include_history = query_str(req, "include_history", "false") == "true";
+    let tenant_scope = query_str(req, "tenant_scope", "");
+
+    let cfg = Config::load_effective_or_default();
+    if as_of_epoch.is_some()
+        || include_history
+        || cfg.memory.provider.trim().eq_ignore_ascii_case("pg_tx")
+    {
+        let st_tx = Storage::new(storage.clone());
+        if let Ok(tx_prov) = cfg.build_tx_memory_provider(st_tx) {
+            let scope = if tenant_scope.trim().is_empty() {
+                cfg.memory.pg_tenant_scope.clone()
+            } else {
+                tenant_scope.trim().to_string()
+            };
+            match tx_prov.search_tx(
+                q.trim(),
+                &crate::memory::TxSearchOptions {
+                    tenant_scope: scope,
+                    as_of_epoch,
+                    include_history,
+                    limit,
+                },
+            ) {
+                Ok(snap) if !snap.fallback_active || as_of_epoch.is_some() || include_history => {
+                    return WebResponse::success(serde_json::json!({
+                        "mode": snap.backend,
+                        "snapshot_epoch": snap.snapshot_epoch,
+                        "fallback_active": snap.fallback_active,
+                        "items": snap.hits,
+                    }));
+                }
+                _ => {}
+            }
+        }
+    }
 
     if q.trim().is_empty() {
         let items = storage.list_all_active_memories(limit).unwrap_or_default();
@@ -224,8 +330,26 @@ pub fn handle_memories_search(req: &HttpRequest, storage: Arc<dyn StorageProvide
 pub fn handle_memories_audit(storage: Arc<dyn StorageProvider>) -> HttpResponse {
     let st = Storage::new(storage);
     let mgr = MemoryLifecycleManager::new(&st);
+    let cfg = Config::load_effective_or_default();
+    let tx_health = cfg
+        .build_tx_memory_provider(st.clone())
+        .ok()
+        .and_then(|p| p.tx_health().ok());
     match mgr.audit_memories() {
-        Ok(rep) => WebResponse::success(rep),
+        Ok(rep) => {
+            if let Some(health) = tx_health {
+                if let Ok(mut val) = serde_json::to_value(&rep) {
+                    if let Some(obj) = val.as_object_mut() {
+                        obj.insert(
+                            "tx_memory_health".to_string(),
+                            serde_json::to_value(&health).unwrap_or(serde_json::Value::Null),
+                        );
+                    }
+                    return WebResponse::success(val);
+                }
+            }
+            WebResponse::success(rep)
+        }
         Err(e) => WebResponse::error(
             StatusCode::INTERNAL_SERVER_ERROR,
             &format!("Memory audit failed: {}", e),

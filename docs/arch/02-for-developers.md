@@ -1,7 +1,7 @@
 # Agent Body — Agent 本体开发者全景开发指南 (面向开发者)
 
 > **目标受众**：Rust 研发工程师、开源贡献者、智能体插件与 MCP 工具生态开发者  
-> **定位准则**：**脑体分离架构下的 Agent 本体（宿主机具身底座，27 模块 / 43 MCP / 88 SPI / 27 表 · 0 `>1000L` 文件 · 微内核 3 crates / contrib 10 扩展 / 3 精简发行版）**，严守三层命名兼容纪律（对外叙事为 Agent 本体，底层 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容）  
+> **定位准则**：**脑体分离架构下的 Agent 本体（宿主机具身底座，27 模块 / 43 MCP / 88 SPI / 27 表 · 0 `>1000L` 文件 · 微内核 3 crates / contrib 11 扩展 / 3 精简发行版）**，严守三层命名兼容纪律（对外叙事为 Agent 本体，底层 `agent-body` / `body_*` / `~/.agent-body/` 100% 向后兼容）  
 > **工程要求**：严格类型安全 · 零内存泄漏 · 100% 测试全绿门禁 · 工业级可调试性
 
 ---
@@ -11,7 +11,7 @@
 Agent Body 采用“微内核 (`kernel/`) + 独立周边 (`contrib/`) + 多发行版 (`distributions/`)”与旗舰主干 (`src/`) 并行兼容的模块化架构：
 
 - `kernel/`：纯机制微内核底座（`body-sdk` / `body-protocol` / `body-kernel`，含只读 `ObservabilityProvider` 与 `KernelObservability`），受 `scripts/arch_boundary_check.py` 强制约束零业务/观测协议词污染；
-- `contrib/`：10 个按需挂载的标准五件套扩展模块（`idx_fts_fuzzy` / `gov_placement` / `probe_db_engines` / `probe_linux_ops` / `probe_jvm_middleware` / `hook_auth_mtls_rbac` / `hook_gov_compliance` / `hook_audit_siem` / `fdw_cmdb_ticket` / `obs_telemetry`，详见 [21-observability-and-telemetry-spec.md](../design_doc/21-observability-and-telemetry-spec.md)）；
+- `contrib/`：11 个按需挂载的标准五件套扩展模块（`idx_fts_fuzzy` / `gov_placement` / `probe_db_engines` / `probe_linux_ops` / `probe_jvm_middleware` / `hook_auth_mtls_rbac` / `hook_gov_compliance` / `hook_audit_siem` / `fdw_cmdb_ticket` / `obs_telemetry` / `mem_pg_tx`，详见 [21-observability-and-telemetry-spec.md](../design_doc/21-observability-and-telemetry-spec.md) 与 [22-pg-tx-memory-spi-a-to-b-spec.md](../design_doc/22-pg-tx-memory-spi-a-to-b-spec.md)）；
 - `distributions/`：3 个零 C++/DuckDB 精简发行版装配入口（`kernel-minimal` / `aiops-probe` / `dba-sentinel`）；
 - `src/`：旗舰全功能版核心源码（27 个顶层模块）：
 
@@ -60,11 +60,11 @@ graph TD
 | `src/fact/` | 宿主机只读物理事实采集、L1~L3 属性图与行业 Know-How/Hierarchy 知识网络 | `FactFacade`, `CapabilityAnnotation`, `AutomationScanner`, `PropertyGraphOrganizer`, `KnowledgeNetworkEngine` |
 | `src/coordination/`| 多 Agent 协作锁、排队唤醒与 WFG 死锁检测 | `CoordinationEngine`, `CoordinationLock`, `DeadlockDetector` |
 | `src/placement/` | 资产规范放置与行为聚类学习 | `PlacementEngine`, `PlacementLearner`, `ConventionChecker` |
-| `src/memory/` | 跨会话长期记忆、三方适配与 Omni-RRF 多路融合检索 | `MemoryManager`, `BuiltinLocalProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
+| `src/memory/` | 跨会话长期记忆、PG 事务级海马体 (`PgTxMemoryAdapter`)、三方适配与 Omni-RRF 多路融合检索 | `MemoryManager`, `TxMemoryProvider`, `PgTxMemoryAdapter`, `BuiltinMemoryProvider`, `Mem0Adapter`, `LettaAdapter`, `PowerContextAdapter` |
 | `src/links/` | 分层加权依赖关系网与爆炸半径推演 | `LinksEngine`, `CodeGraphBridge`, `LinkRepairer` |
 | `src/scanner/` | 资产扫描、全链路脱敏、抗投毒、多模态深度解析（L1A+L2）、原子 Know-How 抽取与 Omni-RRF 检索 | `Scanner`, `SecretRedactor`, `PromptInjectionScanner`, `MultimodalExtractor`, `KnowHowExtractor`, `AssetSearchEngine`, `OllamaAnnotator` |
 | `src/api/` | 43 个原生 MCP 工具服务端（含 `core`/`dev`/`ops`/`full` Schema 减税档位） | `McpServer`, `AgentHookEngine`, `BodyResponse` |
-| `src/benchmark/` | 三轨实证 Benchmark v3.9 (`W1~W19`/`M1~M6`/`DQ1~DQ10`/`PR-01~14`) | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
+| `src/benchmark/` | 三轨实证 Benchmark v3.9 (`W1~W20`/`M1~M6`/`DQ1~DQ10`/`PR-01~14`) | `BenchmarkEngine`, `EffectivenessLedger`, `ProvenanceRule` |
 | `src/feedback/` | 使用反馈总账、新鲜度对账与五点对比自进化探针 | `FeedbackEngine`, `FreshnessReconciler`, `SelfEvolutionProbeEngine` |
 | `src/demo/` | 路演沙盒引擎与 ROI 核算 | `DemoEngine`, `DemoExecutionResult`, `RoiReport` |
 | `src/platform/` | 跨平台原生探针 (Linux/macOS/Windows) | `PlatformProbe`, `LinuxProbe`, `MacosProbe`, `WindowsProbe` |
@@ -103,7 +103,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 # 1. 快速语法与类型检查 (耗时约 2~4 秒)
 cargo check
 
-# 2. 运行全工作区 414 项自动化测试套件（含旗舰版 371 + kernel 26 + contrib 13 + distributions 4）
+# 2. 运行全工作区 421 项自动化测试套件（含旗舰版 375 + kernel 26 + contrib 16 + distributions 4）
 RUST_TEST_THREADS=1 cargo test --workspace
 
 # 2b. 单独校验微内核防腐边界、Playwright WebUI 9 工作台 + 老库迁移 E2E 与精简发行版自检

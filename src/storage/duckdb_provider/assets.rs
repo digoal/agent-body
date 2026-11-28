@@ -45,6 +45,12 @@ impl DuckDbStorageProvider {
         rename_duckdb_legacy("effectiveness_ledger", "body_rounds", &|c| {
             c.ends_with("_rounds") && c != "baseline_rounds" && c != "body_rounds"
         })?;
+        if let Err(e) = conn.execute(
+            "ALTER TABLE body_checkpoints ADD COLUMN IF NOT EXISTS tx_epoch BIGINT DEFAULT 0",
+            [],
+        ) {
+            eprintln!("[DuckDB][WARN] 增量补列 body_checkpoints.tx_epoch 告警: {}", e);
+        }
 
         let now = chrono::Utc::now().to_rfc3339();
         let base = crate::config::default_workspace_base();

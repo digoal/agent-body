@@ -345,12 +345,12 @@ pub(crate) fn ops_tool_schemas() -> Vec<Value> {
             }),
             serde_json::json!({
                 "name": "body_benchmark",
-                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v3.9）：运行 A/B 对照负载(W1~W19)、内核微基准(M1~M6)、数据质量与遥测/图谱健康(DQ1~DQ10)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-14)。",
+                "description": "实证 Benchmark 对照评测与生产效能存证账本引擎（v3.9）：运行 A/B 对照负载(W1~W20)、内核微基准(M1~M6)、数据质量与遥测/图谱健康(DQ1~DQ10)、热门竞品横向对标(COMP-C1~C4)或审计生产效能账本(PR-01~PR-14)。",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "action": { "type": "string", "enum": ["workloads", "run", "report", "ledger", "compare", "export", "reset", "competitors"], "default": "report" },
-                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | dq | competitors | W1~W19 | COMP-C1~C4" },
+                        "suite": { "type": "string", "default": "full", "description": "full | macro | micro | dq | competitors | W1~W20 | COMP-C1~C4" },
                         "track": { "type": "string", "default": "all", "description": "竞品对标赛道: all | C1 | C2 | C3 | C4" },
                         "save": { "type": "boolean", "default": true },
                         "run_id": { "type": "string" },

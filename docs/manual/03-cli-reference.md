@@ -38,7 +38,7 @@ agent-body [OPTIONS] <COMMAND>
 | `mesh` | 轻量多机联邦 `MeshEnvelope v1.0`：跨机图谱、HMAC 签名对话与沙盒文件投递 | 多机集群联动 |
 | `platform` | 跨平台原生探针查看本机硬件、端口与自动化任务 | Linux/macOS/Windows 探测 |
 | `demo` | 真引擎路演场景演示、ROI 核算与 43 工具黑白屏对齐自检 | 产品路演与一致性验证 |
-| `bench` | 运行 `v3.9` 实证 Benchmark（`W1~W19` / `M1~M6` / `DQ1~DQ10` / `COMP-C1~C4`）与 `PR-01~14` 账本 | 实证效能评测与回归对比 |
+| `bench` | 运行 `v3.9` 实证 Benchmark（`W1~W20` / `M1~M6` / `DQ1~DQ10` / `COMP-C1~C4`）与 `PR-01~14` 账本 | 实证效能评测与回归对比 |
 | `feedback` | `user_feedback.md` 双向管理、`reconcile` 新鲜度对账与 `P1~P5` 五点自进化探针 | 反馈闭环与自进化体检 |
 | `audit` | 双域全链路行为审计 (`IN_AGENT` + `OUT_OF_AGENT`)、DuckDB OLAP 与自进化 | 行为溯源与数据驱动进化 |
 | `body` | Agent 本体中枢：`manifest` / `vitals` / `envelope` / `handoff` / `resume` / `heal` / `peers` / `perf-*` | 跨大脑连续性、稳态治理与 AWR 诊断 |
@@ -197,9 +197,12 @@ agent-body [OPTIONS] <COMMAND>
   - `-t, --type <TYPE>`: 类型（`decision`, `task`, `experience`, `preference`, `fact`, `note`）
   - `-c, --content <TEXT>`: 记忆正文
   - `-s, --summary <TEXT>`: 一句话摘要
+  - `--fact-key <KEY>`: 可选逻辑事实键（启用 `pg_tx` 时自动触发双时态写穿覆盖旧版）
+  - `--evidence-tier <TIER>`: 可选证据分层（`L1_EXPLICIT` / `L2_STRUCTURAL` / `L3_SEMANTIC`）
+  - `--expected-epoch <N>`: 可选严格乐观锁 CAS 期望 `tx_epoch`（不匹配即返回 `MVCC_EPOCH_CONFLICT`）
 - **示例**:
   ```bash
-  agent-body memory add -c "决定选用 Rust 编写核心守护进程" -s "选型决策"
+  agent-body memory add -c "决定选用 Rust 编写核心守护进程" -s "选型决策" --fact-key "arch:daemon_lang" --evidence-tier L1_EXPLICIT
   ```
 
 #### (2) `memory search`
@@ -207,9 +210,12 @@ agent-body [OPTIONS] <COMMAND>
   - `<QUERY>`: 搜索关键词或语义描述
   - `-l, --limit <N>`: 限制返回条数（默认 10）
   - `--hybrid`: 是否启用 Ollama 向量 + FTS5 混合 RRF 检索（默认为 true）
+  - `--as-of-epoch <N>`: 可选双时态逻辑纪元时间旅行回放（仅查询 `tx_epoch <= N` 视图）
+  - `--include-history`: 是否包含已覆盖的历史双时态事件版本
 - **示例**:
   ```bash
   agent-body memory search "Rust 选型" --hybrid
+  agent-body memory search "pg_port" --as-of-epoch 12 --include-history
   ```
 - **真实输出**:
   ```text
@@ -352,13 +358,17 @@ agent-body [OPTIONS] <COMMAND>
 ---
 
 ### 2.11 `memory audit` — 认知记忆冲突体检与仲裁
-- **说明**: 检测对立冲突的认知记忆对，计算温和时间衰减淘汰候选，支持指定归档旧条目。
+- **说明**: 检测对立冲突的认知记忆对，计算温和时间衰减淘汰候选，支持指定归档旧条目，并支持查询 PG 事务记忆健康状态与逻辑键墓碑失效。
 - **参数**:
   - `--archive-id <ID>`: 若存在冲突，指定归档淘汰的旧记忆 ID
+  - `--tx-status`: 查看 PG 事务海马体健康态、当前 `tx_epoch`、活跃事件/分段及降级状态
+  - `--tombstone-fact-key <KEY>`: 对指定逻辑键执行写穿墓碑逻辑删除（清除所有向量/分段召回）
 - **示例**:
   ```bash
   agent-body memory audit
   agent-body memory audit --archive-id mem-01
+  agent-body memory audit --tx-status
+  agent-body memory audit --tombstone-fact-key "deploy:old_port"
   ```
 
 ---
@@ -511,8 +521,8 @@ agent-body [OPTIONS] <COMMAND>
 - **这是什么**: 在真实宿主机上运行「Without Agent Body 裸奔基线 vs With Agent Body 本体引擎」A/B 对照测试套件，运行竞品横向对标，并审计日常每次 MCP/CLI/Web/Hook 调用自动记录的生产效能存证流水（对应 `body_benchmark`）。
 - **为什么需要**: 用同机实跑数据与 SHA-256 防篡改指纹证明 Token 节省率、上下文质量净胜（$\Delta Q$）、延迟加速比与冲突拦截率，杜绝“拍脑袋宣传数字”（规约 #18）。
 - **子命令与参数**:
-  - `workloads`: 列出 19 大标准 A/B 负载（`W1`~`W19`）、`M1`~`M6`、`DQ1`~`DQ10` 与 `PR-01`~`PR-14` 归因推导规则字典。
-  - `run [--suite full|macro|micro|dq|competitors|W1~W19|COMP-C1~C4] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
+  - `workloads`: 列出 20 大标准 A/B 负载（`W1`~`W20`）、`M1`~`M6`、`DQ1`~`DQ10` 与 `PR-01`~`PR-14` 归因推导规则字典。
+  - `run [--suite full|macro|micro|dq|competitors|W1~W20|COMP-C1~C4] [--save true|false]`: 真机跑批并生成带 SHA-256 指纹的实证报告（默认保存入库）。
   - `competitors [--track all|C1|C2|C3|C4] [--format markdown|json]`: 运行四大赛道热门开源竞品横向实证对标。
   - `report [--run-id <ID>] [--format table|json|csv]`: 查看指定批次或最近一次跑批报告。
   - `ledger [--window 24h|7d|30d|all] [--tool <NAME>] [--limit 20]`: 审计生产运行态按 PR 规则聚合的效能存证账本。
@@ -541,7 +551,7 @@ agent-body [OPTIONS] <COMMAND>
   | **事前拦截风险数** | - | - | **16 次** |
   | **阻断垃圾噪音文件** | - | - | **379 个** |
   ```
-  > 💡 **指标解读**: 当前 Benchmark 已演进至 **`v3.9`**，覆盖 `W1~W19`（含分层图谱 `W13`、Mesh 防重放 `W14`、AOPCC 自适应并发 `W15`、双域审计 `W16`、跨大脑连续性 `W17`、AWR/ADDM 诊断 `W18`、多模态/Know-How 回填 `W19`）、6 项微基准（`M1~M6`）、10 项质量/AWR/Shadow A/B 稳态门禁（`DQ1~DQ10`）及 `COMP-C1~C4` 竞品同机对标，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁。
+  > 💡 **指标解读**: 当前 Benchmark 已演进至 **`v3.9`**，覆盖 `W1~W20`（含分层图谱 `W13`、Mesh 防重放 `W14`、AOPCC 自适应并发 `W15`、双域审计 `W16`、跨大脑连续性 `W17`、AWR/ADDM 诊断 `W18`、多模态/Know-How 回填 `W19`、PG 事务记忆 MVCC 写穿与透明降级 `W20`）、6 项微基准（`M1~M6`）、10 项质量/AWR/Shadow A/B 稳态门禁（`DQ1~DQ10`）及 `COMP-C1~C4` 竞品同机对标，全量满足「既省 Token × 上下文质量不降反升」帕累托双门禁。
 
 ---
 
