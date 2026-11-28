@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 620" width="1120" height="620" font-family="'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1D5B70"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1F7053"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B56917"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B43C2C"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#5A418E"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1120" height="620" rx="10" fill="#FAF8F4" stroke="none" stroke-width="1.5"/>
+  <rect x="10" y="10" width="1100" height="600" rx="8" fill="none" stroke="#D6D0C4" stroke-width="1.5"/>
+  <rect x="24" y="22" width="1072" height="58" rx="6" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <text x="42" y="47" font-size="18" font-weight="700" fill="#162A33" text-anchor="start">Paper 04 图 2 · 四圈层 16 类一等公民 O(1) 变更传导与双引擎自进化飞轮</text>
+  <text x="42" y="68" font-size="12" font-weight="400" fill="#425863" text-anchor="start">解决 Coding Agent 跨 78 个演进阶段的上下文爆炸与契约静默漂移：动态 SSoT + &lt;100ms 增量路由省 90%+ 重扫 Token</text>
+  <rect x="28" y="96" width="540" height="474" rx="8" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <text x="48" y="124" font-size="14" font-weight="700" fill="#3F2B69" text-anchor="start">A. 四圈层 16 类一等公民平权模型 (C01 ~ C16)</text>
+  <rect x="48" y="142" width="500" height="96" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="48" y="142" width="500" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="62" y="162" font-size="12" font-weight="700" fill="#134252" text-anchor="start">Ring 1 · 内核与契约源头 (C01 ~ C06)</text>
+  <text x="62" y="190" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">C01 Rustdoc/内联注释 · C02 19套集成/E2E测试 (435项)</text>
+  <text x="62" y="210" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">C03 CLI 30命令树 · C04 43 MCP/Web Parity · C05 配置模板 · C06 三后端Schema+自愈</text>
+  <rect x="48" y="250" width="500" height="88" rx="7" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.6"/>
+  <rect x="48" y="250" width="500" height="30" rx="7" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.2"/>
+  <text x="62" y="270" font-size="12" font-weight="700" fill="#15533C" text-anchor="start">Ring 2 · 自动化验证与门禁 (C07 ~ C09)</text>
+  <text x="62" y="298" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">C07 Benchmark v4.1 &amp; PR-01~16 · C08 六重确定性门禁 &amp; 双平台 CI</text>
+  <text x="62" y="318" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">C09 EVOLUTION_GUIDE.md (MANIFEST 机器锚点) &amp; .codegraph 符号索引</text>
+  <rect x="48" y="350" width="500" height="96" rx="7" fill="#FFFFFF" stroke="#B56917" stroke-width="1.6"/>
+  <rect x="48" y="350" width="500" height="30" rx="7" fill="#FDF2E0" stroke="#B56917" stroke-width="1.2"/>
+  <text x="62" y="370" font-size="12" font-weight="700" fill="#8A4E0D" text-anchor="start">Ring 3 · 工程知识与操作手册 (C10 ~ C13)</text>
+  <text x="62" y="398" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">C10 22份架构设计规格书 &amp; 产品边界准则 · C11 ISSUE/反馈总账/活跃路线图</text>
+  <text x="62" y="418" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">C12 开发/安装/三视角指南 · C13 10卷官方使用手册</text>
+  <rect x="48" y="458" width="500" height="96" rx="7" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <rect x="48" y="458" width="500" height="30" rx="7" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.2"/>
+  <text x="62" y="478" font-size="12" font-weight="700" fill="#3F2B69" text-anchor="start">Ring 4 · 对外阵地与智能体认知 (C14 ~ C16)</text>
+  <text x="62" y="506" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">C14 README &amp; 发版说明 · C15 3套内置 Agent SKILL.md</text>
+  <text x="62" y="526" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">C16 Decks-as-Code 9份动态演说 HTML (Playwright 验真) &amp; 技术长文/SVG</text>
+  <rect x="590" y="96" width="502" height="474" rx="8" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <text x="610" y="124" font-size="14" font-weight="700" fill="#134252" text-anchor="start">B. O(1) 变更传导路由与双引擎闭环验证</text>
+  <rect x="610" y="142" width="462" height="118" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="610" y="142" width="462" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="624" y="162" font-size="12" font-weight="700" fill="#134252" text-anchor="start">工程态飞轮 (Engineering Self-Evolution)</text>
+  <text x="624" y="190" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">1. Tier-0 零重扫开工: 仅读 2 份入口文档 + codegraph explore</text>
+  <text x="624" y="209" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">2. make citizen-impact (&lt;100ms): 基于 git diff 划分 L1/L2/L3</text>
+  <text x="624" y="228" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">   精准列出受影响毛细血管与最小测试集，告别全仓盲目 grep</text>
+  <text x="624" y="247" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">3. make quality-gate: CC-1~CC-7 动态交叉审计 0 漂移拦截</text>
+  <rect x="610" y="282" width="462" height="122" rx="7" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.6"/>
+  <rect x="610" y="282" width="462" height="30" rx="7" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.2"/>
+  <text x="624" y="302" font-size="12" font-weight="700" fill="#15533C" text-anchor="start">运行时飞轮 (Runtime Self-Evolution)</text>
+  <text x="624" y="330" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">1. schema_reconcile.rs: 启动事务式老库补列/改名 + FTS5 自愈</text>
+  <text x="624" y="349" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">2. ShadowAbEngine: 线上 shadow_ab 捕获 H1~H5 偏差并写穿修复</text>
+  <text x="624" y="368" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">3. P1~P5 五点探针 + 双域审计驱动租约校准与规则聚类</text>
+  <text x="624" y="387" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">4. 真实痛点自动去重写入 user_feedback.md 触发下一轮工程迭代</text>
+  <rect x="610" y="424" width="462" height="128" rx="7" fill="#FDF2E0" stroke="#B56917" stroke-width="1.4"/>
+  <text x="626" y="448" font-size="13" font-weight="700" fill="#8A4E0D" text-anchor="start">78 个演进阶段量化工程纪律实证结果:</text>
+  <text x="626" y="472" font-size="11" font-weight="600" fill="#162A33" text-anchor="start">- 生产代码 .unwrap() / .expect() 数量:  0 处 (lint-panic 守护)</text>
+  <text x="626" y="494" font-size="11" font-weight="600" fill="#162A33" text-anchor="start">- &gt;1000 行生产 Rust 文件数量:          0 个 (模块化红线)</text>
+  <text x="626" y="516" font-size="11" font-weight="600" fill="#162A33" text-anchor="start">- 核心路径静默 let _ = 吞错数量:        0 / 15 (18/18 WaitEvents)</text>
+  <text x="626" y="538" font-size="11" font-weight="600" fill="#162A33" text-anchor="start">- MCP / CLI / Web 动作级对齐度:        43 / 43 (100% Parity)</text>
+  <path d="M 548,294 L 590,294" fill="none" stroke="#5A418E" stroke-width="1.8" marker-end="url(#arr-purple)"/>
+  <path d="M 841,260 L 841,282" fill="none" stroke="#1F7053" stroke-width="1.8" marker-end="url(#arr-green)"/>
+  <text x="28" y="602" font-size="11" font-weight="400" fill="#6B7F88" text-anchor="start">源码锚点: scripts/{evolution_manifest,citizen_sync,code_hygiene}.py · src/storage/sqlite_provider/schema_reconcile.rs</text>
+</svg>

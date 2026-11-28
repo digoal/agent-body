@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 650" width="1120" height="650" font-family="'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1D5B70"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1F7053"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B56917"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B43C2C"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#5A418E"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1120" height="650" rx="10" fill="#FAF8F4" stroke="none" stroke-width="1.5"/>
+  <rect x="10" y="10" width="1100" height="630" rx="8" fill="none" stroke="#D6D0C4" stroke-width="1.5"/>
+  <rect x="24" y="22" width="1072" height="58" rx="6" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <text x="42" y="47" font-size="18" font-weight="700" fill="#162A33" text-anchor="start">Paper 01 图 1 · 脑体分离架构：瞬态大脑皮层与永驻宿主机六器官本体</text>
+  <text x="42" y="68" font-size="12" font-weight="400" fill="#425863" text-anchor="start">严格坚守递弱代偿红线：本体零内置主战 ReAct 规划循环，以 &lt;90MB 常驻内存与微秒级原语服务任意异构大模型客户端</text>
+  <rect x="28" y="94" width="1064" height="78" rx="8" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.5"/>
+  <text x="46" y="118" font-size="14" font-weight="700" fill="#3F2B69" text-anchor="start">瞬态大脑皮层 (Ephemeral LLM Cortices · 无状态 / 可随时热切换 / 零本体锁定)</text>
+  <rect x="46" y="130" width="230" height="30" rx="15.0" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.3"/>
+  <text x="161.0" y="149.32" font-size="12" font-weight="600" fill="#3F2B69" text-anchor="middle">Antigravity / Claude Code</text>
+  <rect x="296" y="130" width="230" height="30" rx="15.0" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.3"/>
+  <text x="411.0" y="149.32" font-size="12" font-weight="600" fill="#3F2B69" text-anchor="middle">Cursor / Codex / Aider</text>
+  <rect x="546" y="130" width="250" height="30" rx="15.0" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.3"/>
+  <text x="671.0" y="149.32" font-size="12" font-weight="600" fill="#3F2B69" text-anchor="middle">Hermes Cron / 批处理 Agent</text>
+  <rect x="816" y="130" width="254" height="30" rx="15.0" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.3"/>
+  <text x="943.0" y="149.32" font-size="12" font-weight="600" fill="#3F2B69" text-anchor="middle">本地轻量模型 / 自动化脚本</text>
+  <rect x="180" y="194" width="760" height="32" rx="6" fill="#F3EFE8" stroke="#1D5B70" stroke-width="1.4"/>
+  <text x="560" y="215" font-size="12" font-weight="600" fill="#134252" text-anchor="middle">43 MCP Tools (支持 core 10 工具减税 78%) · 30 CLI · Pre/Post Hooks · Web REST/SSE (:8765)</text>
+  <path d="M 560,172 L 560,194" fill="none" stroke="#5A418E" stroke-width="1.8" marker-end="url(#arr-purple)"/>
+  <path d="M 560,226 L 560,248" fill="none" stroke="#1D5B70" stroke-width="1.8" marker-end="url(#arr-teal)"/>
+  <rect x="28" y="248" width="1064" height="274" rx="8" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.8"/>
+  <text x="46" y="272" font-size="14" font-weight="700" fill="#134252" text-anchor="start">Agent 本体 (Agent Embodiment Substrate · Rust 单二进制 · &lt;15ms 冷简报 · 六大生理器官)</text>
+  <rect x="46" y="286" width="330" height="106" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="46" y="286" width="330" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="60" y="306" font-size="12" font-weight="700" fill="#134252" text-anchor="start">1. 感官与本体感觉 (Proprioception)</text>
+  <text x="60" y="334" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">PATH 能力图谱 · /proc 进程与活跃端口</text>
+  <text x="60" y="352" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">L1/L2/L3 加权事实图 · Omni-RRF 检索</text>
+  <text x="60" y="370" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">桥接 CodeGraph 穿透 AST 符号调用链</text>
+  <rect x="395" y="286" width="330" height="106" rx="7" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.6"/>
+  <rect x="395" y="286" width="330" height="30" rx="7" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.2"/>
+  <text x="409" y="306" font-size="12" font-weight="700" fill="#15533C" text-anchor="start">2. 小脑与条件反射 (Cerebellum)</text>
+  <text x="409" y="334" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">AOPCC 开工乐观直通租约 (P_valid&gt;=0.85)</text>
+  <text x="409" y="352" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">Pre-Hook 悲观防撞 · 路径与敏感红线拦截</text>
+  <text x="409" y="370" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">Post-Hook &lt;2ms 碰壁反查注入自愈处方</text>
+  <rect x="744" y="286" width="330" height="106" rx="7" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <rect x="744" y="286" width="330" height="30" rx="7" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.2"/>
+  <text x="758" y="306" font-size="12" font-weight="700" fill="#3F2B69" text-anchor="start">3. 海马体与连续性 (Hippocampus)</text>
+  <text x="758" y="334" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">SQLite FTS5 + PG 18 双时态事务记忆</text>
+  <text x="758" y="352" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">&lt;=300 tok 脱敏抗投毒 ContinuityCapsule v2</text>
+  <text x="758" y="370" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">同基座热挂快权重 / 异构基座回退文本胶囊</text>
+  <rect x="46" y="402" width="330" height="106" rx="7" fill="#FFFFFF" stroke="#B56917" stroke-width="1.6"/>
+  <rect x="46" y="402" width="330" height="30" rx="7" fill="#FDF2E0" stroke="#B56917" stroke-width="1.2"/>
+  <text x="60" y="422" font-size="12" font-weight="700" fill="#8A4E0D" text-anchor="start">4. 规约脊柱与包络 (Normative Spine)</text>
+  <text x="60" y="450" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">8 大工作区规范放置推演 (~103 us P50)</text>
+  <text x="60" y="468" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">L0 只读 / L1 自主稳态 / L2 监督 / L3 禁区</text>
+  <text x="60" y="486" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">全链路 SecretRedactor + 抗提示词投毒</text>
+  <rect x="395" y="402" width="330" height="106" rx="7" fill="#FFFFFF" stroke="#B43C2C" stroke-width="1.6"/>
+  <rect x="395" y="402" width="330" height="30" rx="7" fill="#FCEBE8" stroke="#B43C2C" stroke-width="1.2"/>
+  <text x="409" y="422" font-size="12" font-weight="700" fill="#89281B" text-anchor="start">5. 代谢免疫与稳态 (Homeostasis)</text>
+  <text x="409" y="450" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">IN_AGENT / OUT_OF_AGENT 双域防洪审计</text>
+  <text x="409" y="468" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">18 Wait Events (&lt;100ns) 内生 AWR/ADDM</text>
+  <text x="409" y="486" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">五维生命体征雷达 + Shadow A/B H1~H5 自愈</text>
+  <rect x="744" y="402" width="330" height="106" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="744" y="402" width="330" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="758" y="422" font-size="12" font-weight="700" fill="#134252" text-anchor="start">6. 社会协同与网格 (Social &amp; Mesh)</text>
+  <text x="758" y="450" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">父子目录层级互斥锁 + WFG 死锁环检测</text>
+  <text x="758" y="468" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">MeshEnvelope v1.0 (HMAC + ±300s + Nonce)</text>
+  <text x="758" y="486" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">&lt;=10MB 0600 隔离收件箱与多体名片发现</text>
+  <path d="M 560,522 L 560,548" fill="none" stroke="#1D5B70" stroke-width="1.8" marker-end="url(#arr-teal)"/>
+  <rect x="28" y="548" width="1064" height="56" rx="8" fill="#F3EFE8" stroke="#425863" stroke-width="1.4"/>
+  <text x="560" y="573" font-size="13" font-weight="700" fill="#162A33" text-anchor="middle">物理宿主机内核与外部存储底座 (Linux /proc · inotify · Systemd · Cron · Socket · SQLite WAL · PostgreSQL 18 · DuckDB)</text>
+  <text x="560" y="593" font-size="11" font-weight="400" fill="#425863" text-anchor="middle">零幻觉物理真值采集 (L0_OBSERVE)  ×  可逆稳态自愈与受控监督代谢 (L1_AUTONOMIC / L2_SUPERVISED)</text>
+  <text x="28" y="632" font-size="11" font-weight="400" fill="#6B7F88" text-anchor="start">Paper 01 核心架构图 · 对应源码模块: src/body/, src/brief/, src/hooks/, src/fact/, src/coordination/, src/audit/</text>
+</svg>

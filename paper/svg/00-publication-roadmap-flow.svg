@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 580" width="1120" height="580" font-family="'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1D5B70"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1F7053"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B56917"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B43C2C"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#5A418E"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1120" height="580" rx="10" fill="#FAF8F4" stroke="none" stroke-width="1.5"/>
+  <rect x="10" y="10" width="1100" height="560" rx="8" fill="none" stroke="#D6D0C4" stroke-width="1.5"/>
+  <rect x="24" y="22" width="1072" height="58" rx="6" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <text x="42" y="47" font-size="18" font-weight="700" fill="#162A33" text-anchor="start">顶会投稿梯队排期、实证复用与 Artifact Evaluation (AE) 交付流水线</text>
+  <text x="42" y="68" font-size="12" font-weight="400" fill="#425863" text-anchor="start">以统一可复现开源底座驱动分波次双盲投稿，确保每篇论文拥有独立理论纵深与零重叠核心贡献声明</text>
+  <rect x="32" y="104" width="332" height="205" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="32" y="104" width="332" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="46" y="124" font-size="14" font-weight="700" fill="#134252" text-anchor="start">第一波次 · 核心架构与数据底座双响</text>
+  <text x="46" y="152" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">1) Paper 01 -&gt; OSDI / SOSP 主赛道</text>
+  <text x="46" y="172" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   锚定脑体分离范式与 AOPCC 理论模型</text>
+  <text x="46" y="192" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">2) Paper 02 -&gt; SIGMOD / VLDB 主赛道</text>
+  <text x="46" y="212" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   锚定 PG 18 双时态海马体与快权重三门禁</text>
+  <text x="46" y="232" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">协同关系: Paper 01 建立全局系统抽象,</text>
+  <text x="46" y="252" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">Paper 02 深钻存储事务与百万事件流证明</text>
+  <rect x="394" y="104" width="332" height="205" rx="7" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <rect x="394" y="104" width="332" height="30" rx="7" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.2"/>
+  <text x="408" y="124" font-size="14" font-weight="700" fill="#3F2B69" text-anchor="start">第二波次 · 图谱检索与软件工程突破</text>
+  <text x="408" y="152" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">3) Paper 03 -&gt; SIGIR / KDD 主赛道</text>
+  <text x="408" y="172" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   聚焦 L1~L3 证据分层图与 8 维 Omni-RRF</text>
+  <text x="408" y="192" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">4) Paper 04 -&gt; ICSE / FSE 主赛道</text>
+  <text x="408" y="212" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   聚焦类 PG 微内核与 O(1) 一等公民传导</text>
+  <text x="408" y="232" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">协同关系: 分别向 IR 社区与 SE 社区输出</text>
+  <text x="408" y="252" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">端侧零向量召回与 78 阶段自维护工程方法论</text>
+  <rect x="756" y="104" width="332" height="205" rx="7" fill="#FFFFFF" stroke="#B56917" stroke-width="1.6"/>
+  <rect x="756" y="104" width="332" height="30" rx="7" fill="#FDF2E0" stroke="#B56917" stroke-width="1.2"/>
+  <text x="770" y="124" font-size="14" font-weight="700" fill="#8A4E0D" text-anchor="start">第三波次 · 纵深安全与评测标准收口</text>
+  <text x="770" y="152" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">5) Paper 05 -&gt; USENIX Security / CCS</text>
+  <text x="770" y="172" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   聚焦五层具身安全、双域防洪存证审计、</text>
+  <text x="770" y="192" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   MeshEnvelope v1.0 与防作弊帕累托基准</text>
+  <text x="770" y="212" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">生态价值: 将 Benchmark v4.1 (W1~W22)</text>
+  <text x="770" y="232" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">与 COMP-C1~C4 开源为社区公共评测套件,</text>
+  <text x="770" y="252" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">确立具身 Agent 安全与效能度量衡事实标准</text>
+  <path d="M 364,206 L 394,206" fill="none" stroke="#1D5B70" stroke-width="1.8" marker-end="url(#arr-teal)"/>
+  <path d="M 726,206 L 756,206" fill="none" stroke="#5A418E" stroke-width="1.8" marker-end="url(#arr-purple)"/>
+  <rect x="32" y="352" width="1056" height="178" rx="8" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.6"/>
+  <rect x="32" y="352" width="1056" height="32" rx="8" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.2"/>
+  <text x="50" y="373" font-size="14" font-weight="700" fill="#15533C" text-anchor="start">五大顶会共享 Artifact Evaluation (AE) 三枚徽章冲刺底座 (Available · Functional · Reproduced)</text>
+  <rect x="52" y="400" width="240" height="110" rx="7" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.6"/>
+  <rect x="52" y="400" width="240" height="30" rx="7" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.2"/>
+  <text x="66" y="420" font-size="12" font-weight="700" fill="#15533C" text-anchor="start">确定性单二进制与容器</text>
+  <text x="66" y="448" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">Rust Workspace 零 Panic</text>
+  <text x="66" y="466" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">Dockerfile --target probe</text>
+  <text x="66" y="484" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">一键复现全部图表脚本</text>
+  <rect x="310" y="400" width="240" height="110" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="310" y="400" width="240" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="324" y="420" font-size="12" font-weight="700" fill="#134252" text-anchor="start">三轨基准套件 v4.1</text>
+  <text x="324" y="448" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">W1~W22 宏负载 + M1~M6</text>
+  <text x="324" y="466" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">DQ1~DQ12 + COMP-C1~C4</text>
+  <text x="324" y="484" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">SHA-256 存证签名防篡改</text>
+  <rect x="568" y="400" width="240" height="110" rx="7" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <rect x="568" y="400" width="240" height="30" rx="7" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.2"/>
+  <text x="582" y="420" font-size="12" font-weight="700" fill="#3F2B69" text-anchor="start">真机 PG 18.6 隔离压测</text>
+  <text x="582" y="448" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">TempPgDatabase RAII 沙盒</text>
+  <text x="582" y="466" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">1,000,003 行事件流自动注入</text>
+  <text x="582" y="484" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">3 类快权重故障注入回归</text>
+  <rect x="826" y="400" width="242" height="110" rx="7" fill="#FFFFFF" stroke="#B56917" stroke-width="1.6"/>
+  <rect x="826" y="400" width="242" height="30" rx="7" fill="#FDF2E0" stroke="#B56917" stroke-width="1.2"/>
+  <text x="840" y="420" font-size="12" font-weight="700" fill="#8A4E0D" text-anchor="start">双盲匿名审查脱敏包</text>
+  <text x="840" y="448" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">剥离作者/域名/本地特定路径</text>
+  <text x="840" y="466" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">内置合成数据集与离线种子</text>
+  <text x="840" y="484" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">15 分钟审稿人快速核验脚本</text>
+  <path d="M 198,309 L 198,352" fill="none" stroke="#1F7053" stroke-width="1.8" marker-end="url(#arr-green)"/>
+  <path d="M 560,309 L 560,352" fill="none" stroke="#1F7053" stroke-width="1.8" marker-end="url(#arr-green)"/>
+  <path d="M 922,309 L 922,352" fill="none" stroke="#1F7053" stroke-width="1.8" marker-end="url(#arr-green)"/>
+  <text x="28" y="562" font-size="11" font-weight="400" fill="#6B7F88" text-anchor="start">验收标准: 每篇论文独立具备形式化定理/代价模型 + &gt;=4 个对比基线 + 完整消融实验 + 显式失效边界分析</text>
+</svg>

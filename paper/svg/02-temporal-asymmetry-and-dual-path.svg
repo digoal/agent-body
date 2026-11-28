@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 640" width="1120" height="640" font-family="'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1D5B70"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1F7053"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B56917"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B43C2C"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#5A418E"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1120" height="640" rx="10" fill="#FAF8F4" stroke="none" stroke-width="1.5"/>
+  <rect x="10" y="10" width="1100" height="620" rx="8" fill="none" stroke="#D6D0C4" stroke-width="1.5"/>
+  <rect x="24" y="22" width="1072" height="58" rx="6" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <text x="42" y="47" font-size="18" font-weight="700" fill="#162A33" text-anchor="start">Paper 02 图 1 · 六数量级时间不对称性与 PostgreSQL 事务级海马体 (Scheme A → B)</text>
+  <text x="42" y="68" font-size="12" font-weight="400" fill="#425863" text-anchor="start">严禁将 2PL 悲观锁横跨在秒级 LLM 推理与快权重训练上：以 MVCC 逻辑纪元 tx_epoch 解耦亚毫秒热路径与异步冷整理</text>
+  <rect x="28" y="94" width="1064" height="112" rx="8" fill="#FFFFFF" stroke="#B56917" stroke-width="1.5"/>
+  <text x="46" y="118" font-size="14" font-weight="700" fill="#8A4E0D" text-anchor="start">六个数量级物理延迟鸿沟 (10^1 us  ---&gt;  10^7 us) —— 多智能体共享记忆的核心系统矛盾</text>
+  <rect x="46" y="134" width="240" height="56" rx="6" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.3"/>
+  <text x="58" y="157" font-size="12" font-weight="700" fill="#15533C" text-anchor="start">10^1 ~ 10^2 us (宿主机微秒反射)</text>
+  <text x="58" y="177" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">放置 103us · 3跳图 244us · FTS 879us</text>
+  <rect x="306" y="134" width="240" height="56" rx="6" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.3"/>
+  <text x="318" y="157" font-size="12" font-weight="700" fill="#134252" text-anchor="start">10^3 ~ 10^4 us (PG 事务提交/检索)</text>
+  <text x="318" y="177" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">MVCC 写穿 1~2ms · 百万行检索 2.66ms</text>
+  <rect x="566" y="134" width="248" height="56" rx="6" fill="#FDF2E0" stroke="#B56917" stroke-width="1.3"/>
+  <text x="578" y="157" font-size="12" font-weight="700" fill="#8A4E0D" text-anchor="start">10^6 ~ 10^7 us (LLM 多步推理)</text>
+  <text x="578" y="177" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">单轮 Prefill+Decode 1.7s ~ 10s</text>
+  <rect x="834" y="134" width="240" height="56" rx="6" fill="#FCEBE8" stroke="#B43C2C" stroke-width="1.3"/>
+  <text x="846" y="157" font-size="12" font-weight="700" fill="#89281B" text-anchor="start">10^7 ~ 4.5x10^7 us (神经内化)</text>
+  <text x="846" y="177" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">快权重/LoRA 合并与门禁评测 10~45s</text>
+  <rect x="28" y="228" width="516" height="356" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="28" y="228" width="516" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="42" y="248" font-size="14" font-weight="700" fill="#134252" text-anchor="start">热路径 (Hot Path · 亚毫秒~毫秒级无阻塞契约 · Scheme A M1)</text>
+  <text x="42" y="276" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">1. 同键微序列化: pg_advisory_xact_lock(hash(body|scope|fact_key))</text>
+  <text x="42" y="308" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   不同 fact_key 100% 并发；消除 16 线程热点 SQLSTATE 40001 惊群</text>
+  <text x="42" y="340" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">2. 双时态不可变追加表 ext_mem_pg_tx__events:</text>
+  <text x="42" y="372" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   截断旧行 valid_range [t0, now()) + 置 stale；新行赋单调 tx_epoch</text>
+  <text x="42" y="404" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">3. LSM 解耦检索段 ext_mem_pg_tx__segments:</text>
+  <text x="42" y="436" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   旧段同步置 is_deleted=TRUE，删改后僵尸向量召回率严格 == 0%</text>
+  <text x="42" y="468" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">4. 读路径 REPEATABLE READ READ ONLY 快照读:</text>
+  <text x="42" y="500" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   WITH active_e AS MATERIALIZED 强制局部索引，零锁无阻塞读取</text>
+  <text x="42" y="532" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">5. 网络断连兜底: PG 不可达自动无损回退嵌入式 SQLite 并记审计</text>
+  <rect x="576" y="228" width="516" height="356" rx="7" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <rect x="576" y="228" width="516" height="30" rx="7" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.2"/>
+  <text x="590" y="248" font-size="14" font-weight="700" fill="#3F2B69" text-anchor="start">冷路径 (Cold Path · L1 空闲窗口与旁路快权重控制面 · M2 &amp; M3)</text>
+  <text x="590" y="276" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">1. STC 突触显著性评分 (SalienceScorer):</text>
+  <text x="590" y="308" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   融合惊喜度、跨会话复用频次与修正权重，分层高价值决策 vs 噪声</text>
+  <text x="590" y="340" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">2. SleepTimeCompactor + QueryPredictabilityGate (M2):</text>
+  <text x="590" y="372" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   空闲窗口压缩 3.73x (事实保留 100%)；高熵探索查询自动旁路直查原表</text>
+  <text x="590" y="404" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">3. 旁路 Model Runtime 控制面 (M3 · 零权重 BLOB 入 PG 堆表):</text>
+  <text x="590" y="436" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   JSON-RPC 2.0 调度外部 TTT/Atlas/Larimar/SCoL，拦截 data: 内联载荷</text>
+  <text x="590" y="468" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">4. 三道硬门禁单事务原子切换 (fast_weight_snapshots):</text>
+  <text x="590" y="500" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">   norm_ratio 合规 ∧ eval_glue_delta &gt;= -0.03 ∧ unlearn_leak &lt; 0.001</text>
+  <text x="590" y="532" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">5. selective_unlearn 墓碑擦除 + 按 tx_epoch 24ms 秒级回滚</text>
+  <path d="M 544,406 L 576,406" fill="none" stroke="#5A418E" stroke-width="2.0" marker-end="url(#arr-purple)"/>
+  <text x="28" y="622" font-size="11" font-weight="400" fill="#6B7F88" text-anchor="start">源码锚点: contrib/mem_pg_tx/src/{engine,sleep_compactor,predictability,fast_weight,fast_weight_ops}.rs · kernel/body-sdk/src/fast_weight.rs</text>
+</svg>

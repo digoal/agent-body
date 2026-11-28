@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 620" width="1120" height="620" font-family="'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1D5B70"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1F7053"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B56917"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B43C2C"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#5A418E"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1120" height="620" rx="10" fill="#FAF8F4" stroke="none" stroke-width="1.5"/>
+  <rect x="10" y="10" width="1100" height="600" rx="8" fill="none" stroke="#D6D0C4" stroke-width="1.5"/>
+  <rect x="24" y="22" width="1072" height="58" rx="6" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <text x="42" y="47" font-size="18" font-weight="700" fill="#162A33" text-anchor="start">Paper 02 图 2 · PostgreSQL 18.6 真机百万事件流延迟实测与三门禁故障拦截验证</text>
+  <text x="42" y="68" font-size="12" font-weight="400" fill="#425863" text-anchor="start">实测环境: Linux x86_64 (8 Cores) · PostgreSQL 18.6 · 真实注入 1,000,003 条双时态历史事件与 3 类神经退化故障注入</text>
+  <rect x="28" y="96" width="530" height="470" rx="8" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.5"/>
+  <text x="48" y="124" font-size="14" font-weight="700" fill="#134252" text-anchor="start">A. 1,000,003 行事件规模下核心操作延迟与 SLA 对比</text>
+  <text x="48" y="145" font-size="11" font-weight="400" fill="#425863" text-anchor="start">局部唯一索引 + WITH active_e AS MATERIALIZED 消除全表 Merge Join</text>
+  <text x="48" y="185" font-size="12" font-weight="600" fill="#162A33" text-anchor="start">active_snap 查询 (P99)</text>
+  <text x="534" y="185" font-size="11" font-weight="700" fill="#15533C" text-anchor="end">0.75 ms  (SLA &lt; 10 ms)</text>
+  <rect x="48" y="192" width="486" height="11" rx="4" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <rect x="48" y="192" width="36.4" height="11" rx="4" fill="#1F7053" stroke="none" stroke-width="1.5"/>
+  <text x="48" y="235" font-size="12" font-weight="600" fill="#162A33" text-anchor="start">WITH RECURSIVE 血缘 (P99)</text>
+  <text x="534" y="235" font-size="11" font-weight="700" fill="#134252" text-anchor="end">1.94 ms  (SLA &lt; 5 ms)</text>
+  <rect x="48" y="242" width="486" height="11" rx="4" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <rect x="48" y="242" width="188.6" height="11" rx="4" fill="#1D5B70" stroke="none" stroke-width="1.5"/>
+  <text x="48" y="285" font-size="12" font-weight="600" fill="#162A33" text-anchor="start">1M 行 search_tx (P50)</text>
+  <text x="534" y="285" font-size="11" font-weight="700" fill="#15533C" text-anchor="end">2.66 ms  (SLA &lt; 20 ms)</text>
+  <rect x="48" y="292" width="486" height="11" rx="4" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <rect x="48" y="292" width="64.6" height="11" rx="4" fill="#1F7053" stroke="none" stroke-width="1.5"/>
+  <text x="48" y="335" font-size="12" font-weight="600" fill="#162A33" text-anchor="start">1M 行 search_tx (P99)</text>
+  <text x="534" y="335" font-size="11" font-weight="700" fill="#134252" text-anchor="end">4.42 ms  (SLA &lt; 20 ms)</text>
+  <rect x="48" y="342" width="486" height="11" rx="4" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <rect x="48" y="342" width="107.4" height="11" rx="4" fill="#1D5B70" stroke="none" stroke-width="1.5"/>
+  <text x="48" y="385" font-size="12" font-weight="600" fill="#162A33" text-anchor="start">200 行基线 search_tx (P99)</text>
+  <text x="534" y="385" font-size="11" font-weight="700" fill="#3F2B69" text-anchor="end">4.34 ms  (O(1) 规模无关!)</text>
+  <rect x="48" y="392" width="486" height="11" rx="4" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <rect x="48" y="392" width="105.5" height="11" rx="4" fill="#5A418E" stroke="none" stroke-width="1.5"/>
+  <text x="48" y="435" font-size="12" font-weight="600" fill="#162A33" text-anchor="start">M2 整理期热路径 (P99)</text>
+  <text x="534" y="435" font-size="11" font-weight="700" fill="#8A4E0D" text-anchor="end">10.65 ms (后台整理零阻塞)</text>
+  <rect x="48" y="442" width="486" height="11" rx="4" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <rect x="48" y="442" width="258.8" height="11" rx="4" fill="#B56917" stroke="none" stroke-width="1.5"/>
+  <text x="48" y="485" font-size="12" font-weight="600" fill="#162A33" text-anchor="start">按 tx_epoch 原子回滚</text>
+  <text x="534" y="485" font-size="11" font-weight="700" fill="#15533C" text-anchor="end">24.00 ms (SLA &lt; 1000 ms)</text>
+  <rect x="48" y="492" width="486" height="11" rx="4" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <rect x="48" y="492" width="29.2" height="11" rx="4" fill="#1F7053" stroke="none" stroke-width="1.5"/>
+  <text x="48" y="542" font-size="11" font-weight="700" fill="#15533C" text-anchor="start">并发写压测 (M1): 16 线程 × 5 热点事务 = 80 tx -&gt; 丢写率 0.0%, 40001 重试 0 次</text>
+  <rect x="578" y="96" width="514" height="470" rx="8" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.5"/>
+  <text x="598" y="124" font-size="14" font-weight="700" fill="#3F2B69" text-anchor="start">B. 方案 B 快权重三道硬门禁与故障注入实测 (100% 拦截)</text>
+  <rect x="604" y="146" width="136" height="34" rx="17.0" fill="#FDF2E0" stroke="#B56917" stroke-width="1.3"/>
+  <text x="672.0" y="167.32" font-size="12" font-weight="600" fill="#8A4E0D" text-anchor="middle">warming 快照</text>
+  <rect x="768" y="146" width="146" height="34" rx="17.0" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.3"/>
+  <text x="841.0" y="167.32" font-size="12" font-weight="600" fill="#3F2B69" text-anchor="middle">三门禁联合校验</text>
+  <rect x="942" y="146" width="126" height="34" rx="17.0" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.3"/>
+  <text x="1005.0" y="167.32" font-size="12" font-weight="600" fill="#15533C" text-anchor="middle">active 激活</text>
+  <path d="M 740,163 L 768,163" fill="none" stroke="#B56917" stroke-width="1.8" marker-end="url(#arr-amber)"/>
+  <path d="M 914,163 L 942,163" fill="none" stroke="#1F7053" stroke-width="1.8" marker-end="url(#arr-green)"/>
+  <rect x="598" y="204" width="474" height="96" rx="7" fill="#FFFFFF" stroke="#B43C2C" stroke-width="1.6"/>
+  <rect x="598" y="204" width="474" height="30" rx="7" fill="#FCEBE8" stroke="#B43C2C" stroke-width="1.2"/>
+  <text x="612" y="224" font-size="12" font-weight="700" fill="#89281B" text-anchor="start">门禁 1 · 范数防雪崩门禁 (Norm Explosion Gate)</text>
+  <text x="612" y="252" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">判据: norm_ratio &lt;= max_norm_ratio (默认阈值上限保护参数稳定性)</text>
+  <text x="612" y="272" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">故障注入: norm_ratio = 2.40 -&gt; 状态置 aborted, 原 snap1 保持 active</text>
+  <rect x="598" y="314" width="474" height="96" rx="7" fill="#FFFFFF" stroke="#B56917" stroke-width="1.6"/>
+  <rect x="598" y="314" width="474" height="30" rx="7" fill="#FDF2E0" stroke="#B56917" stroke-width="1.2"/>
+  <text x="612" y="334" font-size="12" font-weight="700" fill="#8A4E0D" text-anchor="start">门禁 2 · 通用能力防灾难遗忘门禁 (General Capability Gate)</text>
+  <text x="612" y="362" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">判据: eval_glue_delta &gt;= -0.03 (连续神经合并通用基准衰减 &lt; 3%)</text>
+  <text x="612" y="382" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">故障注入: eval_glue_delta = -0.08 -&gt; 100% 阻断切换并无损回退方案 A</text>
+  <rect x="598" y="424" width="474" height="122" rx="7" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <rect x="598" y="424" width="474" height="30" rx="7" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.2"/>
+  <text x="612" y="444" font-size="12" font-weight="700" fill="#3F2B69" text-anchor="start">门禁 3 · 合规定向遗忘防泄露门禁 (Selective Unlearning Gate)</text>
+  <text x="612" y="472" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">判据: unlearn_leak_rate &lt; 0.001 (&lt;0.1%) ∧ 严拒 data: 内联权重 URI</text>
+  <text x="612" y="492" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">故障注入: unlearn_leak_rate = 0.02 -&gt; 阻断激活; 检索层墓碑前置过滤</text>
+  <text x="612" y="512" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">确保擦除作业排队与执行全周期 ComplianceToken 僵尸召回率 == 0%</text>
+  <text x="28" y="602" font-size="11" font-weight="400" fill="#6B7F88" text-anchor="start">实测复现入口: cargo test --test pg_tx_memory_integration &amp;&amp; cargo test --test sleep_compaction_integration &amp;&amp; cargo test --test fast_weight_m3_integration</text>
+</svg>

@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 630" width="1120" height="630" font-family="'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1D5B70"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1F7053"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B56917"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B43C2C"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#5A418E"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1120" height="630" rx="10" fill="#FAF8F4" stroke="none" stroke-width="1.5"/>
+  <rect x="10" y="10" width="1100" height="610" rx="8" fill="none" stroke="#D6D0C4" stroke-width="1.5"/>
+  <rect x="24" y="22" width="1072" height="58" rx="6" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <text x="42" y="47" font-size="18" font-weight="700" fill="#162A33" text-anchor="start">Paper 05 图 1 · 宿主机具身智能体五层纵深防御、双域防洪审计与零信任 Mesh 信封</text>
+  <text x="42" y="68" font-size="12" font-weight="400" fill="#425863" text-anchor="start">面向拥有真实宿主机 Shell/文件/网络权限的自主 Agent：实现采集零泄密、自治零黑盒、跨机零直写覆盖</text>
+  <rect x="28" y="96" width="520" height="480" rx="8" fill="#FFFFFF" stroke="#B43C2C" stroke-width="1.6"/>
+  <text x="46" y="124" font-size="14" font-weight="700" fill="#89281B" text-anchor="start">A. 五层具身安全纵深防御矩阵 (L1 ~ L5)</text>
+  <rect x="46" y="142" width="484" height="76" rx="6" fill="#FCEBE8" stroke="#B43C2C" stroke-width="1.4"/>
+  <text x="62" y="168" font-size="13" font-weight="700" fill="#89281B" text-anchor="start">L1 采集准入与全链路脱敏</text>
+  <text x="62" y="194" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">敏感路径浅层阻断 + SecretRedactor 过滤 /proc/记忆/审计 (DQ4: 0% 泄露)</text>
+  <rect x="46" y="226" width="484" height="76" rx="6" fill="#FDF2E0" stroke="#B56917" stroke-width="1.4"/>
+  <text x="62" y="252" font-size="13" font-weight="700" fill="#8A4E0D" text-anchor="start">L2 动作门禁与命令沙盒</text>
+  <text x="62" y="278" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">Pre-Hook 拦截 /etc/shadow &amp; ~/.ssh + POSIX 转义 + DuckDB 导出白名单</text>
+  <rect x="46" y="310" width="484" height="76" rx="6" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.4"/>
+  <text x="62" y="336" font-size="13" font-weight="700" fill="#134252" text-anchor="start">L3 本地回环与令牌鉴权</text>
+  <text x="62" y="362" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">Web/Mesh 默认绑定 127.0.0.1 + 全写端点 Bearer 校验 (未授权 100% 401)</text>
+  <rect x="46" y="394" width="484" height="76" rx="6" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.4"/>
+  <text x="62" y="420" font-size="13" font-weight="700" fill="#15533C" text-anchor="start">L4 存储最小权限与预检</text>
+  <text x="62" y="446" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">~/.agent-body 0700 &amp; body.db 0600 + PreflightChecker 权限越界告警</text>
+  <rect x="46" y="478" width="484" height="76" rx="6" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.4"/>
+  <text x="62" y="504" font-size="13" font-weight="700" fill="#3F2B69" text-anchor="start">L5 抗提示词投毒清洗</text>
+  <text x="62" y="530" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">PromptInjectionScanner 隔离外部 README/胶囊越狱指令 (W11/W22 验证)</text>
+  <rect x="572" y="96" width="520" height="232" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="572" y="96" width="520" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="586" y="116" font-size="14" font-weight="700" fill="#134252" text-anchor="start">B. IN_AGENT × OUT_OF_AGENT 双域因果存证审计 (&lt;80 us)</text>
+  <text x="586" y="144" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">IN_AGENT 域: 捕获 Brief 租约 / Pre&amp;Post Hook / 43 MCP / 30 CLI / Web</text>
+  <text x="586" y="172" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">OUT_OF_AGENT 域: 终结后台黑盒! 强制留痕 Daemon 巡检、HostGC、</text>
+  <text x="586" y="200" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">  LinkRepair 源码补丁、睡眠整理及 Watcher 60s 滑动窗防洪折叠</text>
+  <text x="586" y="228" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">防篡改载体: W3C trace_id + 脱敏 before_after_delta (&lt;=4KB) + SHA-256</text>
+  <text x="586" y="256" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">现网 7 天实测: 9,431 条审计 (IN=6,236 / OUT=3,195), 明文泄露 == 0%</text>
+  <rect x="572" y="348" width="520" height="228" rx="7" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <rect x="572" y="348" width="520" height="30" rx="7" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.2"/>
+  <text x="586" y="368" font-size="14" font-weight="700" fill="#3F2B69" text-anchor="start">C. MeshEnvelope v1.0 零信任跨机联邦协同协议</text>
+  <text x="586" y="396" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">规范签名: HMAC-SHA256(protocol|msg_id|type|from|to|ts|nonce|sha256)</text>
+  <text x="586" y="424" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">双因子防重放: |T_srv - ts| &lt;= 300s 时间窗 + 并发 NonceCache (重放返 409)</text>
+  <text x="586" y="452" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">最小权限四作用域: read:facts / write:locks / dialogue / transfer</text>
+  <text x="586" y="480" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">受控文件沙盒: &lt;=10MB 流式限额 + 禁敏感扩展名 -&gt; 隔离落盘 mesh_inbox/</text>
+  <text x="586" y="508" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">  (0600 权限, status=&#x27;quarantined&#x27;)，须人工或本机显式审批方可消费</text>
+  <path d="M 548,212 L 572,212" fill="none" stroke="#1D5B70" stroke-width="1.8" marker-end="url(#arr-teal)"/>
+  <path d="M 548,462 L 572,462" fill="none" stroke="#5A418E" stroke-width="1.8" marker-end="url(#arr-purple)"/>
+  <text x="28" y="612" font-size="11" font-weight="400" fill="#6B7F88" text-anchor="start">源码与实测依据: src/scanner/redactor.rs · src/audit/mod.rs · src/mesh/{protocol,auth,transfer}.rs · Benchmark W11, W14, W16, DQ4 &amp; DQ7</text>
+</svg>

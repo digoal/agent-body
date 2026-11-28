@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 630" width="1120" height="630" font-family="'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1D5B70"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1F7053"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B56917"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B43C2C"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#5A418E"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1120" height="630" rx="10" fill="#FAF8F4" stroke="none" stroke-width="1.5"/>
+  <rect x="10" y="10" width="1100" height="610" rx="8" fill="none" stroke="#D6D0C4" stroke-width="1.5"/>
+  <rect x="24" y="22" width="1072" height="58" rx="6" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <text x="42" y="47" font-size="18" font-weight="700" fill="#162A33" text-anchor="start">Paper 04 图 1 · 借鉴 PostgreSQL 的纯机制微内核、11 标准五件套与 4 发行版裁剪架构</text>
+  <text x="42" y="68" font-size="12" font-weight="400" fill="#425863" text-anchor="start">以编译期单向依赖 + ScopedSqlExecutor 前缀沙盒 + 静态业务词清零门禁，终结 AI 自维护软件的递弱代偿膨胀</text>
+  <rect x="28" y="94" width="1064" height="96" rx="8" fill="#F3EFE8" stroke="#1D5B70" stroke-width="1.4"/>
+  <text x="46" y="118" font-size="13" font-weight="700" fill="#134252" text-anchor="start">按需装配四大发行版谱系 (Distributions · 同一代码库零分叉构建)</text>
+  <rect x="46" y="130" width="248" height="48" rx="6" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.4"/>
+  <text x="56" y="150" font-size="12" font-weight="700" fill="#134252" text-anchor="start">personal-flagship (agent-body)</text>
+  <text x="56" y="168" font-size="10" font-weight="400" fill="#425863" text-anchor="start">全功能单二进制 · 43 MCP / Web / DuckDB</text>
+  <rect x="308" y="130" width="248" height="48" rx="6" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.4"/>
+  <text x="318" y="150" font-size="12" font-weight="700" fill="#15533C" text-anchor="start">aiops-probe (~6.7 MB)</text>
+  <text x="318" y="168" font-size="10" font-weight="400" fill="#425863" text-anchor="start">政务云探针 · 纯 Rust 0 C++ / mTLS / SIEM</text>
+  <rect x="570" y="130" width="248" height="48" rx="6" fill="#FFFFFF" stroke="#B56917" stroke-width="1.4"/>
+  <text x="580" y="150" font-size="12" font-weight="700" fill="#8A4E0D" text-anchor="start">dba-sentinel (~6.4 MB)</text>
+  <text x="580" y="168" font-size="10" font-weight="400" fill="#425863" text-anchor="start">DBA 哨兵 · PG/达梦/金仓诊断 + OBS 自检</text>
+  <rect x="832" y="130" width="242" height="48" rx="6" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.4"/>
+  <text x="842" y="150" font-size="12" font-weight="700" fill="#3F2B69" text-anchor="start">kernel-minimal (~3.9 MB)</text>
+  <text x="842" y="168" font-size="10" font-weight="400" fill="#425863" text-anchor="start">0 contrib 纯微内核 · CI 防腐基线底座</text>
+  <rect x="28" y="212" width="1064" height="166" rx="8" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.6"/>
+  <text x="46" y="236" font-size="13" font-weight="700" fill="#15533C" text-anchor="start">周边扩展层 contrib/ (11 个物理隔离标准五件套: Cargo.toml + .control.toml + sql/ext_&lt;id&gt;__* + body_module_magic! + regress.rs)</text>
+  <rect x="46" y="250" width="244" height="30" rx="15.0" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.3"/>
+  <text x="168.0" y="268.96" font-size="11" font-weight="600" fill="#15533C" text-anchor="middle">1. idx_fts_fuzzy</text>
+  <rect x="304" y="250" width="244" height="30" rx="15.0" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.3"/>
+  <text x="426.0" y="268.96" font-size="11" font-weight="600" fill="#15533C" text-anchor="middle">2. gov_placement</text>
+  <rect x="562" y="250" width="244" height="30" rx="15.0" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.3"/>
+  <text x="684.0" y="268.96" font-size="11" font-weight="600" fill="#15533C" text-anchor="middle">3. probe_linux_ops</text>
+  <rect x="820" y="250" width="244" height="30" rx="15.0" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.3"/>
+  <text x="942.0" y="268.96" font-size="11" font-weight="600" fill="#15533C" text-anchor="middle">4. probe_jvm_middleware</text>
+  <rect x="46" y="288" width="244" height="30" rx="15.0" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.3"/>
+  <text x="168.0" y="306.96" font-size="11" font-weight="600" fill="#15533C" text-anchor="middle">5. probe_db_engines</text>
+  <rect x="304" y="288" width="244" height="30" rx="15.0" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.3"/>
+  <text x="426.0" y="306.96" font-size="11" font-weight="600" fill="#15533C" text-anchor="middle">6. hook_auth_mtls_rbac</text>
+  <rect x="562" y="288" width="244" height="30" rx="15.0" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.3"/>
+  <text x="684.0" y="306.96" font-size="11" font-weight="600" fill="#15533C" text-anchor="middle">7. hook_gov_compliance</text>
+  <rect x="820" y="288" width="244" height="30" rx="15.0" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.3"/>
+  <text x="942.0" y="306.96" font-size="11" font-weight="600" fill="#15533C" text-anchor="middle">8. hook_audit_siem</text>
+  <rect x="46" y="326" width="244" height="30" rx="15.0" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.3"/>
+  <text x="168.0" y="344.96" font-size="11" font-weight="600" fill="#15533C" text-anchor="middle">9. fdw_cmdb_ticket (轨B)</text>
+  <rect x="304" y="326" width="244" height="30" rx="15.0" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.3"/>
+  <text x="426.0" y="344.96" font-size="11" font-weight="600" fill="#3F2B69" text-anchor="middle">10. obs_telemetry</text>
+  <rect x="562" y="326" width="244" height="30" rx="15.0" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.3"/>
+  <text x="684.0" y="344.96" font-size="11" font-weight="600" fill="#3F2B69" text-anchor="middle">11. mem_pg_tx (PG海马体)</text>
+  <rect x="820" y="326" width="244" height="30" rx="15.0" fill="#FCEBE8" stroke="#B43C2C" stroke-width="1.3"/>
+  <text x="942.0" y="344.96" font-size="11" font-weight="600" fill="#89281B" text-anchor="middle">严禁兄弟 contrib 互调!</text>
+  <path d="M 560,378 L 560,404" fill="none" stroke="#B43C2C" stroke-width="2.2" marker-end="url(#arr-red)"/>
+  <text x="574" y="396" font-size="11" font-weight="700" fill="#89281B" text-anchor="start">唯一单向依赖: contrib -&gt; body-sdk (arch-check 拦截逆向引用与业务词)</text>
+  <rect x="28" y="406" width="1064" height="172" rx="8" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.8"/>
+  <text x="46" y="430" font-size="14" font-weight="700" fill="#134252" text-anchor="start">纯机制微内核底座 kernel/ (3 Crates · 0 业务/观测协议词污染 · 0 C++ 依赖)</text>
+  <rect x="46" y="444" width="330" height="120" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="46" y="444" width="330" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="60" y="464" font-size="12" font-weight="700" fill="#134252" text-anchor="start">kernel/body-sdk (SDK v2.0 稳定契约)</text>
+  <text x="60" y="492" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">6 大 Routine: Type / Operator / TableAM /</text>
+  <text x="60" y="510" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">  IndexAM / FdwRoutine / Proc &amp; BgWorker</text>
+  <text x="60" y="528" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">7 大 Hook: ClientAuth / ObjectAccess /</text>
+  <text x="60" y="546" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">  Planner / ExecStart/End / Redact / Audit</text>
+  <rect x="395" y="444" width="330" height="120" rx="7" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.6"/>
+  <rect x="395" y="444" width="330" height="30" rx="7" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.2"/>
+  <text x="409" y="464" font-size="12" font-weight="700" fill="#15533C" text-anchor="start">kernel/body-kernel (目录驱动内核)</text>
+  <text x="409" y="492" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">8 张系统目录表 body_cat_{extension,type,</text>
+  <text x="409" y="510" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">  opclass,am,fdw,proc,hook,bgworker}</text>
+  <text x="409" y="528" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">5 张通用基表 + ScopedSqlExecutor 沙盒</text>
+  <text x="409" y="546" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">ObservabilityProvider 只读遥测注册表</text>
+  <rect x="744" y="444" width="330" height="120" rx="7" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <rect x="744" y="444" width="330" height="30" rx="7" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.2"/>
+  <text x="758" y="464" font-size="12" font-weight="700" fill="#3F2B69" text-anchor="start">kernel/body-protocol (轨 B 进程外协议)</text>
+  <text x="758" y="492" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">JSON-RPC 2.0 over stdio / Unix Socket</text>
+  <text x="758" y="510" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">FdwRoutine 超时熔断与最小权限隔离</text>
+  <text x="758" y="528" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">支撑外部动态语言/企业 CMDB 安全接入</text>
+  <text x="758" y="546" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">崩溃零连带影响主内核进程</text>
+  <text x="28" y="612" font-size="11" font-weight="400" fill="#6B7F88" text-anchor="start">验证入口: make arch-check (5 项架构防腐规则 0 违规) · cargo build --release -p agent-body-kernel-minimal -p agent-body-probe -p agent-body-dba</text>
+</svg>

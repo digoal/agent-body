@@ -267,6 +267,7 @@ Agent Body 将“运行时自我保鲜纠偏”与“工程迭代零重扫演进
   - `docs/markdown/` : 对外技术长文与矢量 SVG 图表（`docs/markdown/svg/`）
   - `docs/releases/` : 版本发版说明（`v0.1.0` ~ `v1.1.0`）
   - `docs/src_doc/` : 开发指南、边界治理、活跃演进路线图、进度总表与历史归档 (`archive/`)
+- `paper/` : 面向国际顶会（OSDI / SIGMOD / SIGIR / ICSE / USENIX Security）的 `1+4` 系统论文矩阵与确定性矢量图表库（详见 [paper/README.md](paper/README.md)）
 - 根目录核心文件：
   - `README.md` : 项目总览、脑体分离全景架构、实跑验证输出、四大发行版选型、快速上手、项目结构与 28 条顶层设计规约
   - `INSTALL.md` : 生产安装部署手册（多发行版系统依赖矩阵、Docker 容器化、Systemd 常驻托管与故障排查）

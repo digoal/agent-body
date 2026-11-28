@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 640" width="1120" height="640" font-family="'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1D5B70"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1F7053"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B56917"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B43C2C"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#5A418E"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1120" height="640" rx="10" fill="#FAF8F4" stroke="none" stroke-width="1.5"/>
+  <rect x="10" y="10" width="1100" height="620" rx="8" fill="none" stroke="#D6D0C4" stroke-width="1.5"/>
+  <rect x="24" y="22" width="1072" height="58" rx="6" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <text x="42" y="47" font-size="18" font-weight="700" fill="#162A33" text-anchor="start">Agent Body 顶会论文矩阵全景图 (1 旗舰奠基篇 + 4 正交学科专论 = 共 5 篇)</text>
+  <text x="42" y="68" font-size="12" font-weight="400" fill="#425863" text-anchor="start">遵循 One Paper, One Sharp Thesis 学术准则：拒绝大杂烩工程报告，以单一系统底座支撑五大 CCF-A 顶级会议赛道</text>
+  <rect x="330" y="98" width="460" height="136" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="330" y="98" width="460" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="344" y="118" font-size="14" font-weight="700" fill="#134252" text-anchor="start">Paper 01 · 奠基旗舰系统论文 [OSDI / SOSP / EuroSys]</text>
+  <text x="344" y="146" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">核心命题: Brain-Body Separation (脑体分离具身底座)</text>
+  <text x="344" y="166" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">理论突破: AOPCC 整轮对话税期望代价不等式 + &lt;2ms 碰壁自愈</text>
+  <text x="344" y="186" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">系统原语: BodyManifest · ContinuityCapsule v2 · L0~L3 包络</text>
+  <text x="344" y="206" font-size="12" font-weight="400" fill="#162A33" text-anchor="start">实证支撑: W1~W22 全栈帕累托净升 + COMP-C1~C4 同机实跑对标</text>
+  <rect x="28" y="290" width="252" height="286" rx="7" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.6"/>
+  <rect x="28" y="290" width="252" height="30" rx="7" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.2"/>
+  <text x="42" y="310" font-size="13" font-weight="700" fill="#15533C" text-anchor="start">Paper 02 · 数据库 [SIGMOD]</text>
+  <text x="42" y="338" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">命题: 事务级海马体 (Scheme A→B)</text>
+  <text x="42" y="362" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">矛盾: 6 个数量级时间不对称性</text>
+  <text x="42" y="386" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 1: 双时态 MVCC + 同键微锁</text>
+  <text x="42" y="410" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 2: STC 空闲睡眠整理 (3.73x)</text>
+  <text x="42" y="434" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 3: 零 BLOB 快权重三门禁</text>
+  <text x="42" y="458" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 4: QueryPredictabilityGate</text>
+  <text x="42" y="482" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">PG 18.6: 1,000,003 行 P99 4.42ms</text>
+  <text x="42" y="506" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">故障拦截: 3 类退化 100% 原子中止</text>
+  <rect x="296" y="290" width="252" height="286" rx="7" fill="#FFFFFF" stroke="#B56917" stroke-width="1.6"/>
+  <rect x="296" y="290" width="252" height="30" rx="7" fill="#FDF2E0" stroke="#B56917" stroke-width="1.2"/>
+  <text x="310" y="310" font-size="13" font-weight="700" fill="#8A4E0D" text-anchor="start">Paper 03 · 检索与图谱 [SIGIR/KDD]</text>
+  <text x="310" y="338" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">命题: 端侧弱向量补偿与宏微联邦</text>
+  <text x="310" y="362" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">矛盾: 0.8B 弱向量塌缩与假硬边</text>
+  <text x="310" y="386" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 1: L1/L2/L3 证据分层图谱</text>
+  <text x="310" y="410" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 2: 对数饱和上卷 + Top-3 剪枝</text>
+  <text x="310" y="434" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 3: 0.8B 原文锚定三元组抽取</text>
+  <text x="310" y="458" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 4: 8 维重归一化 Omni-RRF</text>
+  <text x="310" y="482" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">连通率: 孤立率 99.5% -&gt; 0.5%</text>
+  <text x="310" y="506" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">离线检索: 0 向量 &lt;20ms 100% 召回</text>
+  <rect x="564" y="290" width="252" height="286" rx="7" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <rect x="564" y="290" width="252" height="30" rx="7" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.2"/>
+  <text x="578" y="310" font-size="13" font-weight="700" fill="#3F2B69" text-anchor="start">Paper 04 · 软件工程 [ICSE/FSE]</text>
+  <text x="578" y="338" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">命题: 微内核防腐与零重扫自进化</text>
+  <text x="578" y="362" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">矛盾: 递弱代偿膨胀 + 毛细血管漂移</text>
+  <text x="578" y="386" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 1: 类 PG 8 张 body_cat_* 目录</text>
+  <text x="578" y="410" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 2: 11 个标准五件套 contrib</text>
+  <text x="578" y="434" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 3: 16 类一等公民 O(1) 路由</text>
+  <text x="578" y="458" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 4: 运行时-工程态双飞轮闭环</text>
+  <text x="578" y="482" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">裁剪力: 3.9MB 纯内核 / 0 C++ 探针</text>
+  <text x="578" y="506" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">工程度: 78 阶段 435 测 0 Panic</text>
+  <rect x="832" y="290" width="260" height="286" rx="7" fill="#FFFFFF" stroke="#B43C2C" stroke-width="1.6"/>
+  <rect x="832" y="290" width="260" height="30" rx="7" fill="#FCEBE8" stroke="#B43C2C" stroke-width="1.2"/>
+  <text x="846" y="310" font-size="13" font-weight="700" fill="#89281B" text-anchor="start">Paper 05 · 安全与评测 [USENIX Sec]</text>
+  <text x="846" y="338" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">命题: 具身纵深防御与防作弊基准</text>
+  <text x="846" y="362" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">矛盾: 密钥外泄/黑盒自治/丢事实刷分</text>
+  <text x="846" y="386" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 1: L1~L5 脱敏与抗提示词投毒</text>
+  <text x="846" y="410" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 2: IN/OUT 双域 60s 折叠审计</text>
+  <text x="846" y="434" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 3: MeshEnvelope v1.0 零信任</text>
+  <text x="846" y="458" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">机制 4: 四维质量 Q 帕累托双门禁</text>
+  <text x="846" y="482" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">现网审计: 7d 9,431 条 0% 明文泄露</text>
+  <text x="846" y="506" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">可溯账本: PR-01~16 SHA-256 存证</text>
+  <path d="M 560,234 L 560,262 L 154,262 L 154,290" fill="none" stroke="#1F7053" stroke-width="1.8" marker-end="url(#arr-green)"/>
+  <path d="M 560,234 L 560,262 L 422,262 L 422,290" fill="none" stroke="#B56917" stroke-width="1.8" marker-end="url(#arr-amber)"/>
+  <path d="M 560,234 L 560,262 L 690,262 L 690,290" fill="none" stroke="#5A418E" stroke-width="1.8" marker-end="url(#arr-purple)"/>
+  <path d="M 560,234 L 560,262 L 962,262 L 962,290" fill="none" stroke="#B43C2C" stroke-width="1.8" marker-end="url(#arr-red)"/>
+  <text x="28" y="622" font-size="11" font-weight="400" fill="#6B7F88" text-anchor="start">数据溯源: Agent Body v1.1.0 (commit 641b71d) · 27 顶层模块 / 3 微内核 Crates / 11 Contrib 扩展 / 435 项工作区测试全绿</text>
+</svg>

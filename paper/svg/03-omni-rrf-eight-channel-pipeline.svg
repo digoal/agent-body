@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 630" width="1120" height="630" font-family="'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1D5B70"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1F7053"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B56917"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B43C2C"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#5A418E"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1120" height="630" rx="10" fill="#FAF8F4" stroke="none" stroke-width="1.5"/>
+  <rect x="10" y="10" width="1100" height="610" rx="8" fill="none" stroke="#D6D0C4" stroke-width="1.5"/>
+  <rect x="24" y="22" width="1072" height="58" rx="6" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <text x="42" y="47" font-size="18" font-weight="700" fill="#162A33" text-anchor="start">Paper 03 图 2 · 自适应权重重归一化 8 维全信号融合检索管线 (Omni-RRF)</text>
+  <text x="42" y="68" font-size="12" font-weight="400" fill="#425863" text-anchor="start">Score(d) = [ sum_{c in C_active} (w_tilde_c / (k_c + rank_c(d))) ] * Phi_scalar(d) —— 向量离线零塌缩，端到端 &lt;20ms</text>
+  <rect x="28" y="180" width="210" height="240" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="28" y="180" width="210" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="42" y="200" font-size="13" font-weight="700" fill="#134252" text-anchor="start">查询解析与归一入口</text>
+  <text x="42" y="228" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">1. 驼峰/蛇形标识符拆词:</text>
+  <text x="42" y="250" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">   ShadowAbEngine -&gt;</text>
+  <text x="42" y="272" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">   Shadow + Ab + Engine</text>
+  <text x="42" y="294" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">2. 行业术语别名归一:</text>
+  <text x="42" y="316" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">   PG/Postgres -&gt; postgresql</text>
+  <text x="42" y="338" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">3. 字符 2/3-gram 切片</text>
+  <text x="42" y="360" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">4. 探测向量通道在线态</text>
+  <text x="42" y="382" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">   动态激活 C_active</text>
+  <rect x="276" y="98" width="450" height="56" rx="6" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.4"/>
+  <rect x="276" y="98" width="8" height="56" rx="3" fill="#1D5B70" stroke="none" stroke-width="1.5"/>
+  <text x="296" y="120" font-size="12" font-weight="700" fill="#134252" text-anchor="start">Ch1 · BM25 + FTS5 全文加权 (w=1.20, &lt;3ms)</text>
+  <text x="296" y="141" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">标题/路径 3.0x · 章节/KV 2.0x · 正文 1.0x</text>
+  <rect x="276" y="164" width="450" height="56" rx="6" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.4"/>
+  <rect x="276" y="164" width="8" height="56" rx="3" fill="#1F7053" stroke="none" stroke-width="1.5"/>
+  <text x="296" y="186" font-size="12" font-weight="700" fill="#15533C" text-anchor="start">Ch2 · Pure-Rust Fuzzy 模糊容错 (w=0.75, &lt;4ms)</text>
+  <text x="296" y="207" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">Bigram/Trigram Jaccard + 有界 Levenshtein (&lt;=2) 纠拼写误差</text>
+  <rect x="276" y="230" width="450" height="56" rx="6" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.4"/>
+  <rect x="276" y="230" width="8" height="56" rx="3" fill="#5A418E" stroke="none" stroke-width="1.5"/>
+  <text x="296" y="252" font-size="12" font-weight="700" fill="#3F2B69" text-anchor="start">Ch3 · 可选本地语义向量 Cosine (w=1.00, 可离线摘除)</text>
+  <text x="296" y="273" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">Ollama 离线时自动从 C_active 移除并重归一化其余通道权重</text>
+  <rect x="276" y="296" width="450" height="56" rx="6" fill="#FFFFFF" stroke="#B56917" stroke-width="1.4"/>
+  <rect x="276" y="296" width="8" height="56" rx="3" fill="#B56917" stroke="none" stroke-width="1.5"/>
+  <text x="296" y="318" font-size="12" font-weight="700" fill="#8A4E0D" text-anchor="start">Ch4 · Know-How 属性图 1~2 跳扩散 (w=1.10, &lt;6ms)</text>
+  <text x="296" y="339" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">沿 causes/mitigates/co_occurs 扩散 (gamma=0.65)，输出推理路径</text>
+  <rect x="276" y="362" width="450" height="56" rx="6" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.4"/>
+  <rect x="276" y="362" width="8" height="56" rx="3" fill="#1D5B70" stroke="none" stroke-width="1.5"/>
+  <text x="296" y="384" font-size="12" font-weight="700" fill="#134252" text-anchor="start">Ch5 · Hierarchy 章节与目录局部性 (w=0.60, &lt;2ms)</text>
+  <text x="296" y="405" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">HeadingChunker 父/兄面包屑回溯，消除 600~1000 字切片断章取义</text>
+  <rect x="276" y="428" width="450" height="56" rx="6" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.4"/>
+  <rect x="276" y="428" width="8" height="56" rx="3" fill="#1F7053" stroke="none" stroke-width="1.5"/>
+  <text x="296" y="450" font-size="12" font-weight="700" fill="#15533C" text-anchor="start">Ch6 · Doc-to-Doc 显式互链传递 (w=0.65, &lt;2ms)</text>
+  <text x="296" y="471" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">Markdown 引用 / documented_by 双向联动长文 MD &lt;-&gt; 架构图 SVG</text>
+  <rect x="276" y="496" width="450" height="72" rx="6" fill="#FFFFFF" stroke="#B43C2C" stroke-width="1.4"/>
+  <rect x="276" y="496" width="8" height="72" rx="3" fill="#B43C2C" stroke="none" stroke-width="1.5"/>
+  <text x="296" y="518" font-size="12" font-weight="700" fill="#89281B" text-anchor="start">Ch7 &amp; Ch8 · 事实标量硬过滤 + 软调制因子 Phi_scalar(d) (&lt;1ms)</text>
+  <text x="296" y="539" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">Ch7 硬过滤: status=&#x27;active&#x27; &amp; modality/domain/kv_filter 零僵尸准入</text>
+  <text x="296" y="556" font-size="10" font-weight="600" fill="#89281B" text-anchor="start">Ch8 软调制: clip(0.75 + 0.25*imp + 0.12*exp(-dt/30d) + auth - stale, 0.4, 1.4)</text>
+  <rect x="764" y="156" width="328" height="310" rx="7" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <rect x="764" y="156" width="328" height="30" rx="7" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.2"/>
+  <text x="778" y="176" font-size="13" font-weight="700" fill="#3F2B69" text-anchor="start">Omni-RRF 融合与可解释回执</text>
+  <text x="778" y="204" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">权重重归一化:</text>
+  <text x="778" y="224" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">w_tilde_c = w_c / sum_{j in active} w_j</text>
+  <text x="778" y="244" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">平滑常数 k_c = 60</text>
+  <text x="778" y="264" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">------------------------------------</text>
+  <text x="778" y="284" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">结构化可解释输出:</text>
+  <text x="778" y="304" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">- matched_channels (命中信号源)</text>
+  <text x="778" y="324" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">- matched_sections (含祖先面包屑)</text>
+  <text x="778" y="344" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">- reasoning_paths (&lt;=40 tok 因果链)</text>
+  <text x="778" y="364" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">------------------------------------</text>
+  <text x="778" y="384" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">W19 离线零向量实测:</text>
+  <text x="778" y="404" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">跨词因果 + 拼写错误 ShadwAbEngine</text>
+  <text x="778" y="424" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">4/4 事实 100% 命中, 密度提升 2580x</text>
+  <path d="M 238,300 L 256,300 L 256,126 L 276,126" fill="none" stroke="#1D5B70" stroke-width="1.3" marker-end="url(#arr-teal)"/>
+  <path d="M 726,126 L 746,126 L 746,310 L 764,310" fill="none" stroke="#5A418E" stroke-width="1.3" marker-end="url(#arr-purple)"/>
+  <path d="M 238,300 L 256,300 L 256,192 L 276,192" fill="none" stroke="#1D5B70" stroke-width="1.3" marker-end="url(#arr-teal)"/>
+  <path d="M 726,192 L 746,192 L 746,310 L 764,310" fill="none" stroke="#5A418E" stroke-width="1.3" marker-end="url(#arr-purple)"/>
+  <path d="M 238,300 L 256,300 L 256,258 L 276,258" fill="none" stroke="#1D5B70" stroke-width="1.3" marker-end="url(#arr-teal)"/>
+  <path d="M 726,258 L 746,258 L 746,310 L 764,310" fill="none" stroke="#5A418E" stroke-width="1.3" marker-end="url(#arr-purple)"/>
+  <path d="M 238,300 L 256,300 L 256,324 L 276,324" fill="none" stroke="#1D5B70" stroke-width="1.3" marker-end="url(#arr-teal)"/>
+  <path d="M 726,324 L 746,324 L 746,310 L 764,310" fill="none" stroke="#5A418E" stroke-width="1.3" marker-end="url(#arr-purple)"/>
+  <path d="M 238,300 L 256,300 L 256,390 L 276,390" fill="none" stroke="#1D5B70" stroke-width="1.3" marker-end="url(#arr-teal)"/>
+  <path d="M 726,390 L 746,390 L 746,310 L 764,310" fill="none" stroke="#5A418E" stroke-width="1.3" marker-end="url(#arr-purple)"/>
+  <path d="M 238,300 L 256,300 L 256,456 L 276,456" fill="none" stroke="#1D5B70" stroke-width="1.3" marker-end="url(#arr-teal)"/>
+  <path d="M 726,456 L 746,456 L 746,310 L 764,310" fill="none" stroke="#5A418E" stroke-width="1.3" marker-end="url(#arr-purple)"/>
+  <path d="M 238,300 L 256,300 L 256,532 L 276,532" fill="none" stroke="#1D5B70" stroke-width="1.3" marker-end="url(#arr-teal)"/>
+  <path d="M 726,532 L 746,532 L 746,310 L 764,310" fill="none" stroke="#5A418E" stroke-width="1.3" marker-end="url(#arr-purple)"/>
+  <text x="28" y="612" font-size="11" font-weight="400" fill="#6B7F88" text-anchor="start">源码锚点: src/scanner/asset_search.rs · src/fact/{knowledge_graph,knowhow_extractor}.rs · Benchmark W19 &amp; DQ10</text>
+</svg>

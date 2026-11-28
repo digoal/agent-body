@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 620" width="1120" height="620" font-family="'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1D5B70"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1F7053"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B56917"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#B43C2C"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#5A418E"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1120" height="620" rx="10" fill="#FAF8F4" stroke="none" stroke-width="1.5"/>
+  <rect x="10" y="10" width="1100" height="600" rx="8" fill="none" stroke="#D6D0C4" stroke-width="1.5"/>
+  <rect x="24" y="22" width="1072" height="58" rx="6" fill="#F3EFE8" stroke="#D6D0C4" stroke-width="1"/>
+  <text x="42" y="47" font-size="18" font-weight="700" fill="#162A33" text-anchor="start">Paper 01 图 2 · AOPCC 自适应并发期望代价边界与 &lt;2ms 碰壁自愈回路</text>
+  <text x="42" y="68" font-size="12" font-weight="400" fill="#425863" text-anchor="start">消除 LLM Agent 每步前置探查引发的整轮对话税 C_turn，在低失败代价区间实现零额外轮次直通执行</text>
+  <rect x="28" y="96" width="510" height="476" rx="8" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.5"/>
+  <text x="48" y="124" font-size="14" font-weight="700" fill="#134252" text-anchor="start">A. 期望对话轮次代价相图 (p_valid × C_fail)</text>
+  <text x="48" y="145" font-size="12" font-weight="600" fill="#425863" text-anchor="start">切换条件: (1 - p_valid)(C_fail + C_rec) &lt; C_turn</text>
+  <rect x="86" y="170" width="416" height="300" rx="4" fill="#FAF8F4" stroke="#D6D0C4" stroke-width="1.2"/>
+  <rect x="90" y="174" width="408" height="96" rx="4" fill="#FCEBE8" stroke="#B43C2C" stroke-width="1.2"/>
+  <text x="290" y="208" font-size="13" font-weight="700" fill="#89281B" text-anchor="middle">PESSIMISTIC_LOCK (悲观强门禁区)</text>
+  <text x="290" y="230" font-size="11" font-weight="400" fill="#162A33" text-anchor="middle">端口 bind / 写共享锁 / 高爆炸半径文件 / 敏感路径</text>
+  <text x="290" y="250" font-size="11" font-weight="600" fill="#89281B" text-anchor="middle">C_fail &gt;&gt; C_turn : 强制 PreToolUse 物理核验</text>
+  <rect x="90" y="278" width="176" height="188" rx="4" fill="#FDF2E0" stroke="#B56917" stroke-width="1.2"/>
+  <text x="178" y="326" font-size="13" font-weight="700" fill="#8A4E0D" text-anchor="middle">CAUTIOUS_CAS</text>
+  <text x="178" y="350" font-size="12" font-weight="600" fill="#8A4E0D" text-anchor="middle">(条件静默校验区)</text>
+  <text x="178" y="378" font-size="11" font-weight="400" fill="#162A33" text-anchor="middle">p_valid &lt; 0.85 或</text>
+  <text x="178" y="398" font-size="11" font-weight="400" fill="#162A33" text-anchor="middle">近期碰壁已降级租约</text>
+  <text x="178" y="422" font-size="11" font-weight="600" fill="#8A4E0D" text-anchor="middle">本地 ~103us 规约校验</text>
+  <rect x="274" y="278" width="224" height="188" rx="4" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.5"/>
+  <text x="386" y="326" font-size="13" font-weight="700" fill="#15533C" text-anchor="middle">OPTIMISTIC (乐观直通区)</text>
+  <text x="386" y="350" font-size="11" font-weight="600" fill="#15533C" text-anchor="middle">p_valid &gt;= 0.85, C_fail ~ 0</text>
+  <text x="386" y="378" font-size="11" font-weight="400" fill="#162A33" text-anchor="middle">客户端直连 :5432 / :11434</text>
+  <text x="386" y="398" font-size="11" font-weight="400" fill="#162A33" text-anchor="middle">已就绪 CLI / tmp 沙盒直写</text>
+  <text x="386" y="424" font-size="11" font-weight="700" fill="#15533C" text-anchor="middle">省去 100% 前置查询轮次!</text>
+  <path d="M 86,470 L 486,470" fill="none" stroke="#162A33" stroke-width="1.6" marker-end="url(#arr-teal)"/>
+  <path d="M 86,470 L 86,186" fill="none" stroke="#162A33" stroke-width="1.6" marker-end="url(#arr-teal)"/>
+  <text x="294.0" y="494" font-size="12" font-weight="600" fill="#162A33" text-anchor="middle">宿主机事实先验稳定概率 p_valid (0.0  ---&gt;  0.85  ---&gt;  1.0)</text>
+  <text x="48" y="520" font-size="11" font-weight="600" fill="#134252" text-anchor="start">W15 实测: 总轮次 20 -&gt; 12 轮 (节省 40% 对话税, 加速 3.49x)</text>
+  <rect x="558" y="96" width="534" height="476" rx="8" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.5"/>
+  <text x="578" y="124" font-size="14" font-weight="700" fill="#15533C" text-anchor="start">B. 开工租约签发、碰壁秒级自愈与审计滑窗校准闭环</text>
+  <rect x="582" y="142" width="486" height="84" rx="7" fill="#FFFFFF" stroke="#1D5B70" stroke-width="1.6"/>
+  <rect x="582" y="142" width="486" height="30" rx="7" fill="#E7F2F5" stroke="#1D5B70" stroke-width="1.2"/>
+  <text x="596" y="162" font-size="12" font-weight="700" fill="#134252" text-anchor="start">Step 1 · SessionStart (body_brief &lt;= 120 tok 租约块)</text>
+  <text x="596" y="190" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">混入 tx_epoch 与活跃端口/工具节点计算 8 位 epoch_hash</text>
+  <text x="596" y="208" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">签发高置信度 OptimisticLease (如 lease-cli-toolchain p=0.96)</text>
+  <rect x="582" y="242" width="486" height="70" rx="7" fill="#FFFFFF" stroke="#1F7053" stroke-width="1.6"/>
+  <rect x="582" y="242" width="486" height="30" rx="7" fill="#E6F4EC" stroke="#1F7053" stroke-width="1.2"/>
+  <text x="596" y="262" font-size="12" font-weight="700" fill="#15533C" text-anchor="start">Step 2 · 乐观直通执行主动作 (0 前置 MCP 查询)</text>
+  <text x="596" y="290" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">90%+ 稳态命中直接完成任务，消除 5k~30k 上下文重发预填充延迟</text>
+  <rect x="582" y="328" width="486" height="106" rx="7" fill="#FFFFFF" stroke="#B56917" stroke-width="1.6"/>
+  <rect x="582" y="328" width="486" height="30" rx="7" fill="#FDF2E0" stroke="#B56917" stroke-width="1.2"/>
+  <text x="596" y="348" font-size="12" font-weight="700" fill="#8A4E0D" text-anchor="start">Step 3 · 乐观碰壁 PostToolUse(success=false) &lt;2ms 处方自愈</text>
+  <text x="596" y="376" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">OptimisticFailureDiagnoser 覆盖 5 类确定性故障模式:</text>
+  <text x="596" y="394" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">ECONNREFUSED / 认证失败 / exit 127 缺命令 / EADDRINUSE / MVCC_EPOCH_CONFLICT</text>
+  <text x="596" y="412" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">实时反查 /proc + CapabilityEngine 注入替代端口/二进制处方</text>
+  <rect x="582" y="450" width="486" height="96" rx="7" fill="#FFFFFF" stroke="#5A418E" stroke-width="1.6"/>
+  <rect x="582" y="450" width="486" height="30" rx="7" fill="#EFEBF8" stroke="#5A418E" stroke-width="1.2"/>
+  <text x="596" y="470" font-size="12" font-weight="700" fill="#3F2B69" text-anchor="start">Step 4 · 双域审计滑窗经验校准 (AuditEvolutionAnalyzer)</text>
+  <text x="596" y="498" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">统计 24h 窗口命中率 p_valid_hat；连续 2 次碰壁自动压低置信度 &lt;0.70</text>
+  <text x="596" y="516" font-size="11" font-weight="400" fill="#162A33" text-anchor="start">撤回乐观租约切回 CAUTIOUS/PCC；待守护巡检确认恢复后平滑康复</text>
+  <path d="M 825,226 L 825,242" fill="none" stroke="#1D5B70" stroke-width="1.8" marker-end="url(#arr-teal)"/>
+  <path d="M 825,312 L 825,328" fill="none" stroke="#B56917" stroke-width="1.8" marker-end="url(#arr-amber)"/>
+  <path d="M 825,434 L 825,450" fill="none" stroke="#5A418E" stroke-width="1.8" marker-end="url(#arr-purple)"/>
+  <text x="28" y="602" font-size="11" font-weight="400" fill="#6B7F88" text-anchor="start">数据与源码出处: src/brief/optimistic.rs · src/hooks/diagnoser.rs · src/audit/evolution.rs · Benchmark W15 &amp; PR-11</text>
+</svg>
