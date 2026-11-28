@@ -710,6 +710,18 @@ impl Config {
                 self.runtime.token_guard_distill_max_bytes
             );
         }
+        if !(5..=500).contains(&self.runtime.token_guard_read_ledger_window_steps) {
+            anyhow::bail!(
+                "runtime.token_guard_read_ledger_window_steps ({}) 必须位于 5..=500 之间",
+                self.runtime.token_guard_read_ledger_window_steps
+            );
+        }
+        if !(256..=8192).contains(&self.runtime.token_guard_outline_max_bytes) {
+            anyhow::bail!(
+                "runtime.token_guard_outline_max_bytes ({}) 必须位于 256..=8192 之间",
+                self.runtime.token_guard_outline_max_bytes
+            );
+        }
         if self.knowledge_graph.max_section_chars < 200 || self.knowledge_graph.max_section_chars > 8000 {
             anyhow::bail!(
                 "knowledge_graph.max_section_chars ({}) 必须位于 200..=8000 之间",

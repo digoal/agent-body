@@ -450,6 +450,22 @@ pub struct RuntimeConfig {
     /// Phase 81: `agent-body distill` 蒸馏输出的最大保留字节数（默认 6144 = 6KB）
     #[serde(default = "default_token_guard_distill_max_bytes")]
     pub token_guard_distill_max_bytes: usize,
+
+    /// Phase 82: 是否启用会话级 `Session Read Ledger`（拦截长会话重复读与重叠盲翻页）
+    #[serde(default = "default_true_flag")]
+    pub token_guard_read_ledger_enabled: bool,
+
+    /// Phase 82: 会话读账本滑窗步数上限（超出步数窗口允许重新读取，默认 40）
+    #[serde(default = "default_token_guard_read_ledger_window_steps")]
+    pub token_guard_read_ledger_window_steps: usize,
+
+    /// Phase 82: 大文件首屏自动切片时是否通过 PreInvocation 注入多语言结构骨架导览
+    #[serde(default = "default_true_flag")]
+    pub token_guard_outline_enabled: bool,
+
+    /// Phase 82: 注入结构骨架导览的最大字节预算（默认 1400）
+    #[serde(default = "default_token_guard_outline_max_bytes")]
+    pub token_guard_outline_max_bytes: usize,
 }
 
 /// 行业 Know-How 知识网络与 Omni-RRF 多路融合检索配置 (`[knowledge_graph]`, Phase 61 / ISSUE #44)
@@ -654,6 +670,14 @@ pub(super) fn default_token_guard_distill_max_bytes() -> usize {
     6144
 }
 
+pub(super) fn default_token_guard_read_ledger_window_steps() -> usize {
+    40
+}
+
+pub(super) fn default_token_guard_outline_max_bytes() -> usize {
+    1400
+}
+
 impl Default for RuntimeConfig {
     fn default() -> Self {
         Self {
@@ -671,6 +695,10 @@ impl Default for RuntimeConfig {
             token_guard_distill_enabled: default_true_flag(),
             token_guard_distill_max_lines: default_token_guard_distill_max_lines(),
             token_guard_distill_max_bytes: default_token_guard_distill_max_bytes(),
+            token_guard_read_ledger_enabled: default_true_flag(),
+            token_guard_read_ledger_window_steps: default_token_guard_read_ledger_window_steps(),
+            token_guard_outline_enabled: default_true_flag(),
+            token_guard_outline_max_bytes: default_token_guard_outline_max_bytes(),
         }
     }
 }

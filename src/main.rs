@@ -48,6 +48,38 @@ fn main() -> Result<()> {
         } => {
             return agent_body::hooks::bridge::handle_cli_bridge(event, &cfg);
         }
+        Commands::Hooks {
+            action:
+                HooksCommands::Outline {
+                    path,
+                    max_items,
+                    after_line,
+                    max_bytes,
+                    json,
+                },
+        } => {
+            return agent_body::hooks::bridge::handle_cli_outline(
+                path,
+                *max_items,
+                *after_line,
+                *max_bytes,
+                *json,
+            );
+        }
+        Commands::Hooks {
+            action:
+                HooksCommands::ReadLedger {
+                    conversation_id,
+                    clear,
+                    json,
+                },
+        } => {
+            return agent_body::hooks::bridge::handle_cli_read_ledger(
+                conversation_id,
+                *clear,
+                *json,
+            );
+        }
         _ => {}
     }
 

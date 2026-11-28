@@ -221,3 +221,91 @@ fn test_hook_pre_critical_path_marks_critical_warning() {
     assert!(res.warnings.iter().any(|w| w.contains("CRITICAL")));
 }
 
+#[test]
+fn test_phase82_outline_and_read_ledger_integration() {
+    use agent_body::hooks::{
+        extract_file_outline, format_outline_compact, ReadLedgerDecision, ReadLedgerRequest,
+        ReadLedgerStore, TokenGuardPolicy,
+    };
+
+    let tmp = tempfile::TempDir::new().expect("tempdir");
+    let big_file = tmp.path().join("sample_engine.rs");
+    let mut code = String::new();
+    for i in 1..=360 {
+        if i == 20 || i == 280 {
+            code.push_str(&format!("pub fn api_entry_{}() -> i32 {{ {} }}\n", i, i));
+        } else {
+            code.push_str(&format!("// padding line {}\n", i));
+        }
+    }
+    std::fs::write(&big_file, code).expect("write big_file");
+
+    // 1. 验证多语言结构骨架提取与 after_line 紧凑格式化
+    let outline = extract_file_outline(&big_file, 40).expect("extract outline");
+    assert_eq!(outline.language, "rust");
+    let guide = format_outline_compact(&outline, Some(250), 1200).expect("format guide");
+    assert!(guide.contains("api_entry_280"));
+    assert!(!guide.contains("api_entry_20"));
+
+    // 2. 验证 ReadLedger 首读骨架注入、重复读拦截、Repeat-Confirm 与写入失效
+    let store = ReadLedgerStore::with_dir(tmp.path().join("ledger"));
+    let policy = TokenGuardPolicy::default();
+    let conv = "integration-phase82-conv";
+    let ow = serde_json::json!({ "StartLine": 1, "EndLine": 250 });
+    let req_args = serde_json::json!({ "Path": big_file });
+
+    let first = store.evaluate_pre_read(&ReadLedgerRequest {
+        conversation_id: conv,
+        transcript_path: None,
+        cwd: None,
+        step_idx: 1,
+        args: &req_args,
+        upstream_overwrite: Some(&ow),
+        policy: &policy,
+    });
+    match first {
+        ReadLedgerDecision::AllowRecord { outline_hint, .. } => {
+            let hint = outline_hint.expect("expected outline_hint on first slice");
+            assert!(hint.contains("api_entry_280"));
+        }
+        other => panic!("unexpected first decision: {:?}", other),
+    }
+
+    let slice_args = serde_json::json!({ "Path": big_file, "StartLine": 1, "EndLine": 250 });
+    let dup = store.evaluate_pre_read(&ReadLedgerRequest {
+        conversation_id: conv,
+        transcript_path: None,
+        cwd: None,
+        step_idx: 2,
+        args: &slice_args,
+        upstream_overwrite: None,
+        policy: &policy,
+    });
+    assert!(matches!(dup, ReadLedgerDecision::DenyDuplicate { .. }));
+
+    // Repeat-Confirm 放行
+    let confirm = store.evaluate_pre_read(&ReadLedgerRequest {
+        conversation_id: conv,
+        transcript_path: None,
+        cwd: None,
+        step_idx: 3,
+        args: &slice_args,
+        upstream_overwrite: None,
+        policy: &policy,
+    });
+    assert!(matches!(confirm, ReadLedgerDecision::AllowRecord { .. }));
+
+    // 失效后再次放行
+    store.invalidate_path(conv, big_file.to_str().unwrap_or(""), None, 4);
+    let after_inv = store.evaluate_pre_read(&ReadLedgerRequest {
+        conversation_id: conv,
+        transcript_path: None,
+        cwd: None,
+        step_idx: 5,
+        args: &slice_args,
+        upstream_overwrite: None,
+        policy: &policy,
+    });
+    assert!(matches!(after_inv, ReadLedgerDecision::AllowRecord { .. }));
+}
+

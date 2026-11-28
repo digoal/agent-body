@@ -245,6 +245,28 @@ pub(crate) enum HooksCommands {
         #[arg(help = "Hook 事件名: session_start | pre_tool | post_tool | pre_invocation | stop")]
         event: String,
     },
+    #[command(about = "零 DB 提取多语言文件结构骨架与精确符号行号（供预读或调试）")]
+    Outline {
+        #[arg(help = "目标文件绝对或相对路径")]
+        path: PathBuf,
+        #[arg(long, default_value_t = 80, help = "最大提取符号条数")]
+        max_items: usize,
+        #[arg(long, help = "仅优先显示该行号之后的符号（如首屏 250 行之后）")]
+        after_line: Option<usize>,
+        #[arg(long, default_value_t = 4096, help = "文本导览输出最大字节上限")]
+        max_bytes: usize,
+        #[arg(long, default_value_t = false, help = "以 JSON 格式输出完整 FileOutline")]
+        json: bool,
+    },
+    #[command(about = "查看或清空指定会话的 Session Read Ledger 读账本统计（零 DB）")]
+    ReadLedger {
+        #[arg(help = "会话 ID (conversationId)")]
+        conversation_id: String,
+        #[arg(long, default_value_t = false, help = "清空该会话读账本文件")]
+        clear: bool,
+        #[arg(long, default_value_t = false, help = "以 JSON 格式输出")]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]

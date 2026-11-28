@@ -81,6 +81,10 @@ pub struct TokenGuardPolicy {
     pub distill_enabled: bool,
     pub distill_max_lines: usize,
     pub distill_max_bytes: usize,
+    pub read_ledger_enabled: bool,
+    pub read_ledger_window_steps: usize,
+    pub outline_enabled: bool,
+    pub outline_max_bytes: usize,
     pub extra_ignore_dirs: Vec<String>,
 }
 
@@ -95,6 +99,10 @@ impl Default for TokenGuardPolicy {
             distill_enabled: true,
             distill_max_lines: 120,
             distill_max_bytes: 6144,
+            read_ledger_enabled: true,
+            read_ledger_window_steps: 40,
+            outline_enabled: true,
+            outline_max_bytes: 1400,
             extra_ignore_dirs: Vec::new(),
         }
     }
@@ -125,6 +133,10 @@ impl TokenGuardPolicy {
             distill_enabled: cfg.runtime.token_guard_distill_enabled,
             distill_max_lines: cfg.runtime.token_guard_distill_max_lines.clamp(20, 2000),
             distill_max_bytes: cfg.runtime.token_guard_distill_max_bytes.clamp(1024, 65536),
+            read_ledger_enabled: cfg.runtime.token_guard_read_ledger_enabled,
+            read_ledger_window_steps: cfg.runtime.token_guard_read_ledger_window_steps.clamp(5, 500),
+            outline_enabled: cfg.runtime.token_guard_outline_enabled,
+            outline_max_bytes: cfg.runtime.token_guard_outline_max_bytes.clamp(256, 8192),
             extra_ignore_dirs: extra,
         }
     }

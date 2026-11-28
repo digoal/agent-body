@@ -292,12 +292,15 @@ html 内容16比9的比例，采用适合阅读的视觉风格。
      3. **客户端生成器开箱套件 (`hooks generate --client agy`)**：一次性生成含 `"agent-body"` 与 `"token-optimizer"` 的 `hooks.json`、`.gemini/config/hooks/body_bridge.py`、`.gemini/config/hooks/token_optimizer.py` 与 `.ripgreprc`（同步升级 Claude `settings.json`/桥接与 Cursor/Codex/Hermes 规则）；
      4. **`contrib/graph_relate` 卫生硬化与全 16 类一等公民齐平**：拆分 `ffi_decode.rs` 消除 `>1000L` 文件、清零 `28` 处 `let _ =`，六重确定性质量门禁全绿，全工作区 **452 项测试**（21 套集成套件 · 12 个 `contrib` 扩展）全绿。
 
-58. **`[Phase 81 已落地 · 部分待定]` Context / Tool Calls 深化治理与默认配置瘦身**:
+58. **`[Phase 81~82 已落地 · 部分待定]` Context / Tool Calls 深化治理与默认配置瘦身**:
     - **暂不拆分 `~/.gemini/GEMINI.md`（状态：待定）**：经对本机近期 4 份真实会话（10.77 MB Tool Call 轨迹）与上下文占用分布实证分析，当前 `~/.gemini/GEMINI.md`（17,178 bytes / 约 `5.6k` tokens）以 `always_on` 全量常驻；后续可评估利用 AGY 原生渐进披露机制（`~/.gemini/config/rules/*.md` 配合 `trigger: model_decision`）将非编码域规约（如写作规范、HTML 演说规范、战略分析模型等）拆分为按需加载，预期可省 `3.0k ~ 3.8k` tokens。**当前明确暂不拆分，保留原状标记为待定**。
     - **`Phase 81` Rust 原生单入口 Hook 统一 + `agent-body distill` 流式命令输出蒸馏器 `✅ 已落地`**（详见 [roadmap-phase81.md](docs/src_doc/roadmap-phase81.md)）：
       - 落地 `src/hooks/distill.rs` 与 `agent-body distill` CLI（零 DB 快路径、ANSI/`\r` 清洗、按 `BuildTest`/`GitDiff`/`SearchList`/`HttpFetch`/`Generic` 分类折叠、失败堆栈 100% 保留、原始退出码透传、`~/.agent-body/tmp/distill/` 无损落盘）；
       - 扩展 `RuntimeConfig`（`token_guard_distill_*`）与 `TokenGuardEngine`，覆盖含 `&&`/`;`/`||` 的复合与高噪 `run_command` 自动包装；
       - 落地 `src/hooks/bridge.rs` 完整 5 事件零 DB 优先分发，合并 AGY `hooks.json` 双 Python 进程为单入口 `agent-body hooks bridge <event>`。
-    - **Phase 82+ 待定治理方向（Backlog）**：
-      1. **会话级 `Session Read Ledger` + AST 骨架优先预读**：针对占比 `43.5% ~ 62.0%` 的 `read_file` 盲翻页与长会话重复读取（超长会话重复读高达 `32.4%`），维护基于 `conversation_id` 与文件版本（含 auto-compact 清零感知）的读账本拦截重复片段，并在大源码首读注入符号行号索引；
-      2. **Token 遥测归因与动态水位档位**：基于 `transcriptPath` 增量归因各工具字节占比与压缩省流率，在上下文跨越高水位时自适应切换紧凑策略。
+    - **`Phase 82` 会话级 `Session Read Ledger` + 多语言结构骨架优先预读 `✅ 已落地`**（详见 [roadmap-phase82.md](docs/src_doc/roadmap-phase82.md)）：
+      - 落地 `src/hooks/outline.rs`（10 类语言零依赖确定性骨架提取、`hooks outline` CLI）与大文件首屏切片 `PreInvocation` 自动导览注入（去重 + `2600B` 上限）；
+      - 落地 `src/hooks/read_ledger.rs` Append-Only JSONL 会话读账本（重复读/子集读拦截附未读符号导航、Repeat-Confirm 二次放行、部分重叠 5 行衔接增量裁剪、`PostToolUse` 写失效 + `transcriptPath` `CHECKPOINT` 自动清零），零 DB 接入 `bridge.rs`。
+    - **Phase 83+ 待定治理方向（Backlog）**：
+      1. **Token 遥测归因与动态水位档位**：基于 `transcriptPath` 增量归因各工具字节占比与压缩省流率，在上下文跨越高水位时自适应切换紧凑策略；
+      2. **多客户端 Hook 矩阵同步**：将 Phase 81~83 蒸馏与读账本能力同步扩展至 Claude/Cursor/Codex/Hermes 生成器与离线回放 Benchmark。

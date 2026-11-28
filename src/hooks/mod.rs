@@ -9,8 +9,11 @@ pub mod diagnoser;
 pub mod dispatcher;
 pub mod distill;
 pub mod event_bus;
+pub mod outline;
 pub mod pipeline;
 pub mod push;
+pub mod read_ledger;
+pub(crate) mod read_ledger_helpers;
 pub mod token_guard;
 pub(crate) mod token_guard_templates;
 
@@ -25,9 +28,14 @@ pub use diagnoser::{
 pub use dispatcher::{HookAction, HookDispatcher, HookFilter, HookRule};
 pub use distill::{distill_output, run_distill_cli, DistillKind, DistillOutput};
 pub use event_bus::{EventBus, EventBusHandle};
+pub use outline::{extract_file_outline, format_outline_compact, FileOutline, OutlineItem};
 pub use pipeline::{
     HookAuditRecord, HookPipeline, HookPipelineEngine, HookStep, OnFailureStrategy,
     PipelineExecutionStatus,
+};
+pub use read_ledger::{
+    FileReadCoverageSummary, LedgerEvent, ReadLedgerDecision, ReadLedgerRequest, ReadLedgerStore,
+    SessionLedgerSummary,
 };
 #[cfg(unix)]
 pub use push::UdsBroadcaster;

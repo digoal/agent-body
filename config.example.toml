@@ -395,6 +395,15 @@ token_guard_distill_enabled = true
 token_guard_distill_max_lines = 120
 # `agent-body distill` 蒸馏输出最大保留字节数（默认 6144 = 6KB）
 token_guard_distill_max_bytes = 6144
+# Phase 82: 是否启用会话级 `Session Read Ledger`（拦截同会话未变更文件重复读取与重叠翻页）
+# 可通过环境变量 AGENT_BODY_READ_LEDGER=0 单独旁路
+token_guard_read_ledger_enabled = true
+# 会话读账本滑窗步数上限（超出步数窗口允许重新读取，范围 5..=500，默认 40）
+token_guard_read_ledger_window_steps = 40
+# 大文件首屏自动切片时是否向 PreInvocation 注入多语言结构骨架导览（默认 true）
+token_guard_outline_enabled = true
+# 结构骨架导览的最大保留字节数（范围 256..=8192，默认 1400）
+token_guard_outline_max_bytes = 1400
 
 # ==============================================================================
 # 13. 行业 Know-How 知识网络与 Omni-RRF 多路融合检索配置 (Phase 61 - ISSUE #44)

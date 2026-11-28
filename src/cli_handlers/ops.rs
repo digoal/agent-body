@@ -289,6 +289,32 @@ pub fn handle_ops(cmd: Commands, cfg: &Config, storage: Storage) -> Result<()> {
                     )?;
                     println!("{}", serde_json::to_string(&out)?);
                 }
+                HooksCommands::Outline {
+                    path,
+                    max_items,
+                    after_line,
+                    max_bytes,
+                    json,
+                } => {
+                    agent_body::hooks::bridge::handle_cli_outline(
+                        &path,
+                        max_items,
+                        after_line,
+                        max_bytes,
+                        json,
+                    )?;
+                }
+                HooksCommands::ReadLedger {
+                    conversation_id,
+                    clear,
+                    json,
+                } => {
+                    agent_body::hooks::bridge::handle_cli_read_ledger(
+                        &conversation_id,
+                        clear,
+                        json,
+                    )?;
+                }
             }
         }
 

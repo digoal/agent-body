@@ -42,7 +42,7 @@ flowchart LR
 
 1. **只读 `Tier-0` 入口（仅 2 份文档）**：
    - 本文件 `EVOLUTION_GUIDE.md`（架构锚点 + 10 大场景变更触点矩阵 + 模块/测试坐标）；
-   - 当前最新活跃路线图 [docs/src_doc/roadmap-phase81.md](docs/src_doc/roadmap-phase81.md)（`ISSUE #58` Rust 原生单入口 Hook 统一 × `agent-body distill` 命令输出蒸馏器；历史 Phase 80 Token 守卫见 [docs/src_doc/roadmap-phase80.md](docs/src_doc/roadmap-phase80.md)；Phase 79 超集检索见 [docs/src_doc/roadmap-phase79.md](docs/src_doc/roadmap-phase79.md)；PG 事务海马体方案 A→B 见 [docs/src_doc/roadmap-phase76-78.md](docs/src_doc/roadmap-phase76-78.md)；已完成基线见 [docs/src_doc/roadmap-phase75.md](docs/src_doc/roadmap-phase75.md) 与 [docs/src_doc/progress.md](docs/src_doc/progress.md)）。
+   - 当前最新活跃路线图 [docs/src_doc/roadmap-phase82.md](docs/src_doc/roadmap-phase82.md)（`ISSUE #58` 会话级 `Session Read Ledger` × 多语言结构骨架优先预读；历史 Phase 81 Rust 单入口 Hook 统一与命令蒸馏见 [docs/src_doc/roadmap-phase81.md](docs/src_doc/roadmap-phase81.md)；Phase 80 Token 守卫见 [docs/src_doc/roadmap-phase80.md](docs/src_doc/roadmap-phase80.md)；Phase 79 超集检索见 [docs/src_doc/roadmap-phase79.md](docs/src_doc/roadmap-phase79.md)；PG 事务海马体方案 A→B 见 [docs/src_doc/roadmap-phase76-78.md](docs/src_doc/roadmap-phase76-78.md)；已完成基线见 [docs/src_doc/roadmap-phase75.md](docs/src_doc/roadmap-phase75.md) 与 [docs/src_doc/progress.md](docs/src_doc/progress.md)）。
 2. **运行 O(1) 实时架构快照与一等公民变更路由（`<100ms`，禁止手工扫全仓）**：
    ```bash
    # 看全局计数与漂移校验

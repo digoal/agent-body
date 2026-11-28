@@ -14,8 +14,13 @@ use serde_json::{json, Value};
 use crate::api::hooks::AgentHookEngine;
 use crate::brief::{BriefAssembler, BriefRequest};
 use crate::config::{Config, RuntimeMode};
-use crate::hooks::{TokenGuardDecision, TokenGuardEngine, TokenGuardPolicy};
+use crate::hooks::{
+    ReadLedgerDecision, ReadLedgerRequest, ReadLedgerStore, TokenGuardDecision, TokenGuardEngine,
+    TokenGuardPolicy,
+};
 use crate::storage::Storage;
+
+const MAX_RX_CACHE_BYTES: usize = 2600;
 
 const FAILURE_SIGNATURES: &[&str] = &[
     "Connection refused",
@@ -60,6 +65,81 @@ pub fn handle_cli_bridge(event: &str, cfg: &Config) -> Result<()> {
     Ok(())
 }
 
+/// CLI 零 DB 文件骨架提取 (`agent-body hooks outline <path>`)
+pub fn handle_cli_outline(
+    path: &std::path::Path,
+    max_items: usize,
+    after_line: Option<usize>,
+    max_bytes: usize,
+    json_out: bool,
+) -> Result<()> {
+    let outline = crate::hooks::extract_file_outline(path, max_items)?;
+    if json_out {
+        println!("{}", serde_json::to_string_pretty(&outline)?);
+        return Ok(());
+    }
+    if let Some(compact) = crate::hooks::format_outline_compact(&outline, after_line, max_bytes) {
+        println!("{}", compact);
+    } else {
+        println!(
+            "[agent-body 文件骨架导览] {} ({}, {}L) 未检测到结构化符号。",
+            outline.path, outline.language, outline.total_lines
+        );
+    }
+    Ok(())
+}
+
+/// CLI 零 DB 会话读账本排查/清理 (`agent-body hooks read-ledger <conv_id>`)
+pub fn handle_cli_read_ledger(conversation_id: &str, clear: bool, json_out: bool) -> Result<()> {
+    let store = ReadLedgerStore::default_host();
+    if clear {
+        let removed = store.clear_session(conversation_id)?;
+        if json_out {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&json!({
+                    "conversation_id": conversation_id,
+                    "cleared": removed,
+                }))?
+            );
+        } else {
+            println!(
+                "[ReadLedger] 会话 `{}` 账本{}",
+                conversation_id,
+                if removed { "已清理" } else { "不存在或已为空" }
+            );
+        }
+        return Ok(());
+    }
+    let summary = store.inspect_session(conversation_id);
+    if json_out {
+        println!("{}", serde_json::to_string_pretty(&summary)?);
+        return Ok(());
+    }
+    println!(
+        "[ReadLedger] 会话: {} | Epoch: {} | Reads: {} | Denies: {} | EstSavedLines: {} | Files: {}",
+        summary.conversation_id,
+        summary.epoch,
+        summary.total_reads,
+        summary.total_denies,
+        summary.estimated_saved_lines,
+        summary.files.len()
+    );
+    for f in &summary.files {
+        let ranges = f
+            .covered_ranges
+            .iter()
+            .map(|(s, e)| format!("L{}~{}", s, e))
+            .collect::<Vec<_>>()
+            .join(", ");
+        println!(
+            "  - {} ({}L, step={}): [{}]",
+            f.path, f.total_lines, f.last_step, ranges
+        );
+    }
+    Ok(())
+}
+
 /// 已持有 `Storage` 时的桥接入口
 pub fn handle_bridge_with_storage(
     event: &str,
@@ -98,6 +178,20 @@ fn evaluate_cli_bridge_with_loader<F>(
 where
     F: FnOnce() -> Result<Storage>,
 {
+    let store = ReadLedgerStore::default_host();
+    evaluate_cli_bridge_with_loader_and_store(event, raw_stdin, cfg, &store, load_storage)
+}
+
+fn evaluate_cli_bridge_with_loader_and_store<F>(
+    event: &str,
+    raw_stdin: &str,
+    cfg: &Config,
+    ledger_store: &ReadLedgerStore,
+    load_storage: F,
+) -> Result<Value>
+where
+    F: FnOnce() -> Result<Storage>,
+{
     let ev = event.trim().to_ascii_lowercase();
     if cfg.effective_runtime_mode() == RuntimeMode::Bypass {
         return Ok(bypass_response(&ev));
@@ -108,14 +202,14 @@ where
         "pre_invocation" => Ok(handle_pre_invocation(&payload)),
         "stop" => Ok(handle_stop(&payload)),
         "pre_tool" => {
-            if let Some(fast) = try_pre_tool_fast(&payload, cfg) {
+            if let Some(fast) = try_pre_tool_fast(&payload, cfg, ledger_store) {
                 return Ok(fast);
             }
             let storage = load_storage()?;
             Ok(handle_pre_tool_with_storage(&payload, cfg, &storage))
         }
         "post_tool" => {
-            if let Some(fast) = try_post_tool_fast(&payload) {
+            if let Some(fast) = try_post_tool_fast(&payload, ledger_store) {
                 return Ok(fast);
             }
             let storage = load_storage()?;
@@ -137,7 +231,19 @@ fn bypass_response(event: &str) -> Value {
     }
 }
 
-fn try_pre_tool_fast(payload: &Value, cfg: &Config) -> Option<Value> {
+fn extract_step_idx(payload: &Value) -> u64 {
+    payload
+        .get("stepIdx")
+        .or_else(|| payload.get("step_idx"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0)
+}
+
+fn try_pre_tool_fast(
+    payload: &Value,
+    cfg: &Config,
+    ledger_store: &ReadLedgerStore,
+) -> Option<Value> {
     let tc = payload.get("toolCall")?;
     let tname = tc.get("name").and_then(|v| v.as_str()).unwrap_or("");
     let args = tc.get("args").filter(|v| v.is_object())?;
@@ -155,7 +261,61 @@ fn try_pre_tool_fast(payload: &Value, cfg: &Config) -> Option<Value> {
             }
             None
         }
-        "read_file" | "view_file" | "read" | "grep_search" | "find_by_name" | "grep" | "glob" => {
+        "read_file" | "view_file" | "read" => {
+            let policy = TokenGuardPolicy::from_config(cfg);
+            let upstream_ow = match TokenGuardEngine::evaluate(tname, args, &policy) {
+                TokenGuardDecision::Deny { .. } => return None,
+                TokenGuardDecision::Overwrite { overwrite, .. } => Some(overwrite),
+                TokenGuardDecision::Pass => None,
+            };
+
+            let conv_id = payload
+                .get("conversationId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let transcript_path = payload.get("transcriptPath").and_then(|v| v.as_str());
+            let cwd = payload.get("cwd").and_then(|v| v.as_str());
+            let step_idx = extract_step_idx(payload);
+
+            match ledger_store.evaluate_pre_read(&ReadLedgerRequest {
+                conversation_id: conv_id,
+                transcript_path,
+                cwd,
+                step_idx,
+                args,
+                upstream_overwrite: upstream_ow.as_ref(),
+                policy: &policy,
+            }) {
+                ReadLedgerDecision::DenyDuplicate { reason, .. } => {
+                    Some(json!({ "decision": "deny", "reason": reason }))
+                }
+                ReadLedgerDecision::TrimOverlap { overwrite, .. } => {
+                    Some(json!({ "decision": "allow", "overwrite": overwrite }))
+                }
+                ReadLedgerDecision::AllowRecord {
+                    effective_overwrite,
+                    outline_hint,
+                    ..
+                } => {
+                    if let Some(hint) = outline_hint {
+                        append_rx_cache(payload, &hint);
+                    }
+                    if let Some(ow) = effective_overwrite.or(upstream_ow) {
+                        Some(json!({ "decision": "allow", "overwrite": ow }))
+                    } else {
+                        Some(json!({ "decision": "allow" }))
+                    }
+                }
+                ReadLedgerDecision::Pass => {
+                    if let Some(ow) = upstream_ow {
+                        Some(json!({ "decision": "allow", "overwrite": ow }))
+                    } else {
+                        Some(json!({ "decision": "allow" }))
+                    }
+                }
+            }
+        }
+        "grep_search" | "find_by_name" | "grep" | "glob" => {
             let policy = TokenGuardPolicy::from_config(cfg);
             match TokenGuardEngine::evaluate(tname, args, &policy) {
                 TokenGuardDecision::Pass => Some(json!({"decision": "allow"})),
@@ -269,7 +429,7 @@ fn handle_pre_tool_with_storage(payload: &Value, cfg: &Config, storage: &Storage
     json!({ "decision": "allow" })
 }
 
-fn try_post_tool_fast(payload: &Value) -> Option<Value> {
+fn try_post_tool_fast(payload: &Value, ledger_store: &ReadLedgerStore) -> Option<Value> {
     if extract_failure_text(payload).is_some() {
         return None;
     }
@@ -284,6 +444,12 @@ fn try_post_tool_fast(payload: &Value) -> Option<Value> {
         .or_else(|| args.get("path"))
         .and_then(|v| v.as_str())
         .unwrap_or("");
+    let conv_id = payload
+        .get("conversationId")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let cwd = payload.get("cwd").and_then(|v| v.as_str());
+    ledger_store.invalidate_path(conv_id, path, cwd, extract_step_idx(payload));
     if is_noise_path(path) {
         return Some(json!({}));
     }
@@ -333,7 +499,7 @@ fn handle_post_tool_with_storage(payload: &Value, storage: &Storage) -> Value {
                 hint.push_str(" | 建议动作: ");
                 hint.push_str(&actions.join(" ; "));
             }
-            write_rx_cache(payload, &hint);
+            append_rx_cache(payload, &hint);
         }
         return json!({});
     }
@@ -344,6 +510,17 @@ fn handle_post_tool_with_storage(payload: &Value, storage: &Storage) -> Value {
             .or_else(|| raw_args.get("path"))
             .and_then(|v| v.as_str())
             .unwrap_or("");
+        let conv_id = payload
+            .get("conversationId")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let cwd = payload.get("cwd").and_then(|v| v.as_str());
+        ReadLedgerStore::default_host().invalidate_path(
+            conv_id,
+            path,
+            cwd,
+            extract_step_idx(payload),
+        );
         if !is_noise_path(path) {
             let engine = AgentHookEngine::new(storage.clone());
             let _res = engine.post_tool_call_with_error(
@@ -462,7 +639,11 @@ fn rx_cache_path(payload: &Value) -> PathBuf {
         .join(format!("agy_rx_{}.txt", final_id))
 }
 
-fn write_rx_cache(payload: &Value, hint: &str) {
+fn append_rx_cache(payload: &Value, hint: &str) {
+    let trimmed = hint.trim();
+    if trimmed.is_empty() {
+        return;
+    }
     let path = rx_cache_path(payload);
     if let Some(parent) = path.parent() {
         if let Err(e) = fs::create_dir_all(parent) {
@@ -470,9 +651,41 @@ fn write_rx_cache(payload: &Value, hint: &str) {
             return;
         }
     }
-    if let Err(e) = fs::write(&path, hint) {
+    let existing = fs::read_to_string(&path).unwrap_or_default();
+    let existing_trimmed = existing.trim();
+    if existing_trimmed.contains(trimmed) {
+        return;
+    }
+    let combined = if existing_trimmed.is_empty() {
+        truncate_utf8_bytes(trimmed, MAX_RX_CACHE_BYTES)
+    } else {
+        let remaining = MAX_RX_CACHE_BYTES.saturating_sub(existing_trimmed.len() + 2);
+        if remaining < 120 {
+            return;
+        }
+        let clipped = truncate_utf8_bytes(trimmed, remaining);
+        format!("{}\n\n{}", existing_trimmed, clipped)
+    };
+    if let Err(e) = fs::write(&path, combined) {
         eprintln!("[HooksBridge][WARN] 写入处方缓存失败 ({:?}): {}", path, e);
     }
+}
+
+fn truncate_utf8_bytes(s: &str, max_bytes: usize) -> String {
+    if s.len() <= max_bytes {
+        return s.to_string();
+    }
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    let slice = &s[..end];
+    if let Some(pos) = slice.rfind('\n') {
+        if pos > 0 {
+            return slice[..pos].to_string();
+        }
+    }
+    slice.to_string()
 }
 
 fn is_noise_path(path: &str) -> bool {
@@ -690,6 +903,127 @@ mod tests {
         )
         .expect("second pre_invocation");
         assert_eq!(second, json!({}));
+    }
+
+    #[test]
+    fn test_bridge_read_ledger_outline_and_repeat_cycle() {
+        let cfg = Config::default();
+        let tmp = tempfile::TempDir::new().expect("tempdir");
+        let store = ReadLedgerStore::with_dir(tmp.path().join("ledger"));
+        let big_rs = tmp.path().join("big_mod.rs");
+        let mut src = String::new();
+        for i in 1..=650 {
+            if i == 10 || i == 320 || i == 500 {
+                src.push_str(&format!("pub fn target_fn_{}() -> usize {{ {} }}\n", i, i));
+            } else {
+                src.push_str(&format!("// comment line {}\n", i));
+            }
+        }
+        fs::write(&big_rs, src).expect("write big_rs");
+
+        let conv = format!("test-phase82-bridge-{}", std::process::id());
+        let read_full = json!({
+            "conversationId": conv,
+            "stepIdx": 1,
+            "toolCall": { "name": "read_file", "args": { "Path": big_rs } }
+        })
+        .to_string();
+
+        // 1. 首次整读触发自动切片 + 零 DB + 缓存骨架导览
+        let r1 = evaluate_cli_bridge_with_loader_and_store(
+            "pre_tool",
+            &read_full,
+            &cfg,
+            &store,
+            || panic!("read_file 切片与 ReadLedger 不应打开 SQLite"),
+        )
+        .expect("r1");
+        assert_eq!(r1["decision"], "allow");
+        assert_eq!(r1["overwrite"]["StartLine"], 1);
+        assert_eq!(r1["overwrite"]["EndLine"], 250);
+
+        // 2. PreInvocation 消费骨架导览
+        let pre_inv = evaluate_cli_bridge_with_loader_and_store(
+            "pre_invocation",
+            &json!({ "conversationId": conv }).to_string(),
+            &cfg,
+            &store,
+            || panic!("pre_invocation 不应打开 SQLite"),
+        )
+        .expect("pre_inv");
+        let injected = pre_inv["injectSteps"][0]["systemMessage"]["systemMessage"]
+            .as_str()
+            .unwrap_or("");
+        assert!(injected.contains("文件骨架导览"), "{}", injected);
+        assert!(injected.contains("target_fn_320"), "{}", injected);
+
+        // 3. 重复读 L1~250 被零 DB 拦截
+        let read_slice = json!({
+            "conversationId": conv,
+            "stepIdx": 2,
+            "toolCall": { "name": "read_file", "args": { "Path": big_rs, "StartLine": 1, "EndLine": 250 } }
+        })
+        .to_string();
+        let r2 = evaluate_cli_bridge_with_loader_and_store(
+            "pre_tool",
+            &read_slice,
+            &cfg,
+            &store,
+            || panic!("ReadLedger 拦截不应打开 SQLite"),
+        )
+        .expect("r2");
+        assert_eq!(r2["decision"], "deny");
+        assert!(r2["reason"].as_str().unwrap_or("").contains("ReadLedger"));
+
+        // 4. Repeat-Confirm 立即再调用同参数自动放行
+        let read_confirm = json!({
+            "conversationId": conv,
+            "stepIdx": 3,
+            "toolCall": { "name": "read_file", "args": { "Path": big_rs, "StartLine": 1, "EndLine": 250 } }
+        })
+        .to_string();
+        let r3 = evaluate_cli_bridge_with_loader_and_store(
+            "pre_tool",
+            &read_confirm,
+            &cfg,
+            &store,
+            || panic!("Repeat-Confirm 不应打开 SQLite"),
+        )
+        .expect("r3");
+        assert_eq!(r3["decision"], "allow");
+
+        // 5. PostToolUse(edit_file) 使该文件账本失效后，再次读 L1~250 放行
+        let post_edit = json!({
+            "conversationId": conv,
+            "stepIdx": 4,
+            "toolCall": { "name": "edit_file", "args": { "Path": big_rs } }
+        })
+        .to_string();
+        let p_res = evaluate_cli_bridge_with_loader_and_store(
+            "post_tool",
+            &post_edit,
+            &cfg,
+            &store,
+            || panic!("常规 edit_file post_tool 走异步零 DB"),
+        )
+        .expect("post_edit");
+        assert_eq!(p_res, json!({}));
+
+        let read_after_edit = json!({
+            "conversationId": conv,
+            "stepIdx": 5,
+            "toolCall": { "name": "read_file", "args": { "Path": big_rs, "StartLine": 1, "EndLine": 250 } }
+        })
+        .to_string();
+        let r4 = evaluate_cli_bridge_with_loader_and_store(
+            "pre_tool",
+            &read_after_edit,
+            &cfg,
+            &store,
+            || panic!("失效后重读不应打开 SQLite"),
+        )
+        .expect("r4");
+        assert_eq!(r4["decision"], "allow");
     }
 
     #[test]
